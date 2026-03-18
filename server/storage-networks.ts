@@ -54,8 +54,9 @@ export const upsertNetwork = (
 ): NetworkProfile => {
   const id = input.id ?? randomUUID();
   const now = Date.now();
-  const template = validateTemplateRelationship(db, userId, input);
-  const storedPassword = resolveStoredPassword(db, userId, input, secretBox, template);
+  const existing = input.id ? (getNetworkRow(db, userId, input.id) ?? null) : null;
+  const template = validateTemplateRelationship(db, userId, input, existing);
+  const storedPassword = resolveStoredPassword(input, secretBox, existing, template);
   db.prepare(
     `INSERT INTO networks
        (id, userId, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin, createdAt, updatedAt)
@@ -131,9 +132,17 @@ const getTemplateRow = (db: DatabaseSync, userId: string, templateId: string) =>
   return db.prepare(sql).get(userId, templateId) as NetworkRow | undefined;
 };
 
-const validateTemplateRelationship = (db: DatabaseSync, userId: string, input: NetworkInput) => {
+const validateTemplateRelationship = (
+  db: DatabaseSync,
+  userId: string,
+  input: NetworkInput,
+  existing: NetworkRow | null
+) => {
   const templateId = input.templateId ?? null;
   const template = templateId ? getTemplateRow(db, userId, templateId) : null;
+  if (existing && (existing.managerHidden !== (input.managerHidden ? 1 : 0) || existing.templateId !== templateId)) {
+    throw badRequest('Network template relationship cannot be changed after creation');
+  }
   if (input.managerHidden) {
     if (!template || template.managerHidden) {
       throw badRequest('Connection instances must reference an existing saved network');
@@ -147,13 +156,11 @@ const validateTemplateRelationship = (db: DatabaseSync, userId: string, input: N
 };
 
 const resolveStoredPassword = (
-  db: DatabaseSync,
-  userId: string,
   input: NetworkInput,
   secretBox: SecretBox,
+  existing: NetworkRow | null,
   template: NetworkRow | null
 ) => {
-  const existing = input.id ? getNetworkRow(db, userId, input.id) : null;
   if (input.clearPassword) {
     return null;
   }

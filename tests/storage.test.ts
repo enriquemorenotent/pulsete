@@ -404,6 +404,65 @@ test('storage rejects invalid template relationships', () => {
   }), /Connection instances must reference an existing saved network/);
 });
 
+test('storage rejects changing a network template relationship after creation', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const user = storage.bootstrapUser('alice', 'secret');
+  const template = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TemplateNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  const otherTemplate = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'OtherTemplateNet',
+    host: 'irc2.example.test',
+    port: 6697,
+    tls: true,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  const clone = storage.upsertNetwork(user.id, {
+    ...template,
+    id: undefined,
+    templateId: template.id,
+    managerHidden: true,
+    name: 'Connection instance',
+  });
+
+  assert.throws(() => storage.upsertNetwork(user.id, {
+    ...template,
+    templateId: otherTemplate.id,
+    managerHidden: true,
+  }), /Network template relationship cannot be changed after creation/);
+
+  assert.throws(() => storage.upsertNetwork(user.id, {
+    ...clone,
+    managerHidden: false,
+    templateId: null,
+  }), /Network template relationship cannot be changed after creation/);
+
+  assert.throws(() => storage.upsertNetwork(user.id, {
+    ...clone,
+    templateId: otherTemplate.id,
+  }), /Network template relationship cannot be changed after creation/);
+});
+
 test('network passwords stay encrypted at rest and inherit on hidden clones', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');

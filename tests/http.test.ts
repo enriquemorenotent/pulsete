@@ -539,6 +539,78 @@ test('network save rejects invalid template relationships', async () => {
   }
 });
 
+test('network save rejects changing a network template relationship after creation', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const template = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TemplateNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'Alice Example',
+    favorite: false,
+    autoJoin: [],
+  });
+  const otherTemplate = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'OtherTemplateNet',
+    host: 'irc2.example.test',
+    port: 6697,
+    tls: true,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'Alice Example',
+    favorite: false,
+    autoJoin: [],
+  });
+  const clone = storage.upsertNetwork(user.id, {
+    ...template,
+    id: undefined,
+    templateId: template.id,
+    managerHidden: true,
+    name: 'Connection instance',
+  });
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const hideTemplateResponse = await requestJson(port, 'PUT', `/api/networks/${template.id}`, {
+      ...template,
+      templateId: otherTemplate.id,
+      managerHidden: true,
+    }, cookie);
+    assert.equal(hideTemplateResponse.status, 400);
+    assert.equal(hideTemplateResponse.json.message, 'Network template relationship cannot be changed after creation');
+
+    const unhideCloneResponse = await requestJson(port, 'PUT', `/api/networks/${clone.id}`, {
+      ...clone,
+      templateId: null,
+      managerHidden: false,
+    }, cookie);
+    assert.equal(unhideCloneResponse.status, 400);
+    assert.equal(unhideCloneResponse.json.message, 'Network template relationship cannot be changed after creation');
+
+    const reparentCloneResponse = await requestJson(port, 'PUT', `/api/networks/${clone.id}`, {
+      ...clone,
+      templateId: otherTemplate.id,
+    }, cookie);
+    assert.equal(reparentCloneResponse.status, 400);
+    assert.equal(reparentCloneResponse.json.message, 'Network template relationship cannot be changed after creation');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('network save rejects conflicting password updates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
