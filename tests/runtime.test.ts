@@ -61,6 +61,58 @@ const createHandshakeServer = async (received: string[]) => {
   };
 };
 
+const createRegisteredServer = async (received: string[]) => {
+  const sockets = new Set<net.Socket>();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let nick: string | null = null;
+    let sawUser = false;
+    socket.on('close', () => sockets.delete(socket));
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+        if (line.startsWith('NICK ')) {
+          nick = line.slice('NICK '.length).trim() || nick;
+        }
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+        if (nick && sawUser) {
+          socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
+          sawUser = false;
+        }
+        index = buffer.indexOf('\n');
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  return {
+    server,
+    port: address.port,
+    hasConnections() {
+      return sockets.size > 0;
+    },
+    closeConnections() {
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+      sockets.clear();
+    },
+  };
+};
+
 test('runtime uses updated network settings on reconnect', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -101,6 +153,60 @@ test('runtime uses updated network settings on reconnect', async () => {
 
     runtime.connect(user.id, network.id);
     await waitFor(() => secondReceived.some((line) => line === 'NICK newnick'));
+  } finally {
+    runtime.disconnect(user.id, network.id);
+    first.closeConnections();
+    second.closeConnections();
+    await new Promise<void>((resolve, reject) => first.server.close((error) => (error ? reject(error) : resolve())));
+    await new Promise<void>((resolve, reject) => second.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('saving a connected network reconnects the live session with updated settings', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('runtime-live-user', 'secret');
+  storage.createSession(user.id);
+  const firstReceived: string[] = [];
+  const secondReceived: string[] = [];
+  const first = await createRegisteredServer(firstReceived);
+  const second = await createRegisteredServer(secondReceived);
+
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: '127.0.0.1',
+    port: first.port,
+    tls: false,
+    nick: 'oldnick',
+    altNicks: ['oldnick_', 'oldnick__'],
+    username: 'olduser',
+    realName: 'Old User',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  try {
+    runtime.connect(user.id, network.id);
+    await waitFor(() => firstReceived.includes('NICK oldnick'));
+    await waitFor(() => firstReceived.includes('USER olduser 0 * :Old User'));
+
+    runtime.saveNetwork(user.id, {
+      ...network,
+      host: '127.0.0.1',
+      port: second.port,
+      nick: 'newnick',
+      altNicks: ['newnick_', 'newnick__'],
+      username: 'newuser',
+      realName: 'New User',
+    });
+
+    await waitFor(() => secondReceived.includes('NICK newnick'));
+    await waitFor(() => secondReceived.includes('USER newuser 0 * :New User'));
+    await waitFor(() => !first.hasConnections());
+    assert.equal(storage.getNetwork(user.id, network.id)?.nick, 'newnick');
   } finally {
     runtime.disconnect(user.id, network.id);
     first.closeConnections();

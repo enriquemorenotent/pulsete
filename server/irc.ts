@@ -83,7 +83,10 @@ export class IrcConnection implements IrcConnectionState {
 
   updateProfile(profile: RuntimeNetworkProfile) {
     const reconnectPending = !this.connected && this.socket !== null;
-    if (reconnectPending) {
+    const restartConnectingSocket = reconnectPending && requiresSocketRestart(this.profile, profile);
+    const reconnectActiveSession = this.connected && requiresSessionReconnect(this.profile, profile);
+    const applyNickUpdate = this.connected && !reconnectActiveSession && this.profile.nick !== profile.nick;
+    if (restartConnectingSocket) {
       const socket = this.socket;
       this.socket = null;
       this.resetTransientState();
@@ -93,8 +96,16 @@ export class IrcConnection implements IrcConnectionState {
     if (!this.connected) {
       this.currentNick = profile.nick;
     }
-    if (reconnectPending) {
+    if (restartConnectingSocket) {
       connectSocket(this);
+      return;
+    }
+    if (reconnectActiveSession) {
+      this.reconnectWithUpdatedProfile();
+      return;
+    }
+    if (applyNickUpdate && this.currentNick !== profile.nick) {
+      this.setNick(profile.nick);
     }
   }
 
@@ -142,6 +153,26 @@ export class IrcConnection implements IrcConnectionState {
     return Array.from(current);
   }
 
+  private reconnectWithUpdatedProfile() {
+    const socket = this.socket;
+    this.clearReconnectTimer();
+    this.reconnectAttempts = 0;
+    this.socket = null;
+    this.resetTransientState();
+    this.connected = false;
+    this.serverName = null;
+    this.currentNick = this.profile.nick;
+    emitState(this);
+    emitStatus(this, 'Reconnecting to apply updated network settings', 'notice');
+    try {
+      socket?.write('QUIT :Reconnecting with updated settings\r\n');
+    } catch {
+      // Ignore write failures while replacing the socket.
+    }
+    socket?.end();
+    connectSocket(this);
+  }
+
   private createSelfMessage(target: string, body: string): MessageInput {
     return {
       id: randomUUID(),
@@ -155,3 +186,15 @@ export class IrcConnection implements IrcConnectionState {
     };
   }
 }
+
+const requiresSocketRestart = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
+  current.host !== next.host || current.port !== next.port || current.tls !== next.tls;
+
+const requiresSessionReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
+  requiresSocketRestart(current, next)
+  || current.password !== next.password
+  || current.username !== next.username
+  || getReportedRealName(current) !== getReportedRealName(next);
+
+const getReportedRealName = (profile: RuntimeNetworkProfile) =>
+  profile.realName || profile.name;
