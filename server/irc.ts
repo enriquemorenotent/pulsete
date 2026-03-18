@@ -83,7 +83,7 @@ export class IrcConnection implements IrcConnectionState {
 
   updateProfile(profile: RuntimeNetworkProfile) {
     const reconnectPending = !this.connected && this.socket !== null;
-    const restartConnectingSocket = reconnectPending && requiresSocketRestart(this.profile, profile);
+    const restartConnectingSocket = reconnectPending && requiresConnectingReconnect(this.profile, profile);
     const reconnectActiveSession = this.connected && requiresSessionReconnect(this.profile, profile);
     const applyNickUpdate = this.connected && !reconnectActiveSession && this.profile.nick !== profile.nick;
     if (restartConnectingSocket) {
@@ -189,6 +189,9 @@ export class IrcConnection implements IrcConnectionState {
 
 const requiresSocketRestart = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
   current.host !== next.host || current.port !== next.port || current.tls !== next.tls;
+
+const requiresConnectingReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
+  current.nick !== next.nick || requiresSessionReconnect(current, next);
 
 const requiresSessionReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
   requiresSocketRestart(current, next)

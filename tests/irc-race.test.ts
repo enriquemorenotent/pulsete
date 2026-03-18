@@ -423,6 +423,69 @@ test('updating a profile while connecting restarts the handshake with the new se
   }
 });
 
+test('updating login fields during handshake restarts even on the same server', () => {
+  const originalConnect = net.connect;
+  const firstWrites: string[] = [];
+  const secondWrites: string[] = [];
+  const sockets = [createMockSocket(firstWrites), createMockSocket(secondWrites)];
+  let connectCalls = 0;
+  net.connect = (() => sockets[connectCalls++]) as unknown as typeof net.connect;
+
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'oldnick',
+      altNicks: ['oldnick_', 'oldnick__'],
+      username: 'olduser',
+      realName: 'Old User',
+      hasPassword: true,
+      password: 'oldpass',
+      favorite: false,
+      autoJoin: [],
+    },
+    { onEvent() {} }
+  );
+
+  try {
+    connection.connect();
+    sockets[0].emit('connect');
+
+    assert.deepEqual(firstWrites, [
+      'PASS oldpass\r\n',
+      'NICK oldnick\r\n',
+      'USER olduser 0 * :Old User\r\n',
+    ]);
+
+    connection.updateProfile({
+      ...connection.profile,
+      nick: 'newnick',
+      altNicks: ['newnick_', 'newnick__'],
+      username: 'newuser',
+      realName: 'New User',
+      password: 'newpass',
+    });
+
+    assert.equal(connectCalls, 2);
+    assert.equal(sockets[0].destroyed, true);
+
+    sockets[1].emit('connect');
+
+    assert.deepEqual(secondWrites, [
+      'PASS newpass\r\n',
+      'NICK newnick\r\n',
+      'USER newuser 0 * :New User\r\n',
+    ]);
+  } finally {
+    net.connect = originalConnect;
+  }
+});
+
 test('multi-line names replies accumulate users across repeated 353 numerics', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const connection = new IrcConnection(
