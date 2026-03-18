@@ -19,6 +19,7 @@ export class Runtime {
   private readonly sockets = new Map<string, Map<WebSocket, string>>();
   private readonly connections = new Map<string, Map<string, IrcConnection>>();
   private readonly sessionExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private closing = false;
 
   constructor(store: Storage) {
     this.store = store;
@@ -67,6 +68,7 @@ export class Runtime {
   }
 
   close() {
+    this.closing = true;
     for (const userId of Array.from(this.sessionExpiryTimers.keys())) {
       this.clearUserSessionTimer(userId);
     }
@@ -287,6 +289,9 @@ export class Runtime {
     if (!connection) {
       connection = new IrcConnection(profile, {
         onEvent: (event) => {
+          if (this.closing) {
+            return;
+          }
           if (!this.store.hasActiveSessions(userId)) {
             this.closeUserSockets(userId);
             this.disconnectUser(userId);

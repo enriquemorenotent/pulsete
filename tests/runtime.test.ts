@@ -895,6 +895,7 @@ test('runtime close disconnects active connections and clears session timers', a
   try {
     runtime.connect(user.id, network.id, session.token);
     await waitFor(() => handshake.hasConnections());
+    const beforeShutdownMessages = storage.listMessages(user.id, network.id, 'server', 20).map((message) => message.body);
 
     assert.equal(state.connections.get(user.id)?.has(network.id), true);
     assert.equal(state.sessionExpiryTimers.size, 1);
@@ -904,6 +905,10 @@ test('runtime close disconnects active connections and clears session timers', a
     await waitFor(() => !handshake.hasConnections());
     assert.equal(state.connections.size, 0);
     assert.equal(state.sessionExpiryTimers.size, 0);
+    assert.deepEqual(
+      storage.listMessages(user.id, network.id, 'server', 20).map((message) => message.body),
+      beforeShutdownMessages
+    );
   } finally {
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
