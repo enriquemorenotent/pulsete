@@ -31,6 +31,7 @@ body {
   background: #111;
   color: var(--text);
   overflow: hidden;
+  font-size: clamp(16px, 0.18vw + 12px, 18px);
 }
 
 button,
@@ -56,7 +57,13 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: clamp(24px, 5vw, 72px);
+}
+
+.auth-screen {
+  background:
+    radial-gradient(circle at top, rgba(10, 132, 255, 0.16), transparent 28%),
+    linear-gradient(180deg, #171717, #0f0f0f 65%);
 }
 
 .shell--loading {
@@ -87,7 +94,12 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 14px;
+  padding: 16px 18px;
+}
+
+.topbar h1 {
+  font-size: clamp(2rem, 1.3rem + 1vw, 3rem);
+  line-height: 1;
 }
 
 .topbar h1,
@@ -162,7 +174,7 @@ input {
 }
 
 .chat__header {
-  padding: 12px 14px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -178,7 +190,7 @@ input {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 12px;
+  padding: clamp(16px, 1.4vw, 28px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -514,13 +526,52 @@ label input[readonly] {
 
 .empty-state {
   margin: auto;
+  width: min(720px, 100%);
   text-align: center;
+  padding: clamp(24px, 2.4vw, 40px);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(61, 61, 61, 0.32), rgba(28, 28, 28, 0.78));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.empty-state h3 {
+  font-size: clamp(1.5rem, 1rem + 0.8vw, 2.3rem);
+}
+
+.empty-state p {
+  margin: 12px auto 0;
+  max-width: 38ch;
+  line-height: 1.6;
 }
 
 .auth-card {
-  width: min(420px, 100%);
-  padding: 24px;
-  gap: 14px;
+  width: min(980px, 100%);
+  padding: clamp(28px, 3vw, 40px);
+  gap: clamp(24px, 4vw, 56px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  align-items: start;
+}
+
+.auth-card h1 {
+  font-size: clamp(2rem, 1.5rem + 1vw, 2.9rem);
+  line-height: 1.05;
+}
+
+.auth-card__intro,
+.auth-card__form {
+  display: grid;
+  gap: 18px;
+}
+
+.auth-card__intro > .muted {
+  max-width: 34ch;
+  line-height: 1.6;
+}
+
+.auth-card__form {
+  padding-left: clamp(0px, 2vw, 24px);
+  border-left: 1px solid var(--line);
 }
 
 .auth-tabs {
@@ -540,20 +591,21 @@ label input[readonly] {
 }
 
 .dialog {
-  width: min(760px, 100%);
+  width: min(920px, 100%);
   max-height: calc(100vh - 48px);
-  padding: 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: hidden;
 }
 
 .dialog--manager {
-  width: min(700px, 100%);
+  width: min(960px, 100%);
 }
 
 .dialog--editor {
-  width: min(760px, 100%);
+  width: min(1100px, 100%);
 }
 
 .dialog__titlebar {
@@ -570,6 +622,9 @@ label input[readonly] {
 .dialog__section--grow {
   min-height: 0;
   flex: 1;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .dialog__section h3 {
@@ -581,6 +636,12 @@ label input[readonly] {
   gap: 12px;
   grid-template-columns: minmax(0, 1fr) 110px;
   min-height: 240px;
+}
+
+.dialog__footer {
+  flex-shrink: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
 }
 
 .manager__list {
@@ -657,5 +718,18 @@ label input[readonly] {
   .manager__actions {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 860px) {
+  .auth-card {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-card__form {
+    padding-left: 0;
+    padding-top: 20px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 }

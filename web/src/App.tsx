@@ -81,6 +81,11 @@ function App() {
     updateBanner: (kind, message) => dispatch({ type: 'set-banner', banner: { kind, message } }),
   });
 
+  const closeNetworkEditor = () => {
+    setShowNetworkEditor(false);
+    setShowNetworkManager(true);
+  };
+
   if (loadingAuth || state.phase === 'loading') {
     return <div className="shell shell--loading">Loading Pulsete…</div>;
   }
@@ -135,7 +140,7 @@ function App() {
           onDeleteManagedNetwork={() => managedNetwork && actions.deleteNetwork(managedNetwork.id)}
           onConnectManagedNetwork={() => managedNetwork && actions.connectNetwork(managedNetwork)}
           onToggleFavoriteManagedNetwork={() => managedNetwork && actions.saveFavorite(managedNetwork, !managedNetwork.favorite)}
-          onCloseNetworkEditor={() => setShowNetworkEditor(false)}
+          onCloseNetworkEditor={closeNetworkEditor}
           onSubmitNetwork={actions.submitNetwork}
           onNetworkFormChange={(form) => dispatch({ type: 'set-network-form', form })}
           onEditorTabChange={setEditorTab}

@@ -5,6 +5,7 @@ type EditorActionParams = {
   dispatch: (action: Action) => void;
   setEditorTab: (value: EditorTab) => void;
   setManagedNetworkId: (value: string | null) => void;
+  setShowNetworkManager: (value: boolean) => void;
   setShowNetworkEditor: (value: boolean) => void;
   state: State;
 };
@@ -21,6 +22,7 @@ export function openNewNetworkEditor(params: EditorActionParams) {
     },
   });
   params.setEditorTab('servers');
+  params.setShowNetworkManager(false);
   params.setShowNetworkEditor(true);
 }
 
@@ -31,5 +33,6 @@ export function openExistingNetworkEditor(
   params.dispatch({ type: 'reset-network-form', form: toForm(network) });
   params.setManagedNetworkId(network.id);
   params.setEditorTab('servers');
+  params.setShowNetworkManager(false);
   params.setShowNetworkEditor(true);
 }
