@@ -795,6 +795,40 @@ test('close query returns not found for missing or foreign networks', async () =
   }
 });
 
+test('close query rejects invalid private-message targets over http', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  storage.upsertQuery(user.id, network.id, 'helper');
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/%23help`, undefined, cookie);
+    assert.equal(response.status, 400);
+    assert.equal(response.json.message, 'Private-message target is required');
+    assert.equal(storage.getQuery(user.id, network.id, 'helper')?.target, 'helper');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('static handler returns a clear error when built assets are missing', async () => {
   const assetRoot = join(mkdtempSync(join(tmpdir(), 'pulsete-assets-')), 'missing-dist');
   const server = createServer((req, res) => {
@@ -1160,6 +1194,7 @@ test('websocket session requests and command routing use the live session', asyn
   }) as Runtime['disconnect'];
   runtime.closeQuery = ((nextUserId: string, networkId: string, target: string) => {
     calls.push(`query.close:${nextUserId}:${networkId}:${target}`);
+    return target;
   }) as Runtime['closeQuery'];
   runtime.sendRaw = ((nextUserId: string, networkId: string, raw: string) => {
     calls.push(`raw.send:${nextUserId}:${networkId}:${raw}`);
@@ -1399,6 +1434,50 @@ test('query.open over websocket rejects invalid private-message targets', async 
       message: 'Private-message target is required',
     });
     assert.equal(storage.listQueries(user.id).length, 0);
+  } finally {
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve());
+      socket.close();
+    });
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('query.close over websocket rejects invalid private-message targets', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  storage.upsertQuery(user.id, network.id, 'helper');
+  const runtime = new Runtime(storage);
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const socket = await connectWebSocket(port, cookie);
+
+  try {
+    socket.send(JSON.stringify({ type: 'query.close', networkId: network.id, target: '#help' }));
+    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
+      type: 'error',
+      networkId: null,
+      message: 'Private-message target is required',
+    });
+    assert.equal(storage.getQuery(user.id, network.id, 'helper')?.target, 'helper');
   } finally {
     await new Promise<void>((resolve) => {
       socket.once('close', () => resolve());

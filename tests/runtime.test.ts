@@ -336,6 +336,31 @@ test('runtime closeQuery rejects missing networks before touching storage', () =
   assert.equal(storage.getQuery(user.id, 'missing-network', 'helper'), null);
 });
 
+test('runtime closeQuery rejects invalid private-message targets before touching storage', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('invalid-close-query-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+  storage.upsertQuery(user.id, network.id, 'helper');
+
+  assert.throws(() => runtime.closeQuery(user.id, network.id, '#help'), /Private-message target is required/);
+  assert.equal(storage.getQuery(user.id, network.id, 'helper')?.target, 'helper');
+});
+
 test('runtime openQuery rejects invalid private-message targets before touching storage', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

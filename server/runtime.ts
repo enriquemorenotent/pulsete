@@ -111,7 +111,9 @@ export class Runtime {
   }
   closeQuery(userId: string, networkId: string, target: string) {
     this.getRequiredNetwork(userId, networkId);
-    this.store.deleteQuery(userId, networkId, target);
+    const normalizedTarget = normalizeQueryTarget(target);
+    this.store.deleteQuery(userId, networkId, normalizedTarget);
+    return normalizedTarget;
   }
   markChannelRead(userId: string, channelId: string) {
     const channel = this.getRequiredChannel(userId, channelId);

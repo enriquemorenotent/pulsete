@@ -88,8 +88,11 @@ const handleClientMessage = (
         return;
       }
       case 'query.close':
-        context.runtime.closeQuery(userId, message.networkId, message.target);
-        context.runtime.send(userId, { type: 'query.close', networkId: message.networkId, target: message.target });
+        context.runtime.send(userId, {
+          type: 'query.close',
+          networkId: message.networkId,
+          target: context.runtime.closeQuery(userId, message.networkId, message.target),
+        });
         return;
       case 'message.send':
         context.runtime.sendMessage(userId, message.networkId, message.target, message.body, message.kind);

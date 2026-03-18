@@ -26,8 +26,8 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context, ses
     const networkId = decodeRouteParam(singleQueryMatch[1]);
     const target = decodeRouteParam(singleQueryMatch[2]);
     const userId = getUserId();
-    context.runtime.closeQuery(userId, networkId, target);
-    context.runtime.send(userId, { type: 'query.close', networkId, target });
+    const normalizedTarget = context.runtime.closeQuery(userId, networkId, target);
+    context.runtime.send(userId, { type: 'query.close', networkId, target: normalizedTarget });
     writeJson(res, 200, { ok: true });
     return true;
   }
