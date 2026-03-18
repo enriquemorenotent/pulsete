@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { NetworkProfile } from '../shared/protocol.js';
 import { isEncryptedSecret } from './network-secret.js';
-import { notFound } from './app-error.js';
+import { badRequest, notFound } from './app-error.js';
 import type { SecretBox } from './network-secret.js';
 import type { NetworkCountRow, NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-types.js';
 import {
@@ -54,7 +54,8 @@ export const upsertNetwork = (
 ): NetworkProfile => {
   const id = input.id ?? randomUUID();
   const now = Date.now();
-  const storedPassword = resolveStoredPassword(db, userId, input, secretBox);
+  const template = validateTemplateRelationship(db, userId, input);
+  const storedPassword = resolveStoredPassword(db, userId, input, secretBox, template);
   db.prepare(
     `INSERT INTO networks
        (id, userId, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin, createdAt, updatedAt)
@@ -130,9 +131,29 @@ const getTemplateRow = (db: DatabaseSync, userId: string, templateId: string) =>
   return db.prepare(sql).get(userId, templateId) as NetworkRow | undefined;
 };
 
-const resolveStoredPassword = (db: DatabaseSync, userId: string, input: NetworkInput, secretBox: SecretBox) => {
+const validateTemplateRelationship = (db: DatabaseSync, userId: string, input: NetworkInput) => {
+  const templateId = input.templateId ?? null;
+  const template = templateId ? getTemplateRow(db, userId, templateId) : null;
+  if (input.managerHidden) {
+    if (!template || template.managerHidden) {
+      throw badRequest('Connection instances must reference an existing saved network');
+    }
+    return template;
+  }
+  if (templateId) {
+    throw badRequest('Saved networks cannot reference a template');
+  }
+  return null;
+};
+
+const resolveStoredPassword = (
+  db: DatabaseSync,
+  userId: string,
+  input: NetworkInput,
+  secretBox: SecretBox,
+  template: NetworkRow | null
+) => {
   const existing = input.id ? getNetworkRow(db, userId, input.id) : null;
-  const template = input.templateId ? getTemplateRow(db, userId, input.templateId) : null;
   if (input.clearPassword) {
     return null;
   }

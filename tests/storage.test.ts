@@ -359,6 +359,51 @@ test('storage rejects upserting another user network id', () => {
   assert.equal(storage.getNetwork(alice.id, network.id)?.name, 'AliceNet');
 });
 
+test('storage rejects invalid template relationships', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const user = storage.bootstrapUser('alice', 'secret');
+  const template = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TemplateNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  assert.throws(() => storage.upsertNetwork(user.id, {
+    ...template,
+    id: undefined,
+    templateId: template.id,
+    managerHidden: false,
+    name: 'Visible clone',
+  }), /Saved networks cannot reference a template/);
+
+  assert.throws(() => storage.upsertNetwork(user.id, {
+    ...template,
+    id: undefined,
+    templateId: null,
+    managerHidden: true,
+    name: 'Orphan instance',
+  }), /Connection instances must reference an existing saved network/);
+
+  assert.throws(() => storage.upsertNetwork(user.id, {
+    ...template,
+    id: undefined,
+    templateId: 'missing-template',
+    managerHidden: true,
+    name: 'Broken instance',
+  }), /Connection instances must reference an existing saved network/);
+});
+
 test('network passwords stay encrypted at rest and inherit on hidden clones', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');

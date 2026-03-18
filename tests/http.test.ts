@@ -482,6 +482,63 @@ test('network save rejects IRC-unsafe fields and auto-join targets', async () =>
   }
 });
 
+test('network save rejects invalid template relationships', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const template = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TemplateNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'Alice Example',
+    favorite: false,
+    autoJoin: [],
+  });
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const visibleCloneResponse = await requestJson(port, 'POST', '/api/networks', {
+      ...template,
+      templateId: template.id,
+      managerHidden: false,
+      name: 'Visible clone',
+    }, cookie);
+    assert.equal(visibleCloneResponse.status, 400);
+    assert.equal(visibleCloneResponse.json.message, 'Saved networks cannot reference a template');
+
+    const orphanInstanceResponse = await requestJson(port, 'POST', '/api/networks', {
+      ...template,
+      templateId: null,
+      managerHidden: true,
+      name: 'Orphan instance',
+    }, cookie);
+    assert.equal(orphanInstanceResponse.status, 400);
+    assert.equal(orphanInstanceResponse.json.message, 'Connection instances must reference an existing saved network');
+
+    const missingTemplateResponse = await requestJson(port, 'POST', '/api/networks', {
+      ...template,
+      templateId: 'missing-template',
+      managerHidden: true,
+      name: 'Broken instance',
+    }, cookie);
+    assert.equal(missingTemplateResponse.status, 400);
+    assert.equal(missingTemplateResponse.json.message, 'Connection instances must reference an existing saved network');
+
+    assert.equal(storage.listNetworks(user.id).length, 1);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('network save rejects conflicting password updates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
