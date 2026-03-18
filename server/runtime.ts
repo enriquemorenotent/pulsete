@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { encode, type ServerMessage } from '../shared/protocol.js';
+import { encode, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
 import { notFound, unauthorized } from './app-error.js';
 import { IrcConnection } from './irc.js';
 import {
@@ -135,9 +135,13 @@ export class Runtime {
       this.getRequiredNetwork(userId, input.id);
     }
     const profile = this.store.upsertNetwork(userId, input);
-    const runtimeProfile = this.store.getRuntimeNetwork(userId, profile.id);
-    if (runtimeProfile) {
-      this.connections.get(userId)?.get(profile.id)?.updateProfile(runtimeProfile);
+    const updatedProfiles = [profile, ...this.syncTemplateInstances(userId, profile, input)];
+    for (const updatedProfile of updatedProfiles) {
+      const runtimeProfile = this.store.getRuntimeNetwork(userId, updatedProfile.id);
+      if (runtimeProfile) {
+        this.connections.get(userId)?.get(updatedProfile.id)?.updateProfile(runtimeProfile);
+      }
+      this.send(userId, { type: 'network.upsert', network: updatedProfile });
     }
     return profile;
   }
@@ -328,5 +332,35 @@ export class Runtime {
       .listNetworks(userId)
       .filter((candidate) => candidate.id === network.id || candidate.templateId === network.id)
       .map((candidate) => candidate.id);
+  }
+
+  private syncTemplateInstances(
+    userId: string,
+    profile: NetworkProfile,
+    input: Parameters<Storage['upsertNetwork']>[1]
+  ) {
+    if (profile.managerHidden) {
+      return [];
+    }
+    return this.store
+      .listNetworks(userId)
+      .filter((candidate) => candidate.managerHidden && candidate.templateId === profile.id)
+      .map((candidate) => this.store.upsertNetwork(userId, {
+        id: candidate.id,
+        templateId: profile.id,
+        managerHidden: true,
+        name: profile.name,
+        host: profile.host,
+        port: profile.port,
+        tls: profile.tls,
+        nick: profile.nick,
+        altNicks: profile.altNicks,
+        username: profile.username,
+        realName: profile.realName,
+        favorite: profile.favorite,
+        autoJoin: profile.autoJoin,
+        ...(input.password !== undefined ? { password: input.password } : {}),
+        ...(input.clearPassword ? { clearPassword: true } : {}),
+      }));
   }
 }

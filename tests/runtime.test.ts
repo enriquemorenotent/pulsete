@@ -216,6 +216,70 @@ test('saving a connected network reconnects the live session with updated settin
   }
 });
 
+test('saving a template network updates live hidden instances', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('templated-live-user', 'secret');
+  storage.createSession(user.id);
+  const firstReceived: string[] = [];
+  const secondReceived: string[] = [];
+  const first = await createRegisteredServer(firstReceived);
+  const second = await createRegisteredServer(secondReceived);
+
+  const template = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TemplateNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'oldnick',
+    altNicks: ['oldnick_', 'oldnick__'],
+    username: 'olduser',
+    realName: 'Old User',
+    favorite: false,
+    autoJoin: [],
+  });
+  const clone = storage.upsertNetwork(user.id, {
+    ...template,
+    id: undefined,
+    templateId: template.id,
+    managerHidden: true,
+    host: '127.0.0.1',
+    port: first.port,
+  });
+
+  try {
+    runtime.connect(user.id, clone.id);
+    await waitFor(() => firstReceived.includes('NICK oldnick'));
+    await waitFor(() => firstReceived.includes('USER olduser 0 * :Old User'));
+
+    runtime.saveNetwork(user.id, {
+      ...template,
+      host: '127.0.0.1',
+      port: second.port,
+      nick: 'newnick',
+      altNicks: ['newnick_', 'newnick__'],
+      username: 'newuser',
+      realName: 'New User',
+    });
+
+    await waitFor(() => secondReceived.includes('NICK newnick'));
+    await waitFor(() => secondReceived.includes('USER newuser 0 * :New User'));
+    await waitFor(() => !first.hasConnections());
+    assert.equal(storage.getNetwork(user.id, clone.id)?.host, '127.0.0.1');
+    assert.equal(storage.getNetwork(user.id, clone.id)?.port, second.port);
+    assert.equal(storage.getNetwork(user.id, clone.id)?.nick, 'newnick');
+  } finally {
+    runtime.disconnect(user.id, clone.id);
+    first.closeConnections();
+    second.closeConnections();
+    await new Promise<void>((resolve, reject) => first.server.close((error) => (error ? reject(error) : resolve())));
+    await new Promise<void>((resolve, reject) => second.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('channel events keep the untouched half of channel state', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

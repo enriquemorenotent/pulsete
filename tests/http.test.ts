@@ -181,6 +181,44 @@ const waitForWebSocketMessageType = (socket: WebSocket, type: string) =>
     socket.on('close', handleClose);
   });
 
+const waitForWebSocketMessages = (socket: WebSocket, type: string, count: number) =>
+  new Promise<Record<string, unknown>[]>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Timed out waiting for ${count} websocket messages: ${type}`));
+    }, 3000);
+    const messages: Record<string, unknown>[] = [];
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off('message', handleMessage);
+      socket.off('error', handleError);
+      socket.off('close', handleClose);
+    };
+    const handleMessage = (payload: WebSocket.RawData) => {
+      const message = JSON.parse(payload.toString()) as Record<string, unknown>;
+      if (message.type !== type) {
+        return;
+      }
+      messages.push(message);
+      if (messages.length < count) {
+        return;
+      }
+      cleanup();
+      resolve(messages);
+    };
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const handleClose = () => {
+      cleanup();
+      reject(new Error('WebSocket closed before the expected messages were received'));
+    };
+    socket.on('message', handleMessage);
+    socket.on('error', handleError);
+    socket.on('close', handleClose);
+  });
+
 test('register returns a conflict response for duplicate usernames', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -668,6 +706,64 @@ test('network save rejects empty string passwords', async () => {
     assert.equal(response.status, 400);
     assert.equal(response.json.message, 'Password cannot be empty');
   } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('network save broadcasts template and instance updates over websocket', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const template = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TemplateNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'oldnick',
+    altNicks: ['oldnick_'],
+    username: 'olduser',
+    realName: 'Old User',
+    favorite: false,
+    autoJoin: [],
+  });
+  const clone = storage.upsertNetwork(user.id, {
+    ...template,
+    id: undefined,
+    templateId: template.id,
+    managerHidden: true,
+    name: 'Connection instance',
+  });
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const socket = await connectWebSocket(port, cookie);
+
+  try {
+    const updatesPromise = waitForWebSocketMessages(socket, 'network.upsert', 2);
+    const response = await requestJson(port, 'PUT', `/api/networks/${template.id}`, {
+      ...template,
+      nick: 'newnick',
+      altNicks: ['newnick_'],
+      username: 'newuser',
+      realName: 'New User',
+    }, cookie);
+    assert.equal(response.status, 200);
+    const updates = await updatesPromise;
+    assert.deepEqual(
+      updates.map((message) => (message.network as { id: string }).id).sort(),
+      [clone.id, template.id].sort()
+    );
+    assert.equal((updates.find((message) => (message.network as { id: string }).id === template.id)?.network as { nick: string }).nick, 'newnick');
+    assert.equal((updates.find((message) => (message.network as { id: string }).id === clone.id)?.network as { nick: string }).nick, 'newnick');
+    assert.equal(storage.getNetwork(user.id, clone.id)?.nick, 'newnick');
+    assert.equal(storage.getNetwork(user.id, clone.id)?.username, 'newuser');
+  } finally {
+    socket.close();
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });

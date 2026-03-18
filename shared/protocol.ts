@@ -144,6 +144,10 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     networkId: z.string(),
   }),
   baseClientSchema.extend({
+    type: z.literal('network.upsert'),
+    network: networkSchema,
+  }),
+  baseClientSchema.extend({
     type: z.literal('channel.snapshot'),
     channel: channelSchema,
   }),

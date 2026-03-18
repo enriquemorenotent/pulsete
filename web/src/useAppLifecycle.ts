@@ -129,6 +129,7 @@ function handleServerMessage(message: ServerMessage, dispatch: (action: Action) 
       nick: message.nick,
     });
   }
+  if (message.type === 'network.upsert') return void dispatch({ type: 'upsert-network', network: message.network });
   if (message.type === 'network.remove') return void dispatch({ type: 'remove-network', networkId: message.networkId });
   if (message.type === 'channel.snapshot') return void dispatch({ type: 'upsert-channel', channel: message.channel });
   if (message.type === 'channel.remove') return void dispatch({ type: 'remove-channel', channelId: message.channelId, networkId: message.networkId });
