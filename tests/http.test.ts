@@ -448,6 +448,24 @@ test('bootstrap rejects blank credentials', async () => {
   }
 });
 
+test('bootstrap returns a conflict when the initial hasUsers precheck is stale', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  storage.bootstrapUser('existing', 'secret');
+  storage.hasUsers = () => false;
+
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'POST', '/api/bootstrap', { username: 'alice', password: 'secret' });
+    assert.equal(response.status, 409);
+    assert.equal(response.json.message, 'Bootstrap already completed');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('network save rejects invalid payloads', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

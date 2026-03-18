@@ -97,6 +97,17 @@ test('storage rejects blank credentials', () => {
   assert.throws(() => storage.createUser('bob', ''), /Password is required/);
 });
 
+test('storage rejects usernames that cannot seed IRC-safe defaults', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+
+  assert.throws(() => storage.bootstrapUser('alice bob', 'secret'), /Username cannot contain whitespace/);
+
+  storage.bootstrapUser('alice', 'secret');
+  assert.throws(() => storage.createUser('bob ross', 'secret'), /Username cannot contain whitespace/);
+});
+
 test('legacy spaced usernames still authenticate and block canonical duplicates', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');

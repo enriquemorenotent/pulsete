@@ -244,6 +244,70 @@ test('reconnect timers are unrefd and cleared on manual disconnect', () => {
   }
 });
 
+test('manual reconnect resets the exhausted retry budget', () => {
+  const originalConnect = net.connect;
+  const originalSetTimeout = global.setTimeout;
+  const originalClearTimeout = global.clearTimeout;
+  const scheduled: Array<() => void> = [];
+  const sockets = Array.from({ length: 5 }, () => createMockSocket([]));
+  let connectCalls = 0;
+  net.connect = (() => sockets[connectCalls++] as unknown as net.Socket) as typeof net.connect;
+  global.setTimeout = (((callback: () => void) => {
+    scheduled.push(callback);
+    return {
+      unref() {
+        return this;
+      },
+      hasRef() {
+        return false;
+      },
+    } as ReturnType<typeof setTimeout>;
+  }) as typeof setTimeout);
+  global.clearTimeout = (() => undefined) as typeof clearTimeout;
+
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'RetryNet',
+      host: 'retry.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    { onEvent() {} }
+  );
+
+  try {
+    connection.connect();
+    sockets[0].emit('close');
+    scheduled.shift()?.();
+    sockets[1].emit('close');
+    scheduled.shift()?.();
+    sockets[2].emit('close');
+    scheduled.shift()?.();
+    sockets[3].emit('close');
+
+    assert.equal(scheduled.length, 0);
+
+    connection.connect();
+    sockets[4].emit('close');
+
+    assert.equal(scheduled.length, 1);
+  } finally {
+    net.connect = originalConnect;
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+  }
+});
+
 test('nick fallback uses the updated profile nick after reconnecting', () => {
   const writes: string[] = [];
   const createMockSocket = () => ({
@@ -343,6 +407,91 @@ test('nick conflicts use configured alternate nicknames before suffix fallback',
     'tertiary is already in use. Retrying with tertiary_...',
   ]);
   assert.equal(connection.currentNick, 'tertiary_');
+});
+
+test('connected nick changes wait for server confirmation before mutating current nick', () => {
+  const writes: string[] = [];
+  const states: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'state') {
+          states.push(event.nick);
+        }
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = createMockSocket(writes) as any;
+  connection.setNick('newnick');
+
+  assert.equal(connection.currentNick, 'tester');
+  assert.equal(connection.pendingNick, 'newnick');
+  assert.deepEqual(states, []);
+  assert.deepEqual(writes, ['NICK newnick\r\n']);
+
+  handleIrcLine(connection, ':tester!user@host NICK newnick');
+
+  assert.equal(connection.currentNick, 'newnick');
+  assert.equal(connection.pendingNick, null);
+  assert.deepEqual(states, ['newnick']);
+});
+
+test('rejected connected nick changes keep the last accepted nick', () => {
+  const writes: string[] = [];
+  const statuses: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'status' && event.kind === 'error') {
+          statuses.push(event.message);
+        }
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = createMockSocket(writes) as any;
+  connection.setNick('newnick');
+  handleIrcLine(connection, ':irc.example 437 tester newnick :Nickname temporarily unavailable');
+
+  assert.equal(connection.currentNick, 'tester');
+  assert.equal(connection.pendingNick, null);
+  assert.deepEqual(writes, ['NICK newnick\r\n']);
+  assert.deepEqual(statuses, ['newnick was rejected by the server']);
 });
 
 test('updating a profile while connecting restarts the handshake with the new settings', () => {
@@ -521,6 +670,50 @@ test('multi-line names replies accumulate users across repeated 353 numerics', (
     (events.filter((event) => event.type === 'channel').at(-1) as { users: string[] } | undefined)?.users.slice().sort(),
     ['alice', 'bob', 'carol', 'dave']
   );
+});
+
+test('IRC self and channel matching ignores nickname and channel casing', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'Tester',
+      altNicks: ['Tester_', 'Tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  handleIrcLine(connection, ':tester!user@host JOIN #Help');
+  handleIrcLine(connection, ':other!user@host PRIVMSG #help :hello there');
+  handleIrcLine(connection, ':HELPER!user@host JOIN #help');
+  handleIrcLine(connection, ':helper!user@host NICK Helper');
+  handleIrcLine(connection, ':HELPER!user@host QUIT :bye');
+
+  assert.deepEqual(Array.from(connection.channelUsers.keys()), ['#Help']);
+  assert.deepEqual(Array.from(connection.channelUsers.get('#Help') ?? []), ['tester']);
+
+  const messageEvents = events.filter(
+    (event): event is { type: 'message'; message: Record<string, unknown> } => event.type === 'message'
+  );
+  assert.equal(messageEvents[0]?.message.target, '#Help');
+  assert.equal(messageEvents[0]?.message.self, true);
+  assert.equal(messageEvents[1]?.message.target, '#Help');
+  assert.equal(messageEvents[1]?.message.body, 'hello there');
 });
 
 test('self kicks emit a self part message and remove channel membership', () => {

@@ -3,6 +3,7 @@ import type { MessageInput } from './storage.js';
 import { connectSocket } from './irc-connect.js';
 import { emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
+import { findIrcCaseMatch } from './irc-parser.js';
 import type { Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
@@ -16,6 +17,7 @@ export class IrcConnection implements IrcConnectionState {
   connected = false;
   serverName: string | null = null;
   currentNick: string;
+  pendingNick: string | null = null;
   profile: RuntimeNetworkProfile;
 
   constructor(
@@ -34,8 +36,11 @@ export class IrcConnection implements IrcConnectionState {
     };
   }
 
-  connect() {
+  connect(resetRetryBudget = true) {
     this.clearReconnectTimer();
+    if (resetRetryBudget) {
+      this.reconnectAttempts = 0;
+    }
     connectSocket(this);
   }
 
@@ -54,6 +59,7 @@ export class IrcConnection implements IrcConnectionState {
     this.connected = false;
     this.serverName = null;
     this.currentNick = this.profile.nick;
+    this.pendingNick = null;
     if (wasActive) {
       emitState(this);
       emitStatus(this, 'Disconnected from server');
@@ -76,9 +82,15 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   setNick(nick: string) {
-    this.currentNick = nick;
+    if (this.connected) {
+      this.pendingNick = nick;
+    } else {
+      this.currentNick = nick;
+    }
     this.sendRaw(`NICK ${nick}`);
-    emitState(this);
+    if (!this.connected) {
+      emitState(this);
+    }
   }
 
   updateProfile(profile: RuntimeNetworkProfile) {
@@ -120,6 +132,7 @@ export class IrcConnection implements IrcConnectionState {
   resetTransientState() {
     this.buffer = '';
     this.channelUsers.clear();
+    this.pendingNick = null;
   }
 
   sendRaw(raw: string) {
@@ -145,11 +158,20 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
-    const current = this.channelUsers.get(channel) ?? new Set<string>();
+    const channelKey = findIrcCaseMatch(this.channelUsers.keys(), channel) ?? channel;
+    const current = this.channelUsers.get(channelKey) ?? new Set<string>();
     if (nick) {
-      joined ? current.add(nick) : current.delete(nick);
+      const existingNick = findIrcCaseMatch(current, nick);
+      if (joined) {
+        if (existingNick && existingNick !== nick) {
+          current.delete(existingNick);
+        }
+        current.add(nick);
+      } else if (existingNick) {
+        current.delete(existingNick);
+      }
     }
-    this.channelUsers.set(channel, current);
+    this.channelUsers.set(channelKey, current);
     return Array.from(current);
   }
 
@@ -162,6 +184,7 @@ export class IrcConnection implements IrcConnectionState {
     this.connected = false;
     this.serverName = null;
     this.currentNick = this.profile.nick;
+    this.pendingNick = null;
     emitState(this);
     emitStatus(this, 'Reconnecting to apply updated network settings', 'notice');
     try {

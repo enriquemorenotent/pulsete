@@ -33,8 +33,9 @@ export type IrcConnectionState = {
   connected: boolean;
   serverName: string | null;
   currentNick: string;
+  pendingNick: string | null;
   clearReconnectTimer(): void;
-  connect(): void;
+  connect(resetRetryBudget?: boolean): void;
   consume(chunk: string): void;
   join(channel: string): void;
   resetTransientState(): void;

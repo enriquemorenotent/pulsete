@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
 import { badRequest, conflict } from './app-error.js';
+import { requireIrcToken } from './irc-validate.js';
 import { hashPassword } from './storage-utils.js';
 import type { AuthUser, SessionRecord, SessionRow, UserRow } from './storage-types.js';
 
@@ -9,29 +10,18 @@ export const hasUsers = (db: DatabaseSync) => countRows(db, 'SELECT COUNT(*) AS 
 export const createUser = (db: DatabaseSync, username: string, password: string): AuthUser => {
   const nextUsername = normalizeUsername(username);
   assertCredentials(nextUsername, password);
-  if (findCanonicalUsers(db, nextUsername).length > 0) {
-    throw conflict('Username already exists');
-  }
-  const id = randomUUID();
-  const salt = randomBytes(16).toString('hex');
-  const passwordHash = hashPassword(password, salt);
-  try {
-    db.prepare('INSERT INTO users (id, username, passwordHash, salt, createdAt) VALUES (?, ?, ?, ?, ?)')
-      .run(id, nextUsername, passwordHash, salt, Date.now());
-  } catch (error) {
-    if (error instanceof Error && /UNIQUE constraint failed: users\.username/.test(error.message)) {
-      throw conflict('Username already exists');
-    }
-    throw error;
-  }
-  return { id, username: nextUsername };
+  return createUserRecord(db, nextUsername, password);
 };
 
 export const bootstrapUser = (db: DatabaseSync, username: string, password: string) => {
-  if (hasUsers(db)) {
-    throw new Error('Bootstrap has already been completed');
-  }
-  return createUser(db, username, password);
+  const nextUsername = normalizeUsername(username);
+  assertCredentials(nextUsername, password);
+  return withImmediateTransaction(db, () => {
+    if (hasUsers(db)) {
+      throw conflict('Bootstrap already completed');
+    }
+    return insertUser(db, nextUsername, password);
+  });
 };
 
 export const authenticate = (db: DatabaseSync, username: string, password: string): AuthUser | null => {
@@ -102,8 +92,47 @@ const assertCredentials = (username: string, password: string) => {
   if (!username) {
     throw badRequest('Username is required');
   }
+  requireIrcToken(username, 'Username cannot contain whitespace');
   if (!password) {
     throw badRequest('Password is required');
+  }
+};
+
+const createUserRecord = (db: DatabaseSync, username: string, password: string) =>
+  withImmediateTransaction(db, () => insertUser(db, username, password));
+
+const insertUser = (db: DatabaseSync, username: string, password: string) => {
+  if (findCanonicalUsers(db, username).length > 0) {
+    throw conflict('Username already exists');
+  }
+  const id = randomUUID();
+  const salt = randomBytes(16).toString('hex');
+  const passwordHash = hashPassword(password, salt);
+  try {
+    db.prepare('INSERT INTO users (id, username, passwordHash, salt, createdAt) VALUES (?, ?, ?, ?, ?)')
+      .run(id, username, passwordHash, salt, Date.now());
+  } catch (error) {
+    if (error instanceof Error && /UNIQUE constraint failed: users\.username/.test(error.message)) {
+      throw conflict('Username already exists');
+    }
+    throw error;
+  }
+  return { id, username };
+};
+
+const withImmediateTransaction = <T>(db: DatabaseSync, action: () => T) => {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const result = action();
+    db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Ignore rollback failures when SQLite has already unwound the transaction.
+    }
+    throw error;
   }
 };
 

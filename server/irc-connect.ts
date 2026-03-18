@@ -87,5 +87,5 @@ const retryConnect = (connection: IrcConnectionState, attempt: number) => {
     return;
   }
   emitStatus(connection, `Reconnecting (${attempt}/3)`, 'notice');
-  connection.connect();
+  connection.connect(false);
 };
