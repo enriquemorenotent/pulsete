@@ -26,15 +26,17 @@ export function AuthScreen(props: AuthScreenProps) {
             <div className="auth-tabs">
               <button
                 className={`button ${props.authMode === 'signin' ? 'button--primary' : ''}`}
+                aria-pressed={props.authMode === 'signin'}
                 onClick={() => props.onModeChange('signin')}
               >
-                Sign in
+                Existing account
               </button>
               <button
                 className={`button ${props.authMode === 'signup' ? 'button--primary' : ''}`}
+                aria-pressed={props.authMode === 'signup'}
                 onClick={() => props.onModeChange('signup')}
               >
-                Create account
+                New account
               </button>
             </div>
           ) : null}

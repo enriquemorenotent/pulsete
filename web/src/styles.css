@@ -31,7 +31,7 @@ body {
   background: #111;
   color: var(--text);
   overflow: hidden;
-  font-size: clamp(16px, 0.18vw + 12px, 18px);
+  font-size: clamp(16px, 0.26vw + 12px, 20px);
 }
 
 button,
@@ -57,12 +57,13 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(24px, 5vw, 72px);
+  padding: clamp(32px, 5vw, 104px);
 }
 
 .auth-screen {
   background:
-    radial-gradient(circle at top, rgba(10, 132, 255, 0.16), transparent 28%),
+    radial-gradient(circle at 24% 12%, rgba(10, 132, 255, 0.22), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.06), transparent 20%),
     linear-gradient(180deg, #171717, #0f0f0f 65%);
 }
 
@@ -94,12 +95,17 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 18px;
+  padding: clamp(18px, 1.3vw, 28px) clamp(20px, 1.5vw, 32px);
 }
 
 .topbar h1 {
   font-size: clamp(2rem, 1.3rem + 1vw, 3rem);
   line-height: 1;
+}
+
+.topbar > :first-child {
+  display: grid;
+  gap: 6px;
 }
 
 .topbar h1,
@@ -119,6 +125,12 @@ input {
   gap: 8px;
 }
 
+.topbar__status {
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .row--actions {
   justify-content: space-between;
 }
@@ -131,13 +143,13 @@ input {
   flex: 1;
   min-height: 0;
   display: grid;
-  gap: 12px;
-  grid-template-columns: 280px minmax(0, 1fr) 220px;
+  gap: clamp(12px, 0.9vw, 20px);
+  grid-template-columns: clamp(300px, 18vw, 420px) minmax(0, 1fr) clamp(240px, 15vw, 320px);
   overflow: hidden;
 }
 
 .workspace--no-nicklist {
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: clamp(300px, 18vw, 420px) minmax(0, 1fr);
 }
 
 .sidebar,
@@ -155,8 +167,8 @@ input {
 }
 
 .panel {
-  padding: 12px;
-  gap: 12px;
+  padding: clamp(14px, 1vw, 20px);
+  gap: 14px;
 }
 
 .panel__header,
@@ -166,7 +178,13 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+}
+
+.panel h2,
+.chat h2,
+.dialog h2 {
+  font-size: clamp(1.15rem, 0.95rem + 0.45vw, 1.6rem);
 }
 
 .chat {
@@ -174,7 +192,7 @@ input {
 }
 
 .chat__header {
-  padding: 16px 18px;
+  padding: clamp(18px, 1.3vw, 28px);
   border-bottom: 1px solid var(--line);
 }
 
@@ -190,7 +208,7 @@ input {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: clamp(16px, 1.4vw, 28px);
+  padding: clamp(22px, 2vw, 40px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -198,7 +216,7 @@ input {
 }
 
 .message {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid #454545;
   background: #292929;
 }
@@ -240,7 +258,7 @@ input {
 .composer {
   display: flex;
   gap: 10px;
-  padding: 12px;
+  padding: 14px 16px;
   border-top: 1px solid var(--line);
 }
 
@@ -285,7 +303,8 @@ input {
   border: 1px solid transparent;
   background: transparent;
   color: var(--text);
-  padding: 7px 8px;
+  min-height: 44px;
+  padding: 10px 12px;
   text-align: left;
   display: grid;
   align-items: center;
@@ -320,9 +339,9 @@ input {
   border: 0;
   background: transparent;
   color: var(--muted);
-  padding: 0 8px;
+  padding: 0 12px;
   min-height: 0;
-  font-size: 1rem;
+  font-size: 1.15rem;
 }
 
 .tree__close:hover {
@@ -354,8 +373,8 @@ input {
 
 .eyebrow {
   margin: 0 0 4px;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  font-size: clamp(0.8rem, 0.74rem + 0.14vw, 0.96rem);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -364,12 +383,12 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 22px;
-  padding: 0 8px;
+  min-height: 28px;
+  padding: 0 10px;
   border: 1px solid var(--line-strong);
   background: var(--panel-3);
   color: var(--text);
-  font-size: 0.78rem;
+  font-size: 0.84rem;
 }
 
 .badge--star {
@@ -388,8 +407,8 @@ input {
   border: 1px solid var(--line-strong);
   background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
   color: var(--text);
-  padding: 7px 12px;
-  min-height: 34px;
+  padding: 8px 15px;
+  min-height: 40px;
 }
 
 .button:hover:not(:disabled) {
@@ -407,14 +426,14 @@ input {
 }
 
 .button--small {
-  min-height: 28px;
-  padding: 4px 10px;
+  min-height: 34px;
+  padding: 6px 12px;
 }
 
 label {
   display: grid;
   gap: 6px;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 label input,
@@ -423,7 +442,8 @@ label input,
   border: 1px solid var(--line-strong);
   background: #3a3a3a;
   color: var(--text);
-  padding: 7px 10px;
+  min-height: 42px;
+  padding: 10px 12px;
 }
 
 label input[readonly] {
@@ -463,13 +483,13 @@ label input[readonly] {
 }
 
 .toast {
-  min-width: min(360px, calc(100vw - 36px));
-  max-width: min(420px, calc(100vw - 36px));
+  min-width: min(420px, calc(100vw - 36px));
+  max-width: min(480px, calc(100vw - 36px));
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 12px 12px 14px;
+  padding: 14px 14px 14px 16px;
   border: 1px solid var(--line-strong);
   background: rgba(39, 39, 39, 0.96);
   box-shadow: var(--shadow);
@@ -526,16 +546,16 @@ label input[readonly] {
 
 .empty-state {
   margin: auto;
-  width: min(720px, 100%);
+  width: min(1120px, calc(100% - 80px));
   text-align: center;
-  padding: clamp(24px, 2.4vw, 40px);
+  padding: clamp(32px, 3vw, 64px);
   border: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(61, 61, 61, 0.32), rgba(28, 28, 28, 0.78));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .empty-state h3 {
-  font-size: clamp(1.5rem, 1rem + 0.8vw, 2.3rem);
+  font-size: clamp(1.8rem, 1.2rem + 1vw, 3rem);
 }
 
 .empty-state p {
@@ -545,12 +565,13 @@ label input[readonly] {
 }
 
 .auth-card {
-  width: min(980px, 100%);
-  padding: clamp(28px, 3vw, 40px);
-  gap: clamp(24px, 4vw, 56px);
+  width: min(1680px, calc(100vw - 120px));
+  min-height: min(760px, calc(100vh - 144px));
+  padding: clamp(36px, 3.2vw, 64px);
+  gap: clamp(40px, 5vw, 104px);
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
-  align-items: start;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 0.9fr);
+  align-items: center;
 }
 
 .auth-card h1 {
@@ -561,22 +582,22 @@ label input[readonly] {
 .auth-card__intro,
 .auth-card__form {
   display: grid;
-  gap: 18px;
+  gap: 22px;
 }
 
 .auth-card__intro > .muted {
-  max-width: 34ch;
+  max-width: 40ch;
   line-height: 1.6;
 }
 
 .auth-card__form {
-  padding-left: clamp(0px, 2vw, 24px);
+  padding-left: clamp(0px, 3vw, 56px);
   border-left: 1px solid var(--line);
 }
 
 .auth-tabs {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .modal-scrim {
@@ -591,32 +612,32 @@ label input[readonly] {
 }
 
 .dialog {
-  width: min(920px, 100%);
+  width: min(1240px, calc(100vw - 72px));
   max-height: calc(100vh - 48px);
-  padding: 16px;
+  padding: clamp(20px, 1.2vw, 28px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   overflow: hidden;
 }
 
 .dialog--manager {
-  width: min(960px, 100%);
+  width: min(1440px, calc(100vw - 72px));
 }
 
 .dialog--editor {
-  width: min(1100px, 100%);
+  width: min(1600px, calc(100vw - 72px));
 }
 
 .dialog__titlebar {
-  padding: 4px 4px 8px;
+  padding: 6px 8px 12px;
   border-bottom: 1px solid var(--line);
 }
 
 .dialog__section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .dialog__section--grow {
@@ -628,14 +649,14 @@ label input[readonly] {
 }
 
 .dialog__section h3 {
-  font-size: 1rem;
+  font-size: clamp(1.05rem, 0.95rem + 0.3vw, 1.25rem);
 }
 
 .manager {
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) 110px;
-  min-height: 240px;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) clamp(140px, 10vw, 180px);
+  min-height: clamp(320px, 34vh, 520px);
 }
 
 .dialog__footer {
@@ -654,18 +675,18 @@ label input[readonly] {
 .manager__actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .editor__serverlist {
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) 110px;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) clamp(140px, 10vw, 180px);
 }
 
 .tabs {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -673,7 +694,7 @@ label input[readonly] {
   border: 0;
   background: transparent;
   color: var(--text);
-  padding: 8px 12px;
+  padding: 10px 16px;
 }
 
 .tab--active {
