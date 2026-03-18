@@ -494,6 +494,42 @@ test('rejected connected nick changes keep the last accepted nick', () => {
   assert.deepEqual(statuses, ['newnick was rejected by the server']);
 });
 
+test('profile updates retry a rejected connected nick change when the desired nick is still different', () => {
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    { onEvent() {} }
+  );
+
+  connection.connected = true;
+  connection.socket = createMockSocket(writes) as any;
+  connection.updateProfile({ ...connection.profile, nick: 'newnick', altNicks: ['newnick_', 'newnick__'] });
+  handleIrcLine(connection, ':irc.example 437 tester newnick :Nickname temporarily unavailable');
+  connection.updateProfile({ ...connection.profile, favorite: true });
+
+  assert.equal(connection.currentNick, 'tester');
+  assert.equal(connection.pendingNick, 'newnick');
+  assert.deepEqual(writes, [
+    'NICK newnick\r\n',
+    'NICK newnick\r\n',
+  ]);
+});
+
 test('updating a profile while connecting restarts the handshake with the new settings', () => {
   const originalConnect = net.connect;
   const firstWrites: string[] = [];

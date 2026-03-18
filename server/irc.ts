@@ -3,7 +3,7 @@ import type { MessageInput } from './storage.js';
 import { connectSocket } from './irc-connect.js';
 import { emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
-import { findIrcCaseMatch } from './irc-parser.js';
+import { findIrcCaseMatch, isSameIrcIdentifier } from './irc-parser.js';
 import type { Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
@@ -97,7 +97,9 @@ export class IrcConnection implements IrcConnectionState {
     const reconnectPending = !this.connected && this.socket !== null;
     const restartConnectingSocket = reconnectPending && requiresConnectingReconnect(this.profile, profile);
     const reconnectActiveSession = this.connected && requiresSessionReconnect(this.profile, profile);
-    const applyNickUpdate = this.connected && !reconnectActiveSession && this.profile.nick !== profile.nick;
+    const applyNickUpdate = this.connected
+      && !reconnectActiveSession
+      && !isSameIrcIdentifier(this.pendingNick ?? this.currentNick, profile.nick);
     if (restartConnectingSocket) {
       const socket = this.socket;
       this.socket = null;
@@ -116,7 +118,7 @@ export class IrcConnection implements IrcConnectionState {
       this.reconnectWithUpdatedProfile();
       return;
     }
-    if (applyNickUpdate && this.currentNick !== profile.nick) {
+    if (applyNickUpdate) {
       this.setNick(profile.nick);
     }
   }

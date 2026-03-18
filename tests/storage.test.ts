@@ -174,6 +174,25 @@ test('default networks use canonical usernames for legacy accounts', () => {
   assert.equal(snapshot.networks[0]?.realName, 'alice');
 });
 
+test('default networks sanitize legacy usernames with internal whitespace for IRC login fields', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const db = new DatabaseSync(file);
+  const salt = randomBytes(16).toString('hex');
+  db.prepare('INSERT INTO users (id, username, passwordHash, salt, createdAt) VALUES (?, ?, ?, ?, ?)')
+    .run('u1', 'bob ross', hashPassword('secret', salt), salt, Date.now());
+  db.close();
+
+  const snapshot = storage.snapshot('u1');
+
+  assert.equal(snapshot.user.username, 'bob ross');
+  assert.equal(snapshot.networks[0]?.nick, 'bob_ross');
+  assert.deepEqual(snapshot.networks[0]?.altNicks, ['bob_ross_', 'bob_ross__']);
+  assert.equal(snapshot.networks[0]?.username, 'bob_ross');
+  assert.equal(snapshot.networks[0]?.realName, 'bob ross');
+});
+
 test('snapshot seeds built-in networks for empty accounts', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');

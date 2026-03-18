@@ -24,7 +24,8 @@ export const parseJson = <T>(value: string, fallback: T): T => {
 
 export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
   const canonicalUsername = username.trim();
-  const altNicks = [`${canonicalUsername}_`, `${canonicalUsername}__`];
+  const ircIdentity = toDefaultIrcIdentity(canonicalUsername);
+  const altNicks = [`${ircIdentity}_`, `${ircIdentity}__`];
   return [
     {
       templateId: null,
@@ -33,9 +34,9 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.libera.chat',
       port: 6697,
       tls: true,
-      nick: canonicalUsername,
+      nick: ircIdentity,
       altNicks,
-      username: canonicalUsername,
+      username: ircIdentity,
       realName: canonicalUsername,
       favorite: true,
       autoJoin: [],
@@ -47,9 +48,9 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.oftc.net',
       port: 6697,
       tls: true,
-      nick: canonicalUsername,
+      nick: ircIdentity,
       altNicks,
-      username: canonicalUsername,
+      username: ircIdentity,
       realName: canonicalUsername,
       favorite: true,
       autoJoin: [],
@@ -61,9 +62,9 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.snoonet.org',
       port: 6697,
       tls: true,
-      nick: canonicalUsername,
+      nick: ircIdentity,
       altNicks,
-      username: canonicalUsername,
+      username: ircIdentity,
       realName: canonicalUsername,
       favorite: false,
       autoJoin: [],
@@ -75,15 +76,17 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.ircnet.com',
       port: 6667,
       tls: false,
-      nick: canonicalUsername,
+      nick: ircIdentity,
       altNicks,
-      username: canonicalUsername,
+      username: ircIdentity,
       realName: canonicalUsername,
       favorite: false,
       autoJoin: [],
     },
   ];
 };
+
+const toDefaultIrcIdentity = (username: string) => username.replace(/\s+/g, '_');
 
 export const toNetworkProfile = (row: NetworkRow): NetworkProfile => ({
   id: row.id,
