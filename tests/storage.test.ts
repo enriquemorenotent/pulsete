@@ -1,12 +1,24 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { createDatabase } from '../server/storage-db.js';
 import { Storage } from '../server/storage.js';
 import { hashPassword } from '../server/storage-utils.js';
+
+const waitFor = async (predicate: () => boolean, timeoutMs = 3000) => {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('Timed out waiting for condition');
+};
 
 test('storage bootstrap, auth, and persistence', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
@@ -345,4 +357,227 @@ test('storage rejects upserting another user network id', () => {
   }), /Network not found/);
   assert.equal(storage.getNetwork(bob.id, network.id), null);
   assert.equal(storage.getNetwork(alice.id, network.id)?.name, 'AliceNet');
+});
+
+test('network passwords stay encrypted at rest and inherit on hidden clones', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const user = storage.bootstrapUser('alice', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'SecretNet',
+    host: 'irc.example.test',
+    port: 6697,
+    tls: true,
+    nick: 'alice',
+    altNicks: ['alice_', 'alice__'],
+    username: 'alice',
+    realName: 'Alice Example',
+    password: 'server-secret',
+    favorite: true,
+    autoJoin: ['#ops'],
+  });
+
+  const publicProfile = storage.getNetwork(user.id, network.id);
+  assert.equal(publicProfile?.hasPassword, true);
+  assert.equal((publicProfile as { password?: string } | null)?.password, undefined);
+  assert.equal(storage.getRuntimeNetwork(user.id, network.id)?.password, 'server-secret');
+
+  const db = new DatabaseSync(file);
+  const row = db.prepare('SELECT password FROM networks WHERE id = ?').get(network.id) as { password: string };
+  db.close();
+  assert.notEqual(row.password, 'server-secret');
+  assert.match(row.password, /^enc-v1:/);
+
+  const clone = storage.upsertNetwork(user.id, {
+    templateId: network.id,
+    managerHidden: true,
+    name: `${network.name} clone`,
+    host: network.host,
+    port: network.port,
+    tls: network.tls,
+    nick: network.nick,
+    altNicks: network.altNicks,
+    username: network.username,
+    realName: network.realName,
+    favorite: network.favorite,
+    autoJoin: network.autoJoin,
+  });
+
+  assert.equal(clone.hasPassword, true);
+  assert.equal(storage.getRuntimeNetwork(user.id, clone.id)?.password, 'server-secret');
+});
+
+test('legacy plaintext passwords with the encryption prefix are migrated as plaintext', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const db = createDatabase(file);
+  db.prepare('INSERT INTO users (id, username, passwordHash, salt, createdAt) VALUES (?, ?, ?, ?, ?)')
+    .run('u1', 'legacy', 'hash', 'salt', Date.now());
+  db.prepare(
+    `INSERT INTO networks
+      (id, userId, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    'n1',
+    'u1',
+    null,
+    0,
+    'LegacyNet',
+    'irc.example.test',
+    6667,
+    0,
+    'legacy',
+    '[]',
+    'legacy',
+    'Legacy User',
+    'enc-v1:not-really-encrypted',
+    0,
+    '[]',
+    Date.now(),
+    Date.now()
+  );
+  db.close();
+
+  const storage = new Storage(file);
+  assert.equal(storage.getRuntimeNetwork('u1', 'n1')?.password, 'enc-v1:not-really-encrypted');
+  assert.equal(existsSync(join(dir, 'pulsete.secret')), true);
+
+  const verify = new DatabaseSync(file);
+  const row = verify.prepare('SELECT password FROM networks WHERE id = ?').get('n1') as { password: string };
+  verify.close();
+  assert.notEqual(row.password, 'enc-v1:not-really-encrypted');
+  assert.match(row.password, /^enc-v1:/);
+});
+
+test('empty string password updates preserve the existing saved password', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const user = storage.bootstrapUser('alice', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'SecretNet',
+    host: 'irc.example.test',
+    port: 6697,
+    tls: true,
+    nick: 'alice',
+    altNicks: ['alice_', 'alice__'],
+    username: 'alice',
+    realName: 'Alice Example',
+    password: 'server-secret',
+    favorite: true,
+    autoJoin: ['#ops'],
+  });
+
+  storage.upsertNetwork(user.id, {
+    ...network,
+    password: '',
+  });
+
+  assert.equal(storage.getRuntimeNetwork(user.id, network.id)?.password, 'server-secret');
+});
+
+test('storage fails fast when encrypted passwords exist but the secret key is missing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const user = storage.bootstrapUser('alice', 'secret');
+  storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'SecretNet',
+    host: 'irc.example.test',
+    port: 6697,
+    tls: true,
+    nick: 'alice',
+    altNicks: ['alice_', 'alice__'],
+    username: 'alice',
+    realName: 'Alice Example',
+    password: 'server-secret',
+    favorite: true,
+    autoJoin: ['#ops'],
+  });
+
+  unlinkSync(join(dir, 'pulsete.secret'));
+
+  assert.throws(() => new Storage(file), /Missing network secret key/);
+});
+
+test('expired sessions are rejected and cleaned up', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const user = storage.bootstrapUser('alice', 'secret');
+  const db = new DatabaseSync(file);
+
+  db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
+    .run('expired-token', user.id, Date.now() - 2_000, Date.now() - 1_000);
+  db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
+    .run('still-valid', user.id, Date.now(), Date.now() + 60_000);
+  db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
+    .run('cleanup-token', user.id, Date.now() - 2_000, Date.now() - 1_000);
+  db.close();
+
+  assert.equal(storage.getSession('expired-token'), null);
+  assert.equal(storage.getSession('still-valid')?.user.id, user.id);
+
+  storage.deleteExpiredSessions();
+
+  const verify = new DatabaseSync(file);
+  const remainingExpired = verify.prepare('SELECT COUNT(*) AS count FROM sessions WHERE token IN (?, ?)')
+    .get('expired-token', 'cleanup-token') as { count: number };
+  const remainingValid = verify.prepare('SELECT COUNT(*) AS count FROM sessions WHERE token = ?')
+    .get('still-valid') as { count: number };
+  verify.close();
+
+  assert.equal(remainingExpired.count, 0);
+  assert.equal(remainingValid.count, 1);
+});
+
+test('storage periodically removes expired sessions without direct access', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file, { sessionCleanupIntervalMs: 25 });
+  const user = storage.bootstrapUser('alice', 'secret');
+  const db = new DatabaseSync(file);
+
+  db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
+    .run('background-expired', user.id, Date.now() - 2_000, Date.now() - 1_000);
+  db.close();
+
+  await waitFor(() => {
+    const verify = new DatabaseSync(file);
+    const count = (verify.prepare('SELECT COUNT(*) AS count FROM sessions WHERE token = ?')
+      .get('background-expired') as { count: number }).count;
+    verify.close();
+    return count === 0;
+  });
+});
+
+test('storage close stops background cleanup work', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file, { sessionCleanupIntervalMs: 25 });
+  const user = storage.bootstrapUser('alice', 'secret');
+  const db = new DatabaseSync(file);
+
+  db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
+    .run('background-expired', user.id, Date.now() - 2_000, Date.now() - 1_000);
+  db.close();
+
+  storage.close();
+  storage.close();
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  const verify = new DatabaseSync(file);
+  const count = (verify.prepare('SELECT COUNT(*) AS count FROM sessions WHERE token = ?')
+    .get('background-expired') as { count: number }).count;
+  verify.close();
+
+  assert.equal(count, 1);
 });

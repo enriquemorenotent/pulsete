@@ -21,7 +21,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   altNicks: overrides.altNicks ?? ['dbugger_', 'dbugger__'],
   username: overrides.username ?? 'dbugger',
   realName: overrides.realName ?? 'dbugger',
-  password: overrides.password,
+  hasPassword: overrides.hasPassword ?? false,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
 });

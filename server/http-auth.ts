@@ -43,6 +43,7 @@ export const handleAuthRoutes = async ({ req, res, pathname, context, session }:
     const token = getSessionTokenFromRequest(req);
     if (token) {
       context.storage.deleteSession(token);
+      context.runtime.revokeSession(token, session?.user.id);
     }
     writeJson(res, 200, { ok: true }, clearSessionCookie());
     return true;

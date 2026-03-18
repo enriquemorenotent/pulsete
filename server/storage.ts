@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { historyWindowLimit, type AppSnapshot, type ChannelState, type NetworkProfile, type QueryBuffer } from '../shared/protocol.js';
+import { createSecretBox } from './network-secret.js';
 import { createDatabase } from './storage-db.js';
 import {
   authenticate,
@@ -9,6 +10,8 @@ import {
   deleteExpiredSessions,
   deleteSession,
   getSession,
+  getNextSessionExpiry,
+  hasActiveSessions,
   getUserById,
   hasUsers,
 } from './storage-auth.js';
@@ -28,16 +31,41 @@ import {
   upsertQuery,
 } from './storage-buffers.js';
 import { appendMessage, getMessageById, listMessages, listRecentMessages } from './storage-messages.js';
-import { deleteNetwork, ensureDefaultNetworks, getNetwork, listNetworks, upsertNetwork } from './storage-networks.js';
-import type { AuthUser, ChannelInput, MessageInput, NetworkInput, SessionRecord } from './storage-types.js';
+import {
+  deleteNetwork,
+  ensureDefaultNetworks,
+  getNetwork,
+  getRuntimeNetwork,
+  hasEncryptedNetworkPasswords,
+  listNetworks,
+  migrateLegacyNetworkPasswords,
+  upsertNetwork,
+} from './storage-networks.js';
+import type { AuthUser, ChannelInput, MessageInput, NetworkInput, RuntimeNetworkProfile, SessionRecord } from './storage-types.js';
 
 export { type AuthUser, type MessageInput, type NetworkInput };
 
+const defaultSessionCleanupIntervalMs = 60_000;
+
 export class Storage {
   private readonly db: DatabaseSync;
+  private readonly secretBox;
+  private readonly sessionCleanupTimer: ReturnType<typeof setInterval> | null;
+  private closed = false;
 
-  constructor(filePath?: string) {
+  constructor(filePath?: string, options: { sessionCleanupIntervalMs?: number } = {}) {
     this.db = createDatabase(filePath);
+    this.secretBox = createSecretBox(filePath, { createIfMissing: !hasEncryptedNetworkPasswords(this.db) });
+    migrateLegacyNetworkPasswords(this.db, this.secretBox);
+    deleteExpiredSessions(this.db);
+    const cleanupIntervalMs = options.sessionCleanupIntervalMs ?? defaultSessionCleanupIntervalMs;
+    if (cleanupIntervalMs > 0) {
+      const timer = setInterval(() => deleteExpiredSessions(this.db), cleanupIntervalMs);
+      timer.unref?.();
+      this.sessionCleanupTimer = timer;
+    } else {
+      this.sessionCleanupTimer = null;
+    }
   }
 
   hasUsers() { return hasUsers(this.db); }
@@ -49,8 +77,13 @@ export class Storage {
   getSession(token: string): SessionRecord | null { return getSession(this.db, token); }
   deleteSession(token: string) { deleteSession(this.db, token); }
   deleteExpiredSessions() { deleteExpiredSessions(this.db); }
+  getNextSessionExpiry(userId: string) { return getNextSessionExpiry(this.db, userId); }
+  hasActiveSessions(userId: string) { return hasActiveSessions(this.db, userId); }
   listNetworks(userId: string): NetworkProfile[] { return listNetworks(this.db, userId); }
   getNetwork(userId: string, networkId: string): NetworkProfile | null { return getNetwork(this.db, userId, networkId); }
+  getRuntimeNetwork(userId: string, networkId: string): RuntimeNetworkProfile | null {
+    return getRuntimeNetwork(this.db, userId, networkId, this.secretBox);
+  }
   deleteNetwork(userId: string, networkId: string) { deleteNetwork(this.db, userId, networkId); }
   listChannels(userId: string, networkId?: string): ChannelState[] { return listChannels(this.db, userId, networkId); }
   listQueries(userId: string, networkId?: string): QueryBuffer[] { return listQueries(this.db, userId, networkId); }
@@ -72,7 +105,7 @@ export class Storage {
   }
 
   upsertNetwork(userId: string, input: NetworkInput): NetworkProfile {
-    return upsertNetwork(this.db, userId, input);
+    return upsertNetwork(this.db, userId, input, this.secretBox);
   }
 
   upsertChannel(userId: string, input: ChannelInput): ChannelState {
@@ -111,5 +144,16 @@ export class Storage {
       activeBuffer: activeChannel ? `${activeNetworkId}:${activeChannel.name}` : activeNetworkId ? `${activeNetworkId}:server` : '',
       bootstrapped: this.hasUsers(),
     };
+  }
+
+  close() {
+    if (this.closed) {
+      return;
+    }
+    this.closed = true;
+    if (this.sessionCleanupTimer) {
+      clearInterval(this.sessionCleanupTimer);
+    }
+    this.db.close();
   }
 }

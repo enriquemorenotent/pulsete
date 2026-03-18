@@ -5,12 +5,17 @@ import { Storage } from './storage.js';
 import { attachWebSocketServer } from './ws-server.js';
 
 const PORT = Number(process.env.PORT ?? 18487);
+const HOST = process.env.HOST ?? '127.0.0.1';
 const storage = new Storage();
 const runtime = new Runtime(storage);
 const server = createServer(createHttpHandler({ storage, runtime }));
 
 attachWebSocketServer(server, { storage, runtime });
+server.on('close', () => {
+  runtime.close();
+  storage.close();
+});
 
-server.listen(PORT, () => {
-  console.log(`Pulsete server listening on http://127.0.0.1:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Pulsete server listening on http://${HOST}:${PORT}`);
 });

@@ -4,7 +4,7 @@ import { connectSocket } from './irc-connect.js';
 import { emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import type { Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export class IrcConnection implements IrcConnectionState {
   socket: IrcSocket | null = null;
@@ -12,13 +12,14 @@ export class IrcConnection implements IrcConnectionState {
   readonly channelUsers = new Map<string, Set<string>>();
   manualDisconnect = false;
   reconnectAttempts = 0;
+  reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   connected = false;
   serverName: string | null = null;
   currentNick: string;
-  profile: NetworkProfile;
+  profile: RuntimeNetworkProfile;
 
   constructor(
-    profile: NetworkProfile,
+    profile: RuntimeNetworkProfile,
     readonly handlers: Handlers
   ) {
     this.profile = profile;
@@ -34,12 +35,14 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   connect() {
+    this.clearReconnectTimer();
     connectSocket(this);
   }
 
   disconnect() {
     this.manualDisconnect = true;
     this.reconnectAttempts = 0;
+    this.clearReconnectTimer();
     const socket = this.socket;
     if (socket) {
       this.sendRaw('QUIT :Client disconnecting');
@@ -78,7 +81,7 @@ export class IrcConnection implements IrcConnectionState {
     emitState(this);
   }
 
-  updateProfile(profile: NetworkProfile) {
+  updateProfile(profile: RuntimeNetworkProfile) {
     const reconnectPending = !this.connected && this.socket !== null;
     if (reconnectPending) {
       const socket = this.socket;
@@ -93,6 +96,14 @@ export class IrcConnection implements IrcConnectionState {
     if (reconnectPending) {
       connectSocket(this);
     }
+  }
+
+  clearReconnectTimer() {
+    if (!this.reconnectTimer) {
+      return;
+    }
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
   }
 
   resetTransientState() {

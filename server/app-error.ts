@@ -9,8 +9,10 @@ export class AppError extends Error {
 }
 
 export const badRequest = (message: string) => new AppError(400, message);
+export const unauthorized = (message: string) => new AppError(401, message);
 export const notFound = (message: string) => new AppError(404, message);
 export const conflict = (message: string) => new AppError(409, message);
+export const payloadTooLarge = (message: string) => new AppError(413, message);
 
 export const toAppError = (error: unknown) => {
   if (error instanceof AppError) {

@@ -79,12 +79,30 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
         <EditableField label="Third choice:" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />
         <EditableField label="Real name:" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
         <EditableField label="User name:" value={props.form.username} onChange={(value) => props.onChange({ username: value })} />
-        <EditableField label="Password:" type="password" value={props.form.password} onChange={(value) => props.onChange({ password: value })} />
+        <label>
+          Password:
+          <input
+            type="password"
+            value={props.form.password}
+            placeholder={props.form.hasSavedPassword && !props.form.clearPassword ? 'Saved on server' : ''}
+            onChange={(event) => props.onChange({ clearPassword: false, password: event.target.value })}
+          />
+        </label>
         <label>
           Character set:
           <input value="UTF-8 (Unicode)" readOnly />
         </label>
       </div>
+      {props.form.hasSavedPassword ? (
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={props.form.clearPassword}
+            onChange={(event) => props.onChange({ clearPassword: event.target.checked, password: '' })}
+          />
+          Remove saved password on save
+        </label>
+      ) : null}
       <label className="checkbox">
         <input type="checkbox" checked={props.form.favorite} onChange={(event) => props.onChange({ favorite: event.target.checked })} />
         Favorite network

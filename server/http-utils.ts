@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { badRequest } from './app-error.js';
+import { badRequest, payloadTooLarge } from './app-error.js';
 
 export const cookieName = 'pulsete_session';
+export const jsonBodyLimitBytes = 64 * 1024;
 const requestBase = 'http://127.0.0.1';
 const decodeCookieValue = (value: string) => {
   try {
@@ -23,10 +24,20 @@ export const parseCookies = (header: string | undefined) =>
       })
   );
 
-export const readJson = async (req: IncomingMessage) => {
+export const readJson = async (req: IncomingMessage, maxBytes = jsonBodyLimitBytes) => {
+  const declaredLength = Number(req.headers['content-length'] ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw payloadTooLarge('Request body too large');
+  }
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
   for await (const chunk of req) {
-    chunks.push(Buffer.from(chunk));
+    const buffer = Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > maxBytes) {
+      throw payloadTooLarge('Request body too large');
+    }
+    chunks.push(buffer);
   }
   const raw = Buffer.concat(chunks).toString('utf8');
   return raw.length > 0 ? JSON.parse(raw) : {};

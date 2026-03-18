@@ -1,5 +1,6 @@
 import { pbkdf2Sync } from 'node:crypto';
 import type { ChannelState, NetworkProfile, QueryBuffer } from '../shared/protocol.js';
+import type { SecretBox } from './network-secret.js';
 import type {
   ChannelRow,
   MessageInput,
@@ -7,6 +8,7 @@ import type {
   NetworkInput,
   NetworkRow,
   QueryRow,
+  RuntimeNetworkProfile,
 } from './storage-types.js';
 
 export const hashPassword = (password: string, salt: string) =>
@@ -95,10 +97,21 @@ export const toNetworkProfile = (row: NetworkRow): NetworkProfile => ({
   altNicks: parseJson<string[]>(row.altNicks, []),
   username: row.username,
   realName: row.realName,
-  password: row.password ?? undefined,
+  hasPassword: Boolean(row.password),
   favorite: Boolean(row.favorite),
   autoJoin: parseJson<string[]>(row.autoJoin, []),
 });
+
+export const toRuntimeNetworkProfile = (row: NetworkRow, secretBox: SecretBox): RuntimeNetworkProfile => ({
+  ...toNetworkProfile(row),
+  password: decryptNetworkPassword(row.password, secretBox),
+});
+
+export const encryptNetworkPassword = (password: string | undefined, secretBox: SecretBox) =>
+  password ? secretBox.encrypt(password) : null;
+
+export const decryptNetworkPassword = (password: string | null, secretBox: SecretBox) =>
+  password ? secretBox.decrypt(password) : undefined;
 
 export const toChannelState = (row: ChannelRow): ChannelState => ({
   id: row.id,

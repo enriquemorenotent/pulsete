@@ -54,7 +54,7 @@ export const api = {
       method: 'POST',
       body: '{}',
     }),
-  saveNetwork: (payload: Partial<NetworkProfile> & { id?: string }) =>
+  saveNetwork: (payload: Partial<NetworkProfile> & { clearPassword?: boolean; id?: string; password?: string }) =>
     apiRequest<{ network: NetworkProfile }>(payload.id ? `/api/networks/${payload.id}` : '/api/networks', {
       method: payload.id ? 'PUT' : 'POST',
       body: JSON.stringify(payload),

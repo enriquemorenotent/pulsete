@@ -1,9 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { NetworkProfile } from '../shared/protocol.js';
+import { isEncryptedSecret } from './network-secret.js';
 import { notFound } from './app-error.js';
-import type { NetworkCountRow, NetworkInput, NetworkRow } from './storage-types.js';
-import { defaultNetworkTemplates, toNetworkProfile } from './storage-utils.js';
+import type { SecretBox } from './network-secret.js';
+import type { NetworkCountRow, NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-types.js';
+import {
+  defaultNetworkTemplates,
+  encryptNetworkPassword,
+  toNetworkProfile,
+  toRuntimeNetworkProfile,
+} from './storage-utils.js';
 
 const networkColumns =
   'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin';
@@ -25,14 +32,29 @@ export const ensureDefaultNetworks = (db: DatabaseSync, userId: string, username
 };
 
 export const getNetwork = (db: DatabaseSync, userId: string, networkId: string): NetworkProfile | null => {
-  const sql = `SELECT ${networkColumns} FROM networks WHERE userId = ? AND id = ?`;
-  const row = db.prepare(sql).get(userId, networkId) as NetworkRow | undefined;
+  const row = getNetworkRow(db, userId, networkId);
   return row ? toNetworkProfile(row) : null;
 };
 
-export const upsertNetwork = (db: DatabaseSync, userId: string, input: NetworkInput): NetworkProfile => {
+export const getRuntimeNetwork = (
+  db: DatabaseSync,
+  userId: string,
+  networkId: string,
+  secretBox: SecretBox
+): RuntimeNetworkProfile | null => {
+  const row = getNetworkRow(db, userId, networkId);
+  return row ? toRuntimeNetworkProfile(row, secretBox) : null;
+};
+
+export const upsertNetwork = (
+  db: DatabaseSync,
+  userId: string,
+  input: NetworkInput,
+  secretBox: SecretBox
+): NetworkProfile => {
   const id = input.id ?? randomUUID();
   const now = Date.now();
+  const storedPassword = resolveStoredPassword(db, userId, input, secretBox);
   db.prepare(
     `INSERT INTO networks
        (id, userId, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin, createdAt, updatedAt)
@@ -66,7 +88,7 @@ export const upsertNetwork = (db: DatabaseSync, userId: string, input: NetworkIn
     JSON.stringify(input.altNicks ?? []),
     input.username,
     input.realName,
-    input.password ?? null,
+    storedPassword,
     input.favorite ? 1 : 0,
     JSON.stringify(input.autoJoin ?? []),
     now,
@@ -81,6 +103,49 @@ export const upsertNetwork = (db: DatabaseSync, userId: string, input: NetworkIn
 
 export const deleteNetwork = (db: DatabaseSync, userId: string, networkId: string) => {
   db.prepare('DELETE FROM networks WHERE userId = ? AND (id = ? OR templateId = ?)').run(userId, networkId, networkId);
+};
+
+export const migrateLegacyNetworkPasswords = (db: DatabaseSync, secretBox: SecretBox) => {
+  const rows = db.prepare('SELECT id, password FROM networks WHERE password IS NOT NULL')
+    .all() as Array<{ id: string; password: string }>;
+  for (const row of rows) {
+    if (!secretBox.isEncrypted(row.password)) {
+      db.prepare('UPDATE networks SET password = ? WHERE id = ?')
+        .run(secretBox.encrypt(row.password), row.id);
+    }
+  }
+};
+
+export const hasEncryptedNetworkPasswords = (db: DatabaseSync) =>
+  (db.prepare('SELECT password FROM networks WHERE password IS NOT NULL').all() as Array<{ password: string }>)
+    .some((row) => isEncryptedSecret(row.password));
+
+const getNetworkRow = (db: DatabaseSync, userId: string, networkId: string) => {
+  const sql = `SELECT ${networkColumns} FROM networks WHERE userId = ? AND id = ?`;
+  return db.prepare(sql).get(userId, networkId) as NetworkRow | undefined;
+};
+
+const getTemplateRow = (db: DatabaseSync, userId: string, templateId: string) => {
+  const sql = `SELECT ${networkColumns} FROM networks WHERE userId = ? AND id = ?`;
+  return db.prepare(sql).get(userId, templateId) as NetworkRow | undefined;
+};
+
+const resolveStoredPassword = (db: DatabaseSync, userId: string, input: NetworkInput, secretBox: SecretBox) => {
+  const existing = input.id ? getNetworkRow(db, userId, input.id) : null;
+  const template = input.templateId ? getTemplateRow(db, userId, input.templateId) : null;
+  if (input.clearPassword) {
+    return null;
+  }
+  if (input.password !== undefined) {
+    if (input.password.length === 0) {
+      return existing?.password ?? template?.password ?? null;
+    }
+    return encryptNetworkPassword(input.password, secretBox);
+  }
+  if (existing?.password) {
+    return existing.password;
+  }
+  return template?.password ?? null;
 };
 
 type SaveNetwork = (userId: string, input: NetworkInput) => NetworkProfile;

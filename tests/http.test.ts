@@ -47,6 +47,15 @@ const requestJson = async (
   };
 };
 
+const request = (port: number, path: string, init?: RequestInit) =>
+  fetch(`http://127.0.0.1:${port}${path}`, init);
+
+const sessionCookieFrom = (response: Response) => {
+  const setCookie = response.headers.get('set-cookie');
+  assert.ok(setCookie, 'expected a session cookie');
+  return setCookie.split(';', 1)[0];
+};
+
 const sendRawRequest = (port: number, request: string) =>
   new Promise<string>((resolve, reject) => {
     const socket = net.connect(port, '127.0.0.1', () => socket.write(request));
@@ -90,6 +99,52 @@ const connectWebSocket = (port: number, cookie: string) =>
       reject(error);
     };
     socket.on('open', handleOpen);
+    socket.on('error', handleError);
+  });
+
+const waitForWebSocketClose = (socket: WebSocket) =>
+  new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out waiting for websocket close'));
+    }, 3000);
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off('close', handleClose);
+      socket.off('error', handleError);
+    };
+    const handleClose = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    socket.on('close', handleClose);
+    socket.on('error', handleError);
+  });
+
+const waitForWebSocketCloseDetails = (socket: WebSocket) =>
+  new Promise<{ code: number; reason: string }>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out waiting for websocket close'));
+    }, 3000);
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off('close', handleClose);
+      socket.off('error', handleError);
+    };
+    const handleClose = (code: number, reason: Buffer) => {
+      cleanup();
+      resolve({ code, reason: reason.toString('utf8') });
+    };
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    socket.on('close', handleClose);
     socket.on('error', handleError);
   });
 
@@ -165,6 +220,137 @@ test('login preserves raw usernames for legacy canonical collisions', async () =
     assert.equal(response.status, 200);
     assert.equal((response.json as { user: { id: string; username: string } }).user.id, 'u2');
     assert.equal((response.json as { user: { id: string; username: string } }).user.username, ' alice ');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('auth lifecycle issues and clears real session cookies', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const bootstrap = await request(port, '/api/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'alice', password: 'secret' }),
+    });
+    assert.equal(bootstrap.status, 200);
+    const bootstrapCookie = sessionCookieFrom(bootstrap);
+    const bootstrapBody = await bootstrap.json() as { authenticated: boolean };
+    assert.equal(bootstrapBody.authenticated, true);
+
+    const bootstrapSession = await request(port, '/api/session', { headers: { Cookie: bootstrapCookie } });
+    assert.equal(bootstrapSession.status, 200);
+    assert.equal((await bootstrapSession.json() as { authenticated: boolean }).authenticated, true);
+
+    const logout = await request(port, '/api/logout', {
+      method: 'POST',
+      headers: { Cookie: bootstrapCookie, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(logout.status, 200);
+    assert.match(logout.headers.get('set-cookie') ?? '', /Max-Age=0/);
+
+    const afterLogout = await request(port, '/api/session', { headers: { Cookie: bootstrapCookie } });
+    assert.equal(afterLogout.status, 200);
+    assert.equal((await afterLogout.json() as { authenticated: boolean }).authenticated, false);
+
+    const register = await request(port, '/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'bob', password: 'secret2' }),
+    });
+    assert.equal(register.status, 200);
+    const registerCookie = sessionCookieFrom(register);
+    assert.equal((await register.json() as { user: { username: string } }).user.username, 'bob');
+
+    const login = await request(port, '/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'bob', password: 'secret2' }),
+    });
+    assert.equal(login.status, 200);
+    const loginCookie = sessionCookieFrom(login);
+    const loginBody = await login.json() as { authenticated: boolean; user: { username: string } };
+    assert.equal(loginBody.authenticated, true);
+    assert.equal(loginBody.user.username, 'bob');
+
+    const loginSession = await request(port, '/api/session', { headers: { Cookie: loginCookie } });
+    assert.equal(loginSession.status, 200);
+    assert.equal((await loginSession.json() as { authenticated: boolean }).authenticated, true);
+
+    const registerLogout = await request(port, '/api/logout', {
+      method: 'POST',
+      headers: { Cookie: registerCookie, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(registerLogout.status, 200);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('unauthenticated api requests are rejected', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  storage.bootstrapUser('alice', 'secret');
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'GET', '/api/networks');
+    assert.equal(response.status, 401);
+    assert.equal(response.json.message, 'Authentication required');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('unauthenticated websocket upgrades are refused', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  storage.bootstrapUser('alice', 'secret');
+  const runtime = new Runtime(storage);
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+
+  try {
+    const response = await sendRawRequest(
+      port,
+      [
+        'GET /ws HTTP/1.1',
+        'Host: 127.0.0.1',
+        'Connection: Upgrade',
+        'Upgrade: websocket',
+        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+        'Sec-WebSocket-Version: 13',
+        '',
+        '',
+      ].join('\r\n')
+    );
+    assert.equal(response.includes('101 Switching Protocols'), false);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('oversized json bodies are rejected before parsing', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'POST', '/api/bootstrap', {
+      username: 'alice',
+      password: 'x'.repeat(70_000),
+    });
+    assert.equal(response.status, 413);
+    assert.equal(response.json.message, 'Request body too large');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -246,6 +432,112 @@ test('network save rejects invalid payloads', async () => {
     }, cookie);
     assert.equal(response.status, 400);
     assert.equal(response.json.message, 'Network name is required');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('network save rejects IRC-unsafe fields and auto-join targets', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const realNameResponse = await requestJson(port, 'POST', '/api/networks', {
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'alice',
+      altNicks: ['alice_'],
+      username: 'alice',
+      realName: 'Alice\r\nOPER root',
+      favorite: false,
+      autoJoin: [],
+    }, cookie);
+    assert.equal(realNameResponse.status, 400);
+    assert.equal(realNameResponse.json.message, 'Real name cannot contain carriage returns or line feeds');
+
+    const autoJoinResponse = await requestJson(port, 'POST', '/api/networks', {
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'alice',
+      altNicks: ['alice_'],
+      username: 'alice',
+      realName: 'Alice Example',
+      favorite: false,
+      autoJoin: ['#help there'],
+    }, cookie);
+    assert.equal(autoJoinResponse.status, 400);
+    assert.equal(autoJoinResponse.json.message, 'Channel name must start with #, &, +, or !');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('network save rejects conflicting password updates', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'POST', '/api/networks', {
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'alice',
+      altNicks: ['alice_'],
+      username: 'alice',
+      realName: 'Alice Example',
+      password: 'secret',
+      clearPassword: true,
+      autoJoin: [],
+    }, cookie);
+    assert.equal(response.status, 400);
+    assert.equal(response.json.message, 'Password cannot be updated and cleared in the same request');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('network save rejects empty string passwords', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'POST', '/api/networks', {
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'alice',
+      altNicks: ['alice_'],
+      username: 'alice',
+      realName: 'Alice Example',
+      password: '',
+      autoJoin: [],
+    }, cookie);
+    assert.equal(response.status, 400);
+    assert.equal(response.json.message, 'Password cannot be empty');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -425,6 +717,39 @@ test('open query rejects invalid private-message targets over http', async () =>
       assert.equal(response.status, 400);
       assert.equal(response.json.message, 'Private-message target is required');
     }
+    assert.equal(storage.listQueries(user.id).length, 0);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('open query rejects non-string payload targets over http', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: {} }, cookie);
+    assert.equal(response.status, 400);
+    assert.equal(response.json.message, 'Invalid query payload');
     assert.equal(storage.listQueries(user.id).length, 0);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
@@ -707,6 +1032,211 @@ test('malformed websocket session cookies do not crash the upgrade handler', asy
   }
 });
 
+test('slow authenticated writes are revalidated before commit', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  const port = await listen(server);
+  const body = JSON.stringify({
+    name: 'RaceNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'Alice Example',
+    favorite: false,
+    autoJoin: [],
+  });
+  const splitAt = Math.floor(body.length / 2);
+
+  try {
+    const socket = net.connect(port, '127.0.0.1');
+    await new Promise<void>((resolve, reject) => {
+      socket.once('connect', resolve);
+      socket.once('error', reject);
+    });
+    const responsePromise = new Promise<string>((resolve, reject) => {
+      let rawResponse = '';
+      socket.setEncoding('utf8');
+      socket.on('data', (chunk) => { rawResponse += chunk; });
+      socket.on('end', () => resolve(rawResponse));
+      socket.on('close', () => resolve(rawResponse));
+      socket.on('error', reject);
+    });
+
+    socket.write(
+      `POST /api/networks HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\nContent-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\nCookie: ${cookie}\r\n\r\n${body.slice(0, splitAt)}`
+    );
+
+    const logoutResponse = await requestJson(port, 'POST', '/api/logout', undefined, cookie);
+    assert.equal(logoutResponse.status, 200);
+
+    socket.write(body.slice(splitAt));
+    socket.end();
+
+    const rawResponse = await responsePromise;
+    assert.match(rawResponse, /^HTTP\/1\.1 401 /);
+    assert.match(rawResponse, /"message":"Authentication required"/);
+    assert.equal(storage.listNetworks(user.id).length, 0);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('oversized websocket payloads are rejected', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_', 'alice__'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  const runtime = new Runtime(storage);
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const socket = await connectWebSocket(port, cookie);
+
+  try {
+    socket.send(JSON.stringify({
+      type: 'raw.send',
+      networkId: network.id,
+      raw: 'x'.repeat(70_000),
+    }));
+    const close = await waitForWebSocketCloseDetails(socket);
+    assert.equal(close.code, 1009);
+  } finally {
+    socket.terminate();
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('websocket session requests and command routing use the live session', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_', 'alice__'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  storage.upsertQuery(user.id, network.id, 'helper');
+
+  const runtime = new Runtime(storage);
+  const calls: string[] = [];
+  runtime.connect = ((nextUserId: string, networkId: string) => {
+    calls.push(`connect:${nextUserId}:${networkId}`);
+  }) as Runtime['connect'];
+  runtime.disconnect = ((nextUserId: string, networkId: string) => {
+    calls.push(`disconnect:${nextUserId}:${networkId}`);
+  }) as Runtime['disconnect'];
+  runtime.closeQuery = ((nextUserId: string, networkId: string, target: string) => {
+    calls.push(`query.close:${nextUserId}:${networkId}:${target}`);
+  }) as Runtime['closeQuery'];
+  runtime.sendRaw = ((nextUserId: string, networkId: string, raw: string) => {
+    calls.push(`raw.send:${nextUserId}:${networkId}:${raw}`);
+  }) as Runtime['sendRaw'];
+
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const socket = await connectWebSocket(port, cookie);
+
+  try {
+    socket.send(JSON.stringify({ type: 'session.init', token: null }));
+    const initReady = await waitForWebSocketMessageType(socket, 'session.ready');
+    assert.equal((initReady.snapshot as { user: { username: string } }).user.username, 'alice');
+
+    socket.send(JSON.stringify({ type: 'state.request' }));
+    const stateReady = await waitForWebSocketMessageType(socket, 'session.ready');
+    assert.equal((stateReady.snapshot as { user: { username: string } }).user.username, 'alice');
+
+    socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
+    socket.send(JSON.stringify({ type: 'network.disconnect', networkId: network.id }));
+    socket.send(JSON.stringify({ type: 'query.close', networkId: network.id, target: 'helper' }));
+    assert.deepEqual(await waitForWebSocketMessageType(socket, 'query.close'), {
+      type: 'query.close',
+      networkId: network.id,
+      target: 'helper',
+    });
+    socket.send(JSON.stringify({ type: 'raw.send', networkId: network.id, raw: '/quote WHOIS alice' }));
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepEqual(calls, [
+      `connect:${user.id}:${network.id}`,
+      `disconnect:${user.id}:${network.id}`,
+      `query.close:${user.id}:${network.id}:helper`,
+      `raw.send:${user.id}:${network.id}:/quote WHOIS alice`,
+    ]);
+  } finally {
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve());
+      socket.close();
+    });
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('logout revokes existing websocket sessions', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const runtime = new Runtime(storage);
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const socket = await connectWebSocket(port, cookie);
+
+  try {
+    socket.send(JSON.stringify({ type: 'state.request' }));
+    assert.equal((await waitForWebSocketMessageType(socket, 'session.ready')).type, 'session.ready');
+
+    const logout = await request(port, '/api/logout', {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(logout.status, 200);
+    await waitForWebSocketClose(socket);
+  } finally {
+    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+      socket.close();
+    }
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('channel.part over websocket returns an error for foreign networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -784,6 +1314,48 @@ test('channel.join over websocket rejects invalid channel names', async () => {
       message: 'Channel name must start with #, &, +, or !',
     });
     assert.equal(storage.listChannels(user.id).length, 0);
+  } finally {
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve());
+      socket.close();
+    });
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('channel.part over websocket rejects invalid channel names', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('alice', 'secret');
+  const session = storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'alice',
+    altNicks: ['alice_'],
+    username: 'alice',
+    realName: 'alice',
+    favorite: false,
+    autoJoin: [],
+  });
+  const runtime = new Runtime(storage);
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const socket = await connectWebSocket(port, cookie);
+
+  try {
+    socket.send(JSON.stringify({ type: 'channel.part', networkId: network.id, channel: 'helper' }));
+    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
+      type: 'error',
+      networkId: null,
+      message: 'Channel name must start with #, &, +, or !',
+    });
   } finally {
     await new Promise<void>((resolve) => {
       socket.once('close', () => resolve());

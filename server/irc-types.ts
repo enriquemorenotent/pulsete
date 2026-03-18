@@ -1,7 +1,7 @@
 import type net from 'node:net';
 import type tls from 'node:tls';
-import type { NetworkProfile } from '../shared/protocol.js';
 import type { MessageInput } from './storage.js';
+import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type RuntimeEvent =
   | { type: 'state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
@@ -22,16 +22,18 @@ export type ParsedLine = {
 };
 
 export type IrcConnectionState = {
-  profile: NetworkProfile;
+  profile: RuntimeNetworkProfile;
   handlers: Handlers;
   socket: IrcSocket | null;
   buffer: string;
   channelUsers: Map<string, Set<string>>;
   manualDisconnect: boolean;
   reconnectAttempts: number;
+  reconnectTimer: ReturnType<typeof setTimeout> | null;
   connected: boolean;
   serverName: string | null;
   currentNick: string;
+  clearReconnectTimer(): void;
   connect(): void;
   consume(chunk: string): void;
   join(channel: string): void;

@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
@@ -47,6 +49,9 @@ const createHandshakeServer = async (received: string[]) => {
   return {
     server,
     port: address.port,
+    hasConnections() {
+      return sockets.size > 0;
+    },
     closeConnections() {
       for (const socket of sockets) {
         socket.destroy();
@@ -275,6 +280,29 @@ test('runtime join rejects invalid channel names before touching storage', () =>
   assert.equal(storage.listChannels(user.id).length, 0);
 });
 
+test('runtime part rejects invalid channel names before touching connections', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('invalid-part-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  assert.throws(() => runtime.part(user.id, network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
+});
+
 test('runtime sendMessage rejects invalid private-message targets before touching storage', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -300,11 +328,84 @@ test('runtime sendMessage rejects invalid private-message targets before touchin
   assert.equal(storage.listMessages(user.id, network.id, '   ', 10).length, 0);
 });
 
+test('runtime openQuery rejects whitespace-containing private-message targets', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('spaced-query-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  assert.throws(() => runtime.openQuery(user.id, network.id, 'alice bob'), /Private-message target is required/);
+  assert.equal(storage.listQueries(user.id).length, 0);
+});
+
+test('runtime sendMessage rejects multi-line bodies before touching storage', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('multiline-send-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  assert.throws(() => runtime.sendMessage(user.id, network.id, '#help', 'hello\r\nOPER root'), /Message body cannot contain carriage returns or line feeds/);
+  assert.equal(storage.listMessages(user.id, network.id, '#help', 10).length, 0);
+});
+
+test('runtime sendRaw rejects multi-line commands before touching the socket', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('multiline-raw-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  assert.throws(() => runtime.sendRaw(user.id, network.id, 'JOIN #help\r\nOPER root'), /Raw command cannot contain carriage returns or line feeds/);
+  assert.equal(storage.listMessages(user.id, network.id, 'server', 10).length, 0);
+});
+
 test('runtime sendMessage does not persist unsent direct messages while disconnected', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const user = storage.bootstrapUser('offline-send-user', 'secret');
+  storage.createSession(user.id);
   const network = storage.upsertNetwork(user.id, {
     templateId: null,
     managerHidden: false,
@@ -341,6 +442,7 @@ test('deleteNetwork removes disconnected runtime connections', async () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const user = storage.bootstrapUser('delete-user', 'secret');
+  storage.createSession(user.id);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
   const network = storage.upsertNetwork(user.id, {
@@ -368,6 +470,209 @@ test('deleteNetwork removes disconnected runtime connections', async () => {
     assert.equal(connections.get(user.id)?.has(network.id) ?? false, false);
     assert.equal(connections.has(user.id), false);
     assert.equal(storage.getNetwork(user.id, network.id), null);
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('revokeSession disconnects runtime connections when the last session is removed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('session-user', 'secret');
+  const session = storage.createSession(user.id);
+  const handshake = await createHandshakeServer([]);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'SessionNet',
+    host: '127.0.0.1',
+    port: handshake.port,
+    tls: false,
+    nick: 'session',
+    altNicks: ['session_', 'session__'],
+    username: 'session',
+    realName: 'session',
+    favorite: false,
+    autoJoin: [],
+  });
+  const connections = (runtime as unknown as { connections: Map<string, Map<string, unknown>> }).connections;
+
+  try {
+    runtime.connect(user.id, network.id);
+    await waitFor(() => handshake.hasConnections());
+
+    storage.deleteSession(session.token);
+    runtime.revokeSession(session.token, user.id);
+
+    await waitFor(() => !handshake.hasConnections());
+    assert.equal(connections.has(user.id), false);
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('revokeSession keeps runtime connections alive while another session remains', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('multi-session-user', 'secret');
+  const firstSession = storage.createSession(user.id);
+  const secondSession = storage.createSession(user.id);
+  const handshake = await createHandshakeServer([]);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'MultiSessionNet',
+    host: '127.0.0.1',
+    port: handshake.port,
+    tls: false,
+    nick: 'session',
+    altNicks: ['session_', 'session__'],
+    username: 'session',
+    realName: 'session',
+    favorite: false,
+    autoJoin: [],
+  });
+  const connections = (runtime as unknown as { connections: Map<string, Map<string, unknown>> }).connections;
+
+  try {
+    runtime.connect(user.id, network.id);
+    await waitFor(() => handshake.hasConnections());
+
+    storage.deleteSession(firstSession.token);
+    runtime.revokeSession(firstSession.token, user.id);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(handshake.hasConnections(), true);
+    assert.equal(connections.get(user.id)?.has(network.id), true);
+
+    storage.deleteSession(secondSession.token);
+    runtime.revokeSession(secondSession.token, user.id);
+
+    await waitFor(() => !handshake.hasConnections());
+    assert.equal(connections.has(user.id), false);
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime connect rejects stale session tokens before opening a new connection', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('stale-connect-user', 'secret');
+  const session = storage.createSession(user.id);
+  const handshake = await createHandshakeServer([]);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'StaleConnectNet',
+    host: '127.0.0.1',
+    port: handshake.port,
+    tls: false,
+    nick: 'stale',
+    altNicks: ['stale_', 'stale__'],
+    username: 'stale',
+    realName: 'stale',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  try {
+    storage.deleteSession(session.token);
+
+    assert.throws(() => runtime.connect(user.id, network.id, session.token), /Authentication required/);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(handshake.hasConnections(), false);
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime close disconnects active connections and clears session timers', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('close-user', 'secret');
+  const session = storage.createSession(user.id);
+  const handshake = await createHandshakeServer([]);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'CloseNet',
+    host: '127.0.0.1',
+    port: handshake.port,
+    tls: false,
+    nick: 'close',
+    altNicks: ['close_', 'close__'],
+    username: 'close',
+    realName: 'close',
+    favorite: false,
+    autoJoin: [],
+  });
+  const state = runtime as unknown as {
+    connections: Map<string, Map<string, unknown>>;
+    sessionExpiryTimers: Map<string, ReturnType<typeof setTimeout>>;
+  };
+
+  try {
+    runtime.connect(user.id, network.id, session.token);
+    await waitFor(() => handshake.hasConnections());
+
+    assert.equal(state.connections.get(user.id)?.has(network.id), true);
+    assert.equal(state.sessionExpiryTimers.size, 1);
+
+    runtime.close();
+
+    await waitFor(() => !handshake.hasConnections());
+    assert.equal(state.connections.size, 0);
+    assert.equal(state.sessionExpiryTimers.size, 0);
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('session expiry disconnects idle runtime connections without waiting for activity', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('expiring-user', 'secret');
+  const expiresAt = Date.now() + 150;
+  const db = new DatabaseSync(file);
+  db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
+    .run('soon-expiring', user.id, Date.now(), expiresAt);
+  db.close();
+  const handshake = await createHandshakeServer([]);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'ExpiringNet',
+    host: '127.0.0.1',
+    port: handshake.port,
+    tls: false,
+    nick: 'expiring',
+    altNicks: ['expiring_', 'expiring__'],
+    username: 'expiring',
+    realName: 'expiring',
+    favorite: false,
+    autoJoin: [],
+  });
+  const connections = (runtime as unknown as { connections: Map<string, Map<string, unknown>> }).connections;
+
+  try {
+    runtime.connect(user.id, network.id);
+    await waitFor(() => handshake.hasConnections());
+
+    await waitFor(() => !handshake.hasConnections(), 3000);
+    assert.equal(connections.has(user.id), false);
+    assert.equal(storage.hasActiveSessions(user.id), false);
   } finally {
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
@@ -426,4 +731,111 @@ test('deleteNetwork removes hidden clone connections when deleting a template', 
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
   }
+});
+
+test('self part events remove the channel and emit channel.remove', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('part-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+  const channel = storage.upsertChannel(user.id, {
+    networkId: network.id,
+    name: '#help',
+    topic: 'support',
+    unread: 0,
+    users: ['tester', 'alice'],
+  });
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_userId, message) { sent.push(message); } },
+    user.id,
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: '#help',
+        nick: 'tester',
+        body: 'tester left #help (Leaving)',
+        kind: 'part',
+        self: true,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.getChannelByName(user.id, network.id, '#help'), null);
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.deepEqual(
+    sent.find((message) => message.type === 'channel.remove'),
+    {
+      type: 'channel.remove',
+      networkId: network.id,
+      channelId: channel.id,
+      channel: '#help',
+    }
+  );
+});
+
+test('incoming private messages open query buffers automatically', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('query-buffer-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_userId, message) { sent.push(message); } },
+    user.id,
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'helper',
+        nick: 'helper',
+        body: 'hello there',
+        kind: 'line',
+        self: false,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.getQuery(user.id, network.id, 'helper')?.target, 'helper');
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.deepEqual(
+    sent.find((message) => message.type === 'query.open'),
+    {
+      type: 'query.open',
+      query: storage.getQuery(user.id, network.id, 'helper'),
+    }
+  );
 });

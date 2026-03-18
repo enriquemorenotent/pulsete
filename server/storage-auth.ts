@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
 import { badRequest, conflict } from './app-error.js';
 import { hashPassword } from './storage-utils.js';
 import type { AuthUser, SessionRecord, SessionRow, UserRow } from './storage-types.js';
@@ -63,7 +63,11 @@ export const createSession = (db: DatabaseSync, userId: string) => {
 export const getSession = (db: DatabaseSync, token: string): SessionRecord | null => {
   const row = db.prepare('SELECT token, userId, createdAt, expiresAt FROM sessions WHERE token = ?')
     .get(token) as SessionRow | undefined;
-  if (!row || row.expiresAt < Date.now()) {
+  if (!row) {
+    return null;
+  }
+  if (row.expiresAt < Date.now()) {
+    deleteSession(db, token);
     return null;
   }
   const user = getUserById(db, row.userId);
@@ -78,8 +82,17 @@ export const deleteExpiredSessions = (db: DatabaseSync) => {
   db.prepare('DELETE FROM sessions WHERE expiresAt < ?').run(Date.now());
 };
 
-const countRows = (db: DatabaseSync, sql: string) => {
-  const row = db.prepare(sql).get() as { count: number };
+export const hasActiveSessions = (db: DatabaseSync, userId: string) =>
+  countRows(db, 'SELECT COUNT(*) AS count FROM sessions WHERE userId = ? AND expiresAt >= ?', userId, Date.now()) > 0;
+
+export const getNextSessionExpiry = (db: DatabaseSync, userId: string) => {
+  const row = db.prepare('SELECT MIN(expiresAt) AS expiresAt FROM sessions WHERE userId = ? AND expiresAt >= ?')
+    .get(userId, Date.now()) as { expiresAt: number | null };
+  return row.expiresAt;
+};
+
+const countRows = (db: DatabaseSync, sql: string, ...params: SQLInputValue[]) => {
+  const row = db.prepare(sql).get(...params) as { count: number };
   return row.count;
 };
 

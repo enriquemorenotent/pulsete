@@ -1,5 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import type { AppSnapshot } from '../shared/protocol.js';
+import { unauthorized } from './app-error.js';
 import { cookieName, parseCookies } from './http-utils.js';
 import type { Session } from './http-types.js';
 import type { Storage } from './storage.js';
@@ -15,6 +16,14 @@ export const getSessionTokenFromRequest = (req: IncomingMessage) =>
 export const getSessionFromRequest = (storage: Storage, req: IncomingMessage): Session => {
   const token = getSessionTokenFromRequest(req);
   return token ? storage.getSession(token) : null;
+};
+
+export const requireLiveSessionFromRequest = (storage: Storage, req: IncomingMessage, userId?: string) => {
+  const session = getSessionFromRequest(storage, req);
+  if (!session || (userId && session.user.id !== userId)) {
+    throw unauthorized('Authentication required');
+  }
+  return session;
 };
 
 export const sessionResponse = (storage: Storage, session: Session): SessionResult => {

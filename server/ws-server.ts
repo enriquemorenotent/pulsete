@@ -1,32 +1,68 @@
 import type { Server } from 'node:http';
 import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol.js';
+import { AppError } from './app-error.js';
 import type { HttpContext } from './http-types.js';
-import { tryParseRequestUrl } from './http-utils.js';
-import { getSessionFromRequest } from './session-utils.js';
+import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
+import { getSessionTokenFromRequest } from './session-utils.js';
 
 export const attachWebSocketServer = (server: Server, context: HttpContext) => {
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ noServer: true, maxPayload: jsonBodyLimitBytes });
   server.on('upgrade', (req, socket, head) => {
     const url = tryParseRequestUrl(req.url);
     if (!url || url.pathname !== '/ws') {
       socket.destroy();
       return;
     }
-    const session = getSessionFromRequest(context.storage, req);
-    if (!session) {
+    const sessionToken = getSessionTokenFromRequest(req);
+    const session = sessionToken ? context.storage.getSession(sessionToken) : null;
+    if (!session || !sessionToken) {
       socket.destroy();
       return;
     }
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req, session.user.id));
+    wss.handleUpgrade(req, socket, head, (ws) =>
+      wss.emit('connection', ws, req, { sessionToken, userId: session.user.id })
+    );
   });
-  wss.on('connection', (ws: WebSocket, _req: import('node:http').IncomingMessage, userId: string) => {
-    context.runtime.attachSocket(userId, ws);
-    ws.on('message', (raw) => handleClientMessage(ws, context, userId, raw.toString()));
-  });
+  wss.on(
+    'connection',
+    (
+      ws: WebSocket,
+      _req: import('node:http').IncomingMessage,
+      auth: { sessionToken: string; userId: string }
+    ) => {
+      context.runtime.attachSocket(auth.userId, auth.sessionToken, ws);
+      ws.on('error', () => {});
+      ws.on('message', (raw) => handleClientMessage(ws, context, auth.userId, auth.sessionToken, raw.toString()));
+    }
+  );
 };
 
-const handleClientMessage = (ws: WebSocket, context: HttpContext, userId: string, raw: string) => {
+const getAuthorizedSession = (
+  ws: WebSocket,
+  context: HttpContext,
+  userId: string,
+  sessionToken: string
+) => {
+  const session = context.storage.getSession(sessionToken);
+  if (!session || session.user.id !== userId) {
+    context.runtime.revokeSession(sessionToken, userId);
+    ws.close(1008, 'Authentication required');
+    return null;
+  }
+  return session;
+};
+
+const handleClientMessage = (
+  ws: WebSocket,
+  context: HttpContext,
+  userId: string,
+  sessionToken: string,
+  raw: string
+) => {
+  if (!getAuthorizedSession(ws, context, userId, sessionToken)) {
+    return;
+  }
   try {
     const message = decodeClient(raw);
     switch (message.type) {
@@ -35,7 +71,7 @@ const handleClientMessage = (ws: WebSocket, context: HttpContext, userId: string
         ws.send(encode({ type: 'session.ready', snapshot: context.storage.snapshot(userId) }));
         return;
       case 'network.connect':
-        context.runtime.connect(userId, message.networkId);
+        context.runtime.connect(userId, message.networkId, sessionToken);
         return;
       case 'network.disconnect':
         context.runtime.disconnect(userId, message.networkId);
@@ -63,6 +99,15 @@ const handleClientMessage = (ws: WebSocket, context: HttpContext, userId: string
         return;
     }
   } catch (error) {
+    if (error instanceof AppError && error.status === 401) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1008, error.message);
+      }
+      return;
+    }
+    if (ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
     ws.send(encode({ type: 'error', networkId: null, message: error instanceof Error ? error.message : 'Invalid websocket payload' }));
   }
 };

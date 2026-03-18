@@ -51,6 +51,9 @@ export function useAppActions(params: AppActionParams) {
         username: params.state.networkForm.username.trim() || params.state.networkForm.nick.trim(),
         realName: params.state.networkForm.realName.trim() || params.state.networkForm.nick.trim(),
         password: params.state.networkForm.password.trim() || undefined,
+        clearPassword: params.state.networkForm.password.trim()
+          ? false
+          : params.state.networkForm.clearPassword || undefined,
         favorite: params.state.networkForm.favorite,
         autoJoin: parseAutoJoin(params.state.networkForm.autoJoin),
       });

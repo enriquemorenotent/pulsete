@@ -29,7 +29,7 @@ export const networkSchema = z.object({
   altNicks: z.array(z.string()).default([]),
   username: z.string(),
   realName: z.string().default(''),
-  password: z.string().optional(),
+  hasPassword: z.boolean().default(false),
   favorite: z.boolean().default(false),
   autoJoin: z.array(z.string()),
 });

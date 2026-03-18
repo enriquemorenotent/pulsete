@@ -33,6 +33,10 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     handlePart(connection, params, nick);
     return;
   }
+  if (command === 'KICK') {
+    handleKick(connection, params, nick);
+    return;
+  }
   if (command === 'QUIT') {
     handleQuit(connection, params, nick);
     return;
@@ -47,17 +51,22 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   }
   if (command === '332') {
     const channel = params[1] ?? '';
-    if (channel) {
+    if (channel && connection.channelUsers.has(channel)) {
       emitChannel(connection, channel, { topic: params[2] ?? '' });
     }
     return;
   }
   if (command === '353') {
     const channel = params[2] ?? '';
-    if (channel) {
-      const users = (params[3] ?? '').split(' ').map(normalizeChannelUser).filter(Boolean);
-      connection.channelUsers.set(channel, new Set(users));
-      emitChannel(connection, channel, { users });
+    if (channel && connection.channelUsers.has(channel)) {
+      const names = (params[3] ?? '').split(' ').map(normalizeChannelUser).filter(Boolean);
+      const knownUsers = new Set(connection.channelUsers.get(channel) ?? []);
+      for (const user of names) {
+        knownUsers.add(user);
+      }
+      const mergedUsers = Array.from(knownUsers);
+      connection.channelUsers.set(channel, new Set(mergedUsers));
+      emitChannel(connection, channel, { users: mergedUsers });
     }
   }
 };
@@ -90,14 +99,28 @@ const handleNickConflict = (connection: IrcConnectionState, command: string) => 
   if (command !== '433') {
     return false;
   }
-  connection.currentNick = `${connection.currentNick}_`;
+  const attemptedNick = connection.currentNick;
+  connection.currentNick = getNextNickOnConflict(connection);
   connection.sendRaw(`NICK ${connection.currentNick}`);
-  emitStatus(connection, `${connection.profile.nick} is already in use. Retrying with ${connection.currentNick}...`, 'notice');
+  emitStatus(connection, `${attemptedNick} is already in use. Retrying with ${connection.currentNick}...`, 'notice');
   return true;
+};
+
+const getNextNickOnConflict = (connection: IrcConnectionState) => {
+  const fallbacks = [connection.profile.nick, ...connection.profile.altNicks]
+    .filter((nick, index, list) => nick && list.indexOf(nick) === index);
+  const currentIndex = fallbacks.indexOf(connection.currentNick);
+  if (currentIndex !== -1 && currentIndex < fallbacks.length - 1) {
+    return fallbacks[currentIndex + 1];
+  }
+  return `${connection.currentNick}_`;
 };
 
 const handleTextMessage = (connection: IrcConnectionState, command: 'PRIVMSG' | 'NOTICE', params: string[], nick: string | null) => {
   const rawTarget = params[0] ?? 'server';
+  if (isChannelTarget(rawTarget) && !connection.channelUsers.has(rawTarget)) {
+    return;
+  }
   const payload = params[1] ?? '';
   const ctcp = stripCtcp(payload);
   const isDirectTarget = rawTarget === connection.currentNick && !isChannelTarget(rawTarget);
@@ -122,13 +145,17 @@ const handleJoin = (connection: IrcConnectionState, params: string[], nick: stri
   if (!name) {
     return;
   }
+  const selfJoin = nick === connection.currentNick;
+  if (!selfJoin && !connection.channelUsers.has(name)) {
+    return;
+  }
   const users = connection.updateChannelUsers(name, nick, true);
   emitMessage(connection, createMessage(connection, {
     target: name,
     nick,
     body: `${nick ?? 'Someone'} joined ${name}`,
     kind: 'join',
-    self: nick === connection.currentNick,
+    self: selfJoin,
   }));
   emitChannel(connection, name, { users });
 };
@@ -139,15 +166,48 @@ const handlePart = (connection: IrcConnectionState, params: string[], nick: stri
     return;
   }
   const reason = params[1] ?? 'left';
-  const users = connection.updateChannelUsers(channel, nick, false);
+  const selfPart = nick === connection.currentNick;
+  if (!selfPart && !connection.channelUsers.has(channel)) {
+    return;
+  }
+  const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
+  if (selfPart) {
+    connection.channelUsers.delete(channel);
+  }
   emitMessage(connection, createMessage(connection, {
     target: channel,
     nick,
     body: `${nick ?? 'Someone'} left ${channel}${reason ? ` (${reason})` : ''}`,
     kind: 'part',
-    self: nick === connection.currentNick,
+    self: selfPart,
   }));
-  emitChannel(connection, channel, { users });
+  if (!selfPart) {
+    emitChannel(connection, channel, { users });
+  }
+};
+
+const handleKick = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+  const channel = params[0] ?? '';
+  const kickedNick = params[1] ?? '';
+  if (!channel || !kickedNick || !connection.channelUsers.has(channel)) {
+    return;
+  }
+  const selfKick = kickedNick === connection.currentNick;
+  const reason = params[2] ?? 'kicked';
+  const users = selfKick ? [] : connection.updateChannelUsers(channel, kickedNick, false);
+  if (selfKick) {
+    connection.channelUsers.delete(channel);
+  }
+  emitMessage(connection, createMessage(connection, {
+    target: channel,
+    nick: kickedNick,
+    body: `${kickedNick} was kicked from ${channel} by ${nick ?? 'Someone'}${reason ? ` (${reason})` : ''}`,
+    kind: 'part',
+    self: selfKick,
+  }));
+  if (!selfKick) {
+    emitChannel(connection, channel, { users });
+  }
 };
 
 const handleQuit = (connection: IrcConnectionState, params: string[], nick: string | null) => {
@@ -179,7 +239,7 @@ const handleNick = (connection: IrcConnectionState, params: string[], nick: stri
 
 const handleTopic = (connection: IrcConnectionState, params: string[]) => {
   const channel = params[0] ?? '';
-  if (!channel) {
+  if (!channel || !connection.channelUsers.has(channel)) {
     return;
   }
   emitChannel(connection, channel, { topic: params[1] ?? '' });

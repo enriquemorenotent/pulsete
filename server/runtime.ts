@@ -1,75 +1,109 @@
 import WebSocket from 'ws';
 import { encode, type ServerMessage } from '../shared/protocol.js';
-import { badRequest, notFound } from './app-error.js';
+import { notFound, unauthorized } from './app-error.js';
 import { IrcConnection } from './irc.js';
+import {
+  normalizeChannelTarget,
+  normalizeMessageBody,
+  normalizeMessageTarget,
+  normalizeQueryTarget,
+  normalizeRawCommand,
+} from './irc-validate.js';
 import { handleRuntimeEvent } from './runtime-events.js';
 import { Storage } from './storage.js';
 
-const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
-const invalidChannelTargetMessage = 'Channel name must start with #, &, +, or !';
-const invalidQueryTargetMessage = 'Private-message target is required';
-
-const normalizeChannelTarget = (value: string) => {
-  const target = value.trim();
-  if (!target || !isChannelTarget(target)) {
-    throw badRequest(invalidChannelTargetMessage);
-  }
-  return target;
-};
-
-const normalizeQueryTarget = (value: string) => {
-  const target = value.trim();
-  if (!target || target === 'server' || isChannelTarget(target)) {
-    throw badRequest(invalidQueryTargetMessage);
-  }
-  return target;
-};
-
-const normalizeMessageTarget = (value: string) => {
-  const target = value.trim();
-  return isChannelTarget(target) ? target : normalizeQueryTarget(target);
-};
+const maxSessionTimerDelayMs = 2_147_483_647;
 
 export class Runtime {
   readonly store: Storage;
-  private readonly sockets = new Map<string, Set<WebSocket>>();
+  private readonly sockets = new Map<string, Map<WebSocket, string>>();
   private readonly connections = new Map<string, Map<string, IrcConnection>>();
+  private readonly sessionExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(store: Storage) {
     this.store = store;
   }
 
-  attachSocket(userId: string, ws: WebSocket) {
-    const sockets = this.sockets.get(userId) ?? new Set<WebSocket>();
-    sockets.add(ws);
+  attachSocket(userId: string, sessionToken: string, ws: WebSocket) {
+    const sockets = this.sockets.get(userId) ?? new Map<WebSocket, string>();
+    sockets.set(ws, sessionToken);
     this.sockets.set(userId, sockets);
+    this.syncUserSession(userId);
     ws.on('close', () => this.detachSocket(userId, ws));
   }
 
+  revokeSession(sessionToken: string, userId?: string) {
+    for (const sockets of this.sockets.values()) {
+      for (const [ws, token] of sockets) {
+        if (token === sessionToken) {
+          ws.close(1008, 'Authentication required');
+        }
+      }
+    }
+    if (userId) {
+      this.syncUserSession(userId);
+    }
+  }
+
   send(userId: string, message: ServerMessage) {
+    this.pruneUserSockets(userId);
+    if (!this.store.hasActiveSessions(userId)) {
+      this.closeUserSockets(userId);
+      this.disconnectUser(userId);
+      this.clearUserSessionTimer(userId);
+      return;
+    }
     const payload = encode(message);
-    for (const ws of this.sockets.get(userId) ?? []) {
+    for (const [ws, sessionToken] of this.sockets.get(userId) ?? []) {
+      const session = this.store.getSession(sessionToken);
+      if (!session || session.user.id !== userId) {
+        ws.close(1008, 'Authentication required');
+        continue;
+      }
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(payload);
       }
     }
   }
 
+  close() {
+    for (const userId of Array.from(this.sessionExpiryTimers.keys())) {
+      this.clearUserSessionTimer(userId);
+    }
+    for (const sockets of this.sockets.values()) {
+      for (const ws of Array.from(sockets.keys())) {
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+          ws.close(1001, 'Server shutting down');
+        }
+      }
+    }
+    this.sockets.clear();
+    for (const userId of Array.from(this.connections.keys())) {
+      this.disconnectUser(userId);
+    }
+  }
+
   snapshot(userId: string) { return this.store.snapshot(userId); }
-  connect(userId: string, networkId: string) { this.ensureConnection(userId, networkId).connect(); }
+  connect(userId: string, networkId: string, sessionToken?: string) {
+    this.syncUserSession(userId);
+    this.assertLiveSession(userId, sessionToken);
+    this.ensureConnection(userId, networkId).connect();
+  }
   disconnect(userId: string, networkId: string) {
     this.getRequiredNetwork(userId, networkId);
     this.connections.get(userId)?.get(networkId)?.disconnect();
   }
 
   join(userId: string, networkId: string, channel: string) {
+    const normalizedChannel = normalizeChannelTarget(channel);
     const connection = this.ensureConnection(userId, networkId);
-    connection.join(normalizeChannelTarget(channel));
+    connection.join(normalizedChannel);
   }
 
   part(userId: string, networkId: string, channel: string) {
     this.getRequiredNetwork(userId, networkId);
-    this.connections.get(userId)?.get(networkId)?.part(channel);
+    const normalizedChannel = normalizeChannelTarget(channel);
+    this.connections.get(userId)?.get(networkId)?.part(normalizedChannel);
   }
   openQuery(userId: string, networkId: string, target: string) {
     this.getRequiredNetwork(userId, networkId);
@@ -99,30 +133,35 @@ export class Runtime {
       this.getRequiredNetwork(userId, input.id);
     }
     const profile = this.store.upsertNetwork(userId, input);
-    this.connections.get(userId)?.get(profile.id)?.updateProfile(profile);
+    const runtimeProfile = this.store.getRuntimeNetwork(userId, profile.id);
+    if (runtimeProfile) {
+      this.connections.get(userId)?.get(profile.id)?.updateProfile(runtimeProfile);
+    }
     return profile;
   }
 
   sendMessage(userId: string, networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message') {
-    const connection = this.ensureConnection(userId, networkId);
     const normalizedTarget = normalizeMessageTarget(target);
-    kind === 'action' ? connection.action(normalizedTarget, body) : connection.say(normalizedTarget, body);
+    const normalizedBody = normalizeMessageBody(body);
+    const connection = this.ensureConnection(userId, networkId);
+    kind === 'action' ? connection.action(normalizedTarget, normalizedBody) : connection.say(normalizedTarget, normalizedBody);
   }
 
   sendRaw(userId: string, networkId: string, raw: string) {
+    const normalizedRaw = normalizeRawCommand(raw);
     const connection = this.ensureConnection(userId, networkId);
-    if (/^\s*NICK\s+/i.test(raw)) {
-      const nextNick = raw.trim().split(/\s+/)[1];
+    if (/^\s*NICK\s+/i.test(normalizedRaw)) {
+      const nextNick = normalizedRaw.trim().split(/\s+/)[1];
       if (nextNick) {
         connection.setNick(nextNick);
         return;
       }
     }
-    if (/^\s*QUIT/i.test(raw)) {
+    if (/^\s*QUIT/i.test(normalizedRaw)) {
       connection.disconnect();
       return;
     }
-    connection.sendRaw(raw);
+    connection.sendRaw(normalizedRaw);
   }
 
   deleteNetwork(userId: string, networkId: string) {
@@ -154,16 +193,115 @@ export class Runtime {
     }
   }
 
+  private closeUserSockets(userId: string) {
+    for (const ws of Array.from(this.sockets.get(userId)?.keys() ?? [])) {
+      ws.close(1008, 'Authentication required');
+    }
+  }
+
+  private disconnectUser(userId: string) {
+    const userConnections = this.connections.get(userId);
+    if (!userConnections) {
+      return;
+    }
+    this.connections.delete(userId);
+    for (const connection of userConnections.values()) {
+      connection.disconnect();
+    }
+  }
+
+  private pruneUserSockets(userId: string) {
+    for (const [ws, sessionToken] of this.sockets.get(userId) ?? []) {
+      const session = this.store.getSession(sessionToken);
+      if (!session || session.user.id !== userId) {
+        ws.close(1008, 'Authentication required');
+      }
+    }
+  }
+
+  private clearUserSessionTimer(userId: string) {
+    const timer = this.sessionExpiryTimers.get(userId);
+    if (timer) {
+      clearTimeout(timer);
+      this.sessionExpiryTimers.delete(userId);
+    }
+  }
+
+  private assertLiveSession(userId: string, sessionToken?: string) {
+    if (!sessionToken) {
+      return;
+    }
+    const session = this.store.getSession(sessionToken);
+    if (session && session.user.id === userId) {
+      return;
+    }
+    this.revokeSession(sessionToken, userId);
+    throw unauthorized('Authentication required');
+  }
+
+  private syncUserSession(userId: string) {
+    this.clearUserSessionTimer(userId);
+    const nextExpiry = this.store.getNextSessionExpiry(userId);
+    if (!nextExpiry) {
+      this.closeUserSockets(userId);
+      this.disconnectUser(userId);
+      return;
+    }
+    const delay = Math.max(0, nextExpiry - Date.now());
+    const scheduledDelay = Math.min(delay, maxSessionTimerDelayMs);
+    const callback = delay > maxSessionTimerDelayMs
+      ? () => this.syncUserSession(userId)
+      : () => this.handleUserSessionExpiry(userId, nextExpiry);
+    const timer = setTimeout(callback, scheduledDelay);
+    timer.unref?.();
+    this.sessionExpiryTimers.set(userId, timer);
+  }
+
+  private handleUserSessionExpiry(userId: string, expectedExpiry: number) {
+    const nextExpiry = this.store.getNextSessionExpiry(userId);
+    if (nextExpiry && nextExpiry > expectedExpiry) {
+      this.pruneUserSockets(userId);
+      this.syncUserSession(userId);
+      return;
+    }
+    this.pruneUserSockets(userId);
+    if (!this.store.hasActiveSessions(userId)) {
+      this.closeUserSockets(userId);
+      this.disconnectUser(userId);
+      this.clearUserSessionTimer(userId);
+      return;
+    }
+    this.syncUserSession(userId);
+  }
+
   private ensureConnection(userId: string, networkId: string) {
-    const profile = this.getRequiredNetwork(userId, networkId);
+    const profile = this.getRequiredRuntimeNetwork(userId, networkId);
     const userConnections = this.connections.get(userId) ?? new Map<string, IrcConnection>();
     let connection = userConnections.get(networkId);
     if (!connection) {
-      connection = new IrcConnection(profile, { onEvent: (event) => handleRuntimeEvent(this, userId, event) });
+      connection = new IrcConnection(profile, {
+        onEvent: (event) => {
+          if (!this.store.hasActiveSessions(userId)) {
+            this.closeUserSockets(userId);
+            this.disconnectUser(userId);
+            this.clearUserSessionTimer(userId);
+            return;
+          }
+          handleRuntimeEvent(this, userId, event);
+        },
+      });
       userConnections.set(networkId, connection);
       this.connections.set(userId, userConnections);
     }
     return connection;
+  }
+
+  private getRequiredRuntimeNetwork(userId: string, networkId: string) {
+    const profile = this.store.getRuntimeNetwork(userId, networkId);
+    if (!profile) {
+      throw notFound('Network not found');
+    }
+    return profile;
   }
 
   private getRequiredNetwork(userId: string, networkId: string) {

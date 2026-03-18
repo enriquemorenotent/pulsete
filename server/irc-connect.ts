@@ -8,6 +8,7 @@ export const connectSocket = (connection: IrcConnectionState) => {
   if (connection.socket) {
     return;
   }
+  connection.clearReconnectTimer();
   connection.manualDisconnect = false;
   emitStatus(connection, `Looking up ${connection.profile.host}`);
   const socket = connection.profile.tls
@@ -23,22 +24,27 @@ export const connectSocket = (connection: IrcConnectionState) => {
     const destination = host ?? connection.profile.host;
     emitStatus(connection, address ? `Connecting to ${destination} (${address}:${connection.profile.port})` : `Connecting to ${destination}:${connection.profile.port}`);
   });
-  socket.on('connect', () => {
+  const beginLogin = () => {
     if (!isCurrentSocket()) {
       return;
     }
-    if (connection.profile.password) {
-      connection.sendRaw(`PASS ${connection.profile.password}`);
-    }
-    if (socket instanceof tls.TLSSocket && socket.authorized) {
-      for (const line of formatTlsStatusLines(socket)) {
+    if (connection.profile.tls && (socket as tls.TLSSocket).authorized) {
+      for (const line of formatTlsStatusLines(socket as tls.TLSSocket)) {
         emitStatus(connection, line);
       }
     }
     emitStatus(connection, 'Connected. Now logging in.');
+    if (connection.profile.password) {
+      connection.sendRaw(`PASS ${connection.profile.password}`);
+    }
     connection.sendRaw(`NICK ${connection.profile.nick}`);
     connection.sendRaw(`USER ${connection.profile.username} 0 * :${connection.profile.realName || connection.profile.name}`);
-  });
+  };
+  if (connection.profile.tls) {
+    (socket as tls.TLSSocket).on('secureConnect', beginLogin);
+  } else {
+    socket.on('connect', beginLogin);
+  }
   socket.on('data', (chunk) => {
     if (isCurrentSocket()) {
       connection.consume(chunk);
@@ -56,6 +62,7 @@ const handleClose = (connection: IrcConnectionState, socket: IrcConnectionState[
   if (connection.socket !== socket) {
     return;
   }
+  connection.clearReconnectTimer();
   const wasConnected = connection.connected;
   connection.socket = null;
   connection.resetTransientState();
@@ -66,7 +73,12 @@ const handleClose = (connection: IrcConnectionState, socket: IrcConnectionState[
   emitStatus(connection, wasConnected ? 'Disconnected from server' : 'Connection closed');
   if (!connection.manualDisconnect && connection.reconnectAttempts < 3) {
     const attempt = ++connection.reconnectAttempts;
-    setTimeout(() => retryConnect(connection, attempt), 3000 * attempt);
+    const timer = setTimeout(() => {
+      connection.reconnectTimer = null;
+      retryConnect(connection, attempt);
+    }, 3000 * attempt);
+    timer.unref?.();
+    connection.reconnectTimer = timer;
   }
 };
 

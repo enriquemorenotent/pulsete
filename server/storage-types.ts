@@ -73,7 +73,15 @@ export type AuthUser = {
   username: string;
 };
 
-export type NetworkInput = Omit<NetworkProfile, 'id'> & { id?: string };
+export type RuntimeNetworkProfile = NetworkProfile & {
+  password?: string;
+};
+
+export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword'> & {
+  id?: string;
+  password?: string;
+  clearPassword?: boolean;
+};
 
 export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'unread' | 'users'> &
   Partial<Pick<ChannelState, 'id' | 'topic' | 'unread' | 'users'>>;

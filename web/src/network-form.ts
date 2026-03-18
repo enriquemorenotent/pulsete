@@ -14,6 +14,8 @@ export type NetworkForm = {
   username: string;
   realName: string;
   password: string;
+  clearPassword: boolean;
+  hasSavedPassword: boolean;
   favorite: boolean;
   autoJoin: string;
 };
@@ -34,6 +36,8 @@ export const emptyNetworkForm = (): NetworkForm => ({
   username: '',
   realName: '',
   password: '',
+  clearPassword: false,
+  hasSavedPassword: false,
   favorite: false,
   autoJoin: '',
 });
@@ -60,7 +64,9 @@ export const toForm = (network: NetworkProfile): NetworkForm => ({
   nick3: network.altNicks[1] ?? '',
   username: network.username,
   realName: network.realName,
-  password: network.password ?? '',
+  password: '',
+  clearPassword: false,
+  hasSavedPassword: network.hasPassword,
   favorite: network.favorite,
   autoJoin: network.autoJoin.join(', '),
 });
@@ -78,7 +84,6 @@ export const createConnectionInstancePayload = (network: NetworkProfile) => ({
   altNicks: network.altNicks,
   username: network.username,
   realName: network.realName,
-  password: network.password,
   favorite: network.favorite,
   autoJoin: network.autoJoin,
 });
