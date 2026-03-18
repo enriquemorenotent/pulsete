@@ -161,12 +161,20 @@ export class Runtime {
     if (/^\s*NICK\s+/i.test(normalizedRaw)) {
       const nextNick = normalizedRaw.trim().split(/\s+/)[1];
       if (nextNick) {
-        connection.setNick(nextNick);
+        if (connection.socket) {
+          connection.setNick(nextNick);
+        } else {
+          connection.sendRaw(normalizedRaw);
+        }
         return;
       }
     }
     if (/^\s*QUIT(?:\s|$)/i.test(normalizedRaw)) {
-      connection.disconnect(normalizedRaw.trim());
+      if (connection.socket) {
+        connection.disconnect(normalizedRaw.trim());
+      } else {
+        connection.sendRaw(normalizedRaw);
+      }
       return;
     }
     connection.sendRaw(normalizedRaw);

@@ -595,6 +595,66 @@ test('runtime sendRaw rejects multi-line commands before touching the socket', (
   assert.equal(storage.listMessages(user.id, network.id, 'server', 10).length, 0);
 });
 
+test('runtime sendRaw does not mutate nick state while disconnected', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('offline-nick-user', 'secret');
+  storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+  const sent: Array<{ type: string }> = [];
+  const state = runtime as unknown as {
+    send: (userId: string, message: { type: string }) => void;
+    connections: Map<string, Map<string, { currentNick: string }>>;
+  };
+  state.send = (_userId, message) => sent.push(message);
+
+  runtime.sendRaw(user.id, network.id, 'NICK othernick');
+
+  assert.equal(sent.some((message) => message.type === 'network.state'), false);
+  assert.equal(state.connections.get(user.id)?.get(network.id)?.currentNick, 'tester');
+  assert.equal(storage.listMessages(user.id, network.id, 'server', 10).at(-1)?.body, 'Not connected');
+});
+
+test('runtime sendRaw reports offline quit commands as not connected', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('offline-quit-user', 'secret');
+  storage.createSession(user.id);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  runtime.sendRaw(user.id, network.id, 'QUIT :Bye for now');
+
+  assert.equal(storage.listMessages(user.id, network.id, 'server', 10).at(-1)?.body, 'Not connected');
+});
+
 test('runtime sendRaw preserves the caller quit message', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
