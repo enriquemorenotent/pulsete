@@ -1,0 +1,10 @@
+node_modules
+dist
+.vite
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+data
+coverage
+playwright-report
+test-results
