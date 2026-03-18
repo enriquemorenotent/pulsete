@@ -39,13 +39,13 @@ export class IrcConnection implements IrcConnectionState {
     connectSocket(this);
   }
 
-  disconnect() {
+  disconnect(raw = 'QUIT :Client disconnecting') {
     this.manualDisconnect = true;
     this.reconnectAttempts = 0;
     this.clearReconnectTimer();
     const socket = this.socket;
     if (socket) {
-      this.sendRaw('QUIT :Client disconnecting');
+      this.sendRaw(raw);
       socket.end();
       this.socket = null;
     }

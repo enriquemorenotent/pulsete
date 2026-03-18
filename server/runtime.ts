@@ -163,8 +163,8 @@ export class Runtime {
         return;
       }
     }
-    if (/^\s*QUIT/i.test(normalizedRaw)) {
-      connection.disconnect();
+    if (/^\s*QUIT(?:\s|$)/i.test(normalizedRaw)) {
+      connection.disconnect(normalizedRaw.trim());
       return;
     }
     connection.sendRaw(normalizedRaw);

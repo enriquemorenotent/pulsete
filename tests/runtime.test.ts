@@ -595,6 +595,83 @@ test('runtime sendRaw rejects multi-line commands before touching the socket', (
   assert.equal(storage.listMessages(user.id, network.id, 'server', 10).length, 0);
 });
 
+test('runtime sendRaw preserves the caller quit message', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('raw-quit-user', 'secret');
+  storage.createSession(user.id);
+  const received: string[] = [];
+  const handshake = await createHandshakeServer(received);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: '127.0.0.1',
+    port: handshake.port,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  try {
+    runtime.connect(user.id, network.id);
+    await waitFor(() => handshake.hasConnections());
+
+    runtime.sendRaw(user.id, network.id, 'QUIT :Bye for now');
+
+    await waitFor(() => received.includes('QUIT :Bye for now'));
+    assert.equal(received.includes('QUIT :Client disconnecting'), false);
+    await waitFor(() => !handshake.hasConnections());
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime sendRaw only treats exact QUIT as a disconnect command', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const user = storage.bootstrapUser('raw-quitter-user', 'secret');
+  storage.createSession(user.id);
+  const received: string[] = [];
+  const handshake = await createHandshakeServer(received);
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: '127.0.0.1',
+    port: handshake.port,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+
+  try {
+    runtime.connect(user.id, network.id);
+    await waitFor(() => handshake.hasConnections());
+
+    runtime.sendRaw(user.id, network.id, 'QUITTER test');
+
+    await waitFor(() => received.includes('QUITTER test'));
+    assert.equal(received.includes('QUIT :Client disconnecting'), false);
+    assert.equal(handshake.hasConnections(), true);
+  } finally {
+    runtime.disconnect(user.id, network.id);
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('runtime sendMessage does not persist unsent direct messages while disconnected', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
