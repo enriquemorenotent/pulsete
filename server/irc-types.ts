@@ -35,6 +35,7 @@ export type IrcConnectionState = {
   connect(): void;
   consume(chunk: string): void;
   join(channel: string): void;
-  sendRaw(raw: string): void;
+  resetTransientState(): void;
+  sendRaw(raw: string): boolean;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): string[];
 };

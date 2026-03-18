@@ -66,8 +66,10 @@ export function useAppActions(params: AppActionParams) {
   };
   const deleteNetwork = async (networkId: string) => {
     try {
-      await api.deleteNetwork(networkId);
-      params.dispatch({ type: 'remove-network', networkId });
+      const result = await api.deleteNetwork(networkId);
+      for (const deletedNetworkId of result.deletedNetworkIds) {
+        params.dispatch({ type: 'remove-network', networkId: deletedNetworkId });
+      }
       params.updateBanner('notice', 'Network deleted');
     } catch (error) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to delete network');
@@ -106,8 +108,10 @@ export function useAppActions(params: AppActionParams) {
   };
   const closeConnection = async (network: NetworkProfile) => {
     try {
-      await api.deleteNetwork(network.id);
-      params.dispatch({ type: 'remove-network', networkId: network.id });
+      const result = await api.deleteNetwork(network.id);
+      for (const deletedNetworkId of result.deletedNetworkIds) {
+        params.dispatch({ type: 'remove-network', networkId: deletedNetworkId });
+      }
       params.updateBanner('notice', 'Connection instance closed');
     } catch (error) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to close connection');

@@ -7,6 +7,7 @@
     "dev:server": "PORT=18487 tsx watch server/index.ts",
     "dev:web": "vite --port 18473",
     "build": "tsc --noEmit && vite build",
+    "prestart": "npm run build",
     "start": "PORT=18487 tsx server/index.ts",
     "test": "node --import tsx --test"
   },

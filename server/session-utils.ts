@@ -9,8 +9,11 @@ export type SessionResult =
   | { bootstrapped: true; authenticated: false }
   | { bootstrapped: true; authenticated: true; user: { id: string; username: string }; snapshot: AppSnapshot };
 
+export const getSessionTokenFromRequest = (req: IncomingMessage) =>
+  parseCookies(req.headers.cookie)[cookieName] ?? null;
+
 export const getSessionFromRequest = (storage: Storage, req: IncomingMessage): Session => {
-  const token = parseCookies(req.headers.cookie)[cookieName];
+  const token = getSessionTokenFromRequest(req);
   return token ? storage.getSession(token) : null;
 };
 

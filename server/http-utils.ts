@@ -1,6 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { badRequest } from './app-error.js';
 
 export const cookieName = 'pulsete_session';
+const requestBase = 'http://127.0.0.1';
+const decodeCookieValue = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
 
 export const parseCookies = (header: string | undefined) =>
   Object.fromEntries(
@@ -10,7 +19,7 @@ export const parseCookies = (header: string | undefined) =>
       .filter(Boolean)
       .map((part) => {
         const index = part.indexOf('=');
-        return index === -1 ? [part, ''] : [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+        return index === -1 ? [part, ''] : [part.slice(0, index), decodeCookieValue(part.slice(index + 1))];
       })
   );
 
@@ -38,5 +47,35 @@ export const setSessionCookie = (token: string) =>
 export const clearSessionCookie = () =>
   `${cookieName}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
 
+export const tryParseRequestUrl = (value: string | undefined) => {
+  try {
+    return new URL(value ?? '/', requestBase);
+  } catch {
+    return null;
+  }
+};
+
+export const parseRequestUrl = (value: string | undefined) => {
+  const url = tryParseRequestUrl(value);
+  if (!url) {
+    throw badRequest('Invalid request target');
+  }
+  return url;
+};
+
+export const decodeRouteParam = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw badRequest('Invalid request parameter');
+  }
+};
+
 export const isApi = (pathname: string) => pathname.startsWith('/api/');
+export const isApiRequest = (value: string | undefined) => {
+  if (typeof value === 'string' && value.startsWith('/api/')) {
+    return true;
+  }
+  return isApi(tryParseRequestUrl(value)?.pathname ?? '');
+};
 export const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

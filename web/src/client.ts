@@ -2,6 +2,7 @@ import {
   clientMessageSchema,
   decodeServer,
   encode,
+  historyWindowLimit,
   type ClientMessage,
   type ServerMessage,
   type AppSnapshot,
@@ -59,7 +60,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   deleteNetwork: (networkId: string) =>
-    apiRequest<{ ok: boolean }>(`/api/networks/${networkId}`, {
+    apiRequest<{ ok: boolean; deletedNetworkIds: string[] }>(`/api/networks/${networkId}`, {
       method: 'DELETE',
       body: '{}',
     }),
@@ -73,7 +74,7 @@ export const api = {
       method: 'POST',
       body: '{}',
     }),
-  loadHistory: (networkId: string, target: string, limit = 250) =>
+  loadHistory: (networkId: string, target: string, limit = historyWindowLimit) =>
     apiRequest<{ messages: ChatMessage[] }>(
       `/api/networks/${networkId}/history?target=${encodeURIComponent(target)}&limit=${limit}`
     ),

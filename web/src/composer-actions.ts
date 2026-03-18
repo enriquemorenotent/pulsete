@@ -2,6 +2,8 @@ import { api, type SocketHandle } from './client.js';
 import type { Action } from './app-types.js';
 import type { WorkspaceView } from './workspace-types.js';
 
+const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
+
 type ComposerParams = {
   draft: string;
   dispatch: (action: Action) => void;
@@ -54,6 +56,9 @@ function runSlashCommand(text: string, params: ComposerParams) {
   switch (command) {
     case 'join':
       if (!remainder) return params.updateBanner('error', 'Usage: /join #channel');
+      if (!isChannelTarget(remainder)) {
+        return params.updateBanner('error', 'Channel name must start with #, &, +, or !');
+      }
       socket.send({ type: 'channel.join', networkId: selection.networkId, channel: remainder });
       params.dispatch({ type: 'select', selection: { networkId: selection.networkId, target: remainder, channelId: null } });
       break;

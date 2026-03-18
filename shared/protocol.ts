@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const historyWindowLimit = 250;
+
 export const messageKindSchema = z.enum(['line', 'join', 'part', 'notice', 'error', 'system']);
 
 export const chatMessageSchema = z.object({
@@ -136,6 +138,10 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     connected: z.boolean(),
     serverName: z.string().nullable(),
     nick: z.string(),
+  }),
+  baseClientSchema.extend({
+    type: z.literal('network.remove'),
+    networkId: z.string(),
   }),
   baseClientSchema.extend({
     type: z.literal('channel.snapshot'),

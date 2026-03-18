@@ -31,16 +31,10 @@ export const handleRuntimeEvent = (runtime: RuntimeContext, userId: string, even
     id: randomUUID(),
     networkId: event.networkId,
     name: event.channel,
-    topic: event.topic ?? '',
+    topic: event.topic,
     unread: runtime.store.getChannelByName(userId, event.networkId, event.channel)?.unread ?? 0,
-    users: event.users ?? [],
+    users: event.users,
   });
-  if (event.topic !== undefined) {
-    runtime.store.updateChannelTopic(userId, event.networkId, event.channel, event.topic);
-  }
-  if (event.users !== undefined) {
-    runtime.store.updateChannelUsers(userId, event.networkId, event.channel, event.users);
-  }
   runtime.send(userId, { type: 'channel.snapshot', channel });
 };
 
@@ -80,16 +74,21 @@ const handleMessageEvent = (
     ? runtime.store.upsertQuery(userId, event.message.networkId, event.message.target)
     : null;
   const saved = runtime.store.appendMessage(userId, event.message);
+  let unreadChannel = null;
   if (!event.message.self && event.message.target !== 'server' && event.message.kind !== 'system') {
     const channel = runtime.store.getChannelByName(userId, event.message.networkId, event.message.target);
     if (channel) {
       runtime.store.setChannelUnread(userId, event.message.networkId, event.message.target, channel.unread + 1);
+      unreadChannel = runtime.store.getChannelByName(userId, event.message.networkId, event.message.target);
     }
   }
   if (removedChannel) {
     runtime.store.deleteChannelByName(userId, event.message.networkId, event.message.target);
   }
   runtime.send(userId, { type: 'message.append', message: saved });
+  if (unreadChannel) {
+    runtime.send(userId, { type: 'channel.snapshot', channel: unreadChannel });
+  }
   if (query) {
     runtime.send(userId, { type: 'query.open', query });
   }

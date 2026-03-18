@@ -75,8 +75,8 @@ export type AuthUser = {
 
 export type NetworkInput = Omit<NetworkProfile, 'id'> & { id?: string };
 
-export type ChannelInput = Omit<ChannelState, 'unread' | 'users'> &
-  Partial<Pick<ChannelState, 'unread' | 'users'>>;
+export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'unread' | 'users'> &
+  Partial<Pick<ChannelState, 'id' | 'topic' | 'unread' | 'users'>>;
 
 export type MessageInput = {
   id: string;

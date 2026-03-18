@@ -33,7 +33,11 @@ export const getQuery = (db: DatabaseSync, userId: string, networkId: string, ta
 };
 
 export const upsertChannel = (db: DatabaseSync, userId: string, input: ChannelInput, lookup: ChannelLookup) => {
-  const id = input.id ?? randomUUID();
+  const existing = lookup(userId, input.networkId, input.name);
+  const id = existing?.id ?? input.id ?? randomUUID();
+  const topic = input.topic ?? existing?.topic ?? '';
+  const unread = input.unread ?? existing?.unread ?? 0;
+  const users = input.users ?? existing?.users ?? [];
   const now = Date.now();
   db.prepare(
     `INSERT INTO channels
@@ -49,9 +53,9 @@ export const upsertChannel = (db: DatabaseSync, userId: string, input: ChannelIn
     userId,
     input.networkId,
     input.name,
-    input.topic ?? '',
-    input.unread ?? 0,
-    JSON.stringify(input.users ?? []),
+    topic,
+    unread,
+    JSON.stringify(users),
     now,
     now
   );

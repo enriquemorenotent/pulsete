@@ -28,8 +28,9 @@ export const getMessageById = (db: DatabaseSync, userId: string, messageId: stri
 };
 
 export const listMessages = (db: DatabaseSync, userId: string, networkId: string, target: string, limit = 200) => {
-  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages WHERE userId = ? AND networkId = ? AND target = ? ORDER BY ts ASC LIMIT ?';
-  return (db.prepare(sql).all(userId, networkId, target, limit) as MessageRow[]).map(toMessage);
+  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages WHERE userId = ? AND networkId = ? AND target = ? ORDER BY ts DESC LIMIT ?';
+  const rows = db.prepare(sql).all(userId, networkId, target, limit) as MessageRow[];
+  return rows.reverse().map(toMessage);
 };
 
 export const listRecentMessages = (db: DatabaseSync, userId: string, limit = 200) => {

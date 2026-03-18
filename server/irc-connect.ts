@@ -14,12 +14,19 @@ export const connectSocket = (connection: IrcConnectionState) => {
     ? tls.connect({ host: connection.profile.host, port: connection.profile.port, servername: connection.profile.host })
     : net.connect({ host: connection.profile.host, port: connection.profile.port });
   connection.socket = socket;
+  const isCurrentSocket = () => connection.socket === socket;
   socket.setEncoding('utf8');
   socket.on('lookup', (_error, address, _family, host) => {
+    if (!isCurrentSocket()) {
+      return;
+    }
     const destination = host ?? connection.profile.host;
     emitStatus(connection, address ? `Connecting to ${destination} (${address}:${connection.profile.port})` : `Connecting to ${destination}:${connection.profile.port}`);
   });
   socket.on('connect', () => {
+    if (!isCurrentSocket()) {
+      return;
+    }
     if (connection.profile.password) {
       connection.sendRaw(`PASS ${connection.profile.password}`);
     }
@@ -32,16 +39,29 @@ export const connectSocket = (connection: IrcConnectionState) => {
     connection.sendRaw(`NICK ${connection.profile.nick}`);
     connection.sendRaw(`USER ${connection.profile.username} 0 * :${connection.profile.realName || connection.profile.name}`);
   });
-  socket.on('data', (chunk) => connection.consume(chunk));
-  socket.on('error', (error) => emitStatus(connection, error.message, 'error'));
-  socket.on('close', () => handleClose(connection));
+  socket.on('data', (chunk) => {
+    if (isCurrentSocket()) {
+      connection.consume(chunk);
+    }
+  });
+  socket.on('error', (error) => {
+    if (isCurrentSocket()) {
+      emitStatus(connection, error.message, 'error');
+    }
+  });
+  socket.on('close', () => handleClose(connection, socket));
 };
 
-const handleClose = (connection: IrcConnectionState) => {
+const handleClose = (connection: IrcConnectionState, socket: IrcConnectionState['socket']) => {
+  if (connection.socket !== socket) {
+    return;
+  }
   const wasConnected = connection.connected;
   connection.socket = null;
+  connection.resetTransientState();
   connection.connected = false;
   connection.serverName = null;
+  connection.currentNick = connection.profile.nick;
   emitState(connection);
   emitStatus(connection, wasConnected ? 'Disconnected from server' : 'Connection closed');
   if (!connection.manualDisconnect && connection.reconnectAttempts < 3) {

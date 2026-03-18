@@ -21,7 +21,8 @@ export const parseJson = <T>(value: string, fallback: T): T => {
 };
 
 export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
-  const altNicks = [`${username}_`, `${username}__`];
+  const canonicalUsername = username.trim();
+  const altNicks = [`${canonicalUsername}_`, `${canonicalUsername}__`];
   return [
     {
       templateId: null,
@@ -30,10 +31,10 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.libera.chat',
       port: 6697,
       tls: true,
-      nick: username,
+      nick: canonicalUsername,
       altNicks,
-      username,
-      realName: username,
+      username: canonicalUsername,
+      realName: canonicalUsername,
       favorite: true,
       autoJoin: [],
     },
@@ -44,10 +45,10 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.oftc.net',
       port: 6697,
       tls: true,
-      nick: username,
+      nick: canonicalUsername,
       altNicks,
-      username,
-      realName: username,
+      username: canonicalUsername,
+      realName: canonicalUsername,
       favorite: true,
       autoJoin: [],
     },
@@ -58,10 +59,10 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.snoonet.org',
       port: 6697,
       tls: true,
-      nick: username,
+      nick: canonicalUsername,
       altNicks,
-      username,
-      realName: username,
+      username: canonicalUsername,
+      realName: canonicalUsername,
       favorite: false,
       autoJoin: [],
     },
@@ -72,10 +73,10 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.ircnet.com',
       port: 6667,
       tls: false,
-      nick: username,
+      nick: canonicalUsername,
       altNicks,
-      username,
-      realName: username,
+      username: canonicalUsername,
+      realName: canonicalUsername,
       favorite: false,
       autoJoin: [],
     },

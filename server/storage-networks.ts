@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { NetworkProfile } from '../shared/protocol.js';
+import { notFound } from './app-error.js';
 import type { NetworkCountRow, NetworkInput, NetworkRow } from './storage-types.js';
 import { defaultNetworkTemplates, toNetworkProfile } from './storage-utils.js';
 
@@ -50,7 +51,8 @@ export const upsertNetwork = (db: DatabaseSync, userId: string, input: NetworkIn
        password = excluded.password,
        favorite = excluded.favorite,
        autoJoin = excluded.autoJoin,
-       updatedAt = excluded.updatedAt`
+       updatedAt = excluded.updatedAt
+     WHERE networks.userId = excluded.userId`
   ).run(
     id,
     userId,
@@ -70,7 +72,11 @@ export const upsertNetwork = (db: DatabaseSync, userId: string, input: NetworkIn
     now,
     now
   );
-  return { ...input, id, templateId: input.templateId ?? null, managerHidden: Boolean(input.managerHidden) };
+  const profile = getNetwork(db, userId, id);
+  if (!profile) {
+    throw notFound('Network not found');
+  }
+  return profile;
 };
 
 export const deleteNetwork = (db: DatabaseSync, userId: string, networkId: string) => {

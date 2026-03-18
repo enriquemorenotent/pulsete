@@ -2,13 +2,14 @@ import type { Server } from 'node:http';
 import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol.js';
 import type { HttpContext } from './http-types.js';
+import { tryParseRequestUrl } from './http-utils.js';
 import { getSessionFromRequest } from './session-utils.js';
 
 export const attachWebSocketServer = (server: Server, context: HttpContext) => {
   const wss = new WebSocketServer({ noServer: true });
   server.on('upgrade', (req, socket, head) => {
-    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-    if (url.pathname !== '/ws') {
+    const url = tryParseRequestUrl(req.url);
+    if (!url || url.pathname !== '/ws') {
       socket.destroy();
       return;
     }

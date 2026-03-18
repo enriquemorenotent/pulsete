@@ -15,11 +15,13 @@ export class IrcConnection implements IrcConnectionState {
   connected = false;
   serverName: string | null = null;
   currentNick: string;
+  profile: NetworkProfile;
 
   constructor(
-    readonly profile: NetworkProfile,
+    profile: NetworkProfile,
     readonly handlers: Handlers
   ) {
+    this.profile = profile;
     this.currentNick = profile.nick;
   }
 
@@ -38,25 +40,36 @@ export class IrcConnection implements IrcConnectionState {
   disconnect() {
     this.manualDisconnect = true;
     this.reconnectAttempts = 0;
-    if (this.socket) {
+    const socket = this.socket;
+    if (socket) {
       this.sendRaw('QUIT :Client disconnecting');
-      this.socket.end();
+      socket.end();
       this.socket = null;
     }
+    const wasActive = this.connected || socket !== null || this.serverName !== null;
+    this.resetTransientState();
     this.connected = false;
+    this.serverName = null;
+    this.currentNick = this.profile.nick;
+    if (wasActive) {
+      emitState(this);
+      emitStatus(this, 'Disconnected from server');
+    }
   }
 
   join(channel: string) { this.sendRaw(`JOIN ${channel}`); }
   part(channel: string, reason = 'Leaving') { this.sendRaw(`PART ${channel} :${reason}`); }
 
   say(target: string, text: string) {
-    emitMessage(this, this.createSelfMessage(target, text));
-    this.sendRaw(`PRIVMSG ${target} :${text}`);
+    if (this.sendRaw(`PRIVMSG ${target} :${text}`)) {
+      emitMessage(this, this.createSelfMessage(target, text));
+    }
   }
 
   action(target: string, text: string) {
-    emitMessage(this, this.createSelfMessage(target, `* ${this.currentNick} ${text}`));
-    this.sendRaw(`PRIVMSG ${target} :\u0001ACTION ${text}\u0001`);
+    if (this.sendRaw(`PRIVMSG ${target} :\u0001ACTION ${text}\u0001`)) {
+      emitMessage(this, this.createSelfMessage(target, `* ${this.currentNick} ${text}`));
+    }
   }
 
   setNick(nick: string) {
@@ -65,12 +78,35 @@ export class IrcConnection implements IrcConnectionState {
     emitState(this);
   }
 
+  updateProfile(profile: NetworkProfile) {
+    const reconnectPending = !this.connected && this.socket !== null;
+    if (reconnectPending) {
+      const socket = this.socket;
+      this.socket = null;
+      this.resetTransientState();
+      socket?.destroy();
+    }
+    this.profile = profile;
+    if (!this.connected) {
+      this.currentNick = profile.nick;
+    }
+    if (reconnectPending) {
+      connectSocket(this);
+    }
+  }
+
+  resetTransientState() {
+    this.buffer = '';
+    this.channelUsers.clear();
+  }
+
   sendRaw(raw: string) {
     if (!this.socket) {
       emitStatus(this, 'Not connected', 'error');
-      return;
+      return false;
     }
     this.socket.write(`${raw}\r\n`);
+    return true;
   }
 
   consume(chunk: string) {

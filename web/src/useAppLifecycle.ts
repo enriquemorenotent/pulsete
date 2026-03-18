@@ -76,10 +76,10 @@ export function useAppLifecycle(params: LifecycleParams) {
   }, [params.state.phase]);
 
   useEffect(() => {
-    if (params.workspace.selectedChannel) {
+    if (params.workspace.selectedChannel?.unread && params.workspace.selectedChannel.unread > 0) {
       api.markChannelRead(params.workspace.selectedChannel.id).catch(() => undefined);
     }
-  }, [params.workspace.selectedChannel]);
+  }, [params.workspace.selectedChannel?.id, params.workspace.selectedChannel?.unread]);
 
   useEffect(() => {
     if (!params.workspace.selection) {
@@ -129,6 +129,7 @@ function handleServerMessage(message: ServerMessage, dispatch: (action: Action) 
       nick: message.nick,
     });
   }
+  if (message.type === 'network.remove') return void dispatch({ type: 'remove-network', networkId: message.networkId });
   if (message.type === 'channel.snapshot') return void dispatch({ type: 'upsert-channel', channel: message.channel });
   if (message.type === 'channel.remove') return void dispatch({ type: 'remove-channel', channelId: message.channelId, networkId: message.networkId });
   if (message.type === 'query.open') return void dispatch({ type: 'upsert-query', query: message.query });

@@ -1,9 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { extname, resolve, sep } from 'node:path';
 import type { ServerResponse } from 'node:http';
-
-const distRoot = join(process.cwd(), 'dist');
-const publicRoot = process.cwd();
 
 const mimeTypes: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -18,12 +15,17 @@ const mimeTypes: Record<string, string> = {
   '.map': 'application/json; charset=utf-8',
 };
 
-export const serveStatic = async (pathname: string, res: ServerResponse) => {
+type StaticHandlerOptions = {
+  assetRoot?: string;
+};
+
+export const serveStatic = async (pathname: string, res: ServerResponse, options: StaticHandlerOptions = {}) => {
+  const assetRoot = resolveAssetRoot(options.assetRoot);
   if (pathname === '/' || pathname === '/index.html') {
-    return serveIndex(res);
+    return serveIndex(res, assetRoot);
   }
-  const safePath = normalize(pathname).replace(/^(\.\.[/\\])+/, '');
-  for (const candidate of [join(distRoot, safePath), join(publicRoot, safePath)]) {
+  const candidate = resolveStaticCandidate(pathname, assetRoot);
+  if (candidate) {
     try {
       const info = await stat(candidate);
       if (info.isFile()) {
@@ -32,14 +34,35 @@ export const serveStatic = async (pathname: string, res: ServerResponse) => {
         return;
       }
     } catch {
-      // continue
+      // fall through
     }
   }
-  await serveIndex(res);
+  if (extname(pathname)) {
+    res.statusCode = 404;
+    res.end('Not found');
+    return;
+  }
+  await serveIndex(res, assetRoot);
 };
 
-const serveIndex = async (res: ServerResponse) => {
-  const content = await readFile(join(distRoot, 'index.html')).catch(() => readFile(join(publicRoot, 'index.html')));
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(content);
+const serveIndex = async (res: ServerResponse, assetRoot: string) => {
+  try {
+    const content = await readFile(resolve(assetRoot, 'index.html'));
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(content);
+  } catch {
+    res.statusCode = 503;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.end('Built assets not found. Run `npm run build` before starting the server.');
+  }
+};
+
+const resolveAssetRoot = (assetRoot?: string) => resolve(assetRoot ?? resolve(process.cwd(), 'dist'));
+
+const resolveStaticCandidate = (pathname: string, assetRoot: string) => {
+  const candidate = resolve(assetRoot, `.${pathname}`);
+  if (candidate === assetRoot || candidate.startsWith(`${assetRoot}${sep}`)) {
+    return candidate;
+  }
+  return null;
 };

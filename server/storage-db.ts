@@ -90,6 +90,7 @@ export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => 
   mkdirSync(dirname(filePath), { recursive: true });
   const db = new DatabaseSync(filePath);
   db.exec(schemaSql);
+  ensureColumn(db, 'networks', 'autoJoin', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'networks', 'altNicks', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'networks', 'realName', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'networks', 'favorite', 'INTEGER NOT NULL DEFAULT 0');

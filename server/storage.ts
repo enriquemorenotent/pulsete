@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { AppSnapshot, ChannelState, NetworkProfile, QueryBuffer } from '../shared/protocol.js';
+import { historyWindowLimit, type AppSnapshot, type ChannelState, type NetworkProfile, type QueryBuffer } from '../shared/protocol.js';
 import { createDatabase } from './storage-db.js';
 import {
   authenticate,
@@ -106,7 +106,7 @@ export class Storage {
       networks,
       channels,
       queries: this.listQueries(userId),
-      messages: this.listRecentMessages(userId, 250),
+      messages: this.listRecentMessages(userId, historyWindowLimit),
       activeNetworkId,
       activeBuffer: activeChannel ? `${activeNetworkId}:${activeChannel.name}` : activeNetworkId ? `${activeNetworkId}:server` : '',
       bootstrapped: this.hasUsers(),
