@@ -123,6 +123,37 @@ export function useAppActions(params: AppActionParams) {
     params.dispatch({ type: 'select', selection: { networkId: network.id, target: 'server', channelId: null } });
   const selectChannelBuffer = (network: NetworkProfile, channel: ChannelState) =>
     params.dispatch({ type: 'select', selection: { networkId: network.id, target: channel.name, channelId: channel.id } });
+  const openMentionedChannel = (channelName: string) => {
+    const network = params.workspace.selectedNetwork;
+    if (!network) {
+      return;
+    }
+
+    const existingChannel =
+      params.state.channels.find(
+        (channel) => channel.networkId === network.id && channel.name.toLowerCase() === channelName.toLowerCase()
+      ) ?? null;
+
+    if (existingChannel) {
+      params.dispatch({
+        type: 'select',
+        selection: { networkId: network.id, target: existingChannel.name, channelId: existingChannel.id },
+      });
+      return;
+    }
+
+    if (!params.state.networkStates[network.id]?.connected) {
+      params.updateBanner('error', `Connect first to join ${channelName}`);
+      return;
+    }
+    if (!params.socketRef.current) {
+      params.updateBanner('error', 'Socket not connected');
+      return;
+    }
+
+    params.dispatch({ type: 'select', selection: { networkId: network.id, target: channelName, channelId: null } });
+    params.socketRef.current.send({ type: 'channel.join', networkId: network.id, channel: channelName });
+  };
   const selectPrivateBuffer = (network: NetworkProfile, nick: string) => {
     api
       .openQuery(network.id, nick)
@@ -163,6 +194,7 @@ export function useAppActions(params: AppActionParams) {
     connectNetwork,
     deleteNetwork,
     disconnectNetwork,
+    openMentionedChannel,
     openNetworkEditor: showExistingNetworkEditor,
     openNewNetworkEditor: showNewNetworkEditor,
     reconnectNetwork,

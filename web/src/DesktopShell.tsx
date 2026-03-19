@@ -39,6 +39,7 @@ type DesktopShellProps = {
   onSelectNetworkBuffer: (network: NetworkProfile) => void;
   onSelectChannelBuffer: (network: NetworkProfile, channel: ChannelState) => void;
   onSelectPrivateBuffer: (network: NetworkProfile, nick: string) => void;
+  onOpenMentionedChannel: (channel: string) => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseQuery: (networkId: string, target: string) => void;
   onSelectManagedNetwork: (networkId: string) => void;
@@ -100,6 +101,7 @@ export function DesktopShell(props: DesktopShellProps) {
             onReconnect={props.onReconnectNetwork}
             onDisconnect={props.onDisconnectNetwork}
             onCloseConnection={props.onCloseConnection}
+            onOpenMentionedChannel={props.onOpenMentionedChannel}
             onCloseChannel={props.onCloseChannel}
             onCloseQuery={props.onCloseQuery}
           />

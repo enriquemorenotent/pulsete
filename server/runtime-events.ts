@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ServerMessage } from '../shared/protocol.js';
+import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
 import type { Storage } from './storage.js';
 
@@ -77,8 +78,19 @@ const handleMessageEvent = (
   const removedChannel = event.message.self && event.message.kind === 'part'
     ? runtime.store.getChannelByName(event.message.networkId, event.message.target)
     : null;
-  const query = event.message.kind === 'line' && event.message.target !== 'server' && !isChannelTarget(event.message.target)
+  const query = !event.message.self
+    && event.message.kind === 'line'
+    && event.message.target !== 'server'
+    && !isChannelTarget(event.message.target)
     ? runtime.store.upsertQuery(event.message.networkId, event.message.target)
+    : null;
+  const serviceNick = !event.message.self
+    && event.message.target === 'server'
+    && isServiceNick(event.message.nick)
+    ? event.message.nick
+    : null;
+  const closedServiceQuery = serviceNick && runtime.store.getQuery(event.message.networkId, serviceNick)
+    ? serviceNick
     : null;
   const saved = runtime.store.appendMessage(event.message);
   let unreadChannel = null;
@@ -98,6 +110,10 @@ const handleMessageEvent = (
   }
   if (query) {
     runtime.send('local', { type: 'query.open', query });
+  }
+  if (closedServiceQuery) {
+    runtime.store.deleteQuery(event.message.networkId, closedServiceQuery);
+    runtime.send('local', { type: 'query.close', networkId: event.message.networkId, target: closedServiceQuery });
   }
   if (removedChannel) {
     runtime.send('local', {

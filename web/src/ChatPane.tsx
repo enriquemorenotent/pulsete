@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.js';
 import { Card } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
 import { cn } from '@/lib/utils.js';
+import { linkifyMessageText } from './message-linkify.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneProps = {
@@ -20,6 +21,7 @@ type ChatPaneProps = {
   onCloseConnection: (network: NetworkProfile) => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseQuery: (networkId: string, target: string) => void;
+  onOpenMentionedChannel: (channel: string) => void;
 };
 
 export function ChatPane(props: ChatPaneProps) {
@@ -106,9 +108,14 @@ export function ChatPane(props: ChatPaneProps) {
                     key={block.messages[0].id}
                     messages={block.messages}
                     sourceLabel={getGroupSourceLabel(block.messages[0], isServerBuffer ? 'server' : 'chat')}
+                    onOpenChannel={props.onOpenMentionedChannel}
                   />
                 ) : isCompactMessage(block.message) ? (
-                  <CompactMessageRow key={block.message.id} message={block.message} />
+                  <CompactMessageRow
+                    key={block.message.id}
+                    message={block.message}
+                    onOpenChannel={props.onOpenMentionedChannel}
+                  />
                 ) : (
                   <article key={block.message.id} className={cn('border px-2 py-1.5', messageTone(block.message))}>
                     <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
@@ -122,7 +129,7 @@ export function ChatPane(props: ChatPaneProps) {
                         isActionBody(block.message) && 'italic'
                       )}
                     >
-                      {block.message.body}
+                      <LinkifiedMessageText text={block.message.body} onOpenChannel={props.onOpenMentionedChannel} />
                     </p>
                   </article>
                 )
@@ -166,7 +173,7 @@ const formatTime = (value: number) =>
     hour12: false,
   });
 
-function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: string }) {
+function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: string; onOpenChannel: (channel: string) => void }) {
   const firstMessage = props.messages[0];
   const continuationMessages = props.messages.slice(1);
 
@@ -182,7 +189,7 @@ function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: stri
             </span>
           </div>
           <p className="whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground">
-            {firstMessage.body}
+            <LinkifiedMessageText text={firstMessage.body} onOpenChannel={props.onOpenChannel} />
           </p>
         </div>
 
@@ -192,7 +199,7 @@ function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: stri
               {formatTime(message.ts)}
             </span>
             <p className="whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground">
-              {message.body}
+              <LinkifiedMessageText text={message.body} onOpenChannel={props.onOpenChannel} />
             </p>
           </div>
         ))}
@@ -201,7 +208,7 @@ function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: stri
   );
 }
 
-function CompactMessageRow(props: { message: ChatMessage }) {
+function CompactMessageRow(props: { message: ChatMessage; onOpenChannel: (channel: string) => void }) {
   const { message } = props;
   const actionBody = isActionBody(message);
   const showNick = message.nick && (message.kind === 'line' || showKindLabel(message));
@@ -217,10 +224,37 @@ function CompactMessageRow(props: { message: ChatMessage }) {
         ) : null}
         {showKindLabel(message) ? <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
         <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
-          {message.body}
+          <LinkifiedMessageText text={message.body} onOpenChannel={props.onOpenChannel} />
         </span>
       </p>
     </article>
+  );
+}
+
+function LinkifiedMessageText(props: { text: string; onOpenChannel: (channel: string) => void }) {
+  return linkifyMessageText(props.text).map((token, index) =>
+    token.type === 'text' ? (
+      token.value
+    ) : token.type === 'channel' ? (
+      <button
+        key={`${token.channel}-${index}`}
+        type="button"
+        onClick={() => props.onOpenChannel(token.channel)}
+        className="cursor-pointer appearance-none border-0 bg-transparent p-0 align-baseline font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
+      >
+        {token.value}
+      </button>
+    ) : (
+      <a
+        key={`${token.href}-${index}`}
+        href={token.href}
+        target={token.external ? '_blank' : undefined}
+        rel={token.external ? 'noreferrer' : undefined}
+        className="font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
+      >
+        {token.value}
+      </a>
+    )
   );
 }
 

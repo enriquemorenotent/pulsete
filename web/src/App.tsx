@@ -125,6 +125,7 @@ function App() {
         onReconnectNetwork={actions.reconnectNetwork}
         onDisconnectNetwork={actions.disconnectNetwork}
         onCloseConnection={actions.closeConnection}
+        onOpenMentionedChannel={actions.openMentionedChannel}
         onSelectNetworkBuffer={actions.selectNetworkBuffer}
         onSelectChannelBuffer={actions.selectChannelBuffer}
         onSelectPrivateBuffer={actions.selectPrivateBuffer}

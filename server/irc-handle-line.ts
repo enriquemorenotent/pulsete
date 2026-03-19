@@ -3,6 +3,7 @@ import tls from 'node:tls';
 import type { MessageInput } from './storage.js';
 import { emitChannel, emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { formatServerNumeric } from './irc-server-log.js';
+import { isServiceNick } from './irc-services.js';
 import {
   findIrcCaseMatch,
   isChannelTarget,
@@ -156,8 +157,9 @@ const handleTextMessage = (connection: IrcConnectionState, command: 'PRIVMSG' | 
   const ctcp = stripCtcp(payload);
   const isDirectTarget = !isChannelTarget(rawTarget) && isSameIrcIdentifier(rawTarget, connection.currentNick);
   const isDirectCtcp = isDirectTarget && ctcp !== null && !ctcp.startsWith('ACTION ');
+  const isDirectServiceMessage = isDirectTarget && command === 'PRIVMSG' && isServiceNick(nick);
   const target = isDirectTarget
-    ? (command === 'NOTICE' || isDirectCtcp ? 'server' : nick ?? rawTarget)
+    ? (command === 'NOTICE' || isDirectCtcp || isDirectServiceMessage ? 'server' : nick ?? rawTarget)
     : trackedChannel ?? rawTarget;
   const body = ctcp?.startsWith('ACTION ')
     ? `* ${nick ?? target} ${ctcp.slice('ACTION '.length)}`

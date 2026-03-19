@@ -618,3 +618,64 @@ test('incoming private messages open query buffers automatically', () => {
     query: storage.getQuery(network.id, 'helper'),
   });
 });
+
+test('self-sent private messages do not open query buffers automatically', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'helper',
+        nick: 'tester',
+        body: 'hello there',
+        kind: 'line',
+        self: true,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.getQuery(network.id, 'helper'), null);
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.equal(sent.some((message) => message.type === 'query.open'), false);
+});
+
+test('service messages on the server buffer close stale service queries', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  storage.upsertQuery(network.id, 'NickServ');
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'server',
+        nick: 'NickServ',
+        body: 'Use IDENTIFY first',
+        kind: 'line',
+        self: false,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.getQuery(network.id, 'NickServ'), null);
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.deepEqual(sent.find((message) => message.type === 'query.close'), {
+    type: 'query.close',
+    networkId: network.id,
+    target: 'NickServ',
+  });
+});

@@ -1,4 +1,4 @@
-import { api, type SocketHandle } from './client.js';
+import type { SocketHandle } from './client.js';
 import type { Action } from './app-types.js';
 import type { WorkspaceView } from './workspace-types.js';
 
@@ -74,12 +74,6 @@ function runSlashCommand(text: string, params: ComposerParams) {
       const body = messageParts.join(' ').trim();
       if (!target || !body) return params.updateBanner('error', 'Usage: /msg target text');
       socket.send({ type: 'message.send', networkId: selection.networkId, target, body, kind: 'message' });
-      if (!target.startsWith('#') && !target.startsWith('&') && !target.startsWith('+') && !target.startsWith('!')) {
-        void api.openQuery(selection.networkId, target).then((result) => {
-          params.dispatch({ type: 'upsert-query', query: result.query });
-          params.dispatch({ type: 'select', selection: { networkId: selection.networkId, target, channelId: null } });
-        });
-      }
       break;
     }
     case 'me':
