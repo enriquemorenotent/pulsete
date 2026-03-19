@@ -1,10 +1,15 @@
 import type { RefObject } from 'react';
+import { Plug2, PowerOff, RefreshCcw, SendHorizonal, X } from 'lucide-react';
 import type { ChatMessage, NetworkProfile } from '../../shared/protocol.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
+import { Card } from '@/components/ui/card.js';
+import { Input } from '@/components/ui/input.js';
+import { cn } from '@/lib/utils.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneProps = {
   workspace: WorkspaceView;
-  selectedNetwork: NetworkProfile | null;
   selectedMessages: ChatMessage[];
   draft: string;
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -19,86 +24,132 @@ type ChatPaneProps = {
 
 export function ChatPane(props: ChatPaneProps) {
   const { selectedChannel, selectedNetwork, selectedQuery } = props.workspace;
+  const renderBlocks = buildRenderBlocks(props.selectedMessages);
 
   return (
-    <section className="chat">
-      <div className="chat__header">
-        <div>
-          <h2>{props.workspace.headerTitle}</h2>
-          <p className="muted">{props.workspace.headerSubtitle}</p>
-        </div>
-        <div className="chat__tools">
-          {props.workspace.mode === 'server-connected' ||
-          props.workspace.mode === 'server-connecting' ||
-          props.workspace.mode === 'server-offline' ? (
-            <button className="button button--small" onClick={() => selectedNetwork && props.onCloseConnection(selectedNetwork)}>
-              Close
-            </button>
-          ) : null}
-          {selectedChannel ? (
-            <button className="button button--small" onClick={() => props.onCloseChannel(selectedChannel.networkId, selectedChannel.name)}>
-              Close
-            </button>
-          ) : null}
-          {selectedQuery && selectedNetwork ? (
-            <button className="button button--small" onClick={() => props.onCloseQuery(selectedNetwork.id, selectedQuery.target)}>
-              Close
-            </button>
-          ) : null}
-          {selectedNetwork ? (
-            props.workspace.selectedRuntime?.connected ? (
-              <button className="button button--small" onClick={() => props.onDisconnect(selectedNetwork.id)}>
-                Disconnect
-              </button>
-            ) : (
-              <button
-                className="button button--small"
-                onClick={() => props.onReconnect(selectedNetwork)}
-                disabled={props.workspace.selectedRuntime?.connecting}
-              >
-                Reconnect
-              </button>
-            )
-          ) : null}
-        </div>
-      </div>
-
-      <div className="chat__body" ref={props.scrollRef}>
-        {props.selectedMessages.length === 0 ? (
-          <div className="empty-state">
-            <h3>{props.workspace.emptyTitle}</h3>
-            <p className="muted">{props.workspace.emptyBody}</p>
-          </div>
-        ) : null}
-        {props.selectedMessages.map((message) => (
-          <article key={message.id} className={`message message--${message.kind}`}>
-            <div className="message__meta">
-              <span className="message__time">{formatTime(message.ts)}</span>
-              {message.nick ? <span className="message__nick">{message.nick}</span> : null}
+    <section className="min-h-0 min-w-0 overflow-hidden">
+      <Card className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-3 py-2">
+          <div className="min-w-0">
+            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+              <Badge variant={props.workspace.selectedRuntime?.connected ? 'success' : 'secondary'}>
+                {props.workspace.statusLabel}
+              </Badge>
+              {selectedNetwork ? (
+                <Badge variant="outline" className="font-mono tracking-[0.08em]">
+                  {selectedNetwork.nick}
+                </Badge>
+              ) : null}
             </div>
-            <p className={`message__body ${isActionBody(message) ? 'message__body--action' : ''}`}>{message.body}</p>
-          </article>
-        ))}
-      </div>
+            <h2 className="truncate text-base font-semibold tracking-tight text-foreground">{props.workspace.headerTitle}</h2>
+            <p className="truncate text-[13px] text-muted-foreground">{props.workspace.headerSubtitle}</p>
+          </div>
 
-      {props.workspace.composerMode !== 'hidden' ? (
-        <footer className="composer">
-          <input
-            value={props.draft}
-            onChange={(event) => props.onDraftChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                props.onSend();
-              }
-            }}
-            placeholder={props.workspace.composerPlaceholder}
-          />
-          <button className="button button--primary" onClick={props.onSend}>
-            Send
-          </button>
-        </footer>
-      ) : null}
+          <div className="flex shrink-0 flex-wrap gap-1">
+            {props.workspace.mode === 'server-connected' ||
+            props.workspace.mode === 'server-connecting' ||
+            props.workspace.mode === 'server-offline' ? (
+              <Button variant="outline" size="sm" onClick={() => selectedNetwork && props.onCloseConnection(selectedNetwork)}>
+                <X />
+                Close
+              </Button>
+            ) : null}
+            {selectedChannel ? (
+              <Button variant="outline" size="sm" onClick={() => props.onCloseChannel(selectedChannel.networkId, selectedChannel.name)}>
+                <X />
+                Close
+              </Button>
+            ) : null}
+            {selectedQuery && selectedNetwork ? (
+              <Button variant="outline" size="sm" onClick={() => props.onCloseQuery(selectedNetwork.id, selectedQuery.target)}>
+                <X />
+                Close
+              </Button>
+            ) : null}
+            {selectedNetwork ? (
+              props.workspace.selectedRuntime?.connected ? (
+                <Button variant="ghost" size="sm" onClick={() => props.onDisconnect(selectedNetwork.id)}>
+                  <PowerOff />
+                  Disconnect
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => props.onReconnect(selectedNetwork)}
+                  disabled={props.workspace.selectedRuntime?.connecting}
+                >
+                  <RefreshCcw />
+                  Reconnect
+                </Button>
+              )
+            ) : null}
+          </div>
+        </div>
+
+        <div ref={props.scrollRef} className="min-h-0 flex-1 overflow-y-auto bg-background/45 px-3 py-2">
+          {props.selectedMessages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="w-full max-w-md border border-border bg-card px-4 py-5 text-center">
+                <div className="mx-auto mb-3 flex size-8 items-center justify-center border border-border bg-secondary">
+                  <Plug2 className="size-4 text-muted-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">{props.workspace.emptyTitle}</h3>
+                <p className="mt-2 text-[13px] leading-6 text-muted-foreground">{props.workspace.emptyBody}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-0.5 font-mono text-[12px]">
+              {renderBlocks.map((block) =>
+                block.kind === 'group' ? (
+                  <GroupedLineBlock key={block.messages[0].id} messages={block.messages} />
+                ) : isCompactMessage(block.message) ? (
+                  <CompactMessageRow key={block.message.id} message={block.message} />
+                ) : (
+                  <article key={block.message.id} className={cn('border px-2 py-1.5', messageTone(block.message))}>
+                    <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                      <span>{formatTime(block.message.ts)}</span>
+                      {block.message.nick ? <span className="font-medium text-foreground">{block.message.nick}</span> : null}
+                      {showKindLabel(block.message) ? <span>{block.message.kind}</span> : null}
+                    </div>
+                    <p
+                      className={cn(
+                        'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground',
+                        isActionBody(block.message) && 'italic'
+                      )}
+                    >
+                      {block.message.body}
+                    </p>
+                  </article>
+                )
+              )}
+            </div>
+          )}
+        </div>
+
+        {props.workspace.composerMode !== 'hidden' ? (
+          <footer className="shrink-0 border-t border-border bg-card px-3 py-2">
+            <div className="flex gap-2">
+              <Input
+                value={props.draft}
+                className="flex-1"
+                onChange={(event) => props.onDraftChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    props.onSend();
+                  }
+                }}
+                placeholder={props.workspace.composerPlaceholder}
+              />
+              <Button onClick={props.onSend}>
+                <SendHorizonal />
+                Send
+              </Button>
+            </div>
+          </footer>
+        ) : null}
+      </Card>
     </section>
   );
 }
@@ -109,4 +160,109 @@ const formatTime = (value: number) =>
     minute: '2-digit',
   });
 
+function GroupedLineBlock(props: { messages: ChatMessage[] }) {
+  const firstMessage = props.messages[0];
+
+  return (
+    <article className={cn('border px-2 py-1.5', messageTone(firstMessage))}>
+      <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+        <span>{formatTime(firstMessage.ts)}</span>
+        <span className="font-medium text-foreground">{firstMessage.nick}</span>
+      </div>
+      <div className="space-y-1 font-sans text-[13px] leading-5 text-foreground">
+        {props.messages.map((message) => (
+          <p key={message.id} className="whitespace-pre-wrap break-words">
+            {message.body}
+          </p>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function CompactMessageRow(props: { message: ChatMessage }) {
+  const { message } = props;
+  const actionBody = isActionBody(message);
+
+  return (
+    <article className={cn('border px-2 py-1.5', messageTone(message))}>
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] leading-5">
+        <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          {formatTime(message.ts)}
+        </span>
+        {message.nick && !actionBody ? <span className="font-semibold text-foreground">{message.nick}</span> : null}
+        <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
+          {message.body}
+        </span>
+      </p>
+    </article>
+  );
+}
+
+function buildRenderBlocks(messages: ChatMessage[]) {
+  const blocks: Array<{ kind: 'group'; messages: ChatMessage[] } | { kind: 'single'; message: ChatMessage }> = [];
+  let currentGroup: ChatMessage[] = [];
+
+  const flushGroup = () => {
+    if (currentGroup.length > 0) {
+      blocks.push({ kind: 'group', messages: currentGroup });
+      currentGroup = [];
+    }
+  };
+
+  for (const message of messages) {
+    if (!canGroupMessage(message)) {
+      flushGroup();
+      blocks.push({ kind: 'single', message });
+      continue;
+    }
+
+    const previous = currentGroup.at(-1);
+    if (previous && canContinueGroup(previous, message)) {
+      currentGroup.push(message);
+      continue;
+    }
+
+    flushGroup();
+    currentGroup = [message];
+  }
+
+  flushGroup();
+  return blocks;
+}
+
+const canGroupMessage = (message: ChatMessage) =>
+  message.kind === 'line' && message.nick !== null && !isActionBody(message);
+
+const canContinueGroup = (previous: ChatMessage, next: ChatMessage) =>
+  previous.nick === next.nick && previous.self === next.self;
+
+const isCompactMessage = (message: ChatMessage) =>
+  message.kind === 'line' || message.kind === 'join' || message.kind === 'part';
+
 const isActionBody = (message: ChatMessage) => message.kind === 'line' && message.body.startsWith('* ');
+
+const showKindLabel = (message: ChatMessage) =>
+  message.kind !== 'line' && message.kind !== 'join' && message.kind !== 'part';
+
+const messageTone = (message: ChatMessage) => {
+  if (message.kind === 'error') {
+    return 'border-destructive/40 bg-destructive/10';
+  }
+  if (message.kind === 'notice') {
+    return 'border-primary/30 bg-primary/8';
+  }
+  if (message.kind === 'join') {
+    return 'border-emerald-500/30 bg-emerald-500/10';
+  }
+  if (message.kind === 'part') {
+    return 'border-amber-400/30 bg-amber-400/10';
+  }
+  if (message.kind === 'system') {
+    return 'border-border bg-secondary';
+  }
+  if (message.self) {
+    return 'border-primary/35 bg-accent';
+  }
+  return 'border-border bg-card';
+};

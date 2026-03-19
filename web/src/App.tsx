@@ -94,7 +94,11 @@ function App() {
   };
 
   if (loadingAuth || state.phase === 'loading') {
-    return <div className="shell shell--loading">Loading Pulsete…</div>;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center px-6 text-sm font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        Loading Pulsete...
+      </div>
+    );
   }
 
   return (

@@ -1,4 +1,9 @@
+import { Hash, MessageSquareMore, X } from 'lucide-react';
 import type { ChannelState, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Card } from '@/components/ui/card.js';
+import { ScrollArea } from '@/components/ui/scroll-area.js';
+import { cn } from '@/lib/utils.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace.js';
 import { canShowInstanceChildren, getConnectionLabel } from './workspace.js';
 
@@ -18,72 +23,97 @@ type ConnectionSidebarProps = {
 
 export function ConnectionSidebar(props: ConnectionSidebarProps) {
   return (
-    <aside className="sidebar panel">
-      <div className="panel__header">
-        <h2>Connections</h2>
-        <span className="muted">{props.networks.length}</span>
-      </div>
-      <div className="tree">
-        {props.networks.length === 0 ? <p className="muted">No open connections. Open Network List to connect.</p> : null}
-        {props.networks.map((network) => {
-          const runtime = props.networkStates[network.id] ?? null;
-          const channels = canShowInstanceChildren(runtime)
-            ? props.channels.filter((channel) => channel.networkId === network.id)
-            : [];
-          const queries = canShowInstanceChildren(runtime)
-            ? props.queries.filter((query) => query.networkId === network.id).sort((a, b) => a.target.localeCompare(b.target))
-            : [];
-          const selectedServer =
-            props.selection?.networkId === network.id &&
-            props.selection.channelId === null &&
-            props.selection.target === 'server';
-          const label = getConnectionLabel(props.networks, network);
+    <aside className="h-full min-h-0 overflow-hidden">
+      <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border px-3 py-2">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Connections</p>
+            <h2 className="text-sm font-semibold tracking-tight">Buffers</h2>
+          </div>
+          <Badge variant="secondary">{props.networks.length}</Badge>
+        </div>
 
-          return (
-            <div key={network.id} className="tree__group">
-              <div className={`tree__item ${selectedServer ? 'tree__item--selected' : ''}`}>
-                <button
-                  className={`tree__row ${selectedServer ? 'tree__row--selected' : ''}`}
-                  onClick={() => props.onSelectNetwork(network)}
-                >
-                  <span className={`dot ${runtime?.connected ? 'dot--good' : 'dot--muted'}`} />
-                  <span>{label}</span>
-                  {network.favorite ? <span className="badge badge--star">Fav</span> : null}
-                </button>
-                <button className="tree__close" onClick={() => props.onCloseConnection(network)} aria-label={`Close ${label}`}>
-                  ×
-                </button>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="space-y-2 p-2">
+            {props.networks.length === 0 ? (
+              <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
+                No open connections. Use Network List to connect.
               </div>
-              {canShowInstanceChildren(runtime) ? (
-                <div className="tree__channels">
-                  {channels.map((channel) => (
-                    <SidebarChannelRow
-                      key={channel.id}
-                      selected={props.selection?.networkId === network.id && props.selection?.channelId === channel.id}
-                      channel={channel}
-                      onSelect={() => props.onSelectChannel(network, channel)}
-                      onClose={() => props.onCloseChannel(network.id, channel.name)}
-                    />
-                  ))}
-                  {queries.map((query) => (
-                    <SidebarQueryRow
-                      key={query.id}
-                      selected={
-                        props.selection?.networkId === network.id &&
-                        props.selection?.channelId === null &&
-                        props.selection?.target === query.target
-                      }
-                      query={query}
-                      onSelect={() => props.onSelectQuery(network, query.target)}
-                      onClose={() => props.onCloseQuery(network.id, query.target)}
-                    />
-                  ))}
+            ) : null}
+
+            {props.networks.map((network) => {
+              const runtime = props.networkStates[network.id] ?? null;
+              const channels = canShowInstanceChildren(runtime)
+                ? props.channels.filter((channel) => channel.networkId === network.id)
+                : [];
+              const queries = canShowInstanceChildren(runtime)
+                ? props.queries.filter((query) => query.networkId === network.id).sort((a, b) => a.target.localeCompare(b.target))
+                : [];
+              const selectedServer =
+                props.selection?.networkId === network.id &&
+                props.selection.channelId === null &&
+                props.selection.target === 'server';
+              const label = getConnectionLabel(props.networks, network);
+
+              return (
+                <div key={network.id} className="border border-border bg-card">
+                  <div className={cn('flex items-stretch', selectedServer && 'bg-accent')}>
+                    <button
+                      className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+                      onClick={() => props.onSelectNetwork(network)}
+                    >
+                      <span className={cn('size-2 shrink-0 rounded-full', dotTone(runtime))} />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-[13px] font-medium text-foreground">{label}</span>
+                          {network.favorite ? <Badge>Fav</Badge> : null}
+                        </div>
+                        <p className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                          {runtime?.connected ? 'Connected' : runtime?.connecting ? 'Connecting' : 'Offline'}
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      className="border-l border-border px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => props.onCloseConnection(network)}
+                      aria-label={`Close ${label}`}
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+
+                  {canShowInstanceChildren(runtime) ? (
+                    <div className="border-t border-border/80 bg-background/50">
+                      {channels.map((channel) => (
+                        <SidebarChannelRow
+                          key={channel.id}
+                          selected={props.selection?.networkId === network.id && props.selection?.channelId === channel.id}
+                          channel={channel}
+                          onSelect={() => props.onSelectChannel(network, channel)}
+                          onClose={() => props.onCloseChannel(network.id, channel.name)}
+                        />
+                      ))}
+                      {queries.map((query) => (
+                        <SidebarQueryRow
+                          key={query.id}
+                          selected={
+                            props.selection?.networkId === network.id &&
+                            props.selection?.channelId === null &&
+                            props.selection?.target === query.target
+                          }
+                          query={query}
+                          onSelect={() => props.onSelectQuery(network, query.target)}
+                          onClose={() => props.onCloseQuery(network.id, query.target)}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </Card>
     </aside>
   );
 }
@@ -95,14 +125,22 @@ function SidebarChannelRow(props: {
   onClose: () => void;
 }) {
   return (
-    <div className={`tree__item ${props.selected ? 'tree__item--selected' : ''}`}>
-      <button className={`tree__row tree__row--channel ${props.selected ? 'tree__row--selected' : ''}`} onClick={props.onSelect}>
-        <span className="hash">#</span>
-        <span>{props.channel.name}</span>
-        {props.channel.unread > 0 ? <span className="badge">{props.channel.unread}</span> : null}
+    <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
+      <button className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left" onClick={props.onSelect}>
+        <Hash className="size-3 shrink-0 text-muted-foreground" />
+        <span className="truncate text-[13px] text-foreground">{props.channel.name}</span>
+        {props.channel.unread > 0 ? (
+          <Badge variant="outline" className="ml-auto font-mono tracking-normal">
+            {props.channel.unread}
+          </Badge>
+        ) : null}
       </button>
-      <button className="tree__close" onClick={props.onClose} aria-label={`Close ${props.channel.name}`}>
-        ×
+      <button
+        className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        onClick={props.onClose}
+        aria-label={`Close ${props.channel.name}`}
+      >
+        <X className="size-3" />
       </button>
     </div>
   );
@@ -115,14 +153,28 @@ function SidebarQueryRow(props: {
   onClose: () => void;
 }) {
   return (
-    <div className={`tree__item ${props.selected ? 'tree__item--selected' : ''}`}>
-      <button className={`tree__row tree__row--query ${props.selected ? 'tree__row--selected' : ''}`} onClick={props.onSelect}>
-        <span className="hash">+</span>
-        <span>{props.query.target}</span>
+    <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
+      <button className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left" onClick={props.onSelect}>
+        <MessageSquareMore className="size-3 shrink-0 text-muted-foreground" />
+        <span className="truncate text-[13px] text-foreground">{props.query.target}</span>
       </button>
-      <button className="tree__close" onClick={props.onClose} aria-label={`Close ${props.query.target}`}>
-        ×
+      <button
+        className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        onClick={props.onClose}
+        aria-label={`Close ${props.query.target}`}
+      >
+        <X className="size-3" />
       </button>
     </div>
   );
 }
+
+const dotTone = (runtime: NetworkRuntimeState | null) => {
+  if (runtime?.connected) {
+    return 'bg-emerald-400';
+  }
+  if (runtime?.connecting) {
+    return 'bg-amber-300';
+  }
+  return 'bg-zinc-500';
+};

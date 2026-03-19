@@ -1,5 +1,9 @@
 import type { RefObject } from 'react';
+import { LogOut, PanelsTopLeft, Radio } from 'lucide-react';
 import type { ChannelState, ChatMessage, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
+import { cn } from '@/lib/utils.js';
 import { ChatPane } from './ChatPane.js';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { NicklistPanel } from './NicklistPanel.js';
@@ -54,57 +58,79 @@ type DesktopShellProps = {
 };
 
 export function DesktopShell(props: DesktopShellProps) {
+  const workspaceClass = cn(
+    'grid h-full min-h-0 flex-1 gap-2 overflow-hidden',
+    props.workspace.showNicklist
+      ? 'grid-cols-1 xl:grid-cols-[16rem_minmax(0,1fr)_13rem]'
+      : 'grid-cols-1 xl:grid-cols-[16rem_minmax(0,1fr)]'
+  );
+
   return (
-    <div className="shell shell--desktop">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Pulsete</p>
-          <h1>IRC</h1>
+    <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background text-foreground">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 py-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold tracking-tight">Pulsete</span>
+            <Badge variant="outline">IRC</Badge>
+          </div>
+          <p className="truncate font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {props.workspace.headerTitle}
+          </p>
         </div>
-        <div className="topbar__status">
-          <span className={`pill ${props.workspace.statusLabel === 'Connected' ? 'pill--good' : 'pill--muted'}`}>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Badge variant={props.workspace.statusLabel === 'Connected' ? 'success' : 'secondary'}>
+            <Radio className="size-3" />
             {props.workspace.statusLabel}
-          </span>
-          <button className="button" onClick={props.onOpenNetworkManager}>Network List</button>
-          <button className="button" onClick={props.onLogout}>Sign out</button>
+          </Badge>
+          <Button variant="outline" size="sm" onClick={props.onOpenNetworkManager}>
+            <PanelsTopLeft />
+            Network List
+          </Button>
+          <Button variant="ghost" size="sm" onClick={props.onLogout}>
+            <LogOut />
+            Sign out
+          </Button>
         </div>
       </header>
-      <main className={`workspace ${props.workspace.showNicklist ? '' : 'workspace--no-nicklist'}`}>
-        <ConnectionSidebar
-          networks={props.connectionInstances}
-          channels={props.channels}
-          queries={props.queries}
-          networkStates={props.networkStates}
-          selection={props.selection}
-          onSelectNetwork={props.onSelectNetworkBuffer}
-          onSelectChannel={props.onSelectChannelBuffer}
-          onSelectQuery={props.onSelectPrivateBuffer}
-          onCloseConnection={props.onCloseConnection}
-          onCloseChannel={props.onCloseChannel}
-          onCloseQuery={props.onCloseQuery}
-        />
-        <ChatPane
-          workspace={props.workspace}
-          selectedNetwork={props.workspace.selectedNetwork}
-          selectedMessages={props.selectedMessages}
-          draft={props.draft}
-          scrollRef={props.scrollRef}
-          onDraftChange={props.onDraftChange}
-          onSend={props.onSendComposer}
-          onReconnect={props.onReconnectNetwork}
-          onDisconnect={props.onDisconnectNetwork}
-          onCloseConnection={props.onCloseConnection}
-          onCloseChannel={props.onCloseChannel}
-          onCloseQuery={props.onCloseQuery}
-        />
-        {props.workspace.showNicklist && props.workspace.selectedChannel ? (
-          <NicklistPanel
-            network={props.workspace.selectedNetwork}
-            channel={props.workspace.selectedChannel}
-            onSelectNick={props.onSelectPrivateBuffer}
+
+      <main className="flex min-h-0 flex-1 overflow-hidden p-2">
+        <div className={workspaceClass}>
+          <ConnectionSidebar
+            networks={props.connectionInstances}
+            channels={props.channels}
+            queries={props.queries}
+            networkStates={props.networkStates}
+            selection={props.selection}
+            onSelectNetwork={props.onSelectNetworkBuffer}
+            onSelectChannel={props.onSelectChannelBuffer}
+            onSelectQuery={props.onSelectPrivateBuffer}
+            onCloseConnection={props.onCloseConnection}
+            onCloseChannel={props.onCloseChannel}
+            onCloseQuery={props.onCloseQuery}
           />
-        ) : null}
+          <ChatPane
+            workspace={props.workspace}
+            selectedMessages={props.selectedMessages}
+            draft={props.draft}
+            scrollRef={props.scrollRef}
+            onDraftChange={props.onDraftChange}
+            onSend={props.onSendComposer}
+            onReconnect={props.onReconnectNetwork}
+            onDisconnect={props.onDisconnectNetwork}
+            onCloseConnection={props.onCloseConnection}
+            onCloseChannel={props.onCloseChannel}
+            onCloseQuery={props.onCloseQuery}
+          />
+          {props.workspace.showNicklist && props.workspace.selectedChannel ? (
+            <NicklistPanel
+              network={props.workspace.selectedNetwork}
+              channel={props.workspace.selectedChannel}
+              onSelectNick={props.onSelectPrivateBuffer}
+            />
+          ) : null}
+        </div>
       </main>
+
       {props.showNetworkManager ? (
         <NetworkManagerDialog
           networks={props.visibleNetworks}
