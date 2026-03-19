@@ -1,5 +1,6 @@
 import { pbkdf2Sync } from 'node:crypto';
 import type { ChannelState, NetworkProfile, QueryBuffer } from '../shared/protocol.js';
+import { getLocalIrcIdentity } from '../shared/local-defaults.js';
 import type { SecretBox } from './network-secret.js';
 import type {
   ChannelRow,
@@ -22,10 +23,8 @@ export const parseJson = <T>(value: string, fallback: T): T => {
   }
 };
 
-export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
-  const canonicalUsername = username.trim();
-  const ircIdentity = toDefaultIrcIdentity(canonicalUsername);
-  const altNicks = [`${ircIdentity}_`, `${ircIdentity}__`];
+export const defaultNetworkTemplates = (): NetworkInput[] => {
+  const identity = getLocalIrcIdentity();
   return [
     {
       templateId: null,
@@ -34,10 +33,10 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.libera.chat',
       port: 6697,
       tls: true,
-      nick: ircIdentity,
-      altNicks,
-      username: ircIdentity,
-      realName: canonicalUsername,
+      nick: identity.nick,
+      altNicks: [...identity.altNicks],
+      username: identity.username,
+      realName: identity.realName,
       favorite: true,
       autoJoin: [],
     },
@@ -48,10 +47,10 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.oftc.net',
       port: 6697,
       tls: true,
-      nick: ircIdentity,
-      altNicks,
-      username: ircIdentity,
-      realName: canonicalUsername,
+      nick: identity.nick,
+      altNicks: [...identity.altNicks],
+      username: identity.username,
+      realName: identity.realName,
       favorite: true,
       autoJoin: [],
     },
@@ -62,10 +61,10 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.snoonet.org',
       port: 6697,
       tls: true,
-      nick: ircIdentity,
-      altNicks,
-      username: ircIdentity,
-      realName: canonicalUsername,
+      nick: identity.nick,
+      altNicks: [...identity.altNicks],
+      username: identity.username,
+      realName: identity.realName,
       favorite: false,
       autoJoin: [],
     },
@@ -76,17 +75,15 @@ export const defaultNetworkTemplates = (username: string): NetworkInput[] => {
       host: 'irc.ircnet.com',
       port: 6667,
       tls: false,
-      nick: ircIdentity,
-      altNicks,
-      username: ircIdentity,
-      realName: canonicalUsername,
+      nick: identity.nick,
+      altNicks: [...identity.altNicks],
+      username: identity.username,
+      realName: identity.realName,
       favorite: false,
       autoJoin: [],
     },
   ];
 };
-
-const toDefaultIrcIdentity = (username: string) => username.replace(/\s+/g, '_');
 
 export const toNetworkProfile = (row: NetworkRow): NetworkProfile => ({
   id: row.id,

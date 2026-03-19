@@ -5,12 +5,19 @@ import type { Storage } from './storage.js';
 
 type RuntimeContext = {
   store: Storage;
-  send(userId: string, message: ServerMessage): void;
+  send(_legacyUserId: string, message: ServerMessage): void;
 };
 
-export const handleRuntimeEvent = (runtime: RuntimeContext, userId: string, event: RuntimeEvent) => {
+export function handleRuntimeEvent(runtime: RuntimeContext, event: RuntimeEvent): void;
+export function handleRuntimeEvent(runtime: RuntimeContext, _legacyUserId: string, event: RuntimeEvent): void;
+export function handleRuntimeEvent(
+  runtime: RuntimeContext,
+  legacyUserIdOrEvent: RuntimeEvent | string,
+  maybeEvent?: RuntimeEvent
+) {
+  const event = typeof legacyUserIdOrEvent === 'string' ? maybeEvent! : legacyUserIdOrEvent;
   if (event.type === 'state') {
-    runtime.send(userId, {
+    runtime.send('local', {
       type: 'network.state',
       networkId: event.networkId,
       connected: event.connected,
@@ -20,27 +27,26 @@ export const handleRuntimeEvent = (runtime: RuntimeContext, userId: string, even
     return;
   }
   if (event.type === 'status') {
-    handleStatusEvent(runtime, userId, event);
+    handleStatusEvent(runtime, event);
     return;
   }
   if (event.type === 'message') {
-    handleMessageEvent(runtime, userId, event);
+    handleMessageEvent(runtime, event);
     return;
   }
-  const channel = runtime.store.upsertChannel(userId, {
+  const channel = runtime.store.upsertChannel({
     id: randomUUID(),
     networkId: event.networkId,
     name: event.channel,
     topic: event.topic,
-    unread: runtime.store.getChannelByName(userId, event.networkId, event.channel)?.unread ?? 0,
+    unread: runtime.store.getChannelByName(event.networkId, event.channel)?.unread ?? 0,
     users: event.users,
   });
-  runtime.send(userId, { type: 'channel.snapshot', channel });
-};
+  runtime.send('local', { type: 'channel.snapshot', channel });
+}
 
 const handleStatusEvent = (
   runtime: RuntimeContext,
-  userId: string,
   event: Extract<RuntimeEvent, { type: 'status' }>
 ) => {
   const message = {
@@ -53,49 +59,48 @@ const handleStatusEvent = (
     self: false,
     ts: Date.now(),
   };
-  runtime.store.appendMessage(userId, message);
+  runtime.store.appendMessage(message);
   if (event.kind !== 'system') {
-    runtime.send(userId, {
+    runtime.send('local', {
       type: event.kind === 'error' ? 'error' : 'notice',
       networkId: event.networkId,
       message: event.message,
     });
   }
-  runtime.send(userId, { type: 'message.append', message });
+  runtime.send('local', { type: 'message.append', message });
 };
 
 const handleMessageEvent = (
   runtime: RuntimeContext,
-  userId: string,
   event: Extract<RuntimeEvent, { type: 'message' }>
 ) => {
   const removedChannel = event.message.self && event.message.kind === 'part'
-    ? runtime.store.getChannelByName(userId, event.message.networkId, event.message.target)
+    ? runtime.store.getChannelByName(event.message.networkId, event.message.target)
     : null;
   const query = event.message.kind === 'line' && event.message.target !== 'server' && !isChannelTarget(event.message.target)
-    ? runtime.store.upsertQuery(userId, event.message.networkId, event.message.target)
+    ? runtime.store.upsertQuery(event.message.networkId, event.message.target)
     : null;
-  const saved = runtime.store.appendMessage(userId, event.message);
+  const saved = runtime.store.appendMessage(event.message);
   let unreadChannel = null;
   if (!event.message.self && event.message.target !== 'server' && event.message.kind !== 'system') {
-    const channel = runtime.store.getChannelByName(userId, event.message.networkId, event.message.target);
+    const channel = runtime.store.getChannelByName(event.message.networkId, event.message.target);
     if (channel) {
-      runtime.store.setChannelUnread(userId, event.message.networkId, event.message.target, channel.unread + 1);
-      unreadChannel = runtime.store.getChannelByName(userId, event.message.networkId, event.message.target);
+      runtime.store.setChannelUnread(event.message.networkId, event.message.target, channel.unread + 1);
+      unreadChannel = runtime.store.getChannelByName(event.message.networkId, event.message.target);
     }
   }
   if (removedChannel) {
-    runtime.store.deleteChannelByName(userId, event.message.networkId, event.message.target);
+    runtime.store.deleteChannelByName(event.message.networkId, event.message.target);
   }
-  runtime.send(userId, { type: 'message.append', message: saved });
+  runtime.send('local', { type: 'message.append', message: saved });
   if (unreadChannel) {
-    runtime.send(userId, { type: 'channel.snapshot', channel: unreadChannel });
+    runtime.send('local', { type: 'channel.snapshot', channel: unreadChannel });
   }
   if (query) {
-    runtime.send(userId, { type: 'query.open', query });
+    runtime.send('local', { type: 'query.open', query });
   }
   if (removedChannel) {
-    runtime.send(userId, {
+    runtime.send('local', {
       type: 'channel.remove',
       networkId: removedChannel.networkId,
       channelId: removedChannel.id,

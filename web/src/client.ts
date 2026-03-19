@@ -10,15 +10,9 @@ import {
   type ChatMessage,
 } from '../../shared/protocol.js';
 
-export type SessionResponse =
-  | { bootstrapped: false; authenticated: false }
-  | { bootstrapped: true; authenticated: false }
-  | { bootstrapped: true; authenticated: true; user: { id: string; username: string }; snapshot: AppSnapshot };
-
 const apiRequest = async <T>(path: string, init?: RequestInit) => {
   const response = await fetch(path, {
     ...init,
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(init?.headers ?? {}),
@@ -33,27 +27,7 @@ const apiRequest = async <T>(path: string, init?: RequestInit) => {
 };
 
 export const api = {
-  session: () => apiRequest<SessionResponse>('/api/session'),
-  bootstrap: (payload: { username: string; password: string }) =>
-    apiRequest<SessionResponse>('/api/bootstrap', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  register: (payload: { username: string; password: string }) =>
-    apiRequest<SessionResponse>('/api/register', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  login: (payload: { username: string; password: string }) =>
-    apiRequest<SessionResponse>('/api/login', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  logout: () =>
-    apiRequest<{ ok: boolean }>('/api/logout', {
-      method: 'POST',
-      body: '{}',
-    }),
+  snapshot: () => apiRequest<AppSnapshot>('/api/snapshot'),
   saveNetwork: (payload: Partial<NetworkProfile> & { clearPassword?: boolean; id?: string; password?: string }) =>
     apiRequest<{ network: NetworkProfile }>(payload.id ? `/api/networks/${payload.id}` : '/api/networks', {
       method: payload.id ? 'PUT' : 'POST',
@@ -103,10 +77,6 @@ export type SocketHandle = {
 export const connectSocket = (onMessage: (message: ServerMessage) => void, onClose?: () => void): SocketHandle => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
-
-  socket.addEventListener('open', () => {
-    socket.send(encode({ type: 'session.init', token: null }));
-  });
 
   socket.addEventListener('message', (event) => {
     try {

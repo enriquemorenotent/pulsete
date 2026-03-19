@@ -4,9 +4,8 @@ import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import { normalizeChannelTarget, requireIrcToken, requireSingleLineValue } from './irc-validate.js';
 import type { NetworkInput } from './storage.js';
 import type { RouteArgs } from './http-types.js';
-import { getSessionTokenFromRequest, requireLiveSessionFromRequest } from './session-utils.js';
 
-const networkInputSchema = z.object({
+export const networkInputSchema = z.object({
   templateId: z.string().nullable().optional().default(null),
   managerHidden: z.boolean().optional().default(false),
   name: z.string().trim().min(1, 'Network name is required'),
@@ -29,15 +28,14 @@ const networkInputSchema = z.object({
   path: ['clearPassword'],
 });
 
-export const handleNetworkRoutes = async ({ req, res, pathname, context, session }: RouteArgs) => {
-  const getUserId = () => requireLiveSessionFromRequest(context.storage, req, session?.user.id).user.id;
+export const handleNetworkRoutes = async ({ req, res, pathname, context }: RouteArgs) => {
   if (req.method === 'GET' && pathname === '/api/networks') {
-    writeJson(res, 200, { networks: context.storage.listNetworks(getUserId()) });
+    writeJson(res, 200, { networks: context.storage.listNetworks() });
     return true;
   }
   if (req.method === 'POST' && pathname === '/api/networks') {
     const input = normalizeNetworkInput(await readJson(req));
-    const network = context.runtime.saveNetwork(getUserId(), input);
+    const network = context.runtime.saveNetwork(input);
     writeJson(res, 200, { network });
     return true;
   }
@@ -45,23 +43,21 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context, session
   if (networkMatch && req.method === 'PUT') {
     const networkId = decodeRouteParam(networkMatch[1]);
     const input = normalizeNetworkInput(await readJson(req), networkId);
-    const network = context.runtime.saveNetwork(getUserId(), input);
+    const network = context.runtime.saveNetwork(input);
     writeJson(res, 200, { network });
     return true;
   }
   if (networkMatch && req.method === 'DELETE') {
-    const deletedNetworkIds = context.runtime.deleteNetwork(getUserId(), decodeRouteParam(networkMatch[1]));
+    const deletedNetworkIds = context.runtime.deleteNetwork(decodeRouteParam(networkMatch[1]));
     writeJson(res, 200, { ok: true, deletedNetworkIds });
     return true;
   }
   const connectMatch = pathname.match(/^\/api\/networks\/([^/]+)\/(connect|disconnect)$/);
   if (connectMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(connectMatch[1]);
-    const sessionToken = getSessionTokenFromRequest(req) ?? undefined;
-    const userId = getUserId();
     connectMatch[2] === 'connect'
-      ? context.runtime.connect(userId, networkId, sessionToken)
-      : context.runtime.disconnect(userId, networkId);
+      ? context.runtime.connect(networkId)
+      : context.runtime.disconnect(networkId);
     writeJson(res, 200, { ok: true });
     return true;
   }

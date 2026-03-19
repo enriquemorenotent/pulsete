@@ -22,52 +22,34 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
 });
 
 const emptySnapshot = (): AppSnapshot => ({
-  user: { id: 'user-1', username: 'tester' },
   networks: [],
   channels: [],
   queries: [],
   messages: [],
   activeNetworkId: null,
   activeBuffer: 'server',
-  bootstrapped: true,
 });
 
-test('session-loaded clears auth state when returning to login', () => {
+test('snapshot-loaded enters the ready phase and clears any banner', () => {
   const dirtyState = {
     ...initialState,
-    authForm: { username: 'tester', password: 'secret' },
-    banner: { kind: 'notice' as const, message: 'Signed out' },
+    banner: { kind: 'notice' as const, message: 'Stale banner' },
   };
 
   const nextState = reducer(dirtyState, {
-    type: 'session-loaded',
-    session: { bootstrapped: true, authenticated: false },
-  });
-
-  assert.equal(nextState.phase, 'login');
-  assert.deepEqual(nextState.authForm, { username: '', password: '' });
-  assert.equal(nextState.banner, null);
-});
-
-test('session-loaded clears auth state after a successful login', () => {
-  const dirtyState = {
-    ...initialState,
-    authForm: { username: 'tester', password: 'secret' },
-  };
-
-  const nextState = reducer(dirtyState, {
-    type: 'session-loaded',
-    session: {
-      bootstrapped: true,
-      authenticated: true,
-      user: { id: 'user-1', username: 'tester' },
-      snapshot: emptySnapshot(),
-    },
+    type: 'snapshot-loaded',
+    snapshot: emptySnapshot(),
   });
 
   assert.equal(nextState.phase, 'ready');
-  assert.deepEqual(nextState.authForm, { username: '', password: '' });
   assert.equal(nextState.banner, null);
+  assert.equal(nextState.selection, null);
+});
+
+test('load-failed still exits the loading phase', () => {
+  const nextState = reducer(initialState, { type: 'load-failed' });
+
+  assert.equal(nextState.phase, 'ready');
 });
 
 test('resolveManagedNetworkId keeps a hidden selection while favorites are filtered', () => {

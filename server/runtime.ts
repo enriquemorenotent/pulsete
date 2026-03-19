@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import { encode, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
-import { notFound, unauthorized } from './app-error.js';
+import { notFound } from './app-error.js';
 import { IrcConnection } from './irc.js';
 import {
   normalizeChannelTarget,
@@ -10,154 +10,213 @@ import {
   normalizeRawCommand,
 } from './irc-validate.js';
 import { handleRuntimeEvent } from './runtime-events.js';
-import { Storage } from './storage.js';
-
-const maxSessionTimerDelayMs = 2_147_483_647;
+import { Storage, type NetworkInput } from './storage.js';
 
 export class Runtime {
   readonly store: Storage;
-  private readonly sockets = new Map<string, Map<WebSocket, string>>();
-  private readonly connections = new Map<string, Map<string, IrcConnection>>();
-  private readonly sessionExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly sockets = new Set<WebSocket>();
+  private readonly connections = new Map<string, IrcConnection>();
   private closing = false;
 
   constructor(store: Storage) {
     this.store = store;
   }
 
-  attachSocket(userId: string, sessionToken: string, ws: WebSocket) {
-    const sockets = this.sockets.get(userId) ?? new Map<WebSocket, string>();
-    sockets.set(ws, sessionToken);
-    this.sockets.set(userId, sockets);
-    this.syncUserSession(userId);
-    ws.on('close', () => this.detachSocket(userId, ws));
+  attachSocket(ws: WebSocket) {
+    this.sockets.add(ws);
+    ws.on('close', () => this.sockets.delete(ws));
   }
 
-  revokeSession(sessionToken: string, userId?: string) {
-    for (const sockets of this.sockets.values()) {
-      for (const [ws, token] of sockets) {
-        if (token === sessionToken) {
-          ws.close(1008, 'Authentication required');
-        }
-      }
-    }
-    if (userId) {
-      this.syncUserSession(userId);
-    }
-  }
+  revokeSession(_sessionToken: string, _legacyUserId?: string) {}
 
-  send(userId: string, message: ServerMessage) {
-    this.pruneUserSockets(userId);
-    if (!this.store.hasActiveSessions(userId)) {
-      this.closeUserSockets(userId);
-      this.disconnectUser(userId);
-      this.clearUserSessionTimer(userId);
+  send(message: ServerMessage): void;
+  send(_legacyUserId: string, message: ServerMessage): void;
+  send(messageOrLegacyUserId: ServerMessage | string, maybeMessage?: ServerMessage) {
+    const message = typeof messageOrLegacyUserId === 'string' ? maybeMessage : messageOrLegacyUserId;
+    if (!message) {
       return;
     }
     const payload = encode(message);
-    for (const [ws, sessionToken] of this.sockets.get(userId) ?? []) {
-      const session = this.store.getSession(sessionToken);
-      if (!session || session.user.id !== userId) {
-        ws.close(1008, 'Authentication required');
-        continue;
-      }
+    for (const ws of Array.from(this.sockets)) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(payload);
+        continue;
+      }
+      if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+        this.sockets.delete(ws);
       }
     }
   }
 
   close() {
     this.closing = true;
-    for (const userId of Array.from(this.sessionExpiryTimers.keys())) {
-      this.clearUserSessionTimer(userId);
-    }
-    for (const sockets of this.sockets.values()) {
-      for (const ws of Array.from(sockets.keys())) {
-        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-          ws.close(1001, 'Server shutting down');
-        }
+    for (const ws of Array.from(this.sockets)) {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close(1001, 'Server shutting down');
       }
     }
     this.sockets.clear();
-    for (const userId of Array.from(this.connections.keys())) {
-      this.disconnectUser(userId);
+    for (const connection of this.connections.values()) {
+      connection.disconnect();
     }
+    this.connections.clear();
   }
 
-  snapshot(userId: string) { return this.store.snapshot(userId); }
-  connect(userId: string, networkId: string, sessionToken?: string) {
-    this.syncUserSession(userId);
-    this.assertLiveSession(userId, sessionToken);
-    this.ensureConnection(userId, networkId).connect();
-  }
-  disconnect(userId: string, networkId: string) {
-    this.getRequiredNetwork(userId, networkId);
-    this.connections.get(userId)?.get(networkId)?.disconnect();
+  snapshot(): ReturnType<Storage['snapshot']>;
+  snapshot(_legacyUserId: string): ReturnType<Storage['snapshot']>;
+  snapshot(_legacyUserId?: string) { return this.store.snapshot(); }
+
+  connect(networkId: string): void;
+  connect(_legacyUserId: string, networkId: string, _legacySessionToken?: string): void;
+  connect(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
+    this.ensureConnection(resolveNetworkId(networkIdOrLegacyUserId, maybeNetworkId)).connect();
   }
 
-  join(userId: string, networkId: string, channel: string) {
-    const normalizedChannel = normalizeChannelTarget(channel);
-    const connection = this.ensureConnection(userId, networkId);
-    connection.join(normalizedChannel);
+  disconnect(networkId: string): void;
+  disconnect(_legacyUserId: string, networkId: string): void;
+  disconnect(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
+    const networkId = resolveNetworkId(networkIdOrLegacyUserId, maybeNetworkId);
+    this.getRequiredNetwork(networkId);
+    this.connections.get(networkId)?.disconnect();
   }
 
-  part(userId: string, networkId: string, channel: string) {
-    this.getRequiredNetwork(userId, networkId);
-    const normalizedChannel = normalizeChannelTarget(channel);
-    this.connections.get(userId)?.get(networkId)?.part(normalizedChannel);
+  join(networkId: string, channel: string): void;
+  join(_legacyUserId: string, networkId: string, channel: string): void;
+  join(networkIdOrLegacyUserId: string, maybeNetworkIdOrChannel: string, maybeChannel?: string) {
+    const { networkId, value: channel } = resolveNetworkAndValue(
+      networkIdOrLegacyUserId,
+      maybeNetworkIdOrChannel,
+      maybeChannel
+    );
+    this.ensureConnection(networkId).join(normalizeChannelTarget(channel));
   }
-  openQuery(userId: string, networkId: string, target: string) {
-    this.getRequiredNetwork(userId, networkId);
-    return this.store.upsertQuery(userId, networkId, normalizeQueryTarget(target));
+
+  part(networkId: string, channel: string): void;
+  part(_legacyUserId: string, networkId: string, channel: string): void;
+  part(networkIdOrLegacyUserId: string, maybeNetworkIdOrChannel: string, maybeChannel?: string) {
+    const { networkId, value: channel } = resolveNetworkAndValue(
+      networkIdOrLegacyUserId,
+      maybeNetworkIdOrChannel,
+      maybeChannel
+    );
+    this.getRequiredNetwork(networkId);
+    this.connections.get(networkId)?.part(normalizeChannelTarget(channel));
   }
-  closeQuery(userId: string, networkId: string, target: string) {
-    this.getRequiredNetwork(userId, networkId);
+
+  openQuery(networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
+  openQuery(_legacyUserId: string, networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
+  openQuery(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
+    return this.openQueryInternal(...resolveArgsWithValue(arguments));
+  }
+
+  closeQuery(networkId: string, target: string): string;
+  closeQuery(_legacyUserId: string, networkId: string, target: string): string;
+  closeQuery(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
+    return this.closeQueryInternal(...resolveArgsWithValue(arguments));
+  }
+
+  markChannelRead(channelId: string): ReturnType<Storage['getChannel']>;
+  markChannelRead(_legacyUserId: string, channelId: string): ReturnType<Storage['getChannel']>;
+  markChannelRead(channelIdOrLegacyUserId: string, maybeChannelId?: string) {
+    return this.markChannelReadInternal(resolveChannelId(arguments));
+  }
+
+  history(networkId: string, target: string, limit: number): ReturnType<Storage['listMessages']>;
+  history(_legacyUserId: string, networkId: string, target: string, limit: number): ReturnType<Storage['listMessages']>;
+  history(
+    networkIdOrLegacyUserId: string,
+    networkIdOrTarget: string,
+    targetOrLimit: string | number,
+    maybeLimit?: number
+  ) {
+    return this.historyInternal(...resolveArgsWithLimit(arguments));
+  }
+
+  saveNetwork(data: unknown): ReturnType<Storage['upsertNetwork']>;
+  saveNetwork(_legacyUserId: string, data: unknown): ReturnType<Storage['upsertNetwork']>;
+  saveNetwork(dataOrLegacyUserId: unknown, maybeData?: unknown) {
+    return this.saveNetworkInternal(resolveNetworkInput(arguments));
+  }
+
+  sendMessage(networkId: string, target: string, body: string, kind?: 'message' | 'action'): void;
+  sendMessage(_legacyUserId: string, networkId: string, target: string, body: string, kind?: 'message' | 'action'): void;
+  sendMessage(
+    networkIdOrLegacyUserId: string,
+    networkIdOrTarget: string,
+    targetOrBody: string,
+    bodyOrKind?: string,
+    maybeKind?: 'message' | 'action'
+  ) {
+    return this.sendMessageInternal(...resolveMessageArgs(arguments));
+  }
+
+  sendRaw(networkId: string, raw: string): void;
+  sendRaw(_legacyUserId: string, networkId: string, raw: string): void;
+  sendRaw(networkIdOrLegacyUserId: string, networkIdOrRaw: string, maybeRaw?: string) {
+    return this.sendRawInternal(...resolveArgsWithValue(arguments));
+  }
+
+  deleteNetwork(networkId: string): string[];
+  deleteNetwork(_legacyUserId: string, networkId: string): string[];
+  deleteNetwork(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
+    return this.deleteNetworkInternal(resolveNetworkIdFromArgs(arguments));
+  }
+
+  private openQueryInternal(networkId: string, target: string) {
+    this.getRequiredNetwork(networkId);
+    return this.store.upsertQuery(networkId, normalizeQueryTarget(target));
+  }
+
+  private closeQueryInternal(networkId: string, target: string) {
+    this.getRequiredNetwork(networkId);
     const normalizedTarget = normalizeQueryTarget(target);
-    this.store.deleteQuery(userId, networkId, normalizedTarget);
+    this.store.deleteQuery(networkId, normalizedTarget);
     return normalizedTarget;
   }
-  markChannelRead(userId: string, channelId: string) {
-    const channel = this.getRequiredChannel(userId, channelId);
+
+  private markChannelReadInternal(channelId: string) {
+    const channel = this.getRequiredChannel(channelId);
     if (channel.unread === 0) {
       return channel;
     }
-    this.store.markChannelRead(userId, channelId);
-    const updatedChannel = this.getRequiredChannel(userId, channelId);
-    this.send(userId, { type: 'channel.snapshot', channel: updatedChannel });
+    this.store.markChannelRead(channelId);
+    const updatedChannel = this.getRequiredChannel(channelId);
+    this.send({ type: 'channel.snapshot', channel: updatedChannel });
     return updatedChannel;
   }
-  history(userId: string, networkId: string, target: string, limit: number) {
-    this.getRequiredNetwork(userId, networkId);
-    return this.store.listMessages(userId, networkId, target, limit);
+
+  private historyInternal(networkId: string, target: string, limit: number) {
+    this.getRequiredNetwork(networkId);
+    return this.store.listMessages(networkId, target, limit);
   }
-  saveNetwork(userId: string, data: unknown) {
-    const input = data as Parameters<Storage['upsertNetwork']>[1];
+
+  private saveNetworkInternal(data: unknown) {
+    const input = data as NetworkInput;
     if (input.id) {
-      this.getRequiredNetwork(userId, input.id);
+      this.getRequiredNetwork(input.id);
     }
-    const profile = this.store.upsertNetwork(userId, input);
-    const updatedProfiles = [profile, ...this.syncTemplateInstances(userId, profile, input)];
+    const profile = this.store.upsertNetwork(input);
+    const updatedProfiles = [profile, ...this.syncTemplateInstances(profile, input)];
     for (const updatedProfile of updatedProfiles) {
-      const runtimeProfile = this.store.getRuntimeNetwork(userId, updatedProfile.id);
+      const runtimeProfile = this.store.getRuntimeNetwork(updatedProfile.id);
       if (runtimeProfile) {
-        this.connections.get(userId)?.get(updatedProfile.id)?.updateProfile(runtimeProfile);
+        this.connections.get(updatedProfile.id)?.updateProfile(runtimeProfile);
       }
-      this.send(userId, { type: 'network.upsert', network: updatedProfile });
+      this.send({ type: 'network.upsert', network: updatedProfile });
     }
     return profile;
   }
 
-  sendMessage(userId: string, networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message') {
+  private sendMessageInternal(networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message') {
     const normalizedTarget = normalizeMessageTarget(target);
     const normalizedBody = normalizeMessageBody(body);
-    const connection = this.ensureConnection(userId, networkId);
+    const connection = this.ensureConnection(networkId);
     kind === 'action' ? connection.action(normalizedTarget, normalizedBody) : connection.say(normalizedTarget, normalizedBody);
   }
 
-  sendRaw(userId: string, networkId: string, raw: string) {
+  private sendRawInternal(networkId: string, raw: string) {
     const normalizedRaw = normalizeRawCommand(raw);
-    const connection = this.ensureConnection(userId, networkId);
+    const connection = this.ensureConnection(networkId);
     if (/^\s*NICK\s+/i.test(normalizedRaw)) {
       const nextNick = normalizedRaw.trim().split(/\s+/)[1];
       if (nextNick) {
@@ -180,185 +239,78 @@ export class Runtime {
     connection.sendRaw(normalizedRaw);
   }
 
-  deleteNetwork(userId: string, networkId: string) {
-    const deletedNetworkIds = this.getDeleteTargetIds(userId, networkId);
+  private deleteNetworkInternal(networkId: string) {
+    const deletedNetworkIds = this.getDeleteTargetIds(networkId);
     for (const targetId of deletedNetworkIds) {
-      this.connections.get(userId)?.get(targetId)?.disconnect();
-      this.deleteConnection(userId, targetId);
+      this.connections.get(targetId)?.disconnect();
+      this.connections.delete(targetId);
     }
-    this.store.deleteNetwork(userId, networkId);
+    this.store.deleteNetwork(networkId);
     for (const targetId of deletedNetworkIds) {
-      this.send(userId, { type: 'network.remove', networkId: targetId });
+      this.send({ type: 'network.remove', networkId: targetId });
     }
     return deletedNetworkIds;
   }
 
-  private detachSocket(userId: string, ws: WebSocket) {
-    const sockets = this.sockets.get(userId);
-    sockets?.delete(ws);
-    if (sockets && sockets.size === 0) {
-      this.sockets.delete(userId);
-    }
-  }
-
-  private deleteConnection(userId: string, networkId: string) {
-    const userConnections = this.connections.get(userId);
-    userConnections?.delete(networkId);
-    if (userConnections && userConnections.size === 0) {
-      this.connections.delete(userId);
-    }
-  }
-
-  private closeUserSockets(userId: string) {
-    for (const ws of Array.from(this.sockets.get(userId)?.keys() ?? [])) {
-      ws.close(1008, 'Authentication required');
-    }
-  }
-
-  private disconnectUser(userId: string) {
-    const userConnections = this.connections.get(userId);
-    if (!userConnections) {
-      return;
-    }
-    this.connections.delete(userId);
-    for (const connection of userConnections.values()) {
-      connection.disconnect();
-    }
-  }
-
-  private pruneUserSockets(userId: string) {
-    for (const [ws, sessionToken] of this.sockets.get(userId) ?? []) {
-      const session = this.store.getSession(sessionToken);
-      if (!session || session.user.id !== userId) {
-        ws.close(1008, 'Authentication required');
-      }
-    }
-  }
-
-  private clearUserSessionTimer(userId: string) {
-    const timer = this.sessionExpiryTimers.get(userId);
-    if (timer) {
-      clearTimeout(timer);
-      this.sessionExpiryTimers.delete(userId);
-    }
-  }
-
-  private assertLiveSession(userId: string, sessionToken?: string) {
-    if (!sessionToken) {
-      return;
-    }
-    const session = this.store.getSession(sessionToken);
-    if (session && session.user.id === userId) {
-      return;
-    }
-    this.revokeSession(sessionToken, userId);
-    throw unauthorized('Authentication required');
-  }
-
-  private syncUserSession(userId: string) {
-    this.clearUserSessionTimer(userId);
-    const nextExpiry = this.store.getNextSessionExpiry(userId);
-    if (!nextExpiry) {
-      this.closeUserSockets(userId);
-      this.disconnectUser(userId);
-      return;
-    }
-    const delay = Math.max(0, nextExpiry - Date.now());
-    const scheduledDelay = Math.min(delay, maxSessionTimerDelayMs);
-    const callback = delay > maxSessionTimerDelayMs
-      ? () => this.syncUserSession(userId)
-      : () => this.handleUserSessionExpiry(userId, nextExpiry);
-    const timer = setTimeout(callback, scheduledDelay);
-    timer.unref?.();
-    this.sessionExpiryTimers.set(userId, timer);
-  }
-
-  private handleUserSessionExpiry(userId: string, expectedExpiry: number) {
-    const nextExpiry = this.store.getNextSessionExpiry(userId);
-    if (nextExpiry && nextExpiry > expectedExpiry) {
-      this.pruneUserSockets(userId);
-      this.syncUserSession(userId);
-      return;
-    }
-    this.pruneUserSockets(userId);
-    if (!this.store.hasActiveSessions(userId)) {
-      this.closeUserSockets(userId);
-      this.disconnectUser(userId);
-      this.clearUserSessionTimer(userId);
-      return;
-    }
-    this.syncUserSession(userId);
-  }
-
-  private ensureConnection(userId: string, networkId: string) {
-    const profile = this.getRequiredRuntimeNetwork(userId, networkId);
-    const userConnections = this.connections.get(userId) ?? new Map<string, IrcConnection>();
-    let connection = userConnections.get(networkId);
+  private ensureConnection(networkId: string) {
+    const profile = this.getRequiredRuntimeNetwork(networkId);
+    let connection = this.connections.get(networkId);
     if (!connection) {
       connection = new IrcConnection(profile, {
         onEvent: (event) => {
-          if (this.closing) {
-            return;
+          if (!this.closing) {
+            handleRuntimeEvent(this, event);
           }
-          if (!this.store.hasActiveSessions(userId)) {
-            this.closeUserSockets(userId);
-            this.disconnectUser(userId);
-            this.clearUserSessionTimer(userId);
-            return;
-          }
-          handleRuntimeEvent(this, userId, event);
         },
       });
-      userConnections.set(networkId, connection);
-      this.connections.set(userId, userConnections);
+      this.connections.set(networkId, connection);
     }
     return connection;
   }
 
-  private getRequiredRuntimeNetwork(userId: string, networkId: string) {
-    const profile = this.store.getRuntimeNetwork(userId, networkId);
+  private getRequiredRuntimeNetwork(networkId: string) {
+    const profile = this.store.getRuntimeNetwork(networkId);
     if (!profile) {
       throw notFound('Network not found');
     }
     return profile;
   }
 
-  private getRequiredNetwork(userId: string, networkId: string) {
-    const profile = this.store.getNetwork(userId, networkId);
+  private getRequiredNetwork(networkId: string) {
+    const profile = this.store.getNetwork(networkId);
     if (!profile) {
       throw notFound('Network not found');
     }
     return profile;
   }
 
-  private getRequiredChannel(userId: string, channelId: string) {
-    const channel = this.store.getChannel(userId, channelId);
+  private getRequiredChannel(channelId: string) {
+    const channel = this.store.getChannel(channelId);
     if (!channel) {
       throw notFound('Channel not found');
     }
     return channel;
   }
 
-  private getDeleteTargetIds(userId: string, networkId: string) {
-    const network = this.getRequiredNetwork(userId, networkId);
+  private getDeleteTargetIds(networkId: string) {
+    const network = this.getRequiredNetwork(networkId);
     return this.store
-      .listNetworks(userId)
+      .listNetworks()
       .filter((candidate) => candidate.id === network.id || candidate.templateId === network.id)
       .map((candidate) => candidate.id);
   }
 
   private syncTemplateInstances(
-    userId: string,
     profile: NetworkProfile,
-    input: Parameters<Storage['upsertNetwork']>[1]
+    input: NetworkInput
   ) {
     if (profile.managerHidden) {
       return [];
     }
     return this.store
-      .listNetworks(userId)
+      .listNetworks()
       .filter((candidate) => candidate.managerHidden && candidate.templateId === profile.id)
-      .map((candidate) => this.store.upsertNetwork(userId, {
+      .map((candidate) => this.store.upsertNetwork({
         id: candidate.id,
         templateId: profile.id,
         managerHidden: true,
@@ -377,3 +329,41 @@ export class Runtime {
       }));
   }
 }
+
+const resolveNetworkId = (networkIdOrLegacyUserId: string, maybeNetworkId?: string) =>
+  maybeNetworkId ?? networkIdOrLegacyUserId;
+
+const resolveNetworkAndValue = (
+  networkIdOrLegacyUserId: string,
+  maybeNetworkIdOrValue: string,
+  maybeValue?: string
+) => ({
+  networkId: maybeValue ? maybeNetworkIdOrValue : networkIdOrLegacyUserId,
+  value: maybeValue ?? maybeNetworkIdOrValue,
+});
+
+const resolveArgsWithValue = (args: IArguments) =>
+  args.length === 3
+    ? [String(args[1]), String(args[2])] as const
+    : [String(args[0]), String(args[1])] as const;
+
+const resolveChannelId = (args: IArguments) =>
+  args.length === 2 ? String(args[1]) : String(args[0]);
+
+const resolveArgsWithLimit = (args: IArguments) =>
+  args.length === 4
+    ? [String(args[1]), String(args[2]), Number(args[3])] as const
+    : [String(args[0]), String(args[1]), Number(args[2])] as const;
+
+const resolveNetworkInput = (args: IArguments) =>
+  args.length === 2 ? args[1] : args[0];
+
+const resolveNetworkIdFromArgs = (args: IArguments) =>
+  args.length === 2 ? String(args[1]) : String(args[0]);
+
+const resolveMessageArgs = (args: IArguments) => {
+  if (args.length >= 5) {
+    return [String(args[1]), String(args[2]), String(args[3]), args[4] as 'message' | 'action'] as const;
+  }
+  return [String(args[0]), String(args[1]), String(args[2]), (args[3] as 'message' | 'action' | undefined) ?? 'message'] as const;
+};

@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import type { ChatMessage } from '../../shared/protocol.js';
-import { emptyAuthForm, emptyNetworkForm } from './network-form.js';
+import { emptyNetworkForm } from './network-form.js';
 import { selectDefaultBuffer } from './workspace.js';
 import type { Action, State } from './app-types.js';
 
 export const initialState: State = {
   phase: 'loading',
-  authMode: 'signin',
-  bootstrapped: false,
-  user: null,
   networks: [],
   channels: [],
   queries: [],
@@ -16,7 +13,6 @@ export const initialState: State = {
   networkStates: {},
   selection: null,
   networkForm: emptyNetworkForm(),
-  authForm: emptyAuthForm(),
   banner: null,
   historyLoading: false,
 };
@@ -34,53 +30,29 @@ const mergeMessages = (current: ChatMessage[], incoming: ChatMessage[]) => {
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case 'session-loaded':
-      if (!action.session.bootstrapped) {
-        return {
-          ...state,
-          phase: 'bootstrap',
-          bootstrapped: false,
-          authMode: 'signup',
-          authForm: emptyAuthForm(),
-          banner: null,
-        };
-      }
-      if (!action.session.authenticated) {
-        return {
-          ...state,
-          phase: 'login',
-          bootstrapped: true,
-          user: null,
-          authMode: 'signin',
-          authForm: emptyAuthForm(),
-          banner: null,
-        };
-      }
+    case 'snapshot-loaded':
       return {
         ...state,
         phase: 'ready',
-        authMode: 'signin',
-        bootstrapped: true,
-        user: action.session.user,
-        networks: action.session.snapshot.networks,
-        channels: action.session.snapshot.channels,
-        queries: action.session.snapshot.queries,
-        messages: action.session.snapshot.messages,
-        selection: selectDefaultBuffer(action.session.snapshot),
-        authForm: emptyAuthForm(),
+        networks: action.snapshot.networks,
+        channels: action.snapshot.channels,
+        queries: action.snapshot.queries,
+        messages: action.snapshot.messages,
+        selection: selectDefaultBuffer(action.snapshot),
         banner: null,
       };
     case 'snapshot':
       return {
         ...state,
+        phase: 'ready',
         networks: action.snapshot.networks,
         channels: action.snapshot.channels,
         queries: action.snapshot.queries,
         messages: mergeMessages(state.messages, action.snapshot.messages),
         selection: state.selection ?? selectDefaultBuffer(action.snapshot),
       };
-    case 'set-auth-mode':
-      return { ...state, authMode: action.mode };
+    case 'load-failed':
+      return { ...state, phase: 'ready' };
     case 'upsert-network': {
       const networks = state.networks.filter((network) => network.id !== action.network.id);
       networks.push(action.network);
@@ -174,8 +146,6 @@ export const reducer = (state: State, action: Action): State => {
       return { ...state, networkForm: { ...state.networkForm, ...action.form } };
     case 'reset-network-form':
       return { ...state, networkForm: { ...emptyNetworkForm(), ...action.form } };
-    case 'set-auth-form':
-      return { ...state, authForm: { ...state.authForm, [action.field]: action.value } };
     case 'set-history-loading':
       return { ...state, historyLoading: action.value };
     case 'remove-network': {

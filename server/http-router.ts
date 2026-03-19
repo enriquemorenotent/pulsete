@@ -1,24 +1,18 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toAppError } from './app-error.js';
-import { handleAuthRoutes } from './http-auth.js';
 import { handleBufferRoutes } from './http-buffers.js';
 import { handleNetworkRoutes } from './http-networks.js';
+import { handleStateRoutes } from './http-state.js';
 import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js';
 import type { HttpContext } from './http-types.js';
-import { getSessionFromRequest } from './session-utils.js';
 import { serveStatic } from './static-handler.js';
 
 export const createHttpHandler = (context: HttpContext) => async (req: IncomingMessage, res: ServerResponse) => {
   try {
     const url = parseRequestUrl(req.url);
     const pathname = url.pathname;
-    const session = getSessionFromRequest(context.storage, req);
-    const args = { req, res, url, pathname, context, session };
-    if (await handleAuthRoutes(args)) {
-      return;
-    }
-    if (isApi(pathname) && !session) {
-      writeJson(res, 401, { message: 'Authentication required' });
+    const args = { req, res, url, pathname, context };
+    if (await handleStateRoutes(args)) {
       return;
     }
     if (await handleNetworkRoutes(args) || await handleBufferRoutes(args)) {

@@ -56,17 +56,12 @@ export const querySchema = z.object({
 export type QueryBuffer = z.infer<typeof querySchema>;
 
 export const appSnapshotSchema = z.object({
-  user: z.object({
-    id: z.string(),
-    username: z.string(),
-  }),
   networks: z.array(networkSchema),
   channels: z.array(channelSchema),
   queries: z.array(querySchema),
   messages: z.array(chatMessageSchema),
   activeNetworkId: z.string().nullable(),
   activeBuffer: z.string(),
-  bootstrapped: z.boolean(),
 });
 
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;
@@ -76,10 +71,6 @@ const baseClientSchema = z.object({
 });
 
 export const clientMessageSchema = z.discriminatedUnion('type', [
-  baseClientSchema.extend({
-    type: z.literal('session.init'),
-    token: z.string().nullable(),
-  }),
   baseClientSchema.extend({
     type: z.literal('network.connect'),
     networkId: z.string(),
@@ -129,7 +120,7 @@ export type ClientMessage = z.infer<typeof clientMessageSchema>;
 
 export const serverMessageSchema = z.discriminatedUnion('type', [
   baseClientSchema.extend({
-    type: z.literal('session.ready'),
+    type: z.literal('state.ready'),
     snapshot: appSnapshotSchema,
   }),
   baseClientSchema.extend({

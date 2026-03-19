@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -7,24 +7,8 @@ const schemaSql = `
   PRAGMA foreign_keys = ON;
   PRAGMA busy_timeout = 5000;
 
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE,
-    passwordHash TEXT NOT NULL,
-    salt TEXT NOT NULL,
-    createdAt INTEGER NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS sessions (
-    token TEXT PRIMARY KEY,
-    userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    createdAt INTEGER NOT NULL,
-    expiresAt INTEGER NOT NULL
-  );
-
   CREATE TABLE IF NOT EXISTS networks (
     id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     templateId TEXT,
     managerHidden INTEGER NOT NULL DEFAULT 0,
     name TEXT NOT NULL,
@@ -44,7 +28,6 @@ const schemaSql = `
 
   CREATE TABLE IF NOT EXISTS channels (
     id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     topic TEXT NOT NULL DEFAULT '',
@@ -52,22 +35,20 @@ const schemaSql = `
     users TEXT NOT NULL DEFAULT '[]',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
-    UNIQUE(userId, networkId, name)
+    UNIQUE(networkId, name)
   );
 
   CREATE TABLE IF NOT EXISTS queries (
     id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     target TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
-    UNIQUE(userId, networkId, target)
+    UNIQUE(networkId, target)
   );
 
   CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     target TEXT NOT NULL,
     nick TEXT,
@@ -78,17 +59,18 @@ const schemaSql = `
   );
 
   CREATE INDEX IF NOT EXISTS idx_messages_buffer
-    ON messages(userId, networkId, target, ts DESC);
+    ON messages(networkId, target, ts DESC);
 
   CREATE INDEX IF NOT EXISTS idx_channels_network
-    ON channels(userId, networkId);
+    ON channels(networkId);
 
   CREATE INDEX IF NOT EXISTS idx_queries_network
-    ON queries(userId, networkId, createdAt ASC);
+    ON queries(networkId, createdAt ASC);
 `;
 
 export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => {
   mkdirSync(dirname(filePath), { recursive: true });
+  backupLegacyDatabaseIfNeeded(filePath);
   const db = new DatabaseSync(filePath);
   db.exec(schemaSql);
   ensureColumn(db, 'networks', 'autoJoin', "TEXT NOT NULL DEFAULT '[]'");
@@ -98,6 +80,48 @@ export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => 
   ensureColumn(db, 'networks', 'templateId', 'TEXT');
   ensureColumn(db, 'networks', 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
   return db;
+};
+
+const backupLegacyDatabaseIfNeeded = (filePath: string) => {
+  if (!existsSync(filePath)) {
+    return;
+  }
+  const db = new DatabaseSync(filePath);
+  const shouldBackup = hasLegacyAuthSchema(db);
+  db.close();
+  if (!shouldBackup) {
+    return;
+  }
+  const suffix = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupFilePath = `${filePath}.legacy-${suffix}`;
+  renameIfExists(filePath, backupFilePath);
+  renameIfExists(`${filePath}-wal`, `${backupFilePath}-wal`);
+  renameIfExists(`${filePath}-shm`, `${backupFilePath}-shm`);
+};
+
+const hasLegacyAuthSchema = (db: DatabaseSync) =>
+  tableExists(db, 'users') ||
+  tableExists(db, 'sessions') ||
+  tableHasColumn(db, 'networks', 'userId') ||
+  tableHasColumn(db, 'channels', 'userId') ||
+  tableHasColumn(db, 'queries', 'userId') ||
+  tableHasColumn(db, 'messages', 'userId');
+
+const tableExists = (db: DatabaseSync, table: string) =>
+  Boolean(
+    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(table)
+  );
+
+const tableHasColumn = (db: DatabaseSync, table: string, column: string) =>
+  tableExists(db, table) &&
+  (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
+    .some((entry) => entry.name === column);
+
+const renameIfExists = (source: string, target: string) => {
+  if (existsSync(source)) {
+    renameSync(source, target);
+  }
 };
 
 const ensureColumn = (db: DatabaseSync, table: string, column: string, definition: string) => {

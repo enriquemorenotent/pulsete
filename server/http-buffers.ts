@@ -3,21 +3,18 @@ import { badRequest } from './app-error.js';
 import { historyWindowLimit } from '../shared/protocol.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import type { RouteArgs } from './http-types.js';
-import { requireLiveSessionFromRequest } from './session-utils.js';
 
 const queryInputSchema = z.object({
   target: z.string(),
 });
 
-export const handleBufferRoutes = async ({ req, res, pathname, url, context, session }: RouteArgs) => {
-  const getUserId = () => requireLiveSessionFromRequest(context.storage, req, session?.user.id).user.id;
+export const handleBufferRoutes = async ({ req, res, pathname, url, context }: RouteArgs) => {
   const queryMatch = pathname.match(/^\/api\/networks\/([^/]+)\/queries$/);
   if (queryMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(queryMatch[1]);
     const target = readQueryTarget(await readJson(req));
-    const userId = getUserId();
-    const query = context.runtime.openQuery(userId, networkId, target);
-    context.runtime.send(userId, { type: 'query.open', query });
+    const query = context.runtime.openQuery(networkId, target);
+    context.runtime.send({ type: 'query.open', query });
     writeJson(res, 200, { query });
     return true;
   }
@@ -25,15 +22,14 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context, ses
   if (singleQueryMatch && req.method === 'DELETE') {
     const networkId = decodeRouteParam(singleQueryMatch[1]);
     const target = decodeRouteParam(singleQueryMatch[2]);
-    const userId = getUserId();
-    const normalizedTarget = context.runtime.closeQuery(userId, networkId, target);
-    context.runtime.send(userId, { type: 'query.close', networkId, target: normalizedTarget });
+    const normalizedTarget = context.runtime.closeQuery(networkId, target);
+    context.runtime.send({ type: 'query.close', networkId, target: normalizedTarget });
     writeJson(res, 200, { ok: true });
     return true;
   }
   const readMatch = pathname.match(/^\/api\/channels\/([^/]+)\/read$/);
   if (readMatch && req.method === 'POST') {
-    context.runtime.markChannelRead(getUserId(), decodeRouteParam(readMatch[1]));
+    context.runtime.markChannelRead(decodeRouteParam(readMatch[1]));
     writeJson(res, 200, { ok: true });
     return true;
   }
@@ -43,7 +39,7 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context, ses
     const target = String(url.searchParams.get('target') ?? 'server');
     const limit = normalizeHistoryLimit(url.searchParams.get('limit'));
     writeJson(res, 200, {
-      messages: context.runtime.history(getUserId(), networkId, target, limit),
+      messages: context.runtime.history(networkId, target, limit),
     });
     return true;
   }

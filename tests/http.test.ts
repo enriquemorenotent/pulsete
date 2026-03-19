@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict';
-import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import net from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import WebSocket from 'ws';
 import { historyWindowLimit } from '../shared/protocol.js';
@@ -13,8 +11,7 @@ import { createHttpHandler } from '../server/http-router.js';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
 import { serveStatic } from '../server/static-handler.js';
-import { Storage } from '../server/storage.js';
-import { hashPassword } from '../server/storage-utils.js';
+import { Storage, type NetworkInput } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
 
 const listen = (server: ReturnType<typeof createServer>) =>
@@ -30,35 +27,25 @@ const requestJson = async (
   port: number,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
-  body?: unknown,
-  cookie?: string
+  body?: unknown
 ) => {
   const response = await fetch(`http://127.0.0.1:${port}${path}`, {
     method,
-    headers: {
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(cookie ? { Cookie: cookie } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   return {
     status: response.status,
-    json: await response.json() as { message?: string },
+    json: await response.json() as Record<string, unknown>,
   };
 };
 
 const request = (port: number, path: string, init?: RequestInit) =>
   fetch(`http://127.0.0.1:${port}${path}`, init);
 
-const sessionCookieFrom = (response: Response) => {
-  const setCookie = response.headers.get('set-cookie');
-  assert.ok(setCookie, 'expected a session cookie');
-  return setCookie.split(';', 1)[0];
-};
-
-const sendRawRequest = (port: number, request: string) =>
+const sendRawRequest = (port: number, rawRequest: string) =>
   new Promise<string>((resolve, reject) => {
-    const socket = net.connect(port, '127.0.0.1', () => socket.write(request));
+    const socket = net.connect(port, '127.0.0.1', () => socket.write(rawRequest));
     let data = '';
     let settled = false;
     const resolveOnce = () => {
@@ -83,70 +70,44 @@ const sendRawRequest = (port: number, request: string) =>
     socket.setTimeout(500, () => socket.destroy(new Error('Timed out waiting for response')));
   });
 
-const connectWebSocket = (port: number, cookie: string) =>
-  new Promise<WebSocket>((resolve, reject) => {
-    const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`, { headers: { Cookie: cookie } });
+const connectWebSocket = (port: number) =>
+  new Promise<{ socket: WebSocket; ready: Record<string, unknown> }>((resolve, reject) => {
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
     const cleanup = () => {
-      socket.off('open', handleOpen);
+      socket.off('message', handleMessage);
       socket.off('error', handleError);
+      socket.off('close', handleClose);
     };
-    const handleOpen = () => {
+    const handleMessage = (payload: WebSocket.RawData) => {
+      const message = JSON.parse(payload.toString()) as Record<string, unknown>;
+      if (message.type !== 'state.ready') {
+        return;
+      }
       cleanup();
-      resolve(socket);
+      resolve({ socket, ready: message });
     };
     const handleError = (error: Error) => {
       cleanup();
       reject(error);
-    };
-    socket.on('open', handleOpen);
-    socket.on('error', handleError);
-  });
-
-const waitForWebSocketClose = (socket: WebSocket) =>
-  new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error('Timed out waiting for websocket close'));
-    }, 3000);
-    const cleanup = () => {
-      clearTimeout(timer);
-      socket.off('close', handleClose);
-      socket.off('error', handleError);
     };
     const handleClose = () => {
       cleanup();
-      resolve();
+      reject(new Error('WebSocket closed before the initial state was received'));
     };
-    const handleError = (error: Error) => {
-      cleanup();
-      reject(error);
-    };
-    socket.on('close', handleClose);
+    socket.on('message', handleMessage);
     socket.on('error', handleError);
+    socket.on('close', handleClose);
   });
 
-const waitForWebSocketCloseDetails = (socket: WebSocket) =>
-  new Promise<{ code: number; reason: string }>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error('Timed out waiting for websocket close'));
-    }, 3000);
-    const cleanup = () => {
-      clearTimeout(timer);
-      socket.off('close', handleClose);
-      socket.off('error', handleError);
-    };
-    const handleClose = (code: number, reason: Buffer) => {
-      cleanup();
-      resolve({ code, reason: reason.toString('utf8') });
-    };
-    const handleError = (error: Error) => {
-      cleanup();
-      reject(error);
-    };
-    socket.on('close', handleClose);
-    socket.on('error', handleError);
+const closeWebSocket = async (socket: WebSocket) => {
+  if (socket.readyState === WebSocket.CLOSED) {
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    socket.once('close', () => resolve());
+    socket.close();
   });
+};
 
 const waitForWebSocketMessageType = (socket: WebSocket, type: string) =>
   new Promise<Record<string, unknown>>((resolve, reject) => {
@@ -219,265 +180,112 @@ const waitForWebSocketMessages = (socket: WebSocket, type: string, count: number
     socket.on('close', handleClose);
   });
 
-test('register returns a conflict response for duplicate usernames', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  storage.bootstrapUser('alice', 'secret');
+const waitForWebSocketCloseDetails = (socket: WebSocket) =>
+  new Promise<{ code: number; reason: string }>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out waiting for websocket close'));
+    }, 3000);
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off('close', handleClose);
+      socket.off('error', handleError);
+    };
+    const handleClose = (code: number, reason: Buffer) => {
+      cleanup();
+      resolve({ code, reason: reason.toString('utf8') });
+    };
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    socket.on('close', handleClose);
+    socket.on('error', handleError);
+  });
 
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'POST', '/api/register', { username: 'alice', password: 'secret2' });
-    assert.equal(response.status, 409);
-    assert.equal(response.json.message, 'Username already exists');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
+const createNetworkInput = (overrides: Partial<NetworkInput> = {}): NetworkInput => ({
+  templateId: null,
+  managerHidden: false,
+  name: 'TestNet',
+  host: 'irc.example.test',
+  port: 6667,
+  tls: false,
+  nick: 'tester',
+  altNicks: ['tester_', 'tester__'],
+  username: 'tester',
+  realName: 'Tester Example',
+  favorite: false,
+  autoJoin: [],
+  ...overrides,
 });
 
-test('login preserves raw usernames for legacy canonical collisions', async () => {
+test('snapshot returns the local workspace without auth state', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const file = join(dir, 'db.sqlite');
-  const storage = new Storage(file);
-  const db = new DatabaseSync(file);
-  const seed = (id: string, username: string) => {
-    const salt = randomBytes(16).toString('hex');
-    db.prepare('INSERT INTO users (id, username, passwordHash, salt, createdAt) VALUES (?, ?, ?, ?, ?)')
-      .run(id, username, hashPassword('pw', salt), salt, Date.now());
-  };
-  seed('u1', 'alice');
-  seed('u2', ' alice ');
-  db.close();
-
+  const storage = new Storage(join(dir, 'db.sqlite'));
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'POST', '/api/login', { username: ' alice ', password: 'pw' });
+    const response = await requestJson(port, 'GET', '/api/snapshot');
+    const snapshot = response.json as {
+      networks: Array<{ nick: string; username: string; realName: string }>;
+      user?: unknown;
+      bootstrapped?: unknown;
+    };
     assert.equal(response.status, 200);
-    assert.equal((response.json as { user: { id: string; username: string } }).user.id, 'u2');
-    assert.equal((response.json as { user: { id: string; username: string } }).user.username, ' alice ');
+    assert.equal(snapshot.networks[0]?.nick, 'pulsete');
+    assert.equal(snapshot.networks[0]?.username, 'pulsete');
+    assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
+    assert.equal('user' in snapshot, false);
+    assert.equal('bootstrapped' in snapshot, false);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('auth lifecycle issues and clears real session cookies', async () => {
+test('network routes are available without cookies', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const bootstrap = await request(port, '/api/bootstrap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'alice', password: 'secret' }),
-    });
-    assert.equal(bootstrap.status, 200);
-    const bootstrapCookie = sessionCookieFrom(bootstrap);
-    const bootstrapBody = await bootstrap.json() as { authenticated: boolean };
-    assert.equal(bootstrapBody.authenticated, true);
-
-    const bootstrapSession = await request(port, '/api/session', { headers: { Cookie: bootstrapCookie } });
-    assert.equal(bootstrapSession.status, 200);
-    assert.equal((await bootstrapSession.json() as { authenticated: boolean }).authenticated, true);
-
-    const logout = await request(port, '/api/logout', {
-      method: 'POST',
-      headers: { Cookie: bootstrapCookie, 'Content-Type': 'application/json' },
-      body: '{}',
-    });
-    assert.equal(logout.status, 200);
-    assert.match(logout.headers.get('set-cookie') ?? '', /Max-Age=0/);
-
-    const afterLogout = await request(port, '/api/session', { headers: { Cookie: bootstrapCookie } });
-    assert.equal(afterLogout.status, 200);
-    assert.equal((await afterLogout.json() as { authenticated: boolean }).authenticated, false);
-
-    const register = await request(port, '/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'bob', password: 'secret2' }),
-    });
-    assert.equal(register.status, 200);
-    const registerCookie = sessionCookieFrom(register);
-    assert.equal((await register.json() as { user: { username: string } }).user.username, 'bob');
-
-    const login = await request(port, '/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'bob', password: 'secret2' }),
-    });
-    assert.equal(login.status, 200);
-    const loginCookie = sessionCookieFrom(login);
-    const loginBody = await login.json() as { authenticated: boolean; user: { username: string } };
-    assert.equal(loginBody.authenticated, true);
-    assert.equal(loginBody.user.username, 'bob');
-
-    const loginSession = await request(port, '/api/session', { headers: { Cookie: loginCookie } });
-    assert.equal(loginSession.status, 200);
-    assert.equal((await loginSession.json() as { authenticated: boolean }).authenticated, true);
-
-    const registerLogout = await request(port, '/api/logout', {
-      method: 'POST',
-      headers: { Cookie: registerCookie, 'Content-Type': 'application/json' },
-      body: '{}',
-    });
-    assert.equal(registerLogout.status, 200);
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('unauthenticated api requests are rejected', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  storage.bootstrapUser('alice', 'secret');
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
+    await requestJson(port, 'GET', '/api/snapshot');
     const response = await requestJson(port, 'GET', '/api/networks');
-    assert.equal(response.status, 401);
-    assert.equal(response.json.message, 'Authentication required');
+    assert.equal(response.status, 200);
+    assert.equal((response.json.networks as unknown[]).length, 4);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('unauthenticated websocket upgrades are refused', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  storage.bootstrapUser('alice', 'secret');
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-
-  try {
-    const response = await sendRawRequest(
-      port,
-      [
-        'GET /ws HTTP/1.1',
-        'Host: 127.0.0.1',
-        'Connection: Upgrade',
-        'Upgrade: websocket',
-        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
-        'Sec-WebSocket-Version: 13',
-        '',
-        '',
-      ].join('\r\n')
-    );
-    assert.equal(response.includes('101 Switching Protocols'), false);
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('oversized json bodies are rejected before parsing', async () => {
+test('connect and disconnect return not found for missing networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'POST', '/api/bootstrap', {
-      username: 'alice',
-      password: 'x'.repeat(70_000),
-    });
-    assert.equal(response.status, 413);
-    assert.equal(response.json.message, 'Request body too large');
+    const connectResponse = await requestJson(port, 'POST', '/api/networks/missing/connect', {});
+    assert.equal(connectResponse.status, 404);
+    assert.equal(connectResponse.json.message, 'Network not found');
+
+    const disconnectResponse = await requestJson(port, 'POST', '/api/networks/missing/disconnect', {});
+    assert.equal(disconnectResponse.status, 404);
+    assert.equal(disconnectResponse.json.message, 'Network not found');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('connect returns not found for missing networks', async () => {
+test('network save rejects invalid payloads and IRC-unsafe fields', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'POST', '/api/networks/missing/connect', {}, cookie);
-    assert.equal(response.status, 404);
-    assert.equal(response.json.message, 'Network not found');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('disconnect returns not found for missing networks', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'POST', '/api/networks/missing/disconnect', {}, cookie);
-    assert.equal(response.status, 404);
-    assert.equal(response.json.message, 'Network not found');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('bootstrap rejects blank credentials', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'POST', '/api/bootstrap', { username: '   ', password: '' });
-    assert.equal(response.status, 400);
-    assert.equal(response.json.message, 'Username is required');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('bootstrap returns a conflict when the initial hasUsers precheck is stale', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  storage.bootstrapUser('existing', 'secret');
-  storage.hasUsers = () => false;
-
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'POST', '/api/bootstrap', { username: 'alice', password: 'secret' });
-    assert.equal(response.status, 409);
-    assert.equal(response.json.message, 'Bootstrap already completed');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('network save rejects invalid payloads', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'POST', '/api/networks', {
+    const invalidResponse = await requestJson(port, 'POST', '/api/networks', {
       name: '',
       host: '',
       port: 0,
@@ -485,244 +293,93 @@ test('network save rejects invalid payloads', async () => {
       nick: '',
       username: '',
       autoJoin: ['#test'],
-    }, cookie);
-    assert.equal(response.status, 400);
-    assert.equal(response.json.message, 'Network name is required');
+    });
+    assert.equal(invalidResponse.status, 400);
+    assert.equal(invalidResponse.json.message, 'Network name is required');
+
+    const unsafeResponse = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      realName: 'Tester\r\nOPER root',
+    });
+    assert.equal(unsafeResponse.status, 400);
+    assert.equal(unsafeResponse.json.message, 'Real name cannot contain carriage returns or line feeds');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('network save rejects IRC-unsafe fields and auto-join targets', async () => {
+test('network save rejects invalid and immutable template relationships', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const realNameResponse = await requestJson(port, 'POST', '/api/networks', {
-      name: 'TestNet',
-      host: 'irc.example.test',
-      port: 6667,
-      tls: false,
-      nick: 'alice',
-      altNicks: ['alice_'],
-      username: 'alice',
-      realName: 'Alice\r\nOPER root',
-      favorite: false,
-      autoJoin: [],
-    }, cookie);
-    assert.equal(realNameResponse.status, 400);
-    assert.equal(realNameResponse.json.message, 'Real name cannot contain carriage returns or line feeds');
-
-    const autoJoinResponse = await requestJson(port, 'POST', '/api/networks', {
-      name: 'TestNet',
-      host: 'irc.example.test',
-      port: 6667,
-      tls: false,
-      nick: 'alice',
-      altNicks: ['alice_'],
-      username: 'alice',
-      realName: 'Alice Example',
-      favorite: false,
-      autoJoin: ['#help there'],
-    }, cookie);
-    assert.equal(autoJoinResponse.status, 400);
-    assert.equal(autoJoinResponse.json.message, 'Channel name must start with #, &, +, or !');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('network save rejects invalid template relationships', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const template = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
+  const runtime = new Runtime(storage);
+  const template = storage.upsertNetwork(createNetworkInput({
     name: 'TemplateNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'Alice Example',
-    favorite: false,
-    autoJoin: [],
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const visibleCloneResponse = await requestJson(port, 'POST', '/api/networks', {
-      ...template,
-      templateId: template.id,
-      managerHidden: false,
-      name: 'Visible clone',
-    }, cookie);
-    assert.equal(visibleCloneResponse.status, 400);
-    assert.equal(visibleCloneResponse.json.message, 'Saved networks cannot reference a template');
-
-    const orphanInstanceResponse = await requestJson(port, 'POST', '/api/networks', {
-      ...template,
-      templateId: null,
-      managerHidden: true,
-      name: 'Orphan instance',
-    }, cookie);
-    assert.equal(orphanInstanceResponse.status, 400);
-    assert.equal(orphanInstanceResponse.json.message, 'Connection instances must reference an existing saved network');
-
-    const missingTemplateResponse = await requestJson(port, 'POST', '/api/networks', {
-      ...template,
-      templateId: 'missing-template',
-      managerHidden: true,
-      name: 'Broken instance',
-    }, cookie);
-    assert.equal(missingTemplateResponse.status, 400);
-    assert.equal(missingTemplateResponse.json.message, 'Connection instances must reference an existing saved network');
-
-    assert.equal(storage.listNetworks(user.id).length, 1);
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('network save rejects changing a network template relationship after creation', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const template = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TemplateNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'Alice Example',
-    favorite: false,
-    autoJoin: [],
-  });
-  const otherTemplate = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
+  }));
+  const otherTemplate = storage.upsertNetwork(createNetworkInput({
     name: 'OtherTemplateNet',
     host: 'irc2.example.test',
     port: 6697,
     tls: true,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'Alice Example',
-    favorite: false,
-    autoJoin: [],
-  });
-  const clone = storage.upsertNetwork(user.id, {
-    ...template,
-    id: undefined,
+  }));
+  const clone = storage.upsertNetwork(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'Connection instance',
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  }));
+  const server = createServer(createHttpHandler({ storage, runtime }));
   const port = await listen(server);
 
   try {
-    const hideTemplateResponse = await requestJson(port, 'PUT', `/api/networks/${template.id}`, {
+    const visibleClone = await requestJson(port, 'POST', '/api/networks', {
       ...template,
-      templateId: otherTemplate.id,
-      managerHidden: true,
-    }, cookie);
-    assert.equal(hideTemplateResponse.status, 400);
-    assert.equal(hideTemplateResponse.json.message, 'Network template relationship cannot be changed after creation');
-
-    const unhideCloneResponse = await requestJson(port, 'PUT', `/api/networks/${clone.id}`, {
-      ...clone,
-      templateId: null,
+      templateId: template.id,
       managerHidden: false,
-    }, cookie);
-    assert.equal(unhideCloneResponse.status, 400);
-    assert.equal(unhideCloneResponse.json.message, 'Network template relationship cannot be changed after creation');
+      name: 'Visible clone',
+    });
+    assert.equal(visibleClone.status, 400);
+    assert.equal(visibleClone.json.message, 'Saved networks cannot reference a template');
 
-    const reparentCloneResponse = await requestJson(port, 'PUT', `/api/networks/${clone.id}`, {
+    const orphanInstance = await requestJson(port, 'POST', '/api/networks', {
+      ...template,
+      templateId: null,
+      managerHidden: true,
+      name: 'Orphan instance',
+    });
+    assert.equal(orphanInstance.status, 400);
+    assert.equal(orphanInstance.json.message, 'Connection instances must reference an existing saved network');
+
+    const reparentClone = await requestJson(port, 'PUT', `/api/networks/${clone.id}`, {
       ...clone,
       templateId: otherTemplate.id,
-    }, cookie);
-    assert.equal(reparentCloneResponse.status, 400);
-    assert.equal(reparentCloneResponse.json.message, 'Network template relationship cannot be changed after creation');
+    });
+    assert.equal(reparentClone.status, 400);
+    assert.equal(reparentClone.json.message, 'Network template relationship cannot be changed after creation');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('network save rejects conflicting password updates', async () => {
+test('network save rejects conflicting and empty password updates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'POST', '/api/networks', {
-      name: 'TestNet',
-      host: 'irc.example.test',
-      port: 6667,
-      tls: false,
-      nick: 'alice',
-      altNicks: ['alice_'],
-      username: 'alice',
-      realName: 'Alice Example',
+    const conflict = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
       password: 'secret',
       clearPassword: true,
-      autoJoin: [],
-    }, cookie);
-    assert.equal(response.status, 400);
-    assert.equal(response.json.message, 'Password cannot be updated and cleared in the same request');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
+    });
+    assert.equal(conflict.status, 400);
+    assert.equal(conflict.json.message, 'Password cannot be updated and cleared in the same request');
 
-test('network save rejects empty string passwords', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'POST', '/api/networks', {
-      name: 'TestNet',
-      host: 'irc.example.test',
-      port: 6667,
-      tls: false,
-      nick: 'alice',
-      altNicks: ['alice_'],
-      username: 'alice',
-      realName: 'Alice Example',
+    const empty = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
       password: '',
-      autoJoin: [],
-    }, cookie);
-    assert.equal(response.status, 400);
-    assert.equal(response.json.message, 'Password cannot be empty');
+    });
+    assert.equal(empty.status, 400);
+    assert.equal(empty.json.message, 'Password cannot be empty');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -732,34 +389,26 @@ test('network save broadcasts template and instance updates over websocket', asy
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const template = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
+  const template = storage.upsertNetwork(createNetworkInput({
     name: 'TemplateNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
     nick: 'oldnick',
     altNicks: ['oldnick_'],
     username: 'olduser',
     realName: 'Old User',
-    favorite: false,
-    autoJoin: [],
-  });
-  const clone = storage.upsertNetwork(user.id, {
-    ...template,
-    id: undefined,
+  }));
+  const clone = storage.upsertNetwork(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'Connection instance',
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+    nick: 'oldnick',
+    altNicks: ['oldnick_'],
+    username: 'olduser',
+    realName: 'Old User',
+  }));
   const server = createServer(createHttpHandler({ storage, runtime }));
   attachWebSocketServer(server, { storage, runtime });
   const port = await listen(server);
-  const socket = await connectWebSocket(port, cookie);
+  const { socket } = await connectWebSocket(port);
 
   try {
     const updatesPromise = waitForWebSocketMessages(socket, 'network.upsert', 2);
@@ -769,103 +418,18 @@ test('network save broadcasts template and instance updates over websocket', asy
       altNicks: ['newnick_'],
       username: 'newuser',
       realName: 'New User',
-    }, cookie);
+    });
     assert.equal(response.status, 200);
+
     const updates = await updatesPromise;
     assert.deepEqual(
       updates.map((message) => (message.network as { id: string }).id).sort(),
       [clone.id, template.id].sort()
     );
-    assert.equal((updates.find((message) => (message.network as { id: string }).id === template.id)?.network as { nick: string }).nick, 'newnick');
-    assert.equal((updates.find((message) => (message.network as { id: string }).id === clone.id)?.network as { nick: string }).nick, 'newnick');
-    assert.equal(storage.getNetwork(user.id, clone.id)?.nick, 'newnick');
-    assert.equal(storage.getNetwork(user.id, clone.id)?.username, 'newuser');
+    assert.equal(storage.getNetwork(clone.id)?.nick, 'newnick');
+    assert.equal(storage.getNetwork(clone.id)?.username, 'newuser');
   } finally {
-    socket.close();
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('network update cannot overwrite another user network', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const alice = storage.bootstrapUser('alice', 'secret');
-  const bob = storage.createUser('bob', 'secret');
-  const bobSession = storage.createSession(bob.id);
-  const network = storage.upsertNetwork(alice.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'AliceNet',
-    host: 'alice.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(bobSession.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'PUT', `/api/networks/${network.id}`, {
-      name: 'BobOverwrite',
-      host: 'bob.example.test',
-      port: 6697,
-      tls: true,
-      nick: 'bob',
-      altNicks: ['bob_'],
-      username: 'bob',
-      realName: 'bob',
-      favorite: true,
-      autoJoin: ['#owned'],
-    }, cookie);
-    assert.equal(response.status, 404);
-    assert.equal(response.json.message, 'Network not found');
-    assert.equal(storage.getNetwork(bob.id, network.id), null);
-    assert.equal(storage.getNetwork(alice.id, network.id)?.name, 'AliceNet');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('delete returns not found for missing or foreign networks', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const alice = storage.bootstrapUser('alice', 'secret');
-  const bob = storage.createUser('bob', 'secret');
-  const bobSession = storage.createSession(bob.id);
-  const network = storage.upsertNetwork(alice.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'AliceNet',
-    host: 'alice.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(bobSession.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const missingResponse = await requestJson(port, 'DELETE', '/api/networks/missing', undefined, cookie);
-    assert.equal(missingResponse.status, 404);
-    assert.equal(missingResponse.json.message, 'Network not found');
-
-    const foreignResponse = await requestJson(port, 'DELETE', `/api/networks/${network.id}`, undefined, cookie);
-    assert.equal(foreignResponse.status, 404);
-    assert.equal(foreignResponse.json.message, 'Network not found');
-    assert.equal(storage.getNetwork(alice.id, network.id)?.name, 'AliceNet');
-  } finally {
+    await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
@@ -873,38 +437,22 @@ test('delete returns not found for missing or foreign networks', async () => {
 test('delete returns all deleted network ids when removing a template', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const template = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
+  const template = storage.upsertNetwork(createNetworkInput({
     name: 'TemplateNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const clone = storage.upsertNetwork(user.id, {
-    ...template,
-    id: undefined,
+  }));
+  const clone = storage.upsertNetwork(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
-    name: `${template.name} clone`,
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+    name: 'TemplateNet clone',
+  }));
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'DELETE', `/api/networks/${template.id}`, undefined, cookie);
+    const response = await requestJson(port, 'DELETE', `/api/networks/${template.id}`);
     assert.equal(response.status, 200);
     assert.deepEqual(
-      [...((response.json as { deletedNetworkIds: string[] }).deletedNetworkIds)].sort(),
+      [...(response.json.deletedNetworkIds as string[])].sort(),
       [clone.id, template.id].sort()
     );
   } finally {
@@ -912,161 +460,121 @@ test('delete returns all deleted network ids when removing a template', async ()
   }
 });
 
-test('open query returns not found for missing networks', async () => {
+test('query routes validate missing networks and invalid targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
+  const network = storage.upsertNetwork(createNetworkInput());
+  storage.upsertQuery(network.id, 'helper');
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'POST', '/api/networks/missing/queries', { target: 'helper' }, cookie);
-    assert.equal(response.status, 404);
-    assert.equal(response.json.message, 'Network not found');
+    const missing = await requestJson(port, 'POST', '/api/networks/missing/queries', { target: 'helper' });
+    assert.equal(missing.status, 404);
+    assert.equal(missing.json.message, 'Network not found');
+
+    const invalidTarget = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: '#help' });
+    assert.equal(invalidTarget.status, 400);
+    assert.equal(invalidTarget.json.message, 'Private-message target is required');
+
+    const invalidPayload = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: {} });
+    assert.equal(invalidPayload.status, 400);
+    assert.equal(invalidPayload.json.message, 'Invalid query payload');
+
+    const invalidClose = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/%23help`);
+    assert.equal(invalidClose.status, 400);
+    assert.equal(invalidClose.json.message, 'Private-message target is required');
+    assert.equal(storage.getQuery(network.id, 'helper')?.target, 'helper');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('open query rejects invalid private-message targets over http', async () => {
+test('channel read emits snapshots and clears unread counts without auth', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+  const channel = storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    unread: 0,
   });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
   const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
 
   try {
-    for (const target of ['   ', 'server', '#help']) {
-      const response = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target }, cookie);
-      assert.equal(response.status, 400);
-      assert.equal(response.json.message, 'Private-message target is required');
-    }
-    assert.equal(storage.listQueries(user.id).length, 0);
+    const unreadSnapshotPromise = waitForWebSocketMessageType(socket, 'channel.snapshot');
+    handleRuntimeEvent(runtime, {
+      type: 'message',
+      message: {
+        id: 'msg-1',
+        networkId: network.id,
+        target: '#help',
+        nick: 'bob',
+        body: 'hello',
+        kind: 'line',
+        self: false,
+        ts: Date.now(),
+      },
+    });
+
+    const unreadSnapshot = await unreadSnapshotPromise as {
+      channel: { id: string; unread: number };
+    };
+    assert.equal(unreadSnapshot.channel.id, channel.id);
+    assert.equal(unreadSnapshot.channel.unread, 1);
+
+    const clearedSnapshotPromise = waitForWebSocketMessageType(socket, 'channel.snapshot');
+    const response = await requestJson(port, 'POST', `/api/channels/${channel.id}/read`, {});
+    assert.equal(response.status, 200);
+
+    const clearedSnapshot = await clearedSnapshotPromise as {
+      channel: { id: string; unread: number };
+    };
+    assert.equal(clearedSnapshot.channel.id, channel.id);
+    assert.equal(clearedSnapshot.channel.unread, 0);
   } finally {
+    await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('open query rejects non-string payload targets over http', async () => {
+test('history clamps invalid and oversized limits to the default window', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: {} }, cookie);
-    assert.equal(response.status, 400);
-    assert.equal(response.json.message, 'Invalid query payload');
-    assert.equal(storage.listQueries(user.id).length, 0);
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  const network = storage.upsertNetwork(createNetworkInput());
+  for (let index = 0; index < 250; index += 1) {
+    storage.appendMessage({
+      id: `m${index}`,
+      networkId: network.id,
+      target: '#help',
+      nick: 'alice',
+      body: `message ${index}`,
+      kind: 'line',
+      self: true,
+      ts: Date.now() + index,
+    });
   }
-});
-
-test('close query returns not found for missing or foreign networks', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const alice = storage.bootstrapUser('alice', 'secret');
-  const bob = storage.createUser('bob', 'secret');
-  const bobSession = storage.createSession(bob.id);
-  const network = storage.upsertNetwork(alice.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'AliceNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  storage.upsertQuery(alice.id, network.id, 'helper');
-  const cookie = `pulsete_session=${encodeURIComponent(bobSession.token)}`;
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const missingResponse = await requestJson(port, 'DELETE', '/api/networks/missing/queries/helper', undefined, cookie);
-    assert.equal(missingResponse.status, 404);
-    assert.equal(missingResponse.json.message, 'Network not found');
+    const invalidLimit = await fetch(`http://127.0.0.1:${port}/api/networks/${network.id}/history?target=%23help&limit=-1`);
+    const invalidBody = await invalidLimit.json() as { messages: Array<{ body: string }> };
+    assert.equal(invalidLimit.status, 200);
+    assert.equal(invalidBody.messages.length, historyWindowLimit);
+    assert.equal(invalidBody.messages[0]?.body, 'message 0');
+    assert.equal(invalidBody.messages.at(-1)?.body, 'message 249');
 
-    const foreignResponse = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/helper`, undefined, cookie);
-    assert.equal(foreignResponse.status, 404);
-    assert.equal(foreignResponse.json.message, 'Network not found');
-    assert.equal(storage.getQuery(alice.id, network.id, 'helper')?.target, 'helper');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('close query rejects invalid private-message targets over http', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  storage.upsertQuery(user.id, network.id, 'helper');
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/%23help`, undefined, cookie);
-    assert.equal(response.status, 400);
-    assert.equal(response.json.message, 'Private-message target is required');
-    assert.equal(storage.getQuery(user.id, network.id, 'helper')?.target, 'helper');
+    const oversizedLimit = await fetch(`http://127.0.0.1:${port}/api/networks/${network.id}/history?target=%23help&limit=1000000`);
+    const oversizedBody = await oversizedLimit.json() as { messages: Array<{ body: string }> };
+    assert.equal(oversizedLimit.status, 200);
+    assert.equal(oversizedBody.messages.length, historyWindowLimit);
+    assert.equal(oversizedBody.messages[0]?.body, 'message 0');
+    assert.equal(oversizedBody.messages.at(-1)?.body, 'message 249');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -1107,29 +615,12 @@ test('static handler does not expose repository files', async () => {
 test('connect route does not allow GET side effects', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_', 'alice__'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-
+  const network = storage.upsertNetwork(createNetworkInput());
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'GET', `/api/networks/${network.id}/connect`, undefined, cookie);
+    const response = await requestJson(port, 'GET', `/api/networks/${network.id}/connect`);
     assert.equal(response.status, 404);
     assert.equal(response.json.message, 'Not found');
   } finally {
@@ -1137,9 +628,10 @@ test('connect route does not allow GET side effects', async () => {
   }
 });
 
-test('malformed request targets return a handled bad request', async () => {
+test('malformed request targets and route params return handled bad requests', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
   let uncaught: string | null = null;
@@ -1149,12 +641,20 @@ test('malformed request targets return a handled bad request', async () => {
   process.once('uncaughtException', onUncaught);
 
   try {
-    const response = await sendRawRequest(
+    const invalidTargetResponse = await sendRawRequest(
       port,
       'GET http://% HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n'
     );
-    assert.match(response, /^HTTP\/1\.1 400 Bad Request/m);
-    assert.match(response, /Invalid request target/);
+    assert.match(invalidTargetResponse, /^HTTP\/1\.1 400 Bad Request/m);
+    assert.match(invalidTargetResponse, /Invalid request target/);
+
+    const invalidParamResponse = await requestJson(port, 'POST', '/api/networks/%E0%A4%A/connect', {});
+    assert.equal(invalidParamResponse.status, 400);
+    assert.equal(invalidParamResponse.json.message, 'Invalid request parameter');
+
+    const invalidQueryTarget = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/%E0%A4%A`);
+    assert.equal(invalidQueryTarget.status, 400);
+    assert.equal(invalidQueryTarget.json.message, 'Invalid request parameter');
     assert.equal(uncaught, null);
   } finally {
     process.removeListener('uncaughtException', onUncaught);
@@ -1196,172 +696,95 @@ test('malformed websocket upgrade targets are destroyed without uncaught excepti
   }
 });
 
-test('malformed session cookies are ignored by auth routes', async () => {
+test('oversized json bodies are rejected before parsing', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  storage.bootstrapUser('alice', 'secret');
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
   try {
-    const sessionResponse = await sendRawRequest(
-      port,
-      [
-        'GET /api/session HTTP/1.1',
-        'Host: 127.0.0.1',
-        'Cookie: pulsete_session=%E0%A4%A',
-        'Connection: close',
-        '',
-        '',
-      ].join('\r\n')
-    );
-    assert.match(sessionResponse, /^HTTP\/1\.1 200 OK/m);
-    assert.match(sessionResponse, /"bootstrapped":true/);
-    assert.match(sessionResponse, /"authenticated":false/);
-
-    const logoutResponse = await sendRawRequest(
-      port,
-      [
-        'POST /api/logout HTTP/1.1',
-        'Host: 127.0.0.1',
-        'Cookie: pulsete_session=%E0%A4%A',
-        'Content-Length: 0',
-        'Connection: close',
-        '',
-        '',
-      ].join('\r\n')
-    );
-    assert.match(logoutResponse, /^HTTP\/1\.1 200 OK/m);
-    assert.match(logoutResponse, /{"ok":true}/);
+    const response = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      realName: 'x'.repeat(70_000),
+    });
+    assert.equal(response.status, 413);
+    assert.equal(response.json.message, 'Request body too large');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('malformed encoded route params return a handled bad request', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_', 'alice__'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const connectResponse = await requestJson(port, 'POST', '/api/networks/%E0%A4%A/connect', {}, cookie);
-    assert.equal(connectResponse.status, 400);
-    assert.equal(connectResponse.json.message, 'Invalid request parameter');
-
-    const deleteResponse = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/%E0%A4%A`, undefined, cookie);
-    assert.equal(deleteResponse.status, 400);
-    assert.equal(deleteResponse.json.message, 'Invalid request parameter');
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('malformed websocket session cookies do not crash the upgrade handler', async () => {
+test('websocket upgrade succeeds without cookies and emits state.ready', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const server = createServer(createHttpHandler({ storage, runtime }));
   attachWebSocketServer(server, { storage, runtime });
   const port = await listen(server);
-  let uncaught: string | null = null;
-  const onUncaught = (error: unknown) => {
-    uncaught = error instanceof Error ? error.message : String(error);
-  };
-  process.once('uncaughtException', onUncaught);
 
   try {
-    await sendRawRequest(
-      port,
-      [
-        'GET /ws HTTP/1.1',
-        'Host: 127.0.0.1',
-        'Connection: Upgrade',
-        'Upgrade: websocket',
-        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
-        'Sec-WebSocket-Version: 13',
-        'Cookie: pulsete_session=%E0%A4%A',
-        '',
-        '',
-      ].join('\r\n')
-    );
-    assert.equal(uncaught, null);
+    const { socket, ready } = await connectWebSocket(port);
+    assert.equal(ready.type, 'state.ready');
+    assert.ok(Array.isArray(ready.snapshot ? (ready.snapshot as { networks: unknown[] }).networks : []));
+    await closeWebSocket(socket);
   } finally {
-    process.removeListener('uncaughtException', onUncaught);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('slow authenticated writes are revalidated before commit', async () => {
+test('websocket state requests and command routing use the live local state', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  storage.upsertQuery(network.id, 'helper');
   const runtime = new Runtime(storage);
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
+  const calls: string[] = [];
+  runtime.connect = ((networkId: string) => {
+    calls.push(`connect:${networkId}`);
+  }) as Runtime['connect'];
+  runtime.disconnect = ((networkId: string) => {
+    calls.push(`disconnect:${networkId}`);
+  }) as Runtime['disconnect'];
+  runtime.closeQuery = ((networkId: string, target: string) => {
+    calls.push(`query.close:${networkId}:${target}`);
+    return target;
+  }) as Runtime['closeQuery'];
+  runtime.sendRaw = ((networkId: string, raw: string) => {
+    calls.push(`raw.send:${networkId}:${raw}`);
+  }) as Runtime['sendRaw'];
+
   const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
   const port = await listen(server);
-  const body = JSON.stringify({
-    name: 'RaceNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'Alice Example',
-    favorite: false,
-    autoJoin: [],
-  });
-  const splitAt = Math.floor(body.length / 2);
+  const { socket, ready } = await connectWebSocket(port);
 
   try {
-    const socket = net.connect(port, '127.0.0.1');
-    await new Promise<void>((resolve, reject) => {
-      socket.once('connect', resolve);
-      socket.once('error', reject);
+    assert.equal((ready.snapshot as { networks: Array<{ id: string }> }).networks.some((entry) => entry.id === network.id), true);
+
+    const stateReadyPromise = waitForWebSocketMessageType(socket, 'state.ready');
+    socket.send(JSON.stringify({ type: 'state.request' }));
+    const stateReady = await stateReadyPromise;
+    assert.equal((stateReady.snapshot as { networks: Array<{ id: string }> }).networks.some((entry) => entry.id === network.id), true);
+
+    const queryClosePromise = waitForWebSocketMessageType(socket, 'query.close');
+    socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
+    socket.send(JSON.stringify({ type: 'network.disconnect', networkId: network.id }));
+    socket.send(JSON.stringify({ type: 'query.close', networkId: network.id, target: 'helper' }));
+    socket.send(JSON.stringify({ type: 'raw.send', networkId: network.id, raw: '/quote WHOIS alice' }));
+
+    assert.deepEqual(await queryClosePromise, {
+      type: 'query.close',
+      networkId: network.id,
+      target: 'helper',
     });
-    const responsePromise = new Promise<string>((resolve, reject) => {
-      let rawResponse = '';
-      socket.setEncoding('utf8');
-      socket.on('data', (chunk) => { rawResponse += chunk; });
-      socket.on('end', () => resolve(rawResponse));
-      socket.on('close', () => resolve(rawResponse));
-      socket.on('error', reject);
-    });
-
-    socket.write(
-      `POST /api/networks HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\nContent-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\nCookie: ${cookie}\r\n\r\n${body.slice(0, splitAt)}`
-    );
-
-    const logoutResponse = await requestJson(port, 'POST', '/api/logout', undefined, cookie);
-    assert.equal(logoutResponse.status, 200);
-
-    socket.write(body.slice(splitAt));
-    socket.end();
-
-    const rawResponse = await responsePromise;
-    assert.match(rawResponse, /^HTTP\/1\.1 401 /);
-    assert.match(rawResponse, /"message":"Authentication required"/);
-    assert.equal(storage.listNetworks(user.id).length, 0);
+    assert.deepEqual(calls, [
+      `connect:${network.id}`,
+      `disconnect:${network.id}`,
+      `query.close:${network.id}:helper`,
+      `raw.send:${network.id}:/quote WHOIS alice`,
+    ]);
   } finally {
+    await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
@@ -1369,36 +792,21 @@ test('slow authenticated writes are revalidated before commit', async () => {
 test('oversized websocket payloads are rejected', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_', 'alice__'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
+  const network = storage.upsertNetwork(createNetworkInput());
   const runtime = new Runtime(storage);
   const server = createServer(createHttpHandler({ storage, runtime }));
   attachWebSocketServer(server, { storage, runtime });
   const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
+  const { socket } = await connectWebSocket(port);
 
   try {
+    const closePromise = waitForWebSocketCloseDetails(socket);
     socket.send(JSON.stringify({
       type: 'raw.send',
       networkId: network.id,
       raw: 'x'.repeat(70_000),
     }));
-    const close = await waitForWebSocketCloseDetails(socket);
+    const close = await closePromise;
     assert.equal(close.code, 1009);
   } finally {
     socket.terminate();
@@ -1406,544 +814,31 @@ test('oversized websocket payloads are rejected', async () => {
   }
 });
 
-test('websocket session requests and command routing use the live session', async () => {
+test('websocket validation returns errors for invalid channel, query, and message targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_', 'alice__'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  storage.upsertQuery(user.id, network.id, 'helper');
-
-  const runtime = new Runtime(storage);
-  const calls: string[] = [];
-  runtime.connect = ((nextUserId: string, networkId: string) => {
-    calls.push(`connect:${nextUserId}:${networkId}`);
-  }) as Runtime['connect'];
-  runtime.disconnect = ((nextUserId: string, networkId: string) => {
-    calls.push(`disconnect:${nextUserId}:${networkId}`);
-  }) as Runtime['disconnect'];
-  runtime.closeQuery = ((nextUserId: string, networkId: string, target: string) => {
-    calls.push(`query.close:${nextUserId}:${networkId}:${target}`);
-    return target;
-  }) as Runtime['closeQuery'];
-  runtime.sendRaw = ((nextUserId: string, networkId: string, raw: string) => {
-    calls.push(`raw.send:${nextUserId}:${networkId}:${raw}`);
-  }) as Runtime['sendRaw'];
-
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
-    socket.send(JSON.stringify({ type: 'session.init', token: null }));
-    const initReady = await waitForWebSocketMessageType(socket, 'session.ready');
-    assert.equal((initReady.snapshot as { user: { username: string } }).user.username, 'alice');
-
-    socket.send(JSON.stringify({ type: 'state.request' }));
-    const stateReady = await waitForWebSocketMessageType(socket, 'session.ready');
-    assert.equal((stateReady.snapshot as { user: { username: string } }).user.username, 'alice');
-
-    socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
-    socket.send(JSON.stringify({ type: 'network.disconnect', networkId: network.id }));
-    socket.send(JSON.stringify({ type: 'query.close', networkId: network.id, target: 'helper' }));
-    assert.deepEqual(await waitForWebSocketMessageType(socket, 'query.close'), {
-      type: 'query.close',
-      networkId: network.id,
-      target: 'helper',
-    });
-    socket.send(JSON.stringify({ type: 'raw.send', networkId: network.id, raw: '/quote WHOIS alice' }));
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    assert.deepEqual(calls, [
-      `connect:${user.id}:${network.id}`,
-      `disconnect:${user.id}:${network.id}`,
-      `query.close:${user.id}:${network.id}:helper`,
-      `raw.send:${user.id}:${network.id}:/quote WHOIS alice`,
-    ]);
-  } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('logout revokes existing websocket sessions', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
+  const network = storage.upsertNetwork(createNetworkInput());
+  storage.upsertQuery(network.id, 'helper');
   const runtime = new Runtime(storage);
   const server = createServer(createHttpHandler({ storage, runtime }));
   attachWebSocketServer(server, { storage, runtime });
   const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
+  const { socket } = await connectWebSocket(port);
 
   try {
-    socket.send(JSON.stringify({ type: 'state.request' }));
-    assert.equal((await waitForWebSocketMessageType(socket, 'session.ready')).type, 'session.ready');
-
-    const logout = await request(port, '/api/logout', {
-      method: 'POST',
-      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-      body: '{}',
-    });
-    assert.equal(logout.status, 200);
-    await waitForWebSocketClose(socket);
-  } finally {
-    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
-      socket.close();
-    }
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('channel.part over websocket returns an error for foreign networks', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const alice = storage.bootstrapUser('alice', 'secret');
-  const bob = storage.createUser('bob', 'secret');
-  const bobSession = storage.createSession(bob.id);
-  const network = storage.upsertNetwork(alice.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'AliceNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(bobSession.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
-    socket.send(JSON.stringify({ type: 'channel.part', networkId: network.id, channel: '#help' }));
-    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
-      type: 'error',
-      networkId: null,
-      message: 'Network not found',
-    });
-  } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('channel.join over websocket rejects invalid channel names', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
+    const joinErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: 'helper' }));
-    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
-      type: 'error',
-      networkId: null,
-      message: 'Channel name must start with #, &, +, or !',
-    });
-    assert.equal(storage.listChannels(user.id).length, 0);
-  } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
+    assert.equal((await joinErrorPromise).message, 'Channel name must start with #, &, +, or !');
 
-test('channel.part over websocket rejects invalid channel names', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
-    socket.send(JSON.stringify({ type: 'channel.part', networkId: network.id, channel: 'helper' }));
-    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
-      type: 'error',
-      networkId: null,
-      message: 'Channel name must start with #, &, +, or !',
-    });
-  } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('query.open over websocket rejects invalid private-message targets', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
+    const queryErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: '#help' }));
-    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
-      type: 'error',
-      networkId: null,
-      message: 'Private-message target is required',
-    });
-    assert.equal(storage.listQueries(user.id).length, 0);
-  } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
+    assert.equal((await queryErrorPromise).message, 'Private-message target is required');
 
-test('query.close over websocket rejects invalid private-message targets', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  storage.upsertQuery(user.id, network.id, 'helper');
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
-    socket.send(JSON.stringify({ type: 'query.close', networkId: network.id, target: '#help' }));
-    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
-      type: 'error',
-      networkId: null,
-      message: 'Private-message target is required',
-    });
-    assert.equal(storage.getQuery(user.id, network.id, 'helper')?.target, 'helper');
-  } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('message.send over websocket rejects invalid private-message targets', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
+    const messageErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: '   ', body: 'hello', kind: 'message' }));
-    assert.deepEqual(await waitForWebSocketMessageType(socket, 'error'), {
-      type: 'error',
-      networkId: null,
-      message: 'Private-message target is required',
-    });
-    assert.equal(storage.listQueries(user.id).length, 0);
-    assert.equal(storage.listMessages(user.id, network.id, '   ', 10).length, 0);
+    assert.equal((await messageErrorPromise).message, 'Private-message target is required');
   } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('channel read returns not found for missing or foreign channels', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const alice = storage.bootstrapUser('alice', 'secret');
-  const bob = storage.createUser('bob', 'secret');
-  const bobSession = storage.createSession(bob.id);
-  const network = storage.upsertNetwork(alice.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'AliceNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const channel = storage.upsertChannel(alice.id, {
-    networkId: network.id,
-    name: '#help',
-    unread: 2,
-  });
-  const cookie = `pulsete_session=${encodeURIComponent(bobSession.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const missingResponse = await requestJson(port, 'POST', '/api/channels/missing/read', {}, cookie);
-    assert.equal(missingResponse.status, 404);
-    assert.equal(missingResponse.json.message, 'Channel not found');
-
-    const foreignResponse = await requestJson(port, 'POST', `/api/channels/${channel.id}/read`, {}, cookie);
-    assert.equal(foreignResponse.status, 404);
-    assert.equal(foreignResponse.json.message, 'Channel not found');
-    assert.equal(storage.getChannel(alice.id, channel.id)?.unread, 2);
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('channel unread snapshots stay in sync across websocket events and http read clears', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  const channel = storage.upsertChannel(user.id, {
-    networkId: network.id,
-    name: '#help',
-    unread: 0,
-  });
-  const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
-  const port = await listen(server);
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const socket = await connectWebSocket(port, cookie);
-
-  try {
-    const unreadSnapshotPromise = waitForWebSocketMessageType(socket, 'channel.snapshot');
-    handleRuntimeEvent(runtime, user.id, {
-      type: 'message',
-      message: {
-        id: 'msg-1',
-        networkId: network.id,
-        target: '#help',
-        nick: 'bob',
-        body: 'hello',
-        kind: 'line',
-        self: false,
-        ts: Date.now(),
-      },
-    });
-
-    const unreadSnapshot = await unreadSnapshotPromise as {
-      type: 'channel.snapshot';
-      channel: { id: string; unread: number };
-    };
-    assert.equal(unreadSnapshot.channel.id, channel.id);
-    assert.equal(unreadSnapshot.channel.unread, 1);
-
-    const clearedSnapshotPromise = waitForWebSocketMessageType(socket, 'channel.snapshot');
-    const response = await requestJson(port, 'POST', `/api/channels/${channel.id}/read`, {}, cookie);
-    assert.equal(response.status, 200);
-
-    const clearedSnapshot = await clearedSnapshotPromise as {
-      type: 'channel.snapshot';
-      channel: { id: string; unread: number };
-    };
-    assert.equal(clearedSnapshot.channel.id, channel.id);
-    assert.equal(clearedSnapshot.channel.unread, 0);
-  } finally {
-    await new Promise<void>((resolve) => {
-      socket.once('close', () => resolve());
-      socket.close();
-    });
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
-test('history clamps invalid and oversized limits to the default window', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const user = storage.bootstrapUser('alice', 'secret');
-  const session = storage.createSession(user.id);
-  const network = storage.upsertNetwork(user.id, {
-    templateId: null,
-    managerHidden: false,
-    name: 'TestNet',
-    host: 'irc.example.test',
-    port: 6667,
-    tls: false,
-    nick: 'alice',
-    altNicks: ['alice_', 'alice__'],
-    username: 'alice',
-    realName: 'alice',
-    favorite: false,
-    autoJoin: [],
-  });
-  for (let index = 0; index < 250; index += 1) {
-    storage.appendMessage(user.id, {
-      id: `m${index}`,
-      networkId: network.id,
-      target: '#help',
-      nick: 'alice',
-      body: `message ${index}`,
-      kind: 'line',
-      self: true,
-      ts: Date.now() + index,
-    });
-  }
-  const cookie = `pulsete_session=${encodeURIComponent(session.token)}`;
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const invalidLimit = await fetch(`http://127.0.0.1:${port}/api/networks/${network.id}/history?target=%23help&limit=-1`, {
-      headers: { Cookie: cookie },
-    });
-    const invalidBody = await invalidLimit.json() as { messages: Array<{ body: string }> };
-    assert.equal(invalidLimit.status, 200);
-    assert.equal(invalidBody.messages.length, historyWindowLimit);
-    assert.equal(invalidBody.messages[0]?.body, 'message 0');
-    assert.equal(invalidBody.messages.at(-1)?.body, 'message 249');
-
-    const oversizedLimit = await fetch(`http://127.0.0.1:${port}/api/networks/${network.id}/history?target=%23help&limit=1000000`, {
-      headers: { Cookie: cookie },
-    });
-    const oversizedBody = await oversizedLimit.json() as { messages: Array<{ body: string }> };
-    assert.equal(oversizedLimit.status, 200);
-    assert.equal(oversizedBody.messages.length, historyWindowLimit);
-    assert.equal(oversizedBody.messages[0]?.body, 'message 0');
-    assert.equal(oversizedBody.messages.at(-1)?.body, 'message 249');
-  } finally {
+    await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });

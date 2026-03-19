@@ -13,7 +13,6 @@ type LifecycleParams = {
   visibleNetworks: NetworkProfile[];
   managedNetworkId: string | null;
   dispatch: (action: Action) => void;
-  setLoadingAuth: (value: boolean) => void;
   setShowNetworkManager: (value: boolean) => void;
   setManagedNetworkId: (value: string | null) => void;
   socketRef: MutableRef<SocketHandle | null>;
@@ -25,17 +24,17 @@ export function useAppLifecycle(params: LifecycleParams) {
   useEffect(() => {
     let alive = true;
     api
-      .session()
-      .then((session) => alive && params.dispatch({ type: 'session-loaded', session }))
+      .snapshot()
+      .then((snapshot) => alive && params.dispatch({ type: 'snapshot-loaded', snapshot }))
       .catch((error) => {
         if (alive) {
           params.dispatch({
             type: 'set-banner',
-            banner: { kind: 'error', message: error instanceof Error ? error.message : 'Failed to load session' },
+            banner: { kind: 'error', message: error instanceof Error ? error.message : 'Failed to load snapshot' },
           });
+          params.dispatch({ type: 'load-failed' });
         }
-      })
-      .finally(() => alive && params.setLoadingAuth(false));
+      });
     return () => {
       alive = false;
     };
@@ -122,7 +121,7 @@ export function useAppLifecycle(params: LifecycleParams) {
 }
 
 function handleServerMessage(message: ServerMessage, dispatch: (action: Action) => void) {
-  if (message.type === 'session.ready') return void dispatch({ type: 'snapshot', snapshot: message.snapshot });
+  if (message.type === 'state.ready') return void dispatch({ type: 'snapshot', snapshot: message.snapshot });
   if (message.type === 'network.state') {
     return void dispatch({
       type: 'network-state',

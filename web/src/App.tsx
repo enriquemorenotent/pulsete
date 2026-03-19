@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'react';
-import { AuthScreen } from './AuthScreen.js';
 import { reducer, initialState, useStateReducer } from './app-state.js';
 import type { SocketHandle } from './client.js';
 import { DesktopShell } from './DesktopShell.js';
@@ -12,7 +11,6 @@ import { deriveWorkspace, type NetworkRuntimeState } from './workspace.js';
 function App() {
   const [state, dispatch] = useStateReducer(reducer, initialState);
   const [draft, setDraft] = useState('');
-  const [loadingAuth, setLoadingAuth] = useState(true);
   const [showNetworkManager, setShowNetworkManager] = useState(false);
   const [showNetworkEditor, setShowNetworkEditor] = useState(false);
   const [editorTab, setEditorTab] = useState<EditorTab>('servers');
@@ -66,7 +64,6 @@ function App() {
     visibleNetworks,
     managedNetworkId,
     dispatch,
-    setLoadingAuth,
     setShowNetworkManager,
     setManagedNetworkId,
     socketRef,
@@ -93,7 +90,7 @@ function App() {
     setShowNetworkManager(true);
   };
 
-  if (loadingAuth || state.phase === 'loading') {
+  if (state.phase === 'loading') {
     return (
       <div className="fixed inset-0 flex items-center justify-center px-6 text-sm font-medium uppercase tracking-[0.12em] text-muted-foreground">
         Loading Pulsete...
@@ -103,63 +100,51 @@ function App() {
 
   return (
     <>
-      {state.phase === 'bootstrap' || state.phase === 'login' ? (
-        <AuthScreen
-          phase={state.phase}
-          authMode={state.authMode}
-          form={state.authForm}
-          onModeChange={(mode) => dispatch({ type: 'set-auth-mode', mode })}
-          onFieldChange={(field, value) => dispatch({ type: 'set-auth-form', field, value })}
-          onSubmit={actions.submitAuth}
-        />
-      ) : (
-        <DesktopShell
-          workspace={workspace}
-          connectionInstances={workspace.connectionInstances}
-          channels={state.channels}
-          queries={state.queries}
-          networkStates={state.networkStates}
-          selection={workspace.selection}
-          selectedMessages={selectedMessages}
-          draft={draft}
-          scrollRef={scrollRef}
-          showNetworkManager={showNetworkManager}
-          showNetworkEditor={showNetworkEditor}
-          managedNetwork={visibleManagedNetwork}
-          managedRuntime={managedRuntime}
-          visibleNetworks={visibleNetworks}
-          showFavoritesOnly={showFavoritesOnly}
-          hiddenManagedNetworkName={hiddenManagedNetworkName}
-          networkForm={state.networkForm}
-          editorTab={editorTab}
-          onOpenNetworkManager={() => setShowNetworkManager(true)}
-          onLogout={actions.logout}
-          onDraftChange={setDraft}
-          onSendComposer={actions.sendComposer}
-          onReconnectNetwork={actions.reconnectNetwork}
-          onDisconnectNetwork={actions.disconnectNetwork}
-          onCloseConnection={actions.closeConnection}
-          onSelectNetworkBuffer={actions.selectNetworkBuffer}
-          onSelectChannelBuffer={actions.selectChannelBuffer}
-          onSelectPrivateBuffer={actions.selectPrivateBuffer}
-          onCloseChannel={actions.closeChannel}
-          onCloseQuery={actions.closeQuery}
-          onSelectManagedNetwork={setManagedNetworkId}
-          onToggleFavoritesOnly={() => setShowFavoritesOnly((value) => !value)}
-          onCloseNetworkManager={() => setShowNetworkManager(false)}
-          onOpenNewNetworkEditor={actions.openNewNetworkEditor}
-          onOpenManagedNetworkEditor={() => visibleManagedNetwork && actions.openNetworkEditor(visibleManagedNetwork)}
-          onDeleteManagedNetwork={() => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id)}
-          onConnectManagedNetwork={() => visibleManagedNetwork && actions.connectNetwork(visibleManagedNetwork)}
-          onToggleFavoriteManagedNetwork={() =>
-            visibleManagedNetwork && actions.saveFavorite(visibleManagedNetwork, !visibleManagedNetwork.favorite)
-          }
-          onCloseNetworkEditor={closeNetworkEditor}
-          onSubmitNetwork={actions.submitNetwork}
-          onNetworkFormChange={(form) => dispatch({ type: 'set-network-form', form })}
-          onEditorTabChange={setEditorTab}
-        />
-      )}
+      <DesktopShell
+        workspace={workspace}
+        connectionInstances={workspace.connectionInstances}
+        channels={state.channels}
+        queries={state.queries}
+        networkStates={state.networkStates}
+        selection={workspace.selection}
+        selectedMessages={selectedMessages}
+        draft={draft}
+        scrollRef={scrollRef}
+        showNetworkManager={showNetworkManager}
+        showNetworkEditor={showNetworkEditor}
+        managedNetwork={visibleManagedNetwork}
+        managedRuntime={managedRuntime}
+        visibleNetworks={visibleNetworks}
+        showFavoritesOnly={showFavoritesOnly}
+        hiddenManagedNetworkName={hiddenManagedNetworkName}
+        networkForm={state.networkForm}
+        editorTab={editorTab}
+        onOpenNetworkManager={() => setShowNetworkManager(true)}
+        onDraftChange={setDraft}
+        onSendComposer={actions.sendComposer}
+        onReconnectNetwork={actions.reconnectNetwork}
+        onDisconnectNetwork={actions.disconnectNetwork}
+        onCloseConnection={actions.closeConnection}
+        onSelectNetworkBuffer={actions.selectNetworkBuffer}
+        onSelectChannelBuffer={actions.selectChannelBuffer}
+        onSelectPrivateBuffer={actions.selectPrivateBuffer}
+        onCloseChannel={actions.closeChannel}
+        onCloseQuery={actions.closeQuery}
+        onSelectManagedNetwork={setManagedNetworkId}
+        onToggleFavoritesOnly={() => setShowFavoritesOnly((value) => !value)}
+        onCloseNetworkManager={() => setShowNetworkManager(false)}
+        onOpenNewNetworkEditor={actions.openNewNetworkEditor}
+        onOpenManagedNetworkEditor={() => visibleManagedNetwork && actions.openNetworkEditor(visibleManagedNetwork)}
+        onDeleteManagedNetwork={() => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id)}
+        onConnectManagedNetwork={() => visibleManagedNetwork && actions.connectNetwork(visibleManagedNetwork)}
+        onToggleFavoriteManagedNetwork={() =>
+          visibleManagedNetwork && actions.saveFavorite(visibleManagedNetwork, !visibleManagedNetwork.favorite)
+        }
+        onCloseNetworkEditor={closeNetworkEditor}
+        onSubmitNetwork={actions.submitNetwork}
+        onNetworkFormChange={(form) => dispatch({ type: 'set-network-form', form })}
+        onEditorTabChange={setEditorTab}
+      />
       <Toast banner={state.banner} onDismiss={() => dispatch({ type: 'set-banner', banner: null })} />
     </>
   );

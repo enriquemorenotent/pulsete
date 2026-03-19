@@ -8,13 +8,10 @@ export type HttpContext = {
   storage: Storage;
 };
 
-export type Session = ReturnType<Storage['getSession']>;
-
 export type RouteArgs = {
   req: IncomingMessage;
   res: ServerResponse;
   url: URL;
   pathname: string;
   context: HttpContext;
-  session: Session;
 };

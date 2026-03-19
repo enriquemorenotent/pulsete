@@ -20,11 +20,6 @@ export type NetworkForm = {
   autoJoin: string;
 };
 
-export type AuthForm = {
-  username: string;
-  password: string;
-};
-
 export const emptyNetworkForm = (): NetworkForm => ({
   name: '',
   host: '',
@@ -40,11 +35,6 @@ export const emptyNetworkForm = (): NetworkForm => ({
   hasSavedPassword: false,
   favorite: false,
   autoJoin: '',
-});
-
-export const emptyAuthForm = (): AuthForm => ({
-  username: '',
-  password: '',
 });
 
 export const parseAutoJoin = (text: string) =>

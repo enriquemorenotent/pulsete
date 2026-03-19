@@ -1,3 +1,4 @@
+import { getLocalIrcIdentity } from '../../shared/local-defaults.js';
 import type { Action, State } from './app-types.js';
 import { toForm, type EditorTab } from './network-form.js';
 
@@ -11,14 +12,15 @@ type EditorActionParams = {
 };
 
 export function openNewNetworkEditor(params: EditorActionParams) {
+  const identity = getLocalIrcIdentity();
   params.dispatch({
     type: 'reset-network-form',
     form: {
-      nick: params.state.user?.username ?? '',
-      nick2: params.state.user?.username ? `${params.state.user.username}_` : '',
-      nick3: params.state.user?.username ? `${params.state.user.username}__` : '',
-      username: params.state.user?.username ?? '',
-      realName: params.state.user?.username ?? '',
+      nick: identity.nick,
+      nick2: identity.altNicks[0] ?? '',
+      nick3: identity.altNicks[1] ?? '',
+      username: identity.username,
+      realName: identity.realName,
     },
   });
   params.setEditorTab('servers');

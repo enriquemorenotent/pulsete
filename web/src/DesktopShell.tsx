@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { LogOut, PanelsTopLeft, Radio } from 'lucide-react';
+import { PanelsTopLeft, Radio } from 'lucide-react';
 import type { ChannelState, ChatMessage, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -32,7 +32,6 @@ type DesktopShellProps = {
   networkForm: NetworkForm;
   editorTab: EditorTab;
   onOpenNetworkManager: () => void;
-  onLogout: () => void;
   onDraftChange: (value: string) => void;
   onSendComposer: () => void;
   onReconnectNetwork: (network: NetworkProfile) => void;
@@ -85,10 +84,6 @@ export function DesktopShell(props: DesktopShellProps) {
           <Button variant="outline" size="sm" onClick={props.onOpenNetworkManager}>
             <PanelsTopLeft />
             Network List
-          </Button>
-          <Button variant="ghost" size="sm" onClick={props.onLogout}>
-            <LogOut />
-            Sign out
           </Button>
         </div>
       </header>

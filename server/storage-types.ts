@@ -1,23 +1,7 @@
 import type { AppSnapshot, ChannelState, NetworkProfile, QueryBuffer } from '../shared/protocol.js';
 
-export type UserRow = {
-  id: string;
-  username: string;
-  passwordHash: string;
-  salt: string;
-  createdAt: number;
-};
-
-export type SessionRow = {
-  token: string;
-  userId: string;
-  createdAt: number;
-  expiresAt: number;
-};
-
 export type NetworkRow = {
   id: string;
-  userId: string;
   templateId: string | null;
   managerHidden: number;
   name: string;
@@ -37,7 +21,6 @@ export type NetworkRow = {
 
 export type ChannelRow = {
   id: string;
-  userId: string;
   networkId: string;
   name: string;
   topic: string;
@@ -49,7 +32,6 @@ export type ChannelRow = {
 
 export type QueryRow = {
   id: string;
-  userId: string;
   networkId: string;
   target: string;
   createdAt: number;
@@ -58,7 +40,6 @@ export type QueryRow = {
 
 export type MessageRow = {
   id: string;
-  userId: string;
   networkId: string;
   target: string;
   nick: string | null;
@@ -66,11 +47,6 @@ export type MessageRow = {
   kind: string;
   self: number;
   ts: number;
-};
-
-export type AuthUser = {
-  id: string;
-  username: string;
 };
 
 export type RuntimeNetworkProfile = NetworkProfile & {
@@ -96,8 +72,6 @@ export type MessageInput = {
   self: boolean;
   ts: number;
 };
-
-export type SessionRecord = SessionRow & { user: AuthUser };
 
 export type CountRow = { count: number };
 

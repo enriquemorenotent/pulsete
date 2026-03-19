@@ -1,28 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { badRequest, payloadTooLarge } from './app-error.js';
 
-export const cookieName = 'pulsete_session';
 export const jsonBodyLimitBytes = 64 * 1024;
 const requestBase = 'http://127.0.0.1';
-const decodeCookieValue = (value: string) => {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-};
-
-export const parseCookies = (header: string | undefined) =>
-  Object.fromEntries(
-    (header ?? '')
-      .split(';')
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const index = part.indexOf('=');
-        return index === -1 ? [part, ''] : [part.slice(0, index), decodeCookieValue(part.slice(index + 1))];
-      })
-  );
 
 export const readJson = async (req: IncomingMessage, maxBytes = jsonBodyLimitBytes) => {
   const declaredLength = Number(req.headers['content-length'] ?? 0);
@@ -51,12 +31,6 @@ export const writeJson = (res: ServerResponse, status: number, payload: unknown,
   }
   res.end(JSON.stringify(payload));
 };
-
-export const setSessionCookie = (token: string) =>
-  `${cookieName}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24 * 30}`;
-
-export const clearSessionCookie = () =>
-  `${cookieName}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
 
 export const tryParseRequestUrl = (value: string | undefined) => {
   try {

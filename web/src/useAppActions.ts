@@ -1,6 +1,5 @@
 import type { ChannelState, NetworkProfile } from '../../shared/protocol.js';
 import type { Action, State } from './app-types.js';
-import { submitAuthRequest } from './auth-actions.js';
 import { api, type SocketHandle } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
@@ -24,15 +23,6 @@ type AppActionParams = {
 };
 
 export function useAppActions(params: AppActionParams) {
-  const submitAuth = async (mode: 'bootstrap' | 'login' | 'register') => {
-    try {
-      const session = await submitAuthRequest(mode, params.state.authForm.username, params.state.authForm.password);
-      params.dispatch({ type: 'session-loaded', session });
-      params.updateBanner('notice', mode === 'bootstrap' ? 'Instance bootstrapped' : mode === 'register' ? 'Account created' : 'Signed in');
-    } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Authentication failed');
-    }
-  };
   const showNewNetworkEditor = () => openNewNetworkEditor(params);
   const showExistingNetworkEditor = (network: NetworkProfile) => openExistingNetworkEditor(network, params);
   const submitNetwork = async () => {
@@ -166,15 +156,6 @@ export function useAppActions(params: AppActionParams) {
       updateBanner: params.updateBanner,
       workspace: params.workspace,
     });
-  const logout = async () => {
-    try {
-      await api.logout();
-    } finally {
-      params.socketRef.current?.close();
-      params.socketRef.current = null;
-    }
-    params.dispatch({ type: 'session-loaded', session: await api.session() });
-  };
   return {
     closeChannel,
     closeConnection,
@@ -182,7 +163,6 @@ export function useAppActions(params: AppActionParams) {
     connectNetwork,
     deleteNetwork,
     disconnectNetwork,
-    logout,
     openNetworkEditor: showExistingNetworkEditor,
     openNewNetworkEditor: showNewNetworkEditor,
     reconnectNetwork,
@@ -191,7 +171,6 @@ export function useAppActions(params: AppActionParams) {
     selectNetworkBuffer,
     selectPrivateBuffer,
     sendComposer,
-    submitAuth,
     submitNetwork,
   };
 }
