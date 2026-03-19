@@ -12,6 +12,7 @@ type ComposerParams = {
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
   workspace: WorkspaceView;
   onOpenChannel: (networkId: string, channel: string) => Promise<void>;
+  onOpenQuery: (networkId: string, nick: string) => Promise<void>;
 };
 
 export async function sendComposerMessage(params: ComposerParams) {
@@ -86,6 +87,13 @@ async function runSlashCommand(text: string, params: ComposerParams) {
       socket.send({ type: 'message.send', networkId: selection.networkId, target, body, kind: 'message' });
       break;
     }
+    case 'query':
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /query nick');
+        return null;
+      }
+      await params.onOpenQuery(selection.networkId, remainder);
+      break;
     case 'whois':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /whois nick');

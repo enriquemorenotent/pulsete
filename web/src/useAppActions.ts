@@ -290,6 +290,13 @@ export function useAppActions(params: AppActionParams) {
           params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
           selectBuffer(params.dispatch, result.buffer);
         },
+        onOpenQuery: async (networkId, nick) => {
+          const network = params.state.networks.find((candidate) => candidate.id === networkId) ?? null;
+          if (!network) {
+            throw new Error('Network not found');
+          }
+          await openOrSelectQueryBuffer(network, nick);
+        },
       });
       if (submitted) {
         params.recordComposerEntry(submitted);
