@@ -1,4 +1,4 @@
-import type { AppSnapshot, BufferState, ChannelState, ChatMessage, NetworkProfile } from '../../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChannelState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import type { NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
@@ -7,6 +7,7 @@ export type Banner = { kind: 'notice' | 'error'; message: string } | null;
 export type State = {
   phase: 'loading' | 'ready';
   networks: NetworkProfile[];
+  friends: FriendState[];
   buffers: BufferState[];
   channels: ChannelState[];
   messages: ChatMessage[];
@@ -21,6 +22,8 @@ export type Action =
   | { type: 'snapshot-loaded'; snapshot: AppSnapshot }
   | { type: 'snapshot'; snapshot: AppSnapshot }
   | { type: 'upsert-network'; network: NetworkProfile }
+  | { type: 'upsert-friend'; friend: FriendState }
+  | { type: 'remove-friend'; friendId: string }
   | { type: 'upsert-buffer'; buffer: BufferState }
   | { type: 'remove-buffer'; bufferId: string; networkId: string }
   | { type: 'load-failed' }

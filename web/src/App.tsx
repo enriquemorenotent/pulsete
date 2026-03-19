@@ -111,6 +111,7 @@ function App() {
       <DesktopShell
         workspace={workspace}
         connectionInstances={workspace.connectionInstances}
+        friends={state.friends}
         buffers={state.buffers}
         channels={state.channels}
         networkStates={state.networkStates}
@@ -138,6 +139,9 @@ function App() {
         onReconnectNetwork={actions.reconnectNetwork}
         onDisconnectNetwork={actions.disconnectNetwork}
         onCloseConnection={actions.closeConnection}
+        onAddFriend={actions.addFriend}
+        onRemoveFriend={actions.removeFriend}
+        onSelectFriend={actions.selectFriend}
         onOpenMentionedChannel={actions.openMentionedChannel}
         onSelectNetworkBuffer={actions.selectNetworkBuffer}
         onSelectTabBuffer={actions.selectTabBuffer}

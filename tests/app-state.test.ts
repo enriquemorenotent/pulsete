@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AppSnapshot, BufferState, NetworkProfile } from '../shared/protocol.js';
+import type { AppSnapshot, BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import { initialState, reducer } from '../web/src/app-state.js';
 import { resolveManagedNetworkId } from '../web/src/network-manager-state.js';
 
@@ -29,8 +29,14 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   unread: overrides.unread ?? 0,
 });
 
+const makeFriend = (overrides: Partial<FriendState> = {}): FriendState => ({
+  id: overrides.id ?? 'friend-1',
+  nick: overrides.nick ?? 'alice',
+});
+
 const emptySnapshot = (): AppSnapshot => ({
   networks: [],
+  friends: [],
   buffers: [],
   channels: [],
   messages: [],
@@ -60,6 +66,7 @@ test('snapshot-loaded selects the first instance server buffer', () => {
     type: 'snapshot-loaded',
     snapshot: {
       networks: [network],
+      friends: [],
       buffers: [buffer],
       channels: [],
       messages: [],
@@ -67,6 +74,20 @@ test('snapshot-loaded selects the first instance server buffer', () => {
   });
 
   assert.deepEqual(nextState.selection, { bufferId: buffer.id });
+});
+
+test('friend updates are sorted alphabetically in state', () => {
+  const withFriend = reducer(initialState, {
+    type: 'upsert-friend',
+    friend: makeFriend({ id: 'friend-2', nick: 'zoe' }),
+  });
+
+  const nextState = reducer(withFriend, {
+    type: 'upsert-friend',
+    friend: makeFriend({ id: 'friend-1', nick: 'Alice' }),
+  });
+
+  assert.deepEqual(nextState.friends.map((friend) => friend.nick), ['Alice', 'zoe']);
 });
 
 test('load-failed still exits the loading phase', () => {

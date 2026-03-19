@@ -7,6 +7,7 @@ import {
   type ServerMessage,
   type AppSnapshot,
   type BufferState,
+  type FriendState,
   type NetworkProfile,
   type ChatMessage,
 } from '../../shared/protocol.js';
@@ -57,6 +58,16 @@ export const api = {
   markBufferRead: (bufferId: string) =>
     apiRequest<{ buffer: BufferState }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',
+      body: '{}',
+    }),
+  addFriend: (nick: string) =>
+    apiRequest<{ friend: FriendState }>('/api/friends', {
+      method: 'POST',
+      body: JSON.stringify({ nick }),
+    }),
+  removeFriend: (friendId: string) =>
+    apiRequest<{ ok: boolean }>(`/api/friends/${friendId}`, {
+      method: 'DELETE',
       body: '{}',
     }),
   openQuery: (networkId: string, target: string) =>

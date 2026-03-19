@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toAppError } from './app-error.js';
 import { handleBufferRoutes } from './http-buffers.js';
+import { handleFriendRoutes } from './http-friends.js';
 import { handleNetworkRoutes } from './http-networks.js';
 import { handleStateRoutes } from './http-state.js';
 import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js';
@@ -15,7 +16,7 @@ export const createHttpHandler = (context: HttpContext) => async (req: IncomingM
     if (await handleStateRoutes(args)) {
       return;
     }
-    if (await handleNetworkRoutes(args) || await handleBufferRoutes(args)) {
+    if (await handleNetworkRoutes(args) || await handleFriendRoutes(args) || await handleBufferRoutes(args)) {
       return;
     }
     if (pathname === '/ws') {

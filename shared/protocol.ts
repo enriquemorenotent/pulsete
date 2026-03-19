@@ -37,6 +37,13 @@ export const networkSchema = z.object({
 
 export type NetworkProfile = z.infer<typeof networkSchema>;
 
+export const friendSchema = z.object({
+  id: z.string(),
+  nick: z.string(),
+});
+
+export type FriendState = z.infer<typeof friendSchema>;
+
 export const bufferKindSchema = z.enum(['server', 'channel', 'query']);
 
 export const bufferSchema = z.object({
@@ -61,6 +68,7 @@ export type ChannelState = z.infer<typeof channelSchema>;
 
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
+  friends: z.array(friendSchema),
   buffers: z.array(bufferSchema),
   channels: z.array(channelSchema),
   messages: z.array(chatMessageSchema),
@@ -134,6 +142,14 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseClientSchema.extend({
     type: z.literal('network.upsert'),
     network: networkSchema,
+  }),
+  baseClientSchema.extend({
+    type: z.literal('friend.upsert'),
+    friend: friendSchema,
+  }),
+  baseClientSchema.extend({
+    type: z.literal('friend.remove'),
+    friendId: z.string(),
   }),
   baseClientSchema.extend({
     type: z.literal('buffer.upsert'),

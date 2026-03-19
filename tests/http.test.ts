@@ -226,6 +226,7 @@ test('snapshot returns the local workspace without auth state', async () => {
     const response = await requestJson(port, 'GET', '/api/snapshot');
     const snapshot = response.json as {
       networks: Array<{ nick: string; username: string; realName: string }>;
+      friends: unknown[];
       user?: unknown;
       bootstrapped?: unknown;
     };
@@ -233,6 +234,7 @@ test('snapshot returns the local workspace without auth state', async () => {
     assert.equal(snapshot.networks[0]?.nick, 'pulsete');
     assert.equal(snapshot.networks[0]?.username, 'pulsete');
     assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
+    assert.deepEqual(snapshot.friends, []);
     assert.equal('user' in snapshot, false);
     assert.equal('bootstrapped' in snapshot, false);
   } finally {
@@ -486,6 +488,72 @@ test('query routes validate missing networks and invalid targets', async () => {
     assert.equal(invalidClose.status, 400);
     assert.equal(invalidClose.json.message, 'Only private message buffers can be closed');
     assert.equal(storage.getBuffer(query.id)?.target, 'helper');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('friend routes persist entries and broadcast updates without auth', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+
+  try {
+    const addMessagePromise = waitForWebSocketMessageType(socket, 'friend.upsert');
+    const createResponse = await requestJson(port, 'POST', '/api/friends', { nick: 'Alice' });
+    assert.equal(createResponse.status, 200);
+    assert.equal((createResponse.json.friend as { nick: string }).nick, 'Alice');
+
+    const addMessage = await addMessagePromise as {
+      friend: { id: string; nick: string };
+    };
+    assert.equal(addMessage.friend.nick, 'Alice');
+
+    const duplicateResponse = await requestJson(port, 'POST', '/api/friends', { nick: 'alice' });
+    assert.equal(duplicateResponse.status, 200);
+    assert.equal((duplicateResponse.json.friend as { id: string }).id, addMessage.friend.id);
+
+    const existingQuery = storage.upsertQuery(network.id, 'Alice');
+    assert.equal(existingQuery.target, 'Alice');
+
+    const removeMessagePromise = waitForWebSocketMessageType(socket, 'friend.remove');
+    const deleteResponse = await requestJson(port, 'DELETE', `/api/friends/${addMessage.friend.id}`);
+    assert.equal(deleteResponse.status, 200);
+    assert.equal(deleteResponse.json.ok, true);
+
+    const removeMessage = await removeMessagePromise as { friendId: string };
+    assert.equal(removeMessage.friendId, addMessage.friend.id);
+    assert.equal(storage.listFriends().length, 0);
+  } finally {
+    await closeWebSocket(socket);
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('friend routes validate payloads and targets', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  const port = await listen(server);
+
+  try {
+    const invalidPayload = await requestJson(port, 'POST', '/api/friends', { nick: {} });
+    assert.equal(invalidPayload.status, 400);
+    assert.equal(invalidPayload.json.message, 'Invalid friend payload');
+
+    const invalidTarget = await requestJson(port, 'POST', '/api/friends', { nick: '#help' });
+    assert.equal(invalidTarget.status, 400);
+    assert.equal(invalidTarget.json.message, 'Private-message target is required');
+
+    const missingDelete = await requestJson(port, 'DELETE', '/api/friends/missing-friend');
+    assert.equal(missingDelete.status, 404);
+    assert.equal(missingDelete.json.message, 'Friend not found');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

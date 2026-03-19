@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import { PanelsTopLeft } from 'lucide-react';
-import type { BufferState, ChannelState, ChatMessage, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPane } from './ChatPane.js';
@@ -16,6 +16,7 @@ import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './works
 type DesktopShellProps = {
   workspace: WorkspaceView;
   connectionInstances: NetworkProfile[];
+  friends: FriendState[];
   buffers: BufferState[];
   channels: ChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
@@ -43,6 +44,9 @@ type DesktopShellProps = {
   onReconnectNetwork: (network: NetworkProfile) => void;
   onDisconnectNetwork: (networkId: string) => void;
   onCloseConnection: (network: NetworkProfile) => void;
+  onAddFriend: (nick: string) => Promise<boolean>;
+  onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onSelectFriend: (friend: FriendState) => Promise<void>;
   onSelectNetworkBuffer: (network: NetworkProfile) => void;
   onSelectTabBuffer: (buffer: BufferState) => void;
   onSelectPrivateBuffer: (network: NetworkProfile, nick: string) => void;
@@ -93,9 +97,13 @@ export function DesktopShell(props: DesktopShellProps) {
         <div className={workspaceClass}>
           <ConnectionSidebar
             networks={props.connectionInstances}
+            friends={props.friends}
             buffers={props.buffers}
             channels={props.channels}
             networkStates={props.networkStates}
+            onAddFriend={props.onAddFriend}
+            onRemoveFriend={props.onRemoveFriend}
+            onSelectFriend={props.onSelectFriend}
             selection={props.selection}
             onSelectNetwork={props.onSelectNetworkBuffer}
             onSelectBuffer={props.onSelectTabBuffer}
@@ -105,6 +113,7 @@ export function DesktopShell(props: DesktopShellProps) {
           />
           <ChatPane
             workspace={props.workspace}
+            friends={props.friends}
             selectedMessages={props.selectedMessages}
             draft={props.draft}
             messageDisplayMode={props.messageDisplayMode}
@@ -116,6 +125,8 @@ export function DesktopShell(props: DesktopShellProps) {
             onReconnect={props.onReconnectNetwork}
             onDisconnect={props.onDisconnectNetwork}
             onCloseConnection={props.onCloseConnection}
+            onAddFriend={props.onAddFriend}
+            onRemoveFriend={props.onRemoveFriend}
             onOpenMentionedChannel={props.onOpenMentionedChannel}
             onCloseChannel={props.onCloseChannel}
             onCloseBuffer={props.onCloseBuffer}
@@ -124,6 +135,9 @@ export function DesktopShell(props: DesktopShellProps) {
             <NicklistPanel
               network={props.workspace.selectedNetwork}
               channel={props.workspace.selectedChannel}
+              friends={props.friends}
+              onAddFriend={props.onAddFriend}
+              onRemoveFriend={props.onRemoveFriend}
               onSelectNick={props.onSelectPrivateBuffer}
             />
           ) : null}

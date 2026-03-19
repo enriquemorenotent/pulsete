@@ -1,17 +1,20 @@
 import type { RefObject } from 'react';
 import { Plug2, PowerOff, RefreshCcw, SendHorizonal, X } from 'lucide-react';
-import type { BufferState, ChatMessage, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
 import { cn } from '@/lib/utils.js';
+import { findFriendByNick } from './friend-utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
+import { FriendToggleButton } from './FriendToggleButton.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneProps = {
   workspace: WorkspaceView;
+  friends: FriendState[];
   selectedMessages: ChatMessage[];
   draft: string;
   messageDisplayMode: MessageDisplayMode;
@@ -23,6 +26,8 @@ type ChatPaneProps = {
   onReconnect: (network: NetworkProfile) => void;
   onDisconnect: (networkId: string) => void;
   onCloseConnection: (network: NetworkProfile) => void;
+  onAddFriend: (nick: string) => Promise<boolean>;
+  onRemoveFriend: (friendId: string) => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenMentionedChannel: (channel: string) => void;
@@ -30,6 +35,8 @@ type ChatPaneProps = {
 
 export function ChatPane(props: ChatPaneProps) {
   const { selectedBuffer, selectedChannel, selectedNetwork } = props.workspace;
+  const selectedFriend =
+    selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -53,6 +60,16 @@ export function ChatPane(props: ChatPaneProps) {
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-1">
+            {selectedBuffer?.kind === 'query' ? (
+              <FriendToggleButton
+                active={Boolean(selectedFriend)}
+                onClick={() =>
+                  void (selectedFriend
+                    ? props.onRemoveFriend(selectedFriend.id)
+                    : props.onAddFriend(selectedBuffer.target))
+                }
+              />
+            ) : null}
             {props.workspace.mode === 'server-connected' ||
             props.workspace.mode === 'server-connecting' ||
             props.workspace.mode === 'server-offline' ? (

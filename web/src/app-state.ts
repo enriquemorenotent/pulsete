@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AppSnapshot, BufferState, ChatMessage } from '../../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChatMessage, FriendState } from '../../shared/protocol.js';
 import { emptyNetworkForm } from './network-form.js';
 import { selectDefaultBuffer } from './workspace.js';
 import type { Action, State } from './app-types.js';
@@ -7,6 +7,7 @@ import type { Action, State } from './app-types.js';
 export const initialState: State = {
   phase: 'loading',
   networks: [],
+  friends: [],
   buffers: [],
   channels: [],
   messages: [],
@@ -35,6 +36,9 @@ const sortBuffers = (buffers: BufferState[]) =>
       : left.networkId.localeCompare(right.networkId)
   );
 
+const sortFriends = (friends: FriendState[]) =>
+  [...friends].sort((left, right) => left.nick.localeCompare(right.nick, undefined, { sensitivity: 'accent' }));
+
 const fallbackSelection = (state: Pick<State, 'networks' | 'buffers'>, preferredNetworkId?: string | null) => {
   if (preferredNetworkId) {
     const buffer = state.buffers.find((candidate) => candidate.networkId === preferredNetworkId && candidate.kind === 'server') ?? null;
@@ -52,6 +56,7 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         phase: 'ready',
         networks: action.snapshot.networks,
+        friends: sortFriends(action.snapshot.friends),
         buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
         messages: action.snapshot.messages,
@@ -63,6 +68,7 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         phase: 'ready',
         networks: action.snapshot.networks,
+        friends: sortFriends(action.snapshot.friends),
         buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
         messages: mergeMessages(state.messages, action.snapshot.messages),
@@ -75,6 +81,13 @@ export const reducer = (state: State, action: Action): State => {
       networks.push(action.network);
       return { ...state, networks: networks.sort((left, right) => left.name.localeCompare(right.name)) };
     }
+    case 'upsert-friend': {
+      const friends = state.friends.filter((friend) => friend.id !== action.friend.id);
+      friends.push(action.friend);
+      return { ...state, friends: sortFriends(friends) };
+    }
+    case 'remove-friend':
+      return { ...state, friends: state.friends.filter((friend) => friend.id !== action.friendId) };
     case 'upsert-buffer': {
       const buffers = state.buffers.filter((buffer) => buffer.id !== action.buffer.id);
       buffers.push(action.buffer);

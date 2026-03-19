@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import { historyWindowLimit, type AppSnapshot, type BufferState, type ChannelState, type NetworkProfile } from '../shared/protocol.js';
+import { historyWindowLimit, type AppSnapshot, type BufferState, type ChannelState, type FriendState, type NetworkProfile } from '../shared/protocol.js';
 import { createSecretBox } from './network-secret.js';
 import { createDatabase } from './storage-db.js';
 import {
@@ -20,6 +20,7 @@ import {
   upsertBuffer,
   upsertChannel,
 } from './storage-buffers.js';
+import { getFriend, listFriends, removeFriend, upsertFriend } from './storage-friends.js';
 import { appendMessage, getMessageById, listMessages, listRecentMessages } from './storage-messages.js';
 import {
   deleteNetwork,
@@ -31,7 +32,7 @@ import {
   migrateLegacyNetworkPasswords,
   upsertNetwork,
 } from './storage-networks.js';
-import type { ChannelInput, MessageInput, NetworkInput, RuntimeNetworkProfile } from './storage-types.js';
+import type { ChannelInput, FriendInput, MessageInput, NetworkInput, RuntimeNetworkProfile } from './storage-types.js';
 
 export { type MessageInput, type NetworkInput };
 
@@ -144,6 +145,12 @@ export class Storage {
     return listBuffers(this.db, resolveOptionalNetworkId(this.db, networkIdOrLegacyUserId, maybeNetworkId));
   }
 
+  listFriends(): FriendState[];
+  listFriends(_legacyUserId: string): FriendState[];
+  listFriends() {
+    return listFriends(this.db);
+  }
+
   getBuffer(bufferId: string): BufferState | null;
   getBuffer(_legacyUserId: string, bufferId: string): BufferState | null;
   getBuffer(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
@@ -178,6 +185,12 @@ export class Storage {
       ? [networkIdOrName, maybeName]
       : [networkIdOrLegacyUserId, networkIdOrName];
     return getChannelByName(this.db, networkId, name);
+  }
+
+  getFriend(friendId: string): FriendState | null;
+  getFriend(_legacyUserId: string, friendId: string): FriendState | null;
+  getFriend(friendIdOrLegacyUserId: string, maybeFriendId?: string) {
+    return getFriend(this.db, resolveOptionalId(friendIdOrLegacyUserId, maybeFriendId));
   }
 
   markBufferRead(bufferId: string): void;
@@ -280,6 +293,18 @@ export class Storage {
     return upsertBuffer(this.db, { networkId, kind: 'query', target });
   }
 
+  upsertFriend(input: FriendInput): FriendState;
+  upsertFriend(_legacyUserId: string, input: FriendInput): FriendState;
+  upsertFriend(inputOrLegacyUserId: FriendInput | string, maybeInput?: FriendInput) {
+    return upsertFriend(this.db, resolveInput(inputOrLegacyUserId, maybeInput));
+  }
+
+  removeFriend(friendId: string): FriendState | null;
+  removeFriend(_legacyUserId: string, friendId: string): FriendState | null;
+  removeFriend(friendIdOrLegacyUserId: string, maybeFriendId?: string) {
+    return removeFriend(this.db, resolveOptionalId(friendIdOrLegacyUserId, maybeFriendId));
+  }
+
   appendMessage(input: MessageInput): MessageInput;
   appendMessage(_legacyUserId: string, input: MessageInput): MessageInput;
   appendMessage(inputOrLegacyUserId: MessageInput | string, maybeInput?: MessageInput) {
@@ -294,6 +319,7 @@ export class Storage {
     const networks = this.listNetworks();
     return {
       networks,
+      friends: this.listFriends(),
       buffers: this.listBuffers(),
       channels: this.listChannels(),
       messages: this.listRecentMessages(historyWindowLimit),

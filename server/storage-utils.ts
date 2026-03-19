@@ -1,10 +1,11 @@
 import { pbkdf2Sync } from 'node:crypto';
-import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import { getLocalIrcIdentity } from '../shared/local-defaults.js';
 import type { SecretBox } from './network-secret.js';
 import type {
   BufferRow,
   ChannelRow,
+  FriendRow,
   MessageInput,
   MessageRow,
   NetworkInput,
@@ -119,6 +120,11 @@ export const toBufferState = (row: BufferRow): BufferState => ({
   unread: row.unread,
   kind: row.kind,
   target: row.target,
+});
+
+export const toFriendState = (row: FriendRow): FriendState => ({
+  id: row.id,
+  nick: row.nick,
 });
 
 export const toChannelState = (

@@ -1,17 +1,23 @@
-import { Hash, MessageSquareMore, X } from 'lucide-react';
-import type { BufferState, ChannelState, NetworkProfile } from '../../shared/protocol.js';
+import { useState } from 'react';
+import { Hash, MessageSquareMore, Plus, X } from 'lucide-react';
+import type { BufferState, ChannelState, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Card } from '@/components/ui/card.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
+import { AddFriendDialog } from './AddFriendDialog.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace.js';
 import { canShowInstanceChildren, getConnectionLabel } from './workspace.js';
 
 type ConnectionSidebarProps = {
   networks: NetworkProfile[];
+  friends: FriendState[];
   buffers: BufferState[];
   channels: ChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
+  onAddFriend: (nick: string) => Promise<boolean>;
+  onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onSelectFriend: (friend: FriendState) => Promise<void>;
   onSelectNetwork: (network: NetworkProfile) => void;
   onSelectBuffer: (buffer: BufferState) => void;
   onCloseConnection: (network: NetworkProfile) => void;
@@ -20,6 +26,9 @@ type ConnectionSidebarProps = {
 };
 
 export function ConnectionSidebar(props: ConnectionSidebarProps) {
+  const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
+  const [friendDraft, setFriendDraft] = useState('');
+
   return (
     <aside className="h-full min-h-0 overflow-hidden">
       <Card className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -94,6 +103,66 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
             })}
           </div>
         </ScrollArea>
+        <div className="shrink-0 border-t border-border bg-background/70 p-2">
+          <section className="border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+              <h2 className="text-sm font-semibold tracking-tight">Friends</h2>
+              <button
+                type="button"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Add friend"
+                onClick={() => setShowAddFriendDialog(true)}
+              >
+                <Plus className="size-4" />
+              </button>
+            </div>
+            {props.friends.length === 0 ? (
+              <div className="px-3 py-2 text-[13px] text-muted-foreground">
+                No friends saved yet.
+              </div>
+            ) : (
+              <ScrollArea className="max-h-48">
+                {props.friends.map((friend) => (
+                  <div key={friend.id} className="flex items-stretch border-b border-border/70 last:border-b-0">
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center px-3 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
+                      onClick={() => void props.onSelectFriend(friend)}
+                    >
+                      <span className="truncate">{friend.nick}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                      aria-label={`Remove ${friend.nick}`}
+                      onClick={() => void props.onRemoveFriend(friend.id)}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </ScrollArea>
+            )}
+          </section>
+        </div>
+        <AddFriendDialog
+          open={showAddFriendDialog}
+          draft={friendDraft}
+          onDraftChange={setFriendDraft}
+          onOpenChange={(open) => {
+            setShowAddFriendDialog(open);
+            if (!open) {
+              setFriendDraft('');
+            }
+          }}
+          onSubmit={async () => {
+            const saved = await props.onAddFriend(friendDraft);
+            if (saved) {
+              setFriendDraft('');
+              setShowAddFriendDialog(false);
+            }
+          }}
+        />
       </Card>
     </aside>
   );

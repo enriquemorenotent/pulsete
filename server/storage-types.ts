@@ -1,4 +1,4 @@
-import type { AppSnapshot, BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChannelState, FriendState, NetworkProfile } from '../shared/protocol.js';
 
 export type NetworkRow = {
   id: string;
@@ -48,6 +48,13 @@ export type MessageRow = {
   ts: number;
 };
 
+export type FriendRow = {
+  id: string;
+  nick: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type RuntimeNetworkProfile = NetworkProfile & {
   password?: string;
 };
@@ -65,6 +72,8 @@ export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'users'> &
 
 export type BufferInput = Omit<BufferState, 'id' | 'unread'> &
   Partial<Pick<BufferState, 'id' | 'unread'>>;
+
+export type FriendInput = Omit<FriendState, 'id'> & Partial<Pick<FriendState, 'id'>>;
 
 export type MessageInput = {
   id: string;

@@ -66,6 +66,7 @@ test('snapshot seeds fixed local networks and no open buffers', () => {
   assert.equal(snapshot.networks[0]?.username, 'pulsete');
   assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
   assert.deepEqual(snapshot.buffers, []);
+  assert.deepEqual(snapshot.friends, []);
   assert.deepEqual(snapshot.channels, []);
   assert.deepEqual(snapshot.messages, []);
 });
@@ -80,6 +81,7 @@ test('legacy bootstrap helpers do not change fixed local defaults', () => {
   assert.equal(snapshot.networks[0]?.nick, 'pulsete');
   assert.equal(snapshot.networks[0]?.username, 'pulsete');
   assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
+  assert.deepEqual(snapshot.friends, []);
 });
 
 test('storage persists local workspace buffers and messages', () => {
@@ -103,6 +105,7 @@ test('storage persists local workspace buffers and messages', () => {
     users: ['alice', 'bob'],
   });
   const query = storage.upsertQuery(network.id, 'helper');
+  const friend = storage.upsertFriend({ nick: 'alice' });
   const message = storage.appendMessage({
     id: randomUUID(),
     networkId: network.id,
@@ -123,8 +126,10 @@ test('storage persists local workspace buffers and messages', () => {
   assert.deepEqual(storage.getChannel(channel.id), channel);
   assert.equal(storage.getBufferByTarget(network.id, 'helper')?.id, query.id);
   assert.deepEqual(storage.listMessages(network.id, '#archlinux', 10), [message]);
+  assert.equal(storage.listFriends()[0]?.id, friend.id);
 
   const snapshot = storage.snapshot();
+  assert.equal(snapshot.friends[0]?.id, friend.id);
   assert.equal(snapshot.channels[0]?.id, channel.id);
   assert.equal(
     snapshot.buffers.some((buffer) => buffer.networkId === network.id && buffer.kind === 'server' && buffer.target === 'server'),
@@ -180,7 +185,7 @@ test('legacy auth databases are backed up and replaced with a fresh local databa
   fresh.close();
   assert.deepEqual(
     tables.map((entry) => entry.name),
-    ['buffers', 'channel_details', 'messages', 'networks']
+    ['buffers', 'channel_details', 'friends', 'messages', 'networks']
   );
 });
 
@@ -287,8 +292,28 @@ test('existing local databases reset stored messages and unread counts on the fo
   const count = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
   upgraded.close();
 
-  assert.equal(version.user_version, 1);
+  assert.equal(version.user_version, 2);
   assert.equal(count.count, 0);
+});
+
+test('friends persist and deduplicate case-insensitively', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+
+  const friend = storage.upsertFriend({ nick: 'Alice' });
+  const duplicate = storage.upsertFriend({ nick: 'alice' });
+  storage.close();
+
+  const reopened = new Storage(file);
+  const friends = reopened.listFriends();
+
+  assert.equal(duplicate.id, friend.id);
+  assert.deepEqual(friends, [friend]);
+
+  const removed = reopened.removeFriend(friend.id);
+  assert.equal(removed?.id, friend.id);
+  assert.deepEqual(reopened.listFriends(), []);
 });
 
 test('deleting a template removes hidden clones', () => {

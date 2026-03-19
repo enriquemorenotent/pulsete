@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-const currentSchemaVersion = 1;
+const currentSchemaVersion = 2;
 
 const schemaSql = `
   PRAGMA journal_mode = WAL;
@@ -58,11 +58,21 @@ const schemaSql = `
     ts INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS friends (
+    id TEXT PRIMARY KEY,
+    nick TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_messages_buffer
     ON messages(networkId, target, ts DESC);
 
   CREATE INDEX IF NOT EXISTS idx_buffers_network
     ON buffers(networkId, createdAt ASC);
+
+  CREATE INDEX IF NOT EXISTS idx_friends_nick
+    ON friends(nick COLLATE NOCASE, createdAt ASC);
 `;
 
 export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => {

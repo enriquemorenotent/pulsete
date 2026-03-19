@@ -377,6 +377,9 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
   assert.throws(() => runtime.openQuery(network.id, '   '), /Private-message target is required/);
   assert.throws(() => runtime.openQuery(network.id, '#help'), /Private-message target is required/);
+  assert.throws(() => runtime.upsertFriend('   '), /Private-message target is required/);
+  assert.throws(() => runtime.upsertFriend('#help'), /Private-message target is required/);
+  assert.throws(() => runtime.removeFriend('missing-friend'), /Friend not found/);
   assert.throws(() => runtime.closeBuffer(channel.id), /Only private message buffers can be closed/);
   assert.throws(() => runtime.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
   assert.throws(

@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { encode, type BufferState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
+import { encode, type BufferState, type FriendState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
 import { badRequest, notFound } from './app-error.js';
 import { IrcConnection } from './irc.js';
 import {
@@ -115,6 +115,18 @@ export class Runtime {
     return this.openQueryInternal(...resolveArgsWithValue(args));
   }
 
+  upsertFriend(nick: string): FriendState;
+  upsertFriend(_legacyUserId: string, nick: string): FriendState;
+  upsertFriend(nickOrLegacyUserId: string, maybeNick?: string) {
+    return this.upsertFriendInternal(resolveOptionalId(nickOrLegacyUserId, maybeNick));
+  }
+
+  removeFriend(friendId: string): FriendState;
+  removeFriend(_legacyUserId: string, friendId: string): FriendState;
+  removeFriend(friendIdOrLegacyUserId: string, maybeFriendId?: string) {
+    return this.removeFriendInternal(resolveOptionalId(friendIdOrLegacyUserId, maybeFriendId));
+  }
+
   closeBuffer(bufferId: string): BufferState;
   closeBuffer(_legacyUserId: string, bufferId: string): BufferState;
   closeBuffer(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
@@ -160,6 +172,18 @@ export class Runtime {
   private openQueryInternal(networkId: string, target: string) {
     this.getRequiredNetwork(networkId);
     return this.store.upsertQuery(networkId, normalizeQueryTarget(target));
+  }
+
+  private upsertFriendInternal(nick: string) {
+    return this.store.upsertFriend({ nick: normalizeQueryTarget(nick) });
+  }
+
+  private removeFriendInternal(friendId: string) {
+    const friend = this.store.removeFriend(friendId);
+    if (!friend) {
+      throw notFound('Friend not found');
+    }
+    return friend;
   }
 
   private joinInternal(networkId: string, channel: string) {
@@ -367,6 +391,9 @@ const resolveArgsWithValue = (args: ArrayLike<unknown>) =>
 
 const resolveBufferId = (bufferIdOrLegacyUserId: string, maybeBufferId?: string) =>
   maybeBufferId ?? bufferIdOrLegacyUserId;
+
+const resolveOptionalId = (idOrLegacyUserId: string, maybeId?: string) =>
+  maybeId ?? idOrLegacyUserId;
 
 const resolveBufferArgsWithLimit = (args: ArrayLike<unknown>) =>
   args.length === 3

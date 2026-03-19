@@ -1,7 +1,8 @@
-import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import type { Action, State } from './app-types.js';
 import { api, type SocketHandle } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
+import { resolveFriendSelection } from './friend-selection.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
 import { createConnectionInstancePayload, parseAutoJoin, toForm, type EditorTab } from './network-form.js';
 import type { WorkspaceView } from './workspace.js';
@@ -29,6 +30,25 @@ const selectBuffer = (dispatch: (action: Action) => void, buffer: BufferState) =
 export function useAppActions(params: AppActionParams) {
   const showNewNetworkEditor = () => openNewNetworkEditor(params);
   const showExistingNetworkEditor = (network: NetworkProfile) => openExistingNetworkEditor(network, params);
+  const findQueryBuffer = (networkId: string, nick: string) =>
+    params.state.buffers.find(
+      (buffer) =>
+        buffer.networkId === networkId &&
+        buffer.kind === 'query' &&
+        buffer.target.localeCompare(nick, undefined, { sensitivity: 'accent' }) === 0
+    ) ?? null;
+
+  const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string) => {
+    const existingBuffer = findQueryBuffer(network.id, nick);
+    if (existingBuffer) {
+      selectBuffer(params.dispatch, existingBuffer);
+      return existingBuffer;
+    }
+    const result = await api.openQuery(network.id, nick);
+    params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
+    selectBuffer(params.dispatch, result.buffer);
+    return result.buffer;
+  };
 
   const submitNetwork = async () => {
     if (!params.state.networkForm.name.trim()) return params.updateBanner('error', 'Network name is required');
@@ -183,25 +203,59 @@ export function useAppActions(params: AppActionParams) {
   };
 
   const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
-    const existingBuffer =
-      params.state.buffers.find(
-        (buffer) =>
-          buffer.networkId === network.id &&
-          buffer.kind === 'query' &&
-          buffer.target.toLowerCase() === nick.toLowerCase()
-      ) ?? null;
+    try {
+      await openOrSelectQueryBuffer(network, nick);
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
+    }
+  };
 
-    if (existingBuffer) {
-      selectBuffer(params.dispatch, existingBuffer);
+  const selectFriend = async (friend: FriendState) => {
+    const decision = resolveFriendSelection({
+      nick: friend.nick,
+      buffers: params.state.buffers,
+      workspace: params.workspace,
+      networkStates: params.state.networkStates,
+    });
+
+    if (decision.type === 'error') {
+      params.updateBanner('error', decision.message);
+      return;
+    }
+
+    if (decision.type === 'select') {
+      selectBuffer(params.dispatch, decision.buffer);
       return;
     }
 
     try {
-      const result = await api.openQuery(network.id, nick);
-      params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
-      selectBuffer(params.dispatch, result.buffer);
+      await openOrSelectQueryBuffer(decision.network, friend.nick);
     } catch (error) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
+    }
+  };
+
+  const addFriend = async (nick: string) => {
+    try {
+      const result = await api.addFriend(nick);
+      params.dispatch({ type: 'upsert-friend', friend: result.friend });
+      params.updateBanner('notice', 'Friend saved');
+      return true;
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to save friend');
+      return false;
+    }
+  };
+
+  const removeFriend = async (friendId: string) => {
+    try {
+      await api.removeFriend(friendId);
+      params.dispatch({ type: 'remove-friend', friendId });
+      params.updateBanner('notice', 'Friend removed');
+      return true;
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to remove friend');
+      return false;
     }
   };
 
@@ -246,6 +300,7 @@ export function useAppActions(params: AppActionParams) {
   };
 
   return {
+    addFriend,
     closeBuffer,
     closeChannel,
     closeConnection,
@@ -257,10 +312,12 @@ export function useAppActions(params: AppActionParams) {
     openNewNetworkEditor: showNewNetworkEditor,
     reconnectNetwork,
     saveFavorite,
+    selectFriend,
     selectNetworkBuffer,
     selectPrivateBuffer,
     selectTabBuffer,
     sendComposer,
     submitNetwork,
+    removeFriend,
   };
 }
