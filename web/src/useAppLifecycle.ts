@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { NetworkProfile, ServerMessage } from '../../shared/protocol.js';
 import type { Action, State } from './app-types.js';
 import { api, connectSocket, type SocketHandle } from './client.js';
+import { resolveManagedNetworkId } from './network-manager-state.js';
 import type { WorkspaceView } from './workspace.js';
 
 type MutableRef<T> = { current: T };
@@ -65,11 +66,15 @@ export function useAppLifecycle(params: LifecycleParams) {
     if (params.state.phase !== 'ready' || params.socketRef.current) {
       return;
     }
+    let closedByClient = false;
     const socket = connectSocket((message) => handleServerMessage(message, params.dispatch), () => {
-      params.dispatch({ type: 'set-banner', banner: { kind: 'notice', message: 'Disconnected from gateway' } });
+      if (!closedByClient) {
+        params.dispatch({ type: 'set-banner', banner: { kind: 'notice', message: 'Disconnected from gateway' } });
+      }
     });
     params.socketRef.current = socket;
     return () => {
+      closedByClient = true;
       socket.close();
       params.socketRef.current = null;
     };
@@ -104,18 +109,16 @@ export function useAppLifecycle(params: LifecycleParams) {
   }, [params.state.messages.length, params.workspace.selection]);
 
   useEffect(() => {
-    if (params.state.phase !== 'ready') {
-      params.setManagedNetworkId(null);
-      return;
+    const nextManagedNetworkId = resolveManagedNetworkId({
+      phase: params.state.phase,
+      managerNetworks: params.state.networks.filter((network) => !network.managerHidden),
+      visibleNetworks: params.visibleNetworks,
+      managedNetworkId: params.managedNetworkId,
+    });
+    if (nextManagedNetworkId !== params.managedNetworkId) {
+      params.setManagedNetworkId(nextManagedNetworkId);
     }
-    if (params.visibleNetworks.length === 0) {
-      params.setManagedNetworkId(null);
-      return;
-    }
-    if (!params.managedNetworkId || !params.visibleNetworks.some((network) => network.id === params.managedNetworkId)) {
-      params.setManagedNetworkId(params.visibleNetworks[0].id);
-    }
-  }, [params.managedNetworkId, params.state.phase, params.visibleNetworks]);
+  }, [params.managedNetworkId, params.state.networks, params.state.phase, params.visibleNetworks]);
 }
 
 function handleServerMessage(message: ServerMessage, dispatch: (action: Action) => void) {

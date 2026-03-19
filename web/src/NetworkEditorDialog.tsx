@@ -21,24 +21,19 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
           <h2>{props.form.name ? `Edit ${props.form.name}` : 'Edit Network'}</h2>
           <span>HexChat-style network editor</span>
         </div>
-        <div className="editor__serverlist">
-          <button className="manager__row manager__row--selected" type="button">
-            <span>{serverLabel}</span>
-          </button>
-          <div className="manager__actions">
-            <button className="button" disabled>Add</button>
-            <button className="button" disabled>Remove</button>
-            <button className="button" disabled>Edit</button>
+        <div className="editor__summary">
+          <div>
+            <p className="eyebrow">Server</p>
+            <strong>{serverLabel}</strong>
           </div>
+          <p className="muted">Pulsete currently supports one server entry per network.</p>
         </div>
         <div className="tabs">
           <EditorTabButton active={props.activeTab === 'servers'} onClick={() => props.onTabChange('servers')}>Servers</EditorTabButton>
           <EditorTabButton active={props.activeTab === 'autojoin'} onClick={() => props.onTabChange('autojoin')}>Autojoin channels</EditorTabButton>
-          <EditorTabButton active={props.activeTab === 'commands'} onClick={() => props.onTabChange('commands')}>Connect commands</EditorTabButton>
         </div>
         {props.activeTab === 'servers' ? <ServerTab form={props.form} onChange={props.onChange} /> : null}
         {props.activeTab === 'autojoin' ? <AutojoinTab form={props.form} onChange={props.onChange} /> : null}
-        {props.activeTab === 'commands' ? <CommandsTab /> : null}
         <div className="dialog__footer">
           <button className="button" onClick={props.onClose}>Close</button>
           <button className="button button--primary" onClick={props.onSubmit}>Save</button>
@@ -59,16 +54,15 @@ function EditorTabButton(props: { active: boolean; onClick: () => void; children
 function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void }) {
   return (
     <div className="dialog__section dialog__section--grow">
-      <div className="editor__options">
-        <label className="checkbox"><input type="checkbox" checked readOnly />Connect to selected server only</label>
-        <label className="checkbox"><input type="checkbox" checked={false} readOnly />Connect to this network automatically</label>
-        <label className="checkbox"><input type="checkbox" checked={false} readOnly />Bypass proxy server</label>
+      <div className="editor__toggles">
         <label className="checkbox">
           <input type="checkbox" checked={props.form.tls} onChange={(event) => props.onChange({ tls: event.target.checked })} />
           Use SSL for all the servers on this network
         </label>
-        <label className="checkbox"><input type="checkbox" checked={false} readOnly />Accept invalid SSL certificates</label>
-        <label className="checkbox"><input type="checkbox" checked={false} readOnly />Use global user information</label>
+        <label className="checkbox">
+          <input type="checkbox" checked={props.form.favorite} onChange={(event) => props.onChange({ favorite: event.target.checked })} />
+          Favorite network
+        </label>
       </div>
       <div className="grid grid--editor">
         <EditableField label="Network name:" value={props.form.name} onChange={(value) => props.onChange({ name: value })} />
@@ -103,10 +97,6 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
           Remove saved password on save
         </label>
       ) : null}
-      <label className="checkbox">
-        <input type="checkbox" checked={props.form.favorite} onChange={(event) => props.onChange({ favorite: event.target.checked })} />
-        Favorite network
-      </label>
     </div>
   );
 }
@@ -123,17 +113,6 @@ function AutojoinTab(props: { form: NetworkForm; onChange: (form: Partial<Networ
         />
       </label>
       <p className="muted">Comma-separated channels joined after connection.</p>
-    </div>
-  );
-}
-
-function CommandsTab() {
-  return (
-    <div className="dialog__section dialog__section--grow">
-      <p className="muted">
-        Connect commands are not wired yet. The rest of the dialog is functional and persists server, nick, TLS,
-        password, favorites, and autojoin settings.
-      </p>
     </div>
   );
 }

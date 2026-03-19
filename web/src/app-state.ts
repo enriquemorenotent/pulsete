@@ -36,10 +36,25 @@ export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case 'session-loaded':
       if (!action.session.bootstrapped) {
-        return { ...state, phase: 'bootstrap', bootstrapped: false, authMode: 'signup' };
+        return {
+          ...state,
+          phase: 'bootstrap',
+          bootstrapped: false,
+          authMode: 'signup',
+          authForm: emptyAuthForm(),
+          banner: null,
+        };
       }
       if (!action.session.authenticated) {
-        return { ...state, phase: 'login', bootstrapped: true, user: null, authMode: 'signin' };
+        return {
+          ...state,
+          phase: 'login',
+          bootstrapped: true,
+          user: null,
+          authMode: 'signin',
+          authForm: emptyAuthForm(),
+          banner: null,
+        };
       }
       return {
         ...state,
@@ -52,6 +67,8 @@ export const reducer = (state: State, action: Action): State => {
         queries: action.session.snapshot.queries,
         messages: action.session.snapshot.messages,
         selection: selectDefaultBuffer(action.session.snapshot),
+        authForm: emptyAuthForm(),
+        banner: null,
       };
     case 'snapshot':
       return {

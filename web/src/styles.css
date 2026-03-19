@@ -211,11 +211,13 @@ input {
   padding: clamp(22px, 2vw, 40px);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   background: #202020;
 }
 
 .message {
+  width: min(100%, 1480px);
   padding: 10px 12px;
   border: 1px solid #454545;
   background: #292929;
@@ -565,7 +567,7 @@ label input[readonly] {
 }
 
 .auth-card {
-  width: min(1680px, calc(100vw - 120px));
+  width: min(1840px, calc(100vw - 120px));
   min-height: min(760px, calc(100vh - 144px));
   padding: clamp(36px, 3.2vw, 64px);
   gap: clamp(40px, 5vw, 104px);
@@ -622,11 +624,11 @@ label input[readonly] {
 }
 
 .dialog--manager {
-  width: min(1440px, calc(100vw - 72px));
+  width: min(1600px, calc(100vw - 72px));
 }
 
 .dialog--editor {
-  width: min(1600px, calc(100vw - 72px));
+  width: min(1760px, calc(100vw - 72px));
 }
 
 .dialog__titlebar {
@@ -678,10 +680,25 @@ label input[readonly] {
   gap: 10px;
 }
 
-.editor__serverlist {
-  display: grid;
+.editor__summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 16px;
-  grid-template-columns: minmax(0, 1fr) clamp(140px, 10vw, 180px);
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: #252525;
+}
+
+.editor__summary strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.05rem;
+}
+
+.editor__summary .muted {
+  max-width: 32ch;
+  line-height: 1.5;
 }
 
 .tabs {
@@ -704,9 +721,13 @@ label input[readonly] {
   margin-bottom: -1px;
 }
 
-.editor__options {
+.editor__toggles {
   display: grid;
   gap: 8px;
+}
+
+.manager__filter-note {
+  margin: 0;
 }
 
 @media (max-width: 960px) {
@@ -731,14 +752,17 @@ label input[readonly] {
 
   .grid--manager,
   .grid--editor,
-  .manager,
-  .editor__serverlist {
+  .manager {
     grid-template-columns: 1fr;
   }
 
   .manager__actions {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .editor__summary {
+    flex-direction: column;
   }
 }
 

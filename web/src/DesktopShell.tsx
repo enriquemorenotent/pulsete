@@ -24,6 +24,7 @@ type DesktopShellProps = {
   managedRuntime: NetworkRuntimeState | null;
   visibleNetworks: NetworkProfile[];
   showFavoritesOnly: boolean;
+  hiddenManagedNetworkName: string | null;
   networkForm: NetworkForm;
   editorTab: EditorTab;
   onOpenNetworkManager: () => void;
@@ -110,6 +111,7 @@ export function DesktopShell(props: DesktopShellProps) {
           selected={props.managedNetwork}
           runtime={props.managedRuntime}
           showFavoritesOnly={props.showFavoritesOnly}
+          hiddenManagedNetworkName={props.hiddenManagedNetworkName}
           onSelect={props.onSelectManagedNetwork}
           onToggleFavorites={props.onToggleFavoritesOnly}
           onClose={props.onCloseNetworkManager}

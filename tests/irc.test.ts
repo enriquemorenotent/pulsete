@@ -338,6 +338,62 @@ test('irc connection keeps direct notices on the server buffer', async () => {
   server.close();
 });
 
+test('irc connection reports failed connects without a generic closed notice', async () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const server = net.createServer();
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  const { port } = address;
+
+  await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'BrokenNet',
+      host: '127.0.0.1',
+      port,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connect();
+
+  await waitFor(
+    () =>
+      events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'error'
+          && String(event.message).includes(`Unable to connect to 127.0.0.1:${port}`)
+      )
+  );
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  assert.ok(!events.some((event) => event.type === 'status' && event.message === 'Connection closed'));
+
+  connection.disconnect();
+});
+
 test('irc connection keeps direct ctcp requests on the server buffer', async () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
 

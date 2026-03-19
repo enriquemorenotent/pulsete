@@ -34,6 +34,7 @@ export type IrcConnectionState = {
   serverName: string | null;
   currentNick: string;
   pendingNick: string | null;
+  lastFailureMessage: string | null;
   clearReconnectTimer(): void;
   connect(resetRetryBudget?: boolean): void;
   consume(chunk: string): void;

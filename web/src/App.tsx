@@ -34,15 +34,22 @@ function App() {
     [state.channels, state.networkStates, state.networks, state.queries, state.selection]
   );
 
-  const visibleNetworks = useMemo(() => {
-    const managerNetworks = state.networks.filter((network) => !network.managerHidden);
-    return showFavoritesOnly ? managerNetworks.filter((network) => network.favorite) : managerNetworks;
-  }, [showFavoritesOnly, state.networks]);
+  const managerNetworks = useMemo(
+    () => state.networks.filter((network) => !network.managerHidden),
+    [state.networks]
+  );
+  const visibleNetworks = useMemo(
+    () => (showFavoritesOnly ? managerNetworks.filter((network) => network.favorite) : managerNetworks),
+    [managerNetworks, showFavoritesOnly]
+  );
 
-  const managedNetwork = visibleNetworks.find((network) => network.id === managedNetworkId) ?? null;
+  const managedNetwork = managerNetworks.find((network) => network.id === managedNetworkId) ?? null;
+  const visibleManagedNetwork = visibleNetworks.find((network) => network.id === managedNetworkId) ?? null;
+  const hiddenManagedNetworkName =
+    managedNetwork && !visibleManagedNetwork && showFavoritesOnly ? managedNetwork.name : null;
   const managedRuntime = useMemo(
-    () => buildManagedRuntime(managedNetwork, workspace.connectionInstances, state.networkStates),
-    [managedNetwork, state.networkStates, workspace.connectionInstances]
+    () => buildManagedRuntime(visibleManagedNetwork, workspace.connectionInstances, state.networkStates),
+    [state.networkStates, visibleManagedNetwork, workspace.connectionInstances]
   );
 
   const selectedMessages = useMemo(() => {
@@ -114,10 +121,11 @@ function App() {
           scrollRef={scrollRef}
           showNetworkManager={showNetworkManager}
           showNetworkEditor={showNetworkEditor}
-          managedNetwork={managedNetwork}
+          managedNetwork={visibleManagedNetwork}
           managedRuntime={managedRuntime}
           visibleNetworks={visibleNetworks}
           showFavoritesOnly={showFavoritesOnly}
+          hiddenManagedNetworkName={hiddenManagedNetworkName}
           networkForm={state.networkForm}
           editorTab={editorTab}
           onOpenNetworkManager={() => setShowNetworkManager(true)}
@@ -136,10 +144,12 @@ function App() {
           onToggleFavoritesOnly={() => setShowFavoritesOnly((value) => !value)}
           onCloseNetworkManager={() => setShowNetworkManager(false)}
           onOpenNewNetworkEditor={actions.openNewNetworkEditor}
-          onOpenManagedNetworkEditor={() => managedNetwork && actions.openNetworkEditor(managedNetwork)}
-          onDeleteManagedNetwork={() => managedNetwork && actions.deleteNetwork(managedNetwork.id)}
-          onConnectManagedNetwork={() => managedNetwork && actions.connectNetwork(managedNetwork)}
-          onToggleFavoriteManagedNetwork={() => managedNetwork && actions.saveFavorite(managedNetwork, !managedNetwork.favorite)}
+          onOpenManagedNetworkEditor={() => visibleManagedNetwork && actions.openNetworkEditor(visibleManagedNetwork)}
+          onDeleteManagedNetwork={() => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id)}
+          onConnectManagedNetwork={() => visibleManagedNetwork && actions.connectNetwork(visibleManagedNetwork)}
+          onToggleFavoriteManagedNetwork={() =>
+            visibleManagedNetwork && actions.saveFavorite(visibleManagedNetwork, !visibleManagedNetwork.favorite)
+          }
           onCloseNetworkEditor={closeNetworkEditor}
           onSubmitNetwork={actions.submitNetwork}
           onNetworkFormChange={(form) => dispatch({ type: 'set-network-form', form })}

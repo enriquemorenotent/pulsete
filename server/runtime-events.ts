@@ -54,11 +54,13 @@ const handleStatusEvent = (
     ts: Date.now(),
   };
   runtime.store.appendMessage(userId, message);
-  runtime.send(userId, {
-    type: event.kind === 'error' ? 'error' : 'notice',
-    networkId: event.networkId,
-    message: event.message,
-  });
+  if (event.kind !== 'system') {
+    runtime.send(userId, {
+      type: event.kind === 'error' ? 'error' : 'notice',
+      networkId: event.networkId,
+      message: event.message,
+    });
+  }
   runtime.send(userId, { type: 'message.append', message });
 };
 

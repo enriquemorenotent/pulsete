@@ -6,6 +6,7 @@ type NetworkManagerDialogProps = {
   selected: NetworkProfile | null;
   runtime: NetworkRuntimeState | null;
   showFavoritesOnly: boolean;
+  hiddenManagedNetworkName: string | null;
   onSelect: (networkId: string) => void;
   onToggleFavorites: () => void;
   onClose: () => void;
@@ -55,20 +56,22 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
               <button className="button" onClick={props.onAdd}>Add</button>
               <button className="button" onClick={props.onRemove} disabled={!props.selected}>Remove</button>
               <button className="button" onClick={props.onEdit} disabled={!props.selected}>Edit...</button>
-              <button className="button" disabled>Sort</button>
-              <button className="button" onClick={props.onFavorite} disabled={!props.selected}>Favor</button>
+              <button className="button" onClick={props.onFavorite} disabled={!props.selected}>
+                {props.selected?.favorite ? 'Unfavorite' : 'Favorite'}
+              </button>
             </div>
           </div>
           <div className="row row--between">
-            <label className="checkbox">
-              <input type="checkbox" checked={false} readOnly />
-              Skip network list on startup
-            </label>
             <label className="checkbox">
               <input type="checkbox" checked={props.showFavoritesOnly} onChange={props.onToggleFavorites} />
               Show favorites only
             </label>
           </div>
+          {props.hiddenManagedNetworkName ? (
+            <p className="muted manager__filter-note">
+              {props.hiddenManagedNetworkName} is hidden by the favorites filter. Clear the filter to restore that selection.
+            </p>
+          ) : null}
         </div>
         <div className="dialog__footer">
           <button className="button" onClick={props.onClose}>Close</button>

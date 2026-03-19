@@ -18,6 +18,7 @@ export class IrcConnection implements IrcConnectionState {
   serverName: string | null = null;
   currentNick: string;
   pendingNick: string | null = null;
+  lastFailureMessage: string | null = null;
   profile: RuntimeNetworkProfile;
 
   constructor(
@@ -41,6 +42,7 @@ export class IrcConnection implements IrcConnectionState {
     if (resetRetryBudget) {
       this.reconnectAttempts = 0;
     }
+    this.lastFailureMessage = null;
     connectSocket(this);
   }
 
@@ -60,6 +62,7 @@ export class IrcConnection implements IrcConnectionState {
     this.serverName = null;
     this.currentNick = this.profile.nick;
     this.pendingNick = null;
+    this.lastFailureMessage = null;
     if (wasActive) {
       emitState(this);
       emitStatus(this, 'Disconnected from server');
@@ -187,6 +190,7 @@ export class IrcConnection implements IrcConnectionState {
     this.serverName = null;
     this.currentNick = this.profile.nick;
     this.pendingNick = null;
+    this.lastFailureMessage = null;
     emitState(this);
     emitStatus(this, 'Reconnecting to apply updated network settings', 'notice');
     try {

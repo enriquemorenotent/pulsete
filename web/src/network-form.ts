@@ -1,6 +1,6 @@
 import type { NetworkProfile } from '../../shared/protocol.js';
 
-export type EditorTab = 'servers' | 'autojoin' | 'commands';
+export type EditorTab = 'servers' | 'autojoin';
 
 export type NetworkForm = {
   id?: string;

@@ -10,6 +10,7 @@ export const connectSocket = (connection: IrcConnectionState) => {
   }
   connection.clearReconnectTimer();
   connection.manualDisconnect = false;
+  connection.lastFailureMessage = null;
   emitStatus(connection, `Looking up ${connection.profile.host}`);
   const socket = connection.profile.tls
     ? tls.connect({ host: connection.profile.host, port: connection.profile.port, servername: connection.profile.host })
@@ -28,6 +29,7 @@ export const connectSocket = (connection: IrcConnectionState) => {
     if (!isCurrentSocket()) {
       return;
     }
+    connection.lastFailureMessage = null;
     if (connection.profile.tls && (socket as tls.TLSSocket).authorized) {
       for (const line of formatTlsStatusLines(socket as tls.TLSSocket)) {
         emitStatus(connection, line);
@@ -52,7 +54,8 @@ export const connectSocket = (connection: IrcConnectionState) => {
   });
   socket.on('error', (error) => {
     if (isCurrentSocket()) {
-      emitStatus(connection, error.message, 'error');
+      connection.lastFailureMessage = formatFailureMessage(connection, error.message);
+      emitStatus(connection, connection.lastFailureMessage, 'error');
     }
   });
   socket.on('close', () => handleClose(connection, socket));
@@ -64,13 +67,19 @@ const handleClose = (connection: IrcConnectionState, socket: IrcConnectionState[
   }
   connection.clearReconnectTimer();
   const wasConnected = connection.connected;
+  const failureMessage = connection.lastFailureMessage;
   connection.socket = null;
   connection.resetTransientState();
   connection.connected = false;
   connection.serverName = null;
   connection.currentNick = connection.profile.nick;
+  connection.lastFailureMessage = null;
   emitState(connection);
-  emitStatus(connection, wasConnected ? 'Disconnected from server' : 'Connection closed');
+  if (wasConnected) {
+    emitStatus(connection, 'Disconnected from server');
+  } else if (!failureMessage) {
+    emitStatus(connection, formatFailureMessage(connection, 'Connection closed'), 'error');
+  }
   if (!connection.manualDisconnect && connection.reconnectAttempts < 3) {
     const attempt = ++connection.reconnectAttempts;
     const timer = setTimeout(() => {
@@ -81,6 +90,9 @@ const handleClose = (connection: IrcConnectionState, socket: IrcConnectionState[
     connection.reconnectTimer = timer;
   }
 };
+
+const formatFailureMessage = (connection: IrcConnectionState, detail: string) =>
+  `Unable to connect to ${connection.profile.host}:${connection.profile.port} (${detail})`;
 
 const retryConnect = (connection: IrcConnectionState, attempt: number) => {
   if (connection.socket || connection.manualDisconnect || attempt !== connection.reconnectAttempts) {

@@ -338,6 +338,42 @@ test('channel events keep the untouched half of channel state', () => {
   });
 });
 
+test('system status events stay in the server buffer without banner notifications', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const user = storage.bootstrapUser('system-status-user', 'secret');
+  const network = storage.upsertNetwork(user.id, {
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'tester',
+    favorite: false,
+    autoJoin: [],
+  });
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_userId, message) { sent.push(message); } },
+    user.id,
+    {
+      type: 'status',
+      networkId: network.id,
+      message: 'Connecting to irc.example.test:6667',
+      kind: 'system',
+    }
+  );
+
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.ok(!sent.some((message) => message.type === 'notice' || message.type === 'error'));
+  assert.equal(storage.listMessages(user.id, network.id, 'server', 5)[0]?.body, 'Connecting to irc.example.test:6667');
+});
+
 test('runtime join preserves existing channel metadata', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
