@@ -24,7 +24,11 @@ type ChatPaneProps = {
 
 export function ChatPane(props: ChatPaneProps) {
   const { selectedChannel, selectedNetwork, selectedQuery } = props.workspace;
-  const renderBlocks = buildRenderBlocks(props.selectedMessages);
+  const isServerBuffer =
+    props.workspace.mode === 'server-connected' ||
+    props.workspace.mode === 'server-connecting' ||
+    props.workspace.mode === 'server-offline';
+  const renderBlocks = buildRenderBlocks(props.selectedMessages, isServerBuffer ? 'server' : 'chat');
 
   return (
     <section className="min-h-0 min-w-0 overflow-hidden">
@@ -98,7 +102,11 @@ export function ChatPane(props: ChatPaneProps) {
             <div className="space-y-0.5 font-mono text-[12px]">
               {renderBlocks.map((block) =>
                 block.kind === 'group' ? (
-                  <GroupedLineBlock key={block.messages[0].id} messages={block.messages} />
+                  <GroupedMessageBlock
+                    key={block.messages[0].id}
+                    messages={block.messages}
+                    sourceLabel={getGroupSourceLabel(block.messages[0], isServerBuffer ? 'server' : 'chat')}
+                  />
                 ) : isCompactMessage(block.message) ? (
                   <CompactMessageRow key={block.message.id} message={block.message} />
                 ) : (
@@ -158,7 +166,7 @@ const formatTime = (value: number) =>
     hour12: false,
   });
 
-function GroupedLineBlock(props: { messages: ChatMessage[] }) {
+function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: string }) {
   const firstMessage = props.messages[0];
   const continuationMessages = props.messages.slice(1);
 
@@ -168,7 +176,7 @@ function GroupedLineBlock(props: { messages: ChatMessage[] }) {
         <div />
         <div className="min-w-0">
           <div className="mb-0.5 flex flex-wrap items-baseline gap-2">
-            <span className="font-sans text-[15px] font-semibold text-foreground">{firstMessage.nick}</span>
+            <span className="font-sans text-[15px] font-semibold text-foreground">{props.sourceLabel}</span>
             <span className="text-[11px] leading-5 text-muted-foreground">
               {formatTime(firstMessage.ts)}
             </span>
@@ -196,6 +204,7 @@ function GroupedLineBlock(props: { messages: ChatMessage[] }) {
 function CompactMessageRow(props: { message: ChatMessage }) {
   const { message } = props;
   const actionBody = isActionBody(message);
+  const showNick = message.nick && (message.kind === 'line' || showKindLabel(message));
 
   return (
     <article className={cn('border px-2 py-1.5', messageTone(message))}>
@@ -203,9 +212,10 @@ function CompactMessageRow(props: { message: ChatMessage }) {
         <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
           {formatTime(message.ts)}
         </span>
-        {message.kind === 'line' && message.nick && !actionBody ? (
+        {showNick && !actionBody ? (
           <span className="font-semibold text-foreground">{message.nick}</span>
         ) : null}
+        {showKindLabel(message) ? <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
         <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
           {message.body}
         </span>
@@ -214,7 +224,7 @@ function CompactMessageRow(props: { message: ChatMessage }) {
   );
 }
 
-function buildRenderBlocks(messages: ChatMessage[]) {
+function buildRenderBlocks(messages: ChatMessage[], mode: 'chat' | 'server') {
   const blocks: Array<{ kind: 'group'; messages: ChatMessage[] } | { kind: 'single'; message: ChatMessage }> = [];
   let currentGroup: ChatMessage[] = [];
 
@@ -226,14 +236,14 @@ function buildRenderBlocks(messages: ChatMessage[]) {
   };
 
   for (const message of messages) {
-    if (!canGroupMessage(message)) {
+    if (!canGroupMessage(message, mode)) {
       flushGroup();
       blocks.push({ kind: 'single', message });
       continue;
     }
 
     const previous = currentGroup.at(-1);
-    if (previous && canContinueGroup(previous, message)) {
+    if (previous && canContinueGroup(previous, message, mode)) {
       currentGroup.push(message);
       continue;
     }
@@ -246,11 +256,37 @@ function buildRenderBlocks(messages: ChatMessage[]) {
   return blocks;
 }
 
-const canGroupMessage = (message: ChatMessage) =>
-  message.kind === 'line' && message.nick !== null && !isActionBody(message);
+const canGroupMessage = (message: ChatMessage, mode: 'chat' | 'server') =>
+  mode === 'server'
+    ? getGroupSourceLabel(message, mode).length > 0 && !isActionBody(message)
+    : message.kind === 'line' && message.nick !== null && !isActionBody(message);
 
-const canContinueGroup = (previous: ChatMessage, next: ChatMessage) =>
-  previous.nick === next.nick && previous.self === next.self;
+const canContinueGroup = (previous: ChatMessage, next: ChatMessage, mode: 'chat' | 'server') =>
+  getGroupSourceKey(previous, mode) === getGroupSourceKey(next, mode) &&
+  previous.kind === next.kind &&
+  previous.self === next.self;
+
+const getGroupSourceKey = (message: ChatMessage, mode: 'chat' | 'server') =>
+  `${message.kind}:${getGroupSourceLabel(message, mode)}`;
+
+const getGroupSourceLabel = (message: ChatMessage, mode: 'chat' | 'server') => {
+  if (mode === 'chat') {
+    return message.nick ?? '';
+  }
+  if (message.nick) {
+    return message.nick;
+  }
+  if (message.kind === 'system') {
+    return 'Server';
+  }
+  if (message.kind === 'notice') {
+    return 'Notice';
+  }
+  if (message.kind === 'error') {
+    return 'Error';
+  }
+  return '';
+};
 
 const isCompactMessage = (message: ChatMessage) =>
   message.kind === 'line' || message.kind === 'join' || message.kind === 'part';
