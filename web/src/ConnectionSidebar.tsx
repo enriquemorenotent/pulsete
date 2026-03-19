@@ -1,6 +1,5 @@
 import { Hash, MessageSquareMore, X } from 'lucide-react';
 import type { ChannelState, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
-import { Badge } from '@/components/ui/badge.js';
 import { Card } from '@/components/ui/card.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
@@ -25,14 +24,6 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
   return (
     <aside className="h-full min-h-0 overflow-hidden">
       <Card className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Connections</p>
-            <h2 className="text-sm font-semibold tracking-tight">Buffers</h2>
-          </div>
-          <Badge variant="secondary">{props.networks.length}</Badge>
-        </div>
-
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-2 p-2">
             {props.networks.length === 0 ? (
@@ -64,10 +55,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                     >
                       <span className={cn('size-2 shrink-0 rounded-full', dotTone(runtime))} />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-[13px] font-medium text-foreground">{label}</span>
-                          {network.favorite ? <Badge>Fav</Badge> : null}
-                        </div>
+                        <span className="truncate text-[13px] font-medium text-foreground">{label}</span>
                         <p className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                           {runtime?.connected ? 'Connected' : runtime?.connecting ? 'Connecting' : 'Offline'}
                         </p>
@@ -130,9 +118,9 @@ function SidebarChannelRow(props: {
         <Hash className="size-3 shrink-0 text-muted-foreground" />
         <span className="truncate text-[13px] text-foreground">{props.channel.name}</span>
         {props.channel.unread > 0 ? (
-          <Badge variant="outline" className="ml-auto font-mono tracking-normal">
+          <span className="ml-auto rounded-sm border border-border px-1.5 py-0.5 font-mono text-[10px] tracking-normal text-muted-foreground">
             {props.channel.unread}
-          </Badge>
+          </span>
         ) : null}
       </button>
       <button

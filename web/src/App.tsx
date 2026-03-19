@@ -93,7 +93,7 @@ function App() {
   if (state.phase === 'loading') {
     return (
       <div className="fixed inset-0 flex items-center justify-center px-6 text-sm font-medium uppercase tracking-[0.12em] text-muted-foreground">
-        Loading Pulsete...
+        Loading...
       </div>
     );
   }

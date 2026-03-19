@@ -109,7 +109,8 @@ test('connecting instance stays on the server buffer with no composer', () => {
 
   assert.equal(workspace.mode, 'server-connecting');
   assert.equal(workspace.composerMode, 'hidden');
-  assert.equal(workspace.headerSubtitle, 'Connecting…');
+  assert.equal(workspace.statusLabel, 'Connecting');
+  assert.equal(workspace.headerSubtitle, '');
 });
 
 test('connected server buffer is command-only and hides the nicklist', () => {

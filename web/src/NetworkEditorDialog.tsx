@@ -1,10 +1,8 @@
-import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -25,30 +23,19 @@ type NetworkEditorDialogProps = {
 };
 
 export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
-  const serverLabel =
-    props.form.host.trim().length > 0 ? `${props.form.host.trim()}/${props.form.port || '6667'}` : 'irc.example.net/6697';
-
   return (
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
-      <DialogContent className="h-[min(90dvh,40rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),56rem)]">
+      <DialogContent
+        aria-describedby={undefined}
+        className="h-[min(90dvh,40rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),56rem)]"
+      >
         <div className="flex h-full min-h-0 flex-col">
           <div className="shrink-0 space-y-3 border-b border-border px-4 py-3">
             <DialogHeader className="space-y-1">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <DialogTitle>{props.form.name ? `Edit ${props.form.name}` : 'Edit Network'}</DialogTitle>
-                  <DialogDescription>Network template settings.</DialogDescription>
-                </div>
-                <Badge variant="outline">Editor</Badge>
+                <DialogTitle>{props.form.name ? `Edit ${props.form.name}` : 'Edit Network'}</DialogTitle>
               </div>
             </DialogHeader>
-            <div className="flex items-center justify-between gap-3 border border-border bg-secondary px-3 py-2">
-              <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Server target</p>
-                <p className="text-sm font-semibold text-foreground">{serverLabel}</p>
-              </div>
-              <Badge variant="outline">{props.form.tls ? 'SSL/TLS' : 'TCP'}</Badge>
-            </div>
           </div>
 
           <Tabs
@@ -95,16 +82,8 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
   return (
     <div className="space-y-4">
       <div className="grid gap-2 md:grid-cols-2">
-        <ToggleField
-          label="Use SSL for this network"
-          checked={props.form.tls}
-          onCheckedChange={(checked) => props.onChange({ tls: checked })}
-        />
-        <ToggleField
-          label="Favorite network"
-          checked={props.form.favorite}
-          onCheckedChange={(checked) => props.onChange({ favorite: checked })}
-        />
+        <ToggleField label="Use TLS" checked={props.form.tls} onCheckedChange={(checked) => props.onChange({ tls: checked })} />
+        <ToggleField label="Favorite" checked={props.form.favorite} onCheckedChange={(checked) => props.onChange({ favorite: checked })} />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -117,7 +96,6 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
         <TextField label="Real name" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
         <TextField label="User name" value={props.form.username} onChange={(value) => props.onChange({ username: value })} />
         <PasswordField form={props.form} onChange={props.onChange} />
-        <StaticField label="Character set" value="UTF-8 (Unicode)" />
       </div>
 
       {props.form.hasSavedPassword ? (
@@ -154,15 +132,6 @@ function TextField(props: { label: string; value: string; onChange: (value: stri
     <div className="space-y-1">
       <Label>{props.label}</Label>
       <Input value={props.value} onChange={(event) => props.onChange(event.target.value)} />
-    </div>
-  );
-}
-
-function StaticField(props: { label: string; value: string }) {
-  return (
-    <div className="space-y-1">
-      <Label>{props.label}</Label>
-      <Input value={props.value} readOnly className="bg-background text-muted-foreground" />
     </div>
   );
 }

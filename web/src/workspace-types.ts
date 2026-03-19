@@ -37,7 +37,6 @@ export type WorkspaceView = {
   statusLabel: 'Offline' | 'Connecting' | 'Connected';
   composerMode: ComposerMode;
   composerPlaceholder: string;
-  emptyTitle: string;
   emptyBody: string;
   showNicklist: boolean;
 };

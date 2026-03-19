@@ -15,7 +15,7 @@ export function Toast({ banner, onDismiss }: ToastProps) {
   const Icon = banner.kind === 'error' ? AlertCircle : Info;
 
   return (
-    <div className="pointer-events-none fixed right-3 top-3 z-[60] w-full max-w-sm" aria-live="polite" aria-atomic="true">
+    <div className="pointer-events-none fixed bottom-3 right-3 z-[60] w-full max-w-sm" aria-live="polite" aria-atomic="true">
       <div
         className={cn(
           'pointer-events-auto flex items-start gap-2 border px-3 py-2 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,0.45)]',

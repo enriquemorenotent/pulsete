@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { Heart, PencilLine, Plus, Power, Trash2 } from 'lucide-react';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
@@ -7,13 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox.js';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog.js';
-import { Input } from '@/components/ui/input.js';
-import { Label } from '@/components/ui/label.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Separator } from '@/components/ui/separator.js';
 import { cn } from '@/lib/utils.js';
@@ -38,17 +34,16 @@ type NetworkManagerDialogProps = {
 export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
   return (
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
-      <DialogContent className="h-[min(90dvh,44rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),68rem)]">
+      <DialogContent
+        aria-describedby={undefined}
+        className="h-[min(90dvh,44rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),68rem)]"
+      >
         <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="flex min-h-0 flex-col">
             <div className="shrink-0 space-y-3 px-4 py-3">
               <DialogHeader className="space-y-1">
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <DialogTitle>Network List</DialogTitle>
-                    <DialogDescription>Saved networks and quick connect targets.</DialogDescription>
-                  </div>
-                  <Badge variant="outline">Manager</Badge>
+                  <DialogTitle>Network List</DialogTitle>
                 </div>
               </DialogHeader>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -108,7 +103,6 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="truncate font-medium text-foreground">{network.name}</span>
-                            {network.favorite ? <Badge>Fav</Badge> : null}
                             {online ? <Badge variant="success">Online</Badge> : null}
                             {connecting ? <Badge variant="outline">Connecting</Badge> : null}
                           </div>
@@ -116,9 +110,6 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                             {network.host}:{network.port} {network.tls ? 'SSL' : 'TCP'}
                           </p>
                         </div>
-                        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-                          {network.nick}
-                        </span>
                       </div>
                     </button>
                   );
@@ -130,39 +121,21 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
           <div className="flex min-h-0 flex-col overflow-hidden border-t border-border bg-secondary/35 lg:border-l lg:border-t-0">
             <div className="min-h-0 flex-1 space-y-3 overflow-auto px-4 py-3">
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Selected network</p>
                 <h3 className="text-sm font-semibold tracking-tight text-foreground">
                   {props.selected?.name ?? 'Nothing selected'}
                 </h3>
                 <p className="text-[13px] text-muted-foreground">
                   {props.selected
-                    ? props.runtime?.connected
-                      ? 'Live connection active.'
-                      : props.runtime?.connecting
-                        ? 'Connection in progress.'
-                        : 'Template ready to connect.'
+                    ? [
+                        `${props.selected.host}:${props.selected.port}`,
+                        props.selected.tls ? 'SSL/TLS' : 'TCP',
+                        props.runtime?.connected ? 'Connected' : props.runtime?.connecting ? 'Connecting' : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
                     : 'Pick a network from the list.'}
                 </p>
               </div>
-
-              <div className="space-y-2">
-                <ReadonlyField label="Nick name" value={props.selected?.nick ?? ''} />
-                <ReadonlyField label="Second choice" value={props.selected?.altNicks[0] ?? ''} />
-                <ReadonlyField label="Third choice" value={props.selected?.altNicks[1] ?? ''} />
-                <ReadonlyField label="User name" value={props.selected?.username ?? ''} />
-              </div>
-
-              {props.selected ? (
-                <div className="border border-border bg-card px-3 py-2 text-[13px]">
-                  <SummaryLine label="Host" value={props.selected.host} />
-                  <SummaryLine label="Port" value={String(props.selected.port)} />
-                  <SummaryLine label="Transport" value={props.selected.tls ? 'SSL/TLS' : 'TCP'} />
-                  <SummaryLine
-                    label="Status"
-                    value={props.runtime?.connected ? 'Connected' : props.runtime?.connecting ? 'Connecting' : 'Offline'}
-                  />
-                </div>
-              ) : null}
             </div>
 
             <div className="shrink-0 border-t border-border px-4 py-3">
@@ -180,23 +153,5 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ReadonlyField(props: { label: string; value: string }) {
-  return (
-    <div className="space-y-1">
-      <Label>{props.label}</Label>
-      <Input value={props.value} readOnly className="bg-background text-muted-foreground" />
-    </div>
-  );
-}
-
-function SummaryLine(props: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2 border-b border-border/70 py-1 last:border-b-0">
-      <span className="text-muted-foreground">{props.label}</span>
-      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground">{props.value}</span>
-    </div>
   );
 }

@@ -35,14 +35,11 @@ export function ChatPane(props: ChatPaneProps) {
               <Badge variant={props.workspace.selectedRuntime?.connected ? 'success' : 'secondary'}>
                 {props.workspace.statusLabel}
               </Badge>
-              {selectedNetwork ? (
-                <Badge variant="outline" className="font-mono tracking-[0.08em]">
-                  {selectedNetwork.nick}
-                </Badge>
-              ) : null}
             </div>
             <h2 className="truncate text-base font-semibold tracking-tight text-foreground">{props.workspace.headerTitle}</h2>
-            <p className="truncate text-[13px] text-muted-foreground">{props.workspace.headerSubtitle}</p>
+            {props.workspace.headerSubtitle ? (
+              <p className="truncate text-[13px] text-muted-foreground">{props.workspace.headerSubtitle}</p>
+            ) : null}
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-1">
@@ -94,8 +91,7 @@ export function ChatPane(props: ChatPaneProps) {
                 <div className="mx-auto mb-3 flex size-8 items-center justify-center border border-border bg-secondary">
                   <Plug2 className="size-4 text-muted-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">{props.workspace.emptyTitle}</h3>
-                <p className="mt-2 text-[13px] leading-6 text-muted-foreground">{props.workspace.emptyBody}</p>
+                <p className="text-[13px] leading-6 text-muted-foreground">{props.workspace.emptyBody}</p>
               </div>
             </div>
           ) : (
@@ -261,8 +257,7 @@ const isCompactMessage = (message: ChatMessage) =>
 
 const isActionBody = (message: ChatMessage) => message.kind === 'line' && message.body.startsWith('* ');
 
-const showKindLabel = (message: ChatMessage) =>
-  message.kind !== 'line' && message.kind !== 'join' && message.kind !== 'part';
+const showKindLabel = (message: ChatMessage) => message.kind === 'notice' || message.kind === 'error';
 
 const messageTone = (message: ChatMessage) => {
   if (message.kind === 'error') {

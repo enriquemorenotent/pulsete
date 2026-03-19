@@ -1,7 +1,6 @@
 import type { RefObject } from 'react';
-import { PanelsTopLeft, Radio } from 'lucide-react';
+import { PanelsTopLeft } from 'lucide-react';
 import type { ChannelState, ChatMessage, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
-import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPane } from './ChatPane.js';
@@ -67,20 +66,8 @@ export function DesktopShell(props: DesktopShellProps) {
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 py-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold tracking-tight">Pulsete</span>
-            <Badge variant="outline">IRC</Badge>
-          </div>
-          <p className="truncate font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            {props.workspace.headerTitle}
-          </p>
-        </div>
+        <span className="font-semibold tracking-tight">Pulsete</span>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge variant={props.workspace.statusLabel === 'Connected' ? 'success' : 'secondary'}>
-            <Radio className="size-3" />
-            {props.workspace.statusLabel}
-          </Badge>
           <Button variant="outline" size="sm" onClick={props.onOpenNetworkManager}>
             <PanelsTopLeft />
             Network List

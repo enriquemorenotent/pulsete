@@ -38,11 +38,10 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedChannel: null,
       selectedQuery: null,
       headerTitle: 'No active connection',
-      headerSubtitle: 'Open Network List to connect.',
+      headerSubtitle: '',
       statusLabel: 'Offline',
       composerMode: 'hidden',
       composerPlaceholder: '',
-      emptyTitle: 'No active connection',
       emptyBody: 'Open Network List to create or connect an instance.',
       showNicklist: false,
     };
@@ -75,11 +74,10 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedChannel: null,
       selectedQuery: null,
       headerTitle: selectedNetwork.name,
-      headerSubtitle: 'Not connected',
+      headerSubtitle: '',
       statusLabel: 'Offline',
       composerMode: 'hidden',
       composerPlaceholder: '',
-      emptyTitle: 'This connection is offline',
       emptyBody: 'Reconnect to restore channels and private messages.',
       showNicklist: false,
     };
@@ -95,11 +93,10 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedChannel: null,
       selectedQuery: null,
       headerTitle: selectedNetwork.name,
-      headerSubtitle: 'Connecting…',
+      headerSubtitle: '',
       statusLabel: 'Connecting',
       composerMode: 'hidden',
       composerPlaceholder: '',
-      emptyTitle: 'Connecting…',
       emptyBody: 'Waiting for the server connection to finish.',
       showNicklist: false,
     };
@@ -121,7 +118,6 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       statusLabel: 'Connected',
       composerMode: 'normal',
       composerPlaceholder: 'Type a message or /command',
-      emptyTitle: 'Nothing here yet',
       emptyBody: 'Wait for activity or send a message.',
       showNicklist: true,
     };
@@ -141,7 +137,6 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       statusLabel: 'Connected',
       composerMode: 'normal',
       composerPlaceholder: 'Type a message or /command',
-      emptyTitle: 'Nothing here yet',
       emptyBody: 'Wait for a reply or send a message.',
       showNicklist: false,
     };
@@ -161,7 +156,6 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       statusLabel: 'Connected',
       composerMode: 'normal',
       composerPlaceholder: 'Type a message or /command',
-      emptyTitle: 'Joining channel…',
       emptyBody: 'Waiting for the server to open this channel buffer.',
       showNicklist: false,
     };
@@ -180,7 +174,6 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     statusLabel: 'Connected',
     composerMode: 'commands',
     composerPlaceholder: 'Use /join #channel or another /command',
-    emptyTitle: 'Connected',
     emptyBody: 'Use /join #channel to enter a channel.',
     showNicklist: false,
   };
