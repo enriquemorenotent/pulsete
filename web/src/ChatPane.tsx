@@ -1,4 +1,4 @@
-import { Fragment, type RefObject } from 'react';
+import type { RefObject } from 'react';
 import { Plug2, PowerOff, RefreshCcw, SendHorizonal, X } from 'lucide-react';
 import type { ChatMessage, NetworkProfile } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
@@ -183,14 +183,14 @@ function GroupedLineBlock(props: { messages: ChatMessage[] }) {
         </div>
 
         {continuationMessages.map((message) => (
-          <Fragment key={message.id}>
-            <span className="pr-1 pt-0.5 text-right text-[11px] leading-5 text-muted-foreground/85">
+          <div key={message.id} className="group/line col-span-2 grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-3">
+            <span className="pr-1 pt-0.5 text-right text-[11px] leading-5 text-muted-foreground/85 opacity-0 transition-opacity group-hover/line:opacity-100">
               {formatTime(message.ts)}
             </span>
             <p className="whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground">
               {message.body}
             </p>
-          </Fragment>
+          </div>
         ))}
       </div>
     </article>
@@ -207,7 +207,9 @@ function CompactMessageRow(props: { message: ChatMessage }) {
         <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
           {formatTime(message.ts)}
         </span>
-        {message.nick && !actionBody ? <span className="font-semibold text-foreground">{message.nick}</span> : null}
+        {message.kind === 'line' && message.nick && !actionBody ? (
+          <span className="font-semibold text-foreground">{message.nick}</span>
+        ) : null}
         <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
           {message.body}
         </span>
