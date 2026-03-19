@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { Fragment, type RefObject } from 'react';
 import { Plug2, PowerOff, RefreshCcw, SendHorizonal, X } from 'lucide-react';
 import type { ChatMessage, NetworkProfile } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
@@ -158,22 +158,39 @@ const formatTime = (value: number) =>
   new Date(value).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
   });
 
 function GroupedLineBlock(props: { messages: ChatMessage[] }) {
   const firstMessage = props.messages[0];
+  const continuationMessages = props.messages.slice(1);
 
   return (
     <article className={cn('border px-2 py-1.5', messageTone(firstMessage))}>
-      <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-        <span>{formatTime(firstMessage.ts)}</span>
-        <span className="font-medium text-foreground">{firstMessage.nick}</span>
-      </div>
-      <div className="space-y-1 font-sans text-[13px] leading-5 text-foreground">
-        {props.messages.map((message) => (
-          <p key={message.id} className="whitespace-pre-wrap break-words">
-            {message.body}
+      <div className="grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-3 gap-y-1">
+        <div />
+        <div className="min-w-0">
+          <div className="mb-0.5 flex flex-wrap items-baseline gap-2">
+            <span className="font-sans text-[15px] font-semibold text-foreground">{firstMessage.nick}</span>
+            <span className="text-[11px] leading-5 text-muted-foreground">
+              {formatTime(firstMessage.ts)}
+            </span>
+          </div>
+          <p className="whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground">
+            {firstMessage.body}
           </p>
+        </div>
+
+        {continuationMessages.map((message) => (
+          <Fragment key={message.id}>
+            <span className="pr-1 pt-0.5 text-right text-[11px] leading-5 text-muted-foreground/85">
+              {formatTime(message.ts)}
+            </span>
+            <p className="whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground">
+              {message.body}
+            </p>
+          </Fragment>
         ))}
       </div>
     </article>
