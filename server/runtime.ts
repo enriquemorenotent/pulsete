@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
-import { encode, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
-import { notFound } from './app-error.js';
+import { encode, type BufferState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
+import { badRequest, notFound } from './app-error.js';
 import { IrcConnection } from './irc.js';
 import {
   normalizeChannelTarget,
@@ -11,6 +11,11 @@ import {
 } from './irc-validate.js';
 import { handleRuntimeEvent } from './runtime-events.js';
 import { Storage, type NetworkInput } from './storage.js';
+
+type SaveNetworkResult = {
+  network: NetworkProfile;
+  serverBuffer: BufferState | null;
+};
 
 export class Runtime {
   readonly store: Storage;
@@ -80,15 +85,15 @@ export class Runtime {
     this.connections.get(networkId)?.disconnect();
   }
 
-  join(networkId: string, channel: string): void;
-  join(_legacyUserId: string, networkId: string, channel: string): void;
+  join(networkId: string, channel: string): BufferState;
+  join(_legacyUserId: string, networkId: string, channel: string): BufferState;
   join(networkIdOrLegacyUserId: string, maybeNetworkIdOrChannel: string, maybeChannel?: string) {
     const { networkId, value: channel } = resolveNetworkAndValue(
       networkIdOrLegacyUserId,
       maybeNetworkIdOrChannel,
       maybeChannel
     );
-    this.ensureConnection(networkId).join(normalizeChannelTarget(channel));
+    return this.joinInternal(networkId, channel);
   }
 
   part(networkId: string, channel: string): void;
@@ -100,66 +105,56 @@ export class Runtime {
       maybeChannel
     );
     this.getRequiredNetwork(networkId);
-    this.connections.get(networkId)?.part(normalizeChannelTarget(channel));
+    const normalizedChannel = normalizeChannelTarget(channel);
+    this.connections.get(networkId)?.part(normalizedChannel);
   }
 
   openQuery(networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
   openQuery(_legacyUserId: string, networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
-  openQuery(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
-    return this.openQueryInternal(...resolveArgsWithValue(arguments));
+  openQuery(...args: [string, string] | [string, string, string]) {
+    return this.openQueryInternal(...resolveArgsWithValue(args));
   }
 
-  closeQuery(networkId: string, target: string): string;
-  closeQuery(_legacyUserId: string, networkId: string, target: string): string;
-  closeQuery(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
-    return this.closeQueryInternal(...resolveArgsWithValue(arguments));
+  closeBuffer(bufferId: string): BufferState;
+  closeBuffer(_legacyUserId: string, bufferId: string): BufferState;
+  closeBuffer(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
+    return this.closeBufferInternal(resolveBufferId(bufferIdOrLegacyUserId, maybeBufferId));
   }
 
-  markChannelRead(channelId: string): ReturnType<Storage['getChannel']>;
-  markChannelRead(_legacyUserId: string, channelId: string): ReturnType<Storage['getChannel']>;
-  markChannelRead(channelIdOrLegacyUserId: string, maybeChannelId?: string) {
-    return this.markChannelReadInternal(resolveChannelId(arguments));
+  markBufferRead(bufferId: string): ReturnType<Storage['getBuffer']>;
+  markBufferRead(_legacyUserId: string, bufferId: string): ReturnType<Storage['getBuffer']>;
+  markBufferRead(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
+    return this.markBufferReadInternal(resolveBufferId(bufferIdOrLegacyUserId, maybeBufferId));
   }
 
-  history(networkId: string, target: string, limit: number): ReturnType<Storage['listMessages']>;
-  history(_legacyUserId: string, networkId: string, target: string, limit: number): ReturnType<Storage['listMessages']>;
-  history(
-    networkIdOrLegacyUserId: string,
-    networkIdOrTarget: string,
-    targetOrLimit: string | number,
-    maybeLimit?: number
-  ) {
-    return this.historyInternal(...resolveArgsWithLimit(arguments));
+  history(bufferId: string, limit: number): ReturnType<Storage['listMessages']>;
+  history(_legacyUserId: string, bufferId: string, limit: number): ReturnType<Storage['listMessages']>;
+  history(...args: [string, number] | [string, string, number]) {
+    return this.historyInternal(...resolveBufferArgsWithLimit(args));
   }
 
-  saveNetwork(data: unknown): ReturnType<Storage['upsertNetwork']>;
-  saveNetwork(_legacyUserId: string, data: unknown): ReturnType<Storage['upsertNetwork']>;
-  saveNetwork(dataOrLegacyUserId: unknown, maybeData?: unknown) {
-    return this.saveNetworkInternal(resolveNetworkInput(arguments));
+  saveNetwork(data: unknown): SaveNetworkResult;
+  saveNetwork(_legacyUserId: string, data: unknown): SaveNetworkResult;
+  saveNetwork(...args: [unknown] | [string, unknown]) {
+    return this.saveNetworkInternal(resolveNetworkInput(args));
   }
 
   sendMessage(networkId: string, target: string, body: string, kind?: 'message' | 'action'): void;
   sendMessage(_legacyUserId: string, networkId: string, target: string, body: string, kind?: 'message' | 'action'): void;
-  sendMessage(
-    networkIdOrLegacyUserId: string,
-    networkIdOrTarget: string,
-    targetOrBody: string,
-    bodyOrKind?: string,
-    maybeKind?: 'message' | 'action'
-  ) {
-    return this.sendMessageInternal(...resolveMessageArgs(arguments));
+  sendMessage(...args: [string, string, string, ('message' | 'action' | undefined)?] | [string, string, string, string, ('message' | 'action' | undefined)?]) {
+    return this.sendMessageInternal(...resolveMessageArgs(args));
   }
 
   sendRaw(networkId: string, raw: string): void;
   sendRaw(_legacyUserId: string, networkId: string, raw: string): void;
-  sendRaw(networkIdOrLegacyUserId: string, networkIdOrRaw: string, maybeRaw?: string) {
-    return this.sendRawInternal(...resolveArgsWithValue(arguments));
+  sendRaw(...args: [string, string] | [string, string, string]) {
+    return this.sendRawInternal(...resolveArgsWithValue(args));
   }
 
   deleteNetwork(networkId: string): string[];
   deleteNetwork(_legacyUserId: string, networkId: string): string[];
-  deleteNetwork(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
-    return this.deleteNetworkInternal(resolveNetworkIdFromArgs(arguments));
+  deleteNetwork(...args: [string] | [string, string]) {
+    return this.deleteNetworkInternal(resolveNetworkIdFromArgs(args));
   }
 
   private openQueryInternal(networkId: string, target: string) {
@@ -167,27 +162,40 @@ export class Runtime {
     return this.store.upsertQuery(networkId, normalizeQueryTarget(target));
   }
 
-  private closeQueryInternal(networkId: string, target: string) {
+  private joinInternal(networkId: string, channel: string) {
     this.getRequiredNetwork(networkId);
-    const normalizedTarget = normalizeQueryTarget(target);
-    this.store.deleteQuery(networkId, normalizedTarget);
-    return normalizedTarget;
+    const normalizedChannel = normalizeChannelTarget(channel);
+    const buffer = this.store.upsertBuffer({
+      networkId,
+      kind: 'channel',
+      target: normalizedChannel,
+    });
+    this.ensureConnection(networkId).join(normalizedChannel);
+    return buffer;
   }
 
-  private markChannelReadInternal(channelId: string) {
-    const channel = this.getRequiredChannel(channelId);
-    if (channel.unread === 0) {
-      return channel;
+  private closeBufferInternal(bufferId: string) {
+    const buffer = this.getRequiredBuffer(bufferId);
+    if (buffer.kind !== 'query') {
+      throw badRequest('Only private message buffers can be closed');
     }
-    this.store.markChannelRead(channelId);
-    const updatedChannel = this.getRequiredChannel(channelId);
-    this.send({ type: 'channel.snapshot', channel: updatedChannel });
-    return updatedChannel;
+    return this.store.removeBuffer(bufferId) ?? buffer;
   }
 
-  private historyInternal(networkId: string, target: string, limit: number) {
-    this.getRequiredNetwork(networkId);
-    return this.store.listMessages(networkId, target, limit);
+  private markBufferReadInternal(bufferId: string) {
+    const buffer = this.getRequiredBuffer(bufferId);
+    if (buffer.unread === 0) {
+      return buffer;
+    }
+    this.store.markBufferRead(bufferId);
+    const updatedBuffer = this.getRequiredBuffer(bufferId);
+    this.send({ type: 'buffer.upsert', buffer: updatedBuffer });
+    return updatedBuffer;
+  }
+
+  private historyInternal(bufferId: string, limit: number) {
+    const buffer = this.getRequiredBuffer(bufferId);
+    return this.store.listMessages(buffer.networkId, buffer.target, limit);
   }
 
   private saveNetworkInternal(data: unknown) {
@@ -195,16 +203,26 @@ export class Runtime {
     if (input.id) {
       this.getRequiredNetwork(input.id);
     }
-    const profile = this.store.upsertNetwork(input);
-    const updatedProfiles = [profile, ...this.syncTemplateInstances(profile, input)];
+    const network = this.store.upsertNetwork(input);
+    const updatedProfiles = [network, ...this.syncTemplateInstances(network, input)];
+    let serverBuffer = network.managerHidden ? this.store.getServerBuffer(network.id) : null;
     for (const updatedProfile of updatedProfiles) {
       const runtimeProfile = this.store.getRuntimeNetwork(updatedProfile.id);
       if (runtimeProfile) {
         this.connections.get(updatedProfile.id)?.updateProfile(runtimeProfile);
       }
       this.send({ type: 'network.upsert', network: updatedProfile });
+      if (updatedProfile.managerHidden) {
+        const nextServerBuffer = this.store.getServerBuffer(updatedProfile.id);
+        if (nextServerBuffer) {
+          this.send({ type: 'buffer.upsert', buffer: nextServerBuffer });
+          if (updatedProfile.id === network.id) {
+            serverBuffer = nextServerBuffer;
+          }
+        }
+      }
     }
-    return profile;
+    return { network, serverBuffer };
   }
 
   private sendMessageInternal(networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message') {
@@ -284,12 +302,12 @@ export class Runtime {
     return profile;
   }
 
-  private getRequiredChannel(channelId: string) {
-    const channel = this.store.getChannel(channelId);
-    if (!channel) {
-      throw notFound('Channel not found');
+  private getRequiredBuffer(bufferId: string) {
+    const buffer = this.store.getBuffer(bufferId);
+    if (!buffer) {
+      throw notFound('Buffer not found');
     }
-    return channel;
+    return buffer;
   }
 
   private getDeleteTargetIds(networkId: string) {
@@ -342,26 +360,26 @@ const resolveNetworkAndValue = (
   value: maybeValue ?? maybeNetworkIdOrValue,
 });
 
-const resolveArgsWithValue = (args: IArguments) =>
+const resolveArgsWithValue = (args: ArrayLike<unknown>) =>
   args.length === 3
     ? [String(args[1]), String(args[2])] as const
     : [String(args[0]), String(args[1])] as const;
 
-const resolveChannelId = (args: IArguments) =>
-  args.length === 2 ? String(args[1]) : String(args[0]);
+const resolveBufferId = (bufferIdOrLegacyUserId: string, maybeBufferId?: string) =>
+  maybeBufferId ?? bufferIdOrLegacyUserId;
 
-const resolveArgsWithLimit = (args: IArguments) =>
-  args.length === 4
-    ? [String(args[1]), String(args[2]), Number(args[3])] as const
-    : [String(args[0]), String(args[1]), Number(args[2])] as const;
+const resolveBufferArgsWithLimit = (args: ArrayLike<unknown>) =>
+  args.length === 3
+    ? [String(args[1]), Number(args[2])] as const
+    : [String(args[0]), Number(args[1])] as const;
 
-const resolveNetworkInput = (args: IArguments) =>
+const resolveNetworkInput = (args: ArrayLike<unknown>) =>
   args.length === 2 ? args[1] : args[0];
 
-const resolveNetworkIdFromArgs = (args: IArguments) =>
+const resolveNetworkIdFromArgs = (args: ArrayLike<unknown>) =>
   args.length === 2 ? String(args[1]) : String(args[0]);
 
-const resolveMessageArgs = (args: IArguments) => {
+const resolveMessageArgs = (args: ArrayLike<unknown>) => {
   if (args.length >= 5) {
     return [String(args[1]), String(args[2]), String(args[3]), args[4] as 'message' | 'action'] as const;
   }

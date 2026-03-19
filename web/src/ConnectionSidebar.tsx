@@ -1,5 +1,5 @@
 import { Hash, MessageSquareMore, X } from 'lucide-react';
-import type { ChannelState, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile } from '../../shared/protocol.js';
 import { Card } from '@/components/ui/card.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
@@ -8,16 +8,15 @@ import { canShowInstanceChildren, getConnectionLabel } from './workspace.js';
 
 type ConnectionSidebarProps = {
   networks: NetworkProfile[];
+  buffers: BufferState[];
   channels: ChannelState[];
-  queries: QueryBuffer[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
   onSelectNetwork: (network: NetworkProfile) => void;
-  onSelectChannel: (network: NetworkProfile, channel: ChannelState) => void;
-  onSelectQuery: (network: NetworkProfile, target: string) => void;
+  onSelectBuffer: (buffer: BufferState) => void;
   onCloseConnection: (network: NetworkProfile) => void;
   onCloseChannel: (networkId: string, channel: string) => void;
-  onCloseQuery: (networkId: string, target: string) => void;
+  onCloseBuffer: (buffer: BufferState) => void;
 };
 
 export function ConnectionSidebar(props: ConnectionSidebarProps) {
@@ -34,16 +33,12 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
 
             {props.networks.map((network) => {
               const runtime = props.networkStates[network.id] ?? null;
-              const channels = canShowInstanceChildren(runtime)
-                ? props.channels.filter((channel) => channel.networkId === network.id)
+              const networkBuffers = props.buffers.filter((buffer) => buffer.networkId === network.id);
+              const serverBuffer = networkBuffers.find((buffer) => buffer.kind === 'server') ?? null;
+              const childBuffers = canShowInstanceChildren(runtime)
+                ? networkBuffers.filter((buffer) => buffer.kind !== 'server').sort(compareBuffers)
                 : [];
-              const queries = canShowInstanceChildren(runtime)
-                ? props.queries.filter((query) => query.networkId === network.id).sort((a, b) => a.target.localeCompare(b.target))
-                : [];
-              const selectedServer =
-                props.selection?.networkId === network.id &&
-                props.selection.channelId === null &&
-                props.selection.target === 'server';
+              const selectedServer = props.selection?.bufferId === serverBuffer?.id;
               const label = getConnectionLabel(props.networks, network);
 
               return (
@@ -60,6 +55,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                           {runtime?.connected ? 'Connected' : runtime?.connecting ? 'Connecting' : 'Offline'}
                         </p>
                       </div>
+                      {serverBuffer && serverBuffer.unread > 0 ? <UnreadBadge unread={serverBuffer.unread} /> : null}
                     </button>
                     <button
                       className="border-l border-border px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -70,30 +66,27 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                     </button>
                   </div>
 
-                  {canShowInstanceChildren(runtime) ? (
+                  {childBuffers.length > 0 ? (
                     <div className="border-t border-border/80 bg-background/50">
-                      {channels.map((channel) => (
-                        <SidebarChannelRow
-                          key={channel.id}
-                          selected={props.selection?.networkId === network.id && props.selection?.channelId === channel.id}
-                          channel={channel}
-                          onSelect={() => props.onSelectChannel(network, channel)}
-                          onClose={() => props.onCloseChannel(network.id, channel.name)}
-                        />
-                      ))}
-                      {queries.map((query) => (
-                        <SidebarQueryRow
-                          key={query.id}
-                          selected={
-                            props.selection?.networkId === network.id &&
-                            props.selection?.channelId === null &&
-                            props.selection?.target === query.target
-                          }
-                          query={query}
-                          onSelect={() => props.onSelectQuery(network, query.target)}
-                          onClose={() => props.onCloseQuery(network.id, query.target)}
-                        />
-                      ))}
+                      {childBuffers.map((buffer) =>
+                        buffer.kind === 'channel' ? (
+                          <SidebarChannelRow
+                            key={buffer.id}
+                            buffer={buffer}
+                            selected={props.selection?.bufferId === buffer.id}
+                            onSelect={() => props.onSelectBuffer(buffer)}
+                            onClose={() => props.onCloseChannel(network.id, buffer.target)}
+                          />
+                        ) : (
+                          <SidebarQueryRow
+                            key={buffer.id}
+                            buffer={buffer}
+                            selected={props.selection?.bufferId === buffer.id}
+                            onSelect={() => props.onSelectBuffer(buffer)}
+                            onClose={() => props.onCloseBuffer(buffer)}
+                          />
+                        )
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -107,7 +100,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
 }
 
 function SidebarChannelRow(props: {
-  channel: ChannelState;
+  buffer: BufferState;
   selected: boolean;
   onSelect: () => void;
   onClose: () => void;
@@ -116,17 +109,13 @@ function SidebarChannelRow(props: {
     <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
       <button className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left" onClick={props.onSelect}>
         <Hash className="size-3 shrink-0 text-muted-foreground" />
-        <span className="truncate text-[13px] text-foreground">{props.channel.name}</span>
-        {props.channel.unread > 0 ? (
-          <span className="ml-auto rounded-sm border border-border px-1.5 py-0.5 font-mono text-[10px] tracking-normal text-muted-foreground">
-            {props.channel.unread}
-          </span>
-        ) : null}
+        <span className="truncate text-[13px] text-foreground">{props.buffer.target}</span>
+        {props.buffer.unread > 0 ? <UnreadBadge unread={props.buffer.unread} /> : null}
       </button>
       <button
         className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         onClick={props.onClose}
-        aria-label={`Close ${props.channel.name}`}
+        aria-label={`Close ${props.buffer.target}`}
       >
         <X className="size-3" />
       </button>
@@ -135,7 +124,7 @@ function SidebarChannelRow(props: {
 }
 
 function SidebarQueryRow(props: {
-  query: QueryBuffer;
+  buffer: BufferState;
   selected: boolean;
   onSelect: () => void;
   onClose: () => void;
@@ -144,18 +133,32 @@ function SidebarQueryRow(props: {
     <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
       <button className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left" onClick={props.onSelect}>
         <MessageSquareMore className="size-3 shrink-0 text-muted-foreground" />
-        <span className="truncate text-[13px] text-foreground">{props.query.target}</span>
+        <span className="truncate text-[13px] text-foreground">{props.buffer.target}</span>
+        {props.buffer.unread > 0 ? <UnreadBadge unread={props.buffer.unread} /> : null}
       </button>
       <button
         className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         onClick={props.onClose}
-        aria-label={`Close ${props.query.target}`}
+        aria-label={`Close ${props.buffer.target}`}
       >
         <X className="size-3" />
       </button>
     </div>
   );
 }
+
+function UnreadBadge(props: { unread: number }) {
+  return (
+    <span className="ml-auto rounded-sm border border-border px-1.5 py-0.5 font-mono text-[10px] tracking-normal text-muted-foreground">
+      {props.unread}
+    </span>
+  );
+}
+
+const compareBuffers = (left: BufferState, right: BufferState) => {
+  const order = { server: 0, channel: 1, query: 2 } satisfies Record<BufferState['kind'], number>;
+  return order[left.kind] - order[right.kind] || left.target.localeCompare(right.target);
+};
 
 const dotTone = (runtime: NetworkRuntimeState | null) => {
   if (runtime?.connected) {

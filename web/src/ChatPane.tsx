@@ -1,31 +1,35 @@
 import type { RefObject } from 'react';
 import { Plug2, PowerOff, RefreshCcw, SendHorizonal, X } from 'lucide-react';
-import type { ChatMessage, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, ChatMessage, NetworkProfile } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
 import { cn } from '@/lib/utils.js';
-import { linkifyMessageText } from './message-linkify.js';
+import { FormattedMessageText } from './FormattedMessageText.js';
+import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneProps = {
   workspace: WorkspaceView;
   selectedMessages: ChatMessage[];
   draft: string;
+  messageDisplayMode: MessageDisplayMode;
   scrollRef: RefObject<HTMLDivElement | null>;
   onDraftChange: (value: string) => void;
-  onSend: () => void;
+  onRecallOlderDraft: () => void;
+  onRecallNewerDraft: () => void;
+  onSend: () => Promise<void>;
   onReconnect: (network: NetworkProfile) => void;
   onDisconnect: (networkId: string) => void;
   onCloseConnection: (network: NetworkProfile) => void;
   onCloseChannel: (networkId: string, channel: string) => void;
-  onCloseQuery: (networkId: string, target: string) => void;
+  onCloseBuffer: (buffer: BufferState) => void;
   onOpenMentionedChannel: (channel: string) => void;
 };
 
 export function ChatPane(props: ChatPaneProps) {
-  const { selectedChannel, selectedNetwork, selectedQuery } = props.workspace;
+  const { selectedBuffer, selectedChannel, selectedNetwork } = props.workspace;
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -63,8 +67,8 @@ export function ChatPane(props: ChatPaneProps) {
                 Close
               </Button>
             ) : null}
-            {selectedQuery && selectedNetwork ? (
-              <Button variant="outline" size="sm" onClick={() => props.onCloseQuery(selectedNetwork.id, selectedQuery.target)}>
+            {selectedBuffer?.kind === 'query' ? (
+              <Button variant="outline" size="sm" onClick={() => props.onCloseBuffer(selectedBuffer)}>
                 <X />
                 Close
               </Button>
@@ -107,6 +111,7 @@ export function ChatPane(props: ChatPaneProps) {
                   <GroupedMessageBlock
                     key={block.messages[0].id}
                     messages={block.messages}
+                    mode={props.messageDisplayMode}
                     sourceLabel={getGroupSourceLabel(block.messages[0], isServerBuffer ? 'server' : 'chat')}
                     onOpenChannel={props.onOpenMentionedChannel}
                   />
@@ -114,6 +119,7 @@ export function ChatPane(props: ChatPaneProps) {
                   <CompactMessageRow
                     key={block.message.id}
                     message={block.message}
+                    mode={props.messageDisplayMode}
                     onOpenChannel={props.onOpenMentionedChannel}
                   />
                 ) : (
@@ -129,7 +135,11 @@ export function ChatPane(props: ChatPaneProps) {
                         isActionBody(block.message) && 'italic'
                       )}
                     >
-                      <LinkifiedMessageText text={block.message.body} onOpenChannel={props.onOpenMentionedChannel} />
+                      <FormattedMessageText
+                        text={block.message.body}
+                        mode={props.messageDisplayMode}
+                        onOpenChannel={props.onOpenMentionedChannel}
+                      />
                     </p>
                   </article>
                 )
@@ -146,14 +156,24 @@ export function ChatPane(props: ChatPaneProps) {
                 className="flex-1"
                 onChange={(event) => props.onDraftChange(event.target.value)}
                 onKeyDown={(event) => {
+                  if (event.key === 'ArrowUp' && !event.altKey && !event.ctrlKey && !event.metaKey) {
+                    event.preventDefault();
+                    props.onRecallOlderDraft();
+                    return;
+                  }
+                  if (event.key === 'ArrowDown' && !event.altKey && !event.ctrlKey && !event.metaKey) {
+                    event.preventDefault();
+                    props.onRecallNewerDraft();
+                    return;
+                  }
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
-                    props.onSend();
+                    void props.onSend();
                   }
                 }}
                 placeholder={props.workspace.composerPlaceholder}
               />
-              <Button onClick={props.onSend}>
+              <Button onClick={() => void props.onSend()}>
                 <SendHorizonal />
                 Send
               </Button>
@@ -173,7 +193,12 @@ const formatTime = (value: number) =>
     hour12: false,
   });
 
-function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: string; onOpenChannel: (channel: string) => void }) {
+function GroupedMessageBlock(props: {
+  messages: ChatMessage[];
+  mode: MessageDisplayMode;
+  sourceLabel: string;
+  onOpenChannel: (channel: string) => void;
+}) {
   const firstMessage = props.messages[0];
   const continuationMessages = props.messages.slice(1);
 
@@ -189,7 +214,7 @@ function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: stri
             </span>
           </div>
           <p className="whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground">
-            <LinkifiedMessageText text={firstMessage.body} onOpenChannel={props.onOpenChannel} />
+            <FormattedMessageText text={firstMessage.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
           </p>
         </div>
 
@@ -199,7 +224,7 @@ function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: stri
               {formatTime(message.ts)}
             </span>
             <p className="whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground">
-              <LinkifiedMessageText text={message.body} onOpenChannel={props.onOpenChannel} />
+              <FormattedMessageText text={message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
             </p>
           </div>
         ))}
@@ -208,7 +233,11 @@ function GroupedMessageBlock(props: { messages: ChatMessage[]; sourceLabel: stri
   );
 }
 
-function CompactMessageRow(props: { message: ChatMessage; onOpenChannel: (channel: string) => void }) {
+function CompactMessageRow(props: {
+  message: ChatMessage;
+  mode: MessageDisplayMode;
+  onOpenChannel: (channel: string) => void;
+}) {
   const { message } = props;
   const actionBody = isActionBody(message);
   const showNick = message.nick && (message.kind === 'line' || showKindLabel(message));
@@ -224,37 +253,10 @@ function CompactMessageRow(props: { message: ChatMessage; onOpenChannel: (channe
         ) : null}
         {showKindLabel(message) ? <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
         <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
-          <LinkifiedMessageText text={message.body} onOpenChannel={props.onOpenChannel} />
+          <FormattedMessageText text={message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
         </span>
       </p>
     </article>
-  );
-}
-
-function LinkifiedMessageText(props: { text: string; onOpenChannel: (channel: string) => void }) {
-  return linkifyMessageText(props.text).map((token, index) =>
-    token.type === 'text' ? (
-      token.value
-    ) : token.type === 'channel' ? (
-      <button
-        key={`${token.channel}-${index}`}
-        type="button"
-        onClick={() => props.onOpenChannel(token.channel)}
-        className="cursor-pointer appearance-none border-0 bg-transparent p-0 align-baseline font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
-      >
-        {token.value}
-      </button>
-    ) : (
-      <a
-        key={`${token.href}-${index}`}
-        href={token.href}
-        target={token.external ? '_blank' : undefined}
-        rel={token.external ? 'noreferrer' : undefined}
-        className="font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
-      >
-        {token.value}
-      </a>
-    )
   );
 }
 

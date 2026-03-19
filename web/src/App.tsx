@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { reducer, initialState, useStateReducer } from './app-state.js';
 import type { SocketHandle } from './client.js';
+import { useComposerHistory } from './composer-history.js';
 import { DesktopShell } from './DesktopShell.js';
+import type { MessageDisplayMode } from './message-display-mode.js';
 import { getTemplateRootId, type EditorTab } from './network-form.js';
 import { Toast } from './Toast.js';
 import { useAppActions } from './useAppActions.js';
@@ -10,11 +12,12 @@ import { deriveWorkspace, type NetworkRuntimeState } from './workspace.js';
 
 function App() {
   const [state, dispatch] = useStateReducer(reducer, initialState);
-  const [draft, setDraft] = useState('');
+  const { draft, setDraft, recordComposerEntry, recallOlderDraft, recallNewerDraft } = useComposerHistory();
   const [showNetworkManager, setShowNetworkManager] = useState(false);
   const [showNetworkEditor, setShowNetworkEditor] = useState(false);
   const [editorTab, setEditorTab] = useState<EditorTab>('servers');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [messageDisplayMode, setMessageDisplayMode] = useState<MessageDisplayMode>('colors');
   const [managedNetworkId, setManagedNetworkId] = useState<string | null>(null);
   const socketRef = useRef<SocketHandle | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -24,12 +27,12 @@ function App() {
     () =>
       deriveWorkspace({
         networks: state.networks,
+        buffers: state.buffers,
         channels: state.channels,
-        queries: state.queries,
         networkStates: state.networkStates,
         selection: state.selection,
       }),
-    [state.channels, state.networkStates, state.networks, state.queries, state.selection]
+    [state.buffers, state.channels, state.networkStates, state.networks, state.selection]
   );
 
   const managerNetworks = useMemo(
@@ -51,12 +54,16 @@ function App() {
   );
 
   const selectedMessages = useMemo(() => {
-    const selection = workspace.selection;
-    if (!selection) {
+    const selectedBuffer = workspace.selectedBuffer;
+    if (!selectedBuffer) {
       return [];
     }
-    return state.messages.filter((message) => message.networkId === selection.networkId && message.target === selection.target);
-  }, [state.messages, workspace.selection]);
+    return state.messages.filter(
+      (message) =>
+        message.networkId === selectedBuffer.networkId &&
+        message.target === selectedBuffer.target
+    );
+  }, [state.messages, workspace.selectedBuffer]);
 
   useAppLifecycle({
     state,
@@ -82,6 +89,7 @@ function App() {
     setManagedNetworkId,
     setEditorTab,
     setDraft,
+    recordComposerEntry,
     updateBanner: (kind, message) => dispatch({ type: 'set-banner', banner: { kind, message } }),
   });
 
@@ -103,12 +111,14 @@ function App() {
       <DesktopShell
         workspace={workspace}
         connectionInstances={workspace.connectionInstances}
+        buffers={state.buffers}
         channels={state.channels}
-        queries={state.queries}
         networkStates={state.networkStates}
         selection={workspace.selection}
         selectedMessages={selectedMessages}
         draft={draft}
+        messageDisplayMode={messageDisplayMode}
+        showMessageDisplayModeToggle={import.meta.env.DEV}
         scrollRef={scrollRef}
         showNetworkManager={showNetworkManager}
         showNetworkEditor={showNetworkEditor}
@@ -119,18 +129,21 @@ function App() {
         hiddenManagedNetworkName={hiddenManagedNetworkName}
         networkForm={state.networkForm}
         editorTab={editorTab}
+        onMessageDisplayModeChange={setMessageDisplayMode}
         onOpenNetworkManager={() => setShowNetworkManager(true)}
         onDraftChange={setDraft}
+        onRecallOlderDraft={recallOlderDraft}
+        onRecallNewerDraft={recallNewerDraft}
         onSendComposer={actions.sendComposer}
         onReconnectNetwork={actions.reconnectNetwork}
         onDisconnectNetwork={actions.disconnectNetwork}
         onCloseConnection={actions.closeConnection}
         onOpenMentionedChannel={actions.openMentionedChannel}
         onSelectNetworkBuffer={actions.selectNetworkBuffer}
-        onSelectChannelBuffer={actions.selectChannelBuffer}
+        onSelectTabBuffer={actions.selectTabBuffer}
         onSelectPrivateBuffer={actions.selectPrivateBuffer}
         onCloseChannel={actions.closeChannel}
-        onCloseQuery={actions.closeQuery}
+        onCloseBuffer={actions.closeBuffer}
         onSelectManagedNetwork={setManagedNetworkId}
         onToggleFavoritesOnly={() => setShowFavoritesOnly((value) => !value)}
         onCloseNetworkManager={() => setShowNetworkManager(false)}

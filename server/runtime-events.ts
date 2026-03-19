@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { ServerMessage } from '../shared/protocol.js';
+import type { BufferState, MessageKind, ServerMessage } from '../shared/protocol.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { Storage } from './storage.js';
+import type { MessageInput, Storage } from './storage.js';
 
 type RuntimeContext = {
   store: Storage;
@@ -36,13 +36,13 @@ export function handleRuntimeEvent(
     return;
   }
   const channel = runtime.store.upsertChannel({
-    id: randomUUID(),
+    id: runtime.store.getChannelByName(event.networkId, event.channel)?.id ?? randomUUID(),
     networkId: event.networkId,
     name: event.channel,
     topic: event.topic,
-    unread: runtime.store.getChannelByName(event.networkId, event.channel)?.unread ?? 0,
     users: event.users,
   });
+  runtime.send('local', { type: 'buffer.upsert', buffer: runtime.store.getBuffer(channel.id)! });
   runtime.send('local', { type: 'channel.snapshot', channel });
 }
 
@@ -50,17 +50,18 @@ const handleStatusEvent = (
   runtime: RuntimeContext,
   event: Extract<RuntimeEvent, { type: 'status' }>
 ) => {
-  const message = {
+  const kind: MessageKind = 'system';
+  const message: MessageInput = {
     id: randomUUID(),
     networkId: event.networkId,
     target: 'server',
     nick: null,
     body: event.message,
-    kind: 'system' as const,
+    kind,
     self: false,
     ts: Date.now(),
   };
-  runtime.store.appendMessage(message);
+  appendMessage(runtime, message);
   if (event.kind !== 'system') {
     runtime.send('local', {
       type: event.kind === 'error' ? 'error' : 'notice',
@@ -68,7 +69,6 @@ const handleStatusEvent = (
       message: event.message,
     });
   }
-  runtime.send('local', { type: 'message.append', message });
 };
 
 const handleMessageEvent = (
@@ -78,51 +78,67 @@ const handleMessageEvent = (
   const removedChannel = event.message.self && event.message.kind === 'part'
     ? runtime.store.getChannelByName(event.message.networkId, event.message.target)
     : null;
-  const query = !event.message.self
-    && event.message.kind === 'line'
-    && event.message.target !== 'server'
-    && !isChannelTarget(event.message.target)
-    ? runtime.store.upsertQuery(event.message.networkId, event.message.target)
-    : null;
-  const serviceNick = !event.message.self
+
+  appendMessage(runtime, event.message);
+
+  const closedServiceQuery = !event.message.self
     && event.message.target === 'server'
+    && !!event.message.nick
     && isServiceNick(event.message.nick)
-    ? event.message.nick
+    ? runtime.store.getBufferByTarget(event.message.networkId, event.message.nick)
     : null;
-  const closedServiceQuery = serviceNick && runtime.store.getQuery(event.message.networkId, serviceNick)
-    ? serviceNick
-    : null;
-  const saved = runtime.store.appendMessage(event.message);
-  let unreadChannel = null;
-  if (!event.message.self && event.message.target !== 'server' && event.message.kind !== 'system') {
-    const channel = runtime.store.getChannelByName(event.message.networkId, event.message.target);
-    if (channel) {
-      runtime.store.setChannelUnread(event.message.networkId, event.message.target, channel.unread + 1);
-      unreadChannel = runtime.store.getChannelByName(event.message.networkId, event.message.target);
-    }
+
+  if (closedServiceQuery?.kind === 'query') {
+    runtime.store.removeBuffer(closedServiceQuery.id);
+    runtime.send('local', { type: 'buffer.remove', networkId: closedServiceQuery.networkId, bufferId: closedServiceQuery.id });
   }
+
   if (removedChannel) {
     runtime.store.deleteChannelByName(event.message.networkId, event.message.target);
-  }
-  runtime.send('local', { type: 'message.append', message: saved });
-  if (unreadChannel) {
-    runtime.send('local', { type: 'channel.snapshot', channel: unreadChannel });
-  }
-  if (query) {
-    runtime.send('local', { type: 'query.open', query });
-  }
-  if (closedServiceQuery) {
-    runtime.store.deleteQuery(event.message.networkId, closedServiceQuery);
-    runtime.send('local', { type: 'query.close', networkId: event.message.networkId, target: closedServiceQuery });
-  }
-  if (removedChannel) {
-    runtime.send('local', {
-      type: 'channel.remove',
-      networkId: removedChannel.networkId,
-      channelId: removedChannel.id,
-      channel: removedChannel.name,
-    });
+    runtime.send('local', { type: 'buffer.remove', networkId: removedChannel.networkId, bufferId: removedChannel.id });
   }
 };
+
+const appendMessage = (runtime: RuntimeContext, message: MessageInput) => {
+  const bufferUpdate = resolveMessageBuffer(runtime, message);
+  const saved = runtime.store.appendMessage(message);
+
+  runtime.send('local', { type: 'message.append', message: saved });
+  if (bufferUpdate) {
+    runtime.send('local', { type: 'buffer.upsert', buffer: bufferUpdate });
+  }
+};
+
+const resolveMessageBuffer = (runtime: RuntimeContext, message: MessageInput) => {
+  const existing = runtime.store.getBufferByTarget(message.networkId, message.target);
+  const created = existing ?? createMessageBuffer(runtime, message);
+  if (!created) {
+    return null;
+  }
+
+  const unread = shouldIncrementUnread(message) ? created.unread + 1 : created.unread;
+  if (unread === created.unread) {
+    return created;
+  }
+  runtime.store.setBufferUnread(created.id, unread);
+  return runtime.store.getBuffer(created.id);
+};
+
+const createMessageBuffer = (runtime: RuntimeContext, message: MessageInput): BufferState | null => {
+  if (message.target === 'server') {
+    return runtime.store.getServerBuffer(message.networkId)
+      ?? runtime.store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' });
+  }
+  if (isChannelTarget(message.target)) {
+    return runtime.store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target });
+  }
+  if (!message.self && message.kind === 'line') {
+    return runtime.store.upsertBuffer({ networkId: message.networkId, kind: 'query', target: message.target });
+  }
+  return null;
+};
+
+const shouldIncrementUnread = (message: MessageInput) =>
+  !message.self && (message.target === 'server' || message.kind !== 'system');
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

@@ -1,4 +1,4 @@
-import type { ChannelState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
 import type { Action, State } from './app-types.js';
 import { api, type SocketHandle } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
@@ -19,12 +19,17 @@ type AppActionParams = {
   setManagedNetworkId: (value: string | null) => void;
   setEditorTab: (value: EditorTab) => void;
   setDraft: (value: string) => void;
+  recordComposerEntry: (value: string) => void;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
+
+const selectBuffer = (dispatch: (action: Action) => void, buffer: BufferState) =>
+  dispatch({ type: 'select', selection: { bufferId: buffer.id } });
 
 export function useAppActions(params: AppActionParams) {
   const showNewNetworkEditor = () => openNewNetworkEditor(params);
   const showExistingNetworkEditor = (network: NetworkProfile) => openExistingNetworkEditor(network, params);
+
   const submitNetwork = async () => {
     if (!params.state.networkForm.name.trim()) return params.updateBanner('error', 'Network name is required');
     if (!params.state.networkForm.host.trim()) return params.updateBanner('error', 'Server address is required');
@@ -48,6 +53,9 @@ export function useAppActions(params: AppActionParams) {
         autoJoin: parseAutoJoin(params.state.networkForm.autoJoin),
       });
       params.dispatch({ type: 'upsert-network', network: result.network });
+      if (result.serverBuffer) {
+        params.dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
+      }
       params.dispatch({ type: 'reset-network-form', form: toForm(result.network) });
       params.setManagedNetworkId(result.network.id);
       params.setShowNetworkEditor(false);
@@ -57,6 +65,7 @@ export function useAppActions(params: AppActionParams) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to save network');
     }
   };
+
   const deleteNetwork = async (networkId: string) => {
     try {
       const result = await api.deleteNetwork(networkId);
@@ -68,19 +77,24 @@ export function useAppActions(params: AppActionParams) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to delete network');
     }
   };
+
   const connectNetwork = async (network: NetworkProfile) => {
     try {
       const instance = await api.saveNetwork(createConnectionInstancePayload(network));
       params.dispatch({ type: 'upsert-network', network: instance.network });
+      if (instance.serverBuffer) {
+        params.dispatch({ type: 'upsert-buffer', buffer: instance.serverBuffer });
+        selectBuffer(params.dispatch, instance.serverBuffer);
+      }
       params.dispatch({ type: 'network-connecting', networkId: instance.network.id, nick: instance.network.nick });
       await api.connectNetwork(instance.network.id);
-      params.dispatch({ type: 'select', selection: { networkId: instance.network.id, target: 'server', channelId: null } });
       params.setShowNetworkManager(false);
       params.updateBanner('notice', 'Opened connection instance');
     } catch (error) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to connect');
     }
   };
+
   const reconnectNetwork = async (network: NetworkProfile) => {
     try {
       params.dispatch({ type: 'network-connecting', networkId: network.id, nick: network.nick });
@@ -91,6 +105,7 @@ export function useAppActions(params: AppActionParams) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to reconnect');
     }
   };
+
   const disconnectNetwork = async (networkId: string) => {
     try {
       await api.disconnectNetwork(networkId);
@@ -99,6 +114,7 @@ export function useAppActions(params: AppActionParams) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to disconnect');
     }
   };
+
   const closeConnection = async (network: NetworkProfile) => {
     try {
       const result = await api.deleteNetwork(network.id);
@@ -110,35 +126,45 @@ export function useAppActions(params: AppActionParams) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to close connection');
     }
   };
+
   const saveFavorite = async (network: NetworkProfile, favorite: boolean) => {
     try {
       const result = await api.saveNetwork({ ...network, favorite });
       params.dispatch({ type: 'upsert-network', network: result.network });
+      if (result.serverBuffer) {
+        params.dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
+      }
       params.updateBanner('notice', favorite ? 'Marked as favorite' : 'Removed from favorites');
     } catch (error) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to update favorite');
     }
   };
-  const selectNetworkBuffer = (network: NetworkProfile) =>
-    params.dispatch({ type: 'select', selection: { networkId: network.id, target: 'server', channelId: null } });
-  const selectChannelBuffer = (network: NetworkProfile, channel: ChannelState) =>
-    params.dispatch({ type: 'select', selection: { networkId: network.id, target: channel.name, channelId: channel.id } });
-  const openMentionedChannel = (channelName: string) => {
+
+  const selectNetworkBuffer = (network: NetworkProfile) => {
+    const buffer = params.state.buffers.find((candidate) => candidate.networkId === network.id && candidate.kind === 'server') ?? null;
+    if (buffer) {
+      selectBuffer(params.dispatch, buffer);
+    }
+  };
+
+  const selectTabBuffer = (buffer: BufferState) => selectBuffer(params.dispatch, buffer);
+
+  const openMentionedChannel = async (channelName: string) => {
     const network = params.workspace.selectedNetwork;
     if (!network) {
       return;
     }
 
-    const existingChannel =
-      params.state.channels.find(
-        (channel) => channel.networkId === network.id && channel.name.toLowerCase() === channelName.toLowerCase()
+    const existingBuffer =
+      params.state.buffers.find(
+        (buffer) =>
+          buffer.networkId === network.id &&
+          buffer.kind === 'channel' &&
+          buffer.target.toLowerCase() === channelName.toLowerCase()
       ) ?? null;
 
-    if (existingChannel) {
-      params.dispatch({
-        type: 'select',
-        selection: { networkId: network.id, target: existingChannel.name, channelId: existingChannel.id },
-      });
+    if (existingBuffer) {
+      selectBuffer(params.dispatch, existingBuffer);
       return;
     }
 
@@ -146,23 +172,39 @@ export function useAppActions(params: AppActionParams) {
       params.updateBanner('error', `Connect first to join ${channelName}`);
       return;
     }
-    if (!params.socketRef.current) {
-      params.updateBanner('error', 'Socket not connected');
+
+    try {
+      const result = await api.openChannel(network.id, channelName);
+      params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
+      selectBuffer(params.dispatch, result.buffer);
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : `Failed to join ${channelName}`);
+    }
+  };
+
+  const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
+    const existingBuffer =
+      params.state.buffers.find(
+        (buffer) =>
+          buffer.networkId === network.id &&
+          buffer.kind === 'query' &&
+          buffer.target.toLowerCase() === nick.toLowerCase()
+      ) ?? null;
+
+    if (existingBuffer) {
+      selectBuffer(params.dispatch, existingBuffer);
       return;
     }
 
-    params.dispatch({ type: 'select', selection: { networkId: network.id, target: channelName, channelId: null } });
-    params.socketRef.current.send({ type: 'channel.join', networkId: network.id, channel: channelName });
+    try {
+      const result = await api.openQuery(network.id, nick);
+      params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
+      selectBuffer(params.dispatch, result.buffer);
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
+    }
   };
-  const selectPrivateBuffer = (network: NetworkProfile, nick: string) => {
-    api
-      .openQuery(network.id, nick)
-      .then((result) => {
-        params.dispatch({ type: 'upsert-query', query: result.query });
-        params.dispatch({ type: 'select', selection: { networkId: network.id, target: nick, channelId: null } });
-      })
-      .catch((error) => params.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message'));
-  };
+
   const closeChannel = (networkId: string, channel: string) => {
     if (!params.socketRef.current) {
       params.updateBanner('error', 'Socket not connected');
@@ -170,27 +212,43 @@ export function useAppActions(params: AppActionParams) {
     }
     params.socketRef.current.send({ type: 'channel.part', networkId, channel });
   };
-  const closeQuery = async (networkId: string, target: string) => {
+
+  const closeBuffer = async (buffer: BufferState) => {
     try {
-      await api.closeQuery(networkId, target);
-      params.dispatch({ type: 'remove-query', networkId, target });
+      await api.closeBuffer(buffer.id);
+      params.dispatch({ type: 'remove-buffer', networkId: buffer.networkId, bufferId: buffer.id });
     } catch (error) {
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to close private message');
     }
   };
-  const sendComposer = () =>
-    sendComposerMessage({
-      draft: params.draft,
-      dispatch: params.dispatch,
-      setDraft: params.setDraft,
-      socket: params.socketRef.current,
-      updateBanner: params.updateBanner,
-      workspace: params.workspace,
-    });
+
+  const sendComposer = async () => {
+    try {
+      const submitted = await sendComposerMessage({
+        draft: params.draft,
+        dispatch: params.dispatch,
+        setDraft: params.setDraft,
+        socket: params.socketRef.current,
+        updateBanner: params.updateBanner,
+        workspace: params.workspace,
+        onOpenChannel: async (networkId, channel) => {
+          const result = await api.openChannel(networkId, channel);
+          params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
+          selectBuffer(params.dispatch, result.buffer);
+        },
+      });
+      if (submitted) {
+        params.recordComposerEntry(submitted);
+      }
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to send message');
+    }
+  };
+
   return {
+    closeBuffer,
     closeChannel,
     closeConnection,
-    closeQuery,
     connectNetwork,
     deleteNetwork,
     disconnectNetwork,
@@ -199,9 +257,9 @@ export function useAppActions(params: AppActionParams) {
     openNewNetworkEditor: showNewNetworkEditor,
     reconnectNetwork,
     saveFavorite,
-    selectChannelBuffer,
     selectNetworkBuffer,
     selectPrivateBuffer,
+    selectTabBuffer,
     sendComposer,
     submitNetwork,
   };

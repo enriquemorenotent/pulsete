@@ -1,4 +1,4 @@
-import type { AppSnapshot, ChannelState, NetworkProfile, QueryBuffer } from '../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
 
 export type NetworkRow = {
   id: string;
@@ -19,21 +19,20 @@ export type NetworkRow = {
   updatedAt: number;
 };
 
-export type ChannelRow = {
+export type BufferRow = {
   id: string;
   networkId: string;
-  name: string;
-  topic: string;
+  kind: BufferState['kind'];
+  target: string;
   unread: number;
-  users: string;
   createdAt: number;
   updatedAt: number;
 };
 
-export type QueryRow = {
+export type ChannelRow = {
   id: string;
-  networkId: string;
-  target: string;
+  topic: string;
+  users: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -59,8 +58,13 @@ export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword'> & {
   clearPassword?: boolean;
 };
 
-export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'unread' | 'users'> &
-  Partial<Pick<ChannelState, 'id' | 'topic' | 'unread' | 'users'>>;
+export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'users'> &
+  Partial<Pick<ChannelState, 'id' | 'topic' | 'users'>> & {
+    unread?: number;
+  };
+
+export type BufferInput = Omit<BufferState, 'id' | 'unread'> &
+  Partial<Pick<BufferState, 'id' | 'unread'>>;
 
 export type MessageInput = {
   id: string;
@@ -76,5 +80,3 @@ export type MessageInput = {
 export type CountRow = { count: number };
 
 export type NetworkCountRow = CountRow;
-
-export type QueryRecord = QueryBuffer;

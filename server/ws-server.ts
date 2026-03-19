@@ -40,22 +40,13 @@ const handleClientMessage = (
         context.runtime.disconnect(message.networkId);
         return;
       case 'channel.join':
-        context.runtime.join(message.networkId, message.channel);
+        context.runtime.send({ type: 'buffer.upsert', buffer: context.runtime.join(message.networkId, message.channel) });
         return;
       case 'channel.part':
         context.runtime.part(message.networkId, message.channel);
         return;
       case 'query.open': {
-        const query = context.runtime.openQuery(message.networkId, message.target);
-        context.runtime.send({ type: 'query.open', query });
-        return;
-      }
-      case 'query.close': {
-        context.runtime.send({
-          type: 'query.close',
-          networkId: message.networkId,
-          target: context.runtime.closeQuery(message.networkId, message.target),
-        });
+        context.runtime.send({ type: 'buffer.upsert', buffer: context.runtime.openQuery(message.networkId, message.target) });
         return;
       }
       case 'message.send':

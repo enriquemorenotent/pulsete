@@ -1,22 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import { historyWindowLimit, type AppSnapshot, type ChannelState, type NetworkProfile, type QueryBuffer } from '../shared/protocol.js';
+import { historyWindowLimit, type AppSnapshot, type BufferState, type ChannelState, type NetworkProfile } from '../shared/protocol.js';
 import { createSecretBox } from './network-secret.js';
 import { createDatabase } from './storage-db.js';
 import {
   deleteChannelByName,
-  deleteQuery,
+  getBuffer,
+  getBufferByTarget,
   getChannel,
   getChannelByName,
-  getQuery,
+  getServerBuffer,
+  listBuffers,
   listChannels,
-  listQueries,
-  markChannelRead,
-  setChannelUnread,
+  markBufferRead,
+  removeBuffer,
+  setBufferUnread,
   updateChannelTopic,
   updateChannelUsers,
+  upsertBuffer,
   upsertChannel,
-  upsertQuery,
 } from './storage-buffers.js';
 import { appendMessage, getMessageById, listMessages, listRecentMessages } from './storage-messages.js';
 import {
@@ -136,25 +138,37 @@ export class Storage {
     return listChannels(this.db, resolveOptionalNetworkId(this.db, networkIdOrLegacyUserId, maybeNetworkId));
   }
 
-  listQueries(networkId?: string): QueryBuffer[];
-  listQueries(_legacyUserId: string, networkId?: string): QueryBuffer[];
-  listQueries(networkIdOrLegacyUserId?: string, maybeNetworkId?: string) {
-    return listQueries(this.db, resolveOptionalNetworkId(this.db, networkIdOrLegacyUserId, maybeNetworkId));
+  listBuffers(networkId?: string): BufferState[];
+  listBuffers(_legacyUserId: string, networkId?: string): BufferState[];
+  listBuffers(networkIdOrLegacyUserId?: string, maybeNetworkId?: string) {
+    return listBuffers(this.db, resolveOptionalNetworkId(this.db, networkIdOrLegacyUserId, maybeNetworkId));
+  }
+
+  getBuffer(bufferId: string): BufferState | null;
+  getBuffer(_legacyUserId: string, bufferId: string): BufferState | null;
+  getBuffer(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
+    return getBuffer(this.db, resolveOptionalId(bufferIdOrLegacyUserId, maybeBufferId));
+  }
+
+  getBufferByTarget(networkId: string, target: string): BufferState | null;
+  getBufferByTarget(_legacyUserId: string, networkId: string, target: string): BufferState | null;
+  getBufferByTarget(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
+    const [networkId, target] = maybeTarget
+      ? [networkIdOrTarget, maybeTarget]
+      : [networkIdOrLegacyUserId, networkIdOrTarget];
+    return getBufferByTarget(this.db, networkId, target);
+  }
+
+  getServerBuffer(networkId: string): BufferState | null;
+  getServerBuffer(_legacyUserId: string, networkId: string): BufferState | null;
+  getServerBuffer(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
+    return getServerBuffer(this.db, resolveOptionalId(networkIdOrLegacyUserId, maybeNetworkId));
   }
 
   getChannel(channelId: string): ChannelState | null;
   getChannel(_legacyUserId: string, channelId: string): ChannelState | null;
   getChannel(channelIdOrLegacyUserId: string, maybeChannelId?: string) {
     return getChannel(this.db, resolveOptionalId(channelIdOrLegacyUserId, maybeChannelId));
-  }
-
-  getQuery(networkId: string, target: string): QueryBuffer | null;
-  getQuery(_legacyUserId: string, networkId: string, target: string): QueryBuffer | null;
-  getQuery(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
-    const [networkId, target] = maybeTarget
-      ? [networkIdOrTarget, maybeTarget]
-      : [networkIdOrLegacyUserId, networkIdOrTarget];
-    return getQuery(this.db, networkId, target);
   }
 
   getChannelByName(networkId: string, name: string): ChannelState | null;
@@ -166,19 +180,16 @@ export class Storage {
     return getChannelByName(this.db, networkId, name);
   }
 
-  markChannelRead(channelId: string): void;
-  markChannelRead(_legacyUserId: string, channelId: string): void;
-  markChannelRead(channelIdOrLegacyUserId: string, maybeChannelId?: string) {
-    markChannelRead(this.db, resolveOptionalId(channelIdOrLegacyUserId, maybeChannelId));
+  markBufferRead(bufferId: string): void;
+  markBufferRead(_legacyUserId: string, bufferId: string): void;
+  markBufferRead(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
+    markBufferRead(this.db, resolveOptionalId(bufferIdOrLegacyUserId, maybeBufferId));
   }
 
-  deleteQuery(networkId: string, target: string): void;
-  deleteQuery(_legacyUserId: string, networkId: string, target: string): void;
-  deleteQuery(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
-    const [networkId, target] = maybeTarget
-      ? [networkIdOrTarget, maybeTarget]
-      : [networkIdOrLegacyUserId, networkIdOrTarget];
-    deleteQuery(this.db, networkId, target);
+  removeBuffer(bufferId: string): BufferState | null;
+  removeBuffer(_legacyUserId: string, bufferId: string): BufferState | null;
+  removeBuffer(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
+    return removeBuffer(this.db, resolveOptionalId(bufferIdOrLegacyUserId, maybeBufferId));
   }
 
   deleteChannelByName(networkId: string, channelName: string): void;
@@ -190,13 +201,13 @@ export class Storage {
     deleteChannelByName(this.db, networkId, channelName);
   }
 
-  setChannelUnread(networkId: string, channelName: string, unread: number): void;
-  setChannelUnread(_legacyUserId: string, networkId: string, channelName: string, unread: number): void;
-  setChannelUnread(networkIdOrLegacyUserId: string, networkIdOrName: string, channelNameOrUnread: string | number, maybeUnread?: number) {
-    const [networkId, channelName, unread] = typeof channelNameOrUnread === 'number'
-      ? [networkIdOrLegacyUserId, networkIdOrName, channelNameOrUnread]
-      : [networkIdOrName, channelNameOrUnread, maybeUnread ?? 0];
-    setChannelUnread(this.db, networkId, channelName, unread);
+  setBufferUnread(bufferId: string, unread: number): void;
+  setBufferUnread(_legacyUserId: string, bufferId: string, unread: number): void;
+  setBufferUnread(bufferIdOrLegacyUserId: string, unreadOrLegacyBufferId: string | number, maybeUnread?: number) {
+    const [bufferId, unread] = typeof unreadOrLegacyBufferId === 'number'
+      ? [bufferIdOrLegacyUserId, unreadOrLegacyBufferId]
+      : [unreadOrLegacyBufferId, maybeUnread ?? 0];
+    setBufferUnread(this.db, bufferId, unread);
   }
 
   updateChannelUsers(networkId: string, channelName: string, users: string[]): void;
@@ -241,23 +252,32 @@ export class Storage {
   upsertNetwork(input: NetworkInput): NetworkProfile;
   upsertNetwork(_legacyUserId: string, input: NetworkInput): NetworkProfile;
   upsertNetwork(inputOrLegacyUserId: NetworkInput | string, maybeInput?: NetworkInput) {
-    return upsertNetwork(this.db, resolveInput(inputOrLegacyUserId, maybeInput), this.secretBox);
+    const network = upsertNetwork(this.db, resolveInput(inputOrLegacyUserId, maybeInput), this.secretBox);
+    if (network.managerHidden) {
+      this.ensureServerBuffer(network.id);
+    }
+    return network;
   }
 
   upsertChannel(input: ChannelInput): ChannelState;
   upsertChannel(_legacyUserId: string, input: ChannelInput): ChannelState;
   upsertChannel(inputOrLegacyUserId: ChannelInput | string, maybeInput?: ChannelInput) {
-    const input = resolveInput(inputOrLegacyUserId, maybeInput);
-    return upsertChannel(this.db, input, (networkId, name) => this.getChannelByName(networkId, name));
+    return upsertChannel(this.db, resolveInput(inputOrLegacyUserId, maybeInput));
   }
 
-  upsertQuery(networkId: string, target: string): QueryBuffer;
-  upsertQuery(_legacyUserId: string, networkId: string, target: string): QueryBuffer;
+  upsertBuffer(input: { id?: string; networkId: string; kind: BufferState['kind']; target: string; unread?: number }): BufferState;
+  upsertBuffer(_legacyUserId: string, input: { id?: string; networkId: string; kind: BufferState['kind']; target: string; unread?: number }): BufferState;
+  upsertBuffer(inputOrLegacyUserId: { id?: string; networkId: string; kind: BufferState['kind']; target: string; unread?: number } | string, maybeInput?: { id?: string; networkId: string; kind: BufferState['kind']; target: string; unread?: number }) {
+    return upsertBuffer(this.db, resolveInput(inputOrLegacyUserId, maybeInput));
+  }
+
+  upsertQuery(networkId: string, target: string): BufferState;
+  upsertQuery(_legacyUserId: string, networkId: string, target: string): BufferState;
   upsertQuery(networkIdOrLegacyUserId: string, networkIdOrTarget: string, maybeTarget?: string) {
     const [networkId, target] = maybeTarget
       ? [networkIdOrTarget, maybeTarget]
       : [networkIdOrLegacyUserId, networkIdOrTarget];
-    return upsertQuery(this.db, networkId, target, (nextNetworkId, nextTarget) => this.getQuery(nextNetworkId, nextTarget));
+    return upsertBuffer(this.db, { networkId, kind: 'query', target });
   }
 
   appendMessage(input: MessageInput): MessageInput;
@@ -270,17 +290,13 @@ export class Storage {
   snapshot(_legacyUserId: string): AppSnapshot;
   snapshot() {
     this.ensureDefaultNetworks();
+    this.ensureServerBuffers();
     const networks = this.listNetworks();
-    const channels = this.listChannels();
-    const activeNetworkId = networks[0]?.id ?? null;
-    const activeChannel = channels.find((channel) => channel.networkId === activeNetworkId);
     return {
       networks,
-      channels,
-      queries: this.listQueries(),
+      buffers: this.listBuffers(),
+      channels: this.listChannels(),
       messages: this.listRecentMessages(historyWindowLimit),
-      activeNetworkId,
-      activeBuffer: activeChannel ? `${activeNetworkId}:${activeChannel.name}` : activeNetworkId ? `${activeNetworkId}:server` : '',
     };
   }
 
@@ -296,6 +312,22 @@ export class Storage {
     const user = { id: randomUUID(), username, password };
     this.legacyUsers.set(user.id, user);
     return { id: user.id, username: user.username };
+  }
+
+  private ensureServerBuffer(networkId: string) {
+    if (!getServerBuffer(this.db, networkId)) {
+      upsertBuffer(this.db, {
+        networkId,
+        kind: 'server',
+        target: 'server',
+      });
+    }
+  }
+
+  private ensureServerBuffers() {
+    for (const network of this.listNetworks().filter((item) => item.managerHidden)) {
+      this.ensureServerBuffer(network.id);
+    }
   }
 }
 

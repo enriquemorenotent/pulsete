@@ -299,9 +299,9 @@ test('channel events keep the untouched half of channel state', () => {
     networkId: network.id,
     name: '#help',
     topic: 'new topic',
-    unread: 2,
     users: ['alice', 'bob'],
   });
+  assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 2);
 
   handleRuntimeEvent({ store: storage, send() {} }, {
     type: 'channel',
@@ -314,9 +314,9 @@ test('channel events keep the untouched half of channel state', () => {
     networkId: network.id,
     name: '#help',
     topic: 'new topic',
-    unread: 2,
     users: ['carol'],
   });
+  assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 2);
 });
 
 test('system status events stay in the server buffer without banner notifications', () => {
@@ -356,6 +356,7 @@ test('runtime join preserves existing channel metadata', () => {
   runtime.join(network.id, '#help');
 
   assert.deepEqual(storage.getChannelByName(network.id, '#help'), existing);
+  assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 3);
 });
 
 test('runtime validation rejects missing networks and invalid targets before touching storage', () => {
@@ -363,16 +364,20 @@ test('runtime validation rejects missing networks and invalid targets before tou
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const network = storage.upsertNetwork(createNetworkInput());
-  storage.upsertQuery(network.id, 'helper');
+  const query = storage.upsertQuery(network.id, 'helper');
+  const channel = storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+  });
 
   assert.throws(() => runtime.join('missing-network', '#help'), /Network not found/);
   assert.throws(() => runtime.part('missing-network', '#help'), /Network not found/);
-  assert.throws(() => runtime.closeQuery('missing-network', 'helper'), /Network not found/);
+  assert.throws(() => runtime.closeBuffer('missing-buffer'), /Buffer not found/);
   assert.throws(() => runtime.join(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
   assert.throws(() => runtime.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
   assert.throws(() => runtime.openQuery(network.id, '   '), /Private-message target is required/);
   assert.throws(() => runtime.openQuery(network.id, '#help'), /Private-message target is required/);
-  assert.throws(() => runtime.closeQuery(network.id, '#help'), /Private-message target is required/);
+  assert.throws(() => runtime.closeBuffer(channel.id), /Only private message buffers can be closed/);
   assert.throws(() => runtime.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
   assert.throws(
     () => runtime.sendMessage(network.id, '#help', 'hello\r\nOPER root'),
@@ -383,8 +388,8 @@ test('runtime validation rejects missing networks and invalid targets before tou
     /Raw command cannot contain carriage returns or line feeds/
   );
 
-  assert.deepEqual(storage.listChannels(network.id), []);
-  assert.equal(storage.getQuery(network.id, 'helper')?.target, 'helper');
+  assert.deepEqual(storage.listChannels(network.id), [channel]);
+  assert.equal(storage.getBuffer(query.id)?.target, 'helper');
   assert.deepEqual(storage.listMessages(network.id, 'server', 10), []);
 });
 
@@ -426,7 +431,7 @@ test('runtime sendMessage does not persist unsent direct messages while disconne
 
   runtime.sendMessage(network.id, 'helper', 'hello');
 
-  assert.deepEqual(storage.listQueries(), []);
+  assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
   assert.deepEqual(storage.listMessages(network.id, 'helper', 10), []);
   assert.equal(storage.listMessages(network.id, 'server', 10).at(-1)?.body, 'Not connected');
 });
@@ -545,7 +550,7 @@ test('deleteNetwork removes hidden clone connections when deleting a template', 
   }
 });
 
-test('self part events remove the channel and emit channel.remove', () => {
+test('self part events remove the channel and emit buffer.remove', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
@@ -578,12 +583,11 @@ test('self part events remove the channel and emit channel.remove', () => {
   assert.equal(storage.getChannelByName(network.id, '#help'), null);
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.deepEqual(
-    sent.find((message) => message.type === 'channel.remove'),
+    sent.find((message) => message.type === 'buffer.remove'),
     {
-      type: 'channel.remove',
+      type: 'buffer.remove',
       networkId: network.id,
-      channelId: channel.id,
-      channel: '#help',
+      bufferId: channel.id,
     }
   );
 });
@@ -611,11 +615,11 @@ test('incoming private messages open query buffers automatically', () => {
     }
   );
 
-  assert.equal(storage.getQuery(network.id, 'helper')?.target, 'helper');
+  assert.equal(storage.getBufferByTarget(network.id, 'helper')?.target, 'helper');
   assert.ok(sent.some((message) => message.type === 'message.append'));
-  assert.deepEqual(sent.find((message) => message.type === 'query.open'), {
-    type: 'query.open',
-    query: storage.getQuery(network.id, 'helper'),
+  assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer: storage.getBufferByTarget(network.id, 'helper'),
   });
 });
 
@@ -642,16 +646,22 @@ test('self-sent private messages do not open query buffers automatically', () =>
     }
   );
 
-  assert.equal(storage.getQuery(network.id, 'helper'), null);
+  assert.equal(storage.getBufferByTarget(network.id, 'helper'), null);
   assert.ok(sent.some((message) => message.type === 'message.append'));
-  assert.equal(sent.some((message) => message.type === 'query.open'), false);
+  assert.equal(
+    sent.some((message) => {
+      const buffer = message.buffer as { kind?: string } | undefined;
+      return message.type === 'buffer.upsert' && buffer?.kind === 'query';
+    }),
+    false
+  );
 });
 
 test('service messages on the server buffer close stale service queries', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
-  storage.upsertQuery(network.id, 'NickServ');
+  const query = storage.upsertQuery(network.id, 'NickServ');
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
@@ -671,11 +681,11 @@ test('service messages on the server buffer close stale service queries', () => 
     }
   );
 
-  assert.equal(storage.getQuery(network.id, 'NickServ'), null);
+  assert.equal(storage.getBufferByTarget(network.id, 'NickServ'), null);
   assert.ok(sent.some((message) => message.type === 'message.append'));
-  assert.deepEqual(sent.find((message) => message.type === 'query.close'), {
-    type: 'query.close',
+  assert.deepEqual(sent.find((message) => message.type === 'buffer.remove'), {
+    type: 'buffer.remove',
     networkId: network.id,
-    target: 'NickServ',
+    bufferId: query.id,
   });
 });

@@ -35,16 +35,16 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
   }
   if (req.method === 'POST' && pathname === '/api/networks') {
     const input = normalizeNetworkInput(await readJson(req));
-    const network = context.runtime.saveNetwork(input);
-    writeJson(res, 200, { network });
+    const result = context.runtime.saveNetwork(input);
+    writeJson(res, 200, result);
     return true;
   }
   const networkMatch = pathname.match(/^\/api\/networks\/([^/]+)$/);
   if (networkMatch && req.method === 'PUT') {
     const networkId = decodeRouteParam(networkMatch[1]);
     const input = normalizeNetworkInput(await readJson(req), networkId);
-    const network = context.runtime.saveNetwork(input);
-    writeJson(res, 200, { network });
+    const result = context.runtime.saveNetwork(input);
+    writeJson(res, 200, result);
     return true;
   }
   if (networkMatch && req.method === 'DELETE') {

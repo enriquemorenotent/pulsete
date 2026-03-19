@@ -11,85 +11,128 @@ type ComposerParams = {
   socket: SocketHandle | null;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
   workspace: WorkspaceView;
+  onOpenChannel: (networkId: string, channel: string) => Promise<void>;
 };
 
-export function sendComposerMessage(params: ComposerParams) {
+export async function sendComposerMessage(params: ComposerParams) {
   const text = params.draft.trim();
-  if (!text || !params.socket || !params.workspace.selection) {
-    return;
+  const selection = params.workspace.selectedBuffer;
+  if (!text || !params.socket || !selection) {
+    return null;
   }
   if (params.workspace.composerMode === 'hidden') {
-    return;
+    return null;
   }
   if (params.workspace.composerMode === 'commands' && !text.startsWith('/')) {
     params.updateBanner('error', 'The server buffer only accepts commands such as /join');
-    return;
+    return null;
   }
   if (text.startsWith('/')) {
-    runSlashCommand(text, params);
-    return;
+    return runSlashCommand(text, params);
   }
-  if (params.workspace.selection.target === 'server') {
+  if (selection.kind === 'server') {
     params.updateBanner('error', 'Select a channel or use /join first');
-    return;
+    return null;
   }
   params.socket.send({
     type: 'message.send',
-    networkId: params.workspace.selection.networkId,
-    target: params.workspace.selection.target,
+    networkId: selection.networkId,
+    target: selection.target,
     body: text,
     kind: 'message',
   });
   params.setDraft('');
+  return text;
 }
 
-function runSlashCommand(text: string, params: ComposerParams) {
-  const selection = params.workspace.selection;
+async function runSlashCommand(text: string, params: ComposerParams) {
+  const selection = params.workspace.selectedBuffer;
   const socket = params.socket;
   if (!selection || !socket) {
     return;
   }
   const [firstWord, ...rest] = text.slice(1).split(' ');
-  const command = firstWord.toLowerCase();
+  const command = normalizeCommand(firstWord);
   const remainder = rest.join(' ').trim();
 
   switch (command) {
     case 'join':
-      if (!remainder) return params.updateBanner('error', 'Usage: /join #channel');
-      if (!isChannelTarget(remainder)) {
-        return params.updateBanner('error', 'Channel name must start with #, &, +, or !');
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /join #channel');
+        return null;
       }
-      socket.send({ type: 'channel.join', networkId: selection.networkId, channel: remainder });
-      params.dispatch({ type: 'select', selection: { networkId: selection.networkId, target: remainder, channelId: null } });
+      if (!isChannelTarget(remainder)) {
+        params.updateBanner('error', 'Channel name must start with #, &, +, or !');
+        return null;
+      }
+      await params.onOpenChannel(selection.networkId, remainder);
       break;
     case 'part': {
       const channel = remainder || selection.target;
       socket.send({ type: 'channel.part', networkId: selection.networkId, channel });
-      params.dispatch({ type: 'select', selection: { networkId: selection.networkId, target: 'server', channelId: null } });
       break;
     }
     case 'msg': {
-      if (!remainder) return params.updateBanner('error', 'Usage: /msg target text');
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /msg target text');
+        return null;
+      }
       const [target, ...messageParts] = remainder.split(' ');
       const body = messageParts.join(' ').trim();
-      if (!target || !body) return params.updateBanner('error', 'Usage: /msg target text');
+      if (!target || !body) {
+        params.updateBanner('error', 'Usage: /msg target text');
+        return null;
+      }
       socket.send({ type: 'message.send', networkId: selection.networkId, target, body, kind: 'message' });
       break;
     }
+    case 'whois':
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /whois nick');
+        return null;
+      }
+      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `WHOIS ${remainder}` });
+      break;
+    case 'nickserv':
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /ns command');
+        return null;
+      }
+      socket.send({ type: 'message.send', networkId: selection.networkId, target: 'NickServ', body: remainder, kind: 'message' });
+      break;
+    case 'chanserv':
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /cs command');
+        return null;
+      }
+      socket.send({ type: 'message.send', networkId: selection.networkId, target: 'ChanServ', body: remainder, kind: 'message' });
+      break;
     case 'me':
-      if (!remainder) return params.updateBanner('error', 'Usage: /me action');
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /me action');
+        return null;
+      }
       socket.send({ type: 'message.send', networkId: selection.networkId, target: selection.target, body: remainder, kind: 'action' });
       break;
     case 'nick':
-      if (!remainder) return params.updateBanner('error', 'Usage: /nick newnick');
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /nick newnick');
+        return null;
+      }
       socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `NICK ${remainder}` });
       break;
     case 'topic':
-      if (!remainder) return params.updateBanner('error', 'Usage: /topic text');
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /topic text');
+        return null;
+      }
       socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `TOPIC ${selection.target} :${remainder}` });
       break;
     case 'raw':
-      if (!remainder) return params.updateBanner('error', 'Usage: /raw IRC line');
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /raw IRC line');
+        return null;
+      }
       socket.send({ type: 'raw.send', networkId: selection.networkId, raw: remainder });
       break;
     case 'connect':
@@ -99,8 +142,36 @@ function runSlashCommand(text: string, params: ComposerParams) {
       socket.send({ type: 'network.disconnect', networkId: selection.networkId });
       break;
     default:
-      return params.updateBanner('error', `Unknown command: /${command}`);
+      params.updateBanner('error', `Unknown command: /${command}`);
+      return null;
   }
 
   params.setDraft('');
+  return text;
 }
+
+const normalizeCommand = (value: string) => {
+  const command = value.toLowerCase();
+  if (command === 'j') {
+    return 'join';
+  }
+  if (command === 'p') {
+    return 'part';
+  }
+  if (command === 'm') {
+    return 'msg';
+  }
+  if (command === 'n') {
+    return 'nick';
+  }
+  if (command === 'w') {
+    return 'whois';
+  }
+  if (command === 'ns') {
+    return 'nickserv';
+  }
+  if (command === 'cs') {
+    return 'chanserv';
+  }
+  return command;
+};

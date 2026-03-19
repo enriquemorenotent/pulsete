@@ -80,32 +80,33 @@ export function useAppLifecycle(params: LifecycleParams) {
   }, [params.state.phase]);
 
   useEffect(() => {
-    if (params.workspace.selectedChannel?.unread && params.workspace.selectedChannel.unread > 0) {
-      api.markChannelRead(params.workspace.selectedChannel.id).catch(() => undefined);
+    const unread = params.workspace.selectedBuffer?.unread ?? 0;
+    if (params.workspace.selectedBuffer && unread > 0) {
+      api.markBufferRead(params.workspace.selectedBuffer.id).catch(() => undefined);
     }
-  }, [params.workspace.selectedChannel?.id, params.workspace.selectedChannel?.unread]);
+  }, [params.workspace.selectedBuffer?.id, params.workspace.selectedBuffer?.unread]);
 
   useEffect(() => {
-    if (!params.workspace.selection) {
+    if (!params.workspace.selectedBuffer) {
       return;
     }
     let active = true;
     params.dispatch({ type: 'set-history-loading', value: true });
     api
-      .loadHistory(params.workspace.selection.networkId, params.workspace.selection.target)
+      .loadHistory(params.workspace.selectedBuffer.id)
       .then((payload) => active && params.dispatch({ type: 'append-messages', messages: payload.messages }))
       .finally(() => active && params.dispatch({ type: 'set-history-loading', value: false }));
     return () => {
       active = false;
     };
-  }, [params.workspace.selection]);
+  }, [params.workspace.selectedBuffer?.id]);
 
   useEffect(() => {
     const node = params.scrollRef.current;
     if (node) {
       node.scrollTop = node.scrollHeight;
     }
-  }, [params.state.messages.length, params.workspace.selection]);
+  }, [params.state.messages.length, params.workspace.selectedBuffer?.id]);
 
   useEffect(() => {
     const nextManagedNetworkId = resolveManagedNetworkId({
@@ -133,10 +134,9 @@ function handleServerMessage(message: ServerMessage, dispatch: (action: Action) 
   }
   if (message.type === 'network.upsert') return void dispatch({ type: 'upsert-network', network: message.network });
   if (message.type === 'network.remove') return void dispatch({ type: 'remove-network', networkId: message.networkId });
+  if (message.type === 'buffer.upsert') return void dispatch({ type: 'upsert-buffer', buffer: message.buffer });
+  if (message.type === 'buffer.remove') return void dispatch({ type: 'remove-buffer', networkId: message.networkId, bufferId: message.bufferId });
   if (message.type === 'channel.snapshot') return void dispatch({ type: 'upsert-channel', channel: message.channel });
-  if (message.type === 'channel.remove') return void dispatch({ type: 'remove-channel', channelId: message.channelId, networkId: message.networkId });
-  if (message.type === 'query.open') return void dispatch({ type: 'upsert-query', query: message.query });
-  if (message.type === 'query.close') return void dispatch({ type: 'remove-query', networkId: message.networkId, target: message.target });
   if (message.type === 'message.append') return void dispatch({ type: 'append-message', message: message.message });
   if (message.type === 'presence.update') {
     return void dispatch({ type: 'update-presence', networkId: message.networkId, channel: message.channel, users: message.users });

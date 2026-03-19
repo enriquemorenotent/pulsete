@@ -3,6 +3,14 @@ export type MessageTextToken =
   | { type: 'link'; value: string; href: string; external: boolean }
   | { type: 'channel'; value: string; channel: string };
 
+export type MessageLinkMatch =
+  | { type: 'link'; start: number; end: number; value: string; href: string; external: boolean }
+  | { type: 'channel'; start: number; end: number; value: string; channel: string };
+
+type MessageLinkDescriptor =
+  | { type: 'link'; value: string; href: string; external: boolean }
+  | { type: 'channel'; value: string; channel: string };
+
 const candidatePattern =
   /((?:https?:\/\/|www\.)[^\s<]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|[#&+!][^\s<]+)/gi;
 
@@ -10,36 +18,64 @@ const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 const channelPattern = /^[#&+!][^\s,:]+$/;
 
 export function linkifyMessageText(text: string): MessageTextToken[] {
+  const matches = findMessageLinkMatches(text);
+  if (matches.length === 0) {
+    return [{ type: 'text', value: text }];
+  }
+
   const tokens: MessageTextToken[] = [];
   let lastIndex = 0;
-
-  for (const match of text.matchAll(candidatePattern)) {
-    const index = match.index ?? 0;
-    const rawCandidate = match[0];
-    const { value, trailing } = trimTrailingPunctuation(rawCandidate);
-    const link = toToken(text, index, value);
-
-    if (!link) {
-      continue;
+  for (const match of matches) {
+    if (match.start > lastIndex) {
+      pushTextToken(tokens, text.slice(lastIndex, match.start));
     }
-    if (index > lastIndex) {
-      pushTextToken(tokens, text.slice(lastIndex, index));
+    if (match.type === 'channel') {
+      tokens.push({
+        type: 'channel',
+        value: match.value,
+        channel: match.channel,
+      });
+    } else {
+      tokens.push({
+        type: 'link',
+        value: match.value,
+        href: match.href,
+        external: match.external,
+      });
     }
-    tokens.push(link);
-    if (trailing) {
-      pushTextToken(tokens, trailing);
-    }
-    lastIndex = index + rawCandidate.length;
+    lastIndex = match.end;
   }
 
   if (lastIndex < text.length) {
     pushTextToken(tokens, text.slice(lastIndex));
   }
 
-  return tokens.length > 0 ? tokens : [{ type: 'text', value: text }];
+  return tokens;
 }
 
-function toToken(text: string, index: number, value: string): MessageTextToken | null {
+export function findMessageLinkMatches(text: string): MessageLinkMatch[] {
+  const matches: MessageLinkMatch[] = [];
+
+  for (const match of text.matchAll(candidatePattern)) {
+    const index = match.index ?? 0;
+    const rawCandidate = match[0];
+    const { value } = trimTrailingPunctuation(rawCandidate);
+    const link = toMatch(text, index, value);
+
+    if (!link) {
+      continue;
+    }
+    matches.push({
+      ...link,
+      start: index,
+      end: index + value.length,
+    });
+  }
+
+  return matches;
+}
+
+function toMatch(text: string, index: number, value: string): MessageLinkDescriptor | null {
   if (channelPattern.test(value) && hasChannelBoundary(text, index)) {
     return {
       type: 'channel',

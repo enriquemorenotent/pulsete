@@ -1,14 +1,14 @@
 import { pbkdf2Sync } from 'node:crypto';
-import type { ChannelState, NetworkProfile, QueryBuffer } from '../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
 import { getLocalIrcIdentity } from '../shared/local-defaults.js';
 import type { SecretBox } from './network-secret.js';
 import type {
+  BufferRow,
   ChannelRow,
   MessageInput,
   MessageRow,
   NetworkInput,
   NetworkRow,
-  QueryRow,
   RuntimeNetworkProfile,
 } from './storage-types.js';
 
@@ -113,19 +113,25 @@ export const encryptNetworkPassword = (password: string | undefined, secretBox: 
 export const decryptNetworkPassword = (password: string | null, secretBox: SecretBox) =>
   password ? secretBox.decrypt(password) : undefined;
 
-export const toChannelState = (row: ChannelRow): ChannelState => ({
+export const toBufferState = (row: BufferRow): BufferState => ({
+  id: row.id,
+  networkId: row.networkId,
+  unread: row.unread,
+  kind: row.kind,
+  target: row.target,
+});
+
+export const toChannelState = (
+  row: ChannelRow & {
+    networkId: string;
+    name: string;
+  }
+): ChannelState => ({
   id: row.id,
   networkId: row.networkId,
   name: row.name,
   topic: row.topic,
-  unread: row.unread,
   users: parseJson<string[]>(row.users, []),
-});
-
-export const toQueryBuffer = (row: QueryRow): QueryBuffer => ({
-  id: row.id,
-  networkId: row.networkId,
-  target: row.target,
 });
 
 export const toMessage = (row: MessageRow): MessageInput => ({

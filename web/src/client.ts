@@ -6,6 +6,7 @@ import {
   type ClientMessage,
   type ServerMessage,
   type AppSnapshot,
+  type BufferState,
   type NetworkProfile,
   type ChatMessage,
 } from '../../shared/protocol.js';
@@ -29,10 +30,13 @@ const apiRequest = async <T>(path: string, init?: RequestInit) => {
 export const api = {
   snapshot: () => apiRequest<AppSnapshot>('/api/snapshot'),
   saveNetwork: (payload: Partial<NetworkProfile> & { clearPassword?: boolean; id?: string; password?: string }) =>
-    apiRequest<{ network: NetworkProfile }>(payload.id ? `/api/networks/${payload.id}` : '/api/networks', {
+    apiRequest<{ network: NetworkProfile; serverBuffer: BufferState | null }>(
+      payload.id ? `/api/networks/${payload.id}` : '/api/networks',
+      {
       method: payload.id ? 'PUT' : 'POST',
       body: JSON.stringify(payload),
-    }),
+      }
+    ),
   deleteNetwork: (networkId: string) =>
     apiRequest<{ ok: boolean; deletedNetworkIds: string[] }>(`/api/networks/${networkId}`, {
       method: 'DELETE',
@@ -48,22 +52,25 @@ export const api = {
       method: 'POST',
       body: '{}',
     }),
-  loadHistory: (networkId: string, target: string, limit = historyWindowLimit) =>
-    apiRequest<{ messages: ChatMessage[] }>(
-      `/api/networks/${networkId}/history?target=${encodeURIComponent(target)}&limit=${limit}`
-    ),
-  markChannelRead: (channelId: string) =>
-    apiRequest<{ ok: boolean }>(`/api/channels/${channelId}/read`, {
+  loadHistory: (bufferId: string, limit = historyWindowLimit) =>
+    apiRequest<{ messages: ChatMessage[] }>(`/api/buffers/${bufferId}/history?limit=${limit}`),
+  markBufferRead: (bufferId: string) =>
+    apiRequest<{ buffer: BufferState }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',
       body: '{}',
     }),
   openQuery: (networkId: string, target: string) =>
-    apiRequest<{ query: { id: string; networkId: string; target: string } }>(`/api/networks/${networkId}/queries`, {
+    apiRequest<{ buffer: BufferState }>(`/api/networks/${networkId}/queries`, {
       method: 'POST',
       body: JSON.stringify({ target }),
     }),
-  closeQuery: (networkId: string, target: string) =>
-    apiRequest<{ ok: boolean }>(`/api/networks/${networkId}/queries/${encodeURIComponent(target)}`, {
+  openChannel: (networkId: string, channel: string) =>
+    apiRequest<{ buffer: BufferState }>(`/api/networks/${networkId}/channels`, {
+      method: 'POST',
+      body: JSON.stringify({ channel }),
+    }),
+  closeBuffer: (bufferId: string) =>
+    apiRequest<{ ok: boolean }>(`/api/buffers/${bufferId}`, {
       method: 'DELETE',
       body: '{}',
     }),

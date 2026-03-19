@@ -43,7 +43,7 @@ test('irc connection negotiates, joins, and parses messages', async () => {
         if (sawNick && sawUser) {
           socket.write(':irc.example 001 tester :Welcome\r\n');
           socket.write(':irc.example 005 tester CHANTYPES=# NETWORK=TestNet :are supported by this server\r\n');
-          socket.write(':irc.example 372 tester :- hello from motd\r\n');
+          socket.write(':irc.example 372 tester :- \u000304hello from motd\u000f\r\n');
           socket.write(':irc.example 376 tester :End of /MOTD command.\r\n');
         }
 
@@ -56,7 +56,7 @@ test('irc connection negotiates, joins, and parses messages', async () => {
 
         if (line.startsWith('PRIVMSG ')) {
           const target = line.split(' ')[1];
-          socket.write(`:other!user@host PRIVMSG ${target} :reply from server\r\n`);
+          socket.write(`:other!user@host PRIVMSG ${target} :\u0002reply from server\u000f\r\n`);
         }
 
         index = buffer.indexOf('\n');
@@ -122,7 +122,7 @@ test('irc connection negotiates, joins, and parses messages', async () => {
       events.some(
         (event) =>
           event.type === 'message' &&
-          (event as { type: string; message: { body: string } }).message.body === 'reply from server'
+          (event as { type: string; message: { body: string } }).message.body === '\u0002reply from server\u000F'
       )
   );
 
@@ -144,7 +144,7 @@ test('irc connection negotiates, joins, and parses messages', async () => {
         (event) =>
           event.type === 'status' &&
           event.kind === 'system' &&
-          event.message === '* - hello from motd'
+          event.message === '* - \u000304hello from motd\u000F'
       ) &&
       events.some(
         (event) =>
@@ -247,6 +247,132 @@ test('irc connection maps direct messages to sender buffer', async () => {
 
   connection.disconnect();
   server.close();
+});
+
+test('irc connection formats whois replies as server status lines', async () => {
+  const received: string[] = [];
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+
+  const server = net.createServer((socket) => {
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let sawNick = false;
+    let sawUser = false;
+
+    const flush = () => {
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+
+        if (line.startsWith('NICK ')) {
+          sawNick = true;
+        }
+
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+
+        if (sawNick && sawUser) {
+          socket.write(':irc.example 001 tester :Welcome\r\n');
+          sawNick = false;
+          sawUser = false;
+        }
+
+        if (line === 'WHOIS helper') {
+          socket.write(':irc.example 311 tester helper helper users.example * :Helper Person\r\n');
+          socket.write(':irc.example 319 tester helper :#chat @#ops\r\n');
+          socket.write(':irc.example 312 tester helper irc.example :Example IRC Server\r\n');
+          socket.write(':irc.example 317 tester helper 125 1700000000 :seconds idle, signon time\r\n');
+          socket.write(':irc.example 318 tester helper :End of /WHOIS list.\r\n');
+        }
+
+        index = buffer.indexOf('\n');
+      }
+    };
+
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      flush();
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: '127.0.0.1',
+      port: address.port,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connect();
+
+  await waitFor(() => events.some((event) => event.type === 'state' && event.connected === true));
+
+  assert.equal(connection.sendRaw('WHOIS helper'), true);
+
+  await waitFor(
+    () =>
+      events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'system'
+          && event.message === '* helper is helper@users.example (Helper Person)'
+      )
+      && events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'system'
+          && event.message === '* helper is on #chat @#ops'
+      )
+      && events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'system'
+          && event.message === '* helper is using irc.example (Example IRC Server)'
+      )
+      && events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'system'
+          && event.message === '* helper has been idle for 2m 5s'
+      )
+      && events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'system'
+          && event.message === '* End of WHOIS for helper'
+      )
+  );
+
+  connection.disconnect();
+  server.close();
+
+  assert.ok(received.includes('WHOIS helper'));
 });
 
 test('irc connection keeps direct notices on the server buffer', async () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AppSnapshot, NetworkProfile } from '../shared/protocol.js';
+import type { AppSnapshot, BufferState, NetworkProfile } from '../shared/protocol.js';
 import { initialState, reducer } from '../web/src/app-state.js';
 import { resolveManagedNetworkId } from '../web/src/network-manager-state.js';
 
@@ -21,13 +21,19 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   autoJoin: overrides.autoJoin ?? [],
 });
 
+const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
+  id: overrides.id ?? 'buffer-1',
+  networkId: overrides.networkId ?? 'network-1',
+  kind: overrides.kind ?? 'server',
+  target: overrides.target ?? 'server',
+  unread: overrides.unread ?? 0,
+});
+
 const emptySnapshot = (): AppSnapshot => ({
   networks: [],
+  buffers: [],
   channels: [],
-  queries: [],
   messages: [],
-  activeNetworkId: null,
-  activeBuffer: 'server',
 });
 
 test('snapshot-loaded enters the ready phase and clears any banner', () => {
@@ -44,6 +50,23 @@ test('snapshot-loaded enters the ready phase and clears any banner', () => {
   assert.equal(nextState.phase, 'ready');
   assert.equal(nextState.banner, null);
   assert.equal(nextState.selection, null);
+});
+
+test('snapshot-loaded selects the first instance server buffer', () => {
+  const network = makeNetwork({ managerHidden: true });
+  const buffer = makeBuffer({ networkId: network.id });
+
+  const nextState = reducer(initialState, {
+    type: 'snapshot-loaded',
+    snapshot: {
+      networks: [network],
+      buffers: [buffer],
+      channels: [],
+      messages: [],
+    },
+  });
+
+  assert.deepEqual(nextState.selection, { bufferId: buffer.id });
 });
 
 test('load-failed still exits the loading phase', () => {

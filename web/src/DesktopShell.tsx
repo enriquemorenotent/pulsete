@@ -1,25 +1,29 @@
 import type { RefObject } from 'react';
 import { PanelsTopLeft } from 'lucide-react';
-import type { ChannelState, ChatMessage, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, ChatMessage, NetworkProfile } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPane } from './ChatPane.js';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
+import { MessageDisplayModeToggle } from './MessageDisplayModeToggle.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { NetworkEditorDialog } from './NetworkEditorDialog.js';
 import { NetworkManagerDialog } from './NetworkManagerDialog.js';
+import type { MessageDisplayMode } from './message-display-mode.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace.js';
 
 type DesktopShellProps = {
   workspace: WorkspaceView;
   connectionInstances: NetworkProfile[];
+  buffers: BufferState[];
   channels: ChannelState[];
-  queries: QueryBuffer[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
   selectedMessages: ChatMessage[];
   draft: string;
+  messageDisplayMode: MessageDisplayMode;
+  showMessageDisplayModeToggle: boolean;
   scrollRef: RefObject<HTMLDivElement | null>;
   showNetworkManager: boolean;
   showNetworkEditor: boolean;
@@ -30,18 +34,21 @@ type DesktopShellProps = {
   hiddenManagedNetworkName: string | null;
   networkForm: NetworkForm;
   editorTab: EditorTab;
+  onMessageDisplayModeChange: (mode: MessageDisplayMode) => void;
   onOpenNetworkManager: () => void;
   onDraftChange: (value: string) => void;
-  onSendComposer: () => void;
+  onRecallOlderDraft: () => void;
+  onRecallNewerDraft: () => void;
+  onSendComposer: () => Promise<void>;
   onReconnectNetwork: (network: NetworkProfile) => void;
   onDisconnectNetwork: (networkId: string) => void;
   onCloseConnection: (network: NetworkProfile) => void;
   onSelectNetworkBuffer: (network: NetworkProfile) => void;
-  onSelectChannelBuffer: (network: NetworkProfile, channel: ChannelState) => void;
+  onSelectTabBuffer: (buffer: BufferState) => void;
   onSelectPrivateBuffer: (network: NetworkProfile, nick: string) => void;
   onOpenMentionedChannel: (channel: string) => void;
   onCloseChannel: (networkId: string, channel: string) => void;
-  onCloseQuery: (networkId: string, target: string) => void;
+  onCloseBuffer: (buffer: BufferState) => void;
   onSelectManagedNetwork: (networkId: string) => void;
   onToggleFavoritesOnly: () => void;
   onCloseNetworkManager: () => void;
@@ -69,6 +76,12 @@ export function DesktopShell(props: DesktopShellProps) {
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 py-2">
         <span className="font-semibold tracking-tight">Pulsete</span>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {props.showMessageDisplayModeToggle ? (
+            <MessageDisplayModeToggle
+              value={props.messageDisplayMode}
+              onChange={props.onMessageDisplayModeChange}
+            />
+          ) : null}
           <Button variant="outline" size="sm" onClick={props.onOpenNetworkManager}>
             <PanelsTopLeft />
             Network List
@@ -80,30 +93,32 @@ export function DesktopShell(props: DesktopShellProps) {
         <div className={workspaceClass}>
           <ConnectionSidebar
             networks={props.connectionInstances}
+            buffers={props.buffers}
             channels={props.channels}
-            queries={props.queries}
             networkStates={props.networkStates}
             selection={props.selection}
             onSelectNetwork={props.onSelectNetworkBuffer}
-            onSelectChannel={props.onSelectChannelBuffer}
-            onSelectQuery={props.onSelectPrivateBuffer}
+            onSelectBuffer={props.onSelectTabBuffer}
             onCloseConnection={props.onCloseConnection}
             onCloseChannel={props.onCloseChannel}
-            onCloseQuery={props.onCloseQuery}
+            onCloseBuffer={props.onCloseBuffer}
           />
           <ChatPane
             workspace={props.workspace}
             selectedMessages={props.selectedMessages}
             draft={props.draft}
+            messageDisplayMode={props.messageDisplayMode}
             scrollRef={props.scrollRef}
             onDraftChange={props.onDraftChange}
+            onRecallOlderDraft={props.onRecallOlderDraft}
+            onRecallNewerDraft={props.onRecallNewerDraft}
             onSend={props.onSendComposer}
             onReconnect={props.onReconnectNetwork}
             onDisconnect={props.onDisconnectNetwork}
             onCloseConnection={props.onCloseConnection}
             onOpenMentionedChannel={props.onOpenMentionedChannel}
             onCloseChannel={props.onCloseChannel}
-            onCloseQuery={props.onCloseQuery}
+            onCloseBuffer={props.onCloseBuffer}
           />
           {props.workspace.showNicklist && props.workspace.selectedChannel ? (
             <NicklistPanel

@@ -1,4 +1,4 @@
-import type { ChannelState, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile } from '../../shared/protocol.js';
 
 export type NetworkRuntimeState = {
   connected: boolean;
@@ -8,9 +8,7 @@ export type NetworkRuntimeState = {
 };
 
 export type SelectedBuffer = {
-  networkId: string;
-  target: string;
-  channelId: string | null;
+  bufferId: string;
 };
 
 export type WorkspaceMode =
@@ -30,8 +28,8 @@ export type WorkspaceView = {
   connectionInstances: NetworkProfile[];
   selectedNetwork: NetworkProfile | null;
   selectedRuntime: NetworkRuntimeState | null;
+  selectedBuffer: BufferState | null;
   selectedChannel: ChannelState | null;
-  selectedQuery: QueryBuffer | null;
   headerTitle: string;
   headerSubtitle: string;
   statusLabel: 'Offline' | 'Connecting' | 'Connected';

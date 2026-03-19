@@ -1,4 +1,4 @@
-import type { ChannelState, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChannelState, NetworkProfile } from '../../shared/protocol.js';
 import { getConnectionInstances, getConnectionStatus } from './workspace-helpers.js';
 import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
 
@@ -7,23 +7,21 @@ export { canShowInstanceChildren, getConnectionLabel } from './workspace-helpers
 
 type WorkspaceInput = {
   networks: NetworkProfile[];
+  buffers: BufferState[];
   channels: ChannelState[];
-  queries: QueryBuffer[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
 };
 
-const serverSelection = (networkId: string): SelectedBuffer => ({
-  networkId,
-  target: 'server',
-  channelId: null,
-});
+const selectionFor = (buffer: BufferState | null): SelectedBuffer | null =>
+  buffer ? { bufferId: buffer.id } : null;
 
-const isChannelTarget = (target: string) => /^[#&+!]/.test(target);
+const findServerBuffer = (buffers: BufferState[], networkId: string) =>
+  buffers.find((buffer) => buffer.networkId === networkId && buffer.kind === 'server') ?? null;
 
-export const selectDefaultBuffer = (snapshot: Pick<WorkspaceInput, 'networks'>): SelectedBuffer | null => {
+export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'buffers'>): SelectedBuffer | null => {
   const instance = getConnectionInstances(snapshot.networks)[0];
-  return instance ? serverSelection(instance.id) : null;
+  return selectionFor(instance ? findServerBuffer(snapshot.buffers, instance.id) : null);
 };
 
 export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
@@ -35,8 +33,8 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       connectionInstances,
       selectedNetwork: null,
       selectedRuntime: null,
+      selectedBuffer: null,
       selectedChannel: null,
-      selectedQuery: null,
       headerTitle: 'No active connection',
       headerSubtitle: '',
       statusLabel: 'Offline',
@@ -47,32 +45,49 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     };
   }
 
+  const selectedBuffer =
+    input.buffers.find((buffer) => buffer.id === input.selection?.bufferId) ?? null;
   const selectedNetwork =
-    connectionInstances.find((network) => network.id === input.selection?.networkId) ?? connectionInstances[0];
+    connectionInstances.find((network) => network.id === selectedBuffer?.networkId) ?? connectionInstances[0];
   const selectedRuntime = input.networkStates[selectedNetwork.id] ?? null;
   const connectionStatus = getConnectionStatus(selectedRuntime);
-  const selection =
-    !input.selection || input.selection.networkId !== selectedNetwork.id || connectionStatus !== 'connected'
-      ? serverSelection(selectedNetwork.id)
-      : input.selection;
+  const serverBuffer = findServerBuffer(input.buffers, selectedNetwork.id);
+  const activeBuffer =
+    !selectedBuffer ||
+    selectedBuffer.networkId !== selectedNetwork.id ||
+    connectionStatus !== 'connected'
+      ? serverBuffer
+      : selectedBuffer;
+  const activeSelection = selectionFor(activeBuffer);
 
-  const selectedChannel = selection.channelId
-    ? input.channels.find((channel) => channel.id === selection.channelId && channel.networkId === selectedNetwork.id) ?? null
-    : input.channels.find((channel) => channel.networkId === selectedNetwork.id && channel.name === selection.target) ?? null;
-  const selectedQuery =
-    selection.target !== 'server'
-      ? input.queries.find((query) => query.networkId === selectedNetwork.id && query.target === selection.target) ?? null
-      : null;
+  if (!serverBuffer) {
+    return {
+      mode: 'empty',
+      selection: null,
+      connectionInstances,
+      selectedNetwork,
+      selectedRuntime,
+      selectedBuffer: null,
+      selectedChannel: null,
+      headerTitle: 'No active connection',
+      headerSubtitle: '',
+      statusLabel: 'Offline',
+      composerMode: 'hidden',
+      composerPlaceholder: '',
+      emptyBody: 'Open Network List to create or connect an instance.',
+      showNicklist: false,
+    };
+  }
 
   if (connectionStatus === 'offline') {
     return {
       mode: 'server-offline',
-      selection: serverSelection(selectedNetwork.id),
+      selection: selectionFor(serverBuffer),
       connectionInstances,
       selectedNetwork,
       selectedRuntime,
+      selectedBuffer: serverBuffer,
       selectedChannel: null,
-      selectedQuery: null,
       headerTitle: selectedNetwork.name,
       headerSubtitle: '',
       statusLabel: 'Offline',
@@ -86,12 +101,12 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   if (connectionStatus === 'connecting') {
     return {
       mode: 'server-connecting',
-      selection: serverSelection(selectedNetwork.id),
+      selection: selectionFor(serverBuffer),
       connectionInstances,
       selectedNetwork,
       selectedRuntime,
+      selectedBuffer: serverBuffer,
       selectedChannel: null,
-      selectedQuery: null,
       headerTitle: selectedNetwork.name,
       headerSubtitle: '',
       statusLabel: 'Connecting',
@@ -103,16 +118,19 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   }
 
   const connectedSubtitle = `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`;
+  const selectedChannel = activeBuffer?.kind === 'channel'
+    ? input.channels.find((channel) => channel.id === activeBuffer.id) ?? null
+    : null;
 
-  if (selectedChannel) {
+  if (activeBuffer?.kind === 'channel' && selectedChannel) {
     return {
       mode: 'channel-connected',
-      selection: { networkId: selectedNetwork.id, target: selectedChannel.name, channelId: selectedChannel.id },
+      selection: activeSelection,
       connectionInstances,
       selectedNetwork,
       selectedRuntime,
+      selectedBuffer: activeBuffer,
       selectedChannel,
-      selectedQuery: null,
       headerTitle: selectedChannel.name,
       headerSubtitle: connectedSubtitle,
       statusLabel: 'Connected',
@@ -123,16 +141,16 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     };
   }
 
-  if (selectedQuery) {
+  if (activeBuffer?.kind === 'query') {
     return {
       mode: 'query-connected',
-      selection: { networkId: selectedNetwork.id, target: selectedQuery.target, channelId: null },
+      selection: activeSelection,
       connectionInstances,
       selectedNetwork,
       selectedRuntime,
+      selectedBuffer: activeBuffer,
       selectedChannel: null,
-      selectedQuery,
-      headerTitle: selectedQuery.target,
+      headerTitle: activeBuffer.target,
       headerSubtitle: connectedSubtitle,
       statusLabel: 'Connected',
       composerMode: 'normal',
@@ -142,16 +160,16 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     };
   }
 
-  if (selection.target !== 'server' && isChannelTarget(selection.target)) {
+  if (activeBuffer?.kind === 'channel') {
     return {
       mode: 'channel-pending',
-      selection,
+      selection: activeSelection,
       connectionInstances,
       selectedNetwork,
       selectedRuntime,
+      selectedBuffer: activeBuffer,
       selectedChannel: null,
-      selectedQuery: null,
-      headerTitle: selection.target,
+      headerTitle: activeBuffer.target,
       headerSubtitle: connectedSubtitle,
       statusLabel: 'Connected',
       composerMode: 'normal',
@@ -163,12 +181,12 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
 
   return {
     mode: 'server-connected',
-    selection: serverSelection(selectedNetwork.id),
+    selection: selectionFor(serverBuffer),
     connectionInstances,
     selectedNetwork,
     selectedRuntime,
+    selectedBuffer: serverBuffer,
     selectedChannel: null,
-    selectedQuery: null,
     headerTitle: selectedNetwork.name,
     headerSubtitle: connectedSubtitle,
     statusLabel: 'Connected',

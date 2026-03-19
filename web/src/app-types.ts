@@ -1,4 +1,4 @@
-import type { AppSnapshot, ChannelState, ChatMessage, NetworkProfile, QueryBuffer } from '../../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChannelState, ChatMessage, NetworkProfile } from '../../shared/protocol.js';
 import type { NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
@@ -7,8 +7,8 @@ export type Banner = { kind: 'notice' | 'error'; message: string } | null;
 export type State = {
   phase: 'loading' | 'ready';
   networks: NetworkProfile[];
+  buffers: BufferState[];
   channels: ChannelState[];
-  queries: QueryBuffer[];
   messages: ChatMessage[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
@@ -21,10 +21,10 @@ export type Action =
   | { type: 'snapshot-loaded'; snapshot: AppSnapshot }
   | { type: 'snapshot'; snapshot: AppSnapshot }
   | { type: 'upsert-network'; network: NetworkProfile }
+  | { type: 'upsert-buffer'; buffer: BufferState }
+  | { type: 'remove-buffer'; bufferId: string; networkId: string }
   | { type: 'load-failed' }
   | { type: 'select'; selection: SelectedBuffer }
-  | { type: 'upsert-query'; query: QueryBuffer }
-  | { type: 'remove-query'; networkId: string; target: string }
   | { type: 'append-message'; message: ChatMessage }
   | { type: 'append-messages'; messages: ChatMessage[] }
   | { type: 'upsert-channel'; channel: ChannelState }

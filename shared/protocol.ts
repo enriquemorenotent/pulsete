@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const historyWindowLimit = 250;
 
 export const messageKindSchema = z.enum(['line', 'join', 'part', 'notice', 'error', 'system']);
+export type MessageKind = z.infer<typeof messageKindSchema>;
 
 export const chatMessageSchema = z.object({
   id: z.string(),
@@ -36,32 +37,33 @@ export const networkSchema = z.object({
 
 export type NetworkProfile = z.infer<typeof networkSchema>;
 
+export const bufferKindSchema = z.enum(['server', 'channel', 'query']);
+
+export const bufferSchema = z.object({
+  id: z.string(),
+  networkId: z.string(),
+  kind: bufferKindSchema,
+  target: z.string(),
+  unread: z.number().int().nonnegative().default(0),
+});
+
+export type BufferState = z.infer<typeof bufferSchema>;
+
 export const channelSchema = z.object({
   id: z.string(),
   networkId: z.string(),
   name: z.string(),
   topic: z.string().default(''),
-  unread: z.number().int().nonnegative().default(0),
   users: z.array(z.string()).default([]),
 });
 
 export type ChannelState = z.infer<typeof channelSchema>;
 
-export const querySchema = z.object({
-  id: z.string(),
-  networkId: z.string(),
-  target: z.string(),
-});
-
-export type QueryBuffer = z.infer<typeof querySchema>;
-
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
+  buffers: z.array(bufferSchema),
   channels: z.array(channelSchema),
-  queries: z.array(querySchema),
   messages: z.array(chatMessageSchema),
-  activeNetworkId: z.string().nullable(),
-  activeBuffer: z.string(),
 });
 
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;
@@ -91,11 +93,6 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
   }),
   baseClientSchema.extend({
     type: z.literal('query.open'),
-    networkId: z.string(),
-    target: z.string(),
-  }),
-  baseClientSchema.extend({
-    type: z.literal('query.close'),
     networkId: z.string(),
     target: z.string(),
   }),
@@ -139,23 +136,17 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     network: networkSchema,
   }),
   baseClientSchema.extend({
+    type: z.literal('buffer.upsert'),
+    buffer: bufferSchema,
+  }),
+  baseClientSchema.extend({
+    type: z.literal('buffer.remove'),
+    networkId: z.string(),
+    bufferId: z.string(),
+  }),
+  baseClientSchema.extend({
     type: z.literal('channel.snapshot'),
     channel: channelSchema,
-  }),
-  baseClientSchema.extend({
-    type: z.literal('channel.remove'),
-    networkId: z.string(),
-    channelId: z.string(),
-    channel: z.string(),
-  }),
-  baseClientSchema.extend({
-    type: z.literal('query.open'),
-    query: querySchema,
-  }),
-  baseClientSchema.extend({
-    type: z.literal('query.close'),
-    networkId: z.string(),
-    target: z.string(),
   }),
   baseClientSchema.extend({
     type: z.literal('message.append'),

@@ -40,9 +40,6 @@ const requestJson = async (
   };
 };
 
-const request = (port: number, path: string, init?: RequestInit) =>
-  fetch(`http://127.0.0.1:${port}${path}`, init);
-
 const sendRawRequest = (port: number, rawRequest: string) =>
   new Promise<string>((resolve, reject) => {
     const socket = net.connect(port, '127.0.0.1', () => socket.write(rawRequest));
@@ -464,7 +461,11 @@ test('query routes validate missing networks and invalid targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
-  storage.upsertQuery(network.id, 'helper');
+  const query = storage.upsertQuery(network.id, 'helper');
+  const channel = storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+  });
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
 
@@ -481,16 +482,16 @@ test('query routes validate missing networks and invalid targets', async () => {
     assert.equal(invalidPayload.status, 400);
     assert.equal(invalidPayload.json.message, 'Invalid query payload');
 
-    const invalidClose = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/%23help`);
+    const invalidClose = await requestJson(port, 'DELETE', `/api/buffers/${channel.id}`);
     assert.equal(invalidClose.status, 400);
-    assert.equal(invalidClose.json.message, 'Private-message target is required');
-    assert.equal(storage.getQuery(network.id, 'helper')?.target, 'helper');
+    assert.equal(invalidClose.json.message, 'Only private message buffers can be closed');
+    assert.equal(storage.getBuffer(query.id)?.target, 'helper');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
-test('channel read emits snapshots and clears unread counts without auth', async () => {
+test('buffer read emits updates and clears unread counts without auth', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
@@ -506,7 +507,7 @@ test('channel read emits snapshots and clears unread counts without auth', async
   const { socket } = await connectWebSocket(port);
 
   try {
-    const unreadSnapshotPromise = waitForWebSocketMessageType(socket, 'channel.snapshot');
+    const unreadBufferPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
     handleRuntimeEvent(runtime, {
       type: 'message',
       message: {
@@ -521,21 +522,21 @@ test('channel read emits snapshots and clears unread counts without auth', async
       },
     });
 
-    const unreadSnapshot = await unreadSnapshotPromise as {
-      channel: { id: string; unread: number };
+    const unreadBuffer = await unreadBufferPromise as {
+      buffer: { id: string; unread: number };
     };
-    assert.equal(unreadSnapshot.channel.id, channel.id);
-    assert.equal(unreadSnapshot.channel.unread, 1);
+    assert.equal(unreadBuffer.buffer.id, channel.id);
+    assert.equal(unreadBuffer.buffer.unread, 1);
 
-    const clearedSnapshotPromise = waitForWebSocketMessageType(socket, 'channel.snapshot');
-    const response = await requestJson(port, 'POST', `/api/channels/${channel.id}/read`, {});
+    const clearedBufferPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
+    const response = await requestJson(port, 'POST', `/api/buffers/${channel.id}/read`, {});
     assert.equal(response.status, 200);
 
-    const clearedSnapshot = await clearedSnapshotPromise as {
-      channel: { id: string; unread: number };
+    const clearedBuffer = await clearedBufferPromise as {
+      buffer: { id: string; unread: number };
     };
-    assert.equal(clearedSnapshot.channel.id, channel.id);
-    assert.equal(clearedSnapshot.channel.unread, 0);
+    assert.equal(clearedBuffer.buffer.id, channel.id);
+    assert.equal(clearedBuffer.buffer.unread, 0);
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
@@ -546,6 +547,7 @@ test('history clamps invalid and oversized limits to the default window', async 
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
+  const buffer = storage.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help' });
   for (let index = 0; index < 250; index += 1) {
     storage.appendMessage({
       id: `m${index}`,
@@ -562,14 +564,14 @@ test('history clamps invalid and oversized limits to the default window', async 
   const port = await listen(server);
 
   try {
-    const invalidLimit = await fetch(`http://127.0.0.1:${port}/api/networks/${network.id}/history?target=%23help&limit=-1`);
+    const invalidLimit = await fetch(`http://127.0.0.1:${port}/api/buffers/${buffer.id}/history?limit=-1`);
     const invalidBody = await invalidLimit.json() as { messages: Array<{ body: string }> };
     assert.equal(invalidLimit.status, 200);
     assert.equal(invalidBody.messages.length, historyWindowLimit);
     assert.equal(invalidBody.messages[0]?.body, 'message 0');
     assert.equal(invalidBody.messages.at(-1)?.body, 'message 249');
 
-    const oversizedLimit = await fetch(`http://127.0.0.1:${port}/api/networks/${network.id}/history?target=%23help&limit=1000000`);
+    const oversizedLimit = await fetch(`http://127.0.0.1:${port}/api/buffers/${buffer.id}/history?limit=1000000`);
     const oversizedBody = await oversizedLimit.json() as { messages: Array<{ body: string }> };
     assert.equal(oversizedLimit.status, 200);
     assert.equal(oversizedBody.messages.length, historyWindowLimit);
@@ -631,7 +633,7 @@ test('connect route does not allow GET side effects', async () => {
 test('malformed request targets and route params return handled bad requests', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
+  storage.upsertNetwork(createNetworkInput());
   const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
   const port = await listen(server);
   let uncaught: string | null = null;
@@ -652,7 +654,7 @@ test('malformed request targets and route params return handled bad requests', a
     assert.equal(invalidParamResponse.status, 400);
     assert.equal(invalidParamResponse.json.message, 'Invalid request parameter');
 
-    const invalidQueryTarget = await requestJson(port, 'DELETE', `/api/networks/${network.id}/queries/%E0%A4%A`);
+    const invalidQueryTarget = await requestJson(port, 'DELETE', '/api/buffers/%E0%A4%A');
     assert.equal(invalidQueryTarget.status, 400);
     assert.equal(invalidQueryTarget.json.message, 'Invalid request parameter');
     assert.equal(uncaught, null);
@@ -736,7 +738,7 @@ test('websocket state requests and command routing use the live local state', as
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
-  storage.upsertQuery(network.id, 'helper');
+  const query = storage.upsertQuery(network.id, 'helper');
   const runtime = new Runtime(storage);
   const calls: string[] = [];
   runtime.connect = ((networkId: string) => {
@@ -745,10 +747,10 @@ test('websocket state requests and command routing use the live local state', as
   runtime.disconnect = ((networkId: string) => {
     calls.push(`disconnect:${networkId}`);
   }) as Runtime['disconnect'];
-  runtime.closeQuery = ((networkId: string, target: string) => {
-    calls.push(`query.close:${networkId}:${target}`);
-    return target;
-  }) as Runtime['closeQuery'];
+  runtime.openQuery = ((networkId: string, target: string) => {
+    calls.push(`query.open:${networkId}:${target}`);
+    return query;
+  }) as Runtime['openQuery'];
   runtime.sendRaw = ((networkId: string, raw: string) => {
     calls.push(`raw.send:${networkId}:${raw}`);
   }) as Runtime['sendRaw'];
@@ -766,21 +768,20 @@ test('websocket state requests and command routing use the live local state', as
     const stateReady = await stateReadyPromise;
     assert.equal((stateReady.snapshot as { networks: Array<{ id: string }> }).networks.some((entry) => entry.id === network.id), true);
 
-    const queryClosePromise = waitForWebSocketMessageType(socket, 'query.close');
+    const queryOpenPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
     socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
     socket.send(JSON.stringify({ type: 'network.disconnect', networkId: network.id }));
-    socket.send(JSON.stringify({ type: 'query.close', networkId: network.id, target: 'helper' }));
+    socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'helper' }));
     socket.send(JSON.stringify({ type: 'raw.send', networkId: network.id, raw: '/quote WHOIS alice' }));
 
-    assert.deepEqual(await queryClosePromise, {
-      type: 'query.close',
-      networkId: network.id,
-      target: 'helper',
+    assert.deepEqual(await queryOpenPromise, {
+      type: 'buffer.upsert',
+      buffer: query,
     });
     assert.deepEqual(calls, [
       `connect:${network.id}`,
       `disconnect:${network.id}`,
-      `query.close:${network.id}:helper`,
+      `query.open:${network.id}:helper`,
       `raw.send:${network.id}:/quote WHOIS alice`,
     ]);
   } finally {

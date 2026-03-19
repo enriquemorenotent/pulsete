@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ChatMessage } from '../../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChatMessage } from '../../shared/protocol.js';
 import { emptyNetworkForm } from './network-form.js';
 import { selectDefaultBuffer } from './workspace.js';
 import type { Action, State } from './app-types.js';
@@ -7,8 +7,8 @@ import type { Action, State } from './app-types.js';
 export const initialState: State = {
   phase: 'loading',
   networks: [],
+  buffers: [],
   channels: [],
-  queries: [],
   messages: [],
   networkStates: {},
   selection: null,
@@ -28,6 +28,23 @@ const mergeMessages = (current: ChatMessage[], incoming: ChatMessage[]) => {
   return Array.from(merged.values()).sort((left, right) => left.ts - right.ts);
 };
 
+const sortBuffers = (buffers: BufferState[]) =>
+  [...buffers].sort((left, right) =>
+    left.networkId === right.networkId
+      ? left.target.localeCompare(right.target)
+      : left.networkId.localeCompare(right.networkId)
+  );
+
+const fallbackSelection = (state: Pick<State, 'networks' | 'buffers'>, preferredNetworkId?: string | null) => {
+  if (preferredNetworkId) {
+    const buffer = state.buffers.find((candidate) => candidate.networkId === preferredNetworkId && candidate.kind === 'server') ?? null;
+    if (buffer) {
+      return { bufferId: buffer.id };
+    }
+  }
+  return selectDefaultBuffer(state as Pick<AppSnapshot, 'networks' | 'buffers'>);
+};
+
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case 'snapshot-loaded':
@@ -35,8 +52,8 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         phase: 'ready',
         networks: action.snapshot.networks,
+        buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
-        queries: action.snapshot.queries,
         messages: action.snapshot.messages,
         selection: selectDefaultBuffer(action.snapshot),
         banner: null,
@@ -46,8 +63,8 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         phase: 'ready',
         networks: action.snapshot.networks,
+        buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
-        queries: action.snapshot.queries,
         messages: mergeMessages(state.messages, action.snapshot.messages),
         selection: state.selection ?? selectDefaultBuffer(action.snapshot),
       };
@@ -58,58 +75,42 @@ export const reducer = (state: State, action: Action): State => {
       networks.push(action.network);
       return { ...state, networks: networks.sort((left, right) => left.name.localeCompare(right.name)) };
     }
+    case 'upsert-buffer': {
+      const buffers = state.buffers.filter((buffer) => buffer.id !== action.buffer.id);
+      buffers.push(action.buffer);
+      return { ...state, buffers: sortBuffers(buffers) };
+    }
+    case 'remove-buffer': {
+      const buffers = state.buffers.filter((buffer) => buffer.id !== action.bufferId);
+      const channels = state.channels.filter((channel) => channel.id !== action.bufferId);
+      const messages = state.messages.filter((message) => {
+        const removedBuffer = state.buffers.find((buffer) => buffer.id === action.bufferId);
+        if (!removedBuffer) {
+          return true;
+        }
+        return !(message.networkId === removedBuffer.networkId && message.target === removedBuffer.target);
+      });
+      const selection = state.selection?.bufferId === action.bufferId
+        ? fallbackSelection({ networks: state.networks, buffers }, action.networkId)
+        : state.selection;
+      return { ...state, buffers, channels, messages, selection };
+    }
     case 'select':
       return { ...state, selection: action.selection, banner: null };
-    case 'upsert-query': {
-      const queries = state.queries.filter(
-        (query) => !(query.networkId === action.query.networkId && query.target === action.query.target)
-      );
-      queries.push(action.query);
-      return {
-        ...state,
-        queries: queries.sort((left, right) =>
-          left.networkId === right.networkId
-            ? left.target.localeCompare(right.target)
-            : left.networkId.localeCompare(right.networkId)
-        ),
-      };
-    }
-    case 'remove-query': {
-      const queries = state.queries.filter(
-        (query) => !(query.networkId === action.networkId && query.target === action.target)
-      );
-      const selection =
-        state.selection?.networkId === action.networkId &&
-        state.selection.channelId === null &&
-        state.selection.target === action.target
-          ? { networkId: action.networkId, target: 'server', channelId: null }
-          : state.selection;
-      return { ...state, queries, selection };
-    }
     case 'append-message':
       return { ...state, messages: mergeMessages(state.messages, [action.message]) };
     case 'append-messages':
       return { ...state, messages: mergeMessages(state.messages, action.messages) };
     case 'upsert-channel': {
-      const next = state.channels.filter((channel) => channel.id !== action.channel.id);
-      next.push(action.channel);
-      const selection =
-        state.selection &&
-        state.selection.channelId === null &&
-        state.selection.networkId === action.channel.networkId &&
-        state.selection.target === action.channel.name
-          ? { ...state.selection, channelId: action.channel.id }
-          : state.selection;
-      return { ...state, channels: next.sort((left, right) => left.name.localeCompare(right.name)), selection };
+      const channels = state.channels.filter((channel) => channel.id !== action.channel.id);
+      channels.push(action.channel);
+      return { ...state, channels: channels.sort((left, right) => left.name.localeCompare(right.name)) };
     }
-    case 'remove-channel': {
-      const channels = state.channels.filter((channel) => channel.id !== action.channelId);
-      const selection =
-        state.selection?.channelId === action.channelId
-          ? { networkId: action.networkId, target: 'server', channelId: null }
-          : state.selection;
-      return { ...state, channels, selection };
-    }
+    case 'remove-channel':
+      return {
+        ...state,
+        channels: state.channels.filter((channel) => channel.id !== action.channelId),
+      };
     case 'update-presence':
       return {
         ...state,
@@ -150,13 +151,15 @@ export const reducer = (state: State, action: Action): State => {
       return { ...state, historyLoading: action.value };
     case 'remove-network': {
       const networks = state.networks.filter((network) => network.id !== action.networkId);
+      const buffers = state.buffers.filter((buffer) => buffer.networkId !== action.networkId);
       const channels = state.channels.filter((channel) => channel.networkId !== action.networkId);
-      const queries = state.queries.filter((query) => query.networkId !== action.networkId);
       const messages = state.messages.filter((message) => message.networkId !== action.networkId);
       const networkStates = { ...state.networkStates };
       delete networkStates[action.networkId];
-      const selection = state.selection?.networkId === action.networkId ? selectDefaultBuffer({ networks }) : state.selection;
-      return { ...state, networks, channels, queries, messages, networkStates, selection };
+      const selection = state.selection && state.buffers.some((buffer) => buffer.id === state.selection?.bufferId && buffer.networkId === action.networkId)
+        ? fallbackSelection({ networks, buffers })
+        : state.selection;
+      return { ...state, networks, buffers, channels, messages, networkStates, selection };
     }
     default:
       return state;
