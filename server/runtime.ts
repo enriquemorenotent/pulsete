@@ -126,7 +126,8 @@ export class Runtime {
   part(networkId: string, channel: string, sourceBufferId?: string) {
     this.getRequiredNetwork(networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
-    this.connections.get(networkId)?.part(normalizedChannel, 'Leaving', this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel));
+    this.ensureConnection(networkId)
+      .part(normalizedChannel, 'Leaving', this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel));
   }
 
   openQuery(networkId: string, target: string): ReturnType<Storage['upsertQuery']>;

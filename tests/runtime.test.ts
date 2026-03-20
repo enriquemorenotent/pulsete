@@ -530,6 +530,21 @@ test('runtime join does not create a channel buffer when the join command is not
   );
 });
 
+test('runtime part reports not connected before the first connection exists', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+
+  runtime.part(network.id, '#help');
+
+  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
+  assert.deepEqual(
+    storage.listMessages(network.id, 'server', 5).map((message) => message.body),
+    ['Not connected']
+  );
+});
+
 test('runtime removes optimistic channel buffers when the server rejects a join', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
