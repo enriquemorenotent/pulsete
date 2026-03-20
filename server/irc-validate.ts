@@ -63,8 +63,18 @@ export const normalizeFriendNick = (value: string) => {
 export const normalizeMessageTarget = (value: string) =>
   channelTargetPattern.test(value.trim()) ? normalizeChannelTarget(value) : normalizeQueryTarget(value);
 
-export const normalizeMessageBody = (value: string) =>
+export const normalizeMessageBody = (value: string) => {
   requireSingleLineValue(value, 'Message body cannot contain carriage returns or line feeds');
+  if (value.trim().length === 0) {
+    throw badRequest('Message body is required');
+  }
+  return value;
+};
 
-export const normalizeRawCommand = (value: string) =>
+export const normalizeRawCommand = (value: string) => {
   requireSingleLineValue(value, 'Raw command cannot contain carriage returns or line feeds');
+  if (value.trim().length === 0) {
+    throw badRequest('Raw command is required');
+  }
+  return value;
+};

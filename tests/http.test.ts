@@ -1545,6 +1545,14 @@ test('websocket validation returns errors for invalid channel, query, and messag
     const multiMessageErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: 'alice,bob', body: 'hello', kind: 'message' }));
     assert.equal((await multiMessageErrorPromise).message, 'Private-message target must refer to a single nick');
+
+    const blankMessageErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: '#help', body: '   ', kind: 'message' }));
+    assert.equal((await blankMessageErrorPromise).message, 'Message body is required');
+
+    const blankRawErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'raw.send', networkId: network.id, raw: '   ' }));
+    assert.equal((await blankRawErrorPromise).message, 'Raw command is required');
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));

@@ -809,10 +809,12 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.closeBuffer(channel.id), /Only private message buffers can be closed/);
   assert.throws(() => runtime.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
   assert.throws(() => runtime.sendMessage(network.id, 'alice,bob', 'hello'), /Private-message target must refer to a single nick/);
+  assert.throws(() => runtime.sendMessage(network.id, '#help', '   '), /Message body is required/);
   assert.throws(
     () => runtime.sendMessage(network.id, '#help', 'hello\r\nOPER root'),
     /Message body cannot contain carriage returns or line feeds/
   );
+  assert.throws(() => runtime.sendRaw(network.id, '   '), /Raw command is required/);
   assert.throws(
     () => runtime.sendRaw(network.id, 'JOIN #help\r\nOPER root'),
     /Raw command cannot contain carriage returns or line feeds/
