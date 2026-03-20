@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import tls from 'node:tls';
 import type { MessageInput } from './storage.js';
 import { emitChannel, emitMessage, emitState, emitStatus } from './irc-emit.js';
-import { createNickReplyContext, getLatestPendingNick } from './irc-reply-context.js';
+import { createNickReplyContext, getLatestPendingNick, type PendingReplyContext } from './irc-reply-context.js';
 import { formatServerNumeric, getServerNumericStatusKind } from './irc-server-log.js';
 import { isServiceNick } from './irc-services.js';
 import {
@@ -339,7 +339,7 @@ const handlePart = (connection: IrcConnectionState, params: string[], nick: stri
     return;
   }
   if (selfPart) {
-    discardPendingChannelReplyContexts(connection, channel);
+    discardPendingChannelReplyContexts(connection, channel, (context) => context.operation !== 'join');
   }
   const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
   if (selfPart) {
@@ -366,7 +366,7 @@ const handleKick = (connection: IrcConnectionState, params: string[], nick: stri
   const selfKick = isSameIrcIdentifier(kickedNick, connection.currentNick);
   const reason = params[2] ?? 'kicked';
   if (selfKick) {
-    discardPendingChannelReplyContexts(connection, channel);
+    discardPendingChannelReplyContexts(connection, channel, (context) => context.operation !== 'join');
   }
   const users = selfKick ? [] : connection.updateChannelUsers(channel, kickedNick, false);
   if (selfKick) {
@@ -512,12 +512,17 @@ const consumePendingChannelReplyContexts = (
 
 const discardPendingChannelReplyContexts = (
   connection: IrcConnectionState,
-  channel: string
+  channel: string,
+  predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
 ) => {
   const contexts = [];
   for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
     const context = connection.pendingReplyContexts[index];
-    if (context?.kind === 'channel' && isSameIrcIdentifier(context.channel, channel)) {
+    if (
+      context?.kind === 'channel'
+      && isSameIrcIdentifier(context.channel, channel)
+      && (!predicate || predicate(context))
+    ) {
       contexts.push(connection.pendingReplyContexts.splice(index, 1)[0]!);
     }
   }
