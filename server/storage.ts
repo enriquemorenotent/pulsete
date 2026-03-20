@@ -121,7 +121,10 @@ export class Storage {
 
   listNetworks(): NetworkProfile[];
   listNetworks(_legacyUserId: string): NetworkProfile[];
-  listNetworks() { return listNetworks(this.db); }
+  listNetworks() {
+    this.ensureDefaultNetworks();
+    return listNetworks(this.db);
+  }
 
   getNetwork(networkId: string): NetworkProfile | null;
   getNetwork(_legacyUserId: string, networkId: string): NetworkProfile | null;

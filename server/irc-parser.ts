@@ -7,14 +7,21 @@ export const parseLine = (line: string): ParsedLine => {
   let prefix: string | null = null;
   if (rest.startsWith(':')) {
     const spaceIndex = rest.indexOf(' ');
+    if (spaceIndex === -1) {
+      return { prefix: rest.slice(1), command: '', params: [] };
+    }
     prefix = rest.slice(1, spaceIndex);
-    rest = rest.slice(spaceIndex + 1);
+    rest = rest.slice(spaceIndex + 1).trimStart();
   }
   const commandEnd = rest.indexOf(' ');
   const command = commandEnd === -1 ? rest : rest.slice(0, commandEnd);
   rest = commandEnd === -1 ? '' : rest.slice(commandEnd + 1);
   const params: string[] = [];
   while (rest.length > 0) {
+    rest = rest.trimStart();
+    if (rest.length === 0) {
+      break;
+    }
     if (rest.startsWith(':')) {
       params.push(rest.slice(1));
       break;

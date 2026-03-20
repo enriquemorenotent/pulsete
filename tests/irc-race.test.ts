@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
 import { handleIrcLine } from '../server/irc-handle-line.js';
+import { parseLine } from '../server/irc-parser.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 
 const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
@@ -107,6 +108,91 @@ const createWelcomeServer = async (closeDelayMs = 0) => {
     },
   };
 };
+
+const createConnection = (onEvent: (event: Record<string, unknown>) => void = () => {}) => new IrcConnection(
+  {
+    id: randomUUID(),
+    templateId: null,
+    managerHidden: false,
+    name: 'TestNet',
+    host: '127.0.0.1',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'Test User',
+    hasPassword: false,
+    favorite: false,
+    autoJoin: [],
+  },
+  {
+    onEvent,
+  }
+);
+
+test('parseLine skips repeated spaces between IRC parameters', () => {
+  assert.deepEqual(parseLine('PING  :abc def'), {
+    prefix: null,
+    command: 'PING',
+    params: ['abc def'],
+  });
+  assert.deepEqual(parseLine(':irc.example 353 tester = #help  :@alice +bob'), {
+    prefix: 'irc.example',
+    command: '353',
+    params: ['tester', '=', '#help', '@alice +bob'],
+  });
+});
+
+test('PING replies preserve the original parameter framing', () => {
+  const writes: string[] = [];
+  const connection = createConnection();
+  connection.socket = createMockSocket(writes) as any;
+
+  handleIrcLine(connection, 'PING  :abc def');
+
+  assert.deepEqual(writes, ['PONG  :abc def\r\n']);
+});
+
+test('sendRaw degrades synchronous socket write failures into status events', () => {
+  const events: Array<Record<string, unknown>> = [];
+
+  class ThrowingSocket extends EventEmitter {
+    destroyed = false;
+
+    write() {
+      throw new Error('boom');
+    }
+
+    end() {}
+    setEncoding() {}
+    destroy() {
+      this.destroyed = true;
+      return this;
+    }
+  }
+
+  const connection = createConnection((event) => {
+    events.push(event as Record<string, unknown>);
+  });
+  const socket = new ThrowingSocket();
+  connection.socket = socket as any;
+
+  const sent = connection.sendRaw('PING :test', '#status');
+
+  assert.equal(sent, false);
+  assert.equal(socket.destroyed, true);
+  assert.equal(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.kind === 'error'
+        && event.message === 'Connection is no longer writable'
+        && event.target === '#status'
+    ),
+    true
+  );
+});
 
 test('late close from an old socket does not disconnect the new connection', async () => {
   const first = await createWelcomeServer(150);

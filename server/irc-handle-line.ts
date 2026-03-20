@@ -39,7 +39,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   const { prefix, command, params } = parseLine(line);
   const nick = nickFromPrefix(prefix);
   if (command === 'PING') {
-    connection.sendRaw(`PONG ${params.join(' ')}`);
+    connection.sendRaw(formatPingReply(line, params));
     return;
   }
   if (
@@ -539,6 +539,19 @@ const parseChannelListEntry = (params: string[]) => {
 
 const formatChannelListFailure = (command: string, params: string[]) =>
   formatServerNumeric(command, params).at(0)?.replace(/^\* /, '') ?? 'Failed to load the channel list';
+
+const formatPingReply = (line: string, params: string[]) => {
+  if (/^PING\b/i.test(line)) {
+    return line.replace(/^PING\b/i, 'PONG');
+  }
+  if (params.length === 0) {
+    return 'PONG';
+  }
+  if (params.length === 1) {
+    return `PONG :${params[0]}`;
+  }
+  return `PONG ${params.join(' ')}`;
+};
 
 const resolveTrackedChannel = (connection: IrcConnectionState, channel: string) =>
   channel ? findIrcCaseMatch(connection.channelUsers.keys(), channel) ?? null : null;

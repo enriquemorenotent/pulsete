@@ -77,6 +77,19 @@ test('snapshot seeds fixed local networks and no open buffers', () => {
   assert.deepEqual(snapshot.messages, []);
 });
 
+test('listNetworks seeds fixed local networks without requiring a snapshot first', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+
+  const networks = storage.listNetworks();
+
+  assert.equal(networks.length, 4);
+  assert.deepEqual(
+    networks.map((network) => network.name),
+    ['Libera.Chat', 'OFTC', 'Snoonet', 'IRCnet']
+  );
+});
+
 test('legacy bootstrap helpers do not change fixed local defaults', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -343,9 +356,13 @@ test('deleting a template removes hidden clones', () => {
     realName: 'templated',
   }));
 
-  assert.equal(storage.listNetworks().length, 2);
+  assert.equal(
+    storage.listNetworks().filter((network) => network.id === template.id || network.templateId === template.id).length,
+    2
+  );
   storage.deleteNetwork(template.id);
-  assert.deepEqual(storage.listNetworks(), []);
+  assert.equal(storage.listNetworks().some((network) => network.id === template.id), false);
+  assert.equal(storage.listNetworks().some((network) => network.templateId === template.id), false);
 });
 
 test('query buffers persist and can be closed', () => {
@@ -380,6 +397,42 @@ test('query buffers and history match IRC nick casing insensitively', () => {
 
   assert.equal(storage.getBufferByTarget(network.id, 'ALICE')?.id, query.id);
   assert.deepEqual(storage.listMessages(network.id, 'ALICE', 10), [message]);
+});
+
+test('message history preserves insertion order when timestamps match', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  const ts = Date.now();
+  const first = storage.appendMessage({
+    id: randomUUID(),
+    networkId: network.id,
+    target: '#help',
+    nick: 'alice',
+    body: 'first',
+    kind: 'line',
+    self: false,
+    ts,
+  });
+  const second = storage.appendMessage({
+    id: randomUUID(),
+    networkId: network.id,
+    target: '#help',
+    nick: 'bob',
+    body: 'second',
+    kind: 'line',
+    self: false,
+    ts,
+  });
+
+  assert.deepEqual(
+    storage.listMessages(network.id, '#help', 10).map((message) => message.body),
+    [first.body, second.body]
+  );
+  assert.deepEqual(
+    storage.listRecentMessages(10).slice(-2).map((message) => message.body),
+    [first.body, second.body]
+  );
 });
 
 test('buffer upserts reuse case-insensitive query and channel ids', () => {

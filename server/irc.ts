@@ -279,7 +279,14 @@ export class IrcConnection implements IrcConnectionState {
       emitStatus(this, `IRC command exceeds the ${maxIrcCommandBytes}-byte limit`, 'error', statusTarget);
       return false;
     }
-    this.socket.write(`${raw}\r\n`);
+    try {
+      this.socket.write(`${raw}\r\n`);
+    } catch {
+      this.lastFailureMessage = 'Connection is no longer writable';
+      emitStatus(this, this.lastFailureMessage, 'error', statusTarget);
+      this.socket.destroy();
+      return false;
+    }
     return true;
   }
 

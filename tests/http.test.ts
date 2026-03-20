@@ -348,7 +348,6 @@ test('network routes are available without cookies', async () => {
   const port = await listen(server);
 
   try {
-    await requestJson(port, 'GET', '/api/snapshot');
     const response = await requestJson(port, 'GET', '/api/networks');
     assert.equal(response.status, 200);
     assert.equal((response.json.networks as unknown[]).length, 4);
@@ -957,6 +956,7 @@ test('static handler serves built assets and spa fallback from the asset root', 
   mkdirSync(join(assetRoot, 'assets'), { recursive: true });
   writeFileSync(join(assetRoot, 'index.html'), '<!doctype html><html><body>pulsete</body></html>');
   writeFileSync(join(assetRoot, 'assets', 'app.js'), 'console.log("pulsete");');
+  writeFileSync(join(assetRoot, 'assets', 'font.woff2'), 'font-data');
   const server = createServer((req, res) => {
     const pathname = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
     void serveStatic(pathname, res, { assetRoot });
@@ -972,6 +972,10 @@ test('static handler serves built assets and spa fallback from the asset root', 
     assert.equal(assetResponse.status, 200);
     assert.equal(assetResponse.headers.get('content-type'), 'application/javascript; charset=utf-8');
     assert.match(await assetResponse.text(), /console\.log/);
+
+    const fontResponse = await fetch(`http://127.0.0.1:${port}/assets/font.woff2`);
+    assert.equal(fontResponse.status, 200);
+    assert.equal(fontResponse.headers.get('content-type'), 'font/woff2');
 
     const fallbackResponse = await fetch(`http://127.0.0.1:${port}/workspace`);
     assert.equal(fallbackResponse.status, 200);

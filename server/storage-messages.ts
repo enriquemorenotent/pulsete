@@ -28,7 +28,7 @@ export const getMessageById = (db: DatabaseSync, messageId: string) => {
 };
 
 export const listMessages = (db: DatabaseSync, networkId: string, target: string, limit = 200) => {
-  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages WHERE networkId = ? ORDER BY ts DESC';
+  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages WHERE networkId = ? ORDER BY ts DESC, rowid DESC';
   const rows = db.prepare(sql).all(networkId) as MessageRow[];
   const matches: MessageRow[] = [];
   for (const row of rows) {
@@ -44,7 +44,7 @@ export const listMessages = (db: DatabaseSync, networkId: string, target: string
 };
 
 export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
-  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages ORDER BY ts DESC LIMIT ?';
+  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages ORDER BY ts DESC, rowid DESC LIMIT ?';
   const rows = db.prepare(sql).all(limit) as MessageRow[];
   return rows.reverse().map(toMessage);
 };
