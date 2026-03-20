@@ -431,7 +431,7 @@ const handleTopic = (connection: IrcConnectionState, params: string[], nick: str
     consumePendingChannelReplyContexts(connection, channel, 'topic-set');
   }
   emitChannel(connection, channel, { topic: params[1] ?? '' });
-  emitStatus(connection, `Topic for ${channel} changed`);
+  emitStatus(connection, `${nick ?? 'Someone'} changed the topic for ${channel}`, 'system', channel, true);
 };
 
 const handleMode = (connection: IrcConnectionState, params: string[]) => {

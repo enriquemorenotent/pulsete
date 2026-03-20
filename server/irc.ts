@@ -127,15 +127,11 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   setNick(nick: string, sourceTarget = 'server') {
-    if (this.connected) {
-      this.pendingNick = nick;
-    } else {
-      this.currentNick = nick;
-    }
-    this.sendTrackedRaw(`NICK ${nick}`, sourceTarget, createNickReplyContext(sourceTarget, nick));
     if (!this.connected) {
-      emitState(this);
+      emitStatus(this, this.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
+      return false;
     }
+    return this.sendTrackedRaw(`NICK ${nick}`, sourceTarget, createNickReplyContext(sourceTarget, nick));
   }
 
   updateProfile(profile: RuntimeNetworkProfile) {
@@ -349,6 +345,10 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   private sendTrackedRaw(raw: string, sourceTarget: string, replyContext: PendingReplyContext | null) {
+    if (!this.connected) {
+      emitStatus(this, this.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
+      return false;
+    }
     if (!this.sendRaw(raw, sourceTarget)) {
       return false;
     }

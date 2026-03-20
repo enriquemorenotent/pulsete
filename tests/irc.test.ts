@@ -2122,6 +2122,61 @@ test('irc connection keeps generic raw-command numerics on the server buffer', (
   );
 });
 
+test('irc connection routes topic change status to the affected channel', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write() {
+      return true;
+    },
+  } as unknown as net.Socket;
+  connection.channelUsers.set('#help', []);
+
+  connection.consume(':alice!user@host TOPIC #help :new topic\r\n');
+
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.target === '#help'
+        && event.kind === 'system'
+        && event.message === 'alice changed the topic for #help'
+    )
+  );
+  assert.ok(
+    !events.some(
+      (event) =>
+        event.type === 'status'
+        && event.target === undefined
+        && event.message === 'alice changed the topic for #help'
+    )
+  );
+});
+
 test('irc connection keeps topic errors bound to topic commands on the same channel', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];

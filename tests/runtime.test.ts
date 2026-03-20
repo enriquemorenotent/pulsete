@@ -657,7 +657,7 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const received: string[] = [];
-  const handshake = await createHandshakeServer(received);
+  const handshake = await createRegisteredServer(received);
   const network = storage.upsertNetwork(createNetworkInput({
     host: '127.0.0.1',
     port: handshake.port,
@@ -665,7 +665,7 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
 
   try {
     runtime.connect(network.id);
-    await waitFor(() => handshake.hasConnections());
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
 
     runtime.sendRaw(network.id, 'QUITTER test');
     await waitFor(() => received.includes('QUITTER test'));
@@ -736,6 +736,49 @@ test('runtime sendMessage does not persist unsent direct messages while disconne
     [{ target: 'helper', kind: 'error', body: 'Not connected' }]
   );
   assert.deepEqual(storage.listMessages(network.id, 'server', 10), []);
+});
+
+test('runtime rejects client commands while the network is still connecting', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const handshake = await createHandshakeServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: handshake.port,
+  }));
+
+  try {
+    runtime.connect(network.id);
+    const joinResult = runtime.join(network.id, '#help');
+    runtime.sendMessage(network.id, 'helper', 'hello');
+    runtime.sendRaw(network.id, 'WHOIS helper');
+
+    await waitFor(
+      () =>
+        received.includes('NICK tester')
+        && received.includes('USER tester 0 * :Tester Example')
+    );
+    await waitFor(
+      () =>
+        storage.listMessages(network.id, 'server', 20)
+          .filter((message) => message.body === 'Still connecting to server')
+          .length >= 2
+        && storage.listMessages(network.id, 'helper', 20)
+          .some((message) => message.body === 'Still connecting to server')
+    );
+
+    assert.equal(joinResult.target, 'server');
+    assert.equal(received.includes('JOIN #help'), false);
+    assert.equal(received.includes('PRIVMSG helper :hello'), false);
+    assert.equal(received.includes('WHOIS helper'), false);
+    assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'channel'), []);
+    assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
 });
 
 test('deleteNetwork removes runtime connections', async () => {

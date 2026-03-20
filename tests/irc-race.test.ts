@@ -802,8 +802,9 @@ test('profile updates retry a rejected connected nick change when the desired ni
   ]);
 });
 
-test('welcome clears stale pre-login nick reply contexts', () => {
+test('connecting connections reject client commands before registration completes', () => {
   const writes: string[] = [];
+  const errors: Array<{ target?: string; message: string }> = [];
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -821,19 +822,34 @@ test('welcome clears stale pre-login nick reply contexts', () => {
       favorite: false,
       autoJoin: [],
     },
-    { onEvent() {} }
+    {
+      onEvent: (event) => {
+        if (event.type === 'status' && event.kind === 'error') {
+          errors.push({ target: event.target, message: event.message });
+        }
+      },
+    }
   );
 
   connection.socket = createMockSocket(writes) as any;
-  connection.setNick('newnick', '#raw');
+  const joinSent = connection.join('#help', '#join');
+  connection.say('alice', 'hello', '#chat');
+  const rawSent = connection.sendClientRaw('WHOIS alice', '#raw');
+  const nickSent = connection.setNick('newnick', '#nick');
 
-  handleIrcLine(connection, ':irc.example 001 newnick :Welcome');
-  handleIrcLine(connection, ':irc.example 372 newnick :- motd line');
-
-  assert.equal(connection.currentNick, 'newnick');
+  assert.equal(joinSent, false);
+  assert.equal(rawSent, false);
+  assert.equal(nickSent, false);
+  assert.equal(connection.currentNick, 'tester');
   assert.equal(connection.pendingNick, null);
-  assert.ok(connection.pendingReplyContexts.every((context) => context.kind !== 'nick'));
-  assert.deepEqual(writes, ['NICK newnick\r\n']);
+  assert.deepEqual(connection.pendingReplyContexts, []);
+  assert.deepEqual(writes, []);
+  assert.deepEqual(errors, [
+    { target: '#join', message: 'Still connecting to server' },
+    { target: '#chat', message: 'Still connecting to server' },
+    { target: '#raw', message: 'Still connecting to server' },
+    { target: '#nick', message: 'Still connecting to server' },
+  ]);
 });
 
 test('updating a profile while connecting restarts the handshake with the new settings', () => {
