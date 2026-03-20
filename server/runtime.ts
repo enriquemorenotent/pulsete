@@ -69,7 +69,33 @@ export class Runtime {
 
   snapshot(): ReturnType<Storage['snapshot']>;
   snapshot(_legacyUserId: string): ReturnType<Storage['snapshot']>;
-  snapshot(_legacyUserId?: string) { return this.store.snapshot(); }
+  snapshot(_legacyUserId?: string) {
+    const snapshot = this.store.snapshot();
+    return {
+      ...snapshot,
+      networkStates: Object.fromEntries(
+        snapshot.networks.map((network) => {
+          const connection = this.connections.get(network.id);
+          return [
+            network.id,
+            connection
+              ? {
+                  connected: connection.connected,
+                  connecting: !connection.connected && connection.socket !== null,
+                  serverName: connection.serverName,
+                  nick: connection.currentNick,
+                }
+              : {
+                  connected: false,
+                  connecting: false,
+                  serverName: null,
+                  nick: network.nick,
+                },
+          ];
+        })
+      ),
+    };
+  }
 
   connect(networkId: string): void;
   connect(_legacyUserId: string, networkId: string, _legacySessionToken?: string): void;

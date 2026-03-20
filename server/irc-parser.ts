@@ -1,4 +1,5 @@
 import type { ParsedLine } from './irc-types.js';
+import { parseChannelUser } from '../shared/channel-users.js';
 export { findIrcCaseMatch, isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 
 export const parseLine = (line: string): ParsedLine => {
@@ -43,5 +44,5 @@ export const stripCtcp = (text: string) => {
   return text.slice(1, -1);
 };
 
-export const normalizeChannelUser = (value: string) => value.replace(/^[@+~&%]/, '');
+export const parseChannelUserToken = (value: string) => parseChannelUser(value);
 export const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

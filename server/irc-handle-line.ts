@@ -6,11 +6,17 @@ import { createNickReplyContext } from './irc-reply-context.js';
 import { formatServerNumeric, getServerNumericStatusKind } from './irc-server-log.js';
 import { isServiceNick } from './irc-services.js';
 import {
+  removeChannelUser,
+  renameChannelUser,
+  updateChannelUserMode,
+  upsertChannelUser,
+} from '../shared/channel-users.js';
+import {
   findIrcCaseMatch,
   isChannelTarget,
   isSameIrcIdentifier,
   nickFromPrefix,
-  normalizeChannelUser,
+  parseChannelUserToken,
   parseLine,
   stripCtcp,
 } from './irc-parser.js';
@@ -66,6 +72,10 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     handleTopic(connection, params);
     return;
   }
+  if (command === 'MODE') {
+    handleMode(connection, params);
+    return;
+  }
   if (command === '332') {
     const channel = resolveTrackedChannel(connection, params[1] ?? '');
     if (channel) {
@@ -76,18 +86,15 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   if (command === '353') {
     const channel = resolveTrackedChannel(connection, params[2] ?? '');
     if (channel) {
-      const names = (params[3] ?? '').split(' ').map(normalizeChannelUser).filter(Boolean);
-      const knownUsers = new Set(connection.channelUsers.get(channel) ?? []);
-      for (const user of names) {
-        const existingUser = findIrcCaseMatch(knownUsers, user);
-        if (existingUser && existingUser !== user) {
-          knownUsers.delete(existingUser);
+      let knownUsers = connection.channelUsers.get(channel) ?? [];
+      for (const name of (params[3] ?? '').split(' ')) {
+        const user = parseChannelUserToken(name);
+        if (user) {
+          knownUsers = upsertChannelUser(knownUsers, user);
         }
-        knownUsers.add(user);
       }
-      const mergedUsers = Array.from(knownUsers);
-      connection.channelUsers.set(channel, new Set(mergedUsers));
-      emitChannel(connection, channel, { users: mergedUsers });
+      connection.channelUsers.set(channel, knownUsers);
+      emitChannel(connection, channel, { users: knownUsers });
     }
   }
 };
@@ -282,9 +289,13 @@ const handleKick = (connection: IrcConnectionState, params: string[], nick: stri
 const handleQuit = (connection: IrcConnectionState, params: string[], nick: string | null) => {
   emitStatus(connection, `${nick ?? 'Someone'} quit (${params[0] ?? 'quit'})`);
   for (const [channel, users] of connection.channelUsers) {
-    const existingNick = nick ? findIrcCaseMatch(users, nick) : null;
-    if (existingNick && users.delete(existingNick)) {
-      emitChannel(connection, channel, { users: Array.from(users) });
+    if (!nick) {
+      continue;
+    }
+    const nextUsers = removeChannelUser(users, nick);
+    if (nextUsers.length !== users.length) {
+      connection.channelUsers.set(channel, nextUsers);
+      emitChannel(connection, channel, { users: nextUsers });
     }
   }
 };
@@ -295,10 +306,13 @@ const handleNick = (connection: IrcConnectionState, params: string[], nick: stri
     return;
   }
   for (const [channel, users] of connection.channelUsers) {
-    const existingNick = nick ? findIrcCaseMatch(users, nick) : null;
-    if (existingNick && users.delete(existingNick)) {
-      users.add(newNick);
-      emitChannel(connection, channel, { users: Array.from(users) });
+    if (!nick) {
+      continue;
+    }
+    const nextUsers = renameChannelUser(users, nick, newNick);
+    if (nextUsers.length !== users.length || nextUsers.some((user, index) => user !== users[index])) {
+      connection.channelUsers.set(channel, nextUsers);
+      emitChannel(connection, channel, { users: nextUsers });
     }
   }
   if (isSameIrcIdentifier(nick, connection.currentNick) || isSameIrcIdentifier(nick, connection.pendingNick)) {
@@ -318,6 +332,40 @@ const handleTopic = (connection: IrcConnectionState, params: string[]) => {
   emitStatus(connection, `Topic for ${channel} changed`);
 };
 
+const handleMode = (connection: IrcConnectionState, params: string[]) => {
+  const channel = resolveTrackedChannel(connection, params[0] ?? '');
+  const modeSequence = params[1] ?? '';
+  if (!channel || !modeSequence || /[^+\-qaohv]/.test(modeSequence)) {
+    return;
+  }
+  let users = connection.channelUsers.get(channel) ?? [];
+  let sign: '+' | '-' = '+';
+  let parameterIndex = 2;
+  let changed = false;
+
+  for (const token of modeSequence) {
+    if (token === '+' || token === '-') {
+      sign = token;
+      continue;
+    }
+    const nick = params[parameterIndex++];
+    const mode = modeFromToken(token);
+    if (!nick || !mode) {
+      continue;
+    }
+    const nextUsers = updateChannelUserMode(users, nick, sign === '+' ? mode : 'normal');
+    if (nextUsers.some((user, index) => user !== users[index]) || nextUsers.length !== users.length) {
+      users = nextUsers;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    connection.channelUsers.set(channel, users);
+    emitChannel(connection, channel, { users });
+  }
+};
+
 const createMessage = (
   connection: IrcConnectionState,
   input: Omit<MessageInput, 'id' | 'networkId' | 'ts'>
@@ -330,3 +378,22 @@ const createMessage = (
 
 const resolveTrackedChannel = (connection: IrcConnectionState, channel: string) =>
   channel ? findIrcCaseMatch(connection.channelUsers.keys(), channel) ?? null : null;
+
+const modeFromToken = (token: string) => {
+  if (token === 'q') {
+    return 'owner';
+  }
+  if (token === 'a') {
+    return 'admin';
+  }
+  if (token === 'o') {
+    return 'op';
+  }
+  if (token === 'h') {
+    return 'halfop';
+  }
+  if (token === 'v') {
+    return 'voice';
+  }
+  return null;
+};

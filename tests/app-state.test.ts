@@ -40,6 +40,7 @@ const emptySnapshot = (): AppSnapshot => ({
   buffers: [],
   channels: [],
   messages: [],
+  networkStates: {},
 });
 
 test('snapshot-loaded enters the ready phase and clears any banner', () => {
@@ -70,10 +71,24 @@ test('snapshot-loaded selects the first instance server buffer', () => {
       buffers: [buffer],
       channels: [],
       messages: [],
+      networkStates: {
+        [network.id]: {
+          connected: false,
+          connecting: true,
+          serverName: null,
+          nick: network.nick,
+        },
+      },
     },
   });
 
   assert.deepEqual(nextState.selection, { bufferId: buffer.id });
+  assert.deepEqual(nextState.networkStates[network.id], {
+    connected: false,
+    connecting: true,
+    serverName: null,
+    nick: network.nick,
+  });
 });
 
 test('friend updates are sorted alphabetically in state', () => {

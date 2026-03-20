@@ -6,6 +6,12 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
 import { handleIrcLine } from '../server/irc-handle-line.js';
+import type { ChannelUserState } from '../shared/protocol.js';
+
+const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+  nick,
+  mode,
+});
 
 const waitFor = async (predicate: () => boolean, timeoutMs = 3000) => {
   const start = Date.now();
@@ -569,7 +575,7 @@ test('updating a profile while connecting restarts the handshake with the new se
   try {
     connection.connect();
     connection.buffer = ':irc.example 001 oldnick';
-    connection.channelUsers.set('#help', new Set(['alice']));
+    connection.channelUsers.set('#help', [makeUser('alice')]);
     connection.updateProfile({
       ...connection.profile,
       name: 'NewNet',
@@ -697,14 +703,24 @@ test('multi-line names replies accumulate users across repeated 353 numerics', (
     }
   );
 
-  connection.channelUsers.set('#help', new Set());
+  connection.channelUsers.set('#help', []);
   handleIrcLine(connection, ':irc.example 353 tester = #help :@alice +bob');
   handleIrcLine(connection, ':irc.example 353 tester = #help :carol dave');
 
-  assert.deepEqual(Array.from(connection.channelUsers.get('#help') ?? []).sort(), ['alice', 'bob', 'carol', 'dave']);
+  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [
+    makeUser('alice', 'op'),
+    makeUser('bob', 'voice'),
+    makeUser('carol'),
+    makeUser('dave'),
+  ]);
   assert.deepEqual(
-    (events.filter((event) => event.type === 'channel').at(-1) as { users: string[] } | undefined)?.users.slice().sort(),
-    ['alice', 'bob', 'carol', 'dave']
+    (events.filter((event) => event.type === 'channel').at(-1) as { users: ChannelUserState[] } | undefined)?.users,
+    [
+      makeUser('alice', 'op'),
+      makeUser('bob', 'voice'),
+      makeUser('carol'),
+      makeUser('dave'),
+    ]
   );
 });
 
@@ -741,7 +757,7 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
   handleIrcLine(connection, ':HELPER!user@host QUIT :bye');
 
   assert.deepEqual(Array.from(connection.channelUsers.keys()), ['#Help']);
-  assert.deepEqual(Array.from(connection.channelUsers.get('#Help') ?? []), ['tester']);
+  assert.deepEqual(connection.channelUsers.get('#Help') ?? [], [makeUser('tester')]);
 
   const messageEvents = events.filter(
     (event): event is { type: 'message'; message: Record<string, unknown> } => event.type === 'message'
@@ -750,6 +766,48 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
   assert.equal(messageEvents[0]?.message.self, true);
   assert.equal(messageEvents[1]?.message.target, '#Help');
   assert.equal(messageEvents[1]?.message.body, 'hello there');
+});
+
+test('channel mode changes update nick privileges in the user list', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.channelUsers.set('#help', [makeUser('alice'), makeUser('bob', 'voice')]);
+  handleIrcLine(connection, ':chanop!user@host MODE #help +o-v alice bob');
+
+  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [
+    makeUser('alice', 'op'),
+    makeUser('bob'),
+  ]);
+  assert.deepEqual(
+    (events.filter((event) => event.type === 'channel').at(-1) as { users: ChannelUserState[] } | undefined)?.users,
+    [
+      makeUser('alice', 'op'),
+      makeUser('bob'),
+    ]
+  );
 });
 
 test('self kicks emit a self part message and remove channel membership', () => {
@@ -778,7 +836,7 @@ test('self kicks emit a self part message and remove channel membership', () => 
     }
   );
 
-  connection.channelUsers.set('#help', new Set(['tester', 'alice']));
+  connection.channelUsers.set('#help', [makeUser('tester'), makeUser('alice')]);
   handleIrcLine(connection, ':op!user@host KICK #help tester :bye');
 
   assert.equal(connection.channelUsers.has('#help'), false);
@@ -821,7 +879,7 @@ test('self part removes local channel state without emitting a replacement chann
     }
   );
 
-  connection.channelUsers.set('#help', new Set(['tester', 'alice']));
+  connection.channelUsers.set('#help', [makeUser('tester'), makeUser('alice')]);
 
   handleIrcLine(connection, ':tester!user@host PART #help :Leaving');
 
@@ -870,7 +928,7 @@ test('late channel events and messages do not recreate a self-parted channel', (
     }
   );
 
-  connection.channelUsers.set('#help', new Set(['tester', 'alice']));
+  connection.channelUsers.set('#help', [makeUser('tester'), makeUser('alice')]);
   handleIrcLine(connection, ':tester!user@host PART #help :Leaving');
   const afterPartEvents = events.length;
 
@@ -917,7 +975,7 @@ test('socket close clears parser buffers and nick tracking', () => {
   try {
     connection.connect();
     connection.buffer = ':irc.example 001 tester';
-    connection.channelUsers.set('#help', new Set(['alice']));
+    connection.channelUsers.set('#help', [makeUser('alice')]);
     connection.manualDisconnect = true;
 
     socket.emit('close');

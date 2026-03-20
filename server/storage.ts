@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import { historyWindowLimit, type AppSnapshot, type BufferState, type ChannelState, type FriendState, type NetworkProfile } from '../shared/protocol.js';
+import {
+  historyWindowLimit,
+  type AppSnapshot,
+  type BufferState,
+  type ChannelState,
+  type ChannelUserState,
+  type FriendState,
+  type NetworkProfile,
+} from '../shared/protocol.js';
 import { createSecretBox } from './network-secret.js';
 import { createDatabase } from './storage-db.js';
 import {
@@ -223,9 +231,14 @@ export class Storage {
     setBufferUnread(this.db, bufferId, unread);
   }
 
-  updateChannelUsers(networkId: string, channelName: string, users: string[]): void;
-  updateChannelUsers(_legacyUserId: string, networkId: string, channelName: string, users: string[]): void;
-  updateChannelUsers(networkIdOrLegacyUserId: string, networkIdOrName: string, channelNameOrUsers: string | string[], maybeUsers?: string[]) {
+  updateChannelUsers(networkId: string, channelName: string, users: ChannelUserState[]): void;
+  updateChannelUsers(_legacyUserId: string, networkId: string, channelName: string, users: ChannelUserState[]): void;
+  updateChannelUsers(
+    networkIdOrLegacyUserId: string,
+    networkIdOrName: string,
+    channelNameOrUsers: string | ChannelUserState[],
+    maybeUsers?: ChannelUserState[]
+  ) {
     const [networkId, channelName, users] = Array.isArray(channelNameOrUsers)
       ? [networkIdOrLegacyUserId, networkIdOrName, channelNameOrUsers]
       : [networkIdOrName, channelNameOrUsers, maybeUsers ?? []];
@@ -323,6 +336,7 @@ export class Storage {
       buffers: this.listBuffers(),
       channels: this.listChannels(),
       messages: this.listRecentMessages(historyWindowLimit),
+      networkStates: {},
     };
   }
 

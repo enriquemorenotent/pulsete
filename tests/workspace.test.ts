@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState, NetworkProfile } from '../shared/protocol.js';
 import {
-  canShowInstanceChildren,
   deriveWorkspace,
+  getConnectionStatus,
+  getConnectionLabel,
+  getConnectionLabelParts,
   selectDefaultBuffer,
   type NetworkRuntimeState,
   type SelectedBuffer,
@@ -41,12 +43,17 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   unread: overrides.unread ?? 0,
 });
 
+const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+  nick,
+  mode,
+});
+
 const makeChannel = (overrides: Partial<ChannelState> = {}): ChannelState => ({
   id: overrides.id ?? 'channel-1',
   networkId: overrides.networkId ?? 'network-1',
   name: overrides.name ?? '#help',
   topic: overrides.topic ?? '',
-  users: overrides.users ?? ['alice', 'bob'],
+  users: overrides.users ?? [makeUser('alice'), makeUser('bob')],
 });
 
 const derive = ({
@@ -76,6 +83,31 @@ test('default buffer picks the first open connection instance server', () => {
   });
 });
 
+test('connection labels include the live runtime nick', () => {
+  const network = makeNetwork({ name: 'Cuff-Link', nick: 'sofia' });
+
+  assert.deepEqual(getConnectionLabelParts([network], network, makeRuntime({ nick: 'sofiaa' })), {
+    name: 'Cuff-Link',
+    nick: 'sofiaa',
+    instanceIndex: null,
+  });
+  assert.equal(getConnectionLabel([network], network, makeRuntime({ nick: 'sofiaa' })), 'Cuff-Link (sofiaa)');
+});
+
+test('connection labels preserve an instance index when several peers share one template', () => {
+  const first = makeNetwork({ id: 'instance-1', templateId: 'template-1', name: 'Cuff-Link', nick: 'sofia' });
+  const second = makeNetwork({ id: 'instance-2', templateId: 'template-1', name: 'Cuff-Link', nick: 'sofia' });
+
+  assert.deepEqual(
+    getConnectionLabelParts([first, second], second, makeRuntime({ nick: 'sofiaa' })),
+    { name: 'Cuff-Link', nick: 'sofiaa', instanceIndex: 2 }
+  );
+  assert.equal(
+    getConnectionLabel([first, second], second, makeRuntime({ nick: 'sofiaa' })),
+    'Cuff-Link (sofiaa, 2)'
+  );
+});
+
 test('empty workspace hides message-oriented UI when no connection instance exists', () => {
   const workspace = derive({
     networks: [makeNetwork({ id: 'saved-template', managerHidden: false })],
@@ -88,7 +120,7 @@ test('empty workspace hides message-oriented UI when no connection instance exis
   assert.equal(workspace.composerMode, 'hidden');
 });
 
-test('offline instance forces server buffer and hides child buffers', () => {
+test('offline channel stays selected in read-only mode', () => {
   const serverBuffer = makeBuffer({ id: 'server-1' });
   const channelBuffer = makeBuffer({ id: 'channel-1', kind: 'channel', target: '#help' });
   const workspace = derive({
@@ -97,15 +129,35 @@ test('offline instance forces server buffer and hides child buffers', () => {
     selection: { bufferId: channelBuffer.id },
   });
 
-  assert.equal(workspace.mode, 'server-offline');
+  assert.equal(workspace.mode, 'channel-offline');
   assert.deepEqual(workspace.selection, {
-    bufferId: serverBuffer.id,
+    bufferId: channelBuffer.id,
   });
-  assert.equal(canShowInstanceChildren(workspace.selectedRuntime), false);
-  assert.equal(workspace.headerTitle, '');
+  assert.equal(workspace.selectedBuffer?.target, '#help');
+  assert.equal(workspace.composerMode, 'hidden');
+  assert.equal(workspace.showNicklist, false);
+  assert.equal(getConnectionStatus(workspace.selectedRuntime), 'offline');
+  assert.equal(workspace.headerTitle, '#help');
 });
 
-test('connecting instance stays on the server buffer with no composer', () => {
+test('offline private message stays selected in read-only mode', () => {
+  const serverBuffer = makeBuffer({ id: 'server-1' });
+  const queryBuffer = makeBuffer({ id: 'query-1', kind: 'query', target: 'alice' });
+  const workspace = derive({
+    buffers: [serverBuffer, queryBuffer],
+    selection: { bufferId: queryBuffer.id },
+  });
+
+  assert.equal(workspace.mode, 'query-offline');
+  assert.deepEqual(workspace.selection, {
+    bufferId: queryBuffer.id,
+  });
+  assert.equal(workspace.selectedBuffer?.target, 'alice');
+  assert.equal(workspace.composerMode, 'hidden');
+  assert.equal(workspace.showNicklist, false);
+});
+
+test('connecting instance keeps channels selected in read-only mode', () => {
   const serverBuffer = makeBuffer({ id: 'server-1' });
   const channelBuffer = makeBuffer({ id: 'channel-1', kind: 'channel', target: '#help' });
   const workspace = derive({
@@ -114,10 +166,27 @@ test('connecting instance stays on the server buffer with no composer', () => {
     selection: { bufferId: channelBuffer.id },
   });
 
-  assert.equal(workspace.mode, 'server-connecting');
+  assert.equal(workspace.mode, 'channel-connecting');
   assert.equal(workspace.composerMode, 'hidden');
-  assert.equal(workspace.headerTitle, '');
-  assert.equal(workspace.headerSubtitle, '');
+  assert.equal(workspace.selectedBuffer?.target, '#help');
+  assert.equal(workspace.headerTitle, '#help');
+  assert.match(workspace.headerSubtitle, /Reconnecting/);
+});
+
+test('connecting instance keeps private messages selected in read-only mode', () => {
+  const serverBuffer = makeBuffer({ id: 'server-1' });
+  const queryBuffer = makeBuffer({ id: 'query-1', kind: 'query', target: 'alice' });
+  const workspace = derive({
+    runtime: makeRuntime({ connecting: true }),
+    buffers: [serverBuffer, queryBuffer],
+    selection: { bufferId: queryBuffer.id },
+  });
+
+  assert.equal(workspace.mode, 'query-connecting');
+  assert.equal(workspace.composerMode, 'hidden');
+  assert.equal(workspace.selectedBuffer?.target, 'alice');
+  assert.equal(workspace.headerTitle, 'alice');
+  assert.match(workspace.headerSubtitle, /Reconnecting/);
 });
 
 test('connected server buffer is command-only and hides the nicklist', () => {

@@ -1,5 +1,6 @@
 import type net from 'node:net';
 import type tls from 'node:tls';
+import type { ChannelUserState } from '../shared/protocol.js';
 import type { MessageInput } from './storage.js';
 import type { PendingReplyContext } from './irc-reply-context.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
@@ -8,7 +9,7 @@ export type RuntimeEvent =
   | { type: 'state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
   | { type: 'status'; networkId: string; message: string; kind: 'notice' | 'error' | 'system'; target?: string }
   | { type: 'message'; message: MessageInput }
-  | { type: 'channel'; networkId: string; channel: string; topic?: string; users?: string[] };
+  | { type: 'channel'; networkId: string; channel: string; topic?: string; users?: ChannelUserState[] };
 
 export type Handlers = {
   onEvent: (event: RuntimeEvent) => void;
@@ -27,7 +28,7 @@ export type IrcConnectionState = {
   handlers: Handlers;
   socket: IrcSocket | null;
   buffer: string;
-  channelUsers: Map<string, Set<string>>;
+  channelUsers: Map<string, ChannelUserState[]>;
   manualDisconnect: boolean;
   reconnectAttempts: number;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
@@ -46,5 +47,5 @@ export type IrcConnectionState = {
   resetTransientState(): void;
   sendRaw(raw: string, statusTarget?: string): boolean;
   sendClientRaw(raw: string, sourceTarget?: string): boolean;
-  updateChannelUsers(channel: string, nick: string | null, joined: boolean): string[];
+  updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
 };

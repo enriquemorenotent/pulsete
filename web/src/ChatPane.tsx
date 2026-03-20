@@ -40,7 +40,7 @@ export function ChatPane(props: ChatPaneProps) {
   const renderBlocks = buildRenderBlocks(props.selectedMessages, isServerBuffer ? 'server' : 'chat');
 
   return (
-    <section className="min-h-0 min-w-0 overflow-hidden">
+    <section className="h-full min-h-0 min-w-0 overflow-hidden">
       <Card className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden">
         {!isServerBuffer ? (
           <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-3 py-2">

@@ -1,4 +1,12 @@
-import type { AppSnapshot, BufferState, ChannelState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type {
+  AppSnapshot,
+  BufferState,
+  ChannelState,
+  ChannelUserState,
+  ChatMessage,
+  FriendState,
+  NetworkProfile,
+} from '../../shared/protocol.js';
 import type { NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
@@ -32,7 +40,7 @@ export type Action =
   | { type: 'append-messages'; messages: ChatMessage[] }
   | { type: 'upsert-channel'; channel: ChannelState }
   | { type: 'remove-channel'; channelId: string; networkId: string }
-  | { type: 'update-presence'; networkId: string; channel: string; users: string[] }
+  | { type: 'update-presence'; networkId: string; channel: string; users: ChannelUserState[] }
   | { type: 'network-connecting'; networkId: string; nick: string }
   | { type: 'network-state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
   | { type: 'set-banner'; banner: Banner }

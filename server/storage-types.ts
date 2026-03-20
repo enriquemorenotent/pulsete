@@ -1,4 +1,4 @@
-import type { AppSnapshot, BufferState, ChannelState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
 
 export type NetworkRow = {
   id: string;
@@ -89,3 +89,5 @@ export type MessageInput = {
 export type CountRow = { count: number };
 
 export type NetworkCountRow = CountRow;
+
+export type ChannelUsers = ChannelUserState[];

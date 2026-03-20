@@ -6,6 +6,12 @@ import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { Storage, type NetworkInput } from '../server/storage.js';
+import type { ChannelUserState } from '../shared/protocol.js';
+
+const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+  nick,
+  mode,
+});
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
   templateId: null,
@@ -102,7 +108,7 @@ test('storage persists local workspace buffers and messages', () => {
     name: '#archlinux',
     topic: 'support',
     unread: 2,
-    users: ['alice', 'bob'],
+    users: [makeUser('alice'), makeUser('bob')],
   });
   const query = storage.upsertQuery(network.id, 'helper');
   const friend = storage.upsertFriend({ nick: 'alice' });

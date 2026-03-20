@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { AddFriendDialog } from './AddFriendDialog.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace.js';
-import { canShowInstanceChildren, getConnectionLabel } from './workspace.js';
+import { getConnectionLabel, getConnectionLabelParts, getConnectionStatus } from './workspace.js';
 
 type ConnectionSidebarProps = {
   networks: NetworkProfile[];
@@ -46,11 +46,11 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
               const runtime = props.networkStates[network.id] ?? null;
               const networkBuffers = props.buffers.filter((buffer) => buffer.networkId === network.id);
               const serverBuffer = networkBuffers.find((buffer) => buffer.kind === 'server') ?? null;
-              const childBuffers = canShowInstanceChildren(runtime)
-                ? networkBuffers.filter((buffer) => buffer.kind !== 'server').sort(compareBuffers)
-                : [];
+              const childBuffers = networkBuffers.filter((buffer) => buffer.kind !== 'server').sort(compareBuffers);
+              const childBuffersDimmed = getConnectionStatus(runtime) !== 'connected';
               const selectedServer = props.selection?.bufferId === serverBuffer?.id;
-              const label = getConnectionLabel(props.networks, network);
+              const labelParts = getConnectionLabelParts(props.networks, network, runtime);
+              const label = getConnectionLabel(props.networks, network, runtime);
 
               return (
                 <div key={network.id} className="border border-border bg-card">
@@ -61,7 +61,17 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                     >
                       <span className={cn('size-2 shrink-0 rounded-full', dotTone(runtime))} />
                       <div className="min-w-0">
-                        <span className="truncate text-[13px] font-medium text-foreground">{label}</span>
+                        <div className="flex min-w-0 items-baseline gap-1.5">
+                          <span className="truncate text-[13px] font-medium text-foreground">{labelParts.name}</span>
+                          <span className="shrink-0 font-mono text-[11px] font-normal text-muted-foreground">
+                            as {labelParts.nick}
+                          </span>
+                          {labelParts.instanceIndex === null ? null : (
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              · {labelParts.instanceIndex}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {serverBuffer && serverBuffer.unread > 0 ? <UnreadBadge unread={serverBuffer.unread} /> : null}
                     </button>
@@ -93,6 +103,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                           <SidebarChannelRow
                             key={buffer.id}
                             buffer={buffer}
+                            dimmed={childBuffersDimmed}
                             selected={props.selection?.bufferId === buffer.id}
                             onSelect={() => props.onSelectBuffer(buffer)}
                             onClose={() => props.onCloseChannel(network.id, buffer.target)}
@@ -101,6 +112,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                           <SidebarQueryRow
                             key={buffer.id}
                             buffer={buffer}
+                            dimmed={childBuffersDimmed}
                             selected={props.selection?.bufferId === buffer.id}
                             onSelect={() => props.onSelectBuffer(buffer)}
                             onClose={() => props.onCloseBuffer(buffer)}
@@ -181,15 +193,25 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
 
 function SidebarChannelRow(props: {
   buffer: BufferState;
+  dimmed: boolean;
   selected: boolean;
   onSelect: () => void;
   onClose: () => void;
 }) {
   return (
     <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
-      <button className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left" onClick={props.onSelect}>
+      <button
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left',
+          props.dimmed && 'opacity-70'
+        )}
+        onClick={props.onSelect}
+        aria-label={`Open ${props.buffer.target}`}
+      >
         <Hash className="size-3 shrink-0 text-muted-foreground" />
-        <span className="truncate text-[13px] text-foreground">{props.buffer.target}</span>
+        <span className={cn('truncate text-[13px] text-foreground', props.dimmed && 'text-muted-foreground')}>
+          {props.buffer.target}
+        </span>
         {props.buffer.unread > 0 ? <UnreadBadge unread={props.buffer.unread} /> : null}
       </button>
       <button
@@ -205,15 +227,25 @@ function SidebarChannelRow(props: {
 
 function SidebarQueryRow(props: {
   buffer: BufferState;
+  dimmed: boolean;
   selected: boolean;
   onSelect: () => void;
   onClose: () => void;
 }) {
   return (
     <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
-      <button className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left" onClick={props.onSelect}>
+      <button
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left',
+          props.dimmed && 'opacity-70'
+        )}
+        onClick={props.onSelect}
+        aria-label={`Open ${props.buffer.target}`}
+      >
         <MessageSquareMore className="size-3 shrink-0 text-muted-foreground" />
-        <span className="truncate text-[13px] text-foreground">{props.buffer.target}</span>
+        <span className={cn('truncate text-[13px] text-foreground', props.dimmed && 'text-muted-foreground')}>
+          {props.buffer.target}
+        </span>
         {props.buffer.unread > 0 ? <UnreadBadge unread={props.buffer.unread} /> : null}
       </button>
       <button

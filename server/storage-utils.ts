@@ -1,5 +1,6 @@
 import { pbkdf2Sync } from 'node:crypto';
-import type { BufferState, ChannelState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
 import { getLocalIrcIdentity } from '../shared/local-defaults.js';
 import type { SecretBox } from './network-secret.js';
 import type {
@@ -22,6 +23,11 @@ export const parseJson = <T>(value: string, fallback: T): T => {
   } catch {
     return fallback;
   }
+};
+
+const parseChannelUsers = (value: string) => {
+  const parsed = parseJson<Array<string | ChannelUserState>>(value, []);
+  return sortChannelUsers(parsed.map(parseChannelUser).filter((user): user is ChannelUserState => user !== null));
 };
 
 export const defaultNetworkTemplates = (): NetworkInput[] => {
@@ -137,7 +143,7 @@ export const toChannelState = (
   networkId: row.networkId,
   name: row.name,
   topic: row.topic,
-  users: parseJson<string[]>(row.users, []),
+  users: parseChannelUsers(row.users),
 });
 
 export const toMessage = (row: MessageRow): MessageInput => ({

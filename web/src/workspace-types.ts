@@ -16,8 +16,12 @@ export type WorkspaceMode =
   | 'server-offline'
   | 'server-connecting'
   | 'server-connected'
+  | 'channel-offline'
+  | 'channel-connecting'
   | 'channel-pending'
   | 'channel-connected'
+  | 'query-offline'
+  | 'query-connecting'
   | 'query-connected';
 
 export type ComposerMode = 'hidden' | 'commands' | 'normal';

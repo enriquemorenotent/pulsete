@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import type { BufferState, ChannelState } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState } from '../shared/protocol.js';
 import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { BufferInput, BufferRow, ChannelInput, ChannelRow } from './storage-types.js';
 import { toBufferState, toChannelState } from './storage-utils.js';
@@ -151,7 +151,7 @@ export const deleteChannelByName = (db: DatabaseSync, networkId: string, channel
   }
 };
 
-export const updateChannelUsers = (db: DatabaseSync, networkId: string, channelName: string, users: string[]) => {
+export const updateChannelUsers = (db: DatabaseSync, networkId: string, channelName: string, users: ChannelUserState[]) => {
   const channel = getChannelByName(db, networkId, channelName);
   if (!channel) {
     return;

@@ -61,6 +61,7 @@ export const reducer = (state: State, action: Action): State => {
         buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
         messages: action.snapshot.messages,
+        networkStates: action.snapshot.networkStates,
         selection: selectDefaultBuffer(action.snapshot),
         banner: null,
       };
@@ -73,6 +74,7 @@ export const reducer = (state: State, action: Action): State => {
         buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
         messages: mergeMessages(state.messages, action.snapshot.messages),
+        networkStates: action.snapshot.networkStates,
         selection: state.selection ?? selectDefaultBuffer(action.snapshot),
       };
     case 'load-failed':

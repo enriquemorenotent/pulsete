@@ -1,5 +1,6 @@
 import type { MessageInput } from './storage.js';
 import type { IrcConnectionState, RuntimeEvent } from './irc-types.js';
+import type { ChannelUserState } from '../shared/protocol.js';
 
 export const emitEvent = (connection: IrcConnectionState, event: RuntimeEvent) => {
   connection.handlers.onEvent(event);
@@ -37,7 +38,7 @@ export const emitMessage = (connection: IrcConnectionState, message: MessageInpu
 export const emitChannel = (
   connection: IrcConnectionState,
   channel: string,
-  details: { topic?: string; users?: string[] } = {}
+  details: { topic?: string; users?: ChannelUserState[] } = {}
 ) => {
   emitEvent(connection, {
     type: 'channel',

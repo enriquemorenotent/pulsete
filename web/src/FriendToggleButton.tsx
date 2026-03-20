@@ -10,14 +10,13 @@ export function FriendToggleButton(props: FriendToggleButtonProps) {
   return (
     <Button
       type="button"
-      size="sm"
+      size="icon"
       variant="ghost"
-      className={props.active ? 'text-primary hover:text-primary' : 'text-muted-foreground'}
+      className={props.active ? 'size-7 text-primary hover:text-primary' : 'size-7 text-muted-foreground'}
       aria-label={props.active ? 'Remove friend' : 'Add friend'}
       onClick={props.onClick}
     >
       <Star className={props.active ? 'fill-current' : undefined} />
-      {props.active ? 'Friend' : 'Add'}
     </Button>
   );
 }

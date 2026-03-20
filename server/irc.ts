@@ -4,6 +4,8 @@ import { connectSocket } from './irc-connect.js';
 import { emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import { findIrcCaseMatch, isSameIrcIdentifier } from './irc-parser.js';
+import { removeChannelUser, upsertChannelUser } from '../shared/channel-users.js';
+import type { ChannelUserState } from '../shared/protocol.js';
 import {
   consumeReplyTarget,
   createChannelReplyContext,
@@ -18,7 +20,7 @@ import type { RuntimeNetworkProfile } from './storage-types.js';
 export class IrcConnection implements IrcConnectionState {
   socket: IrcSocket | null = null;
   buffer = '';
-  readonly channelUsers = new Map<string, Set<string>>();
+  readonly channelUsers = new Map<string, ChannelUserState[]>();
   manualDisconnect = false;
   reconnectAttempts = 0;
   reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -198,20 +200,11 @@ export class IrcConnection implements IrcConnectionState {
 
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
     const channelKey = findIrcCaseMatch(this.channelUsers.keys(), channel) ?? channel;
-    const current = this.channelUsers.get(channelKey) ?? new Set<string>();
-    if (nick) {
-      const existingNick = findIrcCaseMatch(current, nick);
-      if (joined) {
-        if (existingNick && existingNick !== nick) {
-          current.delete(existingNick);
-        }
-        current.add(nick);
-      } else if (existingNick) {
-        current.delete(existingNick);
-      }
-    }
-    this.channelUsers.set(channelKey, current);
-    return Array.from(current);
+    const current = this.channelUsers.get(channelKey) ?? createEmptyChannelUsers();
+    const nextUsers =
+      !nick ? current : joined ? upsertChannelUser(current, { nick, mode: 'normal' }) : removeChannelUser(current, nick);
+    this.channelUsers.set(channelKey, nextUsers);
+    return nextUsers;
   }
 
   private reconnectWithUpdatedProfile() {
@@ -259,6 +252,8 @@ export class IrcConnection implements IrcConnectionState {
     return true;
   }
 }
+
+const createEmptyChannelUsers = (): ChannelUserState[] => [];
 
 const requiresSocketRestart = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
   current.host !== next.host || current.port !== next.port || current.tls !== next.tls;

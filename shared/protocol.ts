@@ -44,6 +44,16 @@ export const friendSchema = z.object({
 
 export type FriendState = z.infer<typeof friendSchema>;
 
+export const channelUserModeSchema = z.enum(['owner', 'admin', 'op', 'halfop', 'voice', 'normal']);
+export type ChannelUserMode = z.infer<typeof channelUserModeSchema>;
+
+export const channelUserSchema = z.object({
+  nick: z.string(),
+  mode: channelUserModeSchema.default('normal'),
+});
+
+export type ChannelUserState = z.infer<typeof channelUserSchema>;
+
 export const bufferKindSchema = z.enum(['server', 'channel', 'query']);
 
 export const bufferSchema = z.object({
@@ -61,10 +71,17 @@ export const channelSchema = z.object({
   networkId: z.string(),
   name: z.string(),
   topic: z.string().default(''),
-  users: z.array(z.string()).default([]),
+  users: z.array(channelUserSchema).default([]),
 });
 
 export type ChannelState = z.infer<typeof channelSchema>;
+
+const networkRuntimeStateSchema = z.object({
+  connected: z.boolean(),
+  connecting: z.boolean(),
+  serverName: z.string().nullable(),
+  nick: z.string(),
+});
 
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
@@ -72,6 +89,7 @@ export const appSnapshotSchema = z.object({
   buffers: z.array(bufferSchema),
   channels: z.array(channelSchema),
   messages: z.array(chatMessageSchema),
+  networkStates: z.record(networkRuntimeStateSchema),
 });
 
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;
@@ -176,7 +194,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('presence.update'),
     networkId: z.string(),
     channel: z.string(),
-    users: z.array(z.string()),
+    users: z.array(channelUserSchema),
   }),
   baseClientSchema.extend({
     type: z.literal('notice'),

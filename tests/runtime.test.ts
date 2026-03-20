@@ -8,6 +8,12 @@ import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
 import { Storage, type NetworkInput } from '../server/storage.js';
+import type { ChannelUserState } from '../shared/protocol.js';
+
+const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+  nick,
+  mode,
+});
 
 const waitFor = async (predicate: () => boolean, timeoutMs = 3000) => {
   const start = Date.now();
@@ -216,6 +222,38 @@ test('saving a connected network reconnects with updated settings', async () => 
   }
 });
 
+test('runtime snapshot includes live network states after a refresh point', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const server = await createRegisteredServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'Tester Example',
+  }));
+
+  try {
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    assert.deepEqual(runtime.snapshot().networkStates[network.id], {
+      connected: true,
+      connecting: false,
+      serverName: 'irc.example',
+      nick: 'tester',
+    });
+  } finally {
+    runtime.disconnect(network.id);
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('saving a template network updates live hidden instances', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -285,7 +323,7 @@ test('channel events keep the untouched half of channel state', () => {
     name: '#help',
     topic: 'old topic',
     unread: 2,
-    users: ['alice', 'bob'],
+    users: [makeUser('alice'), makeUser('bob')],
   });
 
   handleRuntimeEvent({ store: storage, send() {} }, {
@@ -299,7 +337,7 @@ test('channel events keep the untouched half of channel state', () => {
     networkId: network.id,
     name: '#help',
     topic: 'new topic',
-    users: ['alice', 'bob'],
+    users: [makeUser('alice'), makeUser('bob')],
   });
   assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 2);
 
@@ -307,14 +345,14 @@ test('channel events keep the untouched half of channel state', () => {
     type: 'channel',
     networkId: network.id,
     channel: '#help',
-    users: ['carol'],
+    users: [makeUser('carol')],
   });
   assert.deepEqual(storage.getChannelByName(network.id, '#help'), {
     id: storage.getChannelByName(network.id, '#help')?.id ?? '',
     networkId: network.id,
     name: '#help',
     topic: 'new topic',
-    users: ['carol'],
+    users: [makeUser('carol')],
   });
   assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 2);
 });
@@ -350,7 +388,7 @@ test('runtime join preserves existing channel metadata', () => {
     name: '#help',
     topic: 'saved topic',
     unread: 3,
-    users: ['alice'],
+    users: [makeUser('alice')],
   });
 
   runtime.join(network.id, '#help');
@@ -569,7 +607,7 @@ test('self part events remove the channel and emit buffer.remove', () => {
     name: '#help',
     topic: 'support',
     unread: 0,
-    users: ['tester', 'alice'],
+    users: [makeUser('tester'), makeUser('alice')],
   });
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
@@ -740,7 +778,7 @@ test('status events keep their originating buffer target and message kind', () =
     networkId: network.id,
     name: '#help',
     topic: '',
-    users: ['tester'],
+    users: [makeUser('tester')],
   });
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 

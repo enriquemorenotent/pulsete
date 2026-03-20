@@ -3,7 +3,7 @@ import { getConnectionInstances, getConnectionStatus } from './workspace-helpers
 import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
 
 export type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
-export { canShowInstanceChildren, getConnectionLabel } from './workspace-helpers.js';
+export { getConnectionStatus, getConnectionLabel, getConnectionLabelParts } from './workspace-helpers.js';
 
 type WorkspaceInput = {
   networks: NetworkProfile[];
@@ -18,6 +18,26 @@ const selectionFor = (buffer: BufferState | null): SelectedBuffer | null =>
 
 const findServerBuffer = (buffers: BufferState[], networkId: string) =>
   buffers.find((buffer) => buffer.networkId === networkId && buffer.kind === 'server') ?? null;
+
+const getReadOnlySubtitle = (status: 'offline' | 'connecting') =>
+  status === 'offline'
+    ? 'Offline. History only until you reconnect.'
+    : 'Reconnecting. History stays available until the connection returns.';
+
+const getReadOnlyEmptyBody = (
+  kind: Extract<BufferState['kind'], 'channel' | 'query'>,
+  status: 'offline' | 'connecting'
+) => {
+  const prefix =
+    kind === 'channel'
+      ? 'No saved channel history yet.'
+      : 'No saved private-message history yet.';
+  const suffix =
+    status === 'offline'
+      ? 'Reconnect to resume the conversation.'
+      : 'Wait for the connection to finish to resume the conversation.';
+  return `${prefix} ${suffix}`;
+};
 
 export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'buffers'>): SelectedBuffer | null => {
   const instance = getConnectionInstances(snapshot.networks)[0];
@@ -52,11 +72,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   const connectionStatus = getConnectionStatus(selectedRuntime);
   const serverBuffer = findServerBuffer(input.buffers, selectedNetwork.id);
   const activeBuffer =
-    !selectedBuffer ||
-    selectedBuffer.networkId !== selectedNetwork.id ||
-    connectionStatus !== 'connected'
-      ? serverBuffer
-      : selectedBuffer;
+    !selectedBuffer || selectedBuffer.networkId !== selectedNetwork.id ? serverBuffer : selectedBuffer;
   const activeSelection = selectionFor(activeBuffer);
 
   if (!serverBuffer) {
@@ -77,6 +93,46 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     };
   }
 
+  const selectedChannel = activeBuffer?.kind === 'channel'
+    ? input.channels.find((channel) => channel.id === activeBuffer.id) ?? null
+    : null;
+
+  if (connectionStatus === 'offline' && activeBuffer?.kind === 'channel') {
+    return {
+      mode: 'channel-offline',
+      selection: activeSelection,
+      connectionInstances,
+      selectedNetwork,
+      selectedRuntime,
+      selectedBuffer: activeBuffer,
+      selectedChannel,
+      headerTitle: selectedChannel?.name ?? activeBuffer.target,
+      headerSubtitle: getReadOnlySubtitle('offline'),
+      composerMode: 'hidden',
+      composerPlaceholder: '',
+      emptyBody: getReadOnlyEmptyBody('channel', 'offline'),
+      showNicklist: false,
+    };
+  }
+
+  if (connectionStatus === 'offline' && activeBuffer?.kind === 'query') {
+    return {
+      mode: 'query-offline',
+      selection: activeSelection,
+      connectionInstances,
+      selectedNetwork,
+      selectedRuntime,
+      selectedBuffer: activeBuffer,
+      selectedChannel: null,
+      headerTitle: activeBuffer.target,
+      headerSubtitle: getReadOnlySubtitle('offline'),
+      composerMode: 'hidden',
+      composerPlaceholder: '',
+      emptyBody: getReadOnlyEmptyBody('query', 'offline'),
+      showNicklist: false,
+    };
+  }
+
   if (connectionStatus === 'offline') {
     return {
       mode: 'server-offline',
@@ -91,6 +147,42 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       composerMode: 'hidden',
       composerPlaceholder: '',
       emptyBody: 'Reconnect to restore channels and private messages.',
+      showNicklist: false,
+    };
+  }
+
+  if (connectionStatus === 'connecting' && activeBuffer?.kind === 'channel') {
+    return {
+      mode: 'channel-connecting',
+      selection: activeSelection,
+      connectionInstances,
+      selectedNetwork,
+      selectedRuntime,
+      selectedBuffer: activeBuffer,
+      selectedChannel,
+      headerTitle: selectedChannel?.name ?? activeBuffer.target,
+      headerSubtitle: getReadOnlySubtitle('connecting'),
+      composerMode: 'hidden',
+      composerPlaceholder: '',
+      emptyBody: getReadOnlyEmptyBody('channel', 'connecting'),
+      showNicklist: false,
+    };
+  }
+
+  if (connectionStatus === 'connecting' && activeBuffer?.kind === 'query') {
+    return {
+      mode: 'query-connecting',
+      selection: activeSelection,
+      connectionInstances,
+      selectedNetwork,
+      selectedRuntime,
+      selectedBuffer: activeBuffer,
+      selectedChannel: null,
+      headerTitle: activeBuffer.target,
+      headerSubtitle: getReadOnlySubtitle('connecting'),
+      composerMode: 'hidden',
+      composerPlaceholder: '',
+      emptyBody: getReadOnlyEmptyBody('query', 'connecting'),
       showNicklist: false,
     };
   }
@@ -114,9 +206,6 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   }
 
   const connectedSubtitle = `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`;
-  const selectedChannel = activeBuffer?.kind === 'channel'
-    ? input.channels.find((channel) => channel.id === activeBuffer.id) ?? null
-    : null;
 
   if (activeBuffer?.kind === 'channel' && selectedChannel) {
     return {
