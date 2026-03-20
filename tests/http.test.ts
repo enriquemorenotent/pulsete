@@ -269,6 +269,26 @@ const createThrowingWebSocket = () => {
   };
 };
 
+const createFailingWebSocket = () => {
+  let closeCalls = 0;
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    send(payload: string): boolean;
+    close(): void;
+  };
+  socket.readyState = WebSocket.OPEN;
+  socket.send = (_payload: string) => {
+    throw new Error('boom');
+  };
+  socket.close = () => {
+    closeCalls += 1;
+  };
+  return {
+    socket: socket as unknown as WebSocket,
+    getCloseCalls: () => closeCalls,
+  };
+};
+
 const createRegisteredServer = async (received: string[]) => {
   const sockets = new Set<net.Socket>();
   const server = net.createServer((socket) => {
@@ -1168,6 +1188,36 @@ test('websocket initialization installs the error handler before the first snaps
   });
   assert.equal(attached, true);
   assert.equal(getErrorListenersAtSend() > 0, true);
+});
+
+test('websocket initialization detaches the socket when the first snapshot send fails', () => {
+  const { socket, getCloseCalls } = createFailingWebSocket();
+  const calls: string[] = [];
+  const context = {
+    runtime: {
+      attachSocket() {
+        calls.push('attach');
+      },
+      detachSocket() {
+        calls.push('detach');
+      },
+      snapshot() {
+        return {
+          networks: [],
+          friends: [],
+          friendPresence: {},
+          buffers: [],
+          channels: [],
+          messages: [],
+          networkStates: {},
+        };
+      },
+    },
+  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+
+  assert.equal(initializeWebSocketConnection(socket, context), false);
+  assert.deepEqual(calls, ['attach', 'detach']);
+  assert.equal(getCloseCalls(), 1);
 });
 
 test('websocket state requests use the live local state and forward commands to runtime methods', async () => {

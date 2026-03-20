@@ -25,6 +25,7 @@ export const initializeWebSocketConnection = (ws: WebSocket, context: HttpContex
   ws.on('error', () => {});
   context.runtime.attachSocket(ws);
   if (!sendEncoded(ws, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }))) {
+    context.runtime.detachSocket(ws);
     return false;
   }
   ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));

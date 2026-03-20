@@ -42,6 +42,10 @@ export class Runtime {
     });
   }
 
+  detachSocket(ws: WebSocket) {
+    this.dropSocket(ws);
+  }
+
   revokeSession(_sessionToken: string, _legacyUserId?: string) {}
 
   send(message: ServerMessage): void;
