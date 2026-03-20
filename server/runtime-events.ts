@@ -130,6 +130,9 @@ const handleMessageEvent = (
   const removedChannel = event.message.self && event.message.kind === 'part'
     ? runtime.store.getChannelByName(event.message.networkId, event.message.target)
     : null;
+  if (event.message.self && event.message.kind === 'part' && !removedChannel) {
+    return;
+  }
 
   appendMessage(runtime, event.message);
 

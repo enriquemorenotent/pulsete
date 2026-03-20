@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { createServer } from 'node:http';
 import net from 'node:net';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -12,7 +13,7 @@ import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
 import { serveStatic } from '../server/static-handler.js';
 import { Storage, type NetworkInput } from '../server/storage.js';
-import { attachWebSocketServer } from '../server/ws-server.js';
+import { attachWebSocketServer, initializeWebSocketConnection } from '../server/ws-server.js';
 
 const listen = (server: ReturnType<typeof createServer>) =>
   new Promise<number>((resolve) => {
@@ -247,6 +248,26 @@ const waitForWebSocketCloseDetails = (socket: WebSocket) =>
     socket.on('close', handleClose);
     socket.on('error', handleError);
   });
+
+const createThrowingWebSocket = () => {
+  let errorListenersAtSend = 0;
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    send(payload: string): boolean;
+    close(): void;
+  };
+  socket.readyState = WebSocket.OPEN;
+  socket.send = (_payload: string) => {
+    errorListenersAtSend = socket.listenerCount('error');
+    socket.emit('error', new Error('boom'));
+    return true;
+  };
+  socket.close = () => {};
+  return {
+    socket: socket as unknown as WebSocket,
+    getErrorListenersAtSend: () => errorListenersAtSend,
+  };
+};
 
 const createRegisteredServer = async (received: string[]) => {
   const sockets = new Set<net.Socket>();
@@ -1118,6 +1139,35 @@ test('websocket upgrade succeeds without cookies and emits state.ready', async (
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
+});
+
+test('websocket initialization installs the error handler before the first snapshot send', () => {
+  const { socket, getErrorListenersAtSend } = createThrowingWebSocket();
+  let attached = false;
+  const context = {
+    runtime: {
+      attachSocket() {
+        attached = true;
+      },
+      snapshot() {
+        return {
+          networks: [],
+          friends: [],
+          friendPresence: {},
+          buffers: [],
+          channels: [],
+          messages: [],
+          networkStates: {},
+        };
+      },
+    },
+  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+
+  assert.doesNotThrow(() => {
+    initializeWebSocketConnection(socket as WebSocket, context);
+  });
+  assert.equal(attached, true);
+  assert.equal(getErrorListenersAtSend() > 0, true);
 });
 
 test('websocket state requests use the live local state and forward commands to runtime methods', async () => {

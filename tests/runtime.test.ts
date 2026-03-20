@@ -1688,6 +1688,40 @@ test('late duplicate self part events do not recreate the channel buffer', () =>
   handleRuntimeEvent({ store: storage, send() {} }, event());
 
   assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
+  assert.equal(storage.listMessages(network.id, '#help', 10).length, 1);
+});
+
+test('late duplicate self kick events do not append orphaned history', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: 'support',
+    unread: 0,
+    users: [makeUser('tester')],
+  });
+
+  const event = () => ({
+    type: 'message' as const,
+    message: {
+      id: randomUUID(),
+      networkId: network.id,
+      target: '#help',
+      nick: 'tester',
+      body: 'tester was kicked from #help by op (bye)',
+      kind: 'part' as const,
+      self: true,
+      ts: Date.now(),
+    },
+  });
+
+  handleRuntimeEvent({ store: storage, send() {} }, event());
+  handleRuntimeEvent({ store: storage, send() {} }, event());
+
+  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
+  assert.equal(storage.listMessages(network.id, '#help', 10).length, 1);
 });
 
 test('incoming private messages open query buffers automatically', () => {

@@ -15,13 +15,20 @@ export const attachWebSocketServer = (server: Server, context: HttpContext) => {
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
   wss.on('connection', (ws: WebSocket) => {
-    context.runtime.attachSocket(ws);
-    if (!sendEncoded(ws, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }))) {
+    if (!initializeWebSocketConnection(ws, context)) {
       return;
     }
-    ws.on('error', () => {});
-    ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
   });
+};
+
+export const initializeWebSocketConnection = (ws: WebSocket, context: HttpContext) => {
+  ws.on('error', () => {});
+  context.runtime.attachSocket(ws);
+  if (!sendEncoded(ws, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }))) {
+    return false;
+  }
+  ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
+  return true;
 };
 
 const handleClientMessage = (
