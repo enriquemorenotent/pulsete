@@ -497,6 +497,38 @@ test('runtime snapshot includes aggregated friend presence from live connections
   }
 });
 
+test('runtime clears cached friend presence when a network disconnects', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const server = await createIsonServer(received, ['Alice']);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'Tester Example',
+  }));
+  const friend = runtime.upsertFriend('Alice');
+
+  try {
+    runtime.connect(network.id);
+    await waitFor(() => received.some((line) => line === 'ISON Alice'));
+    await waitFor(() => runtime.snapshot().friendPresence[friend.id] === true);
+
+    runtime.disconnect(network.id);
+    await waitFor(() => runtime.snapshot().friendPresence[friend.id] === false);
+
+    assert.equal(runtime.snapshot().friendPresence[friend.id], false);
+  } finally {
+    runtime.disconnect(network.id);
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('saving a template network updates live hidden instances', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

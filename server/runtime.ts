@@ -456,6 +456,9 @@ export class Runtime {
             }
             if (event.type === 'state' && !event.connected) {
               this.channelListSubscribers.delete(event.networkId);
+              if (this.friendPresenceByNetwork.delete(event.networkId)) {
+                this.broadcastFriendPresenceDiffs();
+              }
             }
             if (
               event.type === 'channel-list-entry'
