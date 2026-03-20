@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AppSnapshot, BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../shared/protocol.js';
 import { initialChannelListState, initialState, reducer } from '../web/src/app-state.js';
+import type { State } from '../web/src/app-types.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { resolveManagedNetworkId } from '../web/src/network-manager-state.js';
 
@@ -66,6 +67,7 @@ test('snapshot enters the ready phase and clears any banner', () => {
   const dirtyState = {
     ...initialState,
     banner: { kind: 'notice' as const, message: 'Stale banner' },
+    historyLoading: true,
   };
 
   const nextState = reducer(dirtyState, {
@@ -75,6 +77,7 @@ test('snapshot enters the ready phase and clears any banner', () => {
 
   assert.equal(nextState.phase, 'ready');
   assert.equal(nextState.banner, null);
+  assert.equal(nextState.historyLoading, false);
   assert.equal(nextState.selection, null);
 });
 
@@ -94,8 +97,7 @@ test('snapshot selects the first instance server buffer', () => {
       messages: [],
       networkStates: {
         [network.id]: {
-          connected: false,
-          connecting: true,
+          phase: 'connecting',
           serverName: null,
           nick: network.nick,
         },
@@ -105,8 +107,7 @@ test('snapshot selects the first instance server buffer', () => {
 
   assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: buffer.id });
   assert.deepEqual(nextState.networkStates[network.id], {
-    connected: false,
-    connecting: true,
+    phase: 'connecting',
     serverName: null,
     nick: network.nick,
   });
@@ -139,8 +140,7 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
       messages: [freshMessage],
       networkStates: {
         [network.id]: {
-          connected: true,
-          connecting: false,
+          phase: 'connected',
           serverName: 'irc.libera.chat',
           nick: 'tester',
         },
@@ -178,7 +178,7 @@ test('friend presence updates track online state by friend id', () => {
 
 test('gateway transitions reset transport state and clear the reconnect banner once ready', () => {
   const network = makeNetwork({ id: 'network-1', managerHidden: true, nick: 'tester' });
-  const loadingState = {
+  const loadingState: State = {
     ...initialState,
     phase: 'ready' as const,
     gatewayStatus: 'connected' as const,
@@ -186,8 +186,7 @@ test('gateway transitions reset transport state and clear the reconnect banner o
     pendingChannels: [makePendingChannel({ networkId: network.id })],
     networkStates: {
       [network.id]: {
-        connected: true,
-        connecting: false,
+        phase: 'connected',
         serverName: 'irc.libera.chat',
         nick: 'tester_live',
       },
@@ -211,11 +210,11 @@ test('gateway transitions reset transport state and clear the reconnect banner o
   assert.deepEqual(disconnected.channelList, initialChannelListState);
   assert.deepEqual(disconnected.pendingChannels, []);
   assert.deepEqual(disconnected.networkStates[network.id], {
-    connected: false,
-    connecting: false,
+    phase: 'offline',
     serverName: null,
     nick: network.nick,
   });
+  assert.equal(disconnected.historyLoading, false);
   assert.equal(reconnecting.gatewayStatus, 'connecting');
   assert.deepEqual(reconnecting.channelList, initialChannelListState);
   assert.equal(connected.gatewayStatus, 'connected');
@@ -262,6 +261,7 @@ test('channel list resets when the gateway drops, its network disconnects, or th
     phase: 'ready' as const,
     networks: [makeNetwork({ id: 'network-1', managerHidden: true })],
     buffers: [makeBuffer({ networkId: 'network-1' })],
+    historyLoading: true,
     channelList: {
       open: true,
       networkId: 'network-1',
@@ -276,7 +276,7 @@ test('channel list resets when the gateway drops, its network disconnects, or th
   const disconnected = reducer(connectedState, {
     type: 'network-state',
     networkId: 'network-1',
-    connected: false,
+    phase: 'offline',
     serverName: null,
     nick: 'tester',
   });
@@ -285,6 +285,33 @@ test('channel list resets when the gateway drops, its network disconnects, or th
   assert.deepEqual(gatewayDisconnected.channelList, initialChannelListState);
   assert.deepEqual(disconnected.channelList, initialChannelListState);
   assert.deepEqual(removed.channelList, initialChannelListState);
+  assert.equal(gatewayDisconnected.historyLoading, false);
+  assert.equal(removed.historyLoading, false);
+});
+
+test('presence updates match channel names case-insensitively', () => {
+  const channel = {
+    id: 'channel-1',
+    networkId: 'network-1',
+    name: '#Help',
+    topic: '',
+    users: [],
+  };
+
+  const nextState = reducer(
+    {
+      ...initialState,
+      channels: [channel],
+    },
+    {
+      type: 'update-presence',
+      networkId: 'network-1',
+      channel: '#help',
+      users: [{ nick: 'Alice', mode: 'voice' }],
+    }
+  );
+
+  assert.deepEqual(nextState.channels[0]?.users, [{ nick: 'Alice', mode: 'voice' }]);
 });
 
 test('resolveManagedNetworkId keeps a hidden selection while favorites are filtered', () => {

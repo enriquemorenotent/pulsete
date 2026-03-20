@@ -29,8 +29,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
 });
 
 const makeRuntime = (overrides: Partial<NetworkRuntimeState> = {}): NetworkRuntimeState => ({
-  connected: overrides.connected ?? false,
-  connecting: overrides.connecting ?? false,
+  phase: overrides.phase ?? 'offline',
   serverName: overrides.serverName ?? null,
   nick: overrides.nick ?? 'dbugger',
 });
@@ -170,7 +169,7 @@ test('connecting instance keeps channels selected in read-only mode', () => {
   const serverBuffer = makeBuffer({ id: 'server-1' });
   const channelBuffer = makeBuffer({ id: 'channel-1', kind: 'channel', target: '#help' });
   const workspace = derive({
-    runtime: makeRuntime({ connecting: true }),
+    runtime: makeRuntime({ phase: 'connecting' }),
     buffers: [serverBuffer, channelBuffer],
     selection: bufferSelection(channelBuffer.id),
   });
@@ -186,7 +185,7 @@ test('connecting instance keeps private messages selected in read-only mode', ()
   const serverBuffer = makeBuffer({ id: 'server-1' });
   const queryBuffer = makeBuffer({ id: 'query-1', kind: 'query', target: 'alice' });
   const workspace = derive({
-    runtime: makeRuntime({ connecting: true }),
+    runtime: makeRuntime({ phase: 'connecting' }),
     buffers: [serverBuffer, queryBuffer],
     selection: bufferSelection(queryBuffer.id),
   });
@@ -201,7 +200,7 @@ test('connecting instance keeps private messages selected in read-only mode', ()
 test('connected server buffer is command-only and hides the nicklist', () => {
   const serverBuffer = makeBuffer({ id: 'server-1' });
   const workspace = derive({
-    runtime: makeRuntime({ connected: true, serverName: 'helix.oftc.net' }),
+    runtime: makeRuntime({ phase: 'connected', serverName: 'helix.oftc.net' }),
     buffers: [serverBuffer],
     selection: bufferSelection(serverBuffer.id),
   });
@@ -218,7 +217,7 @@ test('connected channel shows the nicklist and normal composer', () => {
   const channelBuffer = makeBuffer({ id: 'channel-1', kind: 'channel', target: '#help' });
   const channel = makeChannel({ id: channelBuffer.id });
   const workspace = derive({
-    runtime: makeRuntime({ connected: true }),
+    runtime: makeRuntime({ phase: 'connected' }),
     buffers: [serverBuffer, channelBuffer],
     channels: [channel],
     selection: bufferSelection(channelBuffer.id),
@@ -233,7 +232,7 @@ test('connected channel shows the nicklist and normal composer', () => {
 test('pending channels stay selectable before the confirmed buffer exists', () => {
   const serverBuffer = makeBuffer({ id: 'server-1' });
   const workspace = derive({
-    runtime: makeRuntime({ connected: true }),
+    runtime: makeRuntime({ phase: 'connected' }),
     buffers: [serverBuffer],
     pendingChannels: [makePendingChannel({ networkId: serverBuffer.networkId, channel: '#help' })],
     selection: pendingSelection(serverBuffer.networkId, '#help'),
@@ -245,11 +244,25 @@ test('pending channels stay selectable before the confirmed buffer exists', () =
   assert.equal(workspace.showNicklist, false);
 });
 
+test('pending channel selection ignores IRC casing', () => {
+  const serverBuffer = makeBuffer({ id: 'server-1' });
+  const workspace = derive({
+    runtime: makeRuntime({ phase: 'connected' }),
+    buffers: [serverBuffer],
+    pendingChannels: [makePendingChannel({ networkId: serverBuffer.networkId, channel: '#Help' })],
+    selection: pendingSelection(serverBuffer.networkId, '#help'),
+  });
+
+  assert.equal(workspace.mode, 'channel-pending');
+  assert.equal(workspace.selectedPendingChannel?.channel, '#Help');
+  assert.deepEqual(workspace.selection, pendingSelection(serverBuffer.networkId, '#help'));
+});
+
 test('connected private message hides the nicklist but keeps the composer', () => {
   const serverBuffer = makeBuffer({ id: 'server-1' });
   const query = makeBuffer({ id: 'query-1', kind: 'query', target: 'alice' });
   const workspace = derive({
-    runtime: makeRuntime({ connected: true }),
+    runtime: makeRuntime({ phase: 'connected' }),
     buffers: [serverBuffer, query],
     selection: bufferSelection(query.id),
   });
@@ -258,4 +271,18 @@ test('connected private message hides the nicklist but keeps the composer', () =
   assert.equal(workspace.selectedBuffer?.target, 'alice');
   assert.equal(workspace.showNicklist, false);
   assert.equal(workspace.composerMode, 'normal');
+});
+
+test('connections without a server buffer stay in transitional server mode', () => {
+  const network = makeNetwork({ id: 'network-1', managerHidden: true });
+  const workspace = derive({
+    networks: [network],
+    buffers: [],
+    runtime: makeRuntime({ phase: 'connecting' }),
+  });
+
+  assert.equal(workspace.mode, 'server-connecting');
+  assert.equal(workspace.selectedNetwork?.id, network.id);
+  assert.equal(workspace.selection, null);
+  assert.match(workspace.emptyBody, /server buffer/i);
 });

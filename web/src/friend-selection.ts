@@ -49,7 +49,7 @@ export const resolveFriendSelection = (input: FriendSelectionInput): FriendSelec
   return { type: 'error', message: 'Connect a network before opening a friend conversation' };
 };
 
-const isConnected = (runtime: NetworkRuntimeState | null | undefined) => runtime?.connected === true;
+const isConnected = (runtime: NetworkRuntimeState | null | undefined) => runtime?.phase === 'connected';
 
 const findQueryBuffer = (buffers: BufferState[], networkId: string, nick: string) =>
   buffers.find(

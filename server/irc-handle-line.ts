@@ -280,6 +280,9 @@ const getNextNickOnConflict = (connection: IrcConnectionState, attemptedNick: st
   return `${attemptedNick}_`;
 };
 
+const isSelfNick = (connection: IrcConnectionState, nick: string | null) =>
+  isSameIrcIdentifier(nick, connection.currentNick) || isSameIrcIdentifier(nick, connection.pendingNick);
+
 const handleTextMessage = (connection: IrcConnectionState, command: 'PRIVMSG' | 'NOTICE', params: string[], nick: string | null) => {
   const rawTarget = params[0] ?? 'server';
   const trackedChannel = isChannelTarget(rawTarget) ? resolveTrackedChannel(connection, rawTarget) : null;
@@ -288,7 +291,7 @@ const handleTextMessage = (connection: IrcConnectionState, command: 'PRIVMSG' | 
   }
   const payload = params[1] ?? '';
   const ctcp = stripCtcp(payload);
-  const isDirectTarget = !isChannelTarget(rawTarget) && isSameIrcIdentifier(rawTarget, connection.currentNick);
+  const isDirectTarget = !isChannelTarget(rawTarget) && isSelfNick(connection, rawTarget);
   const isDirectCtcp = isDirectTarget && ctcp !== null && !ctcp.startsWith('ACTION ');
   const isDirectServiceMessage = isDirectTarget && command === 'PRIVMSG' && isServiceNick(nick);
   const replyTarget = isDirectTarget && command === 'NOTICE'
@@ -307,7 +310,7 @@ const handleTextMessage = (connection: IrcConnectionState, command: 'PRIVMSG' | 
     nick,
     body,
     kind: command === 'NOTICE' ? 'notice' : 'line',
-    self: isSameIrcIdentifier(nick, connection.currentNick),
+    self: isSelfNick(connection, nick),
   }));
 };
 
@@ -316,7 +319,7 @@ const handleJoin = (connection: IrcConnectionState, params: string[], nick: stri
   if (!name) {
     return;
   }
-  const selfJoin = isSameIrcIdentifier(nick, connection.currentNick);
+  const selfJoin = isSelfNick(connection, nick);
   const pendingSession = selfJoin ? connection.getChannelSession(name) : null;
   if (selfJoin) {
     discardPendingChannelReplyContexts(connection, name, (context) => context.operation === 'join');
@@ -348,7 +351,7 @@ const handlePart = (connection: IrcConnectionState, params: string[], nick: stri
     return;
   }
   const reason = params[1] ?? 'left';
-  const selfPart = isSameIrcIdentifier(nick, connection.currentNick);
+  const selfPart = isSelfNick(connection, nick);
   if (!selfPart && !resolveTrackedChannel(connection, channel)) {
     return;
   }
@@ -387,7 +390,7 @@ const handleKick = (connection: IrcConnectionState, params: string[], nick: stri
   if (!channel || !kickedNick || !resolveTrackedChannel(connection, channel)) {
     return;
   }
-  const selfKick = isSameIrcIdentifier(kickedNick, connection.currentNick);
+  const selfKick = isSelfNick(connection, kickedNick);
   const reason = params[2] ?? 'kicked';
   if (selfKick) {
     discardPendingChannelReplyContexts(connection, channel, (context) => context.operation !== 'join');
@@ -447,7 +450,7 @@ const handleNick = (connection: IrcConnectionState, params: string[], nick: stri
       emitChannel(connection, channel, { users: nextUsers });
     }
   }
-  if (isSameIrcIdentifier(nick, connection.currentNick) || isSameIrcIdentifier(nick, connection.pendingNick)) {
+  if (isSelfNick(connection, nick)) {
     consumePendingNickReplyContexts(connection, newNick);
     connection.currentNick = newNick;
     connection.pendingNick = getLatestPendingNick(connection.pendingReplyContexts);
@@ -462,7 +465,7 @@ const handleTopic = (connection: IrcConnectionState, params: string[], nick: str
   if (!channel) {
     return;
   }
-  if (isSameIrcIdentifier(nick, connection.currentNick)) {
+  if (isSelfNick(connection, nick)) {
     discardPendingChannelReplyContexts(
       connection,
       channel,

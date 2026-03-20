@@ -102,7 +102,7 @@ test('irc connection negotiates, joins, and parses messages', async () => {
 
   connection.connect();
 
-  await waitFor(() => events.some((event) => event.type === 'state' && event.connected === true));
+  await waitFor(() => events.some((event) => event.type === 'state' && event.phase === 'connected'));
   await waitFor(() => received.some((line) => line.startsWith('JOIN #chat')));
 
   connection.say('#chat', 'hello there');
@@ -1110,7 +1110,7 @@ test('irc connection routes whois replies to the originating buffer', async () =
 
   connection.connect();
 
-  await waitFor(() => events.some((event) => event.type === 'state' && event.connected === true));
+  await waitFor(() => events.some((event) => event.type === 'state' && event.phase === 'connected'));
 
   assert.equal(connection.sendClientRaw('WHOIS helper', '#chat'), true);
 
@@ -1403,7 +1403,7 @@ test('irc connection keeps private-message delivery notices on the server buffer
   );
 
   connection.connect();
-  await waitFor(() => events.some((event) => event.type === 'state' && event.connected === true));
+  await waitFor(() => events.some((event) => event.type === 'state' && event.phase === 'connected'));
 
   connection.say('sofia', 'hello there', '#chat');
 
@@ -3875,6 +3875,58 @@ test('irc connection clears all pending join rollback metadata after duplicate s
   );
 });
 
+test('irc connection keeps an already joined channel after a retry JOIN times out', async () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    },
+    {
+      channelJoinTimeoutMs: 20,
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  connection.join('#help');
+  connection.consume(':tester!user@host JOIN #help\r\n');
+  connection.consume(':alice!user@host JOIN #help\r\n');
+  connection.join('#help');
+
+  await waitFor(() => events.some((event) => event.type === 'status' && String(event.message).includes('Timed out joining #help')));
+
+  assert.deepEqual(writes, ['JOIN #help\r\n', 'JOIN #help\r\n']);
+  assert.equal(connection.getChannelSession('#help')?.phase, 'joined');
+  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [
+    { nick: 'alice', mode: 'normal' },
+    { nick: 'tester', mode: 'normal' },
+  ]);
+});
+
 test('irc connection surfaces private-message delivery errors from the server', async () => {
   const received: string[] = [];
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -3952,7 +4004,7 @@ test('irc connection surfaces private-message delivery errors from the server', 
   );
 
   connection.connect();
-  await waitFor(() => events.some((event) => event.type === 'state' && event.connected === true));
+  await waitFor(() => events.some((event) => event.type === 'state' && event.phase === 'connected'));
 
   connection.say('sofia', 'hello there', '#chat');
 

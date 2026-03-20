@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Hash, LoaderCircle, MessageSquareMore, Plus, PowerOff, RefreshCcw, X } from 'lucide-react';
 import type { BufferState, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { AddFriendDialog } from './AddFriendDialog.js';
@@ -81,14 +82,14 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                     <button
                       className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
                       onClick={() =>
-                        runtime?.connected
+                        runtime?.phase === 'connected'
                           ? props.onDisconnectNetwork(network.id)
                           : props.onReconnectNetwork(network)
                       }
-                      aria-label={`${runtime?.connected ? 'Disconnect' : 'Reconnect'} ${label}`}
-                      disabled={Boolean(runtime?.connecting)}
+                      aria-label={`${runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${label}`}
+                      disabled={runtime?.phase === 'connecting'}
                     >
-                      {runtime?.connected ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
+                      {runtime?.phase === 'connected' ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
                     </button>
                     <button
                       className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"
@@ -129,7 +130,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                           selected={
                             props.selection?.kind === 'pending-channel'
                             && props.selection.networkId === pendingChannel.networkId
-                            && props.selection.channel === pendingChannel.channel
+                            && isSameIrcIdentifier(props.selection.channel, pendingChannel.channel)
                           }
                           onSelect={() => props.onSelectPendingChannel(pendingChannel.networkId, pendingChannel.channel)}
                         />
@@ -321,10 +322,10 @@ const compareBuffers = (left: BufferState, right: BufferState) => {
 };
 
 const dotTone = (runtime: NetworkRuntimeState | null) => {
-  if (runtime?.connected) {
+  if (runtime?.phase === 'connected') {
     return 'bg-emerald-400';
   }
-  if (runtime?.connecting) {
+  if (runtime?.phase === 'connecting') {
     return 'bg-amber-300';
   }
   return 'bg-zinc-500';

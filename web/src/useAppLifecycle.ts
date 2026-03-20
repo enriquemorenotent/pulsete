@@ -24,6 +24,7 @@ type LifecycleParams = {
 export function useAppLifecycle(params: LifecycleParams) {
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptRef = useRef(0);
+  const historyRequestRef = useRef(0);
   const [socketGeneration, setSocketGeneration] = useState(0);
 
   useEffect(() => {
@@ -85,19 +86,20 @@ export function useAppLifecycle(params: LifecycleParams) {
   }, [params.workspace.selectedBuffer?.id, params.workspace.selectedBuffer?.unread]);
 
   useEffect(() => {
-    if (!params.workspace.selectedBuffer) {
-      return;
-    }
+    historyRequestRef.current += 1;
+    const requestId = historyRequestRef.current;
     let active = true;
-    params.dispatch({ type: 'set-history-loading', value: true });
-    api
-      .loadHistory(params.workspace.selectedBuffer.id)
-      .then((payload) => active && params.dispatch({ type: 'append-messages', messages: payload.messages }))
-      .finally(() => active && params.dispatch({ type: 'set-history-loading', value: false }));
+    void loadSelectedBufferHistory({
+      bufferId: params.workspace.selectedBuffer?.id ?? null,
+      gatewayStatus: params.state.gatewayStatus,
+      dispatch: params.dispatch,
+      loadHistory: api.loadHistory,
+      isCurrentRequest: () => active && historyRequestRef.current === requestId,
+    });
     return () => {
       active = false;
     };
-  }, [params.workspace.selectedBuffer?.id]);
+  }, [params.state.gatewayStatus, params.workspace.selectedBuffer?.id]);
 
   useEffect(() => {
     const node = params.scrollRef.current;
@@ -128,6 +130,42 @@ type GatewaySocketCallbackParams = {
   reconnectTimerRef: MutableRef<number | null>;
   setSocketGeneration: (updater: (value: number) => number) => void;
 };
+
+type LoadSelectedBufferHistoryParams = {
+  bufferId: string | null;
+  gatewayStatus: State['gatewayStatus'];
+  dispatch: (action: Action) => void;
+  loadHistory: typeof api.loadHistory;
+  isCurrentRequest: () => boolean;
+};
+
+export async function loadSelectedBufferHistory({
+  bufferId,
+  gatewayStatus,
+  dispatch,
+  loadHistory,
+  isCurrentRequest,
+}: LoadSelectedBufferHistoryParams) {
+  if (!bufferId || gatewayStatus !== 'connected') {
+    dispatch({ type: 'set-history-loading', value: false });
+    return;
+  }
+  dispatch({ type: 'set-history-loading', value: true });
+  try {
+    const payload = await loadHistory(bufferId);
+    if (!isCurrentRequest()) {
+      return;
+    }
+    dispatch({ type: 'append-messages', messages: payload.messages });
+    dispatch({ type: 'set-history-loading', value: false });
+  } catch {
+    if (!isCurrentRequest()) {
+      return;
+    }
+    dispatch({ type: 'set-history-loading', value: false });
+    dispatch({ type: 'set-banner', banner: { kind: 'error', message: 'Failed to load history' } });
+  }
+}
 
 export const createGatewaySocketCallbacks = ({
   getSocket,
@@ -181,7 +219,7 @@ function handleServerMessage(message: ServerMessage, dispatch: (action: Action) 
     return void dispatch({
       type: 'network-state',
       networkId: message.networkId,
-      connected: message.connected,
+      phase: message.phase,
       serverName: message.serverName,
       nick: message.nick,
     });

@@ -1,4 +1,5 @@
 import type { AppSnapshot, BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { getConnectionInstances, getConnectionStatus } from './workspace-helpers.js';
 import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
 
@@ -29,7 +30,7 @@ const findSelectedPendingChannel = (pendingChannels: PendingChannelState[], sele
   selection?.kind === 'pending-channel'
     ? pendingChannels.find(
         (pendingChannel) =>
-          pendingChannel.networkId === selection.networkId && pendingChannel.channel === selection.channel
+          pendingChannel.networkId === selection.networkId && isSameIrcIdentifier(pendingChannel.channel, selection.channel)
       ) ?? null
     : null;
 
@@ -93,10 +94,11 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   const activeSelection = selectionFor(activeBuffer);
   const activePendingChannel =
     selectedPendingChannel && selectedPendingChannel.networkId === selectedNetwork.id ? selectedPendingChannel : null;
+  const connectedSubtitle = `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`;
 
   if (!serverBuffer) {
     return {
-      mode: 'empty',
+      mode: connectionStatus === 'connected' ? 'server-connected' : connectionStatus === 'connecting' ? 'server-connecting' : 'server-offline',
       selection: null,
       connectionInstances,
       selectedNetwork,
@@ -104,11 +106,16 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedBuffer: null,
       selectedChannel: null,
       selectedPendingChannel: null,
-      headerTitle: 'No active connection',
-      headerSubtitle: '',
+      headerTitle: '',
+      headerSubtitle: connectionStatus === 'connected' ? connectedSubtitle : '',
       composerMode: 'hidden',
       composerPlaceholder: '',
-      emptyBody: 'Open Network Manager to create or connect an instance.',
+      emptyBody:
+        connectionStatus === 'connected'
+          ? 'Loading the server buffer for this connection.'
+          : connectionStatus === 'connecting'
+            ? 'Starting the connection view. Wait for the server buffer to load.'
+            : 'Restoring the server buffer for this connection.',
       showNicklist: false,
     };
   }
@@ -116,8 +123,6 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   const selectedChannel = activeBuffer?.kind === 'channel'
     ? input.channels.find((channel) => channel.id === activeBuffer.id) ?? null
     : null;
-
-  const connectedSubtitle = `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`;
 
   if (activePendingChannel) {
     return {

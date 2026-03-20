@@ -46,7 +46,7 @@ const workspace: WorkspaceView = {
   selection: { kind: 'buffer', bufferId: selectedBuffer.id },
   connectionInstances: [network],
   selectedNetwork: network,
-  selectedRuntime: { connected: true, connecting: false, serverName: 'irc.example.test', nick: 'tester' },
+  selectedRuntime: { phase: 'connected', serverName: 'irc.example.test', nick: 'tester' },
   selectedBuffer,
   selectedChannel,
   selectedPendingChannel: null,
@@ -69,8 +69,7 @@ const makeState = (overrides: Partial<State> = {}): State => ({
   selection: { kind: 'buffer', bufferId: selectedBuffer.id },
   networkStates: {
     [network.id]: {
-      connected: true,
-      connecting: false,
+      phase: 'connected',
       serverName: 'irc.example.test',
       nick: 'tester',
     },

@@ -244,7 +244,7 @@ test('login write failures keep the write error instead of being relabeled as a 
 test('late close from an old socket does not disconnect the new connection', async () => {
   const first = await createWelcomeServer(150);
   const second = await createWelcomeServer();
-  const stateEvents: boolean[] = [];
+  const stateEvents: string[] = [];
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -265,7 +265,7 @@ test('late close from an old socket does not disconnect the new connection', asy
     {
       onEvent: (event) => {
         if (event.type === 'state') {
-          stateEvents.push(event.connected);
+          stateEvents.push(event.phase);
         }
       },
     }
@@ -276,7 +276,7 @@ test('late close from an old socket does not disconnect the new connection', asy
     await waitFor(() => connection.connected);
 
     connection.disconnect();
-    const disconnectStates = stateEvents.filter((connected) => connected === false).length;
+    const disconnectStates = stateEvents.filter((phase) => phase === 'offline').length;
     connection.updateProfile({ ...connection.profile, port: second.port });
     connection.connect();
 
@@ -285,8 +285,8 @@ test('late close from an old socket does not disconnect the new connection', asy
     await new Promise((resolve) => setTimeout(resolve, 60));
 
     assert.equal(connection.connected, true);
-    assert.equal(stateEvents.at(-1), true);
-    assert.equal(stateEvents.filter((connected) => connected === false).length, disconnectStates);
+    assert.equal(stateEvents.at(-1), 'connected');
+    assert.equal(stateEvents.filter((phase) => phase === 'offline').length, disconnectStates);
   } finally {
     connection.disconnect();
     first.destroySocket();
@@ -667,6 +667,53 @@ test('connected nick changes wait for server confirmation before mutating curren
   assert.equal(connection.currentNick, 'newnick');
   assert.equal(connection.pendingNick, null);
   assert.deepEqual(states, ['newnick']);
+});
+
+test('pending nick self events are handled before the nick echo arrives', () => {
+  const messages: Array<{ target: string; body: string; self: boolean }> = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'message') {
+          messages.push({
+            target: event.message.target,
+            body: event.message.body,
+            self: event.message.self,
+          });
+        }
+      },
+    }
+  );
+
+  connection.pendingNick = 'newnick';
+
+  handleIrcLine(connection, ':newnick!user@host JOIN #Help');
+  handleIrcLine(connection, ':alice!user@host PRIVMSG NewNick :hello');
+  handleIrcLine(connection, ':newnick!user@host PART #help :bye');
+
+  assert.equal(connection.channelUsers.has('#Help'), false);
+  assert.equal(connection.getChannelSession('#help'), null);
+  assert.deepEqual(messages.map((message) => ({ ...message, body: message.body.replace(/\s+/g, ' ') })), [
+    { target: '#Help', body: 'newnick joined #Help', self: true },
+    { target: 'alice', body: 'hello', self: false },
+    { target: '#Help', body: 'newnick left #Help (bye)', self: true },
+  ]);
 });
 
 test('rejected connected nick changes keep the last accepted nick', () => {

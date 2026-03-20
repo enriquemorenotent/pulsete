@@ -91,12 +91,15 @@ export const pendingChannelSchema = z.object({
 
 export type PendingChannelState = z.infer<typeof pendingChannelSchema>;
 
-const networkRuntimeStateSchema = z.object({
-  connected: z.boolean(),
-  connecting: z.boolean(),
+export const networkRuntimePhaseSchema = z.enum(['offline', 'connecting', 'connected']);
+export type NetworkRuntimePhase = z.infer<typeof networkRuntimePhaseSchema>;
+
+export const networkRuntimeStateSchema = z.object({
+  phase: networkRuntimePhaseSchema,
   serverName: z.string().nullable(),
   nick: z.string(),
 });
+export type NetworkRuntimeState = z.infer<typeof networkRuntimeStateSchema>;
 
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
@@ -175,7 +178,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseClientSchema.extend({
     type: z.literal('network.state'),
     networkId: z.string(),
-    connected: z.boolean(),
+    phase: networkRuntimePhaseSchema,
     serverName: z.string().nullable(),
     nick: z.string(),
   }),

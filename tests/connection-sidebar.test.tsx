@@ -31,8 +31,7 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 });
 
 const makeRuntime = (overrides: Partial<NetworkRuntimeState> = {}): NetworkRuntimeState => ({
-  connected: overrides.connected ?? false,
-  connecting: overrides.connecting ?? false,
+  phase: overrides.phase ?? 'offline',
   serverName: overrides.serverName ?? null,
   nick: overrides.nick ?? 'sofia',
 });
@@ -48,7 +47,7 @@ test('offline connections keep channel and query rows visible and selectable', (
       friendPresence={{}}
       buffers={[makeBuffer({ id: 'server-1' }), channel, query]}
       pendingChannels={[]}
-      networkStates={{ [network.id]: makeRuntime({ connected: false }) }}
+      networkStates={{ [network.id]: makeRuntime({ phase: 'offline' }) }}
       selection={{ kind: 'buffer', bufferId: 'server-1' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
@@ -97,4 +96,34 @@ test('friend rows expose online and offline cues', () => {
 
   assert.match(markup, /aria-label="Open Alice \(online\)"/);
   assert.match(markup, /bg-emerald-400/);
+});
+
+test('pending channel selection ignores IRC casing in the sidebar', () => {
+  const network = makeNetwork();
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      networks={[network]}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      buffers={[makeBuffer({ id: 'server-1' })]}
+      pendingChannels={[{ networkId: network.id, channel: '#Help' }]}
+      networkStates={{ [network.id]: makeRuntime({ phase: 'connected' }) }}
+      selection={{ kind: 'pending-channel', networkId: network.id, channel: '#help' }}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />
+  );
+
+  const selectedRows = markup.match(/rounded-sm bg-accent/g) ?? [];
+  assert.equal(selectedRows.length, 1);
+  assert.match(markup, /aria-label="Open pending #Help"/);
 });

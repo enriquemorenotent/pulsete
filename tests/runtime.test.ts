@@ -453,11 +453,10 @@ test('runtime snapshot includes live network states after a refresh point', asyn
 
   try {
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     assert.deepEqual(runtime.snapshot().networkStates[network.id], {
-      connected: true,
-      connecting: false,
+      phase: 'connected',
       serverName: 'irc.example',
       nick: 'tester',
     });
@@ -841,7 +840,7 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
 
   try {
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     runtime.sendRaw(network.id, 'QUITTER test');
     await waitFor(() => received.includes('QUITTER test'));
@@ -873,7 +872,7 @@ test('runtime streams structured channel list events from IRC LIST', async () =>
   try {
     runtime.attachSocket(socket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, socket);
 
@@ -914,7 +913,7 @@ test('runtime replays active LIST entries to a later requester without sending L
     runtime.attachSocket(firstSocket);
     runtime.attachSocket(secondSocket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, firstSocket);
     await waitFor(() =>
@@ -985,7 +984,7 @@ test('runtime does not replay active LIST entries twice to the same requester', 
   try {
     runtime.attachSocket(socket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, socket);
     await waitFor(() =>
@@ -1056,7 +1055,7 @@ test('runtime replays active LIST entries after the same requester cancels and r
   try {
     runtime.attachSocket(socket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, socket);
     await waitFor(() =>
@@ -1115,7 +1114,7 @@ test('runtime drops channel-list events after the requester disconnects mid-LIST
     runtime.attachSocket(requesterSocket);
     runtime.attachSocket(observerSocket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, requesterSocket);
     await waitFor(() =>
@@ -1156,7 +1155,7 @@ test('runtime reports a failed channel-list request when the network disconnects
   try {
     runtime.attachSocket(socket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, socket);
     await waitFor(() =>
@@ -1199,7 +1198,7 @@ test('runtime reports a failed channel-list request when disconnect is requested
   try {
     runtime.attachSocket(socket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, socket);
     await waitFor(() =>
@@ -1244,7 +1243,7 @@ test('runtime removes channel-list subscribers after a request completes', async
     runtime.attachSocket(firstSocket);
     runtime.attachSocket(secondSocket);
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const firstRequestId = runtime.requestChannelList(network.id, firstSocket);
     await waitFor(() =>
@@ -1484,7 +1483,7 @@ test('runtime removes channel-list subscribers after an immediate request failur
     firstSocket.sent.length = 0;
 
     runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const requestId = runtime.requestChannelList(network.id, secondSocket);
     await waitFor(() =>

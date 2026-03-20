@@ -1,11 +1,5 @@
-import type { BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
-
-export type NetworkRuntimeState = {
-  connected: boolean;
-  connecting: boolean;
-  serverName: string | null;
-  nick: string;
-};
+import type { BufferState, ChannelState, NetworkProfile, PendingChannelState, NetworkRuntimeState } from '../../shared/protocol.js';
+export type { NetworkRuntimeState } from '../../shared/protocol.js';
 
 export type SelectedBuffer =
   | {

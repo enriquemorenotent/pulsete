@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
-import { encode, type FriendState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
+import { encode, type FriendState, type NetworkProfile, type NetworkRuntimeState, type ServerMessage } from '../shared/protocol.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { badRequest, notFound } from './app-error.js';
 import { IrcConnection } from './irc.js';
@@ -75,19 +75,7 @@ export class Runtime {
           const connection = this.connections.get(network.id);
           return [
             network.id,
-            connection
-              ? {
-                  connected: connection.connected,
-                  connecting: !connection.connected && connection.socket !== null,
-                  serverName: connection.serverName,
-                  nick: connection.currentNick,
-                }
-              : {
-                  connected: false,
-                  connecting: false,
-                  serverName: null,
-                  nick: network.nick,
-                },
+            toNetworkRuntimeState(connection, network.nick),
           ];
         })
       ),
@@ -265,7 +253,6 @@ export class Runtime {
       if (runtimeProfile) {
         this.connections.get(updatedProfile.id)?.updateProfile(runtimeProfile);
       }
-      this.send({ type: 'network.upsert', network: updatedProfile });
       if (updatedProfile.managerHidden) {
         const nextServerBuffer = this.store.getServerBuffer(updatedProfile.id);
         if (nextServerBuffer) {
@@ -275,6 +262,7 @@ export class Runtime {
           }
         }
       }
+      this.send({ type: 'network.upsert', network: updatedProfile });
     }
     return { network, serverBuffer };
   }
@@ -394,7 +382,7 @@ export class Runtime {
               this.handleFriendPresenceEvent(event.networkId, event.onlineNicks);
               return;
             }
-            if (event.type === 'state' && !event.connected) {
+            if (event.type === 'state' && event.phase === 'offline') {
               this.channelListSubscribers.delete(event.networkId);
               if (this.friendPresenceByNetwork.delete(event.networkId)) {
                 this.broadcastFriendPresenceDiffs();
@@ -634,6 +622,19 @@ export class Runtime {
     return buffer?.networkId === networkId ? buffer.target : fallbackTarget;
   }
 }
+
+const toNetworkRuntimeState = (connection: IrcConnection | undefined, fallbackNick: string): NetworkRuntimeState =>
+  connection
+    ? {
+        phase: connection.connected ? 'connected' : connection.socket ? 'connecting' : 'offline',
+        serverName: connection.serverName,
+        nick: connection.currentNick,
+      }
+    : {
+        phase: 'offline',
+        serverName: null,
+        nick: fallbackNick,
+      };
 
 const createDuplicateNetworkName = (name: string, networks: NetworkProfile[]) => {
   const existingNames = new Set(

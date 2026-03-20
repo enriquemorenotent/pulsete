@@ -92,8 +92,8 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
 
                 {props.networks.map((network) => {
                   const selected = props.selected?.id === network.id;
-                  const online = selected && props.runtime?.connected;
-                  const connecting = selected && props.runtime?.connecting;
+                  const online = selected && props.runtime?.phase === 'connected';
+                  const connecting = selected && props.runtime?.phase === 'connecting';
 
                   return (
                     <button
@@ -134,7 +134,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                     ? [
                         `${props.selected.host}:${props.selected.port}`,
                         props.selected.tls ? 'SSL/TLS' : 'TCP',
-                        props.runtime?.connected ? 'Connected' : props.runtime?.connecting ? 'Connecting' : null,
+                        props.runtime?.phase === 'connected' ? 'Connected' : props.runtime?.phase === 'connecting' ? 'Connecting' : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')

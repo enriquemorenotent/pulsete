@@ -112,8 +112,7 @@ const offlineNetworkStates = (state: Pick<State, 'networks'>) =>
     state.networks.map((network) => [
       network.id,
       {
-        connected: false,
-        connecting: false,
+        phase: 'offline' as const,
         serverName: null,
         nick: network.nick,
       },
@@ -138,6 +137,7 @@ export const reducer = (state: State, action: Action): State => {
         selection,
         banner: null,
         channelList: initialChannelListState,
+        historyLoading: false,
       };
     }
     case 'gateway-connecting':
@@ -159,6 +159,7 @@ export const reducer = (state: State, action: Action): State => {
         pendingChannels: [],
         networkStates: offlineNetworkStates(state),
         channelList: initialChannelListState,
+        historyLoading: false,
       };
       return {
         ...nextState,
@@ -168,9 +169,21 @@ export const reducer = (state: State, action: Action): State => {
     case 'upsert-network': {
       const networks = state.networks.filter((network) => network.id !== action.network.id);
       networks.push(action.network);
+      const runtime = state.networkStates[action.network.id] ?? null;
       return {
         ...state,
         networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
+        networkStates:
+          runtime?.phase === 'connected'
+            ? state.networkStates
+            : {
+                ...state.networkStates,
+                [action.network.id]: {
+                  phase: runtime?.phase ?? 'offline',
+                  serverName: runtime?.serverName ?? null,
+                  nick: action.network.nick,
+                },
+              },
       };
     }
     case 'upsert-friend': {
@@ -297,14 +310,14 @@ export const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         channels: state.channels.map((channel) =>
-          channel.networkId === action.networkId && channel.name === action.channel
+          channel.networkId === action.networkId && isSameIrcIdentifier(channel.name, action.channel)
             ? { ...channel, users: action.users }
             : channel
         ),
       };
     case 'network-state': {
       const pendingChannels =
-        action.connected
+        action.phase === 'connected'
           ? state.pendingChannels
           : state.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId);
       const nextState = {
@@ -312,21 +325,20 @@ export const reducer = (state: State, action: Action): State => {
         networkStates: {
           ...state.networkStates,
           [action.networkId]: {
-            connected: action.connected,
-            connecting: false,
+            phase: action.phase,
             serverName: action.serverName,
             nick: action.nick,
           },
         },
         pendingChannels,
         channelList:
-          !action.connected && state.channelList.networkId === action.networkId
+          action.phase !== 'connected' && state.channelList.networkId === action.networkId
             ? initialChannelListState
             : state.channelList,
       };
       return {
         ...nextState,
-        selection: action.connected ? state.selection : normalizeSelection(nextState, state.selection, action.networkId),
+        selection: action.phase === 'connected' ? state.selection : normalizeSelection(nextState, state.selection, action.networkId),
       };
     }
     case 'set-banner':
@@ -433,6 +445,7 @@ export const reducer = (state: State, action: Action): State => {
         messages,
         networkStates,
         channelList: state.channelList.networkId === action.networkId ? initialChannelListState : state.channelList,
+        historyLoading: false,
       };
       return {
         ...nextState,

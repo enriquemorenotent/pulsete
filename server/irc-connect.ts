@@ -18,6 +18,7 @@ export const connectSocket = (connection: IrcConnectionState) => {
     ? tls.connect({ host: connection.profile.host, port: connection.profile.port, servername: connection.profile.host })
     : net.connect({ host: connection.profile.host, port: connection.profile.port });
   connection.socket = socket;
+  emitState(connection);
   connection.clearConnectDeadlineTimer();
   const isCurrentSocket = () => connection.socket === socket;
   socket.setEncoding('utf8');

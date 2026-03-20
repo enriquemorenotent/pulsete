@@ -1,6 +1,6 @@
 import type net from 'node:net';
 import type tls from 'node:tls';
-import type { ChannelListEntry, ChannelUserState } from '../shared/protocol.js';
+import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
 import type { MessageInput } from './storage.js';
 import type { PendingReplyContext } from './irc-reply-context.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
@@ -17,7 +17,7 @@ export type ChannelSessionState = {
 };
 
 export type RuntimeEvent =
-  | { type: 'state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
+  | { type: 'state'; networkId: string; phase: NetworkRuntimeState['phase']; serverName: string | null; nick: string }
   | {
       type: 'status';
       networkId: string;

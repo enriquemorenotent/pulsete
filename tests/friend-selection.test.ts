@@ -30,15 +30,13 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 });
 
 const connected: NetworkRuntimeState = {
-  connected: true,
-  connecting: false,
+  phase: 'connected',
   serverName: 'irc.example.test',
   nick: 'tester',
 };
 
 const offline: NetworkRuntimeState = {
-  connected: false,
-  connecting: false,
+  phase: 'offline',
   serverName: null,
   nick: 'tester',
 };

@@ -14,7 +14,7 @@ export function handleRuntimeEvent(runtime: RuntimeContext, event: RuntimeEvent)
     runtime.send({
       type: 'network.state',
       networkId: event.networkId,
-      connected: event.connected,
+      phase: event.phase,
       serverName: event.serverName,
       nick: event.nick,
     });

@@ -186,13 +186,13 @@ function buildManagedRuntime(
     return null;
   }
   const instances = connectionInstances.filter((network) => getTemplateRootId(network) === managedNetwork.id);
-  if (instances.some((network) => networkStates[network.id]?.connected)) {
-    return { connected: true, connecting: false, serverName: null, nick: managedNetwork.nick };
+  if (instances.some((network) => networkStates[network.id]?.phase === 'connected')) {
+    return { phase: 'connected' as const, serverName: null, nick: managedNetwork.nick };
   }
-  if (instances.some((network) => networkStates[network.id]?.connecting)) {
-    return { connected: false, connecting: true, serverName: null, nick: managedNetwork.nick };
+  if (instances.some((network) => networkStates[network.id]?.phase === 'connecting')) {
+    return { phase: 'connecting' as const, serverName: null, nick: managedNetwork.nick };
   }
-  return instances.length > 0 ? { connected: false, connecting: false, serverName: null, nick: managedNetwork.nick } : null;
+  return instances.length > 0 ? { phase: 'offline' as const, serverName: null, nick: managedNetwork.nick } : null;
 }
 
 export default App;

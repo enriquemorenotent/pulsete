@@ -1,7 +1,7 @@
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type { NetworkRuntimeState } from './workspace-types.js';
 
-type ConnectionStatus = 'offline' | 'connecting' | 'connected';
+type ConnectionStatus = NetworkRuntimeState['phase'];
 type ConnectionPeers = ReturnType<typeof getConnectionPeers>;
 
 export type ConnectionLabelParts = {
@@ -14,13 +14,7 @@ export const getConnectionInstances = (networks: NetworkProfile[]) =>
   networks.filter((network) => network.managerHidden);
 
 export const getConnectionStatus = (runtime: NetworkRuntimeState | null): ConnectionStatus => {
-  if (runtime?.connected) {
-    return 'connected';
-  }
-  if (runtime?.connecting) {
-    return 'connecting';
-  }
-  return 'offline';
+  return runtime?.phase ?? 'offline';
 };
 
 const getConnectionPeers = (

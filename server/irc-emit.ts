@@ -27,7 +27,7 @@ export const emitState = (connection: IrcConnectionState) => {
   emitEvent(connection, {
     type: 'state',
     networkId: connection.profile.id,
-    connected: connection.connected,
+    phase: connection.connected ? 'connected' : connection.socket ? 'connecting' : 'offline',
     serverName: connection.serverName,
     nick: connection.currentNick,
   });

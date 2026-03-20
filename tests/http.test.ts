@@ -569,6 +569,64 @@ test('network save broadcasts template and instance updates over websocket', asy
   }
 });
 
+test('saving a hidden connection instance broadcasts its server buffer before the network update', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const template = storage.upsertNetwork(createNetworkInput({
+    name: 'TemplateNet',
+    nick: 'oldnick',
+    altNicks: ['oldnick_'],
+    username: 'olduser',
+    realName: 'Old User',
+  }));
+  const instance = storage.upsertNetwork(createNetworkInput({
+    templateId: template.id,
+    managerHidden: true,
+    name: 'Connection instance',
+    nick: 'oldnick',
+    altNicks: ['oldnick_'],
+    username: 'olduser',
+    realName: 'Old User',
+  }));
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+  const messages: Record<string, unknown>[] = [];
+  socket.on('message', (payload) => {
+    messages.push(JSON.parse(payload.toString()) as Record<string, unknown>);
+  });
+
+  try {
+    const response = await requestJson(port, 'PUT', `/api/networks/${instance.id}`, {
+      ...instance,
+      nick: 'newnick',
+      altNicks: ['newnick_'],
+      username: 'newuser',
+      realName: 'New User',
+    });
+    assert.equal(response.status, 200);
+
+    await waitFor(() => {
+      const relevant = messages.filter((message) =>
+        (message.type === 'buffer.upsert' && (message.buffer as { networkId: string }).networkId === instance.id)
+        || (message.type === 'network.upsert' && (message.network as { id: string }).id === instance.id)
+      );
+      return relevant.length >= 2;
+    });
+
+    const relevant = messages.filter((message) =>
+      (message.type === 'buffer.upsert' && (message.buffer as { networkId: string }).networkId === instance.id)
+      || (message.type === 'network.upsert' && (message.network as { id: string }).id === instance.id)
+    );
+    assert.deepEqual(relevant.slice(0, 2).map((message) => message.type), ['buffer.upsert', 'network.upsert']);
+  } finally {
+    await closeWebSocket(socket);
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('delete returns all deleted network ids when removing a template', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -944,7 +1002,7 @@ test('http connect and disconnect routes drive the IRC connection lifecycle', as
   try {
     const connectedStatePromise = waitForWebSocketMessage(
       socket,
-      (message) => message.type === 'network.state' && message.networkId === network.id && message.connected === true,
+      (message) => message.type === 'network.state' && message.networkId === network.id && message.phase === 'connected',
       'connected network.state'
     );
     const connectResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/connect`, {});
@@ -955,7 +1013,7 @@ test('http connect and disconnect routes drive the IRC connection lifecycle', as
 
     const disconnectedStatePromise = waitForWebSocketMessage(
       socket,
-      (message) => message.type === 'network.state' && message.networkId === network.id && message.connected === false,
+      (message) => message.type === 'network.state' && message.networkId === network.id && message.phase === 'offline',
       'disconnected network.state'
     );
     const disconnectResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/disconnect`, {});

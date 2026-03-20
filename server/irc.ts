@@ -91,7 +91,7 @@ export class IrcConnection implements IrcConnectionState {
 
   get state() {
     return {
-      connected: this.connected,
+      phase: this.connected ? 'connected' as const : this.socket ? 'connecting' as const : 'offline' as const,
       serverName: this.serverName,
       nick: this.currentNick,
     };
@@ -602,6 +602,7 @@ export class IrcConnection implements IrcConnectionState {
   ) {
     const key = this.resolveTrackedChannelKey(channel) ?? channel;
     const current = this.channelSessions.get(key) ?? null;
+    const existingUsers = this.channelUsers.get(key) ?? [];
     if (current) {
       this.clearChannelJoinTimer(current);
     }
@@ -614,6 +615,11 @@ export class IrcConnection implements IrcConnectionState {
       joinTimeoutTimer: null,
     };
     if (phase === 'joining') {
+      next.previouslyJoined = options.previouslyJoined ?? (
+        current?.phase === 'joined'
+        || current?.previouslyJoined === true
+        || existingUsers.length > 0
+      );
       next.joinTimeoutTimer = this.createChannelJoinTimer(next.channel);
     } else {
       next.visiblePending = false;

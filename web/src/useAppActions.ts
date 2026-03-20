@@ -97,7 +97,7 @@ export function useAppActions(params: AppActionParams) {
     }
 
     const runtime = params.state.networkStates[networkId] ?? null;
-    if (!runtime?.connected) {
+    if (runtime?.phase !== 'connected') {
       params.updateBanner('error', `Connect first to join ${channel}`);
       return false;
     }
@@ -127,7 +127,7 @@ export function useAppActions(params: AppActionParams) {
       return;
     }
     const runtime = params.state.networkStates[networkId] ?? null;
-    if (!runtime?.connected) {
+    if (runtime?.phase !== 'connected') {
       params.updateBanner('error', 'Connect the network before listing channels');
       return;
     }
