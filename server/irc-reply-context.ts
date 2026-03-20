@@ -6,6 +6,7 @@ export type PendingReplyContext =
   | { kind: 'message'; sourceTarget: string; target: string; expiresAt: number }
   | { kind: 'whois'; sourceTarget: string; nick: string; expiresAt: number }
   | { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string; expiresAt: number }
+  | { kind: 'raw-list'; sourceTarget: string; expiresAt: number }
   | { kind: 'channel-list'; requestId: string; expiresAt: number }
   | {
       kind: 'channel';
@@ -69,6 +70,12 @@ export const createRawTargetReplyContext = (
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
+export const createRawListReplyContext = (sourceTarget: string): PendingReplyContext => ({
+  kind: 'raw-list',
+  sourceTarget,
+  expiresAt: Date.now() + replyContextTtlMs,
+});
+
 export const createChannelListReplyContext = (requestId: string): PendingReplyContext => ({
   kind: 'channel-list',
   requestId,
@@ -128,6 +135,10 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
 
   if (command === 'ISON') {
     return createIsonReplyContext(sourceTarget);
+  }
+
+  if (command === 'LIST') {
+    return createRawListReplyContext(sourceTarget);
   }
 
   if (command === 'TOPIC' && rest[0]) {
@@ -272,6 +283,18 @@ const resolveReplyContext = (
     return { matched: true, done: true };
   }
 
+  if (context.kind === 'raw-list') {
+    if (!channelListReplyNumerics.has(command)) {
+      return { matched: false, done: false };
+    }
+    if (command === '421' || command === '461' || command === '263') {
+      return (params[1] ?? '').toUpperCase() === 'LIST'
+        ? { matched: true, done: true }
+        : { matched: false, done: false };
+    }
+    return { matched: true, done: command === '323' };
+  }
+
   if (context.kind === 'channel-list') {
     if (!channelListReplyNumerics.has(command)) {
       return { matched: false, done: false };
@@ -385,7 +408,13 @@ const getReplyPriority = (context: PendingReplyContext) => {
   if (context.kind === 'channel') {
     return 1;
   }
-  if (context.kind === 'channel-list' || context.kind === 'whois' || context.kind === 'raw-target' || context.kind === 'nick') {
+  if (
+    context.kind === 'channel-list'
+    || context.kind === 'raw-list'
+    || context.kind === 'whois'
+    || context.kind === 'raw-target'
+    || context.kind === 'nick'
+  ) {
     return 2;
   }
   return 3;
@@ -466,6 +495,11 @@ const getResolvedReplyGroupIndexes = (
           && match.context.command === selectedContext.command
           && isSameIrcIdentifier(match.context.target, selectedContext.target)
       )
+      .map((match) => match.index);
+  }
+  if (selected.context.kind === 'raw-list') {
+    return matches
+      .filter((match) => match.context.kind === 'raw-list')
       .map((match) => match.index);
   }
   if (selected.context.kind === 'channel-list') {
