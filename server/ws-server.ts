@@ -67,6 +67,9 @@ const handleClientMessage = (
       case 'channel.list.request':
         context.runtime.requestChannelList(message.networkId, ws);
         return;
+      case 'channel.list.cancel':
+        context.runtime.cancelChannelList(message.networkId, ws);
+        return;
     }
   } catch (error) {
     if (ws.readyState !== WebSocket.OPEN) {

@@ -247,6 +247,10 @@ export function useAppActions(params: AppActionParams) {
   };
 
   const closeChannelList = () => {
+    const networkId = params.state.channelList.networkId;
+    if (networkId && params.socketRef.current) {
+      params.socketRef.current.send({ type: 'channel.list.cancel', networkId });
+    }
     params.dispatch({ type: 'close-channel-list' });
   };
 

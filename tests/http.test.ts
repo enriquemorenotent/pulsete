@@ -1138,6 +1138,9 @@ test('websocket state requests use the live local state and forward commands to 
     runtime.send({ type: 'channel.list.started', networkId, requestId: 'request-1' });
     return 'request-1';
   }) as Runtime['requestChannelList'];
+  runtime.cancelChannelList = ((networkId: string) => {
+    calls.push(`channel.list.cancel:${networkId}`);
+  }) as Runtime['cancelChannelList'];
   runtime.sendRaw = ((networkId: string, raw: string, sourceBufferId?: string) => {
     calls.push(`raw.send:${networkId}:${raw}:${sourceBufferId ?? ''}`);
   }) as Runtime['sendRaw'];
@@ -1161,6 +1164,7 @@ test('websocket state requests use the live local state and forward commands to 
     socket.send(JSON.stringify({ type: 'network.disconnect', networkId: network.id }));
     socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'helper' }));
     socket.send(JSON.stringify({ type: 'channel.list.request', networkId: network.id }));
+    socket.send(JSON.stringify({ type: 'channel.list.cancel', networkId: network.id }));
     socket.send(JSON.stringify({
       type: 'raw.send',
       networkId: network.id,
@@ -1182,6 +1186,7 @@ test('websocket state requests use the live local state and forward commands to 
       `disconnect:${network.id}`,
       `query.open:${network.id}:helper`,
       `channel.list.request:${network.id}`,
+      `channel.list.cancel:${network.id}`,
       `raw.send:${network.id}:/quote WHOIS alice:${query.id}`,
     ]);
   } finally {
@@ -1212,6 +1217,34 @@ test('websocket query.open uses the live runtime path', async () => {
     assert.equal(opened.buffer.kind, 'query');
     assert.equal(storage.getBuffer(opened.buffer.id)?.target, 'helper');
   } finally {
+    await closeWebSocket(socket);
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('websocket channel.list.cancel ignores missing networks', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+  const messages: Array<Record<string, unknown>> = [];
+  const handleMessage = (payload: WebSocket.RawData) => {
+    messages.push(JSON.parse(payload.toString()) as Record<string, unknown>);
+  };
+
+  socket.on('message', handleMessage);
+
+  try {
+    socket.send(JSON.stringify({ type: 'channel.list.cancel', networkId: 'missing-network' }));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    assert.deepEqual(messages.filter((message) => message.type === 'error'), []);
+    assert.equal(socket.readyState, WebSocket.OPEN);
+  } finally {
+    socket.off('message', handleMessage);
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

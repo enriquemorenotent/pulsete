@@ -201,6 +201,10 @@ export class Runtime {
     return this.requestChannelListInternal(networkId, requester);
   }
 
+  cancelChannelList(networkId: string, requester: WebSocket) {
+    this.removeChannelListSubscriberForNetwork(networkId, requester);
+  }
+
   deleteNetwork(networkId: string): string[];
   deleteNetwork(_legacyUserId: string, networkId: string): string[];
   deleteNetwork(...args: [string] | [string, string]) {
@@ -420,7 +424,7 @@ export class Runtime {
       requester
     );
     if (requester) {
-      this.removeChannelListSubscriber(requester);
+      this.removeChannelListSubscriberForNetwork(networkId, requester);
     }
     return requestId;
   }
@@ -537,6 +541,17 @@ export class Runtime {
       if (subscribers.size === 0) {
         this.channelListSubscribers.delete(networkId);
       }
+    }
+  }
+
+  private removeChannelListSubscriberForNetwork(networkId: string, ws: WebSocket) {
+    const subscribers = this.channelListSubscribers.get(networkId);
+    if (!subscribers) {
+      return;
+    }
+    subscribers.delete(ws);
+    if (subscribers.size === 0) {
+      this.channelListSubscribers.delete(networkId);
     }
   }
 
