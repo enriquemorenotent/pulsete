@@ -25,15 +25,18 @@ import { maxBufferedIrcBytes, maxIrcCommandBytes, maxIsonNickBytes } from './irc
 
 const friendPresencePollMs = 60_000;
 const defaultChannelListTimeoutMs = 60_000;
+const defaultChannelListDrainGraceMs = 15_000;
 
 type IrcConnectionOptions = {
   channelListTimeoutMs?: number;
+  channelListDrainGraceMs?: number;
 };
 
 export class IrcConnection implements IrcConnectionState {
   socket: IrcSocket | null = null;
   buffer = '';
   readonly channelUsers = new Map<string, ChannelUserState[]>();
+  readonly trackedChannels = new Set<string>();
   connectDeadlineTimer: ReturnType<typeof setTimeout> | null = null;
   private friendNicks: string[] = [];
   private onlineFriendKeys = new Set<string>();
@@ -55,7 +58,9 @@ export class IrcConnection implements IrcConnectionState {
   pendingReplyContexts: PendingReplyContext[] = [];
   profile: RuntimeNetworkProfile;
   private channelListTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private drainingChannelListExpiresAt: number | null = null;
   private readonly channelListTimeoutMs: number;
+  private readonly channelListDrainGraceMs: number;
 
   constructor(
     profile: RuntimeNetworkProfile,
@@ -65,6 +70,7 @@ export class IrcConnection implements IrcConnectionState {
     this.profile = profile;
     this.currentNick = profile.nick;
     this.channelListTimeoutMs = options.channelListTimeoutMs ?? defaultChannelListTimeoutMs;
+    this.channelListDrainGraceMs = options.channelListDrainGraceMs ?? defaultChannelListDrainGraceMs;
   }
 
   get state() {
@@ -243,8 +249,10 @@ export class IrcConnection implements IrcConnectionState {
   resetTransientState() {
     this.buffer = '';
     this.channelUsers.clear();
+    this.trackedChannels.clear();
     this.abortActiveChannelList('Channel list request was interrupted');
     this.drainingChannelListRequestId = null;
+    this.drainingChannelListExpiresAt = null;
     this.pendingNick = null;
     this.pendingReplyContexts = [];
     this.pendingFriendPresencePoll = null;
@@ -261,12 +269,14 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string) {
+    this.prunePendingReplyContexts();
     const target = consumeReplyTarget(this.pendingReplyContexts, command, params, nick, rawTarget);
     this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
     return target;
   }
 
   consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string) {
+    this.prunePendingReplyContexts();
     const context = consumeReplyContext(this.pendingReplyContexts, command, params, nick, rawTarget);
     this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
     return context;
@@ -293,6 +303,7 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   sendClientRaw(raw: string, sourceTarget = 'server') {
+    this.prunePendingReplyContexts();
     const replyContext = createReplyContextFromRaw(sourceTarget, raw);
     if (replyContext?.kind === 'raw-list' && this.isChannelListPending()) {
       emitStatus(this, this.getChannelListRequestFailureMessage(), 'error', sourceTarget);
@@ -302,6 +313,7 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   requestChannelList(requestId: string) {
+    this.prunePendingReplyContexts();
     if (!this.connected || this.drainingChannelListRequestId || this.hasPendingRawChannelList()) {
       return false;
     }
@@ -331,10 +343,12 @@ export class IrcConnection implements IrcConnectionState {
     }
     if (requestId === this.drainingChannelListRequestId) {
       this.drainingChannelListRequestId = null;
+      this.drainingChannelListExpiresAt = null;
     }
   }
 
   getChannelListRequestFailureMessage() {
+    this.prunePendingReplyContexts();
     if (this.drainingChannelListRequestId || this.hasPendingRawChannelList() || this.activeChannelListRequestId) {
       return 'Waiting for the previous channel list response to finish';
     }
@@ -380,7 +394,7 @@ export class IrcConnection implements IrcConnectionState {
         return;
       }
       this.clearChannelListState();
-      this.drainingChannelListRequestId = requestId;
+      this.markDrainingChannelList(requestId);
       emitChannelListFailed(this, requestId, 'Channel list request timed out');
     }, this.channelListTimeoutMs);
     timer.unref?.();
@@ -409,12 +423,30 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
-    const channelKey = findIrcCaseMatch(this.channelUsers.keys(), channel) ?? channel;
+    const channelKey = this.trackChannel(channel);
     const current = this.channelUsers.get(channelKey) ?? createEmptyChannelUsers();
     const nextUsers =
       !nick ? current : joined ? upsertChannelUser(current, { nick, mode: 'normal' }) : removeChannelUser(current, nick);
     this.channelUsers.set(channelKey, nextUsers);
     return nextUsers;
+  }
+
+  trackChannel(channel: string) {
+    const channelKey = findIrcCaseMatch(this.trackedChannels.keys(), channel)
+      ?? findIrcCaseMatch(this.channelUsers.keys(), channel)
+      ?? channel;
+    this.trackedChannels.add(channelKey);
+    return channelKey;
+  }
+
+  untrackChannel(channel: string) {
+    const trackedChannel = findIrcCaseMatch(this.trackedChannels.keys(), channel)
+      ?? findIrcCaseMatch(this.channelUsers.keys(), channel);
+    if (!trackedChannel) {
+      return;
+    }
+    this.trackedChannels.delete(trackedChannel);
+    this.channelUsers.delete(findIrcCaseMatch(this.channelUsers.keys(), trackedChannel) ?? trackedChannel);
   }
 
   private reconnectWithUpdatedProfile() {
@@ -462,6 +494,9 @@ export class IrcConnection implements IrcConnectionState {
     }
     if (replyContext) {
       this.queueReplyContext(replyContext);
+    }
+    if (replyContext?.kind === 'channel' && replyContext.operation === 'join') {
+      this.trackChannel(replyContext.channel);
     }
     return true;
   }
@@ -528,7 +563,41 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   private isChannelListPending() {
+    this.prunePendingReplyContexts();
     return this.activeChannelListRequestId !== null || this.drainingChannelListRequestId !== null || this.hasPendingRawChannelList();
+  }
+
+  private markDrainingChannelList(requestId: string) {
+    this.drainingChannelListRequestId = requestId;
+    this.drainingChannelListExpiresAt = Date.now() + this.channelListDrainGraceMs;
+    for (const context of this.pendingReplyContexts) {
+      if (context.kind === 'channel-list' && context.requestId === requestId) {
+        context.expiresAt = this.drainingChannelListExpiresAt;
+      }
+    }
+  }
+
+  private prunePendingReplyContexts() {
+    const now = Date.now();
+    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
+      const context = this.pendingReplyContexts[index];
+      if (!context || context.expiresAt >= now) {
+        continue;
+      }
+      if (context.kind === 'channel-list' && context.requestId === this.drainingChannelListRequestId) {
+        this.drainingChannelListRequestId = null;
+        this.drainingChannelListExpiresAt = null;
+      }
+      this.pendingReplyContexts.splice(index, 1);
+    }
+    if (
+      this.drainingChannelListRequestId
+      && this.drainingChannelListExpiresAt !== null
+      && this.drainingChannelListExpiresAt < now
+    ) {
+      this.drainingChannelListRequestId = null;
+      this.drainingChannelListExpiresAt = null;
+    }
   }
 }
 

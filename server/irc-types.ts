@@ -47,6 +47,7 @@ export type IrcConnectionState = {
   socket: IrcSocket | null;
   buffer: string;
   channelUsers: Map<string, ChannelUserState[]>;
+  trackedChannels: Set<string>;
   connectDeadlineTimer: ReturnType<typeof setTimeout> | null;
   manualDisconnect: boolean;
   reconnectAttempts: number;
@@ -79,5 +80,7 @@ export type IrcConnectionState = {
   sendRaw(raw: string, statusTarget?: string): boolean;
   sendClientRaw(raw: string, sourceTarget?: string): boolean;
   setFriendNicks(nicks: string[]): void;
+  trackChannel(channel: string): string;
+  untrackChannel(channel: string): void;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
 };

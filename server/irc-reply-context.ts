@@ -493,6 +493,21 @@ const getExactDuplicateReplyIndexes = (
       )
       .map((match) => match.index);
   }
+  if (selected.context.kind === 'channel') {
+    const selectedContext = selected.context;
+    return matches
+      .filter(
+        (match) =>
+          match.context.kind === 'channel'
+          && match.context.operation === selectedContext.operation
+          && isSameIrcIdentifier(match.context.channel, selectedContext.channel)
+          && (
+            selectedContext.operation !== 'topic-set'
+            || match.context.requestedTopic === selectedContext.requestedTopic
+          )
+      )
+      .map((match) => match.index);
+  }
   return [];
 };
 

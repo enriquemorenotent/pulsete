@@ -72,34 +72,16 @@ export function useAppLifecycle(params: LifecycleParams) {
     }
     params.dispatch({ type: 'gateway-connecting' });
     let closedByClient = false;
-    const socket = connectSocket({
-      onMessage: (message) => {
-        if (message.type === 'state.ready') {
-          reconnectAttemptRef.current = 0;
-        }
-        handleServerMessage(message, params.dispatch);
-      },
-      onOpen: () => {
-        params.dispatch({ type: 'gateway-connecting' });
-      },
-      onClose: () => {
-        if (closedByClient || params.socketRef.current !== socket) {
-          return;
-        }
-        params.socketRef.current = null;
-        params.dispatch({ type: 'gateway-disconnected' });
-        params.dispatch({ type: 'set-banner', banner: { kind: 'error', message: gatewayReconnectMessage } });
-        if (reconnectTimerRef.current !== null) {
-          window.clearTimeout(reconnectTimerRef.current);
-        }
-        const delay = getGatewayReconnectDelayMs(reconnectAttemptRef.current);
-        reconnectAttemptRef.current += 1;
-        reconnectTimerRef.current = window.setTimeout(() => {
-          reconnectTimerRef.current = null;
-          setSocketGeneration((value) => value + 1);
-        }, delay);
-      },
-    });
+    let socket: SocketHandle;
+    socket = connectSocket(createGatewaySocketCallbacks({
+      getSocket: () => socket,
+      socketRef: params.socketRef,
+      isClosedByClient: () => closedByClient,
+      dispatch: params.dispatch,
+      reconnectAttemptRef,
+      reconnectTimerRef,
+      setSocketGeneration,
+    }));
     params.socketRef.current = socket;
     return () => {
       closedByClient = true;
@@ -155,6 +137,59 @@ export function useAppLifecycle(params: LifecycleParams) {
     }
   }, [params.managedNetworkId, params.state.networks, params.state.phase, params.visibleNetworks]);
 }
+
+type GatewaySocketCallbackParams = {
+  getSocket: () => SocketHandle;
+  socketRef: MutableRef<SocketHandle | null>;
+  isClosedByClient: () => boolean;
+  dispatch: (action: Action) => void;
+  reconnectAttemptRef: MutableRef<number>;
+  reconnectTimerRef: MutableRef<number | null>;
+  setSocketGeneration: (updater: (value: number) => number) => void;
+};
+
+export const createGatewaySocketCallbacks = ({
+  getSocket,
+  socketRef,
+  isClosedByClient,
+  dispatch,
+  reconnectAttemptRef,
+  reconnectTimerRef,
+  setSocketGeneration,
+}: GatewaySocketCallbackParams) => ({
+  onMessage(message: ServerMessage) {
+    if (isClosedByClient() || socketRef.current !== getSocket()) {
+      return;
+    }
+    if (message.type === 'state.ready') {
+      reconnectAttemptRef.current = 0;
+    }
+    handleServerMessage(message, dispatch);
+  },
+  onOpen() {
+    if (isClosedByClient() || socketRef.current !== getSocket()) {
+      return;
+    }
+    dispatch({ type: 'gateway-connecting' });
+  },
+  onClose() {
+    if (isClosedByClient() || socketRef.current !== getSocket()) {
+      return;
+    }
+    socketRef.current = null;
+    dispatch({ type: 'gateway-disconnected' });
+    dispatch({ type: 'set-banner', banner: { kind: 'error', message: gatewayReconnectMessage } });
+    if (reconnectTimerRef.current !== null) {
+      window.clearTimeout(reconnectTimerRef.current);
+    }
+    const delay = getGatewayReconnectDelayMs(reconnectAttemptRef.current);
+    reconnectAttemptRef.current += 1;
+    reconnectTimerRef.current = window.setTimeout(() => {
+      reconnectTimerRef.current = null;
+      setSocketGeneration((value) => value + 1);
+    }, delay);
+  },
+});
 
 function handleServerMessage(message: ServerMessage, dispatch: (action: Action) => void) {
   if (message.type === 'state.ready') {

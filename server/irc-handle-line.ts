@@ -84,6 +84,9 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
       && channelJoinFailureCommands.has(command)
       ? replyContext.failedJoinBufferId
       : undefined;
+    if (failedChannelJoinTarget && !hasPendingChannelReplyContext(connection, failedChannelJoinTarget, 'join')) {
+      connection.untrackChannel(failedChannelJoinTarget);
+    }
     if (replyContext?.kind === 'channel-list') {
       const isDrainingTimedOutList = replyContext.requestId === connection.drainingChannelListRequestId;
       if (command === '322') {
@@ -351,6 +354,7 @@ const handleJoin = (connection: IrcConnectionState, params: string[], nick: stri
   const selfJoin = isSameIrcIdentifier(nick, connection.currentNick);
   if (selfJoin) {
     consumePendingChannelReplyContexts(connection, name, 'join');
+    connection.trackChannel(name);
   }
   if (!selfJoin && !resolveTrackedChannel(connection, name)) {
     return;
@@ -382,7 +386,7 @@ const handlePart = (connection: IrcConnectionState, params: string[], nick: stri
   }
   const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
   if (selfPart) {
-    connection.channelUsers.delete(channel);
+    untrackChannelUnlessRejoining(connection, channel);
   }
   emitMessage(connection, createMessage(connection, {
     target: channel,
@@ -409,7 +413,7 @@ const handleKick = (connection: IrcConnectionState, params: string[], nick: stri
   }
   const users = selfKick ? [] : connection.updateChannelUsers(channel, kickedNick, false);
   if (selfKick) {
-    connection.channelUsers.delete(channel);
+    untrackChannelUnlessRejoining(connection, channel);
   }
   emitMessage(connection, createMessage(connection, {
     target: channel,
@@ -562,7 +566,31 @@ const formatPingReply = (line: string, params: string[]) => {
 };
 
 const resolveTrackedChannel = (connection: IrcConnectionState, channel: string) =>
-  channel ? findIrcCaseMatch(connection.channelUsers.keys(), channel) ?? null : null;
+  channel
+    ? findIrcCaseMatch(connection.trackedChannels.keys(), channel)
+      ?? findIrcCaseMatch(connection.channelUsers.keys(), channel)
+      ?? null
+    : null;
+
+const hasPendingChannelReplyContext = (
+  connection: IrcConnectionState,
+  channel: string,
+  operation: 'join' | 'part' | 'topic-set' | 'topic-query' | 'names'
+) =>
+  connection.pendingReplyContexts.some(
+    (context) =>
+      context.kind === 'channel'
+      && context.operation === operation
+      && isSameIrcIdentifier(context.channel, channel)
+  );
+
+const untrackChannelUnlessRejoining = (connection: IrcConnectionState, channel: string) => {
+  if (hasPendingChannelReplyContext(connection, channel, 'join')) {
+    connection.trackChannel(channel);
+    return;
+  }
+  connection.untrackChannel(channel);
+};
 
 const consumePendingChannelReplyContexts = (
   connection: IrcConnectionState,

@@ -249,6 +249,64 @@ test('irc connection maps direct messages to sender buffer', async () => {
   server.close();
 });
 
+test('irc connection keeps tracked joins live before the nicklist arrives', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  assert.equal(connection.join('#help', '#join'), true);
+  connection.consume(':alice!user@host PRIVMSG #help :hello there\r\n');
+  connection.consume(':irc.example 332 tester #help :Live topic\r\n');
+
+  assert.deepEqual(writes, ['JOIN #help\r\n']);
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'message'
+        && typeof event.message === 'object'
+        && (event.message as { target?: string; body?: string }).target === '#help'
+        && (event.message as { target?: string; body?: string }).body === 'hello there'
+    )
+  );
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'channel'
+        && event.channel === '#help'
+        && event.topic === 'Live topic'
+    )
+  );
+});
+
 test('irc connection sends direct private messages to nick targets', async () => {
   const received: string[] = [];
 
@@ -2358,6 +2416,59 @@ test('irc connection times out a stalled LIST, drains late numerics, and retries
   );
 });
 
+test('irc connection expires a stalled LIST drain and allows a later retry without a terminator', async () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    },
+    { channelListTimeoutMs: 20, channelListDrainGraceMs: 20 }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  assert.equal(connection.requestChannelList('request-1'), true);
+  await waitFor(() =>
+    events.some(
+      (event) =>
+        event.type === 'channel-list-failed'
+        && event.requestId === 'request-1'
+        && event.message === 'Channel list request timed out'
+    )
+  );
+
+  assert.equal(connection.requestChannelList('request-2'), false);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  assert.equal(connection.requestChannelList('request-2'), true);
+  assert.equal(connection.drainingChannelListRequestId, null);
+  assert.deepEqual(writes, ['LIST\r\n', 'LIST\r\n']);
+});
+
 test('irc connection refuses a second LIST while one is already active', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
@@ -3160,6 +3271,54 @@ test('irc connection clears duplicate successful topic-change contexts before la
         && (event.target === '#topic-a' || event.target === '#topic-b')
         && event.message === '* #help two'
     )
+  );
+});
+
+test('irc connection clears duplicate topic-error contexts for the same channel', () => {
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: () => {},
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+  connection.trackChannel('#help');
+
+  connection.sendClientRaw('TOPIC #help :locked', '#topic-a');
+  connection.sendClientRaw('TOPIC #help :locked', '#topic-b');
+  connection.consume(':irc.example 482 tester #help :You\'re not channel operator\r\n');
+
+  assert.deepEqual(writes, ['TOPIC #help :locked\r\n', 'TOPIC #help :locked\r\n']);
+  assert.equal(
+    connection.pendingReplyContexts.some(
+      (context) =>
+        context.kind === 'channel'
+        && context.operation === 'topic-set'
+        && context.channel === '#help'
+    ),
+    false
   );
 });
 
