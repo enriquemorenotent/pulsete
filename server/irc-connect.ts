@@ -4,6 +4,8 @@ import { formatTlsStatusLines } from './irc-server-log.js';
 import { emitState, emitStatus } from './irc-emit.js';
 import type { IrcConnectionState } from './irc-types.js';
 
+const defaultConnectTimeoutMs = 15_000;
+
 export const connectSocket = (connection: IrcConnectionState) => {
   if (connection.socket) {
     return;
@@ -16,8 +18,19 @@ export const connectSocket = (connection: IrcConnectionState) => {
     ? tls.connect({ host: connection.profile.host, port: connection.profile.port, servername: connection.profile.host })
     : net.connect({ host: connection.profile.host, port: connection.profile.port });
   connection.socket = socket;
+  connection.clearConnectDeadlineTimer();
   const isCurrentSocket = () => connection.socket === socket;
   socket.setEncoding('utf8');
+  const connectDeadline = setTimeout(() => {
+    if (!isCurrentSocket() || connection.connected) {
+      return;
+    }
+    connection.lastFailureMessage = formatFailureMessage(connection, 'Connection timed out');
+    emitStatus(connection, connection.lastFailureMessage, 'error');
+    socket.destroy();
+  }, getConnectTimeoutMs());
+  connectDeadline.unref?.();
+  connection.connectDeadlineTimer = connectDeadline;
   socket.on('lookup', (_error, address, _family, host) => {
     if (!isCurrentSocket()) {
       return;
@@ -36,11 +49,17 @@ export const connectSocket = (connection: IrcConnectionState) => {
       }
     }
     emitStatus(connection, 'Connected. Now logging in.');
-    if (connection.profile.password) {
-      connection.sendRaw(`PASS ${connection.profile.password}`);
+    const loginLines = [
+      ...(connection.profile.password ? [`PASS ${connection.profile.password}`] : []),
+      `NICK ${connection.profile.nick}`,
+      `USER ${connection.profile.username} 0 * :${connection.profile.realName || connection.profile.name}`,
+    ];
+    const sentAllLoginLines = loginLines.every((line) => connection.sendRaw(line));
+    if (!sentAllLoginLines) {
+      connection.lastFailureMessage = formatFailureMessage(connection, 'Login command exceeded the IRC line limit');
+      socket.destroy();
+      return;
     }
-    connection.sendRaw(`NICK ${connection.profile.nick}`);
-    connection.sendRaw(`USER ${connection.profile.username} 0 * :${connection.profile.realName || connection.profile.name}`);
   };
   if (connection.profile.tls) {
     (socket as tls.TLSSocket).on('secureConnect', beginLogin);
@@ -65,6 +84,7 @@ const handleClose = (connection: IrcConnectionState, socket: IrcConnectionState[
   if (connection.socket !== socket) {
     return;
   }
+  connection.clearConnectDeadlineTimer();
   connection.clearReconnectTimer();
   const wasConnected = connection.connected;
   const failureMessage = connection.lastFailureMessage;
@@ -93,6 +113,11 @@ const handleClose = (connection: IrcConnectionState, socket: IrcConnectionState[
 
 const formatFailureMessage = (connection: IrcConnectionState, detail: string) =>
   `Unable to connect to ${connection.profile.host}:${connection.profile.port} (${detail})`;
+
+const getConnectTimeoutMs = () => {
+  const parsed = Number(process.env.PULSETE_IRC_CONNECT_TIMEOUT_MS ?? defaultConnectTimeoutMs);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultConnectTimeoutMs;
+};
 
 const retryConnect = (connection: IrcConnectionState, attempt: number) => {
   if (connection.socket || connection.manualDisconnect || attempt !== connection.reconnectAttempts) {

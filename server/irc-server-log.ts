@@ -183,26 +183,21 @@ export const formatTlsStatusLines = (socket: tls.TLSSocket) => {
   return lines;
 };
 
-const SERVER_TEXT_NUMERICS = new Set([
-  '001',
-  '002',
-  '003',
-  '004',
-  '005',
-  '042',
-  '251',
-  '252',
-  '254',
-  '255',
-  '265',
-  '266',
-  '372',
-]);
+const silentNumericReplies = new Set(['332', '353']);
 
-export const formatServerNumeric = (command: string, params: string[]) => {
+export const formatServerNumeric = (
+  command: string,
+  params: string[],
+  options: { allowTopicPayload?: boolean; allowNamesPayload?: boolean } = {}
+) => {
   const whoisLines = formatWhoisNumeric(command, params);
   if (whoisLines.length > 0) {
     return whoisLines;
+  }
+
+  if (command === '303') {
+    const online = normalizeText(params[1]);
+    return [online ? `* Online: ${online}` : '* No requested nicks are online'];
   }
 
   if (command === '375') {
@@ -216,6 +211,18 @@ export const formatServerNumeric = (command: string, params: string[]) => {
   if (command === '396') {
     const text = normalizeText(params.at(-1));
     return text ? [`* ${text}`] : [];
+  }
+
+  if (command === '332' && options.allowTopicPayload) {
+    const channel = normalizeText(params[1]);
+    const topic = normalizeText(params[2]);
+    return channel && topic ? [`* ${channel} ${topic}`] : [];
+  }
+
+  if (command === '353' && options.allowNamesPayload) {
+    const channel = normalizeText(params[2]);
+    const names = normalizeText(params[3]);
+    return channel && names ? [`* ${channel} ${names}`] : [];
   }
 
   if (command === '433') {
@@ -232,7 +239,7 @@ export const formatServerNumeric = (command: string, params: string[]) => {
     return body ? [`* ${body}`] : [];
   }
 
-  if (!SERVER_TEXT_NUMERICS.has(command)) {
+  if (silentNumericReplies.has(command)) {
     return [];
   }
 

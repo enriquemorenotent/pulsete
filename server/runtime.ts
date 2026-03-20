@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
 import { encode, type BufferState, type FriendState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
@@ -5,6 +6,7 @@ import { badRequest, notFound } from './app-error.js';
 import { IrcConnection } from './irc.js';
 import {
   normalizeChannelTarget,
+  normalizeFriendNick,
   normalizeMessageBody,
   normalizeMessageTarget,
   normalizeQueryTarget,
@@ -222,7 +224,7 @@ export class Runtime {
   }
 
   private upsertFriendInternal(nick: string) {
-    const friend = this.store.upsertFriend({ nick: normalizeQueryTarget(nick) });
+    const friend = this.store.upsertFriend({ nick: normalizeFriendNick(nick) });
     this.syncFriendTracking();
     this.broadcastFriendPresenceDiffs();
     return friend;
@@ -242,13 +244,32 @@ export class Runtime {
   private joinInternal(networkId: string, channel: string, sourceBufferId?: string) {
     this.getRequiredNetwork(networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
-    const buffer = this.store.upsertBuffer({
+    const existingBuffer = this.store.getBufferByTarget(networkId, normalizedChannel);
+    const existingChannel = this.store.getChannelByName(networkId, normalizedChannel);
+    const existingChannelId = existingBuffer?.kind === 'channel' ? existingBuffer.id : existingChannel?.id;
+    const joinedChannelId = existingChannelId ?? randomUUID();
+    const connection = this.ensureConnection(networkId);
+    const sent = connection.join(
+      normalizedChannel,
+      this.resolveReplyTarget(networkId, sourceBufferId),
+      existingChannelId ? undefined : joinedChannelId
+    );
+    if (!sent) {
+      if (existingBuffer?.kind === 'channel') {
+        return existingBuffer;
+      }
+      return this.store.getServerBuffer(networkId)
+        ?? this.store.upsertBuffer({ networkId, kind: 'server', target: 'server' });
+    }
+    const channelState = this.store.upsertChannel({
+      id: joinedChannelId,
       networkId,
-      kind: 'channel',
-      target: normalizedChannel,
+      name: normalizedChannel,
+      topic: existingChannel?.topic,
+      users: existingChannel?.users,
+      unread: existingBuffer?.kind === 'channel' ? existingBuffer.unread : undefined,
     });
-    this.ensureConnection(networkId).join(normalizedChannel, this.resolveReplyTarget(networkId, sourceBufferId));
-    return buffer;
+    return this.store.getBuffer(channelState.id)!;
   }
 
   private closeBufferInternal(bufferId: string) {

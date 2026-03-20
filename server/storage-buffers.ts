@@ -49,23 +49,35 @@ export const upsertBuffer = (db: DatabaseSync, input: BufferInput) => {
   const existing =
     (input.id ? getBuffer(db, input.id) : null)
     ?? getBufferByTarget(db, input.networkId, input.target);
-  const id = existing?.id ?? input.id ?? randomUUID();
   const now = Date.now();
+  if (existing) {
+    db.prepare(
+      `UPDATE buffers
+       SET networkId = ?, kind = ?, target = ?, unread = ?, updatedAt = ?
+       WHERE id = ?`
+    ).run(
+      input.networkId,
+      input.kind,
+      input.target,
+      input.unread ?? existing.unread ?? 0,
+      now,
+      existing.id
+    );
+    return getBuffer(db, existing.id)!;
+  }
+
+  const id = input.id ?? randomUUID();
   db.prepare(
     `INSERT INTO buffers
        (id, networkId, kind, target, unread, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(networkId, target) DO UPDATE SET
-       kind = excluded.kind,
-       unread = excluded.unread,
-       updatedAt = excluded.updatedAt`
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.networkId,
     input.kind,
     input.target,
-    input.unread ?? existing?.unread ?? 0,
-    existing ? existingIdCreatedAt(db, id) : now,
+    input.unread ?? 0,
+    now,
     now
   );
   return getBuffer(db, id)!;
@@ -168,9 +180,6 @@ export const updateChannelTopic = (db: DatabaseSync, networkId: string, channelN
   db.prepare('UPDATE channel_details SET topic = ?, updatedAt = ? WHERE id = ?')
     .run(topic, Date.now(), channel.id);
 };
-
-const existingIdCreatedAt = (db: DatabaseSync, id: string) =>
-  (db.prepare('SELECT createdAt FROM buffers WHERE id = ?').get(id) as { createdAt: number } | undefined)?.createdAt ?? Date.now();
 
 const getChannelCreatedAt = (db: DatabaseSync, id: string) =>
   (db.prepare('SELECT createdAt FROM channel_details WHERE id = ?').get(id) as { createdAt: number } | undefined)?.createdAt ?? null;

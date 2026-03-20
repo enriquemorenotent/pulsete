@@ -61,7 +61,7 @@ const handleStatusEvent = (
   const message: MessageInput = {
     id: randomUUID(),
     networkId: event.networkId,
-    target: event.target ?? 'server',
+    target: resolveStatusTarget(runtime.store, event),
     nick: null,
     body: event.message,
     kind,
@@ -69,6 +69,7 @@ const handleStatusEvent = (
     ts: Date.now(),
   };
   appendMessage(runtime, message);
+  removeFailedChannelJoin(runtime, event);
   if (event.kind !== 'system') {
     runtime.send('local', {
       type: event.kind === 'error' ? 'error' : 'notice',
@@ -76,6 +77,28 @@ const handleStatusEvent = (
       message: event.message,
     });
   }
+};
+
+const removeFailedChannelJoin = (
+  runtime: RuntimeContext,
+  event: Extract<RuntimeEvent, { type: 'status' }>
+) => {
+  if (!event.failedChannelJoinTarget) {
+    return;
+  }
+  if (!event.failedChannelJoinBufferId) {
+    return;
+  }
+  const failedBuffer = runtime.store.getBuffer(event.failedChannelJoinBufferId);
+  if (
+    failedBuffer?.kind !== 'channel'
+    || failedBuffer.networkId !== event.networkId
+    || failedBuffer.target !== event.failedChannelJoinTarget
+  ) {
+    return;
+  }
+  runtime.store.removeBuffer(failedBuffer.id);
+  runtime.send('local', { type: 'buffer.remove', networkId: failedBuffer.networkId, bufferId: failedBuffer.id });
 };
 
 const handleMessageEvent = (
@@ -116,6 +139,23 @@ const appendMessage = (runtime: RuntimeContext, message: MessageInput) => {
   }
 };
 
+const resolveStatusTarget = (
+  store: Storage,
+  event: Extract<RuntimeEvent, { type: 'status' }>
+) => {
+  if (!event.target || event.target === 'server') {
+    return 'server';
+  }
+  const boundTarget = store.getBufferByTarget(event.networkId, event.target)?.target;
+  if (boundTarget) {
+    return boundTarget;
+  }
+  if (isChannelTarget(event.target) || event.requireBoundTarget) {
+    return 'server';
+  }
+  return event.target;
+};
+
 const resolveMessageBuffer = (runtime: RuntimeContext, message: MessageInput) => {
   const existing = runtime.store.getBufferByTarget(message.networkId, message.target);
   const created = existing ?? createMessageBuffer(runtime, message);
@@ -139,7 +179,7 @@ const createMessageBuffer = (runtime: RuntimeContext, message: MessageInput): Bu
   if (isChannelTarget(message.target)) {
     return runtime.store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target });
   }
-  if (!message.self && message.kind === 'line') {
+  if (message.kind === 'line') {
     return runtime.store.upsertBuffer({ networkId: message.networkId, kind: 'query', target: message.target });
   }
   return null;

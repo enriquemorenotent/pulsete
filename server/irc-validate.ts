@@ -1,8 +1,11 @@
 import { badRequest } from './app-error.js';
+import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { maxIsonNickBytes } from './irc-limits.js';
 
 const lineBreakPattern = /[\r\n]/;
 const whitespacePattern = /\s/;
 const channelTargetPattern = /^[#&+!]/;
+const multiTargetPattern = /,/;
 
 const requireSingleLine = (value: string, message: string) => {
   if (lineBreakPattern.test(value)) {
@@ -27,15 +30,34 @@ export const normalizeChannelTarget = (value: string) => {
   if (!target || !channelTargetPattern.test(target) || whitespacePattern.test(target)) {
     throw badRequest('Channel name must start with #, &, +, or !');
   }
+  if (multiTargetPattern.test(target)) {
+    throw badRequest('Channel name must refer to a single channel');
+  }
   return target;
 };
 
 export const normalizeQueryTarget = (value: string) => {
   const target = value.trim();
-  if (!target || target === 'server' || channelTargetPattern.test(target) || whitespacePattern.test(target)) {
+  if (
+    !target
+    || normalizeIrcIdentifier(target) === normalizeIrcIdentifier('server')
+    || channelTargetPattern.test(target)
+    || whitespacePattern.test(target)
+  ) {
     throw badRequest('Private-message target is required');
   }
+  if (multiTargetPattern.test(target)) {
+    throw badRequest('Private-message target must refer to a single nick');
+  }
   return target;
+};
+
+export const normalizeFriendNick = (value: string) => {
+  const nick = normalizeQueryTarget(value);
+  if (Buffer.byteLength(nick, 'utf8') > maxIsonNickBytes) {
+    throw badRequest('Friend nick is too long');
+  }
+  return nick;
 };
 
 export const normalizeMessageTarget = (value: string) =>

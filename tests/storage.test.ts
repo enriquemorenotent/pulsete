@@ -382,6 +382,36 @@ test('query buffers and history match IRC nick casing insensitively', () => {
   assert.deepEqual(storage.listMessages(network.id, 'ALICE', 10), [message]);
 });
 
+test('buffer upserts reuse case-insensitive query and channel ids', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+
+  const query = storage.upsertQuery(network.id, 'Alice');
+  const queryUpdate = storage.upsertQuery(network.id, 'alice');
+  assert.equal(queryUpdate.id, query.id);
+  assert.equal(queryUpdate.target, 'alice');
+  assert.equal(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
+
+  const channel = storage.upsertChannel({
+    networkId: network.id,
+    name: '#Help',
+    topic: 'Original topic',
+    unread: 2,
+    users: [makeUser('alice')],
+  });
+  const channelUpdate = storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: 'Updated topic',
+  });
+  assert.equal(channelUpdate.id, channel.id);
+  assert.equal(channelUpdate.name, '#help');
+  assert.equal(channelUpdate.topic, 'Updated topic');
+  assert.equal(storage.getBuffer(channel.id)?.target, '#help');
+  assert.equal(storage.listChannels(network.id).length, 1);
+});
+
 test('storage rejects invalid template relationships', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

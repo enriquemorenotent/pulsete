@@ -1,18 +1,40 @@
 import { isSameIrcIdentifier } from './irc-parser.js';
-import { isServiceNick } from './irc-services.js';
 
 export type PendingReplyContext =
   | { kind: 'message'; sourceTarget: string; target: string; expiresAt: number }
   | { kind: 'whois'; sourceTarget: string; nick: string; expiresAt: number }
-  | { kind: 'channel'; sourceTarget: string; channel: string; expiresAt: number }
-  | { kind: 'nick'; sourceTarget: string; expiresAt: number }
-  | { kind: 'generic'; sourceTarget: string; expiresAt: number };
+  | { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string; expiresAt: number }
+  | {
+      kind: 'channel';
+      sourceTarget: string;
+      channel: string;
+      operation: 'join' | 'part' | 'topic' | 'names';
+      failedJoinBufferId?: string;
+      expiresAt: number;
+    }
+  | { kind: 'nick'; sourceTarget: string; requestedNick: string; expiresAt: number }
+  | { kind: 'ison'; sourceTarget: string; expiresAt: number }
+  | { kind: 'friend-presence'; pollId: number; expiresAt: number };
 
 const replyContextTtlMs = 15_000;
 const messageErrorNumerics = new Set(['401', '404', '408', '411', '412', '413', '414', '716', '717']);
 const whoisReplyNumerics = new Set(['301', '311', '312', '313', '317', '318', '319', '330', '338', '401', '402']);
-const channelReplyNumerics = new Set(['403', '405', '442', '471', '472', '473', '474', '475', '476', '477', '482']);
 const nickReplyNumerics = new Set(['431', '432', '433', '436', '437']);
+const joinReplyNumerics = new Set(['403', '405', '437', '471', '472', '473', '474', '475', '476', '477']);
+const partReplyNumerics = new Set(['442']);
+const topicReplyNumerics = new Set(['331', '332', '442', '482']);
+const namesReplyNumerics = new Set(['353', '366']);
+const rawModeTargetedReplyNumerics = new Set(['401', '402']);
+const rawModeUntargetedReplyNumerics = new Set(['221', '501', '502']);
+const rawModeReplyNumerics = new Set([...rawModeTargetedReplyNumerics, ...rawModeUntargetedReplyNumerics]);
+const fifoReplyNumerics = new Set([
+  ...whoisReplyNumerics,
+  ...joinReplyNumerics,
+  ...partReplyNumerics,
+  ...topicReplyNumerics,
+  ...namesReplyNumerics,
+  ...rawModeReplyNumerics,
+]);
 
 export const createMessageReplyContext = (sourceTarget: string, target: string): PendingReplyContext => ({
   kind: 'message',
@@ -28,22 +50,48 @@ export const createWhoisReplyContext = (sourceTarget: string, nick: string): Pen
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
-export const createChannelReplyContext = (sourceTarget: string, channel: string): PendingReplyContext => ({
+export const createRawTargetReplyContext = (
+  sourceTarget: string,
+  command: 'MODE',
+  target: string
+): PendingReplyContext => ({
+  kind: 'raw-target',
+  sourceTarget,
+  command,
+  target,
+  expiresAt: Date.now() + replyContextTtlMs,
+});
+
+export const createChannelReplyContext = (
+  sourceTarget: string,
+  channel: string,
+  operation: 'join' | 'part' | 'topic' | 'names',
+  failedJoinBufferId?: string
+): PendingReplyContext => ({
   kind: 'channel',
   sourceTarget,
   channel,
+  operation,
+  failedJoinBufferId,
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
-export const createNickReplyContext = (sourceTarget: string): PendingReplyContext => ({
+export const createNickReplyContext = (sourceTarget: string, requestedNick: string): PendingReplyContext => ({
   kind: 'nick',
   sourceTarget,
+  requestedNick,
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
-export const createGenericReplyContext = (sourceTarget: string): PendingReplyContext => ({
-  kind: 'generic',
+export const createIsonReplyContext = (sourceTarget: string): PendingReplyContext => ({
+  kind: 'ison',
   sourceTarget,
+  expiresAt: Date.now() + replyContextTtlMs,
+});
+
+export const createFriendPresenceReplyContext = (pollId: number): PendingReplyContext => ({
+  kind: 'friend-presence',
+  pollId,
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
@@ -56,24 +104,48 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
   const [commandToken = '', ...rest] = trimmed.split(/\s+/);
   const command = commandToken.toUpperCase();
 
-  if ((command === 'PRIVMSG' || command === 'NOTICE') && rest[0]) {
+  if (command === 'PRIVMSG' && rest[0]) {
     return createMessageReplyContext(sourceTarget, rest[0]);
   }
 
   if (command === 'WHOIS') {
     const nick = rest.at(-1);
-    return nick ? createWhoisReplyContext(sourceTarget, nick) : createGenericReplyContext(sourceTarget);
+    return nick ? createWhoisReplyContext(sourceTarget, nick) : null;
+  }
+
+  if (command === 'ISON') {
+    return createIsonReplyContext(sourceTarget);
   }
 
   if ((command === 'JOIN' || command === 'PART' || command === 'TOPIC') && rest[0]) {
-    return createChannelReplyContext(sourceTarget, rest[0]);
+    const operation = command.toLowerCase() as 'join' | 'part' | 'topic';
+    const target = command === 'TOPIC' && rest.length === 1 ? 'server' : sourceTarget;
+    return createChannelReplyContext(target, rest[0], operation);
   }
 
-  if (command === 'NICK') {
-    return createNickReplyContext(sourceTarget);
+  if (command === 'MODE' && rest[0] && !isChannelTarget(rest[0])) {
+    return createRawTargetReplyContext('server', 'MODE', rest[0]);
   }
 
-  return createGenericReplyContext(sourceTarget);
+  if (command === 'NAMES' && rest[0] && isChannelTarget(rest[0])) {
+    return createChannelReplyContext('server', rest[0], 'names');
+  }
+
+  if (command === 'NICK' && rest[0]) {
+    return createNickReplyContext(sourceTarget, rest[0]);
+  }
+
+  return null;
+};
+
+export const getLatestPendingNick = (contexts: PendingReplyContext[]) => {
+  for (let index = contexts.length - 1; index >= 0; index -= 1) {
+    const context = contexts[index];
+    if (context?.kind === 'nick') {
+      return context.requestedNick;
+    }
+  }
+  return null;
 };
 
 type ReplyResolution = {
@@ -88,6 +160,20 @@ export const consumeReplyTarget = (
   nick: string | null,
   rawTarget?: string
 ) => {
+  const context = consumeReplyContext(contexts, command, params, nick, rawTarget);
+  if (!context || !('sourceTarget' in context)) {
+    return null;
+  }
+  return context.sourceTarget;
+};
+
+export const consumeReplyContext = (
+  contexts: PendingReplyContext[],
+  command: string,
+  params: string[],
+  _nick: string | null,
+  _rawTarget?: string
+) => {
   const now = Date.now();
 
   for (let index = contexts.length - 1; index >= 0; index -= 1) {
@@ -96,33 +182,47 @@ export const consumeReplyTarget = (
     }
   }
 
-  for (let index = contexts.length - 1; index >= 0; index -= 1) {
-    const resolution = resolveReplyContext(contexts[index]!, command, params, nick, rawTarget);
+  const matches: Array<{ index: number; context: PendingReplyContext; resolution: ReplyResolution }> = [];
+  for (let index = 0; index < contexts.length; index += 1) {
+    const context = contexts[index];
+    if (!context) {
+      continue;
+    }
+    const resolution = resolveReplyContext(context, command, params);
     if (!resolution.matched) {
       continue;
     }
-    const sourceTarget = contexts[index]!.sourceTarget;
-    if (resolution.done) {
-      contexts.splice(index, 1);
-    }
-    return sourceTarget;
+    matches.push({ index, context, resolution });
   }
 
-  return null;
+  if (matches.length === 0) {
+    return null;
+  }
+
+  const highestPriority = Math.max(...matches.map((match) => getReplyPriority(match.context)));
+  const prioritized = matches.filter((match) => getReplyPriority(match.context) === highestPriority);
+  if (isAmbiguousReplyMatch(prioritized, command) || shouldDiscardUntargetedRawModeMatches(prioritized, command)) {
+    discardReplyContexts(contexts, prioritized);
+    return null;
+  }
+
+  const selected = selectReplyContext(prioritized, command, params);
+  if (!selected) {
+    return null;
+  }
+  if (selected.resolution.done) {
+    contexts.splice(selected.index, 1);
+  }
+  return selected.context;
 };
 
 const resolveReplyContext = (
   context: PendingReplyContext,
   command: string,
-  params: string[],
-  nick: string | null,
-  rawTarget?: string
+  params: string[]
 ): ReplyResolution => {
   if (context.kind === 'message') {
     if (messageErrorNumerics.has(command) && isSameIrcIdentifier(params[1] ?? '', context.target)) {
-      return { matched: true, done: true };
-    }
-    if (command === 'NOTICE' && rawTarget && !isServiceNick(nick) && !isChannelTarget(rawTarget)) {
       return { matched: true, done: true };
     }
     return { matched: false, done: false };
@@ -135,26 +235,168 @@ const resolveReplyContext = (
     return { matched: true, done: command === '318' || /^[45]\d{2}$/.test(command) };
   }
 
+  if (context.kind === 'raw-target') {
+    if (
+      context.command !== 'MODE'
+      || !rawModeReplyNumerics.has(command)
+    ) {
+      return { matched: false, done: false };
+    }
+    if (rawModeUntargetedReplyNumerics.has(command)) {
+      return { matched: true, done: true };
+    }
+    if (!isSameIrcIdentifier(params[1] ?? '', context.target)) {
+      return { matched: false, done: false };
+    }
+    return { matched: true, done: true };
+  }
+
   if (context.kind === 'channel') {
-    return channelReplyNumerics.has(command) && isSameIrcIdentifier(params[1] ?? '', context.channel)
-      ? { matched: true, done: true }
-      : { matched: false, done: false };
+    return resolveChannelReplyContext(context, command, params);
   }
 
   if (context.kind === 'nick') {
     return nickReplyNumerics.has(command)
+      && !(command === '437' && isChannelTarget(params[1] ?? ''))
+      && matchesNickReply(context, command, params)
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
 
-  const isDirectServerNotice = command === 'NOTICE'
-    && rawTarget
-    && !isChannelTarget(rawTarget)
-    && !isServiceNick(nick);
+  if (context.kind === 'ison' || context.kind === 'friend-presence') {
+    return isIsonReply(command, params)
+      ? { matched: true, done: true }
+      : { matched: false, done: false };
+  }
 
-  return /^\d{3}$/.test(command) || isDirectServerNotice
-    ? { matched: true, done: true }
-    : { matched: false, done: false };
+  return { matched: false, done: false };
+};
+
+const resolveChannelReplyContext = (
+  context: Extract<PendingReplyContext, { kind: 'channel' }>,
+  command: string,
+  params: string[]
+): ReplyResolution => {
+  const replyChannel = getChannelReplyTarget(command, params);
+  if (!replyChannel || !isSameIrcIdentifier(replyChannel, context.channel)) {
+    return { matched: false, done: false };
+  }
+
+  if (context.operation === 'join') {
+    return joinReplyNumerics.has(command)
+      ? { matched: true, done: true }
+      : { matched: false, done: false };
+  }
+
+  if (context.operation === 'part') {
+    return partReplyNumerics.has(command)
+      ? { matched: true, done: true }
+      : { matched: false, done: false };
+  }
+
+  if (context.operation === 'topic') {
+    return topicReplyNumerics.has(command)
+      ? { matched: true, done: true }
+      : { matched: false, done: false };
+  }
+
+  if (context.operation === 'names') {
+    return namesReplyNumerics.has(command)
+      ? { matched: true, done: command === '366' }
+      : { matched: false, done: false };
+  }
+
+  return { matched: false, done: false };
+};
+
+const getChannelReplyTarget = (command: string, params: string[]) => {
+  if (command === '353') {
+    return params[2] ?? '';
+  }
+  return params[1] ?? '';
+};
+
+const matchesNickReply = (
+  context: Extract<PendingReplyContext, { kind: 'nick' }>,
+  command: string,
+  params: string[]
+) => {
+  if (command === '431') {
+    return true;
+  }
+  return isSameIrcIdentifier(params[1] ?? '', context.requestedNick);
 };
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
+const selectReplyContext = (
+  matches: Array<{ index: number; context: PendingReplyContext; resolution: ReplyResolution }>,
+  command: string,
+  params: string[]
+) => {
+  if (prefersFifoReplyOrder(command, params)) {
+    return matches.reduce((best, candidate) => (candidate.index < best.index ? candidate : best));
+  }
+  return matches.reduce((best, candidate) => (candidate.index > best.index ? candidate : best));
+};
+
+const getReplyPriority = (context: PendingReplyContext) => {
+  if (context.kind === 'message') {
+    return 0;
+  }
+  if (context.kind === 'channel') {
+    return 1;
+  }
+  if (context.kind === 'whois' || context.kind === 'raw-target' || context.kind === 'nick') {
+    return 2;
+  }
+  return 3;
+};
+
+const isAmbiguousReplyMatch = (
+  matches: Array<{ index: number; context: PendingReplyContext; resolution: ReplyResolution }>,
+  command: string
+) => {
+  if (matches.length < 2 || command !== '442') {
+    return false;
+  }
+  const channelMatches = matches.filter(
+    (
+      match
+    ): match is {
+      index: number;
+      context: Extract<PendingReplyContext, { kind: 'channel' }>;
+      resolution: ReplyResolution;
+    } => match.context.kind === 'channel'
+  );
+  if (channelMatches.length < 2) {
+    return false;
+  }
+  const operations = new Set(channelMatches.map((match) => match.context.operation));
+  return operations.size > 1;
+};
+
+const shouldDiscardUntargetedRawModeMatches = (
+  matches: Array<{ index: number; context: PendingReplyContext; resolution: ReplyResolution }>,
+  command: string
+) =>
+  matches.length > 1
+  && rawModeUntargetedReplyNumerics.has(command)
+  && matches.every((match) => match.context.kind === 'raw-target');
+
+const discardReplyContexts = (
+  contexts: PendingReplyContext[],
+  matches: Array<{ index: number; context: PendingReplyContext; resolution: ReplyResolution }>
+) => {
+  const discardIndexes = matches
+    .filter((match) => match.resolution.done)
+    .map((match) => match.index)
+    .sort((left, right) => right - left);
+  for (const index of discardIndexes) {
+    contexts.splice(index, 1);
+  }
+};
+
+const prefersFifoReplyOrder = (command: string, params: string[]) =>
+  isIsonReply(command, params) || fifoReplyNumerics.has(command);
+const isIsonReply = (command: string, params: string[]) =>
+  command === '303' || (command === '421' && (params[1] ?? '').toUpperCase() === 'ISON');

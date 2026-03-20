@@ -7,7 +7,16 @@ import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type RuntimeEvent =
   | { type: 'state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
-  | { type: 'status'; networkId: string; message: string; kind: 'notice' | 'error' | 'system'; target?: string }
+  | {
+      type: 'status';
+      networkId: string;
+      message: string;
+      kind: 'notice' | 'error' | 'system';
+      target?: string;
+      requireBoundTarget?: boolean;
+      failedChannelJoinTarget?: string;
+      failedChannelJoinBufferId?: string;
+    }
   | { type: 'message'; message: MessageInput }
   | { type: 'friend-presence'; networkId: string; onlineNicks: string[] }
   | { type: 'channel'; networkId: string; channel: string; topic?: string; users?: ChannelUserState[] };
@@ -30,6 +39,7 @@ export type IrcConnectionState = {
   socket: IrcSocket | null;
   buffer: string;
   channelUsers: Map<string, ChannelUserState[]>;
+  connectDeadlineTimer: ReturnType<typeof setTimeout> | null;
   manualDisconnect: boolean;
   reconnectAttempts: number;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
@@ -39,12 +49,14 @@ export type IrcConnectionState = {
   pendingNick: string | null;
   lastFailureMessage: string | null;
   pendingReplyContexts: PendingReplyContext[];
+  clearConnectDeadlineTimer(): void;
   clearReconnectTimer(): void;
   disableFriendPresence(): void;
   connect(resetRetryBudget?: boolean): void;
   consume(chunk: string): void;
-  handleFriendPresence(onlineNicks: string[]): void;
-  join(channel: string, sourceTarget?: string): void;
+  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
+  handleFriendPresence(pollId: number, onlineNicks: string[]): void;
+  join(channel: string, sourceTarget?: string, failedJoinBufferId?: string): boolean;
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
   queueReplyContext(context: PendingReplyContext): void;
   refreshFriendPresence(): void;

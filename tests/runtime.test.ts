@@ -8,7 +8,7 @@ import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
 import { Storage, type NetworkInput } from '../server/storage.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState, ServerMessage } from '../shared/protocol.js';
 
 const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
   nick,
@@ -465,6 +465,35 @@ test('system status events stay in the server buffer without banner notification
   assert.equal(storage.listMessages(network.id, 'server', 5)[0]?.body, 'Connecting to irc.example.test:6667');
 });
 
+test('self direct messages create query buffers when none exist', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: 'message-1',
+        networkId: network.id,
+        target: 'helper',
+        nick: 'tester',
+        body: 'hello there',
+        kind: 'line',
+        self: true,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.getBufferByTarget(network.id, 'HELPER')?.kind, 'query');
+  assert.equal(storage.listMessages(network.id, 'helper', 5)[0]?.body, 'hello there');
+  assert.ok(sent.some((message) => message.type === 'buffer.upsert'));
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+});
+
 test('runtime join preserves existing channel metadata', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -484,6 +513,104 @@ test('runtime join preserves existing channel metadata', () => {
   assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 3);
 });
 
+test('runtime join does not create a channel buffer when the join command is not sent', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+
+  const result = runtime.join(network.id, '#missing');
+
+  assert.equal(result.kind, 'server');
+  assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
+  assert.equal(storage.getChannelByName(network.id, '#missing'), null);
+  assert.deepEqual(
+    storage.listMessages(network.id, 'server', 5).map((message) => message.body),
+    ['Not connected']
+  );
+});
+
+test('runtime removes optimistic channel buffers when the server rejects a join', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+  const sent: Array<{ type?: string; [key: string]: unknown }> = [];
+
+  (runtime as unknown as { connections: Map<string, { join(channel: string, sourceTarget?: string): boolean }> }).connections.set(network.id, {
+    join(channel: string) {
+      return channel === '#missing';
+    },
+  });
+
+  const buffer = runtime.join(network.id, '#missing');
+  assert.equal(buffer.kind, 'channel');
+  assert.equal(storage.getBufferByTarget(network.id, '#missing')?.kind, 'channel');
+
+  handleRuntimeEvent(
+    {
+      store: storage,
+      send(_legacyUserId: string, message: ServerMessage) {
+        sent.push(message);
+      },
+    },
+    {
+      type: 'status',
+      networkId: network.id,
+      target: 'server',
+      kind: 'error',
+      message: '* #missing No such channel',
+      requireBoundTarget: true,
+      failedChannelJoinTarget: '#missing',
+      failedChannelJoinBufferId: buffer.id,
+    }
+  );
+
+  assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
+  assert.equal(storage.getChannelByName(network.id, '#missing'), null);
+  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, '* #missing No such channel');
+  assert.ok(sent.some((message) => message.type === 'buffer.remove' && message.bufferId === buffer.id));
+});
+
+test('runtime preserves existing channel buffers when a rejoin is rejected', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+  const existing = storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: 'saved topic',
+    users: [makeUser('alice')],
+  });
+
+  (runtime as unknown as { connections: Map<string, { join(channel: string, sourceTarget?: string): boolean }> }).connections.set(network.id, {
+    join(channel: string) {
+      return channel === '#help';
+    },
+  });
+
+  const buffer = runtime.join(network.id, '#help');
+  assert.equal(buffer.id, existing.id);
+
+  handleRuntimeEvent(
+    { store: storage, send() {} },
+    {
+      type: 'status',
+      networkId: network.id,
+      target: 'server',
+      kind: 'error',
+      message: '* #help Cannot join channel (+i)',
+      requireBoundTarget: true,
+      failedChannelJoinTarget: '#help',
+    }
+  );
+
+  assert.equal(storage.getBuffer(existing.id)?.kind, 'channel');
+  assert.equal(storage.getChannelByName(network.id, '#help')?.topic, 'saved topic');
+  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, '* #help Cannot join channel (+i)');
+});
+
 test('runtime validation rejects missing networks and invalid targets before touching storage', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -499,14 +626,18 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.part('missing-network', '#help'), /Network not found/);
   assert.throws(() => runtime.closeBuffer('missing-buffer'), /Buffer not found/);
   assert.throws(() => runtime.join(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
+  assert.throws(() => runtime.join(network.id, '#help,#ops'), /Channel name must refer to a single channel/);
   assert.throws(() => runtime.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
   assert.throws(() => runtime.openQuery(network.id, '   '), /Private-message target is required/);
   assert.throws(() => runtime.openQuery(network.id, '#help'), /Private-message target is required/);
+  assert.throws(() => runtime.openQuery(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
   assert.throws(() => runtime.upsertFriend('   '), /Private-message target is required/);
   assert.throws(() => runtime.upsertFriend('#help'), /Private-message target is required/);
+  assert.throws(() => runtime.upsertFriend('alice,bob'), /Private-message target must refer to a single nick/);
   assert.throws(() => runtime.removeFriend('missing-friend'), /Friend not found/);
   assert.throws(() => runtime.closeBuffer(channel.id), /Only private message buffers can be closed/);
   assert.throws(() => runtime.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
+  assert.throws(() => runtime.sendMessage(network.id, 'alice,bob', 'hello'), /Private-message target must refer to a single nick/);
   assert.throws(
     () => runtime.sendMessage(network.id, '#help', 'hello\r\nOPER root'),
     /Message body cannot contain carriage returns or line feeds/
@@ -548,6 +679,42 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
   } finally {
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime rejects oversized outbound lines without writing them to the socket', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const server = await createRegisteredServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+  }));
+
+  try {
+    runtime.connect(network.id);
+    await waitFor(() => received.includes('NICK tester'));
+
+    runtime.sendMessage(network.id, 'helper', 'x'.repeat(600));
+    runtime.sendRaw(network.id, `NOTICE helper :${'y'.repeat(600)}`);
+
+    await waitFor(
+      () =>
+        storage.listMessages(network.id, 'helper', 20)
+          .filter((message) => message.body === 'IRC command exceeds the 510-byte limit')
+          .length >= 1
+        && storage.listMessages(network.id, 'server', 20)
+          .filter((message) => message.body === 'IRC command exceeds the 510-byte limit')
+          .length >= 1
+    );
+
+    assert.equal(received.some((line) => line.includes(`PRIVMSG helper :${'x'.repeat(600)}`)), false);
+    assert.equal(received.some((line) => line.includes(`NOTICE helper :${'y'.repeat(600)}`)), false);
+  } finally {
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
@@ -790,7 +957,7 @@ test('incoming private messages reuse an existing query buffer across IRC nick c
   });
 });
 
-test('self-sent private messages do not open query buffers automatically', () => {
+test('self-sent private messages open query buffers automatically', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
@@ -813,14 +980,14 @@ test('self-sent private messages do not open query buffers automatically', () =>
     }
   );
 
-  assert.equal(storage.getBufferByTarget(network.id, 'helper'), null);
+  assert.equal(storage.getBufferByTarget(network.id, 'helper')?.kind, 'query');
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.equal(
     sent.some((message) => {
       const buffer = message.buffer as { kind?: string } | undefined;
       return message.type === 'buffer.upsert' && buffer?.kind === 'query';
     }),
-    false
+    true
   );
 });
 
@@ -890,4 +1057,56 @@ test('status events keep their originating buffer target and message kind', () =
     type: 'buffer.upsert',
     buffer: storage.getBuffer(channel.id),
   });
+});
+
+test('late status events fall back to the server buffer after a channel closes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  const channel = storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: [makeUser('tester')],
+  });
+
+  storage.deleteChannelByName(network.id, channel.name);
+
+  handleRuntimeEvent(
+    { store: storage, send() {} },
+    {
+      type: 'status',
+      networkId: network.id,
+      target: '#help',
+      kind: 'error',
+      message: 'No such channel',
+    }
+  );
+
+  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
+  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such channel');
+});
+
+test('late status events fall back to the server buffer after a query closes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  const query = storage.upsertQuery(network.id, 'helper');
+
+  storage.removeBuffer(query.id);
+
+  handleRuntimeEvent(
+    { store: storage, send() {} },
+    {
+      type: 'status',
+      networkId: network.id,
+      target: 'helper',
+      kind: 'error',
+      message: 'No such nick',
+      requireBoundTarget: true,
+    }
+  );
+
+  assert.equal(storage.getBufferByTarget(network.id, 'helper'), null);
+  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such nick');
 });

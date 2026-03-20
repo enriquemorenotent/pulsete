@@ -9,14 +9,18 @@ import { removeChannelUser, upsertChannelUser } from '../shared/channel-users.js
 import type { ChannelUserState } from '../shared/protocol.js';
 import {
   consumeReplyTarget,
+  consumeReplyContext,
+  createFriendPresenceReplyContext,
   createChannelReplyContext,
   createMessageReplyContext,
+  getLatestPendingNick,
   createNickReplyContext,
   createReplyContextFromRaw,
   type PendingReplyContext,
 } from './irc-reply-context.js';
 import type { Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
+import { maxBufferedIrcBytes, maxIrcCommandBytes, maxIsonNickBytes } from './irc-limits.js';
 
 const friendPresencePollMs = 60_000;
 
@@ -24,9 +28,12 @@ export class IrcConnection implements IrcConnectionState {
   socket: IrcSocket | null = null;
   buffer = '';
   readonly channelUsers = new Map<string, ChannelUserState[]>();
+  connectDeadlineTimer: ReturnType<typeof setTimeout> | null = null;
   private friendNicks: string[] = [];
   private onlineFriendKeys = new Set<string>();
   private friendPresenceTimer: ReturnType<typeof setInterval> | null = null;
+  private pendingFriendPresencePoll: { id: number; remainingResponses: number; onlineNicks: string[] } | null = null;
+  private nextFriendPresencePollId = 0;
   private friendPresenceEnabled = true;
   manualDisconnect = false;
   reconnectAttempts = 0;
@@ -68,6 +75,7 @@ export class IrcConnection implements IrcConnectionState {
   disconnect(raw = 'QUIT :Client disconnecting') {
     this.manualDisconnect = true;
     this.reconnectAttempts = 0;
+    this.clearConnectDeadlineTimer();
     this.clearReconnectTimer();
     const socket = this.socket;
     if (socket) {
@@ -88,12 +96,16 @@ export class IrcConnection implements IrcConnectionState {
     }
   }
 
-  join(channel: string, sourceTarget = 'server') {
-    this.sendTrackedRaw(`JOIN ${channel}`, sourceTarget, createChannelReplyContext(sourceTarget, channel));
+  join(channel: string, sourceTarget = 'server', failedJoinBufferId?: string) {
+    return this.sendTrackedRaw(
+      `JOIN ${channel}`,
+      sourceTarget,
+      createChannelReplyContext(sourceTarget, channel, 'join', failedJoinBufferId)
+    );
   }
 
   part(channel: string, reason = 'Leaving', sourceTarget = channel) {
-    this.sendTrackedRaw(`PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel));
+    this.sendTrackedRaw(`PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
   }
 
   say(target: string, text: string, sourceTarget = target) {
@@ -120,7 +132,7 @@ export class IrcConnection implements IrcConnectionState {
     } else {
       this.currentNick = nick;
     }
-    this.sendTrackedRaw(`NICK ${nick}`, sourceTarget, createNickReplyContext(sourceTarget));
+    this.sendTrackedRaw(`NICK ${nick}`, sourceTarget, createNickReplyContext(sourceTarget, nick));
     if (!this.connected) {
       emitState(this);
     }
@@ -164,6 +176,14 @@ export class IrcConnection implements IrcConnectionState {
     this.reconnectTimer = null;
   }
 
+  clearConnectDeadlineTimer() {
+    if (!this.connectDeadlineTimer) {
+      return;
+    }
+    clearTimeout(this.connectDeadlineTimer);
+    this.connectDeadlineTimer = null;
+  }
+
   setFriendNicks(nicks: string[]) {
     this.friendNicks = dedupeFriendNicks(nicks);
     const currentOnline = this.friendNicks.filter((nick) => this.onlineFriendKeys.has(normalizeIrcIdentifier(nick)));
@@ -186,12 +206,25 @@ export class IrcConnection implements IrcConnectionState {
     this.pollFriendPresence();
   }
 
-  handleFriendPresence(onlineNicks: string[]) {
-    this.updateOnlineFriendKeys(onlineNicks);
+  handleFriendPresence(pollId: number, onlineNicks: string[]) {
+    const pendingPoll = this.pendingFriendPresencePoll;
+    if (!pendingPoll || pendingPoll.id !== pollId) {
+      return;
+    }
+
+    pendingPoll.onlineNicks = mergeUniqueNicks(pendingPoll.onlineNicks, onlineNicks);
+    pendingPoll.remainingResponses -= 1;
+    if (pendingPoll.remainingResponses > 0) {
+      return;
+    }
+
+    this.pendingFriendPresencePoll = null;
+    this.updateOnlineFriendKeys(pendingPoll.onlineNicks);
   }
 
   disableFriendPresence() {
     this.friendPresenceEnabled = false;
+    this.pendingFriendPresencePoll = null;
     this.clearFriendPresenceTimer();
     this.updateOnlineFriendKeys([]);
   }
@@ -201,21 +234,38 @@ export class IrcConnection implements IrcConnectionState {
     this.channelUsers.clear();
     this.pendingNick = null;
     this.pendingReplyContexts = [];
+    this.pendingFriendPresencePoll = null;
+    this.clearConnectDeadlineTimer();
     this.clearFriendPresenceTimer();
     this.updateOnlineFriendKeys([]);
   }
 
   queueReplyContext(context: PendingReplyContext) {
     this.pendingReplyContexts.push(context);
+    if (context.kind === 'nick') {
+      this.pendingNick = context.requestedNick;
+    }
   }
 
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string) {
-    return consumeReplyTarget(this.pendingReplyContexts, command, params, nick, rawTarget);
+    const target = consumeReplyTarget(this.pendingReplyContexts, command, params, nick, rawTarget);
+    this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
+    return target;
+  }
+
+  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string) {
+    const context = consumeReplyContext(this.pendingReplyContexts, command, params, nick, rawTarget);
+    this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
+    return context;
   }
 
   sendRaw(raw: string, statusTarget?: string) {
     if (!this.socket) {
       emitStatus(this, 'Not connected', 'error', statusTarget);
+      return false;
+    }
+    if (Buffer.byteLength(raw, 'utf8') > maxIrcCommandBytes) {
+      emitStatus(this, `IRC command exceeds the ${maxIrcCommandBytes}-byte limit`, 'error', statusTarget);
       return false;
     }
     this.socket.write(`${raw}\r\n`);
@@ -233,11 +283,25 @@ export class IrcConnection implements IrcConnectionState {
     while (newlineIndex !== -1) {
       const line = this.buffer.slice(0, newlineIndex).replace(/\r$/, '');
       this.buffer = this.buffer.slice(newlineIndex + 1);
+      if (Buffer.byteLength(line, 'utf8') > maxBufferedIrcBytes) {
+        this.handleOversizedServerLine();
+        return;
+      }
       if (line.length > 0) {
         handleIrcLine(this, line);
       }
       newlineIndex = this.buffer.indexOf('\n');
     }
+    if (Buffer.byteLength(this.buffer, 'utf8') > maxBufferedIrcBytes) {
+      this.handleOversizedServerLine();
+    }
+  }
+
+  private handleOversizedServerLine() {
+    this.buffer = '';
+    this.lastFailureMessage = 'Server sent an oversized IRC line';
+    emitStatus(this, this.lastFailureMessage, 'error');
+    this.socket?.destroy();
   }
 
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
@@ -315,7 +379,31 @@ export class IrcConnection implements IrcConnectionState {
     if (!this.connected || !this.socket || !this.friendPresenceEnabled || this.friendNicks.length === 0) {
       return;
     }
-    this.sendRaw(`ISON ${this.friendNicks.join(' ')}`);
+    const batches = splitIsonNickBatches(this.friendNicks);
+    if (batches.length === 0) {
+      this.pendingFriendPresencePoll = null;
+      this.updateOnlineFriendKeys([]);
+      return;
+    }
+    const pollId = ++this.nextFriendPresencePollId;
+    this.pendingFriendPresencePoll = {
+      id: pollId,
+      remainingResponses: batches.length,
+      onlineNicks: [],
+    };
+    let sentBatches = 0;
+    for (const batch of batches) {
+      if (this.sendRaw(`ISON ${batch.join(' ')}`)) {
+        this.queueReplyContext(createFriendPresenceReplyContext(pollId));
+        sentBatches += 1;
+      }
+    }
+    if (sentBatches === 0) {
+      this.pendingFriendPresencePoll = null;
+      this.updateOnlineFriendKeys([]);
+      return;
+    }
+    this.pendingFriendPresencePoll.remainingResponses = sentBatches;
   }
 
   private updateOnlineFriendKeys(onlineNicks: string[]) {
@@ -342,6 +430,45 @@ const dedupeFriendNicks = (nicks: string[]) => {
     unique.push(nick);
   }
   return unique;
+};
+
+const mergeUniqueNicks = (current: string[], next: string[]) => {
+  const seen = new Set(current.map(normalizeIrcIdentifier));
+  const merged = [...current];
+  for (const nick of next) {
+    const normalized = normalizeIrcIdentifier(nick);
+    if (seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    merged.push(nick);
+  }
+  return merged;
+};
+
+const splitIsonNickBatches = (nicks: string[]) => {
+  const batches: string[][] = [];
+  let batch: string[] = [];
+  let batchBytes = Buffer.byteLength('ISON ', 'utf8');
+  for (const nick of nicks) {
+    const separatorBytes = batch.length === 0 ? 0 : 1;
+    const nickBytes = Buffer.byteLength(nick, 'utf8');
+    if (nickBytes > maxIsonNickBytes) {
+      continue;
+    }
+    if (batch.length > 0 && batchBytes + separatorBytes + nickBytes > maxIrcCommandBytes) {
+      batches.push(batch);
+      batch = [nick];
+      batchBytes = Buffer.byteLength('ISON ', 'utf8') + nickBytes;
+      continue;
+    }
+    batch.push(nick);
+    batchBytes += separatorBytes + nickBytes;
+  }
+  if (batch.length > 0) {
+    batches.push(batch);
+  }
+  return batches;
 };
 
 const setsEqual = (left: Set<string>, right: Set<string>) =>

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import tls from 'node:tls';
 import type { MessageInput } from './storage.js';
 import { emitChannel, emitMessage, emitState, emitStatus } from './irc-emit.js';
-import { createNickReplyContext } from './irc-reply-context.js';
+import { createNickReplyContext, getLatestPendingNick } from './irc-reply-context.js';
 import { formatServerNumeric, getServerNumericStatusKind } from './irc-server-log.js';
 import { isServiceNick } from './irc-services.js';
 import {
@@ -23,6 +23,9 @@ import {
 import type { IrcConnectionState } from './irc-types.js';
 
 const nickRejectionCommands = new Set(['431', '432', '436', '437']);
+const channelModeArgumentTokens = new Set(['b', 'e', 'I', 'k']);
+const channelModeSetOnlyArgumentTokens = new Set(['L', 'f', 'j', 'l']);
+const channelJoinFailureCommands = new Set(['403', '405', '437', '471', '472', '473', '474', '475', '476', '477']);
 
 export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   const { prefix, command, params } = parseLine(line);
@@ -35,15 +38,56 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     handleWelcome(connection, command, params, nick)
     || handleNickConflict(connection, command, params, nick)
     || handleNickRejected(connection, command, params, nick)
-    || handleFriendPresence(connection, command, params)
-    || handleUnsupportedIson(connection, command, params)
   ) {
     return;
   }
+  const isIsonUnsupported = command === '421' && (params[1] ?? '').toUpperCase() === 'ISON';
+  const isonReplyContext = command === '303' || isIsonUnsupported
+    ? connection.consumeReplyContext(command, params, nick)
+    : null;
+  if (command === '303' && isonReplyContext?.kind === 'friend-presence') {
+    const onlineNicks = (params[1] ?? '')
+      .split(/\s+/)
+      .map((value) => value.trim())
+      .filter(Boolean);
+    connection.handleFriendPresence(isonReplyContext.pollId, onlineNicks);
+    return;
+  }
+  if (isIsonUnsupported) {
+    connection.disableFriendPresence();
+    if (isonReplyContext?.kind === 'friend-presence') {
+      return;
+    }
+  }
   if (/^\d{3}$/.test(command)) {
-    const replyTarget = connection.consumeReplyTarget(command, params, nick);
-    for (const lineText of formatServerNumeric(command, params)) {
-      emitStatus(connection, lineText, getServerNumericStatusKind(command), replyTarget ?? undefined);
+    const replyContext = isonReplyContext && 'sourceTarget' in isonReplyContext
+      ? isonReplyContext
+      : connection.consumeReplyContext(command, params, nick);
+    const replyTarget = replyContext && 'sourceTarget' in replyContext
+      ? replyContext.sourceTarget
+      : null;
+    const failedChannelJoinTarget = replyContext?.kind === 'channel'
+      && replyContext.operation === 'join'
+      && channelJoinFailureCommands.has(command)
+      ? replyContext.channel
+      : undefined;
+    const failedChannelJoinBufferId = replyContext?.kind === 'channel'
+      && replyContext.operation === 'join'
+      && channelJoinFailureCommands.has(command)
+      ? replyContext.failedJoinBufferId
+      : undefined;
+    const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic';
+    const allowNamesPayload = replyContext?.kind === 'channel' && replyContext.operation === 'names';
+    for (const lineText of formatServerNumeric(command, params, { allowTopicPayload, allowNamesPayload })) {
+      emitStatus(
+        connection,
+        lineText,
+        getServerNumericStatusKind(command),
+        replyTarget ?? undefined,
+        true,
+        failedChannelJoinTarget,
+        failedChannelJoinBufferId
+      );
     }
   }
   if (command === 'PRIVMSG' || command === 'NOTICE') {
@@ -71,7 +115,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     return;
   }
   if (command === 'TOPIC') {
-    handleTopic(connection, params);
+    handleTopic(connection, params, nick);
     return;
   }
   if (command === 'MODE') {
@@ -98,6 +142,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
       connection.channelUsers.set(channel, knownUsers);
       emitChannel(connection, channel, { users: knownUsers });
     }
+    return;
   }
 };
 
@@ -106,6 +151,7 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
     return false;
   }
   connection.connected = true;
+  connection.clearConnectDeadlineTimer();
   connection.serverName = nick ?? connection.profile.host;
   connection.reconnectAttempts = 0;
   connection.currentNick = params[0] ?? connection.profile.nick;
@@ -127,26 +173,6 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
   return true;
 };
 
-const handleFriendPresence = (connection: IrcConnectionState, command: string, params: string[]) => {
-  if (command !== '303') {
-    return false;
-  }
-  const onlineNicks = (params[1] ?? '')
-    .split(/\s+/)
-    .map((nick) => nick.trim())
-    .filter(Boolean);
-  connection.handleFriendPresence(onlineNicks);
-  return true;
-};
-
-const handleUnsupportedIson = (connection: IrcConnectionState, command: string, params: string[]) => {
-  if (command !== '421' || (params[1] ?? '').toUpperCase() !== 'ISON') {
-    return false;
-  }
-  connection.disableFriendPresence();
-  return true;
-};
-
 const handleNickConflict = (
   connection: IrcConnectionState,
   command: string,
@@ -156,23 +182,43 @@ const handleNickConflict = (
   if (command !== '433') {
     return false;
   }
-  const attemptedNick = connection.pendingNick ?? connection.currentNick;
+  const replyContext = connection.consumeReplyContext(command, params, nick);
+  const attemptedNick = replyContext?.kind === 'nick'
+    ? replyContext.requestedNick
+    : connection.pendingNick ?? connection.currentNick;
+  const replyTarget = replyContext && 'sourceTarget' in replyContext
+    ? replyContext.sourceTarget
+    : undefined;
+  if (
+    replyContext?.kind === 'nick'
+    && connection.pendingNick
+    && !isSameIrcIdentifier(connection.pendingNick, attemptedNick)
+  ) {
+    emitStatus(
+      connection,
+      `${attemptedNick} is already in use. Keeping ${connection.pendingNick} as the pending nick.`,
+      'notice',
+      replyTarget,
+      true
+    );
+    return true;
+  }
   const fallbackNick = getNextNickOnConflict(connection, attemptedNick);
-  const replyTarget = connection.consumeReplyTarget(command, params, nick) ?? undefined;
-  if (connection.pendingNick) {
+  if (replyContext?.kind === 'nick' || connection.pendingNick) {
     connection.pendingNick = fallbackNick;
   } else {
     connection.currentNick = fallbackNick;
   }
   connection.sendRaw(`NICK ${fallbackNick}`);
   if (replyTarget) {
-    connection.queueReplyContext(createNickReplyContext(replyTarget));
+    connection.queueReplyContext(createNickReplyContext(replyTarget, fallbackNick));
   }
   emitStatus(
     connection,
     `${attemptedNick} is already in use. Retrying with ${fallbackNick}...`,
     'notice',
-    replyTarget
+    replyTarget,
+    true
   );
   return true;
 };
@@ -183,16 +229,32 @@ const handleNickRejected = (
   params: string[],
   nick: string | null
 ) => {
-  if (!connection.pendingNick || !nickRejectionCommands.has(command)) {
+  if (
+    !nickRejectionCommands.has(command)
+    || command === '433'
+    || (command === '437' && isChannelTarget(params[1] ?? ''))
+  ) {
     return false;
   }
-  const rejectedNick = connection.pendingNick;
-  connection.pendingNick = null;
+  const replyContext = connection.consumeReplyContext(command, params, nick);
+  const rejectedNick = replyContext?.kind === 'nick'
+    ? replyContext.requestedNick
+    : connection.pendingNick;
+  if (!rejectedNick) {
+    return false;
+  }
+  const replyTarget = replyContext && 'sourceTarget' in replyContext
+    ? replyContext.sourceTarget
+    : undefined;
+  if (!replyContext) {
+    connection.pendingNick = null;
+  }
   emitStatus(
     connection,
     `${rejectedNick} was rejected by the server`,
     'error',
-    connection.consumeReplyTarget(command, params, nick) ?? undefined
+    replyTarget,
+    true
   );
   return true;
 };
@@ -244,6 +306,9 @@ const handleJoin = (connection: IrcConnectionState, params: string[], nick: stri
     return;
   }
   const selfJoin = isSameIrcIdentifier(nick, connection.currentNick);
+  if (selfJoin) {
+    consumePendingChannelReplyContexts(connection, name, 'join');
+  }
   if (!selfJoin && !resolveTrackedChannel(connection, name)) {
     return;
   }
@@ -268,6 +333,9 @@ const handlePart = (connection: IrcConnectionState, params: string[], nick: stri
   const selfPart = isSameIrcIdentifier(nick, connection.currentNick);
   if (!selfPart && !resolveTrackedChannel(connection, channel)) {
     return;
+  }
+  if (selfPart) {
+    consumePendingChannelReplyContexts(connection, channel, 'part');
   }
   const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
   if (selfPart) {
@@ -339,17 +407,21 @@ const handleNick = (connection: IrcConnectionState, params: string[], nick: stri
     }
   }
   if (isSameIrcIdentifier(nick, connection.currentNick) || isSameIrcIdentifier(nick, connection.pendingNick)) {
+    consumePendingNickReplyContext(connection, newNick);
     connection.currentNick = newNick;
-    connection.pendingNick = null;
+    connection.pendingNick = getLatestPendingNick(connection.pendingReplyContexts);
     emitState(connection);
   }
   emitStatus(connection, `${nick ?? 'Someone'} is now known as ${newNick}`);
 };
 
-const handleTopic = (connection: IrcConnectionState, params: string[]) => {
+const handleTopic = (connection: IrcConnectionState, params: string[], nick: string | null) => {
   const channel = resolveTrackedChannel(connection, params[0] ?? '');
   if (!channel) {
     return;
+  }
+  if (isSameIrcIdentifier(nick, connection.currentNick)) {
+    consumePendingChannelReplyContexts(connection, channel, 'topic');
   }
   emitChannel(connection, channel, { topic: params[1] ?? '' });
   emitStatus(connection, `Topic for ${channel} changed`);
@@ -358,7 +430,7 @@ const handleTopic = (connection: IrcConnectionState, params: string[]) => {
 const handleMode = (connection: IrcConnectionState, params: string[]) => {
   const channel = resolveTrackedChannel(connection, params[0] ?? '');
   const modeSequence = params[1] ?? '';
-  if (!channel || !modeSequence || /[^+\-qaohv]/.test(modeSequence)) {
+  if (!channel || !modeSequence) {
     return;
   }
   let users = connection.channelUsers.get(channel) ?? [];
@@ -366,20 +438,30 @@ const handleMode = (connection: IrcConnectionState, params: string[]) => {
   let parameterIndex = 2;
   let changed = false;
 
-  for (const token of modeSequence) {
+  for (const [index, token] of Array.from(modeSequence).entries()) {
     if (token === '+' || token === '-') {
       sign = token;
       continue;
     }
-    const nick = params[parameterIndex++];
     const mode = modeFromToken(token);
-    if (!nick || !mode) {
+    if (mode) {
+      const nick = params[parameterIndex++];
+      if (!nick) {
+        continue;
+      }
+      const nextUsers = updateChannelUserMode(users, nick, sign === '+' ? mode : 'normal');
+      if (nextUsers.some((user, index) => user !== users[index]) || nextUsers.length !== users.length) {
+        users = nextUsers;
+        changed = true;
+      }
       continue;
     }
-    const nextUsers = updateChannelUserMode(users, nick, sign === '+' ? mode : 'normal');
-    if (nextUsers.some((user, index) => user !== users[index]) || nextUsers.length !== users.length) {
-      users = nextUsers;
-      changed = true;
+    if (
+      modeTokenConsumesParameter(token, sign)
+      || shouldConsumeUnknownModeParameter(modeSequence, index, sign, params, parameterIndex)
+    ) {
+      parameterIndex += 1;
+      continue;
     }
   }
 
@@ -402,6 +484,38 @@ const createMessage = (
 const resolveTrackedChannel = (connection: IrcConnectionState, channel: string) =>
   channel ? findIrcCaseMatch(connection.channelUsers.keys(), channel) ?? null : null;
 
+const consumePendingChannelReplyContexts = (
+  connection: IrcConnectionState,
+  channel: string,
+  operation: 'join' | 'part' | 'topic' | 'names'
+) => {
+  const contexts = [];
+  for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
+    const context = connection.pendingReplyContexts[index];
+    if (
+      context?.kind === 'channel'
+      && context.operation === operation
+      && isSameIrcIdentifier(context.channel, channel)
+    ) {
+      contexts.push(connection.pendingReplyContexts.splice(index, 1)[0]!);
+    }
+  }
+  return contexts;
+};
+
+const consumePendingNickReplyContext = (
+  connection: IrcConnectionState,
+  requestedNick: string
+) => {
+  for (let index = 0; index < connection.pendingReplyContexts.length; index += 1) {
+    const context = connection.pendingReplyContexts[index];
+    if (context?.kind === 'nick' && isSameIrcIdentifier(context.requestedNick, requestedNick)) {
+      return connection.pendingReplyContexts.splice(index, 1)[0] ?? null;
+    }
+  }
+  return null;
+};
+
 const modeFromToken = (token: string) => {
   if (token === 'q') {
     return 'owner';
@@ -419,4 +533,36 @@ const modeFromToken = (token: string) => {
     return 'voice';
   }
   return null;
+};
+
+const modeTokenConsumesParameter = (token: string, sign: '+' | '-') =>
+  channelModeArgumentTokens.has(token) || (sign === '+' && channelModeSetOnlyArgumentTokens.has(token));
+
+const shouldConsumeUnknownModeParameter = (
+  modeSequence: string,
+  tokenIndex: number,
+  sign: '+' | '-',
+  params: string[],
+  parameterIndex: number
+) => {
+  const remainingParams = params.length - parameterIndex;
+  if (remainingParams <= 0 || modeTokenConsumesParameter(modeSequence[tokenIndex] ?? '', sign)) {
+    return false;
+  }
+  return remainingParams > countKnownModeParameters(modeSequence, tokenIndex + 1, sign);
+};
+
+const countKnownModeParameters = (modeSequence: string, startIndex: number, initialSign: '+' | '-') => {
+  let sign = initialSign;
+  let count = 0;
+  for (const token of modeSequence.slice(startIndex)) {
+    if (token === '+' || token === '-') {
+      sign = token;
+      continue;
+    }
+    if (modeFromToken(token) || modeTokenConsumesParameter(token, sign)) {
+      count += 1;
+    }
+  }
+  return count;
 };

@@ -10,7 +10,10 @@ export const emitStatus = (
   connection: IrcConnectionState,
   message: string,
   kind: 'notice' | 'error' | 'system' = 'system',
-  target?: string
+  target?: string,
+  requireBoundTarget = false,
+  failedChannelJoinTarget?: string,
+  failedChannelJoinBufferId?: string
 ) => {
   emitEvent(connection, {
     type: 'status',
@@ -18,6 +21,9 @@ export const emitStatus = (
     message,
     kind,
     target,
+    requireBoundTarget,
+    failedChannelJoinTarget,
+    failedChannelJoinBufferId,
   });
 };
 

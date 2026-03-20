@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import net from 'node:net';
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -22,6 +22,17 @@ const listen = (server: ReturnType<typeof createServer>) =>
       resolve(address.port);
     });
   });
+
+const waitFor = async (predicate: () => boolean, timeoutMs = 3000) => {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('Timed out waiting for condition');
+};
 
 const requestJson = async (
   port: number,
@@ -139,6 +150,43 @@ const waitForWebSocketMessageType = (socket: WebSocket, type: string) =>
     socket.on('close', handleClose);
   });
 
+const waitForWebSocketMessage = (
+  socket: WebSocket,
+  predicate: (message: Record<string, unknown>) => boolean,
+  label: string
+) =>
+  new Promise<Record<string, unknown>>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Timed out waiting for websocket message: ${label}`));
+    }, 3000);
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off('message', handleMessage);
+      socket.off('error', handleError);
+      socket.off('close', handleClose);
+    };
+    const handleMessage = (payload: WebSocket.RawData) => {
+      const message = JSON.parse(payload.toString()) as Record<string, unknown>;
+      if (!predicate(message)) {
+        return;
+      }
+      cleanup();
+      resolve(message);
+    };
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const handleClose = () => {
+      cleanup();
+      reject(new Error(`WebSocket closed before the expected message was received: ${label}`));
+    };
+    socket.on('message', handleMessage);
+    socket.on('error', handleError);
+    socket.on('close', handleClose);
+  });
+
 const waitForWebSocketMessages = (socket: WebSocket, type: string, count: number) =>
   new Promise<Record<string, unknown>[]>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -199,6 +247,55 @@ const waitForWebSocketCloseDetails = (socket: WebSocket) =>
     socket.on('close', handleClose);
     socket.on('error', handleError);
   });
+
+const createRegisteredServer = async (received: string[]) => {
+  const sockets = new Set<net.Socket>();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let nick: string | null = null;
+    let sawUser = false;
+    socket.on('close', () => sockets.delete(socket));
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+        if (line.startsWith('NICK ')) {
+          nick = line.slice('NICK '.length).trim() || nick;
+        }
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+        if (nick && sawUser) {
+          socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
+          sawUser = false;
+        }
+        index = buffer.indexOf('\n');
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  return {
+    server,
+    port: address.port,
+    closeConnections() {
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+      sockets.clear();
+    },
+  };
+};
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}): NetworkInput => ({
   templateId: null,
@@ -538,6 +635,14 @@ test('query routes validate missing networks and invalid targets', async () => {
     assert.equal(invalidTarget.status, 400);
     assert.equal(invalidTarget.json.message, 'Private-message target is required');
 
+    const reservedTarget = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: 'Server' });
+    assert.equal(reservedTarget.status, 400);
+    assert.equal(reservedTarget.json.message, 'Private-message target is required');
+
+    const multipleTargets = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: 'alice,bob' });
+    assert.equal(multipleTargets.status, 400);
+    assert.equal(multipleTargets.json.message, 'Private-message target must refer to a single nick');
+
     const invalidPayload = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: {} });
     assert.equal(invalidPayload.status, 400);
     assert.equal(invalidPayload.json.message, 'Invalid query payload');
@@ -612,6 +717,18 @@ test('friend routes validate payloads and targets', async () => {
     const invalidTarget = await requestJson(port, 'POST', '/api/friends', { nick: '#help' });
     assert.equal(invalidTarget.status, 400);
     assert.equal(invalidTarget.json.message, 'Private-message target is required');
+
+    const reservedTarget = await requestJson(port, 'POST', '/api/friends', { nick: 'Server' });
+    assert.equal(reservedTarget.status, 400);
+    assert.equal(reservedTarget.json.message, 'Private-message target is required');
+
+    const multipleTargets = await requestJson(port, 'POST', '/api/friends', { nick: 'alice,bob' });
+    assert.equal(multipleTargets.status, 400);
+    assert.equal(multipleTargets.json.message, 'Private-message target must refer to a single nick');
+
+    const tooLongNick = await requestJson(port, 'POST', '/api/friends', { nick: 'x'.repeat(600) });
+    assert.equal(tooLongNick.status, 400);
+    assert.equal(tooLongNick.json.message, 'Friend nick is too long');
 
     const missingDelete = await requestJson(port, 'DELETE', '/api/friends/missing-friend');
     assert.equal(missingDelete.status, 404);
@@ -712,6 +829,112 @@ test('history clamps invalid and oversized limits to the default window', async 
   }
 });
 
+test('http buffer mutation routes succeed and broadcast buffer changes', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const ircReceived: string[] = [];
+  const ircServer = await createRegisteredServer(ircReceived);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: ircServer.port,
+  }));
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+
+  try {
+    const queryMessagePromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'buffer.upsert' && (message.buffer as { target?: string } | undefined)?.target === 'helper',
+      'buffer.upsert helper'
+    );
+    const queryResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: 'helper' });
+    assert.equal(queryResponse.status, 200);
+    const queryBuffer = queryResponse.json.buffer as { id: string; kind: string; target: string };
+    assert.equal(queryBuffer.kind, 'query');
+    assert.equal(queryBuffer.target, 'helper');
+    assert.equal(((await queryMessagePromise) as { buffer: { target: string } }).buffer.target, 'helper');
+
+    runtime.connect(network.id);
+    await waitFor(() => ircReceived.includes('NICK tester'));
+
+    const channelMessagePromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'buffer.upsert' && (message.buffer as { target?: string } | undefined)?.target === '#help',
+      'buffer.upsert #help'
+    );
+    const channelResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/channels`, { channel: '#help' });
+    assert.equal(channelResponse.status, 200);
+    const channelBuffer = channelResponse.json.buffer as { id: string; kind: string; target: string };
+    assert.equal(channelBuffer.kind, 'channel');
+    assert.equal(channelBuffer.target, '#help');
+    assert.equal(((await channelMessagePromise) as { buffer: { target: string } }).buffer.target, '#help');
+
+    const removeMessagePromise = waitForWebSocketMessageType(socket, 'buffer.remove');
+    const deleteResponse = await requestJson(port, 'DELETE', `/api/buffers/${queryBuffer.id}`, {});
+    assert.equal(deleteResponse.status, 200);
+    assert.deepEqual(await removeMessagePromise, {
+      type: 'buffer.remove',
+      networkId: network.id,
+      bufferId: queryBuffer.id,
+    });
+  } finally {
+    runtime.disconnect(network.id);
+    await closeWebSocket(socket);
+    ircServer.closeConnections();
+    await new Promise<void>((resolve, reject) => ircServer.server.close((error) => (error ? reject(error) : resolve())));
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('http connect and disconnect routes drive the IRC connection lifecycle', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const ircReceived: string[] = [];
+  const ircServer = await createRegisteredServer(ircReceived);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: ircServer.port,
+  }));
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+
+  try {
+    const connectedStatePromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'network.state' && message.networkId === network.id && message.connected === true,
+      'connected network.state'
+    );
+    const connectResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/connect`, {});
+    assert.equal(connectResponse.status, 200);
+    assert.equal(connectResponse.json.ok, true);
+    await waitFor(() => ircReceived.includes('NICK tester'));
+    await connectedStatePromise;
+
+    const disconnectedStatePromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'network.state' && message.networkId === network.id && message.connected === false,
+      'disconnected network.state'
+    );
+    const disconnectResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/disconnect`, {});
+    assert.equal(disconnectResponse.status, 200);
+    assert.equal(disconnectResponse.json.ok, true);
+    await waitFor(() => ircReceived.some((line) => line.startsWith('QUIT :Client disconnecting')));
+    await disconnectedStatePromise;
+  } finally {
+    runtime.disconnect(network.id);
+    await closeWebSocket(socket);
+    ircServer.closeConnections();
+    await new Promise<void>((resolve, reject) => ircServer.server.close((error) => (error ? reject(error) : resolve())));
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('static handler returns a clear error when built assets are missing', async () => {
   const assetRoot = join(mkdtempSync(join(tmpdir(), 'pulsete-assets-')), 'missing-dist');
   const server = createServer((req, res) => {
@@ -724,6 +947,35 @@ test('static handler returns a clear error when built assets are missing', async
     const response = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(response.status, 503);
     assert.equal(await response.text(), 'Built assets not found. Run `npm run build` before starting the server.');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('static handler serves built assets and spa fallback from the asset root', async () => {
+  const assetRoot = join(mkdtempSync(join(tmpdir(), 'pulsete-assets-')), 'dist');
+  mkdirSync(join(assetRoot, 'assets'), { recursive: true });
+  writeFileSync(join(assetRoot, 'index.html'), '<!doctype html><html><body>pulsete</body></html>');
+  writeFileSync(join(assetRoot, 'assets', 'app.js'), 'console.log("pulsete");');
+  const server = createServer((req, res) => {
+    const pathname = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
+    void serveStatic(pathname, res, { assetRoot });
+  });
+  const port = await listen(server);
+
+  try {
+    const indexResponse = await fetch(`http://127.0.0.1:${port}/`);
+    assert.equal(indexResponse.status, 200);
+    assert.match(await indexResponse.text(), /pulsete/);
+
+    const assetResponse = await fetch(`http://127.0.0.1:${port}/assets/app.js`);
+    assert.equal(assetResponse.status, 200);
+    assert.equal(assetResponse.headers.get('content-type'), 'application/javascript; charset=utf-8');
+    assert.match(await assetResponse.text(), /console\.log/);
+
+    const fallbackResponse = await fetch(`http://127.0.0.1:${port}/workspace`);
+    assert.equal(fallbackResponse.status, 200);
+    assert.match(await fallbackResponse.text(), /pulsete/);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -864,7 +1116,7 @@ test('websocket upgrade succeeds without cookies and emits state.ready', async (
   }
 });
 
-test('websocket state requests and command routing use the live local state', async () => {
+test('websocket state requests use the live local state and forward commands to runtime methods', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
@@ -925,6 +1177,103 @@ test('websocket state requests and command routing use the live local state', as
   }
 });
 
+test('websocket query.open uses the live runtime path', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+
+  try {
+    const queryOpenPromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'buffer.upsert' && (message.buffer as { target?: string } | undefined)?.target === 'helper',
+      'live query.open buffer'
+    );
+    socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'helper' }));
+    const opened = await queryOpenPromise as { buffer: { id: string; target: string; kind: string } };
+    assert.equal(opened.buffer.target, 'helper');
+    assert.equal(opened.buffer.kind, 'query');
+    assert.equal(storage.getBuffer(opened.buffer.id)?.target, 'helper');
+  } finally {
+    await closeWebSocket(socket);
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('websocket join, message, and part commands reach the live IRC connection', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const ircReceived: string[] = [];
+  const ircServer = await createRegisteredServer(ircReceived);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: ircServer.port,
+  }));
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+
+  try {
+    socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
+    await waitFor(() => ircReceived.includes('NICK tester'));
+
+    const joinPromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'buffer.upsert' && (message.buffer as { target?: string } | undefined)?.target === '#help',
+      'websocket join buffer'
+    );
+    socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: '#help' }));
+    assert.equal(((await joinPromise) as { buffer: { target: string } }).buffer.target, '#help');
+    await waitFor(() => ircReceived.includes('JOIN #help'));
+
+    const queryOpenPromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'buffer.upsert' && (message.buffer as { target?: string } | undefined)?.target === 'helper',
+      'self query buffer'
+    );
+    const appendPromise = waitForWebSocketMessage(
+      socket,
+      (message) => message.type === 'message.append' && (message.message as { body?: string } | undefined)?.body === 'hello there',
+      'self message.append'
+    );
+    socket.send(JSON.stringify({
+      type: 'message.send',
+      networkId: network.id,
+      target: 'helper',
+      body: 'hello there',
+      kind: 'message',
+    }));
+    assert.equal(((await queryOpenPromise) as { buffer: { target: string; kind: string } }).buffer.kind, 'query');
+    const appended = await appendPromise as { message: { target: string; body: string; self: boolean } };
+    assert.equal(appended.message.target, 'helper');
+    assert.equal(appended.message.body, 'hello there');
+    assert.equal(appended.message.self, true);
+    await waitFor(() => ircReceived.includes('PRIVMSG helper :hello there'));
+
+    socket.send(JSON.stringify({
+      type: 'raw.send',
+      networkId: network.id,
+      raw: 'WHOIS alice',
+    }));
+    await waitFor(() => ircReceived.includes('WHOIS alice'));
+
+    socket.send(JSON.stringify({ type: 'channel.part', networkId: network.id, channel: '#help' }));
+    await waitFor(() => ircReceived.some((line) => line.startsWith('PART #help :Leaving')));
+  } finally {
+    runtime.disconnect(network.id);
+    await closeWebSocket(socket);
+    ircServer.closeConnections();
+    await new Promise<void>((resolve, reject) => ircServer.server.close((error) => (error ? reject(error) : resolve())));
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('oversized websocket payloads are rejected', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -966,13 +1315,29 @@ test('websocket validation returns errors for invalid channel, query, and messag
     socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: 'helper' }));
     assert.equal((await joinErrorPromise).message, 'Channel name must start with #, &, +, or !');
 
+    const multiJoinErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: '#help,#ops' }));
+    assert.equal((await multiJoinErrorPromise).message, 'Channel name must refer to a single channel');
+
     const queryErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: '#help' }));
     assert.equal((await queryErrorPromise).message, 'Private-message target is required');
 
+    const reservedQueryErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'Server' }));
+    assert.equal((await reservedQueryErrorPromise).message, 'Private-message target is required');
+
+    const multiQueryErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'alice,bob' }));
+    assert.equal((await multiQueryErrorPromise).message, 'Private-message target must refer to a single nick');
+
     const messageErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: '   ', body: 'hello', kind: 'message' }));
     assert.equal((await messageErrorPromise).message, 'Private-message target is required');
+
+    const multiMessageErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: 'alice,bob', body: 'hello', kind: 'message' }));
+    assert.equal((await multiMessageErrorPromise).message, 'Private-message target must refer to a single nick');
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
