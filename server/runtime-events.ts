@@ -31,10 +31,6 @@ export function handleRuntimeEvent(
     handleStatusEvent(runtime, event);
     return;
   }
-  if (event.type === 'channel-list-started') {
-    runtime.send('local', { type: 'channel.list.started', networkId: event.networkId, requestId: event.requestId });
-    return;
-  }
   if (event.type === 'channel-list-entry') {
     runtime.send('local', {
       type: 'channel.list.entry',

@@ -41,14 +41,6 @@ export const emitMessage = (connection: IrcConnectionState, message: MessageInpu
   emitEvent(connection, { type: 'message', message });
 };
 
-export const emitChannelListStarted = (connection: IrcConnectionState, requestId: string) => {
-  emitEvent(connection, {
-    type: 'channel-list-started',
-    networkId: connection.profile.id,
-    requestId,
-  });
-};
-
 export const emitChannelListEntry = (
   connection: IrcConnectionState,
   requestId: string,

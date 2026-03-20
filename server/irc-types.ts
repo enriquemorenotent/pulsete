@@ -17,7 +17,6 @@ export type RuntimeEvent =
       failedChannelJoinTarget?: string;
       failedChannelJoinBufferId?: string;
     }
-  | { type: 'channel-list-started'; networkId: string; requestId: string }
   | {
       type: 'channel-list-entry';
       networkId: string;

@@ -456,8 +456,7 @@ export class Runtime {
               this.channelListSubscribers.delete(event.networkId);
             }
             if (
-              event.type === 'channel-list-started'
-              || event.type === 'channel-list-entry'
+              event.type === 'channel-list-entry'
               || event.type === 'channel-list-completed'
               || event.type === 'channel-list-failed'
             ) {
@@ -474,11 +473,7 @@ export class Runtime {
     return connection;
   }
 
-  private handleChannelListEvent(event: Extract<RuntimeEvent, { type: 'channel-list-started' | 'channel-list-entry' | 'channel-list-completed' | 'channel-list-failed' }>) {
-    if (event.type === 'channel-list-started') {
-      this.sendChannelListMessage(event.networkId, { type: 'channel.list.started', networkId: event.networkId, requestId: event.requestId });
-      return;
-    }
+  private handleChannelListEvent(event: Extract<RuntimeEvent, { type: 'channel-list-entry' | 'channel-list-completed' | 'channel-list-failed' }>) {
     if (event.type === 'channel-list-entry') {
       this.sendChannelListMessage(event.networkId, {
         type: 'channel.list.entry',
