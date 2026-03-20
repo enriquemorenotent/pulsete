@@ -194,6 +194,53 @@ test('sendRaw degrades synchronous socket write failures into status events', ()
   );
 });
 
+test('login write failures keep the write error instead of being relabeled as a line-limit error', () => {
+  const originalConnect = net.connect;
+  const events: Array<Record<string, unknown>> = [];
+
+  class ThrowingConnectSocket extends EventEmitter {
+    destroyed = false;
+
+    write() {
+      throw new Error('boom');
+    }
+
+    end() {}
+    setEncoding() {}
+    destroy() {
+      this.destroyed = true;
+      return this;
+    }
+  }
+
+  const socket = new ThrowingConnectSocket();
+  net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
+
+  const connection = createConnection((event) => {
+    events.push(event as Record<string, unknown>);
+  });
+
+  try {
+    connection.connect();
+    socket.emit('connect');
+
+    assert.equal(connection.lastFailureMessage, 'Connection is no longer writable');
+    assert.equal(
+      events.some(
+        (event) =>
+          event.type === 'status'
+          && event.message === 'Unable to connect to 127.0.0.1:6667 (Login command exceeded the IRC line limit)'
+      ),
+      false
+    );
+  } finally {
+    connection.clearConnectDeadlineTimer();
+    connection.clearReconnectTimer();
+    connection.socket = null;
+    net.connect = originalConnect;
+  }
+});
+
 test('late close from an old socket does not disconnect the new connection', async () => {
   const first = await createWelcomeServer(150);
   const second = await createWelcomeServer();

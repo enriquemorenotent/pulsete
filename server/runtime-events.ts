@@ -199,6 +199,9 @@ const createMessageBuffer = (runtime: RuntimeContext, message: MessageInput): Bu
       ?? runtime.store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' });
   }
   if (isChannelTarget(message.target)) {
+    if (message.self && message.kind === 'part') {
+      return null;
+    }
     return runtime.store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target });
   }
   if (message.kind === 'line') {

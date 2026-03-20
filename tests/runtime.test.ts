@@ -47,6 +47,26 @@ const createSocketRecorder = () => {
   return socket as unknown as WebSocket & { sent: ServerMessage[]; close(): void };
 };
 
+const createThrowingSocket = () => {
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    closed: boolean;
+    send(payload: string): void;
+    close(): void;
+  };
+  socket.readyState = WebSocket.OPEN;
+  socket.closed = false;
+  socket.send = () => {
+    throw new Error('boom');
+  };
+  socket.close = () => {
+    socket.closed = true;
+    socket.readyState = WebSocket.CLOSED;
+    socket.emit('close');
+  };
+  return socket as unknown as WebSocket & { closed: boolean };
+};
+
 const createHandshakeServer = async (received: string[]) => {
   const sockets = new Set<net.Socket>();
   const server = net.createServer((socket) => {
@@ -1253,6 +1273,23 @@ test('runtime removes channel-list subscribers after a request completes', async
   }
 });
 
+test('runtime drops sockets whose websocket send throws without aborting the broadcast', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const healthySocket = createSocketRecorder();
+  const throwingSocket = createThrowingSocket();
+
+  runtime.attachSocket(healthySocket);
+  runtime.attachSocket(throwingSocket as WebSocket);
+
+  assert.doesNotThrow(() => {
+    runtime.send({ type: 'notice', networkId: null, message: 'hello' });
+  });
+  assert.deepEqual(healthySocket.sent, [{ type: 'notice', networkId: null, message: 'hello' }]);
+  assert.equal(throwingSocket.closed, true);
+});
+
 test('runtime rejects oversized outbound lines without writing them to the socket', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -1619,6 +1656,38 @@ test('self part events remove the channel and emit buffer.remove', () => {
       bufferId: channel.id,
     }
   );
+});
+
+test('late duplicate self part events do not recreate the channel buffer', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: 'support',
+    unread: 0,
+    users: [makeUser('tester')],
+  });
+
+  const event = () => ({
+    type: 'message' as const,
+    message: {
+      id: randomUUID(),
+      networkId: network.id,
+      target: '#help',
+      nick: 'tester',
+      body: 'tester left #help (Leaving)',
+      kind: 'part' as const,
+      self: true,
+      ts: Date.now(),
+    },
+  });
+
+  handleRuntimeEvent({ store: storage, send() {} }, event());
+  handleRuntimeEvent({ store: storage, send() {} }, event());
+
+  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
 });
 
 test('incoming private messages open query buffers automatically', () => {

@@ -16,7 +16,9 @@ export const attachWebSocketServer = (server: Server, context: HttpContext) => {
   });
   wss.on('connection', (ws: WebSocket) => {
     context.runtime.attachSocket(ws);
-    ws.send(encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }));
+    if (!sendEncoded(ws, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }))) {
+      return;
+    }
     ws.on('error', () => {});
     ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
   });
@@ -31,7 +33,7 @@ const handleClientMessage = (
     const message = decodeClient(raw);
     switch (message.type) {
       case 'state.request':
-        ws.send(encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }));
+        sendEncoded(ws, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }));
         return;
       case 'network.connect':
         context.runtime.connect(message.networkId);
@@ -75,6 +77,23 @@ const handleClientMessage = (
     if (ws.readyState !== WebSocket.OPEN) {
       return;
     }
-    ws.send(encode({ type: 'error', networkId: null, message: error instanceof Error ? error.message : 'Invalid websocket payload' }));
+    sendEncoded(ws, encode({ type: 'error', networkId: null, message: error instanceof Error ? error.message : 'Invalid websocket payload' }));
+  }
+};
+
+const sendEncoded = (ws: WebSocket, payload: string) => {
+  if (ws.readyState !== WebSocket.OPEN) {
+    return false;
+  }
+  try {
+    ws.send(payload);
+    return true;
+  } catch {
+    try {
+      ws.close();
+    } catch {
+      // Ignore close failures while cleaning up a broken socket.
+    }
+    return false;
   }
 };

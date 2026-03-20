@@ -53,13 +53,7 @@ export class Runtime {
     }
     const payload = encode(message);
     for (const ws of Array.from(this.sockets)) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
-        continue;
-      }
-      if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
-        this.sockets.delete(ws);
-      }
+      this.sendPayload(ws, payload);
     }
   }
 
@@ -516,10 +510,29 @@ export class Runtime {
   }
 
   private sendSocket(ws: WebSocket, message: ServerMessage) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(encode(message));
-      return;
+    this.sendPayload(ws, encode(message));
+  }
+
+  private sendPayload(ws: WebSocket, payload: string) {
+    if (ws.readyState !== WebSocket.OPEN) {
+      this.dropSocket(ws);
+      return false;
     }
+    try {
+      ws.send(payload);
+      return true;
+    } catch {
+      this.dropSocket(ws);
+      try {
+        ws.close();
+      } catch {
+        // Ignore close failures while cleaning up a broken socket.
+      }
+      return false;
+    }
+  }
+
+  private dropSocket(ws: WebSocket) {
     this.sockets.delete(ws);
     this.removeChannelListSubscriber(ws);
   }

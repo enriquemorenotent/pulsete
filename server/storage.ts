@@ -52,12 +52,18 @@ export class Storage {
   private readonly secretBox;
   private readonly legacyUsers = new Map<string, LegacyUser>();
   private readonly legacySessions = new Map<string, LegacySession>();
+  private sessionCleanupTimer: ReturnType<typeof setInterval> | null = null;
   private closed = false;
 
-  constructor(filePath?: string, _options: { sessionCleanupIntervalMs?: number } = {}) {
+  constructor(filePath?: string, options: { sessionCleanupIntervalMs?: number } = {}) {
     this.db = createDatabase(filePath);
     this.secretBox = createSecretBox(filePath, { createIfMissing: !hasEncryptedNetworkPasswords(this.db) });
     migrateLegacyNetworkPasswords(this.db, this.secretBox);
+    const sessionCleanupIntervalMs = Number(options.sessionCleanupIntervalMs ?? 0);
+    if (Number.isFinite(sessionCleanupIntervalMs) && sessionCleanupIntervalMs > 0) {
+      this.sessionCleanupTimer = setInterval(() => this.deleteExpiredSessions(), sessionCleanupIntervalMs);
+      this.sessionCleanupTimer.unref?.();
+    }
   }
 
   hasUsers() { return this.legacyUsers.size > 0; }
@@ -93,7 +99,14 @@ export class Storage {
 
   getSession(token: string) {
     const session = this.legacySessions.get(token);
-    return session && session.expiresAt >= Date.now() ? session : null;
+    if (!session) {
+      return null;
+    }
+    if (session.expiresAt < Date.now()) {
+      this.legacySessions.delete(token);
+      return null;
+    }
+    return session;
   }
 
   deleteSession(token: string) { this.legacySessions.delete(token); }
@@ -349,6 +362,10 @@ export class Storage {
       return;
     }
     this.closed = true;
+    if (this.sessionCleanupTimer) {
+      clearInterval(this.sessionCleanupTimer);
+      this.sessionCleanupTimer = null;
+    }
     this.db.close();
   }
 
@@ -378,17 +395,14 @@ export class Storage {
 const resolveOptionalId = (value: string, maybeValue?: string) => maybeValue ?? value;
 
 const resolveOptionalNetworkId = (
-  db: DatabaseSync,
+  _db: DatabaseSync,
   networkIdOrLegacyUserId?: string,
   maybeNetworkId?: string
 ) => {
   if (maybeNetworkId) {
     return maybeNetworkId;
   }
-  if (!networkIdOrLegacyUserId) {
-    return undefined;
-  }
-  return getNetwork(db, networkIdOrLegacyUserId) ? networkIdOrLegacyUserId : undefined;
+  return networkIdOrLegacyUserId;
 };
 
 const resolveInput = <T>(value: T | string, maybeValue?: T) =>

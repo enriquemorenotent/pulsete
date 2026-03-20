@@ -103,6 +103,23 @@ test('legacy bootstrap helpers do not change fixed local defaults', () => {
   assert.deepEqual(snapshot.friends, []);
 });
 
+test('expired sessions are removed on lookup and by the cleanup timer', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'), { sessionCleanupIntervalMs: 10 });
+  const user = storage.createUser('alice', 'secret');
+  const manual = storage.createSession(user.id);
+  manual.expiresAt = Date.now() - 1;
+
+  assert.equal(storage.getSession(manual.token), null);
+
+  const timed = storage.createSession(user.id);
+  timed.expiresAt = Date.now() - 1;
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  assert.equal(storage.hasActiveSessions(user.id), false);
+  assert.equal(storage.getNextSessionExpiry(user.id), null);
+});
+
 test('storage persists local workspace buffers and messages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -397,6 +414,23 @@ test('query buffers and history match IRC nick casing insensitively', () => {
 
   assert.equal(storage.getBufferByTarget(network.id, 'ALICE')?.id, query.id);
   assert.deepEqual(storage.listMessages(network.id, 'ALICE', 10), [message]);
+});
+
+test('unknown network filters do not fall back to global buffers or channels', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+
+  storage.upsertQuery(network.id, 'helper');
+  storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: 'Support',
+    users: [makeUser('alice')],
+  });
+
+  assert.deepEqual(storage.listBuffers('missing-network'), []);
+  assert.deepEqual(storage.listChannels('missing-network'), []);
 });
 
 test('message history preserves insertion order when timestamps match', () => {

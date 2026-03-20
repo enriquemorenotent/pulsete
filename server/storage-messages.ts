@@ -28,19 +28,20 @@ export const getMessageById = (db: DatabaseSync, messageId: string) => {
 };
 
 export const listMessages = (db: DatabaseSync, networkId: string, target: string, limit = 200) => {
-  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages WHERE networkId = ? ORDER BY ts DESC, rowid DESC';
-  const rows = db.prepare(sql).all(networkId) as MessageRow[];
-  const matches: MessageRow[] = [];
-  for (const row of rows) {
-    if (!isSameIrcIdentifier(row.target, target)) {
-      continue;
-    }
-    matches.push(row);
-    if (matches.length >= limit) {
-      break;
-    }
+  const matchingTargets = listMatchingTargets(db, networkId, target);
+  if (matchingTargets.length === 0) {
+    return [];
   }
-  return matches.reverse().map(toMessage);
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const sql = `
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})
+    ORDER BY ts DESC, rowid DESC
+    LIMIT ?
+  `;
+  const rows = db.prepare(sql).all(networkId, ...matchingTargets, limit) as MessageRow[];
+  return rows.reverse().map(toMessage);
 };
 
 export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
@@ -50,3 +51,10 @@ export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
 };
 
 type MessageLookup = (messageId: string) => MessageInput | null;
+
+const listMatchingTargets = (db: DatabaseSync, networkId: string, target: string) => {
+  const rows = db.prepare('SELECT DISTINCT target FROM messages WHERE networkId = ?').all(networkId) as Array<{ target: string }>;
+  return rows
+    .map((row) => row.target)
+    .filter((candidate) => isSameIrcIdentifier(candidate, target));
+};

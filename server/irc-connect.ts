@@ -56,7 +56,7 @@ export const connectSocket = (connection: IrcConnectionState) => {
     ];
     const sentAllLoginLines = loginLines.every((line) => connection.sendRaw(line));
     if (!sentAllLoginLines) {
-      connection.lastFailureMessage = formatFailureMessage(connection, 'Login command exceeded the IRC line limit');
+      connection.lastFailureMessage ??= formatFailureMessage(connection, 'Login command exceeded the IRC line limit');
       socket.destroy();
       return;
     }
