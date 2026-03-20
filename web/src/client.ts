@@ -75,10 +75,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ target }),
     }),
-  openChannel: (networkId: string, channel: string) =>
+  openChannel: (networkId: string, channel: string, sourceBufferId?: string) =>
     apiRequest<{ buffer: BufferState }>(`/api/networks/${networkId}/channels`, {
       method: 'POST',
-      body: JSON.stringify({ channel }),
+      body: JSON.stringify({ channel, sourceBufferId }),
     }),
   closeBuffer: (bufferId: string) =>
     apiRequest<{ ok: boolean }>(`/api/buffers/${bufferId}`, {

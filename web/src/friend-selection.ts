@@ -1,4 +1,5 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
+import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { State } from './app-types.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 
@@ -55,5 +56,5 @@ const findQueryBuffer = (buffers: BufferState[], networkId: string, nick: string
     (buffer) =>
       buffer.networkId === networkId &&
       buffer.kind === 'query' &&
-      buffer.target.localeCompare(nick, undefined, { sensitivity: 'accent' }) === 0
+      isSameIrcIdentifier(buffer.target, nick)
   ) ?? null;

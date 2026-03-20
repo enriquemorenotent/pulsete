@@ -32,7 +32,6 @@ export type WorkspaceView = {
   selectedChannel: ChannelState | null;
   headerTitle: string;
   headerSubtitle: string;
-  statusLabel: 'Offline' | 'Connecting' | 'Connected';
   composerMode: ComposerMode;
   composerPlaceholder: string;
   emptyBody: string;

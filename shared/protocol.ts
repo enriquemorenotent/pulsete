@@ -93,11 +93,13 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('channel.join'),
     networkId: z.string(),
     channel: z.string(),
+    sourceBufferId: z.string().optional(),
   }),
   baseClientSchema.extend({
     type: z.literal('channel.part'),
     networkId: z.string(),
     channel: z.string(),
+    sourceBufferId: z.string().optional(),
   }),
   baseClientSchema.extend({
     type: z.literal('query.open'),
@@ -110,11 +112,13 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     target: z.string(),
     body: z.string(),
     kind: z.enum(['message', 'action']).default('message'),
+    sourceBufferId: z.string().optional(),
   }),
   baseClientSchema.extend({
     type: z.literal('raw.send'),
     networkId: z.string(),
     raw: z.string(),
+    sourceBufferId: z.string().optional(),
   }),
   baseClientSchema.extend({
     type: z.literal('state.request'),

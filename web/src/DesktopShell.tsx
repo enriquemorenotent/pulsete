@@ -107,6 +107,8 @@ export function DesktopShell(props: DesktopShellProps) {
             selection={props.selection}
             onSelectNetwork={props.onSelectNetworkBuffer}
             onSelectBuffer={props.onSelectTabBuffer}
+            onReconnectNetwork={props.onReconnectNetwork}
+            onDisconnectNetwork={props.onDisconnectNetwork}
             onCloseConnection={props.onCloseConnection}
             onCloseChannel={props.onCloseChannel}
             onCloseBuffer={props.onCloseBuffer}
@@ -122,9 +124,6 @@ export function DesktopShell(props: DesktopShellProps) {
             onRecallOlderDraft={props.onRecallOlderDraft}
             onRecallNewerDraft={props.onRecallNewerDraft}
             onSend={props.onSendComposer}
-            onReconnect={props.onReconnectNetwork}
-            onDisconnect={props.onDisconnectNetwork}
-            onCloseConnection={props.onCloseConnection}
             onAddFriend={props.onAddFriend}
             onRemoveFriend={props.onRemoveFriend}
             onOpenMentionedChannel={props.onOpenMentionedChannel}

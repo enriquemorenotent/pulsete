@@ -819,8 +819,8 @@ test('websocket state requests and command routing use the live local state', as
     calls.push(`query.open:${networkId}:${target}`);
     return query;
   }) as Runtime['openQuery'];
-  runtime.sendRaw = ((networkId: string, raw: string) => {
-    calls.push(`raw.send:${networkId}:${raw}`);
+  runtime.sendRaw = ((networkId: string, raw: string, sourceBufferId?: string) => {
+    calls.push(`raw.send:${networkId}:${raw}:${sourceBufferId ?? ''}`);
   }) as Runtime['sendRaw'];
 
   const server = createServer(createHttpHandler({ storage, runtime }));
@@ -840,7 +840,12 @@ test('websocket state requests and command routing use the live local state', as
     socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
     socket.send(JSON.stringify({ type: 'network.disconnect', networkId: network.id }));
     socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'helper' }));
-    socket.send(JSON.stringify({ type: 'raw.send', networkId: network.id, raw: '/quote WHOIS alice' }));
+    socket.send(JSON.stringify({
+      type: 'raw.send',
+      networkId: network.id,
+      raw: '/quote WHOIS alice',
+      sourceBufferId: query.id,
+    }));
 
     assert.deepEqual(await queryOpenPromise, {
       type: 'buffer.upsert',
@@ -850,7 +855,7 @@ test('websocket state requests and command routing use the live local state', as
       `connect:${network.id}`,
       `disconnect:${network.id}`,
       `query.open:${network.id}:helper`,
-      `raw.send:${network.id}:/quote WHOIS alice`,
+      `raw.send:${network.id}:/quote WHOIS alice:${query.id}`,
     ]);
   } finally {
     await closeWebSocket(socket);

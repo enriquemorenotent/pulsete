@@ -48,7 +48,6 @@ const workspace: WorkspaceView = {
   selectedChannel,
   headerTitle: '#general',
   headerSubtitle: '',
-  statusLabel: 'Connected',
   composerMode: 'normal',
   composerPlaceholder: 'Message #general',
   emptyBody: '',
@@ -88,6 +87,7 @@ test('/msg sends a private message without opening or selecting a query buffer',
       target: 'alice',
       body: 'hello there',
       kind: 'message',
+      sourceBufferId: 'buffer-1',
     },
   ]);
   assert.deepEqual(actions, []);
@@ -198,6 +198,7 @@ test('/ns sends a NickServ message without opening a query buffer', async () => 
       target: 'NickServ',
       body: 'help',
       kind: 'message',
+      sourceBufferId: 'buffer-1',
     },
   ]);
   assert.deepEqual(actions, []);
@@ -238,6 +239,7 @@ test('/w sends a WHOIS raw command', async () => {
       type: 'raw.send',
       networkId: 'network-1',
       raw: 'WHOIS alice',
+      sourceBufferId: 'buffer-1',
     },
   ]);
   assert.deepEqual(actions, []);

@@ -11,7 +11,7 @@ type ComposerParams = {
   socket: SocketHandle | null;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
   workspace: WorkspaceView;
-  onOpenChannel: (networkId: string, channel: string) => Promise<void>;
+  onOpenChannel: (networkId: string, channel: string, sourceBufferId?: string) => Promise<void>;
   onOpenQuery: (networkId: string, nick: string) => Promise<void>;
 };
 
@@ -41,6 +41,7 @@ export async function sendComposerMessage(params: ComposerParams) {
     target: selection.target,
     body: text,
     kind: 'message',
+    sourceBufferId: selection.id,
   });
   params.setDraft('');
   return text;
@@ -66,11 +67,11 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         params.updateBanner('error', 'Channel name must start with #, &, +, or !');
         return null;
       }
-      await params.onOpenChannel(selection.networkId, remainder);
+      await params.onOpenChannel(selection.networkId, remainder, selection.id);
       break;
     case 'part': {
       const channel = remainder || selection.target;
-      socket.send({ type: 'channel.part', networkId: selection.networkId, channel });
+      socket.send({ type: 'channel.part', networkId: selection.networkId, channel, sourceBufferId: selection.id });
       break;
     }
     case 'msg': {
@@ -84,7 +85,14 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         params.updateBanner('error', 'Usage: /msg target text');
         return null;
       }
-      socket.send({ type: 'message.send', networkId: selection.networkId, target, body, kind: 'message' });
+      socket.send({
+        type: 'message.send',
+        networkId: selection.networkId,
+        target,
+        body,
+        kind: 'message',
+        sourceBufferId: selection.id,
+      });
       break;
     }
     case 'query':
@@ -99,49 +107,75 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         params.updateBanner('error', 'Usage: /whois nick');
         return null;
       }
-      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `WHOIS ${remainder}` });
+      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `WHOIS ${remainder}`, sourceBufferId: selection.id });
       break;
     case 'nickserv':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /ns command');
         return null;
       }
-      socket.send({ type: 'message.send', networkId: selection.networkId, target: 'NickServ', body: remainder, kind: 'message' });
+      socket.send({
+        type: 'message.send',
+        networkId: selection.networkId,
+        target: 'NickServ',
+        body: remainder,
+        kind: 'message',
+        sourceBufferId: selection.id,
+      });
       break;
     case 'chanserv':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /cs command');
         return null;
       }
-      socket.send({ type: 'message.send', networkId: selection.networkId, target: 'ChanServ', body: remainder, kind: 'message' });
+      socket.send({
+        type: 'message.send',
+        networkId: selection.networkId,
+        target: 'ChanServ',
+        body: remainder,
+        kind: 'message',
+        sourceBufferId: selection.id,
+      });
       break;
     case 'me':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /me action');
         return null;
       }
-      socket.send({ type: 'message.send', networkId: selection.networkId, target: selection.target, body: remainder, kind: 'action' });
+      socket.send({
+        type: 'message.send',
+        networkId: selection.networkId,
+        target: selection.target,
+        body: remainder,
+        kind: 'action',
+        sourceBufferId: selection.id,
+      });
       break;
     case 'nick':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /nick newnick');
         return null;
       }
-      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `NICK ${remainder}` });
+      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `NICK ${remainder}`, sourceBufferId: selection.id });
       break;
     case 'topic':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /topic text');
         return null;
       }
-      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: `TOPIC ${selection.target} :${remainder}` });
+      socket.send({
+        type: 'raw.send',
+        networkId: selection.networkId,
+        raw: `TOPIC ${selection.target} :${remainder}`,
+        sourceBufferId: selection.id,
+      });
       break;
     case 'raw':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /raw IRC line');
         return null;
       }
-      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: remainder });
+      socket.send({ type: 'raw.send', networkId: selection.networkId, raw: remainder, sourceBufferId: selection.id });
       break;
     case 'connect':
       socket.send({ type: 'network.connect', networkId: selection.networkId });

@@ -14,6 +14,8 @@ const formatCertLine = (label: string, record: Record<string, string> | undefine
 };
 
 const normalizeText = (value: string | undefined) => (value ?? '').trim();
+const deliveryErrorNumerics = new Set(['716', '717']);
+const isErrorNumeric = (command: string) => /^[45]\d{2}$/.test(command) || deliveryErrorNumerics.has(command);
 
 const formatDuration = (rawSeconds: string) => {
   const totalSeconds = Number.parseInt(rawSeconds, 10);
@@ -220,6 +222,16 @@ export const formatServerNumeric = (command: string, params: string[]) => {
     return [];
   }
 
+  if (isErrorNumeric(command)) {
+    const body = params
+      .slice(1)
+      .map((part) => normalizeText(part))
+      .filter(Boolean)
+      .join(' ');
+
+    return body ? [`* ${body}`] : [];
+  }
+
   if (!SERVER_TEXT_NUMERICS.has(command)) {
     return [];
   }
@@ -236,3 +248,6 @@ export const formatServerNumeric = (command: string, params: string[]) => {
 
   return [`* ${body}`];
 };
+
+export const getServerNumericStatusKind = (command: string): 'system' | 'error' =>
+  isErrorNumeric(command) ? 'error' : 'system';

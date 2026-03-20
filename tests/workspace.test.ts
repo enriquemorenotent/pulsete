@@ -102,6 +102,7 @@ test('offline instance forces server buffer and hides child buffers', () => {
     bufferId: serverBuffer.id,
   });
   assert.equal(canShowInstanceChildren(workspace.selectedRuntime), false);
+  assert.equal(workspace.headerTitle, '');
 });
 
 test('connecting instance stays on the server buffer with no composer', () => {
@@ -115,7 +116,7 @@ test('connecting instance stays on the server buffer with no composer', () => {
 
   assert.equal(workspace.mode, 'server-connecting');
   assert.equal(workspace.composerMode, 'hidden');
-  assert.equal(workspace.statusLabel, 'Connecting');
+  assert.equal(workspace.headerTitle, '');
   assert.equal(workspace.headerSubtitle, '');
 });
 
@@ -130,6 +131,8 @@ test('connected server buffer is command-only and hides the nicklist', () => {
   assert.equal(workspace.mode, 'server-connected');
   assert.equal(workspace.composerMode, 'commands');
   assert.equal(workspace.showNicklist, false);
+  assert.equal(workspace.headerTitle, '');
+  assert.equal(workspace.headerSubtitle, 'dbugger @ helix.oftc.net');
 });
 
 test('connected channel shows the nicklist and normal composer', () => {

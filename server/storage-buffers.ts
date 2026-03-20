@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { BufferState, ChannelState } from '../shared/protocol.js';
+import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { BufferInput, BufferRow, ChannelInput, ChannelRow } from './storage-types.js';
 import { toBufferState, toChannelState } from './storage-utils.js';
 
@@ -35,7 +36,10 @@ export const getBuffer = (db: DatabaseSync, bufferId: string): BufferState | nul
 export const getBufferByTarget = (db: DatabaseSync, networkId: string, target: string): BufferState | null => {
   const row = db.prepare('SELECT id, networkId, kind, target, unread, createdAt, updatedAt FROM buffers WHERE networkId = ? AND target = ?')
     .get(networkId, target) as BufferRow | undefined;
-  return row ? toBufferState(row) : null;
+  if (row) {
+    return toBufferState(row);
+  }
+  return listBuffers(db, networkId).find((buffer) => isSameIrcIdentifier(buffer.target, target)) ?? null;
 };
 
 export const getServerBuffer = (db: DatabaseSync, networkId: string) =>
@@ -103,7 +107,10 @@ export const getChannel = (db: DatabaseSync, channelId: string): ChannelState | 
 export const getChannelByName = (db: DatabaseSync, networkId: string, name: string) => {
   const row = db.prepare(`${channelSelect} AND buffers.networkId = ? AND buffers.target = ?`)
     .get(networkId, name) as (ChannelRow & { networkId: string; name: string }) | undefined;
-  return row ? toChannelState(row) : null;
+  if (row) {
+    return toChannelState(row);
+  }
+  return listChannels(db, networkId).find((channel) => isSameIrcIdentifier(channel.name, name)) ?? null;
 };
 
 export const upsertChannel = (db: DatabaseSync, input: ChannelInput) => {

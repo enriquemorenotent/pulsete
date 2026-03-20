@@ -4,6 +4,7 @@ import type { SocketHandle } from './client.js';
 import { useComposerHistory } from './composer-history.js';
 import { DesktopShell } from './DesktopShell.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
+import { matchesBufferMessage } from './message-matching.js';
 import { getTemplateRootId, type EditorTab } from './network-form.js';
 import { Toast } from './Toast.js';
 import { useAppActions } from './useAppActions.js';
@@ -59,9 +60,7 @@ function App() {
       return [];
     }
     return state.messages.filter(
-      (message) =>
-        message.networkId === selectedBuffer.networkId &&
-        message.target === selectedBuffer.target
+      (message) => matchesBufferMessage(selectedBuffer, message)
     );
   }, [state.messages, workspace.selectedBuffer]);
 

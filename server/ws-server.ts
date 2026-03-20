@@ -40,20 +40,29 @@ const handleClientMessage = (
         context.runtime.disconnect(message.networkId);
         return;
       case 'channel.join':
-        context.runtime.send({ type: 'buffer.upsert', buffer: context.runtime.join(message.networkId, message.channel) });
+        context.runtime.send({
+          type: 'buffer.upsert',
+          buffer: context.runtime.join(message.networkId, message.channel, message.sourceBufferId),
+        });
         return;
       case 'channel.part':
-        context.runtime.part(message.networkId, message.channel);
+        context.runtime.part(message.networkId, message.channel, message.sourceBufferId);
         return;
       case 'query.open': {
         context.runtime.send({ type: 'buffer.upsert', buffer: context.runtime.openQuery(message.networkId, message.target) });
         return;
       }
       case 'message.send':
-        context.runtime.sendMessage(message.networkId, message.target, message.body, message.kind);
+        context.runtime.sendMessage(
+          message.networkId,
+          message.target,
+          message.body,
+          message.kind,
+          message.sourceBufferId
+        );
         return;
       case 'raw.send':
-        context.runtime.sendRaw(message.networkId, message.raw);
+        context.runtime.sendRaw(message.networkId, message.raw, message.sourceBufferId);
         return;
     }
   } catch (error) {

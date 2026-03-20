@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import tls from 'node:tls';
 import type { MessageInput } from './storage.js';
 import { emitChannel, emitMessage, emitState, emitStatus } from './irc-emit.js';
-import { formatServerNumeric } from './irc-server-log.js';
+import { createNickReplyContext } from './irc-reply-context.js';
+import { formatServerNumeric, getServerNumericStatusKind } from './irc-server-log.js';
 import { isServiceNick } from './irc-services.js';
 import {
   findIrcCaseMatch,
@@ -24,12 +25,17 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     connection.sendRaw(`PONG ${params.join(' ')}`);
     return;
   }
-  if (handleWelcome(connection, command, params, nick) || handleNickConflict(connection, command) || handleNickRejected(connection, command)) {
+  if (
+    handleWelcome(connection, command, params, nick)
+    || handleNickConflict(connection, command, params, nick)
+    || handleNickRejected(connection, command, params, nick)
+  ) {
     return;
   }
   if (/^\d{3}$/.test(command)) {
+    const replyTarget = connection.consumeReplyTarget(command, params, nick);
     for (const lineText of formatServerNumeric(command, params)) {
-      emitStatus(connection, lineText);
+      emitStatus(connection, lineText, getServerNumericStatusKind(command), replyTarget ?? undefined);
     }
   }
   if (command === 'PRIVMSG' || command === 'NOTICE') {
@@ -111,29 +117,53 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
   return true;
 };
 
-const handleNickConflict = (connection: IrcConnectionState, command: string) => {
+const handleNickConflict = (
+  connection: IrcConnectionState,
+  command: string,
+  params: string[],
+  nick: string | null
+) => {
   if (command !== '433') {
     return false;
   }
   const attemptedNick = connection.pendingNick ?? connection.currentNick;
   const fallbackNick = getNextNickOnConflict(connection, attemptedNick);
+  const replyTarget = connection.consumeReplyTarget(command, params, nick) ?? undefined;
   if (connection.pendingNick) {
     connection.pendingNick = fallbackNick;
   } else {
     connection.currentNick = fallbackNick;
   }
   connection.sendRaw(`NICK ${fallbackNick}`);
-  emitStatus(connection, `${attemptedNick} is already in use. Retrying with ${fallbackNick}...`, 'notice');
+  if (replyTarget) {
+    connection.queueReplyContext(createNickReplyContext(replyTarget));
+  }
+  emitStatus(
+    connection,
+    `${attemptedNick} is already in use. Retrying with ${fallbackNick}...`,
+    'notice',
+    replyTarget
+  );
   return true;
 };
 
-const handleNickRejected = (connection: IrcConnectionState, command: string) => {
+const handleNickRejected = (
+  connection: IrcConnectionState,
+  command: string,
+  params: string[],
+  nick: string | null
+) => {
   if (!connection.pendingNick || !nickRejectionCommands.has(command)) {
     return false;
   }
   const rejectedNick = connection.pendingNick;
   connection.pendingNick = null;
-  emitStatus(connection, `${rejectedNick} was rejected by the server`, 'error');
+  emitStatus(
+    connection,
+    `${rejectedNick} was rejected by the server`,
+    'error',
+    connection.consumeReplyTarget(command, params, nick) ?? undefined
+  );
   return true;
 };
 
@@ -158,8 +188,11 @@ const handleTextMessage = (connection: IrcConnectionState, command: 'PRIVMSG' | 
   const isDirectTarget = !isChannelTarget(rawTarget) && isSameIrcIdentifier(rawTarget, connection.currentNick);
   const isDirectCtcp = isDirectTarget && ctcp !== null && !ctcp.startsWith('ACTION ');
   const isDirectServiceMessage = isDirectTarget && command === 'PRIVMSG' && isServiceNick(nick);
+  const replyTarget = isDirectTarget && command === 'NOTICE'
+    ? connection.consumeReplyTarget(command, params, nick, rawTarget)
+    : null;
   const target = isDirectTarget
-    ? (command === 'NOTICE' || isDirectCtcp || isDirectServiceMessage ? 'server' : nick ?? rawTarget)
+    ? (replyTarget ?? (command === 'NOTICE' || isDirectCtcp || isDirectServiceMessage ? 'server' : nick ?? rawTarget))
     : trackedChannel ?? rawTarget;
   const body = ctcp?.startsWith('ACTION ')
     ? `* ${nick ?? target} ${ctcp.slice('ACTION '.length)}`

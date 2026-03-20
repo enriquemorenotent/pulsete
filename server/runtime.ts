@@ -85,28 +85,16 @@ export class Runtime {
     this.connections.get(networkId)?.disconnect();
   }
 
-  join(networkId: string, channel: string): BufferState;
-  join(_legacyUserId: string, networkId: string, channel: string): BufferState;
-  join(networkIdOrLegacyUserId: string, maybeNetworkIdOrChannel: string, maybeChannel?: string) {
-    const { networkId, value: channel } = resolveNetworkAndValue(
-      networkIdOrLegacyUserId,
-      maybeNetworkIdOrChannel,
-      maybeChannel
-    );
-    return this.joinInternal(networkId, channel);
+  join(networkId: string, channel: string, sourceBufferId?: string): BufferState;
+  join(networkId: string, channel: string, sourceBufferId?: string) {
+    return this.joinInternal(networkId, channel, sourceBufferId);
   }
 
-  part(networkId: string, channel: string): void;
-  part(_legacyUserId: string, networkId: string, channel: string): void;
-  part(networkIdOrLegacyUserId: string, maybeNetworkIdOrChannel: string, maybeChannel?: string) {
-    const { networkId, value: channel } = resolveNetworkAndValue(
-      networkIdOrLegacyUserId,
-      maybeNetworkIdOrChannel,
-      maybeChannel
-    );
+  part(networkId: string, channel: string, sourceBufferId?: string): void;
+  part(networkId: string, channel: string, sourceBufferId?: string) {
     this.getRequiredNetwork(networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
-    this.connections.get(networkId)?.part(normalizedChannel);
+    this.connections.get(networkId)?.part(normalizedChannel, 'Leaving', this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel));
   }
 
   openQuery(networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
@@ -151,16 +139,14 @@ export class Runtime {
     return this.saveNetworkInternal(resolveNetworkInput(args));
   }
 
-  sendMessage(networkId: string, target: string, body: string, kind?: 'message' | 'action'): void;
-  sendMessage(_legacyUserId: string, networkId: string, target: string, body: string, kind?: 'message' | 'action'): void;
-  sendMessage(...args: [string, string, string, ('message' | 'action' | undefined)?] | [string, string, string, string, ('message' | 'action' | undefined)?]) {
-    return this.sendMessageInternal(...resolveMessageArgs(args));
+  sendMessage(networkId: string, target: string, body: string, kind?: 'message' | 'action', sourceBufferId?: string): void;
+  sendMessage(networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message', sourceBufferId?: string) {
+    return this.sendMessageInternal(networkId, target, body, kind, sourceBufferId);
   }
 
-  sendRaw(networkId: string, raw: string): void;
-  sendRaw(_legacyUserId: string, networkId: string, raw: string): void;
-  sendRaw(...args: [string, string] | [string, string, string]) {
-    return this.sendRawInternal(...resolveArgsWithValue(args));
+  sendRaw(networkId: string, raw: string, sourceBufferId?: string): void;
+  sendRaw(networkId: string, raw: string, sourceBufferId?: string) {
+    return this.sendRawInternal(networkId, raw, sourceBufferId);
   }
 
   deleteNetwork(networkId: string): string[];
@@ -186,7 +172,7 @@ export class Runtime {
     return friend;
   }
 
-  private joinInternal(networkId: string, channel: string) {
+  private joinInternal(networkId: string, channel: string, sourceBufferId?: string) {
     this.getRequiredNetwork(networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
     const buffer = this.store.upsertBuffer({
@@ -194,7 +180,7 @@ export class Runtime {
       kind: 'channel',
       target: normalizedChannel,
     });
-    this.ensureConnection(networkId).join(normalizedChannel);
+    this.ensureConnection(networkId).join(normalizedChannel, this.resolveReplyTarget(networkId, sourceBufferId));
     return buffer;
   }
 
@@ -249,23 +235,33 @@ export class Runtime {
     return { network, serverBuffer };
   }
 
-  private sendMessageInternal(networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message') {
+  private sendMessageInternal(
+    networkId: string,
+    target: string,
+    body: string,
+    kind: 'message' | 'action' = 'message',
+    sourceBufferId?: string
+  ) {
     const normalizedTarget = normalizeMessageTarget(target);
     const normalizedBody = normalizeMessageBody(body);
     const connection = this.ensureConnection(networkId);
-    kind === 'action' ? connection.action(normalizedTarget, normalizedBody) : connection.say(normalizedTarget, normalizedBody);
+    const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId, normalizedTarget);
+    kind === 'action'
+      ? connection.action(normalizedTarget, normalizedBody, replyTarget)
+      : connection.say(normalizedTarget, normalizedBody, replyTarget);
   }
 
-  private sendRawInternal(networkId: string, raw: string) {
+  private sendRawInternal(networkId: string, raw: string, sourceBufferId?: string) {
     const normalizedRaw = normalizeRawCommand(raw);
     const connection = this.ensureConnection(networkId);
+    const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId);
     if (/^\s*NICK\s+/i.test(normalizedRaw)) {
       const nextNick = normalizedRaw.trim().split(/\s+/)[1];
       if (nextNick) {
         if (connection.socket) {
-          connection.setNick(nextNick);
+          connection.setNick(nextNick, replyTarget);
         } else {
-          connection.sendRaw(normalizedRaw);
+          connection.sendRaw(normalizedRaw, replyTarget);
         }
         return;
       }
@@ -274,11 +270,11 @@ export class Runtime {
       if (connection.socket) {
         connection.disconnect(normalizedRaw.trim());
       } else {
-        connection.sendRaw(normalizedRaw);
+        connection.sendRaw(normalizedRaw, replyTarget);
       }
       return;
     }
-    connection.sendRaw(normalizedRaw);
+    connection.sendClientRaw(normalizedRaw, replyTarget);
   }
 
   private deleteNetworkInternal(networkId: string) {
@@ -370,19 +366,18 @@ export class Runtime {
         ...(input.clearPassword ? { clearPassword: true } : {}),
       }));
   }
+
+  private resolveReplyTarget(networkId: string, sourceBufferId?: string, fallbackTarget = 'server') {
+    if (!sourceBufferId) {
+      return fallbackTarget;
+    }
+    const buffer = this.store.getBuffer(sourceBufferId);
+    return buffer?.networkId === networkId ? buffer.target : fallbackTarget;
+  }
 }
 
 const resolveNetworkId = (networkIdOrLegacyUserId: string, maybeNetworkId?: string) =>
   maybeNetworkId ?? networkIdOrLegacyUserId;
-
-const resolveNetworkAndValue = (
-  networkIdOrLegacyUserId: string,
-  maybeNetworkIdOrValue: string,
-  maybeValue?: string
-) => ({
-  networkId: maybeValue ? maybeNetworkIdOrValue : networkIdOrLegacyUserId,
-  value: maybeValue ?? maybeNetworkIdOrValue,
-});
 
 const resolveArgsWithValue = (args: ArrayLike<unknown>) =>
   args.length === 3
@@ -405,10 +400,3 @@ const resolveNetworkInput = (args: ArrayLike<unknown>) =>
 
 const resolveNetworkIdFromArgs = (args: ArrayLike<unknown>) =>
   args.length === 2 ? String(args[1]) : String(args[0]);
-
-const resolveMessageArgs = (args: ArrayLike<unknown>) => {
-  if (args.length >= 5) {
-    return [String(args[1]), String(args[2]), String(args[3]), args[4] as 'message' | 'action'] as const;
-  }
-  return [String(args[0]), String(args[1]), String(args[2]), (args[3] as 'message' | 'action' | undefined) ?? 'message'] as const;
-};

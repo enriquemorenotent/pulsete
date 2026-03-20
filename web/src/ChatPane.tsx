@@ -1,7 +1,6 @@
 import type { RefObject } from 'react';
-import { Plug2, PowerOff, RefreshCcw, SendHorizonal, X } from 'lucide-react';
-import type { BufferState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
-import { Badge } from '@/components/ui/badge.js';
+import { Plug2, SendHorizonal, X } from 'lucide-react';
+import type { BufferState, ChatMessage, FriendState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { Card } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
@@ -23,9 +22,6 @@ type ChatPaneProps = {
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
   onSend: () => Promise<void>;
-  onReconnect: (network: NetworkProfile) => void;
-  onDisconnect: (networkId: string) => void;
-  onCloseConnection: (network: NetworkProfile) => void;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
@@ -34,7 +30,7 @@ type ChatPaneProps = {
 };
 
 export function ChatPane(props: ChatPaneProps) {
-  const { selectedBuffer, selectedChannel, selectedNetwork } = props.workspace;
+  const { selectedBuffer, selectedChannel } = props.workspace;
   const selectedFriend =
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
   const isServerBuffer =
@@ -46,70 +42,45 @@ export function ChatPane(props: ChatPaneProps) {
   return (
     <section className="min-h-0 min-w-0 overflow-hidden">
       <Card className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden">
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-3 py-2">
-          <div className="min-w-0">
-            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-              <Badge variant={props.workspace.selectedRuntime?.connected ? 'success' : 'secondary'}>
-                {props.workspace.statusLabel}
-              </Badge>
+        {!isServerBuffer ? (
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-3 py-2">
+            <div className="min-w-0">
+              {props.workspace.headerTitle ? (
+                <h2 className={cn('truncate text-base font-semibold tracking-tight text-foreground', props.workspace.headerSubtitle && 'mb-1')}>
+                  {props.workspace.headerTitle}
+                </h2>
+              ) : null}
+              {props.workspace.headerSubtitle ? (
+                <p className="truncate text-[13px] text-muted-foreground">{props.workspace.headerSubtitle}</p>
+              ) : null}
             </div>
-            <h2 className="truncate text-base font-semibold tracking-tight text-foreground">{props.workspace.headerTitle}</h2>
-            {props.workspace.headerSubtitle ? (
-              <p className="truncate text-[13px] text-muted-foreground">{props.workspace.headerSubtitle}</p>
-            ) : null}
-          </div>
 
-          <div className="flex shrink-0 flex-wrap gap-1">
-            {selectedBuffer?.kind === 'query' ? (
-              <FriendToggleButton
-                active={Boolean(selectedFriend)}
-                onClick={() =>
-                  void (selectedFriend
-                    ? props.onRemoveFriend(selectedFriend.id)
-                    : props.onAddFriend(selectedBuffer.target))
-                }
-              />
-            ) : null}
-            {props.workspace.mode === 'server-connected' ||
-            props.workspace.mode === 'server-connecting' ||
-            props.workspace.mode === 'server-offline' ? (
-              <Button variant="outline" size="sm" onClick={() => selectedNetwork && props.onCloseConnection(selectedNetwork)}>
-                <X />
-                Close
-              </Button>
-            ) : null}
-            {selectedChannel ? (
-              <Button variant="outline" size="sm" onClick={() => props.onCloseChannel(selectedChannel.networkId, selectedChannel.name)}>
-                <X />
-                Close
-              </Button>
-            ) : null}
-            {selectedBuffer?.kind === 'query' ? (
-              <Button variant="outline" size="sm" onClick={() => props.onCloseBuffer(selectedBuffer)}>
-                <X />
-                Close
-              </Button>
-            ) : null}
-            {selectedNetwork ? (
-              props.workspace.selectedRuntime?.connected ? (
-                <Button variant="ghost" size="sm" onClick={() => props.onDisconnect(selectedNetwork.id)}>
-                  <PowerOff />
-                  Disconnect
+            <div className="flex shrink-0 flex-wrap gap-1">
+              {selectedBuffer?.kind === 'query' ? (
+                <FriendToggleButton
+                  active={Boolean(selectedFriend)}
+                  onClick={() =>
+                    void (selectedFriend
+                      ? props.onRemoveFriend(selectedFriend.id)
+                      : props.onAddFriend(selectedBuffer.target))
+                  }
+                />
+              ) : null}
+              {selectedChannel ? (
+                <Button variant="outline" size="sm" onClick={() => props.onCloseChannel(selectedChannel.networkId, selectedChannel.name)}>
+                  <X />
+                  Close
                 </Button>
-              ) : (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => props.onReconnect(selectedNetwork)}
-                  disabled={props.workspace.selectedRuntime?.connecting}
-                >
-                  <RefreshCcw />
-                  Reconnect
+              ) : null}
+              {selectedBuffer?.kind === 'query' ? (
+                <Button variant="outline" size="sm" onClick={() => props.onCloseBuffer(selectedBuffer)}>
+                  <X />
+                  Close
                 </Button>
-              )
-            ) : null}
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div ref={props.scrollRef} className="min-h-0 flex-1 overflow-y-auto bg-background/45 px-3 py-2">
           {props.selectedMessages.length === 0 ? (

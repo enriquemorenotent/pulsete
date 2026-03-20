@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Hash, MessageSquareMore, Plus, X } from 'lucide-react';
+import { Hash, MessageSquareMore, Plus, PowerOff, RefreshCcw, X } from 'lucide-react';
 import type { BufferState, ChannelState, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Card } from '@/components/ui/card.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -20,6 +20,8 @@ type ConnectionSidebarProps = {
   onSelectFriend: (friend: FriendState) => Promise<void>;
   onSelectNetwork: (network: NetworkProfile) => void;
   onSelectBuffer: (buffer: BufferState) => void;
+  onReconnectNetwork: (network: NetworkProfile) => void;
+  onDisconnectNetwork: (networkId: string) => void;
   onCloseConnection: (network: NetworkProfile) => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
@@ -60,11 +62,20 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                       <span className={cn('size-2 shrink-0 rounded-full', dotTone(runtime))} />
                       <div className="min-w-0">
                         <span className="truncate text-[13px] font-medium text-foreground">{label}</span>
-                        <p className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                          {runtime?.connected ? 'Connected' : runtime?.connecting ? 'Connecting' : 'Offline'}
-                        </p>
                       </div>
                       {serverBuffer && serverBuffer.unread > 0 ? <UnreadBadge unread={serverBuffer.unread} /> : null}
+                    </button>
+                    <button
+                      className="border-l border-border px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                      onClick={() =>
+                        runtime?.connected
+                          ? props.onDisconnectNetwork(network.id)
+                          : props.onReconnectNetwork(network)
+                      }
+                      aria-label={`${runtime?.connected ? 'Disconnect' : 'Reconnect'} ${label}`}
+                      disabled={Boolean(runtime?.connecting)}
+                    >
+                      {runtime?.connected ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
                     </button>
                     <button
                       className="border-l border-border px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { AppSnapshot, BufferState, ChatMessage, FriendState } from '../../shared/protocol.js';
+import { matchesBufferMessage } from './message-matching.js';
 import { emptyNetworkForm } from './network-form.js';
 import { selectDefaultBuffer } from './workspace.js';
 import type { Action, State } from './app-types.js';
@@ -101,7 +102,7 @@ export const reducer = (state: State, action: Action): State => {
         if (!removedBuffer) {
           return true;
         }
-        return !(message.networkId === removedBuffer.networkId && message.target === removedBuffer.target);
+        return !matchesBufferMessage(removedBuffer, message);
       });
       const selection = state.selection?.bufferId === action.bufferId
         ? fallbackSelection({ networks: state.networks, buffers }, action.networkId)

@@ -4,6 +4,14 @@ import { connectSocket } from './irc-connect.js';
 import { emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import { findIrcCaseMatch, isSameIrcIdentifier } from './irc-parser.js';
+import {
+  consumeReplyTarget,
+  createChannelReplyContext,
+  createMessageReplyContext,
+  createNickReplyContext,
+  createReplyContextFromRaw,
+  type PendingReplyContext,
+} from './irc-reply-context.js';
 import type { Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
@@ -19,6 +27,7 @@ export class IrcConnection implements IrcConnectionState {
   currentNick: string;
   pendingNick: string | null = null;
   lastFailureMessage: string | null = null;
+  pendingReplyContexts: PendingReplyContext[] = [];
   profile: RuntimeNetworkProfile;
 
   constructor(
@@ -69,28 +78,39 @@ export class IrcConnection implements IrcConnectionState {
     }
   }
 
-  join(channel: string) { this.sendRaw(`JOIN ${channel}`); }
-  part(channel: string, reason = 'Leaving') { this.sendRaw(`PART ${channel} :${reason}`); }
+  join(channel: string, sourceTarget = 'server') {
+    this.sendTrackedRaw(`JOIN ${channel}`, sourceTarget, createChannelReplyContext(sourceTarget, channel));
+  }
 
-  say(target: string, text: string) {
-    if (this.sendRaw(`PRIVMSG ${target} :${text}`)) {
+  part(channel: string, reason = 'Leaving', sourceTarget = channel) {
+    this.sendTrackedRaw(`PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel));
+  }
+
+  say(target: string, text: string, sourceTarget = target) {
+    if (this.sendTrackedRaw(`PRIVMSG ${target} :${text}`, sourceTarget, createMessageReplyContext(sourceTarget, target))) {
       emitMessage(this, this.createSelfMessage(target, text));
     }
   }
 
-  action(target: string, text: string) {
-    if (this.sendRaw(`PRIVMSG ${target} :\u0001ACTION ${text}\u0001`)) {
+  action(target: string, text: string, sourceTarget = target) {
+    if (
+      this.sendTrackedRaw(
+        `PRIVMSG ${target} :\u0001ACTION ${text}\u0001`,
+        sourceTarget,
+        createMessageReplyContext(sourceTarget, target)
+      )
+    ) {
       emitMessage(this, this.createSelfMessage(target, `* ${this.currentNick} ${text}`));
     }
   }
 
-  setNick(nick: string) {
+  setNick(nick: string, sourceTarget = 'server') {
     if (this.connected) {
       this.pendingNick = nick;
     } else {
       this.currentNick = nick;
     }
-    this.sendRaw(`NICK ${nick}`);
+    this.sendTrackedRaw(`NICK ${nick}`, sourceTarget, createNickReplyContext(sourceTarget));
     if (!this.connected) {
       emitState(this);
     }
@@ -138,15 +158,29 @@ export class IrcConnection implements IrcConnectionState {
     this.buffer = '';
     this.channelUsers.clear();
     this.pendingNick = null;
+    this.pendingReplyContexts = [];
   }
 
-  sendRaw(raw: string) {
+  queueReplyContext(context: PendingReplyContext) {
+    this.pendingReplyContexts.push(context);
+  }
+
+  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string) {
+    return consumeReplyTarget(this.pendingReplyContexts, command, params, nick, rawTarget);
+  }
+
+  sendRaw(raw: string, statusTarget?: string) {
     if (!this.socket) {
-      emitStatus(this, 'Not connected', 'error');
+      emitStatus(this, 'Not connected', 'error', statusTarget);
       return false;
     }
     this.socket.write(`${raw}\r\n`);
     return true;
+  }
+
+  sendClientRaw(raw: string, sourceTarget = 'server') {
+    const replyContext = createReplyContextFromRaw(sourceTarget, raw);
+    return this.sendTrackedRaw(raw, sourceTarget, replyContext);
   }
 
   consume(chunk: string) {
@@ -213,6 +247,16 @@ export class IrcConnection implements IrcConnectionState {
       self: true,
       ts: Date.now(),
     };
+  }
+
+  private sendTrackedRaw(raw: string, sourceTarget: string, replyContext: PendingReplyContext | null) {
+    if (!this.sendRaw(raw, sourceTarget)) {
+      return false;
+    }
+    if (replyContext) {
+      this.queueReplyContext(replyContext);
+    }
+    return true;
   }
 }
 

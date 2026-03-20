@@ -1,4 +1,5 @@
 import type { BufferState, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, State } from './app-types.js';
 import { api, type SocketHandle } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
@@ -35,7 +36,7 @@ export function useAppActions(params: AppActionParams) {
       (buffer) =>
         buffer.networkId === networkId &&
         buffer.kind === 'query' &&
-        buffer.target.localeCompare(nick, undefined, { sensitivity: 'accent' }) === 0
+        isSameIrcIdentifier(buffer.target, nick)
     ) ?? null;
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string) => {
@@ -180,7 +181,7 @@ export function useAppActions(params: AppActionParams) {
         (buffer) =>
           buffer.networkId === network.id &&
           buffer.kind === 'channel' &&
-          buffer.target.toLowerCase() === channelName.toLowerCase()
+          isSameIrcIdentifier(buffer.target, channelName)
       ) ?? null;
 
     if (existingBuffer) {
@@ -194,7 +195,7 @@ export function useAppActions(params: AppActionParams) {
     }
 
     try {
-      const result = await api.openChannel(network.id, channelName);
+      const result = await api.openChannel(network.id, channelName, params.workspace.selectedBuffer?.id);
       params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
       selectBuffer(params.dispatch, result.buffer);
     } catch (error) {
@@ -264,7 +265,15 @@ export function useAppActions(params: AppActionParams) {
       params.updateBanner('error', 'Socket not connected');
       return;
     }
-    params.socketRef.current.send({ type: 'channel.part', networkId, channel });
+    const buffer = params.state.buffers.find(
+      (candidate) => candidate.networkId === networkId && candidate.kind === 'channel' && candidate.target === channel
+    );
+    params.socketRef.current.send({
+      type: 'channel.part',
+      networkId,
+      channel,
+      sourceBufferId: buffer?.id ?? params.workspace.selectedBuffer?.id,
+    });
   };
 
   const closeBuffer = async (buffer: BufferState) => {
@@ -285,8 +294,8 @@ export function useAppActions(params: AppActionParams) {
         socket: params.socketRef.current,
         updateBanner: params.updateBanner,
         workspace: params.workspace,
-        onOpenChannel: async (networkId, channel) => {
-          const result = await api.openChannel(networkId, channel);
+        onOpenChannel: async (networkId, channel, sourceBufferId) => {
+          const result = await api.openChannel(networkId, channel, sourceBufferId);
           params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
           selectBuffer(params.dispatch, result.buffer);
         },

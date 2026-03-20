@@ -50,11 +50,15 @@ const handleStatusEvent = (
   runtime: RuntimeContext,
   event: Extract<RuntimeEvent, { type: 'status' }>
 ) => {
-  const kind: MessageKind = 'system';
+  const kind: MessageKind = event.kind === 'error'
+    ? 'error'
+    : event.kind === 'notice'
+      ? 'notice'
+      : 'system';
   const message: MessageInput = {
     id: randomUUID(),
     networkId: event.networkId,
-    target: 'server',
+    target: event.target ?? 'server',
     nick: null,
     body: event.message,
     kind,

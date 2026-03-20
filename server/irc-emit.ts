@@ -8,13 +8,15 @@ export const emitEvent = (connection: IrcConnectionState, event: RuntimeEvent) =
 export const emitStatus = (
   connection: IrcConnectionState,
   message: string,
-  kind: 'notice' | 'error' | 'system' = 'system'
+  kind: 'notice' | 'error' | 'system' = 'system',
+  target?: string
 ) => {
   emitEvent(connection, {
     type: 'status',
     networkId: connection.profile.id,
     message,
     kind,
+    target,
   });
 };
 

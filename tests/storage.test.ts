@@ -356,6 +356,26 @@ test('query buffers persist and can be closed', () => {
   assert.equal(storage.snapshot().buffers.some((buffer) => buffer.id === query.id), false);
 });
 
+test('query buffers and history match IRC nick casing insensitively', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  const query = storage.upsertQuery(network.id, 'Alice');
+  const message = storage.appendMessage({
+    id: randomUUID(),
+    networkId: network.id,
+    target: 'alice',
+    nick: 'alice',
+    body: 'hello there',
+    kind: 'line',
+    self: false,
+    ts: Date.now(),
+  });
+
+  assert.equal(storage.getBufferByTarget(network.id, 'ALICE')?.id, query.id);
+  assert.deepEqual(storage.listMessages(network.id, 'ALICE', 10), [message]);
+});
+
 test('storage rejects invalid template relationships', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

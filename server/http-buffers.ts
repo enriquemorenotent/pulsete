@@ -11,14 +11,15 @@ const queryInputSchema = z.object({
 
 const channelInputSchema = z.object({
   channel: z.string(),
+  sourceBufferId: z.string().optional(),
 });
 
 export const handleBufferRoutes = async ({ req, res, pathname, url, context }: RouteArgs) => {
   const channelMatch = pathname.match(/^\/api\/networks\/([^/]+)\/channels$/);
   if (channelMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(channelMatch[1]);
-    const channel = readChannelTarget(await readJson(req));
-    const buffer = context.runtime.join(networkId, channel);
+    const { channel, sourceBufferId } = readChannelTarget(await readJson(req));
+    const buffer = context.runtime.join(networkId, channel, sourceBufferId);
     context.runtime.send({ type: 'buffer.upsert', buffer });
     writeJson(res, 200, { buffer });
     return true;
@@ -73,7 +74,10 @@ const readChannelTarget = (body: unknown) => {
   if (!result.success) {
     throw badRequest('Invalid channel payload');
   }
-  return normalizeChannelTarget(result.data.channel);
+  return {
+    channel: normalizeChannelTarget(result.data.channel),
+    sourceBufferId: result.data.sourceBufferId,
+  };
 };
 
 const readQueryTarget = (body: unknown) => {

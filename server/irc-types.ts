@@ -1,11 +1,12 @@
 import type net from 'node:net';
 import type tls from 'node:tls';
 import type { MessageInput } from './storage.js';
+import type { PendingReplyContext } from './irc-reply-context.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type RuntimeEvent =
   | { type: 'state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
-  | { type: 'status'; networkId: string; message: string; kind: 'notice' | 'error' | 'system' }
+  | { type: 'status'; networkId: string; message: string; kind: 'notice' | 'error' | 'system'; target?: string }
   | { type: 'message'; message: MessageInput }
   | { type: 'channel'; networkId: string; channel: string; topic?: string; users?: string[] };
 
@@ -35,11 +36,15 @@ export type IrcConnectionState = {
   currentNick: string;
   pendingNick: string | null;
   lastFailureMessage: string | null;
+  pendingReplyContexts: PendingReplyContext[];
   clearReconnectTimer(): void;
   connect(resetRetryBudget?: boolean): void;
   consume(chunk: string): void;
-  join(channel: string): void;
+  join(channel: string, sourceTarget?: string): void;
+  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
+  queueReplyContext(context: PendingReplyContext): void;
   resetTransientState(): void;
-  sendRaw(raw: string): boolean;
+  sendRaw(raw: string, statusTarget?: string): boolean;
+  sendClientRaw(raw: string, sourceTarget?: string): boolean;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): string[];
 };

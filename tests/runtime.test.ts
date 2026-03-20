@@ -435,8 +435,15 @@ test('runtime sendMessage does not persist unsent direct messages while disconne
   runtime.sendMessage(network.id, 'helper', 'hello');
 
   assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
-  assert.deepEqual(storage.listMessages(network.id, 'helper', 10), []);
-  assert.equal(storage.listMessages(network.id, 'server', 10).at(-1)?.body, 'Not connected');
+  assert.deepEqual(
+    storage.listMessages(network.id, 'helper', 10).map((message) => ({
+      target: message.target,
+      kind: message.kind,
+      body: message.body,
+    })),
+    [{ target: 'helper', kind: 'error', body: 'Not connected' }]
+  );
+  assert.deepEqual(storage.listMessages(network.id, 'server', 10), []);
 });
 
 test('deleteNetwork removes runtime connections', async () => {
@@ -626,6 +633,38 @@ test('incoming private messages open query buffers automatically', () => {
   });
 });
 
+test('incoming private messages reuse an existing query buffer across IRC nick casing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  const existingQuery = storage.upsertQuery(network.id, 'Alice');
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'alice',
+        nick: 'alice',
+        body: 'hello again',
+        kind: 'line',
+        self: false,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
+  assert.equal(storage.getBufferByTarget(network.id, 'ALICE')?.id, existingQuery.id);
+  assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer: storage.getBuffer(existingQuery.id),
+  });
+});
+
 test('self-sent private messages do not open query buffers automatically', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -690,5 +729,40 @@ test('service messages on the server buffer close stale service queries', () => 
     type: 'buffer.remove',
     networkId: network.id,
     bufferId: query.id,
+  });
+});
+
+test('status events keep their originating buffer target and message kind', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.upsertNetwork(createNetworkInput());
+  const channel = storage.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: ['tester'],
+  });
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    {
+      type: 'status',
+      networkId: network.id,
+      target: '#help',
+      kind: 'error',
+      message: '* You need to be identified to message that user',
+    }
+  );
+
+  const appended = storage.listMessages(network.id, '#help', 10);
+  assert.equal(appended.length, 1);
+  assert.equal(appended[0]?.target, '#help');
+  assert.equal(appended[0]?.kind, 'error');
+  assert.equal(storage.getBuffer(channel.id)?.unread, 1);
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer: storage.getBuffer(channel.id),
   });
 });
