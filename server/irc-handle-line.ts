@@ -244,12 +244,15 @@ const handleNickConflict = (
     return true;
   }
   const fallbackNick = getNextNickOnConflict(connection, attemptedNick);
-  if (replyContext?.kind === 'nick' || connection.pendingNick) {
+  const shouldUpdatePendingNick = replyContext?.kind === 'nick' || !!connection.pendingNick;
+  if (!connection.sendRaw(`NICK ${fallbackNick}`)) {
+    return true;
+  }
+  if (shouldUpdatePendingNick) {
     connection.pendingNick = fallbackNick;
   } else {
     connection.currentNick = fallbackNick;
   }
-  connection.sendRaw(`NICK ${fallbackNick}`);
   if (replyTarget) {
     connection.queueReplyContext(createNickReplyContext(replyTarget, fallbackNick));
   }

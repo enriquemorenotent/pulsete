@@ -569,6 +569,61 @@ test('nick conflicts use configured alternate nicknames before suffix fallback',
   assert.equal(connection.currentNick, 'tertiary_');
 });
 
+test('nick fallback keeps the attempted nick when the retry write fails', () => {
+  const writes: string[] = [];
+  const notices: string[] = [];
+  const errors: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: '127.0.0.1',
+      port: 6667,
+      tls: false,
+      nick: 'primary',
+      altNicks: ['secondary', 'tertiary'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'status' && event.kind === 'notice') {
+          notices.push(event.message);
+        }
+        if (event.type === 'status' && event.kind === 'error') {
+          errors.push(event.message);
+        }
+      },
+    }
+  );
+
+  connection.socket = {
+    write(line: string) {
+      writes.push(line);
+      throw new Error('boom');
+    },
+    end() {},
+    setEncoding() {},
+    destroy() {},
+    on() {
+      return this;
+    },
+  } as any;
+
+  handleIrcLine(connection, ':irc.example 433 * primary :Nickname is already in use');
+
+  assert.deepEqual(writes, ['NICK secondary\r\n']);
+  assert.equal(connection.currentNick, 'primary');
+  assert.equal(connection.pendingNick, null);
+  assert.deepEqual(notices, []);
+  assert.deepEqual(errors, ['Connection is no longer writable']);
+});
+
 test('connected nick changes wait for server confirmation before mutating current nick', () => {
   const writes: string[] = [];
   const states: string[] = [];
