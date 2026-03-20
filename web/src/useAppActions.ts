@@ -27,7 +27,10 @@ type AppActionParams = {
 };
 
 const selectBuffer = (dispatch: (action: Action) => void, buffer: BufferState) =>
-  dispatch({ type: 'select', selection: { bufferId: buffer.id } });
+  dispatch({ type: 'select', selection: { kind: 'buffer', bufferId: buffer.id } });
+
+const selectPendingChannel = (dispatch: (action: Action) => void, networkId: string, channel: string) =>
+  dispatch({ type: 'select', selection: { kind: 'pending-channel', networkId, channel } });
 
 export function useAppActions(params: AppActionParams) {
   const showNewNetworkEditor = () => openNewNetworkEditor(params);
@@ -37,17 +40,24 @@ export function useAppActions(params: AppActionParams) {
   const findQueryBuffer = (networkId: string, nick: string) =>
     params.state.buffers.find(
       (buffer) =>
-        buffer.networkId === networkId &&
-        buffer.kind === 'query' &&
-        isSameIrcIdentifier(buffer.target, nick)
+        buffer.networkId === networkId
+        && buffer.kind === 'query'
+        && isSameIrcIdentifier(buffer.target, nick)
     ) ?? null;
   const findChannelBuffer = (networkId: string, channel: string) =>
     params.state.buffers.find(
       (buffer) =>
-        buffer.networkId === networkId &&
-        buffer.kind === 'channel' &&
-        isSameIrcIdentifier(buffer.target, channel)
+        buffer.networkId === networkId
+        && buffer.kind === 'channel'
+        && isSameIrcIdentifier(buffer.target, channel)
     ) ?? null;
+  const findPendingChannel = (networkId: string, channel: string) =>
+    params.state.pendingChannels.find(
+      (pendingChannel) =>
+        pendingChannel.networkId === networkId
+        && isSameIrcIdentifier(pendingChannel.channel, channel)
+    ) ?? null;
+
   const getGatewaySocket = (showBanner = true) => {
     if (params.state.gatewayStatus !== 'connected' || !params.socketRef.current) {
       if (showBanner) {
@@ -57,6 +67,7 @@ export function useAppActions(params: AppActionParams) {
     }
     return params.socketRef.current;
   };
+
   const sendGatewayMessage = (message: ClientMessage, showBanner = true) => {
     const socket = getGatewaySocket(showBanner);
     if (!socket) {
@@ -71,6 +82,32 @@ export function useAppActions(params: AppActionParams) {
       }
       return false;
     }
+  };
+
+  const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
+    const existingBuffer = findChannelBuffer(networkId, channel);
+    if (existingBuffer) {
+      selectBuffer(params.dispatch, existingBuffer);
+      return true;
+    }
+
+    if (findPendingChannel(networkId, channel)) {
+      selectPendingChannel(params.dispatch, networkId, channel);
+      return true;
+    }
+
+    const runtime = params.state.networkStates[networkId] ?? null;
+    if (!runtime?.connected) {
+      params.updateBanner('error', `Connect first to join ${channel}`);
+      return false;
+    }
+
+    if (!sendGatewayMessage({ type: 'channel.join', networkId, channel, sourceBufferId })) {
+      return false;
+    }
+
+    selectPendingChannel(params.dispatch, networkId, channel);
+    return true;
   };
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string) => {
@@ -174,7 +211,6 @@ export function useAppActions(params: AppActionParams) {
         params.dispatch({ type: 'upsert-buffer', buffer: instance.serverBuffer });
         selectBuffer(params.dispatch, instance.serverBuffer);
       }
-      params.dispatch({ type: 'network-connecting', networkId: instance.network.id, nick: instance.network.nick });
       await api.connectNetwork(instance.network.id);
       params.setShowNetworkManager(false);
       params.updateBanner('notice', 'Opened connection instance');
@@ -185,11 +221,9 @@ export function useAppActions(params: AppActionParams) {
 
   const reconnectNetwork = async (network: NetworkProfile) => {
     try {
-      params.dispatch({ type: 'network-connecting', networkId: network.id, nick: network.nick });
       await api.connectNetwork(network.id);
       params.updateBanner('notice', 'Reconnect requested');
     } catch (error) {
-      params.dispatch({ type: 'network-state', networkId: network.id, connected: false, serverName: null, nick: network.nick });
       params.updateBanner('error', error instanceof Error ? error.message : 'Failed to reconnect');
     }
   };
@@ -236,32 +270,14 @@ export function useAppActions(params: AppActionParams) {
   };
 
   const selectTabBuffer = (buffer: BufferState) => selectBuffer(params.dispatch, buffer);
+  const selectPendingTab = (networkId: string, channel: string) => selectPendingChannel(params.dispatch, networkId, channel);
 
   const openMentionedChannel = async (channelName: string) => {
     const network = params.workspace.selectedNetwork;
     if (!network) {
       return;
     }
-
-    const existingBuffer = findChannelBuffer(network.id, channelName);
-
-    if (existingBuffer) {
-      selectBuffer(params.dispatch, existingBuffer);
-      return;
-    }
-
-    if (!params.state.networkStates[network.id]?.connected) {
-      params.updateBanner('error', `Connect first to join ${channelName}`);
-      return;
-    }
-
-    try {
-      const result = await api.openChannel(network.id, channelName, params.workspace.selectedBuffer?.id);
-      params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
-      selectBuffer(params.dispatch, result.buffer);
-    } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : `Failed to join ${channelName}`);
-    }
+    joinChannel(network.id, channelName, params.workspace.selectedBuffer?.id);
   };
 
   const openChannelList = async () => {
@@ -285,18 +301,7 @@ export function useAppActions(params: AppActionParams) {
     if (!networkId) {
       return;
     }
-    const existingBuffer = findChannelBuffer(networkId, channel);
-    if (existingBuffer) {
-      selectBuffer(params.dispatch, existingBuffer);
-      return;
-    }
-    try {
-      const result = await api.openChannel(networkId, channel, findServerBuffer(networkId)?.id);
-      params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
-      selectBuffer(params.dispatch, result.buffer);
-    } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : `Failed to join ${channel}`);
-    }
+    joinChannel(networkId, channel, findServerBuffer(networkId)?.id);
   };
 
   const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
@@ -392,15 +397,12 @@ export function useAppActions(params: AppActionParams) {
     try {
       const submitted = await sendComposerMessage({
         draft: params.draft,
-        dispatch: params.dispatch,
         setDraft: params.setDraft,
         socket: getGatewaySocket(false),
         updateBanner: params.updateBanner,
         workspace: params.workspace,
-        onOpenChannel: async (networkId, channel, sourceBufferId) => {
-          const result = await api.openChannel(networkId, channel, sourceBufferId);
-          params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
-          selectBuffer(params.dispatch, result.buffer);
+        onJoinChannel: async (networkId, channel, sourceBufferId) => {
+          joinChannel(networkId, channel, sourceBufferId);
         },
         onOpenChannelList: openChannelListForNetwork,
         onOpenQuery: async (networkId, nick) => {
@@ -438,6 +440,7 @@ export function useAppActions(params: AppActionParams) {
     selectFriend,
     joinChannelFromList,
     selectNetworkBuffer,
+    selectPendingTab,
     selectPrivateBuffer,
     selectTabBuffer,
     sendComposer,

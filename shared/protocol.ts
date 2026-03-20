@@ -84,6 +84,13 @@ export const channelListEntrySchema = z.object({
 
 export type ChannelListEntry = z.infer<typeof channelListEntrySchema>;
 
+export const pendingChannelSchema = z.object({
+  networkId: z.string(),
+  channel: z.string(),
+});
+
+export type PendingChannelState = z.infer<typeof pendingChannelSchema>;
+
 const networkRuntimeStateSchema = z.object({
   connected: z.boolean(),
   connecting: z.boolean(),
@@ -97,6 +104,7 @@ export const appSnapshotSchema = z.object({
   friendPresence: z.record(z.boolean()),
   buffers: z.array(bufferSchema),
   channels: z.array(channelSchema),
+  pendingChannels: z.array(pendingChannelSchema).default([]),
   messages: z.array(chatMessageSchema),
   networkStates: z.record(networkRuntimeStateSchema),
 });
@@ -207,6 +215,15 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseClientSchema.extend({
     type: z.literal('channel.snapshot'),
     channel: channelSchema,
+  }),
+  baseClientSchema.extend({
+    type: z.literal('channel.pending'),
+    pendingChannel: pendingChannelSchema,
+  }),
+  baseClientSchema.extend({
+    type: z.literal('channel.pending.remove'),
+    networkId: z.string(),
+    channel: z.string(),
   }),
   baseClientSchema.extend({
     type: z.literal('channel.list.started'),

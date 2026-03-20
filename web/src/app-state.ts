@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import type { AppSnapshot, BufferState, ChatMessage, FriendState } from '../../shared/protocol.js';
+import { useReducer } from 'react';
+import type { AppSnapshot, BufferState, ChatMessage, FriendState, PendingChannelState } from '../../shared/protocol.js';
+import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { matchesBufferMessage } from './message-matching.js';
 import { emptyNetworkForm } from './network-form.js';
-import { selectDefaultBuffer } from './workspace.js';
 import type { Action, ChannelListState, State } from './app-types.js';
 import { gatewayReconnectMessage } from './gateway.js';
+import { selectDefaultBuffer } from './workspace.js';
 
 export const initialChannelListState: ChannelListState = {
   open: false,
@@ -23,6 +24,7 @@ export const initialState: State = {
   friendPresence: {},
   buffers: [],
   channels: [],
+  pendingChannels: [],
   messages: [],
   networkStates: {},
   selection: null,
@@ -53,19 +55,75 @@ const sortBuffers = (buffers: BufferState[]) =>
 const sortFriends = (friends: FriendState[]) =>
   [...friends].sort((left, right) => left.nick.localeCompare(right.nick, undefined, { sensitivity: 'accent' }));
 
+const sortPendingChannels = (pendingChannels: PendingChannelState[]) =>
+  [...pendingChannels].sort((left, right) =>
+    left.networkId === right.networkId
+      ? left.channel.localeCompare(right.channel)
+      : left.networkId.localeCompare(right.networkId)
+  );
+
+type SelectionState = Pick<State, 'networks' | 'buffers' | 'pendingChannels'>;
+
 const fallbackSelection = (state: Pick<State, 'networks' | 'buffers'>, preferredNetworkId?: string | null) => {
   if (preferredNetworkId) {
-    const buffer = state.buffers.find((candidate) => candidate.networkId === preferredNetworkId && candidate.kind === 'server') ?? null;
-    if (buffer) {
-      return { bufferId: buffer.id };
+    const serverBuffer = state.buffers.find(
+      (candidate) => candidate.networkId === preferredNetworkId && candidate.kind === 'server'
+    );
+    if (serverBuffer) {
+      return { kind: 'buffer' as const, bufferId: serverBuffer.id };
     }
   }
-  return selectDefaultBuffer(state as Pick<AppSnapshot, 'networks' | 'buffers'>);
+  return selectDefaultBuffer(state);
 };
+
+const getSelectionNetworkId = (state: SelectionState, selection: State['selection']) => {
+  if (!selection) {
+    return null;
+  }
+  if (selection.kind === 'pending-channel') {
+    return selection.networkId;
+  }
+  return state.buffers.find((buffer) => buffer.id === selection.bufferId)?.networkId ?? null;
+};
+
+const hasSelection = (state: SelectionState, selection: State['selection']) => {
+  if (!selection) {
+    return false;
+  }
+  if (selection.kind === 'pending-channel') {
+    return state.pendingChannels.some(
+      (pendingChannel) =>
+        pendingChannel.networkId === selection.networkId &&
+        isSameIrcIdentifier(pendingChannel.channel, selection.channel)
+    );
+  }
+  return state.buffers.some((buffer) => buffer.id === selection.bufferId);
+};
+
+const normalizeSelection = (state: SelectionState, selection: State['selection'], preferredNetworkId?: string | null) => {
+  if (hasSelection(state, selection)) {
+    return selection;
+  }
+  return fallbackSelection(state, preferredNetworkId ?? getSelectionNetworkId(state, selection));
+};
+
+const offlineNetworkStates = (state: Pick<State, 'networks'>) =>
+  Object.fromEntries(
+    state.networks.map((network) => [
+      network.id,
+      {
+        connected: false,
+        connecting: false,
+        serverName: null,
+        nick: network.nick,
+      },
+    ])
+  );
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case 'snapshot-loaded':
+    case 'snapshot': {
+      const selection = normalizeSelection(action.snapshot, state.selection);
       return {
         ...state,
         phase: 'ready',
@@ -74,25 +132,14 @@ export const reducer = (state: State, action: Action): State => {
         friendPresence: action.snapshot.friendPresence,
         buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
+        pendingChannels: sortPendingChannels(action.snapshot.pendingChannels),
         messages: action.snapshot.messages,
         networkStates: action.snapshot.networkStates,
-        selection: selectDefaultBuffer(action.snapshot),
+        selection,
         banner: null,
         channelList: initialChannelListState,
       };
-    case 'snapshot':
-      return {
-        ...state,
-        phase: 'ready',
-        networks: action.snapshot.networks,
-        friends: sortFriends(action.snapshot.friends),
-        friendPresence: action.snapshot.friendPresence,
-        buffers: sortBuffers(action.snapshot.buffers),
-        channels: action.snapshot.channels,
-        messages: mergeMessages(state.messages, action.snapshot.messages),
-        networkStates: action.snapshot.networkStates,
-        selection: state.selection ?? selectDefaultBuffer(action.snapshot),
-      };
+    }
     case 'gateway-connecting':
       return {
         ...state,
@@ -105,18 +152,26 @@ export const reducer = (state: State, action: Action): State => {
         gatewayStatus: 'connected',
         banner: state.banner?.message === gatewayReconnectMessage ? null : state.banner,
       };
-    case 'gateway-disconnected':
-      return {
+    case 'gateway-disconnected': {
+      const nextState = {
         ...state,
-        gatewayStatus: 'disconnected',
+        gatewayStatus: 'disconnected' as const,
+        pendingChannels: [],
+        networkStates: offlineNetworkStates(state),
         channelList: initialChannelListState,
       };
-    case 'load-failed':
-      return { ...state, phase: 'ready' };
+      return {
+        ...nextState,
+        selection: normalizeSelection(nextState, state.selection),
+      };
+    }
     case 'upsert-network': {
       const networks = state.networks.filter((network) => network.id !== action.network.id);
       networks.push(action.network);
-      return { ...state, networks: networks.sort((left, right) => left.name.localeCompare(right.name)) };
+      return {
+        ...state,
+        networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
+      };
     }
     case 'upsert-friend': {
       const friends = state.friends.filter((friend) => friend.id !== action.friend.id);
@@ -142,22 +197,39 @@ export const reducer = (state: State, action: Action): State => {
     case 'upsert-buffer': {
       const buffers = state.buffers.filter((buffer) => buffer.id !== action.buffer.id);
       buffers.push(action.buffer);
-      return { ...state, buffers: sortBuffers(buffers) };
+      const pendingChannels =
+        action.buffer.kind === 'channel'
+          ? state.pendingChannels.filter(
+              (pendingChannel) =>
+                pendingChannel.networkId !== action.buffer.networkId ||
+                !isSameIrcIdentifier(pendingChannel.channel, action.buffer.target)
+            )
+          : state.pendingChannels;
+      const selection =
+        state.selection?.kind === 'pending-channel' &&
+        state.selection.networkId === action.buffer.networkId &&
+        isSameIrcIdentifier(state.selection.channel, action.buffer.target) &&
+        action.buffer.kind === 'channel'
+          ? { kind: 'buffer' as const, bufferId: action.buffer.id }
+          : state.selection;
+      const nextState = { ...state, buffers: sortBuffers(buffers), pendingChannels };
+      return { ...nextState, selection: normalizeSelection(nextState, selection) };
     }
     case 'remove-buffer': {
+      const removedBuffer = state.buffers.find((buffer) => buffer.id === action.bufferId) ?? null;
       const buffers = state.buffers.filter((buffer) => buffer.id !== action.bufferId);
       const channels = state.channels.filter((channel) => channel.id !== action.bufferId);
-      const messages = state.messages.filter((message) => {
-        const removedBuffer = state.buffers.find((buffer) => buffer.id === action.bufferId);
-        if (!removedBuffer) {
-          return true;
-        }
-        return !matchesBufferMessage(removedBuffer, message);
-      });
-      const selection = state.selection?.bufferId === action.bufferId
-        ? fallbackSelection({ networks: state.networks, buffers }, action.networkId)
-        : state.selection;
-      return { ...state, buffers, channels, messages, selection };
+      const messages = removedBuffer
+        ? state.messages.filter((message) => !matchesBufferMessage(removedBuffer, message))
+        : state.messages;
+      const nextState = { ...state, buffers, channels, messages };
+      return {
+        ...nextState,
+        selection:
+          state.selection?.kind === 'buffer' && state.selection.bufferId === action.bufferId
+            ? fallbackSelection(nextState, action.networkId)
+            : state.selection,
+      };
     }
     case 'select':
       return { ...state, selection: action.selection, banner: null };
@@ -175,6 +247,52 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         channels: state.channels.filter((channel) => channel.id !== action.channelId),
       };
+    case 'add-pending-channel': {
+      const existingBuffer = state.buffers.find(
+        (buffer) =>
+          buffer.networkId === action.pendingChannel.networkId &&
+          buffer.kind === 'channel' &&
+          isSameIrcIdentifier(buffer.target, action.pendingChannel.channel)
+      );
+      if (existingBuffer) {
+        return state;
+      }
+      const pendingChannels = state.pendingChannels.filter(
+        (pendingChannel) =>
+          pendingChannel.networkId !== action.pendingChannel.networkId ||
+          !isSameIrcIdentifier(pendingChannel.channel, action.pendingChannel.channel)
+      );
+      pendingChannels.push(action.pendingChannel);
+      return {
+        ...state,
+        pendingChannels: sortPendingChannels(pendingChannels),
+      };
+    }
+    case 'remove-pending-channel': {
+      const pendingChannels = state.pendingChannels.filter(
+        (pendingChannel) =>
+          pendingChannel.networkId !== action.networkId || !isSameIrcIdentifier(pendingChannel.channel, action.channel)
+      );
+      const matchingChannelBuffer =
+        state.buffers.find(
+          (buffer) =>
+            buffer.networkId === action.networkId &&
+            buffer.kind === 'channel' &&
+            isSameIrcIdentifier(buffer.target, action.channel)
+        ) ?? null;
+      const nextState = { ...state, pendingChannels };
+      return {
+        ...nextState,
+        selection:
+          state.selection?.kind === 'pending-channel' &&
+          state.selection.networkId === action.networkId &&
+          isSameIrcIdentifier(state.selection.channel, action.channel)
+            ? matchingChannelBuffer
+              ? { kind: 'buffer', bufferId: matchingChannelBuffer.id }
+              : fallbackSelection(nextState, action.networkId)
+            : state.selection,
+      };
+    }
     case 'update-presence':
       return {
         ...state,
@@ -184,16 +302,12 @@ export const reducer = (state: State, action: Action): State => {
             : channel
         ),
       };
-    case 'network-connecting':
-      return {
-        ...state,
-        networkStates: {
-          ...state.networkStates,
-          [action.networkId]: { connected: false, connecting: true, serverName: null, nick: action.nick },
-        },
-      };
-    case 'network-state':
-      return {
+    case 'network-state': {
+      const pendingChannels =
+        action.connected
+          ? state.pendingChannels
+          : state.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId);
+      const nextState = {
         ...state,
         networkStates: {
           ...state.networkStates,
@@ -204,11 +318,17 @@ export const reducer = (state: State, action: Action): State => {
             nick: action.nick,
           },
         },
+        pendingChannels,
         channelList:
           !action.connected && state.channelList.networkId === action.networkId
             ? initialChannelListState
             : state.channelList,
       };
+      return {
+        ...nextState,
+        selection: action.connected ? state.selection : normalizeSelection(nextState, state.selection, action.networkId),
+      };
+    }
     case 'set-banner':
       return { ...state, banner: action.banner };
     case 'open-channel-list':
@@ -227,10 +347,10 @@ export const reducer = (state: State, action: Action): State => {
       return { ...state, channelList: initialChannelListState };
     case 'channel-list-started':
       if (
-        !state.channelList.open
-        || state.channelList.networkId !== action.networkId
-        || state.channelList.status !== 'loading'
-        || state.channelList.requestId !== null
+        !state.channelList.open ||
+        state.channelList.networkId !== action.networkId ||
+        state.channelList.status !== 'loading' ||
+        state.channelList.requestId !== null
       ) {
         return state;
       }
@@ -243,9 +363,9 @@ export const reducer = (state: State, action: Action): State => {
       };
     case 'channel-list-entry':
       if (
-        !state.channelList.open
-        || state.channelList.networkId !== action.networkId
-        || state.channelList.requestId !== action.requestId
+        !state.channelList.open ||
+        state.channelList.networkId !== action.networkId ||
+        state.channelList.requestId !== action.requestId
       ) {
         return state;
       }
@@ -258,9 +378,9 @@ export const reducer = (state: State, action: Action): State => {
       };
     case 'channel-list-completed':
       if (
-        !state.channelList.open
-        || state.channelList.networkId !== action.networkId
-        || state.channelList.requestId !== action.requestId
+        !state.channelList.open ||
+        state.channelList.networkId !== action.networkId ||
+        state.channelList.requestId !== action.requestId
       ) {
         return state;
       }
@@ -274,10 +394,10 @@ export const reducer = (state: State, action: Action): State => {
       };
     case 'channel-list-failed':
       if (
-        !state.channelList.open
-        || state.channelList.networkId !== action.networkId
-        || (state.channelList.requestId !== null && state.channelList.requestId !== action.requestId)
-        || (state.channelList.requestId === null && state.channelList.status !== 'loading')
+        !state.channelList.open ||
+        state.channelList.networkId !== action.networkId ||
+        (state.channelList.requestId !== null && state.channelList.requestId !== action.requestId) ||
+        (state.channelList.requestId === null && state.channelList.status !== 'loading')
       ) {
         return state;
       }
@@ -300,21 +420,23 @@ export const reducer = (state: State, action: Action): State => {
       const networks = state.networks.filter((network) => network.id !== action.networkId);
       const buffers = state.buffers.filter((buffer) => buffer.networkId !== action.networkId);
       const channels = state.channels.filter((channel) => channel.networkId !== action.networkId);
+      const pendingChannels = state.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId);
       const messages = state.messages.filter((message) => message.networkId !== action.networkId);
       const networkStates = { ...state.networkStates };
       delete networkStates[action.networkId];
-      const selection = state.selection && state.buffers.some((buffer) => buffer.id === state.selection?.bufferId && buffer.networkId === action.networkId)
-        ? fallbackSelection({ networks, buffers })
-        : state.selection;
-      return {
+      const nextState = {
         ...state,
         networks,
         buffers,
         channels,
+        pendingChannels,
         messages,
         networkStates,
-        selection,
         channelList: state.channelList.networkId === action.networkId ? initialChannelListState : state.channelList,
+      };
+      return {
+        ...nextState,
+        selection: normalizeSelection(nextState, state.selection),
       };
     }
     default:
@@ -322,8 +444,6 @@ export const reducer = (state: State, action: Action): State => {
   }
 };
 
-export function useStateReducer<T, A>(reducerFn: (state: T, action: A) => T, initial: T) {
-  const [state, setState] = useState(initial);
-  const dispatch = (action: A) => setState((current) => reducerFn(current, action));
-  return [state, dispatch] as const;
+export function useStateReducer(initialReducer: typeof reducer, state: State) {
+  return useReducer(initialReducer, state);
 }

@@ -1,4 +1,4 @@
-import type { BufferState, ChannelState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
 
 export type NetworkRuntimeState = {
   connected: boolean;
@@ -7,9 +7,16 @@ export type NetworkRuntimeState = {
   nick: string;
 };
 
-export type SelectedBuffer = {
-  bufferId: string;
-};
+export type SelectedBuffer =
+  | {
+      kind: 'buffer';
+      bufferId: string;
+    }
+  | {
+      kind: 'pending-channel';
+      networkId: string;
+      channel: string;
+    };
 
 export type WorkspaceMode =
   | 'empty'
@@ -34,6 +41,7 @@ export type WorkspaceView = {
   selectedRuntime: NetworkRuntimeState | null;
   selectedBuffer: BufferState | null;
   selectedChannel: ChannelState | null;
+  selectedPendingChannel: PendingChannelState | null;
   headerTitle: string;
   headerSubtitle: string;
   composerMode: ComposerMode;

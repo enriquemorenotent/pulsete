@@ -43,12 +43,13 @@ const selectedChannel: ChannelState = {
 
 const workspace: WorkspaceView = {
   mode: 'channel-connected',
-  selection: { bufferId: selectedBuffer.id },
+  selection: { kind: 'buffer', bufferId: selectedBuffer.id },
   connectionInstances: [network],
   selectedNetwork: network,
   selectedRuntime: { connected: true, connecting: false, serverName: 'irc.example.test', nick: 'tester' },
   selectedBuffer,
   selectedChannel,
+  selectedPendingChannel: null,
   headerTitle: '#general',
   headerSubtitle: '',
   composerMode: 'normal',
@@ -64,7 +65,8 @@ const makeState = (overrides: Partial<State> = {}): State => ({
   networks: [network],
   buffers: [selectedBuffer],
   channels: [selectedChannel],
-  selection: { bufferId: selectedBuffer.id },
+  pendingChannels: [],
+  selection: { kind: 'buffer', bufferId: selectedBuffer.id },
   networkStates: {
     [network.id]: {
       connected: true,
@@ -133,6 +135,72 @@ test('openChannelList sends the request before opening local dialog state', asyn
   await actions.openChannelList();
 
   assert.deepEqual(log, ['send:channel.list.request', 'dispatch:open-channel-list']);
+});
+
+test('openMentionedChannel sends channel.join and selects the pending channel locally', async () => {
+  const sent: ClientMessage[] = [];
+  const { params, actions: dispatched, banners } = createParams({
+    socket: {
+      send(message) {
+        sent.push(message);
+      },
+      close() {},
+    },
+  });
+  const actions = useAppActions(params);
+
+  await actions.openMentionedChannel('#help');
+
+  assert.deepEqual(sent, [
+    {
+      type: 'channel.join',
+      networkId: network.id,
+      channel: '#help',
+      sourceBufferId: selectedBuffer.id,
+    },
+  ]);
+  assert.deepEqual(dispatched, [
+    {
+      type: 'select',
+      selection: { kind: 'pending-channel', networkId: network.id, channel: '#help' },
+    },
+  ]);
+  assert.deepEqual(banners, []);
+});
+
+test('joinChannelFromList reuses an existing pending channel selection without sending twice', async () => {
+  const sent: ClientMessage[] = [];
+  const { params, actions: dispatched, banners } = createParams({
+    state: makeState({
+      pendingChannels: [{ networkId: network.id, channel: '#help' }],
+      channelList: {
+        open: true,
+        networkId: network.id,
+        requestId: 'request-1',
+        status: 'ready',
+        entries: [],
+        error: null,
+      },
+    }),
+    socket: {
+      send(message) {
+        sent.push(message);
+      },
+      close() {},
+    },
+  });
+  const actions = useAppActions(params);
+
+  await actions.joinChannelFromList('#help');
+
+  assert.deepEqual(sent, []);
+  assert.deepEqual(dispatched, [
+    {
+      type: 'select',
+      selection: { kind: 'pending-channel', networkId: network.id, channel: '#help' },
+    },
+  ]);
+  assert.deepEqual(banners, []);
 });
 
 test('openChannelList does not wedge loading state when the socket send fails', async () => {

@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import type { MessageInput } from './storage.js';
 import { connectSocket } from './irc-connect.js';
-import { emitChannelListFailed, emitFriendPresence, emitMessage, emitState, emitStatus } from './irc-emit.js';
+import {
+  emitChannelListFailed,
+  emitFriendPresence,
+  emitMessage,
+  emitPendingChannel,
+  emitPendingChannelRemoved,
+  emitState,
+  emitStatus,
+} from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import { findIrcCaseMatch, isSameIrcIdentifier } from './irc-parser.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
@@ -10,7 +18,6 @@ import type { ChannelListEntry, ChannelUserState } from '../shared/protocol.js';
 import {
   consumeReplyTarget,
   consumeReplyContext,
-  createChannelListReplyContext,
   createFriendPresenceReplyContext,
   createChannelReplyContext,
   createMessageReplyContext,
@@ -19,15 +26,18 @@ import {
   createReplyContextFromRaw,
   type PendingReplyContext,
 } from './irc-reply-context.js';
-import type { Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
+import type { ChannelSessionPhase, ChannelSessionState, Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
+import { formatServerNumeric } from './irc-server-log.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 import { maxBufferedIrcBytes, maxIrcCommandBytes, maxIsonNickBytes } from './irc-limits.js';
 
 const friendPresencePollMs = 60_000;
+const defaultChannelJoinTimeoutMs = 15_000;
 const defaultChannelListTimeoutMs = 60_000;
 const defaultChannelListDrainGraceMs = 15_000;
 
 type IrcConnectionOptions = {
+  channelJoinTimeoutMs?: number;
   channelListTimeoutMs?: number;
   channelListDrainGraceMs?: number;
 };
@@ -36,7 +46,7 @@ export class IrcConnection implements IrcConnectionState {
   socket: IrcSocket | null = null;
   buffer = '';
   readonly channelUsers = new Map<string, ChannelUserState[]>();
-  readonly trackedChannels = new Set<string>();
+  readonly channelSessions = new Map<string, ChannelSessionState>();
   connectDeadlineTimer: ReturnType<typeof setTimeout> | null = null;
   private friendNicks: string[] = [];
   private onlineFriendKeys = new Set<string>();
@@ -50,13 +60,18 @@ export class IrcConnection implements IrcConnectionState {
   connected = false;
   serverName: string | null = null;
   currentNick: string;
+  activeChannelListMode: 'raw' | 'structured' | null = null;
+  activeChannelListSourceTarget: string | null = null;
   activeChannelListRequestId: string | null = null;
   activeChannelListEntries: ChannelListEntry[] = [];
+  drainingChannelListMode: 'raw' | 'structured' | null = null;
+  drainingChannelListSourceTarget: string | null = null;
   drainingChannelListRequestId: string | null = null;
   pendingNick: string | null = null;
   lastFailureMessage: string | null = null;
   pendingReplyContexts: PendingReplyContext[] = [];
   profile: RuntimeNetworkProfile;
+  private readonly channelJoinTimeoutMs: number;
   private channelListTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private drainingChannelListExpiresAt: number | null = null;
   private readonly channelListTimeoutMs: number;
@@ -69,6 +84,7 @@ export class IrcConnection implements IrcConnectionState {
   ) {
     this.profile = profile;
     this.currentNick = profile.nick;
+    this.channelJoinTimeoutMs = options.channelJoinTimeoutMs ?? defaultChannelJoinTimeoutMs;
     this.channelListTimeoutMs = options.channelListTimeoutMs ?? defaultChannelListTimeoutMs;
     this.channelListDrainGraceMs = options.channelListDrainGraceMs ?? defaultChannelListDrainGraceMs;
   }
@@ -115,16 +131,31 @@ export class IrcConnection implements IrcConnectionState {
     }
   }
 
-  join(channel: string, sourceTarget = 'server', failedJoinBufferId?: string) {
-    return this.sendTrackedRaw(
-      `JOIN ${channel}`,
+  join(
+    channel: string,
+    sourceTarget = 'server',
+    options: { visiblePending?: boolean } | string = {}
+  ) {
+    if (!this.connected) {
+      emitStatus(this, this.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
+      return false;
+    }
+    if (!this.sendRaw(`JOIN ${channel}`, sourceTarget)) {
+      return false;
+    }
+    const visiblePending = typeof options === 'string' ? false : options.visiblePending ?? false;
+    this.setChannelSession(channel, 'joining', {
       sourceTarget,
-      createChannelReplyContext(sourceTarget, channel, 'join', { failedJoinBufferId })
-    );
+      visiblePending,
+    });
+    return true;
   }
 
   part(channel: string, reason = 'Leaving', sourceTarget = channel) {
-    this.sendTrackedRaw(`PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
+    if (this.getChannelSession(channel)?.phase === 'joined') {
+      this.setChannelSession(channel, 'leaving', { sourceTarget, visiblePending: false });
+    }
+    return this.sendTrackedRaw(`PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
   }
 
   say(target: string, text: string, sourceTarget = target) {
@@ -248,11 +279,9 @@ export class IrcConnection implements IrcConnectionState {
 
   resetTransientState() {
     this.buffer = '';
-    this.channelUsers.clear();
-    this.trackedChannels.clear();
+    this.clearChannelSessions();
     this.abortActiveChannelList('Channel list request was interrupted');
-    this.drainingChannelListRequestId = null;
-    this.drainingChannelListExpiresAt = null;
+    this.clearDrainingChannelList();
     this.pendingNick = null;
     this.pendingReplyContexts = [];
     this.pendingFriendPresencePoll = null;
@@ -304,28 +333,44 @@ export class IrcConnection implements IrcConnectionState {
 
   sendClientRaw(raw: string, sourceTarget = 'server') {
     this.prunePendingReplyContexts();
+    const trimmed = raw.trim();
+    const [commandToken = '', ...rest] = trimmed.split(/\s+/);
+    const command = commandToken.toUpperCase();
+    if (command === 'JOIN' && rest[0]) {
+      return this.join(rest[0], sourceTarget, { visiblePending: true });
+    }
+    if (command === 'PART' && rest[0]) {
+      const reason = rest.slice(1).join(' ').replace(/^:/, '') || 'Leaving';
+      return this.part(rest[0], reason, sourceTarget);
+    }
     const replyContext = createReplyContextFromRaw(sourceTarget, raw);
-    if (replyContext?.kind === 'raw-list' && this.isChannelListPending()) {
-      emitStatus(this, this.getChannelListRequestFailureMessage(), 'error', sourceTarget);
-      return false;
+    if (command === 'LIST') {
+      if (this.isChannelListPending()) {
+        emitStatus(this, this.getChannelListRequestFailureMessage(), 'error', sourceTarget);
+        return false;
+      }
+      if (!this.connected) {
+        emitStatus(this, this.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
+        return false;
+      }
+      if (!this.sendRaw(raw, sourceTarget)) {
+        return false;
+      }
+      this.startChannelList('raw', { sourceTarget });
+      return true;
     }
     return this.sendTrackedRaw(raw, sourceTarget, replyContext);
   }
 
   requestChannelList(requestId: string) {
     this.prunePendingReplyContexts();
-    if (!this.connected || this.drainingChannelListRequestId || this.hasPendingRawChannelList()) {
+    if (!this.connected || this.isChannelListPending()) {
       return false;
     }
-    if (this.activeChannelListRequestId) {
+    if (!this.sendRaw('LIST', 'server')) {
       return false;
     }
-    if (!this.sendTrackedRaw('LIST', 'server', createChannelListReplyContext(requestId))) {
-      return false;
-    }
-    this.activeChannelListRequestId = requestId;
-    this.activeChannelListEntries = [];
-    this.resetChannelListTimeout(requestId);
+    this.startChannelList('structured', { requestId });
     return true;
   }
 
@@ -338,18 +383,17 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   finishChannelListRequest(requestId: string) {
-    if (requestId === this.activeChannelListRequestId) {
-      this.clearChannelListState();
+    if (requestId === this.activeChannelListRequestId && this.activeChannelListMode === 'structured') {
+      this.clearActiveChannelList();
     }
-    if (requestId === this.drainingChannelListRequestId) {
-      this.drainingChannelListRequestId = null;
-      this.drainingChannelListExpiresAt = null;
+    if (requestId === this.drainingChannelListRequestId && this.drainingChannelListMode === 'structured') {
+      this.clearDrainingChannelList();
     }
   }
 
   getChannelListRequestFailureMessage() {
     this.prunePendingReplyContexts();
-    if (this.drainingChannelListRequestId || this.hasPendingRawChannelList() || this.activeChannelListRequestId) {
+    if (this.isChannelListPending()) {
       return 'Waiting for the previous channel list response to finish';
     }
     return this.socket ? 'Still connecting to server' : 'Not connected';
@@ -390,40 +434,121 @@ export class IrcConnection implements IrcConnectionState {
       clearTimeout(this.channelListTimeoutTimer);
     }
     const timer = setTimeout(() => {
-      if (this.activeChannelListRequestId !== requestId) {
+      if (!this.activeChannelListMode) {
         return;
       }
-      this.clearChannelListState();
-      this.markDrainingChannelList(requestId);
-      emitChannelListFailed(this, requestId, 'Channel list request timed out');
+      if (this.activeChannelListMode === 'structured' && this.activeChannelListRequestId !== requestId) {
+        return;
+      }
+      if (this.activeChannelListMode === 'raw' && requestId !== '__raw__') {
+        return;
+      }
+      this.failActiveChannelList('Channel list request timed out');
     }, this.channelListTimeoutMs);
     timer.unref?.();
     this.channelListTimeoutTimer = timer;
   }
 
-  private clearChannelListState() {
+  handleChannelListNumeric(command: string, params: string[]) {
+    this.prunePendingReplyContexts();
+    if (!isChannelListNumeric(command, params)) {
+      return false;
+    }
+    const mode = this.activeChannelListMode ?? this.drainingChannelListMode;
+    if (!mode) {
+      return true;
+    }
+    const isDraining = this.activeChannelListMode === null;
+    if (mode === 'structured') {
+      const requestId = (isDraining ? this.drainingChannelListRequestId : this.activeChannelListRequestId) ?? null;
+      if (!requestId) {
+        return false;
+      }
+      if (command === '321') {
+        return true;
+      }
+      if (command === '322') {
+        const entry = parseChannelListEntry(params);
+        if (entry && !isDraining) {
+          this.recordChannelListEntry(requestId, entry);
+          this.handlers.onEvent({
+            type: 'channel-list-entry',
+            networkId: this.profile.id,
+            requestId,
+            entry,
+          });
+        }
+        return true;
+      }
+      if (command === '323') {
+        if (isDraining) {
+          this.clearDrainingChannelList();
+          return true;
+        }
+        this.clearActiveChannelList();
+        this.handlers.onEvent({
+          type: 'channel-list-completed',
+          networkId: this.profile.id,
+          requestId,
+        });
+        return true;
+      }
+      if (!isChannelListFailureNumeric(command, params)) {
+        return false;
+      }
+      if (isDraining) {
+        this.clearDrainingChannelList();
+      } else {
+        this.failActiveChannelList(formatChannelListFailure(command, params));
+      }
+      return true;
+    }
+
+    const sourceTarget = (isDraining ? this.drainingChannelListSourceTarget : this.activeChannelListSourceTarget) ?? 'server';
+    if (isDraining) {
+      if (command === '323' || isChannelListFailureNumeric(command, params)) {
+        this.clearDrainingChannelList();
+      }
+      return true;
+    }
+    for (const line of formatChannelListReply(command, params)) {
+      emitStatus(this, line, 'system', sourceTarget);
+    }
+    if (command === '323') {
+      this.clearActiveChannelList();
+      return true;
+    }
+    if (isChannelListFailureNumeric(command, params)) {
+      this.failActiveChannelList(formatChannelListFailure(command, params), {
+        emitStructuredFailure: false,
+        sourceTarget,
+      });
+      return true;
+    }
+    this.resetChannelListTimeout('__raw__');
+    return true;
+  }
+
+  private clearActiveChannelList() {
     if (this.channelListTimeoutTimer) {
       clearTimeout(this.channelListTimeoutTimer);
       this.channelListTimeoutTimer = null;
     }
+    this.activeChannelListMode = null;
+    this.activeChannelListSourceTarget = null;
     this.activeChannelListRequestId = null;
     this.activeChannelListEntries = [];
   }
 
   private abortActiveChannelList(message: string) {
-    const requestId = this.activeChannelListRequestId;
-    if (!requestId) {
+    if (!this.activeChannelListMode) {
       return;
     }
-    this.pendingReplyContexts = this.pendingReplyContexts.filter(
-      (context) => context.kind !== 'channel-list' || context.requestId !== requestId
-    );
-    this.clearChannelListState();
-    emitChannelListFailed(this, requestId, message);
+    this.failActiveChannelList(message);
   }
 
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
-    const channelKey = this.trackChannel(channel);
+    const channelKey = this.resolveTrackedChannelKey(channel) ?? channel;
     const current = this.channelUsers.get(channelKey) ?? createEmptyChannelUsers();
     const nextUsers =
       !nick ? current : joined ? upsertChannelUser(current, { nick, mode: 'normal' }) : removeChannelUser(current, nick);
@@ -431,22 +556,176 @@ export class IrcConnection implements IrcConnectionState {
     return nextUsers;
   }
 
+  clearExpiredChannelSessions() {
+    this.prunePendingReplyContexts();
+  }
+
+  getChannelSession(channel: string) {
+    const key = this.resolveTrackedChannelKey(channel, false);
+    return key ? this.channelSessions.get(key) ?? null : null;
+  }
+
+  listPendingChannels() {
+    return Array.from(this.channelSessions.values())
+      .filter((session) => session.phase === 'joining' && session.visiblePending)
+      .map((session) => ({ networkId: this.profile.id, channel: session.channel }));
+  }
+
   trackChannel(channel: string) {
-    const channelKey = findIrcCaseMatch(this.trackedChannels.keys(), channel)
-      ?? findIrcCaseMatch(this.channelUsers.keys(), channel)
-      ?? channel;
-    this.trackedChannels.add(channelKey);
-    return channelKey;
+    return this.setChannelSession(channel, 'joined', { visiblePending: false }).channel;
   }
 
   untrackChannel(channel: string) {
-    const trackedChannel = findIrcCaseMatch(this.trackedChannels.keys(), channel)
-      ?? findIrcCaseMatch(this.channelUsers.keys(), channel);
-    if (!trackedChannel) {
+    this.removeChannelSession(channel);
+  }
+
+  removeChannelSession(channel: string) {
+    const key = this.resolveTrackedChannelKey(channel, false);
+    if (!key) {
+      return null;
+    }
+    const session = this.channelSessions.get(key) ?? null;
+    this.channelUsers.delete(key);
+    if (!session) {
+      return null;
+    }
+    this.clearChannelJoinTimer(session);
+    this.channelSessions.delete(key);
+    this.hidePendingChannel(session);
+    return { ...session, joinTimeoutTimer: null };
+  }
+
+  setChannelSession(
+    channel: string,
+    phase: ChannelSessionPhase,
+    options: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean } = {}
+  ) {
+    const key = this.resolveTrackedChannelKey(channel) ?? channel;
+    const current = this.channelSessions.get(key) ?? null;
+    if (current) {
+      this.clearChannelJoinTimer(current);
+    }
+    const next: ChannelSessionState = {
+      channel: current?.channel ?? channel,
+      phase,
+      sourceTarget: options.sourceTarget ?? current?.sourceTarget ?? 'server',
+      visiblePending: options.visiblePending ?? current?.visiblePending ?? false,
+      previouslyJoined: options.previouslyJoined ?? current?.previouslyJoined ?? false,
+      joinTimeoutTimer: null,
+    };
+    if (phase === 'joining') {
+      next.joinTimeoutTimer = this.createChannelJoinTimer(next.channel);
+    } else {
+      next.visiblePending = false;
+      next.previouslyJoined = false;
+    }
+    this.channelSessions.set(key, next);
+    if (!current?.visiblePending && next.visiblePending) {
+      emitPendingChannel(this, next.channel);
+    }
+    if (current?.visiblePending && !next.visiblePending) {
+      emitPendingChannelRemoved(this, next.channel);
+    }
+    return next;
+  }
+
+  private startChannelList(
+    mode: 'raw' | 'structured',
+    options: { requestId?: string; sourceTarget?: string }
+  ) {
+    this.clearActiveChannelList();
+    this.activeChannelListMode = mode;
+    this.activeChannelListSourceTarget = mode === 'raw' ? options.sourceTarget ?? 'server' : null;
+    this.activeChannelListRequestId = mode === 'structured' ? options.requestId ?? null : null;
+    this.activeChannelListEntries = [];
+    this.resetChannelListTimeout(this.activeChannelListRequestId ?? '__raw__');
+  }
+
+  private failActiveChannelList(
+    message: string,
+    options: { emitStructuredFailure?: boolean; sourceTarget?: string } = {}
+  ) {
+    const mode = this.activeChannelListMode;
+    const requestId = this.activeChannelListRequestId;
+    const sourceTarget = options.sourceTarget ?? this.activeChannelListSourceTarget ?? 'server';
+    if (!mode) {
       return;
     }
-    this.trackedChannels.delete(trackedChannel);
-    this.channelUsers.delete(findIrcCaseMatch(this.channelUsers.keys(), trackedChannel) ?? trackedChannel);
+    this.markDrainingChannelList(mode, requestId, sourceTarget);
+    if (mode === 'structured') {
+      if (requestId && options.emitStructuredFailure !== false) {
+        emitChannelListFailed(this, requestId, message);
+      }
+      return;
+    }
+    emitStatus(this, message, 'error', sourceTarget);
+  }
+
+  private clearDrainingChannelList() {
+    this.drainingChannelListMode = null;
+    this.drainingChannelListSourceTarget = null;
+    this.drainingChannelListRequestId = null;
+    this.drainingChannelListExpiresAt = null;
+  }
+
+  private markDrainingChannelList(mode: 'raw' | 'structured', requestId: string | null, sourceTarget: string) {
+    this.clearActiveChannelList();
+    this.drainingChannelListMode = mode;
+    this.drainingChannelListSourceTarget = mode === 'raw' ? sourceTarget : null;
+    this.drainingChannelListRequestId = mode === 'structured' ? requestId : null;
+    this.drainingChannelListExpiresAt = Date.now() + this.channelListDrainGraceMs;
+  }
+
+  private clearChannelSessions() {
+    for (const session of this.channelSessions.values()) {
+      this.clearChannelJoinTimer(session);
+      this.hidePendingChannel(session);
+    }
+    this.channelSessions.clear();
+    this.channelUsers.clear();
+  }
+
+  private hidePendingChannel(session: ChannelSessionState) {
+    if (session.visiblePending) {
+      emitPendingChannelRemoved(this, session.channel);
+    }
+  }
+
+  private clearChannelJoinTimer(session: ChannelSessionState) {
+    if (!session.joinTimeoutTimer) {
+      return;
+    }
+    clearTimeout(session.joinTimeoutTimer);
+    session.joinTimeoutTimer = null;
+  }
+
+  private createChannelJoinTimer(channel: string) {
+    if (this.channelJoinTimeoutMs <= 0) {
+      return null;
+    }
+    const timer = setTimeout(() => this.handleChannelJoinTimeout(channel), this.channelJoinTimeoutMs);
+    timer.unref?.();
+    return timer;
+  }
+
+  private handleChannelJoinTimeout(channel: string) {
+    const session = this.getChannelSession(channel);
+    if (!session || session.phase !== 'joining') {
+      return;
+    }
+    const sourceTarget = session.sourceTarget;
+    if (session.previouslyJoined) {
+      this.setChannelSession(channel, 'joined', { sourceTarget });
+    } else {
+      this.removeChannelSession(channel);
+    }
+    emitStatus(this, `Timed out joining ${channel}`, 'error', sourceTarget);
+  }
+
+  private resolveTrackedChannelKey(channel: string, createIfMissing = true) {
+    return findIrcCaseMatch(this.channelSessions.keys(), channel)
+      ?? findIrcCaseMatch(this.channelUsers.keys(), channel)
+      ?? (createIfMissing ? channel : null);
   }
 
   private reconnectWithUpdatedProfile() {
@@ -494,9 +773,6 @@ export class IrcConnection implements IrcConnectionState {
     }
     if (replyContext) {
       this.queueReplyContext(replyContext);
-    }
-    if (replyContext?.kind === 'channel' && replyContext.operation === 'join') {
-      this.trackChannel(replyContext.channel);
     }
     return true;
   }
@@ -558,23 +834,9 @@ export class IrcConnection implements IrcConnectionState {
     emitFriendPresence(this, onlineNicks);
   }
 
-  private hasPendingRawChannelList() {
-    return this.pendingReplyContexts.some((context) => context.kind === 'raw-list');
-  }
-
   private isChannelListPending() {
     this.prunePendingReplyContexts();
-    return this.activeChannelListRequestId !== null || this.drainingChannelListRequestId !== null || this.hasPendingRawChannelList();
-  }
-
-  private markDrainingChannelList(requestId: string) {
-    this.drainingChannelListRequestId = requestId;
-    this.drainingChannelListExpiresAt = Date.now() + this.channelListDrainGraceMs;
-    for (const context of this.pendingReplyContexts) {
-      if (context.kind === 'channel-list' && context.requestId === requestId) {
-        context.expiresAt = this.drainingChannelListExpiresAt;
-      }
-    }
+    return this.activeChannelListMode !== null || this.drainingChannelListMode !== null;
   }
 
   private prunePendingReplyContexts() {
@@ -584,22 +846,48 @@ export class IrcConnection implements IrcConnectionState {
       if (!context || context.expiresAt >= now) {
         continue;
       }
-      if (context.kind === 'channel-list' && context.requestId === this.drainingChannelListRequestId) {
-        this.drainingChannelListRequestId = null;
-        this.drainingChannelListExpiresAt = null;
-      }
       this.pendingReplyContexts.splice(index, 1);
     }
     if (
-      this.drainingChannelListRequestId
+      this.drainingChannelListMode
       && this.drainingChannelListExpiresAt !== null
       && this.drainingChannelListExpiresAt < now
     ) {
-      this.drainingChannelListRequestId = null;
-      this.drainingChannelListExpiresAt = null;
+      this.clearDrainingChannelList();
     }
   }
 }
+
+const channelListNumerics = new Set(['321', '322', '323', '263', '421', '461']);
+
+const isChannelListNumeric = (command: string, params: string[]) =>
+  command === '321'
+  || command === '322'
+  || command === '323'
+  || isChannelListFailureNumeric(command, params);
+
+const isChannelListFailureNumeric = (command: string, params: string[]) =>
+  command === '263'
+  || ((command === '421' || command === '461') && (params[1] ?? '').toUpperCase() === 'LIST');
+
+const parseChannelListEntry = (params: string[]) => {
+  const name = params[1] ?? '';
+  if (!name) {
+    return null;
+  }
+  const parsedUsers = Number.parseInt(params[2] ?? '0', 10);
+  return {
+    name,
+    users: Number.isFinite(parsedUsers) && parsedUsers >= 0 ? parsedUsers : 0,
+    topic: params[3] ?? '',
+  };
+};
+
+const formatChannelListFailure = (command: string, params: string[]) =>
+  formatServerNumeric(command, params).at(0)?.replace(/^\* /, '') ?? 'Failed to load the channel list';
+
+const formatChannelListReply = (command: string, params: string[]) =>
+  channelListNumerics.has(command) ? formatServerNumeric(command, params) : [];
 
 const createEmptyChannelUsers = (): ChannelUserState[] => [];
 

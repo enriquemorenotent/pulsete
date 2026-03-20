@@ -5,6 +5,17 @@ import type { MessageInput } from './storage.js';
 import type { PendingReplyContext } from './irc-reply-context.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
+export type ChannelSessionPhase = 'joining' | 'joined' | 'leaving';
+
+export type ChannelSessionState = {
+  channel: string;
+  phase: ChannelSessionPhase;
+  sourceTarget: string;
+  visiblePending: boolean;
+  previouslyJoined: boolean;
+  joinTimeoutTimer: ReturnType<typeof setTimeout> | null;
+};
+
 export type RuntimeEvent =
   | { type: 'state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
   | {
@@ -14,9 +25,9 @@ export type RuntimeEvent =
       kind: 'notice' | 'error' | 'system';
       target?: string;
       requireBoundTarget?: boolean;
-      failedChannelJoinTarget?: string;
-      failedChannelJoinBufferId?: string;
     }
+  | { type: 'channel-pending'; networkId: string; channel: string }
+  | { type: 'channel-pending-remove'; networkId: string; channel: string }
   | {
       type: 'channel-list-entry';
       networkId: string;
@@ -47,7 +58,7 @@ export type IrcConnectionState = {
   socket: IrcSocket | null;
   buffer: string;
   channelUsers: Map<string, ChannelUserState[]>;
-  trackedChannels: Set<string>;
+  channelSessions: Map<string, ChannelSessionState>;
   connectDeadlineTimer: ReturnType<typeof setTimeout> | null;
   manualDisconnect: boolean;
   reconnectAttempts: number;
@@ -68,19 +79,27 @@ export type IrcConnectionState = {
   consume(chunk: string): void;
   consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
   handleFriendPresence(pollId: number, onlineNicks: string[]): void;
-  join(channel: string, sourceTarget?: string, failedJoinBufferId?: string): boolean;
+  join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
   queueReplyContext(context: PendingReplyContext): void;
   refreshFriendPresence(): void;
   finishChannelListRequest(requestId: string): void;
   getChannelListRequestFailureMessage(): string;
+  handleChannelListNumeric(command: string, params: string[]): boolean;
   recordChannelListEntry(requestId: string, entry: ChannelListEntry): void;
   requestChannelList(requestId: string): boolean;
   resetTransientState(): void;
   sendRaw(raw: string, statusTarget?: string): boolean;
   sendClientRaw(raw: string, sourceTarget?: string): boolean;
   setFriendNicks(nicks: string[]): void;
-  trackChannel(channel: string): string;
-  untrackChannel(channel: string): void;
+  clearExpiredChannelSessions(): void;
+  getChannelSession(channel: string): ChannelSessionState | null;
+  listPendingChannels(): Array<{ networkId: string; channel: string }>;
+  removeChannelSession(channel: string): ChannelSessionState | null;
+  setChannelSession(
+    channel: string,
+    phase: ChannelSessionPhase,
+    options?: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean }
+  ): ChannelSessionState;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
 };

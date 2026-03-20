@@ -707,9 +707,8 @@ test('runtime join does not create a channel buffer when the join command is not
   const runtime = new Runtime(storage);
   const network = storage.upsertNetwork(createNetworkInput());
 
-  const result = runtime.join(network.id, '#missing');
+  runtime.join(network.id, '#missing');
 
-  assert.equal(result.kind, 'server');
   assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
   assert.equal(storage.getChannelByName(network.id, '#missing'), null);
   assert.deepEqual(
@@ -733,49 +732,30 @@ test('runtime part reports not connected before the first connection exists', ()
   );
 });
 
-test('runtime removes optimistic channel buffers when the server rejects a join', () => {
+test('runtime join defers channel persistence until the server confirms the join', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const network = storage.upsertNetwork(createNetworkInput());
-  const sent: Array<{ type?: string; [key: string]: unknown }> = [];
+  let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
 
-  (runtime as unknown as { connections: Map<string, { join(channel: string, sourceTarget?: string): boolean }> }).connections.set(network.id, {
-    join(channel: string) {
+  (runtime as unknown as {
+    connections: Map<string, { join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean }>;
+  }).connections.set(network.id, {
+    join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
+      requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
       return channel === '#missing';
     },
   });
 
-  const buffer = runtime.join(network.id, '#missing');
-  assert.equal(buffer.kind, 'channel');
-  assert.equal(storage.getBufferByTarget(network.id, '#missing')?.kind, 'channel');
+  runtime.join(network.id, '#missing');
 
-  handleRuntimeEvent(
-    {
-      store: storage,
-      send(_legacyUserId: string, message: ServerMessage) {
-        sent.push(message);
-      },
-    },
-    {
-      type: 'status',
-      networkId: network.id,
-      target: 'server',
-      kind: 'error',
-      message: '* #missing No such channel',
-      requireBoundTarget: true,
-      failedChannelJoinTarget: '#missing',
-      failedChannelJoinBufferId: buffer.id,
-    }
-  );
-
+  assert.deepEqual(requestedJoin, { channel: '#missing', sourceTarget: 'server', visiblePending: true });
   assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
   assert.equal(storage.getChannelByName(network.id, '#missing'), null);
-  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, '* #missing No such channel');
-  assert.ok(sent.some((message) => message.type === 'buffer.remove' && message.bufferId === buffer.id));
 });
 
-test('runtime preserves existing channel buffers when a rejoin is rejected', () => {
+test('runtime rejoins existing channel buffers without surfacing a pending channel row', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
@@ -787,31 +767,22 @@ test('runtime preserves existing channel buffers when a rejoin is rejected', () 
     users: [makeUser('alice')],
   });
 
-  (runtime as unknown as { connections: Map<string, { join(channel: string, sourceTarget?: string): boolean }> }).connections.set(network.id, {
-    join(channel: string) {
+  let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
+
+  (runtime as unknown as {
+    connections: Map<string, { join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean }>;
+  }).connections.set(network.id, {
+    join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
+      requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
       return channel === '#help';
     },
   });
 
-  const buffer = runtime.join(network.id, '#help');
-  assert.equal(buffer.id, existing.id);
+  runtime.join(network.id, '#help');
 
-  handleRuntimeEvent(
-    { store: storage, send() {} },
-    {
-      type: 'status',
-      networkId: network.id,
-      target: 'server',
-      kind: 'error',
-      message: '* #help Cannot join channel (+i)',
-      requireBoundTarget: true,
-      failedChannelJoinTarget: '#help',
-    }
-  );
-
+  assert.deepEqual(requestedJoin, { channel: '#help', sourceTarget: 'server', visiblePending: false });
   assert.equal(storage.getBuffer(existing.id)?.kind, 'channel');
   assert.equal(storage.getChannelByName(network.id, '#help')?.topic, 'saved topic');
-  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, '* #help Cannot join channel (+i)');
 });
 
 test('runtime validation rejects missing networks and invalid targets before touching storage', () => {
@@ -1393,7 +1364,7 @@ test('runtime rejects client commands while the network is still connecting', as
 
   try {
     runtime.connect(network.id);
-    const joinResult = runtime.join(network.id, '#help');
+    runtime.join(network.id, '#help');
     runtime.sendMessage(network.id, 'helper', 'hello');
     runtime.sendRaw(network.id, 'WHOIS helper');
 
@@ -1411,7 +1382,6 @@ test('runtime rejects client commands while the network is still connecting', as
           .some((message) => message.body === 'Still connecting to server')
     );
 
-    assert.equal(joinResult.target, 'server');
     assert.equal(received.includes('JOIN #help'), false);
     assert.equal(received.includes('PRIVMSG helper :hello'), false);
     assert.equal(received.includes('WHOIS helper'), false);

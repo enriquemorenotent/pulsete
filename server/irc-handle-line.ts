@@ -3,9 +3,6 @@ import tls from 'node:tls';
 import type { MessageInput } from './storage.js';
 import {
   emitChannel,
-  emitChannelListCompleted,
-  emitChannelListEntry,
-  emitChannelListFailed,
   emitMessage,
   emitState,
   emitStatus,
@@ -67,52 +64,22 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
       return;
     }
   }
+  if (connection.handleChannelListNumeric(command, params)) {
+    return;
+  }
   if (/^\d{3}$/.test(command)) {
     const replyContext = isonReplyContext && 'sourceTarget' in isonReplyContext
       ? isonReplyContext
       : connection.consumeReplyContext(command, params, nick);
-    const replyTarget = replyContext && 'sourceTarget' in replyContext
+    let replyTarget = replyContext && 'sourceTarget' in replyContext
       ? replyContext.sourceTarget
       : null;
-    const failedChannelJoinTarget = replyContext?.kind === 'channel'
-      && replyContext.operation === 'join'
-      && channelJoinFailureCommands.has(command)
-      ? replyContext.channel
-      : undefined;
-    const failedChannelJoinBufferId = replyContext?.kind === 'channel'
-      && replyContext.operation === 'join'
-      && channelJoinFailureCommands.has(command)
-      ? replyContext.failedJoinBufferId
-      : undefined;
-    if (failedChannelJoinTarget && !hasPendingChannelReplyContext(connection, failedChannelJoinTarget, 'join')) {
-      connection.untrackChannel(failedChannelJoinTarget);
-    }
-    if (replyContext?.kind === 'channel-list') {
-      const isDrainingTimedOutList = replyContext.requestId === connection.drainingChannelListRequestId;
-      if (command === '322') {
-        const entry = parseChannelListEntry(params);
-        if (entry && !isDrainingTimedOutList) {
-          connection.recordChannelListEntry(replyContext.requestId, entry);
-          emitChannelListEntry(connection, replyContext.requestId, entry);
-        }
-        return;
-      }
-      if (command === '323') {
-        connection.finishChannelListRequest(replyContext.requestId);
-        if (!isDrainingTimedOutList) {
-          emitChannelListCompleted(connection, replyContext.requestId);
-        }
-        return;
-      }
-      if (command === '263' || command === '421' || command === '461') {
-        connection.finishChannelListRequest(replyContext.requestId);
-        if (!isDrainingTimedOutList) {
-          emitChannelListFailed(connection, replyContext.requestId, formatChannelListFailure(command, params));
-        }
-        return;
-      }
-      if (command === '321') {
-        return;
+    const joinFailureChannel = channelJoinFailureCommands.has(command) ? params[1] ?? '' : '';
+    if (joinFailureChannel) {
+      const session = connection.getChannelSession(joinFailureChannel);
+      if (session?.phase === 'joining') {
+        replyTarget ??= session.sourceTarget;
+        connection.removeChannelSession(joinFailureChannel);
       }
     }
     const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic-query';
@@ -123,9 +90,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
         lineText,
         getServerNumericStatusKind(command),
         replyTarget ?? undefined,
-        true,
-        failedChannelJoinTarget,
-        failedChannelJoinBufferId
+        true
       );
     }
   }
@@ -352,15 +317,18 @@ const handleJoin = (connection: IrcConnectionState, params: string[], nick: stri
     return;
   }
   const selfJoin = isSameIrcIdentifier(nick, connection.currentNick);
+  const pendingSession = selfJoin ? connection.getChannelSession(name) : null;
   if (selfJoin) {
-    consumePendingChannelReplyContexts(connection, name, 'join');
-    connection.trackChannel(name);
+    discardPendingChannelReplyContexts(connection, name, (context) => context.operation === 'join');
+    if (!pendingSession) {
+      connection.setChannelSession(name, 'joined', { sourceTarget: 'server' });
+    }
   }
-  if (!selfJoin && !resolveTrackedChannel(connection, name)) {
+  const channel = resolveTrackedChannel(connection, name);
+  if (!channel) {
     return;
   }
-  const users = connection.updateChannelUsers(name, nick, true);
-  const channel = resolveTrackedChannel(connection, name) ?? name;
+  const users = connection.updateChannelUsers(channel, nick, true);
   emitMessage(connection, createMessage(connection, {
     target: channel,
     nick,
@@ -369,6 +337,9 @@ const handleJoin = (connection: IrcConnectionState, params: string[], nick: stri
     self: selfJoin,
   }));
   emitChannel(connection, channel, { users });
+  if (selfJoin && pendingSession) {
+    connection.setChannelSession(channel, 'joined', { sourceTarget: pendingSession.sourceTarget });
+  }
 };
 
 const handlePart = (connection: IrcConnectionState, params: string[], nick: string | null) => {
@@ -386,7 +357,17 @@ const handlePart = (connection: IrcConnectionState, params: string[], nick: stri
   }
   const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
   if (selfPart) {
-    untrackChannelUnlessRejoining(connection, channel);
+    const session = connection.getChannelSession(channel);
+    if (session?.phase === 'joining') {
+      connection.channelUsers.set(channel, []);
+      connection.setChannelSession(channel, 'joining', {
+        sourceTarget: session.sourceTarget,
+        visiblePending: session.visiblePending,
+        previouslyJoined: false,
+      });
+    } else {
+      connection.removeChannelSession(channel);
+    }
   }
   emitMessage(connection, createMessage(connection, {
     target: channel,
@@ -413,7 +394,17 @@ const handleKick = (connection: IrcConnectionState, params: string[], nick: stri
   }
   const users = selfKick ? [] : connection.updateChannelUsers(channel, kickedNick, false);
   if (selfKick) {
-    untrackChannelUnlessRejoining(connection, channel);
+    const session = connection.getChannelSession(channel);
+    if (session?.phase === 'joining') {
+      connection.channelUsers.set(channel, []);
+      connection.setChannelSession(channel, 'joining', {
+        sourceTarget: session.sourceTarget,
+        visiblePending: session.visiblePending,
+        previouslyJoined: false,
+      });
+    } else {
+      connection.removeChannelSession(channel);
+    }
   }
   emitMessage(connection, createMessage(connection, {
     target: channel,
@@ -536,22 +527,6 @@ const createMessage = (
   ...input,
 });
 
-const parseChannelListEntry = (params: string[]) => {
-  const name = params[1] ?? '';
-  if (!name) {
-    return null;
-  }
-  const parsedUsers = Number.parseInt(params[2] ?? '0', 10);
-  return {
-    name,
-    users: Number.isFinite(parsedUsers) && parsedUsers >= 0 ? parsedUsers : 0,
-    topic: params[3] ?? '',
-  };
-};
-
-const formatChannelListFailure = (command: string, params: string[]) =>
-  formatServerNumeric(command, params).at(0)?.replace(/^\* /, '') ?? 'Failed to load the channel list';
-
 const formatPingReply = (line: string, params: string[]) => {
   if (/^PING\b/i.test(line)) {
     return line.replace(/^PING\b/i, 'PONG');
@@ -567,49 +542,10 @@ const formatPingReply = (line: string, params: string[]) => {
 
 const resolveTrackedChannel = (connection: IrcConnectionState, channel: string) =>
   channel
-    ? findIrcCaseMatch(connection.trackedChannels.keys(), channel)
+    ? findIrcCaseMatch(connection.channelSessions.keys(), channel)
       ?? findIrcCaseMatch(connection.channelUsers.keys(), channel)
       ?? null
     : null;
-
-const hasPendingChannelReplyContext = (
-  connection: IrcConnectionState,
-  channel: string,
-  operation: 'join' | 'part' | 'topic-set' | 'topic-query' | 'names'
-) =>
-  connection.pendingReplyContexts.some(
-    (context) =>
-      context.kind === 'channel'
-      && context.operation === operation
-      && isSameIrcIdentifier(context.channel, channel)
-  );
-
-const untrackChannelUnlessRejoining = (connection: IrcConnectionState, channel: string) => {
-  if (hasPendingChannelReplyContext(connection, channel, 'join')) {
-    connection.trackChannel(channel);
-    return;
-  }
-  connection.untrackChannel(channel);
-};
-
-const consumePendingChannelReplyContexts = (
-  connection: IrcConnectionState,
-  channel: string,
-  operation: 'join' | 'part' | 'topic-set' | 'topic-query' | 'names'
-) => {
-  const contexts = [];
-  for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
-    const context = connection.pendingReplyContexts[index];
-    if (
-      context?.kind === 'channel'
-      && context.operation === operation
-      && isSameIrcIdentifier(context.channel, channel)
-    ) {
-      contexts.push(connection.pendingReplyContexts.splice(index, 1)[0]!);
-    }
-  }
-  return contexts;
-};
 
 const discardPendingChannelReplyContexts = (
   connection: IrcConnectionState,

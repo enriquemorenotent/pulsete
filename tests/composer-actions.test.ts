@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, ChannelState, ClientMessage, NetworkProfile } from '../shared/protocol.js';
 import { sendComposerMessage } from '../web/src/composer-actions.js';
-import type { Action } from '../web/src/app-types.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const network: NetworkProfile = {
@@ -40,12 +39,13 @@ const selectedChannel: ChannelState = {
 
 const workspace: WorkspaceView = {
   mode: 'channel-connected',
-  selection: { bufferId: selectedBuffer.id },
+  selection: { kind: 'buffer', bufferId: selectedBuffer.id },
   connectionInstances: [network],
   selectedNetwork: network,
   selectedRuntime: null,
   selectedBuffer,
   selectedChannel,
+  selectedPendingChannel: null,
   headerTitle: '#general',
   headerSubtitle: '',
   composerMode: 'normal',
@@ -55,7 +55,6 @@ const workspace: WorkspaceView = {
 };
 
 test('/msg sends a private message without opening or selecting a query buffer', async () => {
-  const actions: Action[] = [];
   const sent: ClientMessage[] = [];
   const drafts: string[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
@@ -65,7 +64,6 @@ test('/msg sends a private message without opening or selecting a query buffer',
 
   await sendComposerMessage({
     draft: '/msg alice hello there',
-    dispatch: (action) => actions.push(action),
     setDraft: (value) => drafts.push(value),
     socket: {
       send: (message) => sent.push(message),
@@ -73,7 +71,7 @@ test('/msg sends a private message without opening or selecting a query buffer',
     },
     updateBanner: (kind, message) => banners.push({ kind, message }),
     workspace,
-    onOpenChannel: async (networkId, channel) => {
+    onJoinChannel: async (networkId, channel) => {
       openedChannels.push({ networkId, channel });
     },
     onOpenChannelList: async (networkId) => {
@@ -94,7 +92,6 @@ test('/msg sends a private message without opening or selecting a query buffer',
       sourceBufferId: 'buffer-1',
     },
   ]);
-  assert.deepEqual(actions, []);
   assert.deepEqual(drafts, ['']);
   assert.deepEqual(banners, []);
   assert.deepEqual(openedChannels, []);
@@ -103,7 +100,6 @@ test('/msg sends a private message without opening or selecting a query buffer',
 });
 
 test('/j joins a channel through the channel opener', async () => {
-  const actions: Action[] = [];
   const sent: ClientMessage[] = [];
   const drafts: string[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
@@ -113,7 +109,6 @@ test('/j joins a channel through the channel opener', async () => {
 
   await sendComposerMessage({
     draft: '/j #help',
-    dispatch: (action) => actions.push(action),
     setDraft: (value) => drafts.push(value),
     socket: {
       send: (message) => sent.push(message),
@@ -121,7 +116,7 @@ test('/j joins a channel through the channel opener', async () => {
     },
     updateBanner: (kind, message) => banners.push({ kind, message }),
     workspace,
-    onOpenChannel: async (networkId, channel) => {
+    onJoinChannel: async (networkId, channel) => {
       openedChannels.push({ networkId, channel });
     },
     onOpenChannelList: async (networkId) => {
@@ -133,7 +128,6 @@ test('/j joins a channel through the channel opener', async () => {
   });
 
   assert.deepEqual(sent, []);
-  assert.deepEqual(actions, []);
   assert.deepEqual(drafts, ['']);
   assert.deepEqual(banners, []);
   assert.deepEqual(openedChannels, [{ networkId: 'network-1', channel: '#help' }]);
@@ -142,7 +136,6 @@ test('/j joins a channel through the channel opener', async () => {
 });
 
 test('/query opens or selects a private-message buffer', async () => {
-  const actions: Action[] = [];
   const sent: ClientMessage[] = [];
   const drafts: string[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
@@ -152,7 +145,6 @@ test('/query opens or selects a private-message buffer', async () => {
 
   await sendComposerMessage({
     draft: '/query alice',
-    dispatch: (action) => actions.push(action),
     setDraft: (value) => drafts.push(value),
     socket: {
       send: (message) => sent.push(message),
@@ -160,7 +152,7 @@ test('/query opens or selects a private-message buffer', async () => {
     },
     updateBanner: (kind, message) => banners.push({ kind, message }),
     workspace,
-    onOpenChannel: async (networkId, channel) => {
+    onJoinChannel: async (networkId, channel) => {
       openedChannels.push({ networkId, channel });
     },
     onOpenChannelList: async (networkId) => {
@@ -172,7 +164,6 @@ test('/query opens or selects a private-message buffer', async () => {
   });
 
   assert.deepEqual(sent, []);
-  assert.deepEqual(actions, []);
   assert.deepEqual(drafts, ['']);
   assert.deepEqual(banners, []);
   assert.deepEqual(openedChannels, []);
@@ -181,7 +172,6 @@ test('/query opens or selects a private-message buffer', async () => {
 });
 
 test('/ns sends a NickServ message without opening a query buffer', async () => {
-  const actions: Action[] = [];
   const sent: ClientMessage[] = [];
   const drafts: string[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
@@ -191,7 +181,6 @@ test('/ns sends a NickServ message without opening a query buffer', async () => 
 
   await sendComposerMessage({
     draft: '/ns help',
-    dispatch: (action) => actions.push(action),
     setDraft: (value) => drafts.push(value),
     socket: {
       send: (message) => sent.push(message),
@@ -199,7 +188,7 @@ test('/ns sends a NickServ message without opening a query buffer', async () => 
     },
     updateBanner: (kind, message) => banners.push({ kind, message }),
     workspace,
-    onOpenChannel: async (networkId, channel) => {
+    onJoinChannel: async (networkId, channel) => {
       openedChannels.push({ networkId, channel });
     },
     onOpenChannelList: async (networkId) => {
@@ -220,7 +209,6 @@ test('/ns sends a NickServ message without opening a query buffer', async () => 
       sourceBufferId: 'buffer-1',
     },
   ]);
-  assert.deepEqual(actions, []);
   assert.deepEqual(drafts, ['']);
   assert.deepEqual(banners, []);
   assert.deepEqual(openedChannels, []);
@@ -229,7 +217,6 @@ test('/ns sends a NickServ message without opening a query buffer', async () => 
 });
 
 test('/w sends a WHOIS raw command', async () => {
-  const actions: Action[] = [];
   const sent: ClientMessage[] = [];
   const drafts: string[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
@@ -239,7 +226,6 @@ test('/w sends a WHOIS raw command', async () => {
 
   await sendComposerMessage({
     draft: '/w alice',
-    dispatch: (action) => actions.push(action),
     setDraft: (value) => drafts.push(value),
     socket: {
       send: (message) => sent.push(message),
@@ -247,7 +233,7 @@ test('/w sends a WHOIS raw command', async () => {
     },
     updateBanner: (kind, message) => banners.push({ kind, message }),
     workspace,
-    onOpenChannel: async (networkId, channel) => {
+    onJoinChannel: async (networkId, channel) => {
       openedChannels.push({ networkId, channel });
     },
     onOpenChannelList: async (networkId) => {
@@ -266,7 +252,6 @@ test('/w sends a WHOIS raw command', async () => {
       sourceBufferId: 'buffer-1',
     },
   ]);
-  assert.deepEqual(actions, []);
   assert.deepEqual(drafts, ['']);
   assert.deepEqual(banners, []);
   assert.deepEqual(openedChannels, []);
@@ -275,7 +260,6 @@ test('/w sends a WHOIS raw command', async () => {
 });
 
 test('/list opens the channel list dialog without sending a raw IRC command', async () => {
-  const actions: Action[] = [];
   const sent: ClientMessage[] = [];
   const drafts: string[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
@@ -285,7 +269,6 @@ test('/list opens the channel list dialog without sending a raw IRC command', as
 
   await sendComposerMessage({
     draft: '/list',
-    dispatch: (action) => actions.push(action),
     setDraft: (value) => drafts.push(value),
     socket: {
       send: (message) => sent.push(message),
@@ -293,7 +276,7 @@ test('/list opens the channel list dialog without sending a raw IRC command', as
     },
     updateBanner: (kind, message) => banners.push({ kind, message }),
     workspace,
-    onOpenChannel: async (networkId, channel) => {
+    onJoinChannel: async (networkId, channel) => {
       openedChannels.push({ networkId, channel });
     },
     onOpenChannelList: async (networkId) => {
@@ -304,7 +287,6 @@ test('/list opens the channel list dialog without sending a raw IRC command', as
     },
   });
 
-  assert.deepEqual(actions, []);
   assert.deepEqual(sent, []);
   assert.deepEqual(drafts, ['']);
   assert.deepEqual(banners, []);
@@ -319,7 +301,6 @@ test('/list rejects extra arguments', async () => {
 
   await sendComposerMessage({
     draft: '/list #help',
-    dispatch: () => {},
     setDraft: () => {},
     socket: {
       send: () => {},
@@ -327,7 +308,7 @@ test('/list rejects extra arguments', async () => {
     },
     updateBanner: (kind, message) => banners.push({ kind, message }),
     workspace,
-    onOpenChannel: async () => {},
+    onJoinChannel: async () => {},
     onOpenChannelList: async (networkId) => {
       listedNetworks.push(networkId);
     },

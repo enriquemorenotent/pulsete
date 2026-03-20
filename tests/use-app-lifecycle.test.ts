@@ -14,6 +14,7 @@ const emptySnapshot = {
   friendPresence: {},
   buffers: [],
   channels: [],
+  pendingChannels: [],
   messages: [],
   networkStates: {},
 };
@@ -71,5 +72,44 @@ test('createGatewaySocketCallbacks handles state.ready only for the current sock
   assert.deepEqual(dispatched, [
     { type: 'gateway-connected' },
     { type: 'snapshot', snapshot: emptySnapshot },
+  ]);
+});
+
+test('createGatewaySocketCallbacks forwards pending channel events from the current socket', () => {
+  const currentSocket = createSocket();
+  const dispatched: Array<{ type: string; [key: string]: unknown }> = [];
+
+  const callbacks = createGatewaySocketCallbacks({
+    getSocket: () => currentSocket,
+    socketRef: { current: currentSocket },
+    isClosedByClient: () => false,
+    dispatch: (action) => {
+      dispatched.push(action);
+    },
+    reconnectAttemptRef: { current: 0 },
+    reconnectTimerRef: { current: null },
+    setSocketGeneration: () => {},
+  });
+
+  callbacks.onMessage({
+    type: 'channel.pending',
+    pendingChannel: { networkId: 'network-1', channel: '#help' },
+  });
+  callbacks.onMessage({
+    type: 'channel.pending.remove',
+    networkId: 'network-1',
+    channel: '#help',
+  });
+
+  assert.deepEqual(dispatched, [
+    {
+      type: 'add-pending-channel',
+      pendingChannel: { networkId: 'network-1', channel: '#help' },
+    },
+    {
+      type: 'remove-pending-channel',
+      networkId: 'network-1',
+      channel: '#help',
+    },
   ]);
 });

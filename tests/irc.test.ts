@@ -3548,7 +3548,7 @@ test('irc connection surfaces raw TOPIC payloads for unjoined channels', () => {
     )
   );
 });
-test('irc connection marks rejected joins for channel rollback', () => {
+test('irc connection routes rejected joins through the pending session target', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
   const connection = new IrcConnection(
@@ -3582,7 +3582,7 @@ test('irc connection marks rejected joins for channel rollback', () => {
     },
   } as unknown as net.Socket;
 
-  connection.join('#missing', '#chat', 'buffer-1');
+  connection.join('#missing', '#chat', { visiblePending: true });
   connection.consume(':irc.example 403 tester #missing :No such channel\r\n');
 
   assert.deepEqual(writes, ['JOIN #missing\r\n']);
@@ -3592,13 +3592,11 @@ test('irc connection marks rejected joins for channel rollback', () => {
         event.type === 'status'
         && event.target === '#chat'
         && String(event.message).includes('No such channel')
-        && event.failedChannelJoinTarget === '#missing'
-        && event.failedChannelJoinBufferId === 'buffer-1'
     )
   );
 });
 
-test('irc connection marks 437 rejected joins for channel rollback', () => {
+test('irc connection routes 437 rejected joins through the pending session target', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
   const connection = new IrcConnection(
@@ -3632,7 +3630,7 @@ test('irc connection marks 437 rejected joins for channel rollback', () => {
     },
   } as unknown as net.Socket;
 
-  connection.join('#missing', '#chat', 'buffer-437');
+  connection.join('#missing', '#chat', { visiblePending: true });
   connection.consume(':irc.example 437 tester #missing :Channel is temporarily unavailable\r\n');
 
   assert.deepEqual(writes, ['JOIN #missing\r\n']);
@@ -3642,8 +3640,6 @@ test('irc connection marks 437 rejected joins for channel rollback', () => {
         event.type === 'status'
         && event.target === '#chat'
         && String(event.message).includes('Channel is temporarily unavailable')
-        && event.failedChannelJoinTarget === '#missing'
-        && event.failedChannelJoinBufferId === 'buffer-437'
     )
   );
 });
@@ -3683,7 +3679,7 @@ test('irc connection keeps pending nick changes from stealing channel 437 replie
   } as unknown as net.Socket;
 
   connection.setNick('newnick', '#chat');
-  connection.join('#missing', '#chat', 'buffer-mixed-437');
+  connection.join('#missing', '#chat', { visiblePending: true });
   connection.consume(':irc.example 437 tester #missing :Channel is temporarily unavailable\r\n');
 
   assert.deepEqual(writes, ['NICK newnick\r\n', 'JOIN #missing\r\n']);
@@ -3693,8 +3689,6 @@ test('irc connection keeps pending nick changes from stealing channel 437 replie
         event.type === 'status'
         && event.target === '#chat'
         && String(event.message).includes('Channel is temporarily unavailable')
-        && event.failedChannelJoinTarget === '#missing'
-        && event.failedChannelJoinBufferId === 'buffer-mixed-437'
     )
   );
   assert.ok(
@@ -3740,7 +3734,7 @@ test('irc connection keeps channel 437 replies out of nick contexts regardless o
     },
   } as unknown as net.Socket;
 
-  connection.join('#missing', '#chat', 'buffer-437-after-nick');
+  connection.join('#missing', '#chat', { visiblePending: true });
   connection.setNick('newnick', '#chat');
   connection.consume(':irc.example 437 tester #missing :Channel is temporarily unavailable\r\n');
 
@@ -3751,8 +3745,6 @@ test('irc connection keeps channel 437 replies out of nick contexts regardless o
         event.type === 'status'
         && event.target === '#chat'
         && String(event.message).includes('Channel is temporarily unavailable')
-        && event.failedChannelJoinTarget === '#missing'
-        && event.failedChannelJoinBufferId === 'buffer-437-after-nick'
     )
   );
   assert.ok(
@@ -3819,8 +3811,6 @@ test('irc connection clears join rollback metadata after a successful self join'
       (event) =>
         event.type === 'status'
         && String(event.message).includes('Cannot join channel (+i)')
-        && event.failedChannelJoinTarget === undefined
-        && event.failedChannelJoinBufferId === undefined
     )
   );
 });
@@ -3881,8 +3871,6 @@ test('irc connection clears all pending join rollback metadata after duplicate s
       (event) =>
         event.type === 'status'
         && String(event.message).includes('Cannot join channel (+i)')
-        && event.failedChannelJoinTarget === undefined
-        && event.failedChannelJoinBufferId === undefined
     )
   );
 });

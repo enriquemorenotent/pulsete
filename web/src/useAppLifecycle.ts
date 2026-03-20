@@ -27,25 +27,6 @@ export function useAppLifecycle(params: LifecycleParams) {
   const [socketGeneration, setSocketGeneration] = useState(0);
 
   useEffect(() => {
-    let alive = true;
-    api
-      .snapshot()
-      .then((snapshot) => alive && params.dispatch({ type: 'snapshot-loaded', snapshot }))
-      .catch((error) => {
-        if (alive) {
-          params.dispatch({
-            type: 'set-banner',
-            banner: { kind: 'error', message: error instanceof Error ? error.message : 'Failed to load snapshot' },
-          });
-          params.dispatch({ type: 'load-failed' });
-        }
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  useEffect(() => {
     if (params.state.phase !== 'ready') {
       params.didAutoOpenManagerRef.current = false;
       params.setShowNetworkManager(false);
@@ -67,7 +48,7 @@ export function useAppLifecycle(params: LifecycleParams) {
   }, [params.state.banner]);
 
   useEffect(() => {
-    if (params.state.phase !== 'ready' || params.socketRef.current) {
+    if (params.socketRef.current) {
       return;
     }
     params.dispatch({ type: 'gateway-connecting' });
@@ -94,7 +75,7 @@ export function useAppLifecycle(params: LifecycleParams) {
       }
       socket.close();
     };
-  }, [params.state.phase, params.socketRef, socketGeneration]);
+  }, [params.socketRef, socketGeneration]);
 
   useEffect(() => {
     const unread = params.workspace.selectedBuffer?.unread ?? 0;
@@ -215,6 +196,12 @@ function handleServerMessage(message: ServerMessage, dispatch: (action: Action) 
   if (message.type === 'buffer.upsert') return void dispatch({ type: 'upsert-buffer', buffer: message.buffer });
   if (message.type === 'buffer.remove') return void dispatch({ type: 'remove-buffer', networkId: message.networkId, bufferId: message.bufferId });
   if (message.type === 'channel.snapshot') return void dispatch({ type: 'upsert-channel', channel: message.channel });
+  if (message.type === 'channel.pending') {
+    return void dispatch({ type: 'add-pending-channel', pendingChannel: message.pendingChannel });
+  }
+  if (message.type === 'channel.pending.remove') {
+    return void dispatch({ type: 'remove-pending-channel', networkId: message.networkId, channel: message.channel });
+  }
   if (message.type === 'channel.list.started') {
     return void dispatch({ type: 'channel-list-started', networkId: message.networkId, requestId: message.requestId });
   }

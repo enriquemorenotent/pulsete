@@ -1,17 +1,15 @@
 import type { SocketHandle } from './client.js';
-import type { Action } from './app-types.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
 
 type ComposerParams = {
   draft: string;
-  dispatch: (action: Action) => void;
   setDraft: (value: string) => void;
   socket: SocketHandle | null;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
   workspace: WorkspaceView;
-  onOpenChannel: (networkId: string, channel: string, sourceBufferId?: string) => Promise<void>;
+  onJoinChannel: (networkId: string, channel: string, sourceBufferId?: string) => Promise<void>;
   onOpenChannelList: (networkId: string) => Promise<void>;
   onOpenQuery: (networkId: string, nick: string) => Promise<void>;
 };
@@ -68,7 +66,7 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         params.updateBanner('error', 'Channel name must start with #, &, +, or !');
         return null;
       }
-      await params.onOpenChannel(selection.networkId, remainder, selection.id);
+      await params.onJoinChannel(selection.networkId, remainder, selection.id);
       break;
     case 'part': {
       const channel = remainder || selection.target;

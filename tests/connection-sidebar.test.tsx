@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ConnectionSidebar } from '../web/src/ConnectionSidebar.js';
-import type { BufferState, ChannelState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import type { NetworkRuntimeState } from '../web/src/workspace.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
@@ -47,14 +47,15 @@ test('offline connections keep channel and query rows visible and selectable', (
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
       buffers={[makeBuffer({ id: 'server-1' }), channel, query]}
-      channels={[] satisfies ChannelState[]}
+      pendingChannels={[]}
       networkStates={{ [network.id]: makeRuntime({ connected: false }) }}
-      selection={{ bufferId: 'server-1' }}
+      selection={{ kind: 'buffer', bufferId: 'server-1' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
       onSelectNetwork={() => undefined}
       onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
       onReconnectNetwork={() => undefined}
       onDisconnectNetwork={() => undefined}
       onCloseConnection={() => undefined}
@@ -77,7 +78,7 @@ test('friend rows expose online and offline cues', () => {
       friends={[friend]}
       friendPresence={{ [friend.id]: true }}
       buffers={[] satisfies BufferState[]}
-      channels={[] satisfies ChannelState[]}
+      pendingChannels={[]}
       networkStates={{}}
       selection={null}
       onAddFriend={async () => true}
@@ -85,6 +86,7 @@ test('friend rows expose online and offline cues', () => {
       onSelectFriend={async () => undefined}
       onSelectNetwork={() => undefined}
       onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
       onReconnectNetwork={() => undefined}
       onDisconnectNetwork={() => undefined}
       onCloseConnection={() => undefined}

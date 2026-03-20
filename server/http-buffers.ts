@@ -19,9 +19,8 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   if (channelMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(channelMatch[1]);
     const { channel, sourceBufferId } = readChannelTarget(await readJson(req));
-    const buffer = context.runtime.join(networkId, channel, sourceBufferId);
-    context.runtime.send({ type: 'buffer.upsert', buffer });
-    writeJson(res, 200, { buffer });
+    context.runtime.join(networkId, channel, sourceBufferId);
+    writeJson(res, 202, { ok: true });
     return true;
   }
 

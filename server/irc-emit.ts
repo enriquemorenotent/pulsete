@@ -11,9 +11,7 @@ export const emitStatus = (
   message: string,
   kind: 'notice' | 'error' | 'system' = 'system',
   target?: string,
-  requireBoundTarget = false,
-  failedChannelJoinTarget?: string,
-  failedChannelJoinBufferId?: string
+  requireBoundTarget = false
 ) => {
   emitEvent(connection, {
     type: 'status',
@@ -22,8 +20,6 @@ export const emitStatus = (
     kind,
     target,
     requireBoundTarget,
-    failedChannelJoinTarget,
-    failedChannelJoinBufferId,
   });
 };
 
@@ -89,5 +85,21 @@ export const emitChannel = (
     networkId: connection.profile.id,
     channel,
     ...details,
+  });
+};
+
+export const emitPendingChannel = (connection: IrcConnectionState, channel: string) => {
+  emitEvent(connection, {
+    type: 'channel-pending',
+    networkId: connection.profile.id,
+    channel,
+  });
+};
+
+export const emitPendingChannelRemoved = (connection: IrcConnectionState, channel: string) => {
+  emitEvent(connection, {
+    type: 'channel-pending-remove',
+    networkId: connection.profile.id,
+    channel,
   });
 };

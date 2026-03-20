@@ -925,17 +925,17 @@ test('http buffer mutation routes succeed and broadcast buffer changes', async (
     runtime.connect(network.id);
     await waitFor(() => ircReceived.includes('NICK tester'));
 
-    const channelMessagePromise = waitForWebSocketMessage(
+    const channelPendingPromise = waitForWebSocketMessage(
       socket,
-      (message) => message.type === 'buffer.upsert' && (message.buffer as { target?: string } | undefined)?.target === '#help',
-      'buffer.upsert #help'
+      (message) =>
+        message.type === 'channel.pending'
+        && (message.pendingChannel as { channel?: string } | undefined)?.channel === '#help',
+      'channel.pending #help'
     );
     const channelResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/channels`, { channel: '#help' });
-    assert.equal(channelResponse.status, 200);
-    const channelBuffer = channelResponse.json.buffer as { id: string; kind: string; target: string };
-    assert.equal(channelBuffer.kind, 'channel');
-    assert.equal(channelBuffer.target, '#help');
-    assert.equal(((await channelMessagePromise) as { buffer: { target: string } }).buffer.target, '#help');
+    assert.equal(channelResponse.status, 202);
+    assert.equal(channelResponse.json.ok, true);
+    assert.equal(((await channelPendingPromise) as { pendingChannel: { channel: string } }).pendingChannel.channel, '#help');
 
     const removeMessagePromise = waitForWebSocketMessageType(socket, 'buffer.remove');
     const deleteResponse = await requestJson(port, 'DELETE', `/api/buffers/${queryBuffer.id}`, {});
@@ -1472,11 +1472,13 @@ test('websocket join, message, and part commands reach the live IRC connection',
 
     const joinPromise = waitForWebSocketMessage(
       socket,
-      (message) => message.type === 'buffer.upsert' && (message.buffer as { target?: string } | undefined)?.target === '#help',
-      'websocket join buffer'
+      (message) =>
+        message.type === 'channel.pending'
+        && (message.pendingChannel as { channel?: string } | undefined)?.channel === '#help',
+      'websocket join pending channel'
     );
     socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: '#help' }));
-    assert.equal(((await joinPromise) as { buffer: { target: string } }).buffer.target, '#help');
+    assert.equal(((await joinPromise) as { pendingChannel: { channel: string } }).pendingChannel.channel, '#help');
     await waitFor(() => ircReceived.includes('JOIN #help'));
 
     const queryOpenPromise = waitForWebSocketMessage(

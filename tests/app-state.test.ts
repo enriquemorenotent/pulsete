@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AppSnapshot, BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
-import { initialState, reducer } from '../web/src/app-state.js';
+import type { AppSnapshot, BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../shared/protocol.js';
+import { initialChannelListState, initialState, reducer } from '../web/src/app-state.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { resolveManagedNetworkId } from '../web/src/network-manager-state.js';
 
@@ -35,24 +35,41 @@ const makeFriend = (overrides: Partial<FriendState> = {}): FriendState => ({
   nick: overrides.nick ?? 'alice',
 });
 
+const makePendingChannel = (overrides: Partial<PendingChannelState> = {}): PendingChannelState => ({
+  networkId: overrides.networkId ?? 'network-1',
+  channel: overrides.channel ?? '#help',
+});
+
+const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
+  id: overrides.id ?? 'message-1',
+  networkId: overrides.networkId ?? 'network-1',
+  target: overrides.target ?? '#help',
+  nick: overrides.nick ?? 'alice',
+  body: overrides.body ?? 'hello',
+  kind: overrides.kind ?? 'line',
+  self: overrides.self ?? false,
+  ts: overrides.ts ?? 1,
+});
+
 const emptySnapshot = (): AppSnapshot => ({
   networks: [],
   friends: [],
   friendPresence: {},
   buffers: [],
   channels: [],
+  pendingChannels: [],
   messages: [],
   networkStates: {},
 });
 
-test('snapshot-loaded enters the ready phase and clears any banner', () => {
+test('snapshot enters the ready phase and clears any banner', () => {
   const dirtyState = {
     ...initialState,
     banner: { kind: 'notice' as const, message: 'Stale banner' },
   };
 
   const nextState = reducer(dirtyState, {
-    type: 'snapshot-loaded',
+    type: 'snapshot',
     snapshot: emptySnapshot(),
   });
 
@@ -61,18 +78,19 @@ test('snapshot-loaded enters the ready phase and clears any banner', () => {
   assert.equal(nextState.selection, null);
 });
 
-test('snapshot-loaded selects the first instance server buffer', () => {
+test('snapshot selects the first instance server buffer', () => {
   const network = makeNetwork({ managerHidden: true });
   const buffer = makeBuffer({ networkId: network.id });
 
   const nextState = reducer(initialState, {
-    type: 'snapshot-loaded',
+    type: 'snapshot',
     snapshot: {
       networks: [network],
       friends: [],
       friendPresence: {},
       buffers: [buffer],
       channels: [],
+      pendingChannels: [],
       messages: [],
       networkStates: {
         [network.id]: {
@@ -85,13 +103,53 @@ test('snapshot-loaded selects the first instance server buffer', () => {
     },
   });
 
-  assert.deepEqual(nextState.selection, { bufferId: buffer.id });
+  assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: buffer.id });
   assert.deepEqual(nextState.networkStates[network.id], {
     connected: false,
     connecting: true,
     serverName: null,
     nick: network.nick,
   });
+});
+
+test('snapshot replaces stale runtime messages and invalid pending selections', () => {
+  const network = makeNetwork({ managerHidden: true });
+  const serverBuffer = makeBuffer({ id: 'server-1', networkId: network.id });
+  const staleMessage = makeMessage({ id: 'stale', body: 'stale', ts: 1 });
+  const freshMessage = makeMessage({ id: 'fresh', body: 'fresh', ts: 2 });
+  const state = {
+    ...initialState,
+    phase: 'ready' as const,
+    networks: [network],
+    buffers: [serverBuffer],
+    pendingChannels: [makePendingChannel()],
+    messages: [staleMessage],
+    selection: { kind: 'pending-channel' as const, networkId: network.id, channel: '#help' },
+  };
+
+  const nextState = reducer(state, {
+    type: 'snapshot',
+    snapshot: {
+      networks: [network],
+      friends: [],
+      friendPresence: {},
+      buffers: [serverBuffer],
+      channels: [],
+      pendingChannels: [],
+      messages: [freshMessage],
+      networkStates: {
+        [network.id]: {
+          connected: true,
+          connecting: false,
+          serverName: 'irc.libera.chat',
+          nick: 'tester',
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(nextState.messages, [freshMessage]);
+  assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: serverBuffer.id });
 });
 
 test('friend updates are sorted alphabetically in state', () => {
@@ -118,16 +176,22 @@ test('friend presence updates track online state by friend id', () => {
   assert.equal(friend.id in withoutFriend.friendPresence, false);
 });
 
-test('load-failed still exits the loading phase', () => {
-  const nextState = reducer(initialState, { type: 'load-failed' });
-
-  assert.equal(nextState.phase, 'ready');
-});
-
-test('gateway transitions reset transport-scoped state and clear the reconnect banner once ready', () => {
+test('gateway transitions reset transport state and clear the reconnect banner once ready', () => {
+  const network = makeNetwork({ id: 'network-1', managerHidden: true, nick: 'tester' });
   const loadingState = {
     ...initialState,
+    phase: 'ready' as const,
     gatewayStatus: 'connected' as const,
+    networks: [network],
+    pendingChannels: [makePendingChannel({ networkId: network.id })],
+    networkStates: {
+      [network.id]: {
+        connected: true,
+        connecting: false,
+        serverName: 'irc.libera.chat',
+        nick: 'tester_live',
+      },
+    },
     banner: { kind: 'error' as const, message: gatewayReconnectMessage },
     channelList: {
       open: true,
@@ -144,39 +208,58 @@ test('gateway transitions reset transport-scoped state and clear the reconnect b
   const connected = reducer(reconnecting, { type: 'gateway-connected' });
 
   assert.equal(disconnected.gatewayStatus, 'disconnected');
-  assert.deepEqual(disconnected.channelList, initialState.channelList);
+  assert.deepEqual(disconnected.channelList, initialChannelListState);
+  assert.deepEqual(disconnected.pendingChannels, []);
+  assert.deepEqual(disconnected.networkStates[network.id], {
+    connected: false,
+    connecting: false,
+    serverName: null,
+    nick: network.nick,
+  });
   assert.equal(reconnecting.gatewayStatus, 'connecting');
-  assert.deepEqual(reconnecting.channelList, initialState.channelList);
+  assert.deepEqual(reconnecting.channelList, initialChannelListState);
   assert.equal(connected.gatewayStatus, 'connected');
   assert.equal(connected.banner, null);
 });
 
-test('channel list accumulates live entries and ignores stale request ids', () => {
-  const opened = reducer(initialState, { type: 'open-channel-list', networkId: 'network-1' });
-  const started = reducer(opened, { type: 'channel-list-started', networkId: 'network-1', requestId: 'request-1' });
-  const withEntry = reducer(started, {
-    type: 'channel-list-entry',
-    networkId: 'network-1',
-    requestId: 'request-1',
-    entry: { name: '#help', users: 42, topic: 'Support' },
-  });
-  const ignored = reducer(withEntry, {
-    type: 'channel-list-entry',
-    networkId: 'network-1',
-    requestId: 'request-2',
-    entry: { name: '#ops', users: 12, topic: 'Ops' },
-  });
-  const completed = reducer(ignored, { type: 'channel-list-completed', networkId: 'network-1', requestId: 'request-1' });
+test('pending selections promote to the confirmed channel buffer', () => {
+  const state = {
+    ...initialState,
+    pendingChannels: [makePendingChannel({ networkId: 'network-1', channel: '#help' })],
+    selection: { kind: 'pending-channel' as const, networkId: 'network-1', channel: '#help' },
+  };
 
-  assert.equal(completed.channelList.open, true);
-  assert.equal(completed.channelList.status, 'ready');
-  assert.equal(completed.channelList.requestId, 'request-1');
-  assert.deepEqual(completed.channelList.entries, [{ name: '#help', users: 42, topic: 'Support' }]);
+  const nextState = reducer(state, {
+    type: 'upsert-buffer',
+    buffer: makeBuffer({ id: 'channel-1', kind: 'channel', target: '#help' }),
+  });
+
+  assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: 'channel-1' });
+});
+
+test('removing a pending channel falls back to the same network server buffer', () => {
+  const serverBuffer = makeBuffer({ id: 'server-1', kind: 'server' });
+  const state = {
+    ...initialState,
+    networks: [makeNetwork({ id: 'network-1', managerHidden: true })],
+    buffers: [serverBuffer],
+    pendingChannels: [makePendingChannel({ networkId: 'network-1', channel: '#help' })],
+    selection: { kind: 'pending-channel' as const, networkId: 'network-1', channel: '#help' },
+  };
+
+  const nextState = reducer(state, {
+    type: 'remove-pending-channel',
+    networkId: 'network-1',
+    channel: '#help',
+  });
+
+  assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: serverBuffer.id });
 });
 
 test('channel list resets when the gateway drops, its network disconnects, or the network is removed', () => {
   const connectedState = {
     ...initialState,
+    phase: 'ready' as const,
     networks: [makeNetwork({ id: 'network-1', managerHidden: true })],
     buffers: [makeBuffer({ networkId: 'network-1' })],
     channelList: {
@@ -199,9 +282,9 @@ test('channel list resets when the gateway drops, its network disconnects, or th
   });
   const removed = reducer(connectedState, { type: 'remove-network', networkId: 'network-1' });
 
-  assert.deepEqual(gatewayDisconnected.channelList, initialState.channelList);
-  assert.deepEqual(disconnected.channelList, initialState.channelList);
-  assert.deepEqual(removed.channelList, initialState.channelList);
+  assert.deepEqual(gatewayDisconnected.channelList, initialChannelListState);
+  assert.deepEqual(disconnected.channelList, initialChannelListState);
+  assert.deepEqual(removed.channelList, initialChannelListState);
 });
 
 test('resolveManagedNetworkId keeps a hidden selection while favorites are filtered', () => {

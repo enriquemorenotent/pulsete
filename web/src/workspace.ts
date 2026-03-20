@@ -1,4 +1,4 @@
-import type { AppSnapshot, BufferState, ChannelState, NetworkProfile } from '../../shared/protocol.js';
+import type { AppSnapshot, BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
 import { getConnectionInstances, getConnectionStatus } from './workspace-helpers.js';
 import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
 
@@ -9,15 +9,29 @@ type WorkspaceInput = {
   networks: NetworkProfile[];
   buffers: BufferState[];
   channels: ChannelState[];
+  pendingChannels: PendingChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
 };
 
 const selectionFor = (buffer: BufferState | null): SelectedBuffer | null =>
-  buffer ? { bufferId: buffer.id } : null;
+  buffer ? { kind: 'buffer', bufferId: buffer.id } : null;
 
 const findServerBuffer = (buffers: BufferState[], networkId: string) =>
   buffers.find((buffer) => buffer.networkId === networkId && buffer.kind === 'server') ?? null;
+
+const findSelectedBuffer = (buffers: BufferState[], selection: SelectedBuffer | null) =>
+  selection?.kind === 'buffer'
+    ? buffers.find((buffer) => buffer.id === selection.bufferId) ?? null
+    : null;
+
+const findSelectedPendingChannel = (pendingChannels: PendingChannelState[], selection: SelectedBuffer | null) =>
+  selection?.kind === 'pending-channel'
+    ? pendingChannels.find(
+        (pendingChannel) =>
+          pendingChannel.networkId === selection.networkId && pendingChannel.channel === selection.channel
+      ) ?? null
+    : null;
 
 const getReadOnlySubtitle = (status: 'offline' | 'connecting') =>
   status === 'offline'
@@ -55,6 +69,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime: null,
       selectedBuffer: null,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: 'No active connection',
       headerSubtitle: '',
       composerMode: 'hidden',
@@ -64,16 +79,20 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     };
   }
 
-  const selectedBuffer =
-    input.buffers.find((buffer) => buffer.id === input.selection?.bufferId) ?? null;
+  const selectedBuffer = findSelectedBuffer(input.buffers, input.selection);
+  const selectedPendingChannel = findSelectedPendingChannel(input.pendingChannels, input.selection);
   const selectedNetwork =
-    connectionInstances.find((network) => network.id === selectedBuffer?.networkId) ?? connectionInstances[0];
+    connectionInstances.find(
+      (network) => network.id === selectedBuffer?.networkId || network.id === selectedPendingChannel?.networkId
+    ) ?? connectionInstances[0];
   const selectedRuntime = input.networkStates[selectedNetwork.id] ?? null;
   const connectionStatus = getConnectionStatus(selectedRuntime);
   const serverBuffer = findServerBuffer(input.buffers, selectedNetwork.id);
   const activeBuffer =
     !selectedBuffer || selectedBuffer.networkId !== selectedNetwork.id ? serverBuffer : selectedBuffer;
   const activeSelection = selectionFor(activeBuffer);
+  const activePendingChannel =
+    selectedPendingChannel && selectedPendingChannel.networkId === selectedNetwork.id ? selectedPendingChannel : null;
 
   if (!serverBuffer) {
     return {
@@ -84,6 +103,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: null,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: 'No active connection',
       headerSubtitle: '',
       composerMode: 'hidden',
@@ -97,6 +117,30 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     ? input.channels.find((channel) => channel.id === activeBuffer.id) ?? null
     : null;
 
+  const connectedSubtitle = `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`;
+
+  if (activePendingChannel) {
+    return {
+      mode: 'channel-pending',
+      selection: input.selection,
+      connectionInstances,
+      selectedNetwork,
+      selectedRuntime,
+      selectedBuffer: null,
+      selectedChannel: null,
+      selectedPendingChannel: activePendingChannel,
+      headerTitle: activePendingChannel.channel,
+      headerSubtitle:
+        connectionStatus === 'connected'
+          ? connectedSubtitle
+          : 'Waiting for the connection to become available again.',
+      composerMode: 'hidden',
+      composerPlaceholder: '',
+      emptyBody: 'Joining channel. Wait for the server to confirm the membership.',
+      showNicklist: false,
+    };
+  }
+
   if (connectionStatus === 'offline' && activeBuffer?.kind === 'channel') {
     return {
       mode: 'channel-offline',
@@ -106,6 +150,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: activeBuffer,
       selectedChannel,
+      selectedPendingChannel: null,
       headerTitle: selectedChannel?.name ?? activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('offline'),
       composerMode: 'hidden',
@@ -124,6 +169,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: activeBuffer,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('offline'),
       composerMode: 'hidden',
@@ -142,6 +188,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: serverBuffer,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: '',
       headerSubtitle: '',
       composerMode: 'hidden',
@@ -160,6 +207,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: activeBuffer,
       selectedChannel,
+      selectedPendingChannel: null,
       headerTitle: selectedChannel?.name ?? activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('connecting'),
       composerMode: 'hidden',
@@ -178,6 +226,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: activeBuffer,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('connecting'),
       composerMode: 'hidden',
@@ -196,6 +245,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: serverBuffer,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: '',
       headerSubtitle: '',
       composerMode: 'hidden',
@@ -204,8 +254,6 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       showNicklist: false,
     };
   }
-
-  const connectedSubtitle = `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`;
 
   if (activeBuffer?.kind === 'channel' && selectedChannel) {
     return {
@@ -216,6 +264,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: activeBuffer,
       selectedChannel,
+      selectedPendingChannel: null,
       headerTitle: selectedChannel.name,
       headerSubtitle: connectedSubtitle,
       composerMode: 'normal',
@@ -234,6 +283,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       selectedRuntime,
       selectedBuffer: activeBuffer,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: activeBuffer.target,
       headerSubtitle: connectedSubtitle,
       composerMode: 'normal',
@@ -245,18 +295,19 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
 
   if (activeBuffer?.kind === 'channel') {
     return {
-      mode: 'channel-pending',
+      mode: 'channel-offline',
       selection: activeSelection,
       connectionInstances,
       selectedNetwork,
       selectedRuntime,
       selectedBuffer: activeBuffer,
       selectedChannel: null,
+      selectedPendingChannel: null,
       headerTitle: activeBuffer.target,
-      headerSubtitle: connectedSubtitle,
-      composerMode: 'normal',
-      composerPlaceholder: 'Type a message or /command',
-      emptyBody: 'Waiting for the server to open this channel buffer.',
+      headerSubtitle: 'Not joined. History stays available until you rejoin this channel.',
+      composerMode: 'hidden',
+      composerPlaceholder: '',
+      emptyBody: 'Use /join to re-enter this channel before sending messages.',
       showNicklist: false,
     };
   }
@@ -269,6 +320,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     selectedRuntime,
     selectedBuffer: serverBuffer,
     selectedChannel: null,
+    selectedPendingChannel: null,
     headerTitle: '',
     headerSubtitle: connectedSubtitle,
     composerMode: 'commands',

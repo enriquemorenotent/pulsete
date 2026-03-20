@@ -49,10 +49,7 @@ const handleClientMessage = (
         context.runtime.disconnect(message.networkId);
         return;
       case 'channel.join':
-        context.runtime.send({
-          type: 'buffer.upsert',
-          buffer: context.runtime.join(message.networkId, message.channel, message.sourceBufferId),
-        });
+        context.runtime.join(message.networkId, message.channel, message.sourceBufferId);
         return;
       case 'channel.part':
         context.runtime.part(message.networkId, message.channel, message.sourceBufferId);

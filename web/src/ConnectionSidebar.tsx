@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Hash, MessageSquareMore, Plus, PowerOff, RefreshCcw, X } from 'lucide-react';
-import type { BufferState, ChannelState, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import { Hash, LoaderCircle, MessageSquareMore, Plus, PowerOff, RefreshCcw, X } from 'lucide-react';
+import type { BufferState, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { AddFriendDialog } from './AddFriendDialog.js';
@@ -13,7 +13,7 @@ type ConnectionSidebarProps = {
   friends: FriendState[];
   friendPresence: Record<string, boolean>;
   buffers: BufferState[];
-  channels: ChannelState[];
+  pendingChannels: PendingChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
   onAddFriend: (nick: string) => Promise<boolean>;
@@ -21,6 +21,7 @@ type ConnectionSidebarProps = {
   onSelectFriend: (friend: FriendState) => Promise<void>;
   onSelectNetwork: (network: NetworkProfile) => void;
   onSelectBuffer: (buffer: BufferState) => void;
+  onSelectPendingChannel: (networkId: string, channel: string) => void;
   onReconnectNetwork: (network: NetworkProfile) => void;
   onDisconnectNetwork: (networkId: string) => void;
   onCloseConnection: (network: NetworkProfile) => void;
@@ -46,10 +47,11 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
             {props.networks.map((network, index) => {
               const runtime = props.networkStates[network.id] ?? null;
               const networkBuffers = props.buffers.filter((buffer) => buffer.networkId === network.id);
+              const pendingChannels = props.pendingChannels.filter((pendingChannel) => pendingChannel.networkId === network.id);
               const serverBuffer = networkBuffers.find((buffer) => buffer.kind === 'server') ?? null;
               const childBuffers = networkBuffers.filter((buffer) => buffer.kind !== 'server').sort(compareBuffers);
               const childBuffersDimmed = getConnectionStatus(runtime) !== 'connected';
-              const selectedServer = props.selection?.bufferId === serverBuffer?.id;
+              const selectedServer = props.selection?.kind === 'buffer' && props.selection.bufferId === serverBuffer?.id;
               const labelParts = getConnectionLabelParts(props.networks, network, runtime);
               const label = getConnectionLabel(props.networks, network, runtime);
 
@@ -97,7 +99,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                     </button>
                   </div>
 
-                  {childBuffers.length > 0 ? (
+                  {childBuffers.length > 0 || pendingChannels.length > 0 ? (
                     <div className="mt-1 space-y-0.5 pl-4">
                       {childBuffers.map((buffer) =>
                         buffer.kind === 'channel' ? (
@@ -105,7 +107,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                             key={buffer.id}
                             buffer={buffer}
                             dimmed={childBuffersDimmed}
-                            selected={props.selection?.bufferId === buffer.id}
+                            selected={props.selection?.kind === 'buffer' && props.selection.bufferId === buffer.id}
                             onSelect={() => props.onSelectBuffer(buffer)}
                             onClose={() => props.onCloseChannel(network.id, buffer.target)}
                           />
@@ -114,12 +116,24 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                             key={buffer.id}
                             buffer={buffer}
                             dimmed={childBuffersDimmed}
-                            selected={props.selection?.bufferId === buffer.id}
+                            selected={props.selection?.kind === 'buffer' && props.selection.bufferId === buffer.id}
                             onSelect={() => props.onSelectBuffer(buffer)}
                             onClose={() => props.onCloseBuffer(buffer)}
                           />
                         )
                       )}
+                      {pendingChannels.map((pendingChannel) => (
+                        <SidebarPendingChannelRow
+                          key={`${pendingChannel.networkId}:${pendingChannel.channel}`}
+                          pendingChannel={pendingChannel}
+                          selected={
+                            props.selection?.kind === 'pending-channel'
+                            && props.selection.networkId === pendingChannel.networkId
+                            && props.selection.channel === pendingChannel.channel
+                          }
+                          onSelect={() => props.onSelectPendingChannel(pendingChannel.networkId, pendingChannel.channel)}
+                        />
+                      ))}
                     </div>
                   ) : null}
                 </section>
@@ -265,6 +279,29 @@ function SidebarQueryRow(props: {
         aria-label={`Close ${props.buffer.target}`}
       >
         <X className="size-3" />
+      </button>
+    </div>
+  );
+}
+
+function SidebarPendingChannelRow(props: {
+  pendingChannel: PendingChannelState;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <div className={cn('flex items-stretch rounded-sm', props.selected && 'bg-accent')}>
+      <button
+        className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/70"
+        onClick={props.onSelect}
+        aria-label={`Open pending ${props.pendingChannel.channel}`}
+      >
+        <Hash className="size-3 shrink-0 text-muted-foreground" />
+        <span className="truncate text-[13px] text-foreground">{props.pendingChannel.channel}</span>
+        <span className="ml-auto inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          <LoaderCircle className="size-3 animate-spin" />
+          joining
+        </span>
       </button>
     </div>
   );

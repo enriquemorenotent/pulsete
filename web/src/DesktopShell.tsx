@@ -1,6 +1,6 @@
 import { useRef, type CSSProperties, type RefObject } from 'react';
 import { PanelsTopLeft } from 'lucide-react';
-import type { BufferState, ChannelState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
 import type { ChannelListState } from './app-types.js';
 import { Button } from '@/components/ui/button.js';
 import { ChatPane } from './ChatPane.js';
@@ -21,7 +21,7 @@ type DesktopShellProps = {
   friends: FriendState[];
   friendPresence: Record<string, boolean>;
   buffers: BufferState[];
-  channels: ChannelState[];
+  pendingChannels: PendingChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
   selectedMessages: ChatMessage[];
@@ -56,6 +56,7 @@ type DesktopShellProps = {
   onJoinChannelFromList: (channel: string) => Promise<void>;
   onSelectNetworkBuffer: (network: NetworkProfile) => void;
   onSelectTabBuffer: (buffer: BufferState) => void;
+  onSelectPendingChannel: (networkId: string, channel: string) => void;
   onSelectPrivateBuffer: (network: NetworkProfile, nick: string) => void;
   onOpenChannelList: () => void;
   onOpenMentionedChannel: (channel: string) => void;
@@ -113,7 +114,7 @@ export function DesktopShell(props: DesktopShellProps) {
               friends={props.friends}
               friendPresence={props.friendPresence}
               buffers={props.buffers}
-              channels={props.channels}
+              pendingChannels={props.pendingChannels}
               networkStates={props.networkStates}
               onAddFriend={props.onAddFriend}
               onRemoveFriend={props.onRemoveFriend}
@@ -121,6 +122,7 @@ export function DesktopShell(props: DesktopShellProps) {
               selection={props.selection}
               onSelectNetwork={props.onSelectNetworkBuffer}
               onSelectBuffer={props.onSelectTabBuffer}
+              onSelectPendingChannel={props.onSelectPendingChannel}
               onReconnectNetwork={props.onReconnectNetwork}
               onDisconnectNetwork={props.onDisconnectNetwork}
               onCloseConnection={props.onCloseConnection}

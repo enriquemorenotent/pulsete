@@ -352,6 +352,7 @@ export class Storage {
       friendPresence: {},
       buffers: this.listBuffers(),
       channels: this.listChannels(),
+      pendingChannels: [],
       messages: this.listRecentMessages(historyWindowLimit),
       networkStates: {},
     };

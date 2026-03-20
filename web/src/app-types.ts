@@ -7,6 +7,7 @@ import type {
   ChatMessage,
   FriendState,
   NetworkProfile,
+  PendingChannelState,
 } from '../../shared/protocol.js';
 import type { NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
@@ -31,6 +32,7 @@ export type State = {
   friendPresence: Record<string, boolean>;
   buffers: BufferState[];
   channels: ChannelState[];
+  pendingChannels: PendingChannelState[];
   messages: ChatMessage[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
@@ -41,7 +43,6 @@ export type State = {
 };
 
 export type Action =
-  | { type: 'snapshot-loaded'; snapshot: AppSnapshot }
   | { type: 'snapshot'; snapshot: AppSnapshot }
   | { type: 'gateway-connecting' }
   | { type: 'gateway-connected' }
@@ -52,14 +53,14 @@ export type Action =
   | { type: 'friend-presence'; friendId: string; online: boolean }
   | { type: 'upsert-buffer'; buffer: BufferState }
   | { type: 'remove-buffer'; bufferId: string; networkId: string }
-  | { type: 'load-failed' }
-  | { type: 'select'; selection: SelectedBuffer }
+  | { type: 'select'; selection: SelectedBuffer | null }
   | { type: 'append-message'; message: ChatMessage }
   | { type: 'append-messages'; messages: ChatMessage[] }
   | { type: 'upsert-channel'; channel: ChannelState }
   | { type: 'remove-channel'; channelId: string; networkId: string }
+  | { type: 'add-pending-channel'; pendingChannel: PendingChannelState }
+  | { type: 'remove-pending-channel'; networkId: string; channel: string }
   | { type: 'update-presence'; networkId: string; channel: string; users: ChannelUserState[] }
-  | { type: 'network-connecting'; networkId: string; nick: string }
   | { type: 'network-state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
   | { type: 'set-banner'; banner: Banner }
   | { type: 'open-channel-list'; networkId: string }

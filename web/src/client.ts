@@ -5,7 +5,6 @@ import {
   historyWindowLimit,
   type ClientMessage,
   type ServerMessage,
-  type AppSnapshot,
   type BufferState,
   type FriendState,
   type NetworkProfile,
@@ -30,7 +29,6 @@ const apiRequest = async <T>(path: string, init?: RequestInit) => {
 };
 
 export const api = {
-  snapshot: () => apiRequest<AppSnapshot>('/api/snapshot'),
   saveNetwork: (payload: Partial<NetworkProfile> & { clearPassword?: boolean; id?: string; password?: string }) =>
     apiRequest<{ network: NetworkProfile; serverBuffer: BufferState | null }>(
       payload.id ? `/api/networks/${payload.id}` : '/api/networks',
@@ -80,11 +78,6 @@ export const api = {
     apiRequest<{ buffer: BufferState }>(`/api/networks/${networkId}/queries`, {
       method: 'POST',
       body: JSON.stringify({ target }),
-    }),
-  openChannel: (networkId: string, channel: string, sourceBufferId?: string) =>
-    apiRequest<{ buffer: BufferState }>(`/api/networks/${networkId}/channels`, {
-      method: 'POST',
-      body: JSON.stringify({ channel, sourceBufferId }),
     }),
   closeBuffer: (bufferId: string) =>
     apiRequest<{ ok: boolean }>(`/api/buffers/${bufferId}`, {

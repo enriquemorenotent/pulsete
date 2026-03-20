@@ -31,6 +31,17 @@ export function handleRuntimeEvent(
     handleStatusEvent(runtime, event);
     return;
   }
+  if (event.type === 'channel-pending') {
+    runtime.send('local', {
+      type: 'channel.pending',
+      pendingChannel: { networkId: event.networkId, channel: event.channel },
+    });
+    return;
+  }
+  if (event.type === 'channel-pending-remove') {
+    runtime.send('local', { type: 'channel.pending.remove', networkId: event.networkId, channel: event.channel });
+    return;
+  }
   if (event.type === 'channel-list-entry') {
     runtime.send('local', {
       type: 'channel.list.entry',
@@ -58,6 +69,9 @@ export function handleRuntimeEvent(
     return;
   }
   if (event.type === 'friend-presence') {
+    return;
+  }
+  if (event.type !== 'channel') {
     return;
   }
   const channel = runtime.store.upsertChannel({
@@ -91,7 +105,6 @@ const handleStatusEvent = (
     ts: Date.now(),
   };
   appendMessage(runtime, message);
-  removeFailedChannelJoin(runtime, event);
   if (event.kind !== 'system') {
     runtime.send('local', {
       type: event.kind === 'error' ? 'error' : 'notice',
@@ -99,28 +112,6 @@ const handleStatusEvent = (
       message: event.message,
     });
   }
-};
-
-const removeFailedChannelJoin = (
-  runtime: RuntimeContext,
-  event: Extract<RuntimeEvent, { type: 'status' }>
-) => {
-  if (!event.failedChannelJoinTarget) {
-    return;
-  }
-  if (!event.failedChannelJoinBufferId) {
-    return;
-  }
-  const failedBuffer = runtime.store.getBuffer(event.failedChannelJoinBufferId);
-  if (
-    failedBuffer?.kind !== 'channel'
-    || failedBuffer.networkId !== event.networkId
-    || failedBuffer.target !== event.failedChannelJoinTarget
-  ) {
-    return;
-  }
-  runtime.store.removeBuffer(failedBuffer.id);
-  runtime.send('local', { type: 'buffer.remove', networkId: failedBuffer.networkId, bufferId: failedBuffer.id });
 };
 
 const handleMessageEvent = (

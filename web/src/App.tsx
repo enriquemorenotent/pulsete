@@ -30,10 +30,11 @@ function App() {
         networks: state.networks,
         buffers: state.buffers,
         channels: state.channels,
+        pendingChannels: state.pendingChannels,
         networkStates: state.networkStates,
         selection: state.selection,
       }),
-    [state.buffers, state.channels, state.networkStates, state.networks, state.selection]
+    [state.buffers, state.channels, state.networkStates, state.networks, state.pendingChannels, state.selection]
   );
 
   const managerNetworks = useMemo(
@@ -114,7 +115,7 @@ function App() {
         friends={state.friends}
         friendPresence={state.friendPresence}
         buffers={state.buffers}
-        channels={state.channels}
+        pendingChannels={state.pendingChannels}
         networkStates={state.networkStates}
         selection={workspace.selection}
         selectedMessages={selectedMessages}
@@ -151,6 +152,7 @@ function App() {
         onOpenChannelList={actions.openChannelList}
         onSelectNetworkBuffer={actions.selectNetworkBuffer}
         onSelectTabBuffer={actions.selectTabBuffer}
+        onSelectPendingChannel={actions.selectPendingTab}
         onSelectPrivateBuffer={actions.selectPrivateBuffer}
         onCloseChannel={actions.closeChannel}
         onCloseBuffer={actions.closeBuffer}

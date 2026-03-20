@@ -80,8 +80,10 @@ export class Runtime {
   snapshot(_legacyUserId: string): ReturnType<Storage['snapshot']>;
   snapshot(_legacyUserId?: string) {
     const snapshot = this.store.snapshot();
+    const pendingChannels = Array.from(this.connections.values()).flatMap((connection) => connection.listPendingChannels());
     return {
       ...snapshot,
+      pendingChannels,
       friendPresence: this.computeFriendPresence(snapshot.friends),
       networkStates: Object.fromEntries(
         snapshot.networks.map((network) => {
@@ -122,7 +124,7 @@ export class Runtime {
     this.channelListSubscribers.delete(networkId);
   }
 
-  join(networkId: string, channel: string, sourceBufferId?: string): BufferState;
+  join(networkId: string, channel: string, sourceBufferId?: string): void;
   join(networkId: string, channel: string, sourceBufferId?: string) {
     return this.joinInternal(networkId, channel, sourceBufferId);
   }
@@ -262,30 +264,12 @@ export class Runtime {
     const normalizedChannel = normalizeChannelTarget(channel);
     const existingBuffer = this.store.getBufferByTarget(networkId, normalizedChannel);
     const existingChannel = this.store.getChannelByName(networkId, normalizedChannel);
-    const existingChannelId = existingBuffer?.kind === 'channel' ? existingBuffer.id : existingChannel?.id;
-    const joinedChannelId = existingChannelId ?? randomUUID();
     const connection = this.ensureConnection(networkId);
-    const sent = connection.join(
+    connection.join(
       normalizedChannel,
       this.resolveReplyTarget(networkId, sourceBufferId),
-      existingChannelId ? undefined : joinedChannelId
+      { visiblePending: !(existingBuffer?.kind === 'channel' || existingChannel) }
     );
-    if (!sent) {
-      if (existingBuffer?.kind === 'channel') {
-        return existingBuffer;
-      }
-      return this.store.getServerBuffer(networkId)
-        ?? this.store.upsertBuffer({ networkId, kind: 'server', target: 'server' });
-    }
-    const channelState = this.store.upsertChannel({
-      id: joinedChannelId,
-      networkId,
-      name: normalizedChannel,
-      topic: existingChannel?.topic,
-      users: existingChannel?.users,
-      unread: existingBuffer?.kind === 'channel' ? existingBuffer.unread : undefined,
-    });
-    return this.store.getBuffer(channelState.id)!;
   }
 
   private closeBufferInternal(bufferId: string) {
