@@ -198,6 +198,7 @@ export class IrcConnection implements IrcConnectionState {
     const currentOnline = this.friendNicks.filter((nick) => this.onlineFriendKeys.has(normalizeIrcIdentifier(nick)));
     this.updateOnlineFriendKeys(currentOnline);
     if (!this.connected || !this.socket || !this.friendPresenceEnabled || this.friendNicks.length === 0) {
+      this.pendingFriendPresencePoll = null;
       this.clearFriendPresenceTimer();
       return;
     }
@@ -207,6 +208,7 @@ export class IrcConnection implements IrcConnectionState {
 
   refreshFriendPresence() {
     if (!this.connected || !this.socket || !this.friendPresenceEnabled || this.friendNicks.length === 0) {
+      this.pendingFriendPresencePoll = null;
       this.updateOnlineFriendKeys([]);
       this.clearFriendPresenceTimer();
       return;
@@ -292,11 +294,15 @@ export class IrcConnection implements IrcConnectionState {
 
   sendClientRaw(raw: string, sourceTarget = 'server') {
     const replyContext = createReplyContextFromRaw(sourceTarget, raw);
+    if (replyContext?.kind === 'raw-list' && this.isChannelListPending()) {
+      emitStatus(this, this.getChannelListRequestFailureMessage(), 'error', sourceTarget);
+      return false;
+    }
     return this.sendTrackedRaw(raw, sourceTarget, replyContext);
   }
 
   requestChannelList(requestId: string) {
-    if (!this.connected || this.drainingChannelListRequestId) {
+    if (!this.connected || this.drainingChannelListRequestId || this.hasPendingRawChannelList()) {
       return false;
     }
     if (this.activeChannelListRequestId) {
@@ -329,7 +335,7 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   getChannelListRequestFailureMessage() {
-    if (this.drainingChannelListRequestId) {
+    if (this.drainingChannelListRequestId || this.hasPendingRawChannelList() || this.activeChannelListRequestId) {
       return 'Waiting for the previous channel list response to finish';
     }
     return this.socket ? 'Still connecting to server' : 'Not connected';
@@ -515,6 +521,14 @@ export class IrcConnection implements IrcConnectionState {
     }
     this.onlineFriendKeys = nextKeys;
     emitFriendPresence(this, onlineNicks);
+  }
+
+  private hasPendingRawChannelList() {
+    return this.pendingReplyContexts.some((context) => context.kind === 'raw-list');
+  }
+
+  private isChannelListPending() {
+    return this.activeChannelListRequestId !== null || this.drainingChannelListRequestId !== null || this.hasPendingRawChannelList();
   }
 }
 

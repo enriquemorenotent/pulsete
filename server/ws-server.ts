@@ -23,11 +23,11 @@ export const attachWebSocketServer = (server: Server, context: HttpContext) => {
 
 export const initializeWebSocketConnection = (ws: WebSocket, context: HttpContext) => {
   ws.on('error', () => {});
+  ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
   context.runtime.attachSocket(ws);
   if (!sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }))) {
     return false;
   }
-  ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
   return true;
 };
 

@@ -624,6 +624,48 @@ test('irc connection ignores stale ISON replies when polls overlap', () => {
   assert.deepEqual(friendPresenceEvents[0]?.onlineNicks, ['Alice']);
 });
 
+test('irc connection ignores stale ISON replies after friend tracking is cleared', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  connection.setFriendNicks(['Alice']);
+  connection.setFriendNicks([]);
+  connection.consume(':irc.example 303 tester :Alice\r\n');
+
+  assert.deepEqual(writes, ['ISON Alice\r\n']);
+  assert.equal(events.some((event) => event.type === 'friend-presence'), false);
+});
+
 test('irc connection skips oversized friend nicks when polling ISON', () => {
   const writes: string[] = [];
   const connection = new IrcConnection(
@@ -2187,6 +2229,54 @@ test('irc connection streams dedicated LIST replies without generic status noise
   );
 });
 
+test('irc connection refuses a structured LIST while a raw LIST reply is still pending', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  connection.sendClientRaw('LIST', '#chat');
+
+  assert.equal(connection.requestChannelList('request-1'), false);
+  assert.equal(connection.activeChannelListRequestId, null);
+  assert.deepEqual(writes, ['LIST\r\n']);
+  assert.equal(connection.getChannelListRequestFailureMessage(), 'Waiting for the previous channel list response to finish');
+  assert.ok(!events.some((event) => event.type === 'channel-list-failed'));
+
+  connection.consume(':irc.example 323 tester :End of /LIST\r\n');
+
+  assert.equal(connection.requestChannelList('request-1'), true);
+  assert.deepEqual(writes, ['LIST\r\n', 'LIST\r\n']);
+});
+
 test('irc connection times out a stalled LIST, drains late numerics, and retries only after LIST ends', async () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
@@ -2414,6 +2504,54 @@ test('irc connection keeps raw LIST numerics on the server buffer', () => {
         event.type === 'status'
         && event.kind === 'system'
         && event.message === '* #help 42 Support room'
+    )
+  );
+});
+
+test('irc connection refuses a raw LIST while a structured LIST is active', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  assert.equal(connection.requestChannelList('request-1'), true);
+  assert.equal(connection.sendClientRaw('LIST', '#chat'), false);
+  assert.deepEqual(writes, ['LIST\r\n']);
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.kind === 'error'
+        && event.target === '#chat'
+        && event.message === 'Waiting for the previous channel list response to finish'
     )
   );
 });

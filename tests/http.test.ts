@@ -1245,6 +1245,46 @@ test('websocket initialization detaches the socket when the first snapshot send 
   assert.equal(getCloseCalls(), 1);
 });
 
+test('websocket initialization handles frames emitted during the first snapshot send', () => {
+  const calls: string[] = [];
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    send(payload: string): boolean;
+    close(): void;
+  };
+  socket.readyState = WebSocket.OPEN;
+  socket.send = (_payload: string) => {
+    socket.emit('message', JSON.stringify({ type: 'network.connect', networkId: 'net-1' }));
+    return true;
+  };
+  socket.close = () => {};
+  const context = {
+    runtime: {
+      attachSocket() {
+        calls.push('attach');
+      },
+      connect(networkId: string) {
+        calls.push(`connect:${networkId}`);
+      },
+      snapshot() {
+        calls.push('snapshot');
+        return {
+          networks: [],
+          friends: [],
+          friendPresence: {},
+          buffers: [],
+          channels: [],
+          messages: [],
+          networkStates: {},
+        };
+      },
+    },
+  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+
+  assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), true);
+  assert.deepEqual(calls, ['attach', 'snapshot', 'connect:net-1']);
+});
+
 test('websocket state replies detach the socket when a later send fails', () => {
   const { socket, getCloseCalls } = createBootstrapThenFailingWebSocket();
   const calls: string[] = [];
