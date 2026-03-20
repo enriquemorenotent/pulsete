@@ -76,7 +76,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
       && channelJoinFailureCommands.has(command)
       ? replyContext.failedJoinBufferId
       : undefined;
-    const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic';
+    const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic-query';
     const allowNamesPayload = replyContext?.kind === 'channel' && replyContext.operation === 'names';
     for (const lineText of formatServerNumeric(command, params, { allowTopicPayload, allowNamesPayload })) {
       emitStatus(
@@ -183,6 +183,9 @@ const handleNickConflict = (
     return false;
   }
   const replyContext = connection.consumeReplyContext(command, params, nick);
+  if (connection.connected && !replyContext && !connection.pendingNick) {
+    return true;
+  }
   const attemptedNick = replyContext?.kind === 'nick'
     ? replyContext.requestedNick
     : connection.pendingNick ?? connection.currentNick;
@@ -407,7 +410,7 @@ const handleNick = (connection: IrcConnectionState, params: string[], nick: stri
     }
   }
   if (isSameIrcIdentifier(nick, connection.currentNick) || isSameIrcIdentifier(nick, connection.pendingNick)) {
-    consumePendingNickReplyContext(connection, newNick);
+    consumePendingNickReplyContexts(connection, newNick);
     connection.currentNick = newNick;
     connection.pendingNick = getLatestPendingNick(connection.pendingReplyContexts);
     emitState(connection);
@@ -421,7 +424,7 @@ const handleTopic = (connection: IrcConnectionState, params: string[], nick: str
     return;
   }
   if (isSameIrcIdentifier(nick, connection.currentNick)) {
-    consumePendingChannelReplyContexts(connection, channel, 'topic');
+    consumePendingChannelReplyContexts(connection, channel, 'topic-set');
   }
   emitChannel(connection, channel, { topic: params[1] ?? '' });
   emitStatus(connection, `Topic for ${channel} changed`);
@@ -487,7 +490,7 @@ const resolveTrackedChannel = (connection: IrcConnectionState, channel: string) 
 const consumePendingChannelReplyContexts = (
   connection: IrcConnectionState,
   channel: string,
-  operation: 'join' | 'part' | 'topic' | 'names'
+  operation: 'join' | 'part' | 'topic-set' | 'topic-query' | 'names'
 ) => {
   const contexts = [];
   for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
@@ -503,17 +506,18 @@ const consumePendingChannelReplyContexts = (
   return contexts;
 };
 
-const consumePendingNickReplyContext = (
+const consumePendingNickReplyContexts = (
   connection: IrcConnectionState,
   requestedNick: string
 ) => {
-  for (let index = 0; index < connection.pendingReplyContexts.length; index += 1) {
+  const contexts = [];
+  for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
     const context = connection.pendingReplyContexts[index];
     if (context?.kind === 'nick' && isSameIrcIdentifier(context.requestedNick, requestedNick)) {
-      return connection.pendingReplyContexts.splice(index, 1)[0] ?? null;
+      contexts.push(connection.pendingReplyContexts.splice(index, 1)[0]!);
     }
   }
-  return null;
+  return contexts;
 };
 
 const modeFromToken = (token: string) => {

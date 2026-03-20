@@ -1,5 +1,7 @@
 import { isSameIrcIdentifier } from './irc-parser.js';
 
+type ChannelReplyOperation = 'join' | 'part' | 'topic-set' | 'topic-query' | 'names';
+
 export type PendingReplyContext =
   | { kind: 'message'; sourceTarget: string; target: string; expiresAt: number }
   | { kind: 'whois'; sourceTarget: string; nick: string; expiresAt: number }
@@ -8,7 +10,7 @@ export type PendingReplyContext =
       kind: 'channel';
       sourceTarget: string;
       channel: string;
-      operation: 'join' | 'part' | 'topic' | 'names';
+      operation: ChannelReplyOperation;
       failedJoinBufferId?: string;
       expiresAt: number;
     }
@@ -22,7 +24,8 @@ const whoisReplyNumerics = new Set(['301', '311', '312', '313', '317', '318', '3
 const nickReplyNumerics = new Set(['431', '432', '433', '436', '437']);
 const joinReplyNumerics = new Set(['403', '405', '437', '471', '472', '473', '474', '475', '476', '477']);
 const partReplyNumerics = new Set(['442']);
-const topicReplyNumerics = new Set(['331', '332', '442', '482']);
+const topicSetReplyNumerics = new Set(['442', '482']);
+const topicQueryReplyNumerics = new Set(['331', '332']);
 const namesReplyNumerics = new Set(['353', '366']);
 const rawModeTargetedReplyNumerics = new Set(['401', '402']);
 const rawModeUntargetedReplyNumerics = new Set(['221', '501', '502']);
@@ -31,7 +34,8 @@ const fifoReplyNumerics = new Set([
   ...whoisReplyNumerics,
   ...joinReplyNumerics,
   ...partReplyNumerics,
-  ...topicReplyNumerics,
+  ...topicSetReplyNumerics,
+  ...topicQueryReplyNumerics,
   ...namesReplyNumerics,
   ...rawModeReplyNumerics,
 ]);
@@ -65,7 +69,7 @@ export const createRawTargetReplyContext = (
 export const createChannelReplyContext = (
   sourceTarget: string,
   channel: string,
-  operation: 'join' | 'part' | 'topic' | 'names',
+  operation: ChannelReplyOperation,
   failedJoinBufferId?: string
 ): PendingReplyContext => ({
   kind: 'channel',
@@ -117,10 +121,13 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
     return createIsonReplyContext(sourceTarget);
   }
 
-  if ((command === 'JOIN' || command === 'PART' || command === 'TOPIC') && rest[0]) {
-    const operation = command.toLowerCase() as 'join' | 'part' | 'topic';
-    const target = command === 'TOPIC' && rest.length === 1 ? 'server' : sourceTarget;
-    return createChannelReplyContext(target, rest[0], operation);
+  if (command === 'TOPIC' && rest[0]) {
+    return createChannelReplyContext(rest.length === 1 ? 'server' : sourceTarget, rest[0], rest.length === 1 ? 'topic-query' : 'topic-set');
+  }
+
+  if ((command === 'JOIN' || command === 'PART') && rest[0]) {
+    const operation = command.toLowerCase() as 'join' | 'part';
+    return createChannelReplyContext(sourceTarget, rest[0], operation);
   }
 
   if (command === 'MODE' && rest[0] && !isChannelTarget(rest[0])) {
@@ -211,7 +218,12 @@ export const consumeReplyContext = (
     return null;
   }
   if (selected.resolution.done) {
-    contexts.splice(selected.index, 1);
+    const relatedIndexes = getResolvedReplyGroupIndexes(prioritized, selected);
+    if (relatedIndexes.length > 0) {
+      discardReplyIndexes(contexts, relatedIndexes);
+    } else {
+      contexts.splice(selected.index, 1);
+    }
   }
   return selected.context;
 };
@@ -294,8 +306,14 @@ const resolveChannelReplyContext = (
       : { matched: false, done: false };
   }
 
-  if (context.operation === 'topic') {
-    return topicReplyNumerics.has(command)
+  if (context.operation === 'topic-set') {
+    return topicSetReplyNumerics.has(command)
+      ? { matched: true, done: true }
+      : { matched: false, done: false };
+  }
+
+  if (context.operation === 'topic-query') {
+    return topicQueryReplyNumerics.has(command)
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
@@ -390,7 +408,50 @@ const discardReplyContexts = (
   const discardIndexes = matches
     .filter((match) => match.resolution.done)
     .map((match) => match.index)
-    .sort((left, right) => right - left);
+  discardReplyIndexes(contexts, discardIndexes);
+};
+
+const getResolvedReplyGroupIndexes = (
+  matches: Array<{ index: number; context: PendingReplyContext; resolution: ReplyResolution }>,
+  selected: { index: number; context: PendingReplyContext; resolution: ReplyResolution }
+) => {
+  if (selected.context.kind === 'channel') {
+    const selectedContext = selected.context;
+    return matches
+      .filter(
+        (match) =>
+          match.context.kind === 'channel'
+          && match.context.operation === selectedContext.operation
+          && isSameIrcIdentifier(match.context.channel, selectedContext.channel)
+      )
+      .map((match) => match.index);
+  }
+  if (selected.context.kind === 'nick') {
+    const selectedContext = selected.context;
+    return matches
+      .filter(
+        (match) =>
+          match.context.kind === 'nick'
+          && isSameIrcIdentifier(match.context.requestedNick, selectedContext.requestedNick)
+      )
+      .map((match) => match.index);
+  }
+  if (selected.context.kind === 'raw-target') {
+    const selectedContext = selected.context;
+    return matches
+      .filter(
+        (match) =>
+          match.context.kind === 'raw-target'
+          && match.context.command === selectedContext.command
+          && isSameIrcIdentifier(match.context.target, selectedContext.target)
+      )
+      .map((match) => match.index);
+  }
+  return [];
+};
+
+const discardReplyIndexes = (contexts: PendingReplyContext[], indexes: number[]) => {
+  const discardIndexes = indexes.slice().sort((left, right) => right - left);
   for (const index of discardIndexes) {
     contexts.splice(index, 1);
   }
