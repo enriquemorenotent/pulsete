@@ -802,6 +802,40 @@ test('profile updates retry a rejected connected nick change when the desired ni
   ]);
 });
 
+test('welcome clears stale pre-login nick reply contexts', () => {
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    { onEvent() {} }
+  );
+
+  connection.socket = createMockSocket(writes) as any;
+  connection.setNick('newnick', '#raw');
+
+  handleIrcLine(connection, ':irc.example 001 newnick :Welcome');
+  handleIrcLine(connection, ':irc.example 372 newnick :- motd line');
+
+  assert.equal(connection.currentNick, 'newnick');
+  assert.equal(connection.pendingNick, null);
+  assert.ok(connection.pendingReplyContexts.every((context) => context.kind !== 'nick'));
+  assert.deepEqual(writes, ['NICK newnick\r\n']);
+});
+
 test('updating a profile while connecting restarts the handshake with the new settings', () => {
   const originalConnect = net.connect;
   const firstWrites: string[] = [];

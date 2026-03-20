@@ -155,6 +155,7 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
   connection.serverName = nick ?? connection.profile.host;
   connection.reconnectAttempts = 0;
   connection.currentNick = params[0] ?? connection.profile.nick;
+  discardPendingNickReplyContexts(connection);
   connection.pendingNick = null;
   emitState(connection);
   for (const line of formatServerNumeric(command, params)) {
@@ -338,7 +339,7 @@ const handlePart = (connection: IrcConnectionState, params: string[], nick: stri
     return;
   }
   if (selfPart) {
-    consumePendingChannelReplyContexts(connection, channel, 'part');
+    discardPendingChannelReplyContexts(connection, channel);
   }
   const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
   if (selfPart) {
@@ -364,6 +365,9 @@ const handleKick = (connection: IrcConnectionState, params: string[], nick: stri
   }
   const selfKick = isSameIrcIdentifier(kickedNick, connection.currentNick);
   const reason = params[2] ?? 'kicked';
+  if (selfKick) {
+    discardPendingChannelReplyContexts(connection, channel);
+  }
   const users = selfKick ? [] : connection.updateChannelUsers(channel, kickedNick, false);
   if (selfKick) {
     connection.channelUsers.delete(channel);
@@ -506,6 +510,20 @@ const consumePendingChannelReplyContexts = (
   return contexts;
 };
 
+const discardPendingChannelReplyContexts = (
+  connection: IrcConnectionState,
+  channel: string
+) => {
+  const contexts = [];
+  for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
+    const context = connection.pendingReplyContexts[index];
+    if (context?.kind === 'channel' && isSameIrcIdentifier(context.channel, channel)) {
+      contexts.push(connection.pendingReplyContexts.splice(index, 1)[0]!);
+    }
+  }
+  return contexts;
+};
+
 const consumePendingNickReplyContexts = (
   connection: IrcConnectionState,
   requestedNick: string
@@ -514,6 +532,17 @@ const consumePendingNickReplyContexts = (
   for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
     const context = connection.pendingReplyContexts[index];
     if (context?.kind === 'nick' && isSameIrcIdentifier(context.requestedNick, requestedNick)) {
+      contexts.push(connection.pendingReplyContexts.splice(index, 1)[0]!);
+    }
+  }
+  return contexts;
+};
+
+const discardPendingNickReplyContexts = (connection: IrcConnectionState) => {
+  const contexts = [];
+  for (let index = connection.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
+    const context = connection.pendingReplyContexts[index];
+    if (context?.kind === 'nick') {
       contexts.push(connection.pendingReplyContexts.splice(index, 1)[0]!);
     }
   }
