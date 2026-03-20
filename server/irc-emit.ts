@@ -35,6 +35,14 @@ export const emitMessage = (connection: IrcConnectionState, message: MessageInpu
   emitEvent(connection, { type: 'message', message });
 };
 
+export const emitFriendPresence = (connection: IrcConnectionState, onlineNicks: string[]) => {
+  emitEvent(connection, {
+    type: 'friend-presence',
+    networkId: connection.profile.id,
+    onlineNicks,
+  });
+};
+
 export const emitChannel = (
   connection: IrcConnectionState,
   channel: string,

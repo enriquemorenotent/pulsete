@@ -118,6 +118,64 @@ const createRegisteredServer = async (received: string[]) => {
   };
 };
 
+const createIsonServer = async (received: string[], onlineNicks: string[]) => {
+  const sockets = new Set<net.Socket>();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let nick: string | null = null;
+    let sawUser = false;
+    socket.on('close', () => sockets.delete(socket));
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+        if (line.startsWith('NICK ')) {
+          nick = line.slice('NICK '.length).trim() || nick;
+        }
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+        if (nick && sawUser) {
+          socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
+          sawUser = false;
+        }
+        if (line.startsWith('ISON ') && nick) {
+          const tracked = line
+            .slice('ISON '.length)
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+          const visible = tracked.filter((candidate) => onlineNicks.includes(candidate));
+          socket.write(`:irc.example 303 ${nick} :${visible.join(' ')}\r\n`);
+        }
+        index = buffer.indexOf('\n');
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  return {
+    server,
+    port: address.port,
+    closeConnections() {
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+      sockets.clear();
+    },
+  };
+};
+
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}): NetworkInput => ({
   templateId: null,
   managerHidden: false,
@@ -247,6 +305,35 @@ test('runtime snapshot includes live network states after a refresh point', asyn
       serverName: 'irc.example',
       nick: 'tester',
     });
+  } finally {
+    runtime.disconnect(network.id);
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime snapshot includes aggregated friend presence from live connections', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const server = await createIsonServer(received, ['Alice']);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'Tester Example',
+  }));
+  const friend = runtime.upsertFriend('Alice');
+
+  try {
+    runtime.connect(network.id);
+    await waitFor(() => received.some((line) => line === 'ISON Alice'));
+    await waitFor(() => runtime.snapshot().friendPresence[friend.id] === true);
+
+    assert.equal(runtime.snapshot().friendPresence[friend.id], true);
   } finally {
     runtime.disconnect(network.id);
     server.closeConnections();

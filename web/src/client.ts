@@ -43,6 +43,11 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
+  duplicateNetwork: (networkId: string) =>
+    apiRequest<{ network: NetworkProfile; serverBuffer: BufferState | null }>(`/api/networks/${networkId}/duplicate`, {
+      method: 'POST',
+      body: '{}',
+    }),
   connectNetwork: (networkId: string) =>
     apiRequest<{ ok: boolean }>(`/api/networks/${networkId}/connect`, {
       method: 'POST',

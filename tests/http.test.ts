@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import WebSocket from 'ws';
-import { historyWindowLimit } from '../shared/protocol.js';
+import { historyWindowLimit, type NetworkProfile } from '../shared/protocol.js';
 import { createHttpHandler } from '../server/http-router.js';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
@@ -227,6 +227,7 @@ test('snapshot returns the local workspace without auth state', async () => {
     const snapshot = response.json as {
       networks: Array<{ nick: string; username: string; realName: string }>;
       friends: unknown[];
+      friendPresence: Record<string, boolean>;
       user?: unknown;
       bootstrapped?: unknown;
     };
@@ -235,6 +236,7 @@ test('snapshot returns the local workspace without auth state', async () => {
     assert.equal(snapshot.networks[0]?.username, 'pulsete');
     assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
     assert.deepEqual(snapshot.friends, []);
+    assert.deepEqual(snapshot.friendPresence, {});
     assert.equal('user' in snapshot, false);
     assert.equal('bootstrapped' in snapshot, false);
   } finally {
@@ -459,6 +461,62 @@ test('delete returns all deleted network ids when removing a template', async ()
   }
 });
 
+test('duplicate creates a new saved network and preserves encrypted passwords', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput({
+    name: 'PrimaryNet',
+    host: 'irc.primary.test',
+    port: 6697,
+    tls: true,
+    nick: 'sofia',
+    altNicks: ['sofia_', 'sofia__'],
+    username: 'sofia',
+    realName: 'Sofia',
+    password: 'hunter2',
+    favorite: true,
+    autoJoin: ['#help'],
+  }));
+  const server = createServer(createHttpHandler({ storage, runtime }));
+  attachWebSocketServer(server, { storage, runtime });
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+
+  try {
+    const updatePromise = waitForWebSocketMessageType(socket, 'network.upsert');
+    const response = await requestJson(port, 'POST', `/api/networks/${network.id}/duplicate`, {});
+    assert.equal(response.status, 200);
+
+    const duplicate = response.json.network as NetworkProfile;
+    assert.notEqual(duplicate.id, network.id);
+    assert.equal(duplicate.name, 'PrimaryNet copy');
+    assert.equal(duplicate.host, network.host);
+    assert.equal(duplicate.port, network.port);
+    assert.equal(duplicate.tls, network.tls);
+    assert.equal(duplicate.nick, network.nick);
+    assert.deepEqual(duplicate.altNicks, network.altNicks);
+    assert.equal(duplicate.username, network.username);
+    assert.equal(duplicate.realName, network.realName);
+    assert.equal(duplicate.favorite, true);
+    assert.deepEqual(duplicate.autoJoin, ['#help']);
+    assert.equal(duplicate.managerHidden, false);
+    assert.equal(duplicate.templateId, null);
+    assert.equal(duplicate.hasPassword, true);
+    assert.equal(storage.getRuntimeNetwork(duplicate.id)?.password, 'hunter2');
+
+    const update = await updatePromise as { network: NetworkProfile };
+    assert.equal(update.network.id, duplicate.id);
+
+    const secondResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/duplicate`, {});
+    assert.equal(secondResponse.status, 200);
+    assert.equal((secondResponse.json.network as NetworkProfile).name, 'PrimaryNet copy 2');
+  } finally {
+    await closeWebSocket(socket);
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('query routes validate missing networks and invalid targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -505,6 +563,7 @@ test('friend routes persist entries and broadcast updates without auth', async (
 
   try {
     const addMessagePromise = waitForWebSocketMessageType(socket, 'friend.upsert');
+    const presenceMessagePromise = waitForWebSocketMessageType(socket, 'friend.presence');
     const createResponse = await requestJson(port, 'POST', '/api/friends', { nick: 'Alice' });
     assert.equal(createResponse.status, 200);
     assert.equal((createResponse.json.friend as { nick: string }).nick, 'Alice');
@@ -513,6 +572,9 @@ test('friend routes persist entries and broadcast updates without auth', async (
       friend: { id: string; nick: string };
     };
     assert.equal(addMessage.friend.nick, 'Alice');
+    const presenceMessage = await presenceMessagePromise as { friendId: string; online: boolean };
+    assert.equal(presenceMessage.friendId, addMessage.friend.id);
+    assert.equal(presenceMessage.online, false);
 
     const duplicateResponse = await requestJson(port, 'POST', '/api/friends', { nick: 'alice' });
     assert.equal(duplicateResponse.status, 200);

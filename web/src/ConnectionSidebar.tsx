@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { Hash, MessageSquareMore, Plus, PowerOff, RefreshCcw, X } from 'lucide-react';
 import type { BufferState, ChannelState, FriendState, NetworkProfile } from '../../shared/protocol.js';
-import { Card } from '@/components/ui/card.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { AddFriendDialog } from './AddFriendDialog.js';
+import { SidebarWidget } from './SidebarWidget.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace.js';
 import { getConnectionLabel, getConnectionLabelParts, getConnectionStatus } from './workspace.js';
 
 type ConnectionSidebarProps = {
   networks: NetworkProfile[];
   friends: FriendState[];
+  friendPresence: Record<string, boolean>;
   buffers: BufferState[];
   channels: ChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
@@ -32,17 +33,17 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
   const [friendDraft, setFriendDraft] = useState('');
 
   return (
-    <aside className="h-full min-h-0 overflow-hidden">
-      <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+    <aside className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border bg-card">
         <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-2 p-2">
+          <div className="p-2">
             {props.networks.length === 0 ? (
-              <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
-                No open connections. Use Network List to connect.
+              <div className="px-2 py-2 text-[13px] text-muted-foreground">
+                No open connections. Use Network Manager to connect.
               </div>
             ) : null}
 
-            {props.networks.map((network) => {
+            {props.networks.map((network, index) => {
               const runtime = props.networkStates[network.id] ?? null;
               const networkBuffers = props.buffers.filter((buffer) => buffer.networkId === network.id);
               const serverBuffer = networkBuffers.find((buffer) => buffer.kind === 'server') ?? null;
@@ -53,10 +54,10 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
               const label = getConnectionLabel(props.networks, network, runtime);
 
               return (
-                <div key={network.id} className="border border-border bg-card">
-                  <div className={cn('flex items-stretch', selectedServer && 'bg-accent')}>
+                <section key={network.id} className={cn(index > 0 && 'mt-2 border-t border-border/70 pt-2')}>
+                  <div className={cn('flex items-stretch rounded-sm', selectedServer && 'bg-accent')}>
                     <button
-                      className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+                      className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left hover:bg-accent/70"
                       onClick={() => props.onSelectNetwork(network)}
                     >
                       <span className={cn('size-2 shrink-0 rounded-full', dotTone(runtime))} />
@@ -76,7 +77,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                       {serverBuffer && serverBuffer.unread > 0 ? <UnreadBadge unread={serverBuffer.unread} /> : null}
                     </button>
                     <button
-                      className="border-l border-border px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                      className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
                       onClick={() =>
                         runtime?.connected
                           ? props.onDisconnectNetwork(network.id)
@@ -88,7 +89,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                       {runtime?.connected ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
                     </button>
                     <button
-                      className="border-l border-border px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                      className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"
                       onClick={() => props.onCloseConnection(network)}
                       aria-label={`Close ${label}`}
                     >
@@ -97,7 +98,7 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                   </div>
 
                   {childBuffers.length > 0 ? (
-                    <div className="border-t border-border/80 bg-background/50">
+                    <div className="mt-1 space-y-0.5 pl-4">
                       {childBuffers.map((buffer) =>
                         buffer.kind === 'channel' ? (
                           <SidebarChannelRow
@@ -121,72 +122,82 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
                       )}
                     </div>
                   ) : null}
-                </div>
+                </section>
               );
             })}
           </div>
         </ScrollArea>
-        <div className="shrink-0 border-t border-border bg-background/70 p-2">
-          <section className="border border-border bg-card">
-            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <h2 className="text-sm font-semibold tracking-tight">Friends</h2>
-              <button
-                type="button"
-                className="text-muted-foreground transition-colors hover:text-foreground"
-                aria-label="Add friend"
-                onClick={() => setShowAddFriendDialog(true)}
-              >
-                <Plus className="size-4" />
-              </button>
+      </section>
+      <SidebarWidget
+        title="Friends"
+        className="shrink-0"
+        actions={
+          <button
+            type="button"
+            className="text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Add friend"
+            onClick={() => setShowAddFriendDialog(true)}
+          >
+            <Plus className="size-4" />
+          </button>
+        }
+      >
+        {props.friends.length === 0 ? (
+          <div className="px-3 py-2 text-[13px] text-muted-foreground">
+            No friends saved yet.
+          </div>
+        ) : (
+          <ScrollArea className="max-h-48">
+            <div className="space-y-0.5 px-2 pb-2">
+              {props.friends.map((friend) => (
+                <div key={friend.id} className="flex items-stretch rounded-sm">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
+                    onClick={() => void props.onSelectFriend(friend)}
+                    aria-label={`Open ${friend.nick} (${props.friendPresence[friend.id] ? 'online' : 'offline'})`}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'size-2 shrink-0 rounded-full',
+                        props.friendPresence[friend.id] ? 'bg-emerald-400' : 'bg-zinc-500/70'
+                      )}
+                    />
+                    <span className="truncate">{friend.nick}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    aria-label={`Remove ${friend.nick}`}
+                    onClick={() => void props.onRemoveFriend(friend.id)}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
             </div>
-            {props.friends.length === 0 ? (
-              <div className="px-3 py-2 text-[13px] text-muted-foreground">
-                No friends saved yet.
-              </div>
-            ) : (
-              <ScrollArea className="max-h-48">
-                {props.friends.map((friend) => (
-                  <div key={friend.id} className="flex items-stretch border-b border-border/70 last:border-b-0">
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center px-3 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
-                      onClick={() => void props.onSelectFriend(friend)}
-                    >
-                      <span className="truncate">{friend.nick}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                      aria-label={`Remove ${friend.nick}`}
-                      onClick={() => void props.onRemoveFriend(friend.id)}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </ScrollArea>
-            )}
-          </section>
-        </div>
-        <AddFriendDialog
-          open={showAddFriendDialog}
-          draft={friendDraft}
-          onDraftChange={setFriendDraft}
-          onOpenChange={(open) => {
-            setShowAddFriendDialog(open);
-            if (!open) {
-              setFriendDraft('');
-            }
-          }}
-          onSubmit={async () => {
-            const saved = await props.onAddFriend(friendDraft);
-            if (saved) {
-              setFriendDraft('');
-              setShowAddFriendDialog(false);
-            }
-          }}
-        />
-      </Card>
+          </ScrollArea>
+        )}
+      </SidebarWidget>
+      <AddFriendDialog
+        open={showAddFriendDialog}
+        draft={friendDraft}
+        onDraftChange={setFriendDraft}
+        onOpenChange={(open) => {
+          setShowAddFriendDialog(open);
+          if (!open) {
+            setFriendDraft('');
+          }
+        }}
+        onSubmit={async () => {
+          const saved = await props.onAddFriend(friendDraft);
+          if (saved) {
+            setFriendDraft('');
+            setShowAddFriendDialog(false);
+          }
+        }}
+      />
     </aside>
   );
 }
@@ -199,10 +210,10 @@ function SidebarChannelRow(props: {
   onClose: () => void;
 }) {
   return (
-    <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
+    <div className={cn('flex items-stretch rounded-sm', props.selected && 'bg-accent')}>
       <button
         className={cn(
-          'flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left',
+          'flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/70',
           props.dimmed && 'opacity-70'
         )}
         onClick={props.onSelect}
@@ -215,7 +226,7 @@ function SidebarChannelRow(props: {
         {props.buffer.unread > 0 ? <UnreadBadge unread={props.buffer.unread} /> : null}
       </button>
       <button
-        className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"
         onClick={props.onClose}
         aria-label={`Close ${props.buffer.target}`}
       >
@@ -233,10 +244,10 @@ function SidebarQueryRow(props: {
   onClose: () => void;
 }) {
   return (
-    <div className={cn('flex items-stretch border-b border-border/70 last:border-b-0', props.selected && 'bg-accent')}>
+    <div className={cn('flex items-stretch rounded-sm', props.selected && 'bg-accent')}>
       <button
         className={cn(
-          'flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left',
+          'flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/70',
           props.dimmed && 'opacity-70'
         )}
         onClick={props.onSelect}
@@ -249,7 +260,7 @@ function SidebarQueryRow(props: {
         {props.buffer.unread > 0 ? <UnreadBadge unread={props.buffer.unread} /> : null}
       </button>
       <button
-        className="border-l border-border/70 px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"
         onClick={props.onClose}
         aria-label={`Close ${props.buffer.target}`}
       >

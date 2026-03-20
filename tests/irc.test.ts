@@ -330,6 +330,101 @@ test('irc connection sends direct private messages to nick targets', async () =>
   server.close();
 });
 
+test('irc connection polls ISON and emits friend presence updates', async () => {
+  const received: string[] = [];
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+
+  const server = net.createServer((socket) => {
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let sawNick = false;
+    let sawUser = false;
+
+    const flush = () => {
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+
+        if (line.startsWith('NICK ')) {
+          sawNick = true;
+        }
+
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+
+        if (sawNick && sawUser) {
+          socket.write(':irc.example 001 tester :Welcome\r\n');
+          sawNick = false;
+          sawUser = false;
+        }
+
+        if (line === 'ISON Alice Bob') {
+          socket.write(':irc.example 303 tester :Alice\r\n');
+        }
+
+        index = buffer.indexOf('\n');
+      }
+    };
+
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      flush();
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: '127.0.0.1',
+      port: address.port,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.setFriendNicks(['Alice', 'Bob']);
+  connection.connect();
+
+  await waitFor(() => received.includes('ISON Alice Bob'));
+  await waitFor(
+    () =>
+      events.some(
+        (event) =>
+          event.type === 'friend-presence'
+          && Array.isArray(event.onlineNicks)
+          && event.onlineNicks.length === 1
+          && event.onlineNicks[0] === 'Alice'
+      )
+  );
+
+  connection.disconnect();
+  server.close();
+});
+
 test('irc connection routes whois replies to the originating buffer', async () => {
   const received: string[] = [];
   const events: Array<{ type: string; [key: string]: unknown }> = [];

@@ -52,6 +52,12 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
     writeJson(res, 200, { ok: true, deletedNetworkIds });
     return true;
   }
+  const duplicateMatch = pathname.match(/^\/api\/networks\/([^/]+)\/duplicate$/);
+  if (duplicateMatch && req.method === 'POST') {
+    const result = context.runtime.duplicateNetwork(decodeRouteParam(duplicateMatch[1]));
+    writeJson(res, 200, result);
+    return true;
+  }
   const connectMatch = pathname.match(/^\/api\/networks\/([^/]+)\/(connect|disconnect)$/);
   if (connectMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(connectMatch[1]);

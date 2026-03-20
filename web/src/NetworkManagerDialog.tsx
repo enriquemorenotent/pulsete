@@ -1,4 +1,4 @@
-import { Heart, PencilLine, Plus, Power, Trash2 } from 'lucide-react';
+import { Copy, Heart, PencilLine, Plus, Power, Trash2 } from 'lucide-react';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -26,6 +26,7 @@ type NetworkManagerDialogProps = {
   onClose: () => void;
   onAdd: () => void;
   onEdit: () => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   onConnect: () => void;
   onFavorite: () => void;
@@ -43,7 +44,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
             <div className="shrink-0 space-y-3 px-4 py-3">
               <DialogHeader className="space-y-1">
                 <div className="flex items-center justify-between gap-3">
-                  <DialogTitle>Network List</DialogTitle>
+                  <DialogTitle>Network Manager</DialogTitle>
                 </div>
               </DialogHeader>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -54,6 +55,10 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                 <Button variant="outline" size="sm" onClick={props.onEdit} disabled={!props.selected}>
                   <PencilLine />
                   Edit
+                </Button>
+                <Button variant="outline" size="sm" onClick={props.onDuplicate} disabled={!props.selected}>
+                  <Copy />
+                  Duplicate
                 </Button>
                 <Button variant="ghost" size="sm" onClick={props.onFavorite} disabled={!props.selected}>
                   <Heart />

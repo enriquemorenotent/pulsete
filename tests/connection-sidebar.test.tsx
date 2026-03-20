@@ -45,6 +45,7 @@ test('offline connections keep channel and query rows visible and selectable', (
     <ConnectionSidebar
       networks={[network]}
       friends={[] satisfies FriendState[]}
+      friendPresence={{}}
       buffers={[makeBuffer({ id: 'server-1' }), channel, query]}
       channels={[] satisfies ChannelState[]}
       networkStates={{ [network.id]: makeRuntime({ connected: false }) }}
@@ -66,4 +67,32 @@ test('offline connections keep channel and query rows visible and selectable', (
   assert.match(markup, /aria-label="Open alice"/);
   assert.doesNotMatch(markup, /aria-label="Open #help"[^>]*disabled/);
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
+});
+
+test('friend rows expose online and offline cues', () => {
+  const friend: FriendState = { id: 'friend-1', nick: 'Alice' };
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      networks={[] satisfies NetworkProfile[]}
+      friends={[friend]}
+      friendPresence={{ [friend.id]: true }}
+      buffers={[] satisfies BufferState[]}
+      channels={[] satisfies ChannelState[]}
+      networkStates={{}}
+      selection={null}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />
+  );
+
+  assert.match(markup, /aria-label="Open Alice \(online\)"/);
+  assert.match(markup, /bg-emerald-400/);
 });

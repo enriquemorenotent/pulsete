@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { MessageInput } from './storage.js';
 import { connectSocket } from './irc-connect.js';
-import { emitMessage, emitState, emitStatus } from './irc-emit.js';
+import { emitFriendPresence, emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import { findIrcCaseMatch, isSameIrcIdentifier } from './irc-parser.js';
+import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { removeChannelUser, upsertChannelUser } from '../shared/channel-users.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 import {
@@ -17,10 +18,16 @@ import {
 import type { Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
+const friendPresencePollMs = 60_000;
+
 export class IrcConnection implements IrcConnectionState {
   socket: IrcSocket | null = null;
   buffer = '';
   readonly channelUsers = new Map<string, ChannelUserState[]>();
+  private friendNicks: string[] = [];
+  private onlineFriendKeys = new Set<string>();
+  private friendPresenceTimer: ReturnType<typeof setInterval> | null = null;
+  private friendPresenceEnabled = true;
   manualDisconnect = false;
   reconnectAttempts = 0;
   reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -53,6 +60,7 @@ export class IrcConnection implements IrcConnectionState {
     if (resetRetryBudget) {
       this.reconnectAttempts = 0;
     }
+    this.friendPresenceEnabled = true;
     this.lastFailureMessage = null;
     connectSocket(this);
   }
@@ -156,11 +164,45 @@ export class IrcConnection implements IrcConnectionState {
     this.reconnectTimer = null;
   }
 
+  setFriendNicks(nicks: string[]) {
+    this.friendNicks = dedupeFriendNicks(nicks);
+    const currentOnline = this.friendNicks.filter((nick) => this.onlineFriendKeys.has(normalizeIrcIdentifier(nick)));
+    this.updateOnlineFriendKeys(currentOnline);
+    if (!this.connected || !this.socket || !this.friendPresenceEnabled || this.friendNicks.length === 0) {
+      this.clearFriendPresenceTimer();
+      return;
+    }
+    this.ensureFriendPresenceTimer();
+    this.pollFriendPresence();
+  }
+
+  refreshFriendPresence() {
+    if (!this.connected || !this.socket || !this.friendPresenceEnabled || this.friendNicks.length === 0) {
+      this.updateOnlineFriendKeys([]);
+      this.clearFriendPresenceTimer();
+      return;
+    }
+    this.ensureFriendPresenceTimer();
+    this.pollFriendPresence();
+  }
+
+  handleFriendPresence(onlineNicks: string[]) {
+    this.updateOnlineFriendKeys(onlineNicks);
+  }
+
+  disableFriendPresence() {
+    this.friendPresenceEnabled = false;
+    this.clearFriendPresenceTimer();
+    this.updateOnlineFriendKeys([]);
+  }
+
   resetTransientState() {
     this.buffer = '';
     this.channelUsers.clear();
     this.pendingNick = null;
     this.pendingReplyContexts = [];
+    this.clearFriendPresenceTimer();
+    this.updateOnlineFriendKeys([]);
   }
 
   queueReplyContext(context: PendingReplyContext) {
@@ -251,9 +293,59 @@ export class IrcConnection implements IrcConnectionState {
     }
     return true;
   }
+
+  private ensureFriendPresenceTimer() {
+    if (this.friendPresenceTimer) {
+      return;
+    }
+    const timer = setInterval(() => this.pollFriendPresence(), friendPresencePollMs);
+    timer.unref?.();
+    this.friendPresenceTimer = timer;
+  }
+
+  private clearFriendPresenceTimer() {
+    if (!this.friendPresenceTimer) {
+      return;
+    }
+    clearInterval(this.friendPresenceTimer);
+    this.friendPresenceTimer = null;
+  }
+
+  private pollFriendPresence() {
+    if (!this.connected || !this.socket || !this.friendPresenceEnabled || this.friendNicks.length === 0) {
+      return;
+    }
+    this.sendRaw(`ISON ${this.friendNicks.join(' ')}`);
+  }
+
+  private updateOnlineFriendKeys(onlineNicks: string[]) {
+    const nextKeys = new Set(onlineNicks.map(normalizeIrcIdentifier));
+    if (setsEqual(this.onlineFriendKeys, nextKeys)) {
+      return;
+    }
+    this.onlineFriendKeys = nextKeys;
+    emitFriendPresence(this, onlineNicks);
+  }
 }
 
 const createEmptyChannelUsers = (): ChannelUserState[] => [];
+
+const dedupeFriendNicks = (nicks: string[]) => {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const nick of nicks) {
+    const normalized = normalizeIrcIdentifier(nick);
+    if (seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    unique.push(nick);
+  }
+  return unique;
+};
+
+const setsEqual = (left: Set<string>, right: Set<string>) =>
+  left.size === right.size && Array.from(left).every((value) => right.has(value));
 
 const requiresSocketRestart = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
   current.host !== next.host || current.port !== next.port || current.tls !== next.tls;

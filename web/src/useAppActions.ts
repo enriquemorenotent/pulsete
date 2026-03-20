@@ -99,6 +99,17 @@ export function useAppActions(params: AppActionParams) {
     }
   };
 
+  const duplicateNetwork = async (network: NetworkProfile) => {
+    try {
+      const result = await api.duplicateNetwork(network.id);
+      params.dispatch({ type: 'upsert-network', network: result.network });
+      params.setManagedNetworkId(result.network.id);
+      params.updateBanner('notice', 'Network duplicated');
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to duplicate network');
+    }
+  };
+
   const connectNetwork = async (network: NetworkProfile) => {
     try {
       const instance = await api.saveNetwork(createConnectionInstancePayload(network));
@@ -321,6 +332,7 @@ export function useAppActions(params: AppActionParams) {
     closeChannel,
     closeConnection,
     connectNetwork,
+    duplicateNetwork,
     deleteNetwork,
     disconnectNetwork,
     openMentionedChannel,

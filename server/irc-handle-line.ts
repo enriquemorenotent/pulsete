@@ -35,6 +35,8 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     handleWelcome(connection, command, params, nick)
     || handleNickConflict(connection, command, params, nick)
     || handleNickRejected(connection, command, params, nick)
+    || handleFriendPresence(connection, command, params)
+    || handleUnsupportedIson(connection, command, params)
   ) {
     return;
   }
@@ -118,9 +120,30 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
       ? `* Connected securely via ${connection.socket.getProtocol() ?? 'TLS'} ${connection.socket.getCipher().standardName ?? connection.socket.getCipher().name}`
       : '* Connected via TCP'
   );
+  connection.refreshFriendPresence();
   for (const channel of connection.profile.autoJoin) {
     connection.join(channel);
   }
+  return true;
+};
+
+const handleFriendPresence = (connection: IrcConnectionState, command: string, params: string[]) => {
+  if (command !== '303') {
+    return false;
+  }
+  const onlineNicks = (params[1] ?? '')
+    .split(/\s+/)
+    .map((nick) => nick.trim())
+    .filter(Boolean);
+  connection.handleFriendPresence(onlineNicks);
+  return true;
+};
+
+const handleUnsupportedIson = (connection: IrcConnectionState, command: string, params: string[]) => {
+  if (command !== '421' || (params[1] ?? '').toUpperCase() !== 'ISON') {
+    return false;
+  }
+  connection.disableFriendPresence();
   return true;
 };
 

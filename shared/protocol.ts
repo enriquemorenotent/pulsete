@@ -86,6 +86,7 @@ const networkRuntimeStateSchema = z.object({
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
+  friendPresence: z.record(z.boolean()),
   buffers: z.array(bufferSchema),
   channels: z.array(channelSchema),
   messages: z.array(chatMessageSchema),
@@ -172,6 +173,11 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseClientSchema.extend({
     type: z.literal('friend.remove'),
     friendId: z.string(),
+  }),
+  baseClientSchema.extend({
+    type: z.literal('friend.presence'),
+    friendId: z.string(),
+    online: z.boolean(),
   }),
   baseClientSchema.extend({
     type: z.literal('buffer.upsert'),

@@ -16,6 +16,7 @@ export type State = {
   phase: 'loading' | 'ready';
   networks: NetworkProfile[];
   friends: FriendState[];
+  friendPresence: Record<string, boolean>;
   buffers: BufferState[];
   channels: ChannelState[];
   messages: ChatMessage[];
@@ -32,6 +33,7 @@ export type Action =
   | { type: 'upsert-network'; network: NetworkProfile }
   | { type: 'upsert-friend'; friend: FriendState }
   | { type: 'remove-friend'; friendId: string }
+  | { type: 'friend-presence'; friendId: string; online: boolean }
   | { type: 'upsert-buffer'; buffer: BufferState }
   | { type: 'remove-buffer'; bufferId: string; networkId: string }
   | { type: 'load-failed' }

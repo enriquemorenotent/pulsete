@@ -18,6 +18,7 @@ type DesktopShellProps = {
   workspace: WorkspaceView;
   connectionInstances: NetworkProfile[];
   friends: FriendState[];
+  friendPresence: Record<string, boolean>;
   buffers: BufferState[];
   channels: ChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
@@ -59,6 +60,7 @@ type DesktopShellProps = {
   onCloseNetworkManager: () => void;
   onOpenNewNetworkEditor: () => void;
   onOpenManagedNetworkEditor: () => void;
+  onDuplicateManagedNetwork: () => void;
   onDeleteManagedNetwork: () => void;
   onConnectManagedNetwork: () => void;
   onToggleFavoriteManagedNetwork: () => void;
@@ -88,7 +90,7 @@ export function DesktopShell(props: DesktopShellProps) {
           ) : null}
           <Button variant="outline" size="sm" onClick={props.onOpenNetworkManager}>
             <PanelsTopLeft />
-            Network List
+            Network Manager
           </Button>
         </div>
       </header>
@@ -103,6 +105,7 @@ export function DesktopShell(props: DesktopShellProps) {
             <ConnectionSidebar
               networks={props.connectionInstances}
               friends={props.friends}
+              friendPresence={props.friendPresence}
               buffers={props.buffers}
               channels={props.channels}
               networkStates={props.networkStates}
@@ -172,6 +175,7 @@ export function DesktopShell(props: DesktopShellProps) {
           onClose={props.onCloseNetworkManager}
           onAdd={props.onOpenNewNetworkEditor}
           onEdit={props.onOpenManagedNetworkEditor}
+          onDuplicate={props.onDuplicateManagedNetwork}
           onRemove={props.onDeleteManagedNetwork}
           onConnect={props.onConnectManagedNetwork}
           onFavorite={props.onToggleFavoriteManagedNetwork}

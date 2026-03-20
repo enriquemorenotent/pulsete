@@ -136,6 +136,9 @@ function handleServerMessage(message: ServerMessage, dispatch: (action: Action) 
   if (message.type === 'network.remove') return void dispatch({ type: 'remove-network', networkId: message.networkId });
   if (message.type === 'friend.upsert') return void dispatch({ type: 'upsert-friend', friend: message.friend });
   if (message.type === 'friend.remove') return void dispatch({ type: 'remove-friend', friendId: message.friendId });
+  if (message.type === 'friend.presence') {
+    return void dispatch({ type: 'friend-presence', friendId: message.friendId, online: message.online });
+  }
   if (message.type === 'buffer.upsert') return void dispatch({ type: 'upsert-buffer', buffer: message.buffer });
   if (message.type === 'buffer.remove') return void dispatch({ type: 'remove-buffer', networkId: message.networkId, bufferId: message.bufferId });
   if (message.type === 'channel.snapshot') return void dispatch({ type: 'upsert-channel', channel: message.channel });

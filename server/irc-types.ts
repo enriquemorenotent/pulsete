@@ -9,6 +9,7 @@ export type RuntimeEvent =
   | { type: 'state'; networkId: string; connected: boolean; serverName: string | null; nick: string }
   | { type: 'status'; networkId: string; message: string; kind: 'notice' | 'error' | 'system'; target?: string }
   | { type: 'message'; message: MessageInput }
+  | { type: 'friend-presence'; networkId: string; onlineNicks: string[] }
   | { type: 'channel'; networkId: string; channel: string; topic?: string; users?: ChannelUserState[] };
 
 export type Handlers = {
@@ -39,13 +40,17 @@ export type IrcConnectionState = {
   lastFailureMessage: string | null;
   pendingReplyContexts: PendingReplyContext[];
   clearReconnectTimer(): void;
+  disableFriendPresence(): void;
   connect(resetRetryBudget?: boolean): void;
   consume(chunk: string): void;
+  handleFriendPresence(onlineNicks: string[]): void;
   join(channel: string, sourceTarget?: string): void;
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
   queueReplyContext(context: PendingReplyContext): void;
+  refreshFriendPresence(): void;
   resetTransientState(): void;
   sendRaw(raw: string, statusTarget?: string): boolean;
   sendClientRaw(raw: string, sourceTarget?: string): boolean;
+  setFriendNicks(nicks: string[]): void;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
 };

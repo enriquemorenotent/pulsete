@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { encode, type BufferState, type FriendState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
+import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { badRequest, notFound } from './app-error.js';
 import { IrcConnection } from './irc.js';
 import {
@@ -21,6 +22,8 @@ export class Runtime {
   readonly store: Storage;
   private readonly sockets = new Set<WebSocket>();
   private readonly connections = new Map<string, IrcConnection>();
+  private readonly friendPresenceByNetwork = new Map<string, Set<string>>();
+  private readonly friendPresenceCache = new Map<string, boolean>();
   private closing = false;
 
   constructor(store: Storage) {
@@ -73,6 +76,7 @@ export class Runtime {
     const snapshot = this.store.snapshot();
     return {
       ...snapshot,
+      friendPresence: this.computeFriendPresence(snapshot.friends),
       networkStates: Object.fromEntries(
         snapshot.networks.map((network) => {
           const connection = this.connections.get(network.id);
@@ -127,6 +131,12 @@ export class Runtime {
   openQuery(_legacyUserId: string, networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
   openQuery(...args: [string, string] | [string, string, string]) {
     return this.openQueryInternal(...resolveArgsWithValue(args));
+  }
+
+  duplicateNetwork(networkId: string): SaveNetworkResult;
+  duplicateNetwork(_legacyUserId: string, networkId: string): SaveNetworkResult;
+  duplicateNetwork(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
+    return this.duplicateNetworkInternal(resolveNetworkId(networkIdOrLegacyUserId, maybeNetworkId));
   }
 
   upsertFriend(nick: string): FriendState;
@@ -186,8 +196,36 @@ export class Runtime {
     return this.store.upsertQuery(networkId, normalizeQueryTarget(target));
   }
 
+  private duplicateNetworkInternal(networkId: string) {
+    const network = this.getRequiredNetwork(networkId);
+    if (network.managerHidden) {
+      throw badRequest('Only saved networks can be duplicated');
+    }
+    const runtimeProfile = this.getRequiredRuntimeNetwork(networkId);
+    const duplicate = this.store.upsertNetwork({
+      templateId: null,
+      managerHidden: false,
+      name: createDuplicateNetworkName(network.name, this.store.listNetworks()),
+      host: network.host,
+      port: network.port,
+      tls: network.tls,
+      nick: network.nick,
+      altNicks: network.altNicks,
+      username: network.username,
+      realName: network.realName,
+      password: runtimeProfile.password,
+      favorite: network.favorite,
+      autoJoin: network.autoJoin,
+    });
+    this.send({ type: 'network.upsert', network: duplicate });
+    return { network: duplicate, serverBuffer: null };
+  }
+
   private upsertFriendInternal(nick: string) {
-    return this.store.upsertFriend({ nick: normalizeQueryTarget(nick) });
+    const friend = this.store.upsertFriend({ nick: normalizeQueryTarget(nick) });
+    this.syncFriendTracking();
+    this.broadcastFriendPresenceDiffs();
+    return friend;
   }
 
   private removeFriendInternal(friendId: string) {
@@ -195,6 +233,9 @@ export class Runtime {
     if (!friend) {
       throw notFound('Friend not found');
     }
+    this.friendPresenceCache.delete(friend.id);
+    this.syncFriendTracking();
+    this.broadcastFriendPresenceDiffs();
     return friend;
   }
 
@@ -308,7 +349,9 @@ export class Runtime {
     for (const targetId of deletedNetworkIds) {
       this.connections.get(targetId)?.disconnect();
       this.connections.delete(targetId);
+      this.friendPresenceByNetwork.delete(targetId);
     }
+    this.broadcastFriendPresenceDiffs();
     this.store.deleteNetwork(networkId);
     for (const targetId of deletedNetworkIds) {
       this.send({ type: 'network.remove', networkId: targetId });
@@ -323,13 +366,68 @@ export class Runtime {
       connection = new IrcConnection(profile, {
         onEvent: (event) => {
           if (!this.closing) {
+            if (event.type === 'friend-presence') {
+              this.handleFriendPresenceEvent(event.networkId, event.onlineNicks);
+              return;
+            }
             handleRuntimeEvent(this, event);
           }
         },
       });
+      connection.setFriendNicks(this.store.listFriends().map((friend) => friend.nick));
       this.connections.set(networkId, connection);
     }
     return connection;
+  }
+
+  private handleFriendPresenceEvent(networkId: string, onlineNicks: string[]) {
+    this.friendPresenceByNetwork.set(
+      networkId,
+      new Set(onlineNicks.map(normalizeIrcIdentifier))
+    );
+    this.broadcastFriendPresenceDiffs();
+  }
+
+  private syncFriendTracking() {
+    const friendNicks = this.store.listFriends().map((friend) => friend.nick);
+    for (const connection of this.connections.values()) {
+      connection.setFriendNicks(friendNicks);
+    }
+  }
+
+  private computeFriendPresence(friends: FriendState[]) {
+    return Object.fromEntries(
+      friends.map((friend) => [friend.id, this.isFriendOnline(friend.nick)])
+    );
+  }
+
+  private broadcastFriendPresenceDiffs() {
+    const friends = this.store.listFriends();
+    const nextPresence = this.computeFriendPresence(friends);
+    for (const friend of friends) {
+      const online = nextPresence[friend.id] ?? false;
+      if (this.friendPresenceCache.get(friend.id) === online) {
+        continue;
+      }
+      this.friendPresenceCache.set(friend.id, online);
+      this.send({ type: 'friend.presence', friendId: friend.id, online });
+    }
+    for (const friendId of Array.from(this.friendPresenceCache.keys())) {
+      if (friendId in nextPresence) {
+        continue;
+      }
+      this.friendPresenceCache.delete(friendId);
+    }
+  }
+
+  private isFriendOnline(nick: string) {
+    const normalized = normalizeIrcIdentifier(nick);
+    for (const onlineNicks of this.friendPresenceByNetwork.values()) {
+      if (onlineNicks.has(normalized)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private getRequiredRuntimeNetwork(networkId: string) {
@@ -404,6 +502,23 @@ export class Runtime {
 
 const resolveNetworkId = (networkIdOrLegacyUserId: string, maybeNetworkId?: string) =>
   maybeNetworkId ?? networkIdOrLegacyUserId;
+
+const createDuplicateNetworkName = (name: string, networks: NetworkProfile[]) => {
+  const existingNames = new Set(
+    networks
+      .filter((network) => !network.managerHidden)
+      .map((network) => network.name.toLocaleLowerCase())
+  );
+  const baseName = `${name} copy`;
+  if (!existingNames.has(baseName.toLocaleLowerCase())) {
+    return baseName;
+  }
+  let suffix = 2;
+  while (existingNames.has(`${baseName} ${suffix}`.toLocaleLowerCase())) {
+    suffix += 1;
+  }
+  return `${baseName} ${suffix}`;
+};
 
 const resolveArgsWithValue = (args: ArrayLike<unknown>) =>
   args.length === 3

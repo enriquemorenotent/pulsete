@@ -35,6 +35,9 @@ export function handleRuntimeEvent(
     handleMessageEvent(runtime, event);
     return;
   }
+  if (event.type === 'friend-presence') {
+    return;
+  }
   const channel = runtime.store.upsertChannel({
     id: runtime.store.getChannelByName(event.networkId, event.channel)?.id ?? randomUUID(),
     networkId: event.networkId,

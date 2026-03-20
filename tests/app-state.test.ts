@@ -37,6 +37,7 @@ const makeFriend = (overrides: Partial<FriendState> = {}): FriendState => ({
 const emptySnapshot = (): AppSnapshot => ({
   networks: [],
   friends: [],
+  friendPresence: {},
   buffers: [],
   channels: [],
   messages: [],
@@ -68,6 +69,7 @@ test('snapshot-loaded selects the first instance server buffer', () => {
     snapshot: {
       networks: [network],
       friends: [],
+      friendPresence: {},
       buffers: [buffer],
       channels: [],
       messages: [],
@@ -103,6 +105,16 @@ test('friend updates are sorted alphabetically in state', () => {
   });
 
   assert.deepEqual(nextState.friends.map((friend) => friend.nick), ['Alice', 'zoe']);
+});
+
+test('friend presence updates track online state by friend id', () => {
+  const friend = makeFriend({ id: 'friend-1', nick: 'Alice' });
+  const withFriend = reducer(initialState, { type: 'upsert-friend', friend });
+  const withPresence = reducer(withFriend, { type: 'friend-presence', friendId: friend.id, online: true });
+  const withoutFriend = reducer(withPresence, { type: 'remove-friend', friendId: friend.id });
+
+  assert.equal(withPresence.friendPresence[friend.id], true);
+  assert.equal(friend.id in withoutFriend.friendPresence, false);
 });
 
 test('load-failed still exits the loading phase', () => {

@@ -111,6 +111,7 @@ function App() {
         workspace={workspace}
         connectionInstances={workspace.connectionInstances}
         friends={state.friends}
+        friendPresence={state.friendPresence}
         buffers={state.buffers}
         channels={state.channels}
         networkStates={state.networkStates}
@@ -152,6 +153,7 @@ function App() {
         onCloseNetworkManager={() => setShowNetworkManager(false)}
         onOpenNewNetworkEditor={actions.openNewNetworkEditor}
         onOpenManagedNetworkEditor={() => visibleManagedNetwork && actions.openNetworkEditor(visibleManagedNetwork)}
+        onDuplicateManagedNetwork={() => visibleManagedNetwork && actions.duplicateNetwork(visibleManagedNetwork)}
         onDeleteManagedNetwork={() => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id)}
         onConnectManagedNetwork={() => visibleManagedNetwork && actions.connectNetwork(visibleManagedNetwork)}
         onToggleFavoriteManagedNetwork={() =>

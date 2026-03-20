@@ -333,6 +333,7 @@ export class Storage {
     return {
       networks,
       friends: this.listFriends(),
+      friendPresence: {},
       buffers: this.listBuffers(),
       channels: this.listChannels(),
       messages: this.listRecentMessages(historyWindowLimit),

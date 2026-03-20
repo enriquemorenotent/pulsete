@@ -59,7 +59,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       headerSubtitle: '',
       composerMode: 'hidden',
       composerPlaceholder: '',
-      emptyBody: 'Open Network List to create or connect an instance.',
+      emptyBody: 'Open Network Manager to create or connect an instance.',
       showNicklist: false,
     };
   }
@@ -88,7 +88,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       headerSubtitle: '',
       composerMode: 'hidden',
       composerPlaceholder: '',
-      emptyBody: 'Open Network List to create or connect an instance.',
+      emptyBody: 'Open Network Manager to create or connect an instance.',
       showNicklist: false,
     };
   }

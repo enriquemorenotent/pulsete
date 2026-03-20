@@ -9,6 +9,7 @@ export const initialState: State = {
   phase: 'loading',
   networks: [],
   friends: [],
+  friendPresence: {},
   buffers: [],
   channels: [],
   messages: [],
@@ -58,6 +59,7 @@ export const reducer = (state: State, action: Action): State => {
         phase: 'ready',
         networks: action.snapshot.networks,
         friends: sortFriends(action.snapshot.friends),
+        friendPresence: action.snapshot.friendPresence,
         buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
         messages: action.snapshot.messages,
@@ -71,6 +73,7 @@ export const reducer = (state: State, action: Action): State => {
         phase: 'ready',
         networks: action.snapshot.networks,
         friends: sortFriends(action.snapshot.friends),
+        friendPresence: action.snapshot.friendPresence,
         buffers: sortBuffers(action.snapshot.buffers),
         channels: action.snapshot.channels,
         messages: mergeMessages(state.messages, action.snapshot.messages),
@@ -90,7 +93,21 @@ export const reducer = (state: State, action: Action): State => {
       return { ...state, friends: sortFriends(friends) };
     }
     case 'remove-friend':
-      return { ...state, friends: state.friends.filter((friend) => friend.id !== action.friendId) };
+      return {
+        ...state,
+        friends: state.friends.filter((friend) => friend.id !== action.friendId),
+        friendPresence: Object.fromEntries(
+          Object.entries(state.friendPresence).filter(([friendId]) => friendId !== action.friendId)
+        ),
+      };
+    case 'friend-presence':
+      return {
+        ...state,
+        friendPresence: {
+          ...state.friendPresence,
+          [action.friendId]: action.online,
+        },
+      };
     case 'upsert-buffer': {
       const buffers = state.buffers.filter((buffer) => buffer.id !== action.buffer.id);
       buffers.push(action.buffer);
