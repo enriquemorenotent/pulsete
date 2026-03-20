@@ -289,6 +289,31 @@ const createFailingWebSocket = () => {
   };
 };
 
+const createBootstrapThenFailingWebSocket = () => {
+  let closeCalls = 0;
+  let sends = 0;
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    send(payload: string): boolean;
+    close(): void;
+  };
+  socket.readyState = WebSocket.OPEN;
+  socket.send = (_payload: string) => {
+    sends += 1;
+    if (sends > 1) {
+      throw new Error('boom');
+    }
+    return true;
+  };
+  socket.close = () => {
+    closeCalls += 1;
+  };
+  return {
+    socket: socket as unknown as WebSocket & EventEmitter,
+    getCloseCalls: () => closeCalls,
+  };
+};
+
 const createRegisteredServer = async (received: string[]) => {
   const sockets = new Set<net.Socket>();
   const server = net.createServer((socket) => {
@@ -1216,6 +1241,38 @@ test('websocket initialization detaches the socket when the first snapshot send 
   } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
 
   assert.equal(initializeWebSocketConnection(socket, context), false);
+  assert.deepEqual(calls, ['attach', 'detach']);
+  assert.equal(getCloseCalls(), 1);
+});
+
+test('websocket state replies detach the socket when a later send fails', () => {
+  const { socket, getCloseCalls } = createBootstrapThenFailingWebSocket();
+  const calls: string[] = [];
+  const context = {
+    runtime: {
+      attachSocket() {
+        calls.push('attach');
+      },
+      detachSocket() {
+        calls.push('detach');
+      },
+      snapshot() {
+        return {
+          networks: [],
+          friends: [],
+          friendPresence: {},
+          buffers: [],
+          channels: [],
+          messages: [],
+          networkStates: {},
+        };
+      },
+    },
+  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+
+  assert.equal(initializeWebSocketConnection(socket, context), true);
+  socket.emit('message', JSON.stringify({ type: 'state.request' }));
+
   assert.deepEqual(calls, ['attach', 'detach']);
   assert.equal(getCloseCalls(), 1);
 });
