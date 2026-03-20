@@ -53,6 +53,7 @@ function App() {
     () => buildManagedRuntime(visibleManagedNetwork, workspace.connectionInstances, state.networkStates),
     [state.networkStates, visibleManagedNetwork, workspace.connectionInstances]
   );
+  const channelListNetwork = state.networks.find((network) => network.id === state.channelList.networkId) ?? null;
 
   const selectedMessages = useMemo(() => {
     const selectedBuffer = workspace.selectedBuffer;
@@ -142,7 +143,12 @@ function App() {
         onAddFriend={actions.addFriend}
         onRemoveFriend={actions.removeFriend}
         onSelectFriend={actions.selectFriend}
+        channelList={state.channelList}
+        channelListNetwork={channelListNetwork}
+        onCloseChannelList={actions.closeChannelList}
+        onJoinChannelFromList={actions.joinChannelFromList}
         onOpenMentionedChannel={actions.openMentionedChannel}
+        onOpenChannelList={actions.openChannelList}
         onSelectNetworkBuffer={actions.selectNetworkBuffer}
         onSelectTabBuffer={actions.selectTabBuffer}
         onSelectPrivateBuffer={actions.selectPrivateBuffer}

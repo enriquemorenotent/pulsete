@@ -1,15 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import type { MessageInput } from './storage.js';
 import { connectSocket } from './irc-connect.js';
-import { emitFriendPresence, emitMessage, emitState, emitStatus } from './irc-emit.js';
+import { emitChannelListFailed, emitFriendPresence, emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import { findIrcCaseMatch, isSameIrcIdentifier } from './irc-parser.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { removeChannelUser, upsertChannelUser } from '../shared/channel-users.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelListEntry, ChannelUserState } from '../shared/protocol.js';
 import {
   consumeReplyTarget,
   consumeReplyContext,
+  createChannelListReplyContext,
   createFriendPresenceReplyContext,
   createChannelReplyContext,
   createMessageReplyContext,
@@ -23,6 +24,11 @@ import type { RuntimeNetworkProfile } from './storage-types.js';
 import { maxBufferedIrcBytes, maxIrcCommandBytes, maxIsonNickBytes } from './irc-limits.js';
 
 const friendPresencePollMs = 60_000;
+const defaultChannelListTimeoutMs = 60_000;
+
+type IrcConnectionOptions = {
+  channelListTimeoutMs?: number;
+};
 
 export class IrcConnection implements IrcConnectionState {
   socket: IrcSocket | null = null;
@@ -41,17 +47,24 @@ export class IrcConnection implements IrcConnectionState {
   connected = false;
   serverName: string | null = null;
   currentNick: string;
+  activeChannelListRequestId: string | null = null;
+  activeChannelListEntries: ChannelListEntry[] = [];
+  drainingChannelListRequestId: string | null = null;
   pendingNick: string | null = null;
   lastFailureMessage: string | null = null;
   pendingReplyContexts: PendingReplyContext[] = [];
   profile: RuntimeNetworkProfile;
+  private channelListTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly channelListTimeoutMs: number;
 
   constructor(
     profile: RuntimeNetworkProfile,
-    readonly handlers: Handlers
+    readonly handlers: Handlers,
+    options: IrcConnectionOptions = {}
   ) {
     this.profile = profile;
     this.currentNick = profile.nick;
+    this.channelListTimeoutMs = options.channelListTimeoutMs ?? defaultChannelListTimeoutMs;
   }
 
   get state() {
@@ -228,6 +241,8 @@ export class IrcConnection implements IrcConnectionState {
   resetTransientState() {
     this.buffer = '';
     this.channelUsers.clear();
+    this.abortActiveChannelList('Channel list request was interrupted');
+    this.drainingChannelListRequestId = null;
     this.pendingNick = null;
     this.pendingReplyContexts = [];
     this.pendingFriendPresencePoll = null;
@@ -273,6 +288,46 @@ export class IrcConnection implements IrcConnectionState {
     return this.sendTrackedRaw(raw, sourceTarget, replyContext);
   }
 
+  requestChannelList(requestId: string) {
+    if (!this.connected || this.drainingChannelListRequestId) {
+      return false;
+    }
+    if (this.activeChannelListRequestId) {
+      return false;
+    }
+    if (!this.sendTrackedRaw('LIST', 'server', createChannelListReplyContext(requestId))) {
+      return false;
+    }
+    this.activeChannelListRequestId = requestId;
+    this.activeChannelListEntries = [];
+    this.resetChannelListTimeout(requestId);
+    return true;
+  }
+
+  recordChannelListEntry(requestId: string, entry: ChannelListEntry) {
+    if (requestId !== this.activeChannelListRequestId) {
+      return;
+    }
+    this.activeChannelListEntries.push(entry);
+    this.resetChannelListTimeout(requestId);
+  }
+
+  finishChannelListRequest(requestId: string) {
+    if (requestId === this.activeChannelListRequestId) {
+      this.clearChannelListState();
+    }
+    if (requestId === this.drainingChannelListRequestId) {
+      this.drainingChannelListRequestId = null;
+    }
+  }
+
+  getChannelListRequestFailureMessage() {
+    if (this.drainingChannelListRequestId) {
+      return 'Waiting for the previous channel list response to finish';
+    }
+    return this.socket ? 'Still connecting to server' : 'Not connected';
+  }
+
   consume(chunk: string) {
     this.buffer += chunk;
     let newlineIndex = this.buffer.indexOf('\n');
@@ -298,6 +353,46 @@ export class IrcConnection implements IrcConnectionState {
     this.lastFailureMessage = 'Server sent an oversized IRC line';
     emitStatus(this, this.lastFailureMessage, 'error');
     this.socket?.destroy();
+  }
+
+  private resetChannelListTimeout(requestId: string) {
+    if (this.channelListTimeoutMs <= 0) {
+      return;
+    }
+    if (this.channelListTimeoutTimer) {
+      clearTimeout(this.channelListTimeoutTimer);
+    }
+    const timer = setTimeout(() => {
+      if (this.activeChannelListRequestId !== requestId) {
+        return;
+      }
+      this.clearChannelListState();
+      this.drainingChannelListRequestId = requestId;
+      emitChannelListFailed(this, requestId, 'Channel list request timed out');
+    }, this.channelListTimeoutMs);
+    timer.unref?.();
+    this.channelListTimeoutTimer = timer;
+  }
+
+  private clearChannelListState() {
+    if (this.channelListTimeoutTimer) {
+      clearTimeout(this.channelListTimeoutTimer);
+      this.channelListTimeoutTimer = null;
+    }
+    this.activeChannelListRequestId = null;
+    this.activeChannelListEntries = [];
+  }
+
+  private abortActiveChannelList(message: string) {
+    const requestId = this.activeChannelListRequestId;
+    if (!requestId) {
+      return;
+    }
+    this.pendingReplyContexts = this.pendingReplyContexts.filter(
+      (context) => context.kind !== 'channel-list' || context.requestId !== requestId
+    );
+    this.clearChannelListState();
+    emitChannelListFailed(this, requestId, message);
   }
 
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {

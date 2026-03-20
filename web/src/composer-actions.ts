@@ -12,6 +12,7 @@ type ComposerParams = {
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
   workspace: WorkspaceView;
   onOpenChannel: (networkId: string, channel: string, sourceBufferId?: string) => Promise<void>;
+  onOpenChannelList: (networkId: string) => Promise<void>;
   onOpenQuery: (networkId: string, nick: string) => Promise<void>;
 };
 
@@ -101,6 +102,13 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         return null;
       }
       await params.onOpenQuery(selection.networkId, remainder);
+      break;
+    case 'list':
+      if (remainder) {
+        params.updateBanner('error', 'Usage: /list');
+        return null;
+      }
+      await params.onOpenChannelList(selection.networkId);
       break;
     case 'whois':
       if (!remainder) {

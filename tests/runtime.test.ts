@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import net from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import WebSocket from 'ws';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
 import { Storage, type NetworkInput } from '../server/storage.js';
@@ -24,6 +26,25 @@ const waitFor = async (predicate: () => boolean, timeoutMs = 3000) => {
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   throw new Error('Timed out waiting for condition');
+};
+
+const createSocketRecorder = () => {
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    sent: ServerMessage[];
+    send(payload: string): void;
+    close(): void;
+  };
+  socket.readyState = WebSocket.OPEN;
+  socket.sent = [];
+  socket.send = (payload: string) => {
+    socket.sent.push(JSON.parse(payload) as ServerMessage);
+  };
+  socket.close = () => {
+    socket.readyState = WebSocket.CLOSED;
+    socket.emit('close');
+  };
+  return socket as unknown as WebSocket & { sent: ServerMessage[]; close(): void };
 };
 
 const createHandshakeServer = async (received: string[]) => {
@@ -109,6 +130,121 @@ const createRegisteredServer = async (received: string[]) => {
     hasConnections() {
       return sockets.size > 0;
     },
+    closeConnections() {
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+      sockets.clear();
+    },
+  };
+};
+
+const createListServer = async (received: string[]) => {
+  const sockets = new Set<net.Socket>();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let nick: string | null = null;
+    let sawUser = false;
+    socket.on('close', () => sockets.delete(socket));
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+        if (line.startsWith('NICK ')) {
+          nick = line.slice('NICK '.length).trim() || nick;
+        }
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+        if (nick && sawUser) {
+          socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
+          sawUser = false;
+        }
+        if (line === 'LIST' && nick) {
+          socket.write(`:irc.example 321 ${nick} Channel :Users Name\r\n`);
+          socket.write(`:irc.example 322 ${nick} #help 42 :Support room\r\n`);
+          socket.write(`:irc.example 322 ${nick} #ops 7 :Operators\r\n`);
+          socket.write(`:irc.example 323 ${nick} :End of /LIST\r\n`);
+        }
+        index = buffer.indexOf('\n');
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  return {
+    server,
+    port: address.port,
+    closeConnections() {
+      for (const socket of sockets) {
+        socket.destroy();
+      }
+      sockets.clear();
+    },
+  };
+};
+
+const createStreamingListServer = async (received: string[], trailingDelayMs = 100) => {
+  const sockets = new Set<net.Socket>();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let nick: string | null = null;
+    let sawUser = false;
+    socket.on('close', () => sockets.delete(socket));
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+        if (line.startsWith('NICK ')) {
+          nick = line.slice('NICK '.length).trim() || nick;
+        }
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+        if (nick && sawUser) {
+          socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
+          sawUser = false;
+        }
+        if (line === 'LIST' && nick) {
+          socket.write(`:irc.example 321 ${nick} Channel :Users Name\r\n`);
+          socket.write(`:irc.example 322 ${nick} #help 42 :Support room\r\n`);
+          setTimeout(() => {
+            if (socket.destroyed) {
+              return;
+            }
+            socket.write(`:irc.example 322 ${nick} #ops 7 :Operators\r\n`);
+            socket.write(`:irc.example 323 ${nick} :End of /LIST\r\n`);
+          }, trailingDelayMs).unref?.();
+        }
+        index = buffer.indexOf('\n');
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  return {
+    server,
+    port: address.port,
     closeConnections() {
       for (const socket of sockets) {
         socket.destroy();
@@ -697,6 +833,369 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
   }
 });
 
+test('runtime streams structured channel list events from IRC LIST', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createListServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const socket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(socket);
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const requestId = runtime.requestChannelList(network.id, socket);
+
+    await waitFor(() => received.includes('LIST'));
+    await waitFor(() => socket.sent.some((message) => message.type === 'channel.list.completed' && message.requestId === requestId));
+
+    assert.ok(socket.sent.some((message) => message.type === 'channel.list.started' && message.requestId === requestId));
+    assert.deepEqual(
+      socket.sent
+        .filter((message): message is Extract<ServerMessage, { type: 'channel.list.entry' }> => message.type === 'channel.list.entry')
+        .map((message) => message.entry),
+      [
+        { name: '#help', users: 42, topic: 'Support room' },
+        { name: '#ops', users: 7, topic: 'Operators' },
+      ]
+    );
+  } finally {
+    runtime.disconnect(network.id);
+    listServer.closeConnections();
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime replays active LIST entries to a later requester without sending LIST twice', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createStreamingListServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const firstSocket = createSocketRecorder();
+  const secondSocket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(firstSocket);
+    runtime.attachSocket(secondSocket);
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const requestId = runtime.requestChannelList(network.id, firstSocket);
+    await waitFor(() =>
+      firstSocket.sent.some(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      )
+    );
+
+    const replayedRequestId = runtime.requestChannelList(network.id, secondSocket);
+    assert.equal(replayedRequestId, requestId);
+    await waitFor(() =>
+      secondSocket.sent.some(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      )
+    );
+    await waitFor(() =>
+      secondSocket.sent.some(
+        (message) =>
+          message.type === 'channel.list.completed'
+          && message.requestId === requestId
+      )
+    );
+
+    assert.equal(received.filter((line) => line === 'LIST').length, 1);
+    assert.equal(
+      firstSocket.sent.filter(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      ).length,
+      1
+    );
+    assert.deepEqual(
+      secondSocket.sent
+        .filter((message): message is Extract<ServerMessage, { type: 'channel.list.entry' }> => message.type === 'channel.list.entry')
+        .map((message) => message.entry),
+      [
+        { name: '#help', users: 42, topic: 'Support room' },
+        { name: '#ops', users: 7, topic: 'Operators' },
+      ]
+    );
+  } finally {
+    runtime.disconnect(network.id);
+    listServer.closeConnections();
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime does not replay active LIST entries twice to the same requester', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createStreamingListServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const socket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(socket);
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const requestId = runtime.requestChannelList(network.id, socket);
+    await waitFor(() =>
+      socket.sent.some(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      )
+    );
+
+    const repeatedRequestId = runtime.requestChannelList(network.id, socket);
+    assert.equal(repeatedRequestId, requestId);
+    await waitFor(() =>
+      socket.sent.some(
+        (message) =>
+          message.type === 'channel.list.completed'
+          && message.requestId === requestId
+      )
+    );
+
+    assert.equal(received.filter((line) => line === 'LIST').length, 1);
+    assert.equal(
+      socket.sent.filter(
+        (message) =>
+          message.type === 'channel.list.started'
+          && message.requestId === requestId
+      ).length,
+      1
+    );
+    assert.equal(
+      socket.sent.filter(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      ).length,
+      1
+    );
+    assert.equal(
+      socket.sent.filter(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#ops'
+      ).length,
+      1
+    );
+  } finally {
+    runtime.disconnect(network.id);
+    listServer.closeConnections();
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime drops channel-list events after the requester disconnects mid-LIST', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createStreamingListServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const requesterSocket = createSocketRecorder();
+  const observerSocket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(requesterSocket);
+    runtime.attachSocket(observerSocket);
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const requestId = runtime.requestChannelList(network.id, requesterSocket);
+    await waitFor(() =>
+      requesterSocket.sent.some(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      )
+    );
+
+    requesterSocket.close();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    assert.deepEqual(
+      observerSocket.sent.filter((message) => message.type.startsWith('channel.list')),
+      []
+    );
+  } finally {
+    runtime.disconnect(network.id);
+    listServer.closeConnections();
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime reports a failed channel-list request when the network disconnects mid-LIST', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createStreamingListServer(received, 500);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const socket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(socket);
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const requestId = runtime.requestChannelList(network.id, socket);
+    await waitFor(() =>
+      socket.sent.some(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      )
+    );
+
+    listServer.closeConnections();
+
+    await waitFor(() =>
+      socket.sent.some(
+        (message) =>
+          message.type === 'channel.list.failed'
+          && message.requestId === requestId
+          && message.message === 'Channel list request was interrupted'
+      )
+    );
+  } finally {
+    runtime.disconnect(network.id);
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime reports a failed channel-list request when disconnect is requested mid-LIST', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createStreamingListServer(received, 500);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const socket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(socket);
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const requestId = runtime.requestChannelList(network.id, socket);
+    await waitFor(() =>
+      socket.sent.some(
+        (message) =>
+          message.type === 'channel.list.entry'
+          && message.requestId === requestId
+          && message.entry.name === '#help'
+      )
+    );
+
+    runtime.disconnect(network.id);
+
+    await waitFor(() =>
+      socket.sent.some(
+        (message) =>
+          message.type === 'channel.list.failed'
+          && message.requestId === requestId
+          && message.message === 'Channel list request was interrupted'
+      )
+    );
+  } finally {
+    listServer.closeConnections();
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime removes channel-list subscribers after a request completes', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createListServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const firstSocket = createSocketRecorder();
+  const secondSocket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(firstSocket);
+    runtime.attachSocket(secondSocket);
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const firstRequestId = runtime.requestChannelList(network.id, firstSocket);
+    await waitFor(() =>
+      firstSocket.sent.some(
+        (message) =>
+          message.type === 'channel.list.completed'
+          && message.requestId === firstRequestId
+      )
+    );
+
+    firstSocket.sent.length = 0;
+
+    const secondRequestId = runtime.requestChannelList(network.id, secondSocket);
+    await waitFor(() =>
+      secondSocket.sent.some(
+        (message) =>
+          message.type === 'channel.list.completed'
+          && message.requestId === secondRequestId
+      )
+    );
+
+    assert.notEqual(secondRequestId, firstRequestId);
+    assert.deepEqual(
+      firstSocket.sent.filter((message) => message.type.startsWith('channel.list')),
+      []
+    );
+  } finally {
+    runtime.disconnect(network.id);
+    listServer.closeConnections();
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('runtime rejects oversized outbound lines without writing them to the socket', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -793,6 +1292,119 @@ test('runtime rejects client commands while the network is still connecting', as
   } finally {
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime reports a failed channel-list request while disconnected', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+  const socket = createSocketRecorder();
+
+  runtime.attachSocket(socket);
+
+  const requestId = runtime.requestChannelList(network.id, socket);
+
+  assert.equal(typeof requestId, 'string');
+  assert.deepEqual(socket.sent, [
+    {
+      type: 'channel.list.failed',
+      networkId: network.id,
+      requestId,
+      message: 'Not connected',
+    },
+  ]);
+});
+
+test('runtime reports when a timed-out LIST is still draining late server replies', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const network = storage.upsertNetwork(createNetworkInput());
+  const socket = createSocketRecorder();
+
+  runtime.attachSocket(socket);
+  (runtime as unknown as {
+    connections: Map<string, {
+      activeChannelListRequestId: string | null;
+      activeChannelListEntries: ServerMessage[];
+      requestChannelList(requestId: string): boolean;
+      getChannelListRequestFailureMessage(): string;
+    }>;
+  }).connections.set(network.id, {
+    activeChannelListRequestId: null,
+    activeChannelListEntries: [],
+    requestChannelList() {
+      return false;
+    },
+    getChannelListRequestFailureMessage() {
+      return 'Waiting for the previous channel list response to finish';
+    },
+  });
+
+  const requestId = runtime.requestChannelList(network.id, socket);
+
+  assert.equal(typeof requestId, 'string');
+  assert.deepEqual(socket.sent, [
+    {
+      type: 'channel.list.failed',
+      networkId: network.id,
+      requestId,
+      message: 'Waiting for the previous channel list response to finish',
+    },
+  ]);
+});
+
+test('runtime removes channel-list subscribers after an immediate request failure', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = new Runtime(storage);
+  const received: string[] = [];
+  const listServer = await createListServer(received);
+  const network = storage.upsertNetwork(createNetworkInput({
+    host: '127.0.0.1',
+    port: listServer.port,
+  }));
+  const firstSocket = createSocketRecorder();
+  const secondSocket = createSocketRecorder();
+
+  try {
+    runtime.attachSocket(firstSocket);
+    runtime.attachSocket(secondSocket);
+
+    const failedRequestId = runtime.requestChannelList(network.id, firstSocket);
+    assert.deepEqual(firstSocket.sent, [
+      {
+        type: 'channel.list.failed',
+        networkId: network.id,
+        requestId: failedRequestId,
+        message: 'Not connected',
+      },
+    ]);
+
+    firstSocket.sent.length = 0;
+
+    runtime.connect(network.id);
+    await waitFor(() => runtime.snapshot().networkStates[network.id]?.connected === true);
+
+    const requestId = runtime.requestChannelList(network.id, secondSocket);
+    await waitFor(() =>
+      secondSocket.sent.some(
+        (message) =>
+          message.type === 'channel.list.completed'
+          && message.requestId === requestId
+      )
+    );
+
+    assert.deepEqual(
+      firstSocket.sent.filter((message) => message.type.startsWith('channel.list')),
+      []
+    );
+  } finally {
+    runtime.disconnect(network.id);
+    listServer.closeConnections();
+    await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }
 });
 

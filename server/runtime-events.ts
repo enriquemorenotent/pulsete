@@ -31,6 +31,32 @@ export function handleRuntimeEvent(
     handleStatusEvent(runtime, event);
     return;
   }
+  if (event.type === 'channel-list-started') {
+    runtime.send('local', { type: 'channel.list.started', networkId: event.networkId, requestId: event.requestId });
+    return;
+  }
+  if (event.type === 'channel-list-entry') {
+    runtime.send('local', {
+      type: 'channel.list.entry',
+      networkId: event.networkId,
+      requestId: event.requestId,
+      entry: event.entry,
+    });
+    return;
+  }
+  if (event.type === 'channel-list-completed') {
+    runtime.send('local', { type: 'channel.list.completed', networkId: event.networkId, requestId: event.requestId });
+    return;
+  }
+  if (event.type === 'channel-list-failed') {
+    runtime.send('local', {
+      type: 'channel.list.failed',
+      networkId: event.networkId,
+      requestId: event.requestId,
+      message: event.message,
+    });
+    return;
+  }
   if (event.type === 'message') {
     handleMessageEvent(runtime, event);
     return;

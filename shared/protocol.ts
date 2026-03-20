@@ -76,6 +76,14 @@ export const channelSchema = z.object({
 
 export type ChannelState = z.infer<typeof channelSchema>;
 
+export const channelListEntrySchema = z.object({
+  name: z.string(),
+  users: z.number().int().nonnegative(),
+  topic: z.string().default(''),
+});
+
+export type ChannelListEntry = z.infer<typeof channelListEntrySchema>;
+
 const networkRuntimeStateSchema = z.object({
   connected: z.boolean(),
   connecting: z.boolean(),
@@ -140,6 +148,10 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     sourceBufferId: z.string().optional(),
   }),
   baseClientSchema.extend({
+    type: z.literal('channel.list.request'),
+    networkId: z.string(),
+  }),
+  baseClientSchema.extend({
     type: z.literal('state.request'),
   }),
 ]);
@@ -191,6 +203,28 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseClientSchema.extend({
     type: z.literal('channel.snapshot'),
     channel: channelSchema,
+  }),
+  baseClientSchema.extend({
+    type: z.literal('channel.list.started'),
+    networkId: z.string(),
+    requestId: z.string(),
+  }),
+  baseClientSchema.extend({
+    type: z.literal('channel.list.entry'),
+    networkId: z.string(),
+    requestId: z.string(),
+    entry: channelListEntrySchema,
+  }),
+  baseClientSchema.extend({
+    type: z.literal('channel.list.completed'),
+    networkId: z.string(),
+    requestId: z.string(),
+  }),
+  baseClientSchema.extend({
+    type: z.literal('channel.list.failed'),
+    networkId: z.string(),
+    requestId: z.string(),
+    message: z.string(),
   }),
   baseClientSchema.extend({
     type: z.literal('message.append'),

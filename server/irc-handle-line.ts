@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import tls from 'node:tls';
 import type { MessageInput } from './storage.js';
-import { emitChannel, emitMessage, emitState, emitStatus } from './irc-emit.js';
+import {
+  emitChannel,
+  emitChannelListCompleted,
+  emitChannelListEntry,
+  emitChannelListFailed,
+  emitMessage,
+  emitState,
+  emitStatus,
+} from './irc-emit.js';
 import { createNickReplyContext, getLatestPendingNick, type PendingReplyContext } from './irc-reply-context.js';
 import { formatServerNumeric, getServerNumericStatusKind } from './irc-server-log.js';
 import { isServiceNick } from './irc-services.js';
@@ -76,6 +84,34 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
       && channelJoinFailureCommands.has(command)
       ? replyContext.failedJoinBufferId
       : undefined;
+    if (replyContext?.kind === 'channel-list') {
+      const isDrainingTimedOutList = replyContext.requestId === connection.drainingChannelListRequestId;
+      if (command === '322') {
+        const entry = parseChannelListEntry(params);
+        if (entry && !isDrainingTimedOutList) {
+          connection.recordChannelListEntry(replyContext.requestId, entry);
+          emitChannelListEntry(connection, replyContext.requestId, entry);
+        }
+        return;
+      }
+      if (command === '323') {
+        connection.finishChannelListRequest(replyContext.requestId);
+        if (!isDrainingTimedOutList) {
+          emitChannelListCompleted(connection, replyContext.requestId);
+        }
+        return;
+      }
+      if (command === '263' || command === '421' || command === '461') {
+        connection.finishChannelListRequest(replyContext.requestId);
+        if (!isDrainingTimedOutList) {
+          emitChannelListFailed(connection, replyContext.requestId, formatChannelListFailure(command, params));
+        }
+        return;
+      }
+      if (command === '321') {
+        return;
+      }
+    }
     const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic-query';
     const allowNamesPayload = replyContext?.kind === 'channel' && replyContext.operation === 'names';
     for (const lineText of formatServerNumeric(command, params, { allowTopicPayload, allowNamesPayload })) {
@@ -487,6 +523,22 @@ const createMessage = (
   ts: Date.now(),
   ...input,
 });
+
+const parseChannelListEntry = (params: string[]) => {
+  const name = params[1] ?? '';
+  if (!name) {
+    return null;
+  }
+  const parsedUsers = Number.parseInt(params[2] ?? '0', 10);
+  return {
+    name,
+    users: Number.isFinite(parsedUsers) && parsedUsers >= 0 ? parsedUsers : 0,
+    topic: params[3] ?? '',
+  };
+};
+
+const formatChannelListFailure = (command: string, params: string[]) =>
+  formatServerNumeric(command, params).at(0)?.replace(/^\* /, '') ?? 'Failed to load the channel list';
 
 const resolveTrackedChannel = (connection: IrcConnectionState, channel: string) =>
   channel ? findIrcCaseMatch(connection.channelUsers.keys(), channel) ?? null : null;

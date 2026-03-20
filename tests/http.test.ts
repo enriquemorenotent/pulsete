@@ -1133,6 +1133,11 @@ test('websocket state requests use the live local state and forward commands to 
     calls.push(`query.open:${networkId}:${target}`);
     return query;
   }) as Runtime['openQuery'];
+  runtime.requestChannelList = ((networkId: string) => {
+    calls.push(`channel.list.request:${networkId}`);
+    runtime.send({ type: 'channel.list.started', networkId, requestId: 'request-1' });
+    return 'request-1';
+  }) as Runtime['requestChannelList'];
   runtime.sendRaw = ((networkId: string, raw: string, sourceBufferId?: string) => {
     calls.push(`raw.send:${networkId}:${raw}:${sourceBufferId ?? ''}`);
   }) as Runtime['sendRaw'];
@@ -1151,9 +1156,11 @@ test('websocket state requests use the live local state and forward commands to 
     assert.equal((stateReady.snapshot as { networks: Array<{ id: string }> }).networks.some((entry) => entry.id === network.id), true);
 
     const queryOpenPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
+    const channelListPromise = waitForWebSocketMessageType(socket, 'channel.list.started');
     socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
     socket.send(JSON.stringify({ type: 'network.disconnect', networkId: network.id }));
     socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'helper' }));
+    socket.send(JSON.stringify({ type: 'channel.list.request', networkId: network.id }));
     socket.send(JSON.stringify({
       type: 'raw.send',
       networkId: network.id,
@@ -1165,10 +1172,16 @@ test('websocket state requests use the live local state and forward commands to 
       type: 'buffer.upsert',
       buffer: query,
     });
+    assert.deepEqual(await channelListPromise, {
+      type: 'channel.list.started',
+      networkId: network.id,
+      requestId: 'request-1',
+    });
     assert.deepEqual(calls, [
       `connect:${network.id}`,
       `disconnect:${network.id}`,
       `query.open:${network.id}:helper`,
+      `channel.list.request:${network.id}`,
       `raw.send:${network.id}:/quote WHOIS alice:${query.id}`,
     ]);
   } finally {

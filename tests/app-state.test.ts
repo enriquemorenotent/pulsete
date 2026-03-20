@@ -123,6 +123,57 @@ test('load-failed still exits the loading phase', () => {
   assert.equal(nextState.phase, 'ready');
 });
 
+test('channel list accumulates live entries and ignores stale request ids', () => {
+  const opened = reducer(initialState, { type: 'open-channel-list', networkId: 'network-1' });
+  const started = reducer(opened, { type: 'channel-list-started', networkId: 'network-1', requestId: 'request-1' });
+  const withEntry = reducer(started, {
+    type: 'channel-list-entry',
+    networkId: 'network-1',
+    requestId: 'request-1',
+    entry: { name: '#help', users: 42, topic: 'Support' },
+  });
+  const ignored = reducer(withEntry, {
+    type: 'channel-list-entry',
+    networkId: 'network-1',
+    requestId: 'request-2',
+    entry: { name: '#ops', users: 12, topic: 'Ops' },
+  });
+  const completed = reducer(ignored, { type: 'channel-list-completed', networkId: 'network-1', requestId: 'request-1' });
+
+  assert.equal(completed.channelList.open, true);
+  assert.equal(completed.channelList.status, 'ready');
+  assert.equal(completed.channelList.requestId, 'request-1');
+  assert.deepEqual(completed.channelList.entries, [{ name: '#help', users: 42, topic: 'Support' }]);
+});
+
+test('channel list resets when its network disconnects or is removed', () => {
+  const connectedState = {
+    ...initialState,
+    networks: [makeNetwork({ id: 'network-1', managerHidden: true })],
+    buffers: [makeBuffer({ networkId: 'network-1' })],
+    channelList: {
+      open: true,
+      networkId: 'network-1',
+      requestId: 'request-1',
+      status: 'loading' as const,
+      entries: [{ name: '#help', users: 42, topic: 'Support' }],
+      error: null,
+    },
+  };
+
+  const disconnected = reducer(connectedState, {
+    type: 'network-state',
+    networkId: 'network-1',
+    connected: false,
+    serverName: null,
+    nick: 'tester',
+  });
+  const removed = reducer(connectedState, { type: 'remove-network', networkId: 'network-1' });
+
+  assert.deepEqual(disconnected.channelList, initialState.channelList);
+  assert.deepEqual(removed.channelList, initialState.channelList);
+});
+
 test('resolveManagedNetworkId keeps a hidden selection while favorites are filtered', () => {
   const nonFavorite = makeNetwork({ id: 'network-1', name: 'IRCnet', favorite: false });
   const favorite = makeNetwork({ id: 'network-2', name: 'Libera.Chat', favorite: true });

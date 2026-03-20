@@ -64,6 +64,9 @@ const handleClientMessage = (
       case 'raw.send':
         context.runtime.sendRaw(message.networkId, message.raw, message.sourceBufferId);
         return;
+      case 'channel.list.request':
+        context.runtime.requestChannelList(message.networkId, ws);
+        return;
     }
   } catch (error) {
     if (ws.readyState !== WebSocket.OPEN) {

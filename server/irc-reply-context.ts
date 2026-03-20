@@ -6,6 +6,7 @@ export type PendingReplyContext =
   | { kind: 'message'; sourceTarget: string; target: string; expiresAt: number }
   | { kind: 'whois'; sourceTarget: string; nick: string; expiresAt: number }
   | { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string; expiresAt: number }
+  | { kind: 'channel-list'; requestId: string; expiresAt: number }
   | {
       kind: 'channel';
       sourceTarget: string;
@@ -27,6 +28,7 @@ const partReplyNumerics = new Set(['442']);
 const topicSetReplyNumerics = new Set(['442', '482']);
 const topicQueryReplyNumerics = new Set(['331', '332']);
 const namesReplyNumerics = new Set(['353', '366']);
+const channelListReplyNumerics = new Set(['321', '322', '323', '263', '421', '461']);
 const rawModeTargetedReplyNumerics = new Set(['401', '402']);
 const rawModeUntargetedReplyNumerics = new Set(['221', '501', '502']);
 const rawModeReplyNumerics = new Set([...rawModeTargetedReplyNumerics, ...rawModeUntargetedReplyNumerics]);
@@ -36,6 +38,7 @@ const fifoReplyNumerics = new Set([
   ...partReplyNumerics,
   ...topicSetReplyNumerics,
   ...topicQueryReplyNumerics,
+  ...channelListReplyNumerics,
   ...namesReplyNumerics,
   ...rawModeReplyNumerics,
 ]);
@@ -64,6 +67,12 @@ export const createRawTargetReplyContext = (
   command,
   target,
   expiresAt: Date.now() + replyContextTtlMs,
+});
+
+export const createChannelListReplyContext = (requestId: string): PendingReplyContext => ({
+  kind: 'channel-list',
+  requestId,
+  expiresAt: Number.POSITIVE_INFINITY,
 });
 
 export const createChannelReplyContext = (
@@ -263,6 +272,18 @@ const resolveReplyContext = (
     return { matched: true, done: true };
   }
 
+  if (context.kind === 'channel-list') {
+    if (!channelListReplyNumerics.has(command)) {
+      return { matched: false, done: false };
+    }
+    if (command === '421' || command === '461' || command === '263') {
+      return (params[1] ?? '').toUpperCase() === 'LIST'
+        ? { matched: true, done: true }
+        : { matched: false, done: false };
+    }
+    return { matched: true, done: command === '323' };
+  }
+
   if (context.kind === 'channel') {
     return resolveChannelReplyContext(context, command, params);
   }
@@ -364,7 +385,7 @@ const getReplyPriority = (context: PendingReplyContext) => {
   if (context.kind === 'channel') {
     return 1;
   }
-  if (context.kind === 'whois' || context.kind === 'raw-target' || context.kind === 'nick') {
+  if (context.kind === 'channel-list' || context.kind === 'whois' || context.kind === 'raw-target' || context.kind === 'nick') {
     return 2;
   }
   return 3;
@@ -444,6 +465,16 @@ const getResolvedReplyGroupIndexes = (
           match.context.kind === 'raw-target'
           && match.context.command === selectedContext.command
           && isSameIrcIdentifier(match.context.target, selectedContext.target)
+      )
+      .map((match) => match.index);
+  }
+  if (selected.context.kind === 'channel-list') {
+    const selectedContext = selected.context;
+    return matches
+      .filter(
+        (match) =>
+          match.context.kind === 'channel-list'
+          && match.context.requestId === selectedContext.requestId
       )
       .map((match) => match.index);
   }

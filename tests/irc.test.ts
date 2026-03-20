@@ -2122,6 +2122,302 @@ test('irc connection keeps generic raw-command numerics on the server buffer', (
   );
 });
 
+test('irc connection streams dedicated LIST replies without generic status noise', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  connection.requestChannelList('request-1');
+  connection.consume(':irc.example 321 tester Channel :Users Name\r\n');
+  connection.consume(':irc.example 322 tester #help 42 :Support room\r\n');
+  connection.consume(':irc.example 323 tester :End of /LIST\r\n');
+
+  assert.deepEqual(writes, ['LIST\r\n']);
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'channel-list-entry'
+        && event.requestId === 'request-1'
+        && JSON.stringify(event.entry) === JSON.stringify({ name: '#help', users: 42, topic: 'Support room' })
+    )
+  );
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'channel-list-completed'
+        && event.requestId === 'request-1'
+    )
+  );
+  assert.ok(
+    !events.some(
+      (event) =>
+        event.type === 'status'
+        && typeof event.message === 'string'
+        && event.message.includes('#help')
+    )
+  );
+});
+
+test('irc connection times out a stalled LIST, drains late numerics, and retries only after LIST ends', async () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    },
+    { channelListTimeoutMs: 20 }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  assert.equal(connection.requestChannelList('request-1'), true);
+  await waitFor(() =>
+    events.some(
+      (event) =>
+        event.type === 'channel-list-failed'
+        && event.requestId === 'request-1'
+        && event.message === 'Channel list request timed out'
+    )
+  );
+
+  assert.equal(connection.activeChannelListRequestId, null);
+  assert.deepEqual(connection.activeChannelListEntries, []);
+  assert.equal(connection.drainingChannelListRequestId, 'request-1');
+  assert.equal(connection.requestChannelList('request-2'), false);
+
+  connection.consume(':irc.example 322 tester #late 5 :Late room\r\n');
+  connection.consume(':irc.example 323 tester :End of /LIST\r\n');
+
+  assert.equal(connection.drainingChannelListRequestId, null);
+  assert.equal(connection.requestChannelList('request-2'), true);
+  assert.deepEqual(writes, ['LIST\r\n', 'LIST\r\n']);
+  assert.ok(
+    !events.some(
+      (event) =>
+        event.type === 'channel-list-entry'
+        && event.requestId === 'request-1'
+        && JSON.stringify(event.entry) === JSON.stringify({ name: '#late', users: 5, topic: 'Late room' })
+    )
+  );
+  assert.ok(
+    !events.some(
+      (event) =>
+        event.type === 'channel-list-completed'
+        && event.requestId === 'request-1'
+    )
+  );
+  assert.ok(
+    !events.some(
+      (event) =>
+        event.type === 'status'
+        && typeof event.message === 'string'
+        && event.message.includes('End of /LIST')
+    )
+  );
+});
+
+test('irc connection refuses a second LIST while one is already active', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  assert.equal(connection.requestChannelList('request-1'), true);
+  assert.equal(connection.requestChannelList('request-2'), false);
+  assert.equal(connection.activeChannelListRequestId, 'request-1');
+  assert.deepEqual(connection.activeChannelListEntries, []);
+  assert.deepEqual(writes, ['LIST\r\n']);
+  assert.ok(!events.some((event) => event.type === 'channel-list-failed'));
+});
+
+test('irc connection keeps unrelated command errors from failing LIST', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  connection.requestChannelList('request-1');
+  connection.sendClientRaw('NOPE', '#chat');
+  connection.consume(':irc.example 421 tester NOPE :Unknown command\r\n');
+  connection.consume(':irc.example 322 tester #help 42 :Support room\r\n');
+  connection.consume(':irc.example 323 tester :End of /LIST\r\n');
+
+  assert.deepEqual(writes, ['LIST\r\n', 'NOPE\r\n']);
+  assert.ok(!events.some((event) => event.type === 'channel-list-failed'));
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.kind === 'error'
+        && typeof event.message === 'string'
+        && event.message.includes('Unknown command')
+    )
+  );
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'channel-list-completed'
+        && event.requestId === 'request-1'
+    )
+  );
+});
+
+test('irc connection keeps raw LIST numerics on the server buffer', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  connection.sendClientRaw('LIST', '#chat');
+  connection.consume(':irc.example 322 tester #help 42 :Support room\r\n');
+
+  assert.deepEqual(writes, ['LIST\r\n']);
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.kind === 'system'
+        && event.message === '* #help 42 Support room'
+    )
+  );
+});
+
 test('irc connection routes topic change status to the affected channel', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const connection = new IrcConnection(

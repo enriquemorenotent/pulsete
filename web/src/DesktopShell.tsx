@@ -1,6 +1,7 @@
 import { useRef, type CSSProperties, type RefObject } from 'react';
 import { PanelsTopLeft } from 'lucide-react';
 import type { BufferState, ChannelState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type { ChannelListState } from './app-types.js';
 import { Button } from '@/components/ui/button.js';
 import { ChatPane } from './ChatPane.js';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
@@ -49,9 +50,14 @@ type DesktopShellProps = {
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onSelectFriend: (friend: FriendState) => Promise<void>;
+  channelList: ChannelListState;
+  channelListNetwork: NetworkProfile | null;
+  onCloseChannelList: () => void;
+  onJoinChannelFromList: (channel: string) => Promise<void>;
   onSelectNetworkBuffer: (network: NetworkProfile) => void;
   onSelectTabBuffer: (buffer: BufferState) => void;
   onSelectPrivateBuffer: (network: NetworkProfile, nick: string) => void;
+  onOpenChannelList: () => void;
   onOpenMentionedChannel: (channel: string) => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
@@ -143,7 +149,12 @@ export function DesktopShell(props: DesktopShellProps) {
               onSend={props.onSendComposer}
               onAddFriend={props.onAddFriend}
               onRemoveFriend={props.onRemoveFriend}
+              channelList={props.channelList}
+              channelListNetwork={props.channelListNetwork}
+              onCloseChannelList={props.onCloseChannelList}
               onOpenMentionedChannel={props.onOpenMentionedChannel}
+              onJoinChannelFromList={props.onJoinChannelFromList}
+              onOpenChannelList={props.onOpenChannelList}
               onCloseChannel={props.onCloseChannel}
               onCloseBuffer={props.onCloseBuffer}
             />

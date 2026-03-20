@@ -3,7 +3,16 @@ import type { AppSnapshot, BufferState, ChatMessage, FriendState } from '../../s
 import { matchesBufferMessage } from './message-matching.js';
 import { emptyNetworkForm } from './network-form.js';
 import { selectDefaultBuffer } from './workspace.js';
-import type { Action, State } from './app-types.js';
+import type { Action, ChannelListState, State } from './app-types.js';
+
+export const initialChannelListState: ChannelListState = {
+  open: false,
+  networkId: null,
+  requestId: null,
+  status: 'idle',
+  entries: [],
+  error: null,
+};
 
 export const initialState: State = {
   phase: 'loading',
@@ -17,6 +26,7 @@ export const initialState: State = {
   selection: null,
   networkForm: emptyNetworkForm(),
   banner: null,
+  channelList: initialChannelListState,
   historyLoading: false,
 };
 
@@ -66,6 +76,7 @@ export const reducer = (state: State, action: Action): State => {
         networkStates: action.snapshot.networkStates,
         selection: selectDefaultBuffer(action.snapshot),
         banner: null,
+        channelList: initialChannelListState,
       };
     case 'snapshot':
       return {
@@ -173,9 +184,92 @@ export const reducer = (state: State, action: Action): State => {
             nick: action.nick,
           },
         },
+        channelList:
+          !action.connected && state.channelList.networkId === action.networkId
+            ? initialChannelListState
+            : state.channelList,
       };
     case 'set-banner':
       return { ...state, banner: action.banner };
+    case 'open-channel-list':
+      return {
+        ...state,
+        channelList: {
+          open: true,
+          networkId: action.networkId,
+          requestId: null,
+          status: 'loading',
+          entries: [],
+          error: null,
+        },
+      };
+    case 'close-channel-list':
+      return { ...state, channelList: initialChannelListState };
+    case 'channel-list-started':
+      if (
+        !state.channelList.open
+        || state.channelList.networkId !== action.networkId
+        || state.channelList.status !== 'loading'
+        || state.channelList.requestId !== null
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        channelList: {
+          ...state.channelList,
+          requestId: action.requestId,
+        },
+      };
+    case 'channel-list-entry':
+      if (
+        !state.channelList.open
+        || state.channelList.networkId !== action.networkId
+        || state.channelList.requestId !== action.requestId
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        channelList: {
+          ...state.channelList,
+          entries: [...state.channelList.entries, action.entry],
+        },
+      };
+    case 'channel-list-completed':
+      if (
+        !state.channelList.open
+        || state.channelList.networkId !== action.networkId
+        || state.channelList.requestId !== action.requestId
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        channelList: {
+          ...state.channelList,
+          status: 'ready',
+          error: null,
+        },
+      };
+    case 'channel-list-failed':
+      if (
+        !state.channelList.open
+        || state.channelList.networkId !== action.networkId
+        || (state.channelList.requestId !== null && state.channelList.requestId !== action.requestId)
+        || (state.channelList.requestId === null && state.channelList.status !== 'loading')
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        channelList: {
+          ...state.channelList,
+          requestId: action.requestId,
+          status: 'error',
+          error: action.message,
+        },
+      };
     case 'set-network-form':
       return { ...state, networkForm: { ...state.networkForm, ...action.form } };
     case 'reset-network-form':
@@ -192,7 +286,16 @@ export const reducer = (state: State, action: Action): State => {
       const selection = state.selection && state.buffers.some((buffer) => buffer.id === state.selection?.bufferId && buffer.networkId === action.networkId)
         ? fallbackSelection({ networks, buffers })
         : state.selection;
-      return { ...state, networks, buffers, channels, messages, networkStates, selection };
+      return {
+        ...state,
+        networks,
+        buffers,
+        channels,
+        messages,
+        networkStates,
+        selection,
+        channelList: state.channelList.networkId === action.networkId ? initialChannelListState : state.channelList,
+      };
     }
     default:
       return state;

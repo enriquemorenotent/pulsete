@@ -31,12 +31,21 @@ const selectBuffer = (dispatch: (action: Action) => void, buffer: BufferState) =
 export function useAppActions(params: AppActionParams) {
   const showNewNetworkEditor = () => openNewNetworkEditor(params);
   const showExistingNetworkEditor = (network: NetworkProfile) => openExistingNetworkEditor(network, params);
+  const findServerBuffer = (networkId: string) =>
+    params.state.buffers.find((buffer) => buffer.networkId === networkId && buffer.kind === 'server') ?? null;
   const findQueryBuffer = (networkId: string, nick: string) =>
     params.state.buffers.find(
       (buffer) =>
         buffer.networkId === networkId &&
         buffer.kind === 'query' &&
         isSameIrcIdentifier(buffer.target, nick)
+    ) ?? null;
+  const findChannelBuffer = (networkId: string, channel: string) =>
+    params.state.buffers.find(
+      (buffer) =>
+        buffer.networkId === networkId &&
+        buffer.kind === 'channel' &&
+        isSameIrcIdentifier(buffer.target, channel)
     ) ?? null;
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string) => {
@@ -49,6 +58,27 @@ export function useAppActions(params: AppActionParams) {
     params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
     selectBuffer(params.dispatch, result.buffer);
     return result.buffer;
+  };
+
+  const openChannelListForNetwork = async (networkId: string) => {
+    const runtime = params.state.networkStates[networkId] ?? null;
+    if (!runtime?.connected) {
+      params.updateBanner('error', 'Connect the network before listing channels');
+      return;
+    }
+    if (!params.socketRef.current) {
+      params.updateBanner('error', 'Socket not connected');
+      return;
+    }
+    if (
+      params.state.channelList.open
+      && params.state.channelList.networkId === networkId
+      && params.state.channelList.status === 'loading'
+    ) {
+      return;
+    }
+    params.dispatch({ type: 'open-channel-list', networkId });
+    params.socketRef.current.send({ type: 'channel.list.request', networkId });
   };
 
   const submitNetwork = async () => {
@@ -187,13 +217,7 @@ export function useAppActions(params: AppActionParams) {
       return;
     }
 
-    const existingBuffer =
-      params.state.buffers.find(
-        (buffer) =>
-          buffer.networkId === network.id &&
-          buffer.kind === 'channel' &&
-          isSameIrcIdentifier(buffer.target, channelName)
-      ) ?? null;
+    const existingBuffer = findChannelBuffer(network.id, channelName);
 
     if (existingBuffer) {
       selectBuffer(params.dispatch, existingBuffer);
@@ -211,6 +235,37 @@ export function useAppActions(params: AppActionParams) {
       selectBuffer(params.dispatch, result.buffer);
     } catch (error) {
       params.updateBanner('error', error instanceof Error ? error.message : `Failed to join ${channelName}`);
+    }
+  };
+
+  const openChannelList = async () => {
+    const network = params.workspace.selectedNetwork;
+    if (!network) {
+      return;
+    }
+    await openChannelListForNetwork(network.id);
+  };
+
+  const closeChannelList = () => {
+    params.dispatch({ type: 'close-channel-list' });
+  };
+
+  const joinChannelFromList = async (channel: string) => {
+    const networkId = params.state.channelList.networkId;
+    if (!networkId) {
+      return;
+    }
+    const existingBuffer = findChannelBuffer(networkId, channel);
+    if (existingBuffer) {
+      selectBuffer(params.dispatch, existingBuffer);
+      return;
+    }
+    try {
+      const result = await api.openChannel(networkId, channel, findServerBuffer(networkId)?.id);
+      params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
+      selectBuffer(params.dispatch, result.buffer);
+    } catch (error) {
+      params.updateBanner('error', error instanceof Error ? error.message : `Failed to join ${channel}`);
     }
   };
 
@@ -310,6 +365,7 @@ export function useAppActions(params: AppActionParams) {
           params.dispatch({ type: 'upsert-buffer', buffer: result.buffer });
           selectBuffer(params.dispatch, result.buffer);
         },
+        onOpenChannelList: openChannelListForNetwork,
         onOpenQuery: async (networkId, nick) => {
           const network = params.state.networks.find((candidate) => candidate.id === networkId) ?? null;
           if (!network) {
@@ -329,6 +385,7 @@ export function useAppActions(params: AppActionParams) {
   return {
     addFriend,
     closeBuffer,
+    closeChannelList,
     closeChannel,
     closeConnection,
     connectNetwork,
@@ -336,11 +393,13 @@ export function useAppActions(params: AppActionParams) {
     deleteNetwork,
     disconnectNetwork,
     openMentionedChannel,
+    openChannelList,
     openNetworkEditor: showExistingNetworkEditor,
     openNewNetworkEditor: showNewNetworkEditor,
     reconnectNetwork,
     saveFavorite,
     selectFriend,
+    joinChannelFromList,
     selectNetworkBuffer,
     selectPrivateBuffer,
     selectTabBuffer,

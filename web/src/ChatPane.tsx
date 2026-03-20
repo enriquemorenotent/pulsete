@@ -1,10 +1,12 @@
 import type { RefObject } from 'react';
 import { Plug2, SendHorizonal, X } from 'lucide-react';
-import type { BufferState, ChatMessage, FriendState } from '../../shared/protocol.js';
+import type { BufferState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { Card } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
 import { cn } from '@/lib/utils.js';
+import type { ChannelListState } from './app-types.js';
+import { ChannelListDialog } from './ChannelListDialog.js';
 import { findFriendByNick } from './friend-utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
 import { FriendToggleButton } from './FriendToggleButton.js';
@@ -26,7 +28,12 @@ type ChatPaneProps = {
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
+  channelList: ChannelListState;
+  channelListNetwork: NetworkProfile | null;
+  onCloseChannelList: () => void;
+  onJoinChannelFromList: (channel: string) => Promise<void>;
   onOpenMentionedChannel: (channel: string) => void;
+  onOpenChannelList: () => void;
 };
 
 export function ChatPane(props: ChatPaneProps) {
@@ -37,12 +44,30 @@ export function ChatPane(props: ChatPaneProps) {
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
     props.workspace.mode === 'server-offline';
+  const showConnectedServerHeader = props.workspace.mode === 'server-connected';
   const renderBlocks = buildRenderBlocks(props.selectedMessages, isServerBuffer ? 'server' : 'chat');
 
   return (
     <section className="h-full min-h-0 min-w-0 overflow-hidden">
       <Card className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden">
-        {!isServerBuffer ? (
+        {showConnectedServerHeader ? (
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-3 py-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
+                {props.workspace.selectedNetwork?.name ?? 'Server'}
+              </h2>
+              {props.workspace.headerSubtitle ? (
+                <p className="truncate text-[13px] text-muted-foreground">{props.workspace.headerSubtitle}</p>
+              ) : null}
+            </div>
+
+            <div className="flex shrink-0 flex-wrap gap-1">
+              <Button variant="outline" size="sm" onClick={props.onOpenChannelList}>
+                List Channels
+              </Button>
+            </div>
+          </div>
+        ) : !isServerBuffer ? (
           <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-3 py-2">
             <div className="min-w-0">
               {props.workspace.headerTitle ? (
@@ -169,6 +194,12 @@ export function ChatPane(props: ChatPaneProps) {
           </footer>
         ) : null}
       </Card>
+      <ChannelListDialog
+        network={props.channelListNetwork}
+        state={props.channelList}
+        onClose={props.onCloseChannelList}
+        onJoin={props.onJoinChannelFromList}
+      />
     </section>
   );
 }

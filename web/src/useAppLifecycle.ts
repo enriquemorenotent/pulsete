@@ -142,6 +142,28 @@ function handleServerMessage(message: ServerMessage, dispatch: (action: Action) 
   if (message.type === 'buffer.upsert') return void dispatch({ type: 'upsert-buffer', buffer: message.buffer });
   if (message.type === 'buffer.remove') return void dispatch({ type: 'remove-buffer', networkId: message.networkId, bufferId: message.bufferId });
   if (message.type === 'channel.snapshot') return void dispatch({ type: 'upsert-channel', channel: message.channel });
+  if (message.type === 'channel.list.started') {
+    return void dispatch({ type: 'channel-list-started', networkId: message.networkId, requestId: message.requestId });
+  }
+  if (message.type === 'channel.list.entry') {
+    return void dispatch({
+      type: 'channel-list-entry',
+      networkId: message.networkId,
+      requestId: message.requestId,
+      entry: message.entry,
+    });
+  }
+  if (message.type === 'channel.list.completed') {
+    return void dispatch({ type: 'channel-list-completed', networkId: message.networkId, requestId: message.requestId });
+  }
+  if (message.type === 'channel.list.failed') {
+    return void dispatch({
+      type: 'channel-list-failed',
+      networkId: message.networkId,
+      requestId: message.requestId,
+      message: message.message,
+    });
+  }
   if (message.type === 'message.append') return void dispatch({ type: 'append-message', message: message.message });
   if (message.type === 'presence.update') {
     return void dispatch({ type: 'update-presence', networkId: message.networkId, channel: message.channel, users: message.users });
