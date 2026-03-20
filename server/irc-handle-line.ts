@@ -463,13 +463,18 @@ const handleNick = (connection: IrcConnectionState, params: string[], nick: stri
 
 const handleTopic = (connection: IrcConnectionState, params: string[], nick: string | null) => {
   const channel = resolveTrackedChannel(connection, params[0] ?? '');
+  const topic = params[1] ?? '';
   if (!channel) {
     return;
   }
   if (isSameIrcIdentifier(nick, connection.currentNick)) {
-    consumePendingChannelReplyContexts(connection, channel, 'topic-set');
+    discardPendingChannelReplyContexts(
+      connection,
+      channel,
+      (context) => context.operation === 'topic-set' && context.requestedTopic === topic
+    );
   }
-  emitChannel(connection, channel, { topic: params[1] ?? '' });
+  emitChannel(connection, channel, { topic });
   emitStatus(connection, `${nick ?? 'Someone'} changed the topic for ${channel}`, 'system', channel, true);
 };
 

@@ -1,8 +1,9 @@
-import type { BufferState, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, ClientMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, State } from './app-types.js';
 import { api, type SocketHandle } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
+import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
 import { resolveFriendSelection } from './friend-selection.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
 import { createConnectionInstancePayload, parseAutoJoin, toForm, type EditorTab } from './network-form.js';
@@ -47,6 +48,30 @@ export function useAppActions(params: AppActionParams) {
         buffer.kind === 'channel' &&
         isSameIrcIdentifier(buffer.target, channel)
     ) ?? null;
+  const getGatewaySocket = (showBanner = true) => {
+    if (params.state.gatewayStatus !== 'connected' || !params.socketRef.current) {
+      if (showBanner) {
+        params.updateBanner('error', gatewayReconnectMessage);
+      }
+      return null;
+    }
+    return params.socketRef.current;
+  };
+  const sendGatewayMessage = (message: ClientMessage, showBanner = true) => {
+    const socket = getGatewaySocket(showBanner);
+    if (!socket) {
+      return false;
+    }
+    try {
+      socket.send(message);
+      return true;
+    } catch {
+      if (showBanner) {
+        params.updateBanner('error', gatewayReconnectMessage);
+      }
+      return false;
+    }
+  };
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string) => {
     const existingBuffer = findQueryBuffer(network.id, nick);
@@ -61,13 +86,12 @@ export function useAppActions(params: AppActionParams) {
   };
 
   const openChannelListForNetwork = async (networkId: string) => {
+    if (!getGatewaySocket()) {
+      return;
+    }
     const runtime = params.state.networkStates[networkId] ?? null;
     if (!runtime?.connected) {
       params.updateBanner('error', 'Connect the network before listing channels');
-      return;
-    }
-    if (!params.socketRef.current) {
-      params.updateBanner('error', 'Socket not connected');
       return;
     }
     if (
@@ -77,8 +101,10 @@ export function useAppActions(params: AppActionParams) {
     ) {
       return;
     }
+    if (!sendGatewayMessage({ type: 'channel.list.request', networkId })) {
+      return;
+    }
     params.dispatch({ type: 'open-channel-list', networkId });
-    params.socketRef.current.send({ type: 'channel.list.request', networkId });
   };
 
   const submitNetwork = async () => {
@@ -248,8 +274,8 @@ export function useAppActions(params: AppActionParams) {
 
   const closeChannelList = () => {
     const networkId = params.state.channelList.networkId;
-    if (networkId && params.socketRef.current) {
-      params.socketRef.current.send({ type: 'channel.list.cancel', networkId });
+    if (networkId) {
+      sendGatewayMessage({ type: 'channel.list.cancel', networkId }, false);
     }
     params.dispatch({ type: 'close-channel-list' });
   };
@@ -331,19 +357,23 @@ export function useAppActions(params: AppActionParams) {
   };
 
   const closeChannel = (networkId: string, channel: string) => {
-    if (!params.socketRef.current) {
-      params.updateBanner('error', 'Socket not connected');
+    const socket = getGatewaySocket();
+    if (!socket) {
       return;
     }
     const buffer = params.state.buffers.find(
       (candidate) => candidate.networkId === networkId && candidate.kind === 'channel' && candidate.target === channel
     );
-    params.socketRef.current.send({
-      type: 'channel.part',
-      networkId,
-      channel,
-      sourceBufferId: buffer?.id ?? params.workspace.selectedBuffer?.id,
-    });
+    try {
+      socket.send({
+        type: 'channel.part',
+        networkId,
+        channel,
+        sourceBufferId: buffer?.id ?? params.workspace.selectedBuffer?.id,
+      });
+    } catch {
+      params.updateBanner('error', gatewayReconnectMessage);
+    }
   };
 
   const closeBuffer = async (buffer: BufferState) => {
@@ -356,12 +386,15 @@ export function useAppActions(params: AppActionParams) {
   };
 
   const sendComposer = async () => {
+    if (params.draft.trim() && !getGatewaySocket()) {
+      return;
+    }
     try {
       const submitted = await sendComposerMessage({
         draft: params.draft,
         dispatch: params.dispatch,
         setDraft: params.setDraft,
-        socket: params.socketRef.current,
+        socket: getGatewaySocket(false),
         updateBanner: params.updateBanner,
         workspace: params.workspace,
         onOpenChannel: async (networkId, channel, sourceBufferId) => {
@@ -382,7 +415,7 @@ export function useAppActions(params: AppActionParams) {
         params.recordComposerEntry(submitted);
       }
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to send message');
+      params.updateBanner('error', toGatewayErrorMessage(error, 'Failed to send message'));
     }
   };
 

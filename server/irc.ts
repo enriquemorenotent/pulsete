@@ -113,7 +113,7 @@ export class IrcConnection implements IrcConnectionState {
     return this.sendTrackedRaw(
       `JOIN ${channel}`,
       sourceTarget,
-      createChannelReplyContext(sourceTarget, channel, 'join', failedJoinBufferId)
+      createChannelReplyContext(sourceTarget, channel, 'join', { failedJoinBufferId })
     );
   }
 

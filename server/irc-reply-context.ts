@@ -14,6 +14,7 @@ export type PendingReplyContext =
       channel: string;
       operation: ChannelReplyOperation;
       failedJoinBufferId?: string;
+      requestedTopic?: string;
       expiresAt: number;
     }
   | { kind: 'nick'; sourceTarget: string; requestedNick: string; expiresAt: number }
@@ -86,13 +87,14 @@ export const createChannelReplyContext = (
   sourceTarget: string,
   channel: string,
   operation: ChannelReplyOperation,
-  failedJoinBufferId?: string
+  options: { failedJoinBufferId?: string; requestedTopic?: string } = {}
 ): PendingReplyContext => ({
   kind: 'channel',
   sourceTarget,
   channel,
   operation,
-  failedJoinBufferId,
+  failedJoinBufferId: options.failedJoinBufferId,
+  requestedTopic: options.requestedTopic,
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
@@ -142,7 +144,12 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
   }
 
   if (command === 'TOPIC' && rest[0]) {
-    return createChannelReplyContext(rest.length === 1 ? 'server' : sourceTarget, rest[0], rest.length === 1 ? 'topic-query' : 'topic-set');
+    return createChannelReplyContext(
+      rest.length === 1 ? 'server' : sourceTarget,
+      rest[0],
+      rest.length === 1 ? 'topic-query' : 'topic-set',
+      rest.length === 1 ? {} : { requestedTopic: rest.slice(1).join(' ').replace(/^:/, '') }
+    );
   }
 
   if ((command === 'JOIN' || command === 'PART') && rest[0]) {
@@ -238,9 +245,9 @@ export const consumeReplyContext = (
     return null;
   }
   if (selected.resolution.done) {
-    const relatedIndexes = getResolvedReplyGroupIndexes(prioritized, selected);
-    if (relatedIndexes.length > 0) {
-      discardReplyIndexes(contexts, relatedIndexes);
+    const exactDuplicateIndexes = getExactDuplicateReplyIndexes(prioritized, selected);
+    if (exactDuplicateIndexes.length > 0) {
+      discardReplyIndexes(contexts, exactDuplicateIndexes);
     } else {
       contexts.splice(selected.index, 1);
     }
@@ -461,21 +468,10 @@ const discardReplyContexts = (
   discardReplyIndexes(contexts, discardIndexes);
 };
 
-const getResolvedReplyGroupIndexes = (
+const getExactDuplicateReplyIndexes = (
   matches: Array<{ index: number; context: PendingReplyContext; resolution: ReplyResolution }>,
   selected: { index: number; context: PendingReplyContext; resolution: ReplyResolution }
 ) => {
-  if (selected.context.kind === 'channel') {
-    const selectedContext = selected.context;
-    return matches
-      .filter(
-        (match) =>
-          match.context.kind === 'channel'
-          && match.context.operation === selectedContext.operation
-          && isSameIrcIdentifier(match.context.channel, selectedContext.channel)
-      )
-      .map((match) => match.index);
-  }
   if (selected.context.kind === 'nick') {
     const selectedContext = selected.context;
     return matches
@@ -494,21 +490,6 @@ const getResolvedReplyGroupIndexes = (
           match.context.kind === 'raw-target'
           && match.context.command === selectedContext.command
           && isSameIrcIdentifier(match.context.target, selectedContext.target)
-      )
-      .map((match) => match.index);
-  }
-  if (selected.context.kind === 'raw-list') {
-    return matches
-      .filter((match) => match.context.kind === 'raw-list')
-      .map((match) => match.index);
-  }
-  if (selected.context.kind === 'channel-list') {
-    const selectedContext = selected.context;
-    return matches
-      .filter(
-        (match) =>
-          match.context.kind === 'channel-list'
-          && match.context.requestId === selectedContext.requestId
       )
       .map((match) => match.index);
   }

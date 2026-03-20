@@ -11,6 +11,7 @@ import {
   type NetworkProfile,
   type ChatMessage,
 } from '../../shared/protocol.js';
+import { gatewaySocketClosedMessage } from './gateway.js';
 
 const apiRequest = async <T>(path: string, init?: RequestInit) => {
   const response = await fetch(path, {
@@ -97,9 +98,27 @@ export type SocketHandle = {
   close: () => void;
 };
 
-export const connectSocket = (onMessage: (message: ServerMessage) => void, onClose?: () => void): SocketHandle => {
+type SocketCallbacks = {
+  onMessage: (message: ServerMessage) => void;
+  onOpen?: () => void;
+  onClose?: () => void;
+};
+
+const closeSocket = (socket: WebSocket) => {
+  try {
+    socket.close();
+  } catch {
+    // Ignore browser close failures; callers only need the transport retired.
+  }
+};
+
+export const connectSocket = ({ onMessage, onOpen, onClose }: SocketCallbacks): SocketHandle => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+  socket.addEventListener('open', () => {
+    onOpen?.();
+  });
 
   socket.addEventListener('message', (event) => {
     try {
@@ -116,10 +135,19 @@ export const connectSocket = (onMessage: (message: ServerMessage) => void, onClo
   return {
     send(message) {
       const parsed = clientMessageSchema.parse(message);
-      socket.send(encode(parsed));
+      if (socket.readyState !== WebSocket.OPEN) {
+        closeSocket(socket);
+        throw new Error(gatewaySocketClosedMessage);
+      }
+      try {
+        socket.send(encode(parsed));
+      } catch {
+        closeSocket(socket);
+        throw new Error(gatewaySocketClosedMessage);
+      }
     },
     close() {
-      socket.close();
+      closeSocket(socket);
     },
   };
 };

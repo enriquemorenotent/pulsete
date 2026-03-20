@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AppSnapshot, BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import { initialState, reducer } from '../web/src/app-state.js';
+import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { resolveManagedNetworkId } from '../web/src/network-manager-state.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
@@ -123,6 +124,33 @@ test('load-failed still exits the loading phase', () => {
   assert.equal(nextState.phase, 'ready');
 });
 
+test('gateway transitions reset transport-scoped state and clear the reconnect banner once ready', () => {
+  const loadingState = {
+    ...initialState,
+    gatewayStatus: 'connected' as const,
+    banner: { kind: 'error' as const, message: gatewayReconnectMessage },
+    channelList: {
+      open: true,
+      networkId: 'network-1',
+      requestId: 'request-1',
+      status: 'loading' as const,
+      entries: [{ name: '#help', users: 42, topic: 'Support' }],
+      error: null,
+    },
+  };
+
+  const disconnected = reducer(loadingState, { type: 'gateway-disconnected' });
+  const reconnecting = reducer(disconnected, { type: 'gateway-connecting' });
+  const connected = reducer(reconnecting, { type: 'gateway-connected' });
+
+  assert.equal(disconnected.gatewayStatus, 'disconnected');
+  assert.deepEqual(disconnected.channelList, initialState.channelList);
+  assert.equal(reconnecting.gatewayStatus, 'connecting');
+  assert.deepEqual(reconnecting.channelList, initialState.channelList);
+  assert.equal(connected.gatewayStatus, 'connected');
+  assert.equal(connected.banner, null);
+});
+
 test('channel list accumulates live entries and ignores stale request ids', () => {
   const opened = reducer(initialState, { type: 'open-channel-list', networkId: 'network-1' });
   const started = reducer(opened, { type: 'channel-list-started', networkId: 'network-1', requestId: 'request-1' });
@@ -146,7 +174,7 @@ test('channel list accumulates live entries and ignores stale request ids', () =
   assert.deepEqual(completed.channelList.entries, [{ name: '#help', users: 42, topic: 'Support' }]);
 });
 
-test('channel list resets when its network disconnects or is removed', () => {
+test('channel list resets when the gateway drops, its network disconnects, or the network is removed', () => {
   const connectedState = {
     ...initialState,
     networks: [makeNetwork({ id: 'network-1', managerHidden: true })],
@@ -161,6 +189,7 @@ test('channel list resets when its network disconnects or is removed', () => {
     },
   };
 
+  const gatewayDisconnected = reducer(connectedState, { type: 'gateway-disconnected' });
   const disconnected = reducer(connectedState, {
     type: 'network-state',
     networkId: 'network-1',
@@ -170,6 +199,7 @@ test('channel list resets when its network disconnects or is removed', () => {
   });
   const removed = reducer(connectedState, { type: 'remove-network', networkId: 'network-1' });
 
+  assert.deepEqual(gatewayDisconnected.channelList, initialState.channelList);
   assert.deepEqual(disconnected.channelList, initialState.channelList);
   assert.deepEqual(removed.channelList, initialState.channelList);
 });

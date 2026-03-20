@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { NetworkProfile, ServerMessage } from '../../shared/protocol.js';
 import type { Action, State } from './app-types.js';
 import { api, connectSocket, type SocketHandle } from './client.js';
+import { gatewayReconnectMessage, getGatewayReconnectDelayMs } from './gateway.js';
 import { resolveManagedNetworkId } from './network-manager-state.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -21,6 +22,10 @@ type LifecycleParams = {
 };
 
 export function useAppLifecycle(params: LifecycleParams) {
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const [socketGeneration, setSocketGeneration] = useState(0);
+
   useEffect(() => {
     let alive = true;
     api
@@ -54,7 +59,7 @@ export function useAppLifecycle(params: LifecycleParams) {
   }, [params.state.phase, params.workspace.connectionInstances.length]);
 
   useEffect(() => {
-    if (!params.state.banner) {
+    if (!params.state.banner || params.state.banner.message === gatewayReconnectMessage) {
       return;
     }
     const timer = window.setTimeout(() => params.dispatch({ type: 'set-banner', banner: null }), 4200);
@@ -65,19 +70,49 @@ export function useAppLifecycle(params: LifecycleParams) {
     if (params.state.phase !== 'ready' || params.socketRef.current) {
       return;
     }
+    params.dispatch({ type: 'gateway-connecting' });
     let closedByClient = false;
-    const socket = connectSocket((message) => handleServerMessage(message, params.dispatch), () => {
-      if (!closedByClient) {
-        params.dispatch({ type: 'set-banner', banner: { kind: 'notice', message: 'Disconnected from gateway' } });
-      }
+    const socket = connectSocket({
+      onMessage: (message) => {
+        if (message.type === 'state.ready') {
+          reconnectAttemptRef.current = 0;
+        }
+        handleServerMessage(message, params.dispatch);
+      },
+      onOpen: () => {
+        params.dispatch({ type: 'gateway-connecting' });
+      },
+      onClose: () => {
+        if (closedByClient || params.socketRef.current !== socket) {
+          return;
+        }
+        params.socketRef.current = null;
+        params.dispatch({ type: 'gateway-disconnected' });
+        params.dispatch({ type: 'set-banner', banner: { kind: 'error', message: gatewayReconnectMessage } });
+        if (reconnectTimerRef.current !== null) {
+          window.clearTimeout(reconnectTimerRef.current);
+        }
+        const delay = getGatewayReconnectDelayMs(reconnectAttemptRef.current);
+        reconnectAttemptRef.current += 1;
+        reconnectTimerRef.current = window.setTimeout(() => {
+          reconnectTimerRef.current = null;
+          setSocketGeneration((value) => value + 1);
+        }, delay);
+      },
     });
     params.socketRef.current = socket;
     return () => {
       closedByClient = true;
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (params.socketRef.current === socket) {
+        params.socketRef.current = null;
+      }
       socket.close();
-      params.socketRef.current = null;
     };
-  }, [params.state.phase]);
+  }, [params.state.phase, params.socketRef, socketGeneration]);
 
   useEffect(() => {
     const unread = params.workspace.selectedBuffer?.unread ?? 0;
@@ -122,7 +157,10 @@ export function useAppLifecycle(params: LifecycleParams) {
 }
 
 function handleServerMessage(message: ServerMessage, dispatch: (action: Action) => void) {
-  if (message.type === 'state.ready') return void dispatch({ type: 'snapshot', snapshot: message.snapshot });
+  if (message.type === 'state.ready') {
+    dispatch({ type: 'gateway-connected' });
+    return void dispatch({ type: 'snapshot', snapshot: message.snapshot });
+  }
   if (message.type === 'network.state') {
     return void dispatch({
       type: 'network-state',

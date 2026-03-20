@@ -4,6 +4,7 @@ import { matchesBufferMessage } from './message-matching.js';
 import { emptyNetworkForm } from './network-form.js';
 import { selectDefaultBuffer } from './workspace.js';
 import type { Action, ChannelListState, State } from './app-types.js';
+import { gatewayReconnectMessage } from './gateway.js';
 
 export const initialChannelListState: ChannelListState = {
   open: false,
@@ -16,6 +17,7 @@ export const initialChannelListState: ChannelListState = {
 
 export const initialState: State = {
   phase: 'loading',
+  gatewayStatus: 'connecting',
   networks: [],
   friends: [],
   friendPresence: {},
@@ -90,6 +92,24 @@ export const reducer = (state: State, action: Action): State => {
         messages: mergeMessages(state.messages, action.snapshot.messages),
         networkStates: action.snapshot.networkStates,
         selection: state.selection ?? selectDefaultBuffer(action.snapshot),
+      };
+    case 'gateway-connecting':
+      return {
+        ...state,
+        gatewayStatus: 'connecting',
+        channelList: initialChannelListState,
+      };
+    case 'gateway-connected':
+      return {
+        ...state,
+        gatewayStatus: 'connected',
+        banner: state.banner?.message === gatewayReconnectMessage ? null : state.banner,
+      };
+    case 'gateway-disconnected':
+      return {
+        ...state,
+        gatewayStatus: 'disconnected',
+        channelList: initialChannelListState,
       };
     case 'load-failed':
       return { ...state, phase: 'ready' };

@@ -12,6 +12,7 @@ import type { NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
 export type Banner = { kind: 'notice' | 'error'; message: string } | null;
+export type GatewayStatus = 'connecting' | 'connected' | 'disconnected';
 
 export type ChannelListState = {
   open: boolean;
@@ -24,6 +25,7 @@ export type ChannelListState = {
 
 export type State = {
   phase: 'loading' | 'ready';
+  gatewayStatus: GatewayStatus;
   networks: NetworkProfile[];
   friends: FriendState[];
   friendPresence: Record<string, boolean>;
@@ -41,6 +43,9 @@ export type State = {
 export type Action =
   | { type: 'snapshot-loaded'; snapshot: AppSnapshot }
   | { type: 'snapshot'; snapshot: AppSnapshot }
+  | { type: 'gateway-connecting' }
+  | { type: 'gateway-connected' }
+  | { type: 'gateway-disconnected' }
   | { type: 'upsert-network'; network: NetworkProfile }
   | { type: 'upsert-friend'; friend: FriendState }
   | { type: 'remove-friend'; friendId: string }

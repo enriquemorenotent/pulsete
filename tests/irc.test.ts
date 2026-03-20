@@ -3163,6 +3163,66 @@ test('irc connection clears duplicate successful topic-change contexts before la
   );
 });
 
+test('irc connection keeps older topic-change contexts after a later topic self echo', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.connected = true;
+  connection.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+  connection.channelUsers.set('#help', []);
+
+  connection.sendClientRaw('TOPIC #help :one', '#topic-a');
+  connection.sendClientRaw('TOPIC #help :two', '#topic-b');
+  connection.consume(':tester!user@host TOPIC #help :two\r\n');
+  connection.consume(':irc.example 482 tester #help :You\'re not channel operator\r\n');
+
+  assert.deepEqual(writes, ['TOPIC #help :one\r\n', 'TOPIC #help :two\r\n']);
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.target === '#topic-a'
+        && event.kind === 'error'
+        && event.message === '* #help You\'re not channel operator'
+    )
+  );
+  assert.ok(
+    !events.some(
+      (event) =>
+        event.type === 'status'
+        && event.target === '#topic-b'
+        && event.message === '* #help You\'re not channel operator'
+    )
+  );
+});
+
 test('irc connection surfaces otherwise unformatted numerics from raw commands', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
