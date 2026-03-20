@@ -877,7 +877,7 @@ test('runtime replays active LIST entries to a later requester without sending L
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const received: string[] = [];
-  const listServer = await createStreamingListServer(received);
+  const listServer = await createStreamingListServer(received, 500);
   const network = storage.upsertNetwork(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
@@ -950,7 +950,7 @@ test('runtime does not replay active LIST entries twice to the same requester', 
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const received: string[] = [];
-  const listServer = await createStreamingListServer(received);
+  const listServer = await createStreamingListServer(received, 500);
   const network = storage.upsertNetwork(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
@@ -1021,7 +1021,7 @@ test('runtime replays active LIST entries after the same requester cancels and r
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const received: string[] = [];
-  const listServer = await createStreamingListServer(received);
+  const listServer = await createStreamingListServer(received, 500);
   const network = storage.upsertNetwork(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
