@@ -163,9 +163,6 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('channel.list.cancel'),
     networkId: z.string(),
   }),
-  baseClientSchema.extend({
-    type: z.literal('state.request'),
-  }),
 ]);
 
 export type ClientMessage = z.infer<typeof clientMessageSchema>;

@@ -379,34 +379,6 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}): NetworkInput
   ...overrides,
 });
 
-test('snapshot returns the local workspace without auth state', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
-  const port = await listen(server);
-
-  try {
-    const response = await requestJson(port, 'GET', '/api/snapshot');
-    const snapshot = response.json as {
-      networks: Array<{ nick: string; username: string; realName: string }>;
-      friends: unknown[];
-      friendPresence: Record<string, boolean>;
-      user?: unknown;
-      bootstrapped?: unknown;
-    };
-    assert.equal(response.status, 200);
-    assert.equal(snapshot.networks[0]?.nick, 'pulsete');
-    assert.equal(snapshot.networks[0]?.username, 'pulsete');
-    assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
-    assert.deepEqual(snapshot.friends, []);
-    assert.deepEqual(snapshot.friendPresence, {});
-    assert.equal('user' in snapshot, false);
-    assert.equal('bootstrapped' in snapshot, false);
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-});
-
 test('network routes are available without cookies', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -1285,7 +1257,7 @@ test('websocket initialization handles frames emitted during the first snapshot 
   assert.deepEqual(calls, ['attach', 'snapshot', 'connect:net-1']);
 });
 
-test('websocket state replies detach the socket when a later send fails', () => {
+test('websocket error replies detach the socket when a later send fails', () => {
   const { socket, getCloseCalls } = createBootstrapThenFailingWebSocket();
   const calls: string[] = [];
   const context = {
@@ -1311,13 +1283,13 @@ test('websocket state replies detach the socket when a later send fails', () => 
   } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
 
   assert.equal(initializeWebSocketConnection(socket, context), true);
-  socket.emit('message', JSON.stringify({ type: 'state.request' }));
+  socket.emit('message', '{invalid-json');
 
   assert.deepEqual(calls, ['attach', 'detach']);
   assert.equal(getCloseCalls(), 1);
 });
 
-test('websocket state requests use the live local state and forward commands to runtime methods', async () => {
+test('websocket commands use the live local state and forward runtime methods', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
@@ -1353,11 +1325,6 @@ test('websocket state requests use the live local state and forward commands to 
 
   try {
     assert.equal((ready.snapshot as { networks: Array<{ id: string }> }).networks.some((entry) => entry.id === network.id), true);
-
-    const stateReadyPromise = waitForWebSocketMessageType(socket, 'state.ready');
-    socket.send(JSON.stringify({ type: 'state.request' }));
-    const stateReady = await stateReadyPromise;
-    assert.equal((stateReady.snapshot as { networks: Array<{ id: string }> }).networks.some((entry) => entry.id === network.id), true);
 
     const queryOpenPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
     const channelListPromise = waitForWebSocketMessageType(socket, 'channel.list.started');

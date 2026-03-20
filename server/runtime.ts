@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
-import { encode, type BufferState, type FriendState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
+import { encode, type FriendState, type NetworkProfile, type ServerMessage } from '../shared/protocol.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { badRequest, notFound } from './app-error.js';
 import { IrcConnection } from './irc.js';
@@ -15,11 +15,6 @@ import {
 import type { RuntimeEvent } from './irc-types.js';
 import { handleRuntimeEvent } from './runtime-events.js';
 import { Storage, type NetworkInput } from './storage.js';
-
-type SaveNetworkResult = {
-  network: NetworkProfile;
-  serverBuffer: BufferState | null;
-};
 
 export class Runtime {
   readonly store: Storage;
@@ -46,15 +41,7 @@ export class Runtime {
     this.dropSocket(ws);
   }
 
-  revokeSession(_sessionToken: string, _legacyUserId?: string) {}
-
-  send(message: ServerMessage): void;
-  send(_legacyUserId: string, message: ServerMessage): void;
-  send(messageOrLegacyUserId: ServerMessage | string, maybeMessage?: ServerMessage) {
-    const message = typeof messageOrLegacyUserId === 'string' ? maybeMessage : messageOrLegacyUserId;
-    if (!message) {
-      return;
-    }
+  send(message: ServerMessage) {
     const payload = encode(message);
     for (const ws of Array.from(this.sockets)) {
       this.sendPayload(ws, payload);
@@ -76,9 +63,7 @@ export class Runtime {
     this.connections.clear();
   }
 
-  snapshot(): ReturnType<Storage['snapshot']>;
-  snapshot(_legacyUserId: string): ReturnType<Storage['snapshot']>;
-  snapshot(_legacyUserId?: string) {
+  snapshot() {
     const snapshot = this.store.snapshot();
     const pendingChannels = Array.from(this.connections.values()).flatMap((connection) => connection.listPendingChannels());
     return {
@@ -109,27 +94,20 @@ export class Runtime {
     };
   }
 
-  connect(networkId: string): void;
-  connect(_legacyUserId: string, networkId: string, _legacySessionToken?: string): void;
-  connect(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
-    this.ensureConnection(resolveNetworkId(networkIdOrLegacyUserId, maybeNetworkId)).connect();
+  connect(networkId: string) {
+    this.ensureConnection(networkId).connect();
   }
 
-  disconnect(networkId: string): void;
-  disconnect(_legacyUserId: string, networkId: string): void;
-  disconnect(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
-    const networkId = resolveNetworkId(networkIdOrLegacyUserId, maybeNetworkId);
+  disconnect(networkId: string) {
     this.getRequiredNetwork(networkId);
     this.connections.get(networkId)?.disconnect();
     this.channelListSubscribers.delete(networkId);
   }
 
-  join(networkId: string, channel: string, sourceBufferId?: string): void;
   join(networkId: string, channel: string, sourceBufferId?: string) {
     return this.joinInternal(networkId, channel, sourceBufferId);
   }
 
-  part(networkId: string, channel: string, sourceBufferId?: string): void;
   part(networkId: string, channel: string, sourceBufferId?: string) {
     this.getRequiredNetwork(networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
@@ -137,66 +115,46 @@ export class Runtime {
       .part(normalizedChannel, 'Leaving', this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel));
   }
 
-  openQuery(networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
-  openQuery(_legacyUserId: string, networkId: string, target: string): ReturnType<Storage['upsertQuery']>;
-  openQuery(...args: [string, string] | [string, string, string]) {
-    return this.openQueryInternal(...resolveArgsWithValue(args));
+  openQuery(networkId: string, target: string) {
+    return this.openQueryInternal(networkId, target);
   }
 
-  duplicateNetwork(networkId: string): SaveNetworkResult;
-  duplicateNetwork(_legacyUserId: string, networkId: string): SaveNetworkResult;
-  duplicateNetwork(networkIdOrLegacyUserId: string, maybeNetworkId?: string) {
-    return this.duplicateNetworkInternal(resolveNetworkId(networkIdOrLegacyUserId, maybeNetworkId));
+  duplicateNetwork(networkId: string) {
+    return this.duplicateNetworkInternal(networkId);
   }
 
-  upsertFriend(nick: string): FriendState;
-  upsertFriend(_legacyUserId: string, nick: string): FriendState;
-  upsertFriend(nickOrLegacyUserId: string, maybeNick?: string) {
-    return this.upsertFriendInternal(resolveOptionalId(nickOrLegacyUserId, maybeNick));
+  upsertFriend(nick: string) {
+    return this.upsertFriendInternal(nick);
   }
 
-  removeFriend(friendId: string): FriendState;
-  removeFriend(_legacyUserId: string, friendId: string): FriendState;
-  removeFriend(friendIdOrLegacyUserId: string, maybeFriendId?: string) {
-    return this.removeFriendInternal(resolveOptionalId(friendIdOrLegacyUserId, maybeFriendId));
+  removeFriend(friendId: string) {
+    return this.removeFriendInternal(friendId);
   }
 
-  closeBuffer(bufferId: string): BufferState;
-  closeBuffer(_legacyUserId: string, bufferId: string): BufferState;
-  closeBuffer(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
-    return this.closeBufferInternal(resolveBufferId(bufferIdOrLegacyUserId, maybeBufferId));
+  closeBuffer(bufferId: string) {
+    return this.closeBufferInternal(bufferId);
   }
 
-  markBufferRead(bufferId: string): ReturnType<Storage['getBuffer']>;
-  markBufferRead(_legacyUserId: string, bufferId: string): ReturnType<Storage['getBuffer']>;
-  markBufferRead(bufferIdOrLegacyUserId: string, maybeBufferId?: string) {
-    return this.markBufferReadInternal(resolveBufferId(bufferIdOrLegacyUserId, maybeBufferId));
+  markBufferRead(bufferId: string) {
+    return this.markBufferReadInternal(bufferId);
   }
 
-  history(bufferId: string, limit: number): ReturnType<Storage['listMessages']>;
-  history(_legacyUserId: string, bufferId: string, limit: number): ReturnType<Storage['listMessages']>;
-  history(...args: [string, number] | [string, string, number]) {
-    return this.historyInternal(...resolveBufferArgsWithLimit(args));
+  history(bufferId: string, limit: number) {
+    return this.historyInternal(bufferId, limit);
   }
 
-  saveNetwork(data: unknown): SaveNetworkResult;
-  saveNetwork(_legacyUserId: string, data: unknown): SaveNetworkResult;
-  saveNetwork(...args: [unknown] | [string, unknown]) {
-    return this.saveNetworkInternal(resolveNetworkInput(args));
+  saveNetwork(data: unknown) {
+    return this.saveNetworkInternal(data);
   }
 
-  sendMessage(networkId: string, target: string, body: string, kind?: 'message' | 'action', sourceBufferId?: string): void;
   sendMessage(networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message', sourceBufferId?: string) {
     return this.sendMessageInternal(networkId, target, body, kind, sourceBufferId);
   }
 
-  sendRaw(networkId: string, raw: string, sourceBufferId?: string): void;
   sendRaw(networkId: string, raw: string, sourceBufferId?: string) {
     return this.sendRawInternal(networkId, raw, sourceBufferId);
   }
 
-  requestChannelList(networkId: string): string;
-  requestChannelList(networkId: string, requester: WebSocket): string;
   requestChannelList(networkId: string, requester?: WebSocket) {
     return this.requestChannelListInternal(networkId, requester);
   }
@@ -205,10 +163,8 @@ export class Runtime {
     this.removeChannelListSubscriberForNetwork(networkId, requester);
   }
 
-  deleteNetwork(networkId: string): string[];
-  deleteNetwork(_legacyUserId: string, networkId: string): string[];
-  deleteNetwork(...args: [string] | [string, string]) {
-    return this.deleteNetworkInternal(resolveNetworkIdFromArgs(args));
+  deleteNetwork(networkId: string) {
+    return this.deleteNetworkInternal(networkId);
   }
 
   private openQueryInternal(networkId: string, target: string) {
@@ -679,9 +635,6 @@ export class Runtime {
   }
 }
 
-const resolveNetworkId = (networkIdOrLegacyUserId: string, maybeNetworkId?: string) =>
-  maybeNetworkId ?? networkIdOrLegacyUserId;
-
 const createDuplicateNetworkName = (name: string, networks: NetworkProfile[]) => {
   const existingNames = new Set(
     networks
@@ -698,25 +651,3 @@ const createDuplicateNetworkName = (name: string, networks: NetworkProfile[]) =>
   }
   return `${baseName} ${suffix}`;
 };
-
-const resolveArgsWithValue = (args: ArrayLike<unknown>) =>
-  args.length === 3
-    ? [String(args[1]), String(args[2])] as const
-    : [String(args[0]), String(args[1])] as const;
-
-const resolveBufferId = (bufferIdOrLegacyUserId: string, maybeBufferId?: string) =>
-  maybeBufferId ?? bufferIdOrLegacyUserId;
-
-const resolveOptionalId = (idOrLegacyUserId: string, maybeId?: string) =>
-  maybeId ?? idOrLegacyUserId;
-
-const resolveBufferArgsWithLimit = (args: ArrayLike<unknown>) =>
-  args.length === 3
-    ? [String(args[1]), Number(args[2])] as const
-    : [String(args[0]), Number(args[1])] as const;
-
-const resolveNetworkInput = (args: ArrayLike<unknown>) =>
-  args.length === 2 ? args[1] : args[0];
-
-const resolveNetworkIdFromArgs = (args: ArrayLike<unknown>) =>
-  args.length === 2 ? String(args[1]) : String(args[0]);

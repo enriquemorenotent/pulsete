@@ -639,7 +639,7 @@ test('system status events stay in the server buffer without banner notification
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'status',
       networkId: network.id,
@@ -660,7 +660,7 @@ test('self direct messages create query buffers when none exist', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -1634,7 +1634,7 @@ test('self part events remove the channel and emit buffer.remove', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -1735,7 +1735,7 @@ test('incoming private messages open query buffers automatically', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -1767,7 +1767,7 @@ test('incoming private messages reuse an existing query buffer across IRC nick c
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -1798,7 +1798,7 @@ test('self-sent private messages open query buffers automatically', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -1833,7 +1833,7 @@ test('service messages on the server buffer close stale service queries', () => 
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -1871,7 +1871,7 @@ test('status events keep their originating buffer target and message kind', () =
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(_legacyUserId, message) { sent.push(message); } },
+    { store: storage, send(message) { sent.push(message); } },
     {
       type: 'status',
       networkId: network.id,

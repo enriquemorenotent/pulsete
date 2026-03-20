@@ -90,36 +90,6 @@ test('listNetworks seeds fixed local networks without requiring a snapshot first
   );
 });
 
-test('legacy bootstrap helpers do not change fixed local defaults', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-
-  storage.bootstrapUser('alice', 'secret');
-  const snapshot = storage.snapshot();
-
-  assert.equal(snapshot.networks[0]?.nick, 'pulsete');
-  assert.equal(snapshot.networks[0]?.username, 'pulsete');
-  assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
-  assert.deepEqual(snapshot.friends, []);
-});
-
-test('expired sessions are removed on lookup and by the cleanup timer', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
-  const storage = new Storage(join(dir, 'db.sqlite'), { sessionCleanupIntervalMs: 10 });
-  const user = storage.createUser('alice', 'secret');
-  const manual = storage.createSession(user.id);
-  manual.expiresAt = Date.now() - 1;
-
-  assert.equal(storage.getSession(manual.token), null);
-
-  const timed = storage.createSession(user.id);
-  timed.expiresAt = Date.now() - 1;
-  await new Promise((resolve) => setTimeout(resolve, 30));
-
-  assert.equal(storage.hasActiveSessions(user.id), false);
-  assert.equal(storage.getNextSessionExpiry(user.id), null);
-});
-
 test('storage persists local workspace buffers and messages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

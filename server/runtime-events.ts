@@ -6,19 +6,12 @@ import type { MessageInput, Storage } from './storage.js';
 
 type RuntimeContext = {
   store: Storage;
-  send(_legacyUserId: string, message: ServerMessage): void;
+  send(message: ServerMessage): void;
 };
 
-export function handleRuntimeEvent(runtime: RuntimeContext, event: RuntimeEvent): void;
-export function handleRuntimeEvent(runtime: RuntimeContext, _legacyUserId: string, event: RuntimeEvent): void;
-export function handleRuntimeEvent(
-  runtime: RuntimeContext,
-  legacyUserIdOrEvent: RuntimeEvent | string,
-  maybeEvent?: RuntimeEvent
-) {
-  const event = typeof legacyUserIdOrEvent === 'string' ? maybeEvent! : legacyUserIdOrEvent;
+export function handleRuntimeEvent(runtime: RuntimeContext, event: RuntimeEvent): void {
   if (event.type === 'state') {
-    runtime.send('local', {
+    runtime.send({
       type: 'network.state',
       networkId: event.networkId,
       connected: event.connected,
@@ -32,18 +25,18 @@ export function handleRuntimeEvent(
     return;
   }
   if (event.type === 'channel-pending') {
-    runtime.send('local', {
+    runtime.send({
       type: 'channel.pending',
       pendingChannel: { networkId: event.networkId, channel: event.channel },
     });
     return;
   }
   if (event.type === 'channel-pending-remove') {
-    runtime.send('local', { type: 'channel.pending.remove', networkId: event.networkId, channel: event.channel });
+    runtime.send({ type: 'channel.pending.remove', networkId: event.networkId, channel: event.channel });
     return;
   }
   if (event.type === 'channel-list-entry') {
-    runtime.send('local', {
+    runtime.send({
       type: 'channel.list.entry',
       networkId: event.networkId,
       requestId: event.requestId,
@@ -52,11 +45,11 @@ export function handleRuntimeEvent(
     return;
   }
   if (event.type === 'channel-list-completed') {
-    runtime.send('local', { type: 'channel.list.completed', networkId: event.networkId, requestId: event.requestId });
+    runtime.send({ type: 'channel.list.completed', networkId: event.networkId, requestId: event.requestId });
     return;
   }
   if (event.type === 'channel-list-failed') {
-    runtime.send('local', {
+    runtime.send({
       type: 'channel.list.failed',
       networkId: event.networkId,
       requestId: event.requestId,
@@ -81,8 +74,8 @@ export function handleRuntimeEvent(
     topic: event.topic,
     users: event.users,
   });
-  runtime.send('local', { type: 'buffer.upsert', buffer: runtime.store.getBuffer(channel.id)! });
-  runtime.send('local', { type: 'channel.snapshot', channel });
+  runtime.send({ type: 'buffer.upsert', buffer: runtime.store.getBuffer(channel.id)! });
+  runtime.send({ type: 'channel.snapshot', channel });
 }
 
 const handleStatusEvent = (
@@ -106,7 +99,7 @@ const handleStatusEvent = (
   };
   appendMessage(runtime, message);
   if (event.kind !== 'system') {
-    runtime.send('local', {
+    runtime.send({
       type: event.kind === 'error' ? 'error' : 'notice',
       networkId: event.networkId,
       message: event.message,
@@ -136,12 +129,12 @@ const handleMessageEvent = (
 
   if (closedServiceQuery?.kind === 'query') {
     runtime.store.removeBuffer(closedServiceQuery.id);
-    runtime.send('local', { type: 'buffer.remove', networkId: closedServiceQuery.networkId, bufferId: closedServiceQuery.id });
+    runtime.send({ type: 'buffer.remove', networkId: closedServiceQuery.networkId, bufferId: closedServiceQuery.id });
   }
 
   if (removedChannel) {
     runtime.store.deleteChannelByName(event.message.networkId, event.message.target);
-    runtime.send('local', { type: 'buffer.remove', networkId: removedChannel.networkId, bufferId: removedChannel.id });
+    runtime.send({ type: 'buffer.remove', networkId: removedChannel.networkId, bufferId: removedChannel.id });
   }
 };
 
@@ -149,9 +142,9 @@ const appendMessage = (runtime: RuntimeContext, message: MessageInput) => {
   const bufferUpdate = resolveMessageBuffer(runtime, message);
   const saved = runtime.store.appendMessage(message);
 
-  runtime.send('local', { type: 'message.append', message: saved });
+  runtime.send({ type: 'message.append', message: saved });
   if (bufferUpdate) {
-    runtime.send('local', { type: 'buffer.upsert', buffer: bufferUpdate });
+    runtime.send({ type: 'buffer.upsert', buffer: bufferUpdate });
   }
 };
 

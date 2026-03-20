@@ -3,7 +3,6 @@ import { toAppError } from './app-error.js';
 import { handleBufferRoutes } from './http-buffers.js';
 import { handleFriendRoutes } from './http-friends.js';
 import { handleNetworkRoutes } from './http-networks.js';
-import { handleStateRoutes } from './http-state.js';
 import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js';
 import type { HttpContext } from './http-types.js';
 import { serveStatic } from './static-handler.js';
@@ -13,9 +12,6 @@ export const createHttpHandler = (context: HttpContext) => async (req: IncomingM
     const url = parseRequestUrl(req.url);
     const pathname = url.pathname;
     const args = { req, res, url, pathname, context };
-    if (await handleStateRoutes(args)) {
-      return;
-    }
     if (await handleNetworkRoutes(args) || await handleFriendRoutes(args) || await handleBufferRoutes(args)) {
       return;
     }

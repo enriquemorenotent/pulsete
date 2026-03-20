@@ -99,7 +99,7 @@ test('connectSocket forwards websocket events through the wrapper', () => {
 
     socket.readyState = FakeWebSocket.OPEN;
     socket.emit('open', new Event('open'));
-    handle.send({ type: 'state.request' });
+    handle.send({ type: 'network.connect', networkId: 'net-1' });
     socket.emit('message', {
       data: JSON.stringify({ type: 'notice', networkId: null, message: 'hello' }),
     } as MessageEvent);
@@ -107,7 +107,7 @@ test('connectSocket forwards websocket events through the wrapper', () => {
 
     assert.equal(openCalls, 1);
     assert.equal(closeCalls, 1);
-    assert.deepEqual(socket.sent.map((entry) => JSON.parse(entry)), [{ type: 'state.request' }]);
+    assert.deepEqual(socket.sent.map((entry) => JSON.parse(entry)), [{ type: 'network.connect', networkId: 'net-1' }]);
     assert.deepEqual(messages, [{ type: 'notice', networkId: null, message: 'hello' }]);
   } finally {
     restore();
@@ -127,7 +127,7 @@ test('connectSocket throws a stable error and retires the socket when send is at
 
     const socket = FakeWebSocket.instances[0]!;
 
-    assert.throws(() => handle.send({ type: 'state.request' }), /Gateway socket is not open/);
+    assert.throws(() => handle.send({ type: 'network.connect', networkId: 'net-1' }), /Gateway socket is not open/);
     assert.equal(socket.closeCalls, 1);
     assert.equal(closeCalls, 1);
     assert.equal(socket.readyState, FakeWebSocket.CLOSED);

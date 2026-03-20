@@ -39,9 +39,6 @@ const handleClientMessage = (
   try {
     const message = decodeClient(raw);
     switch (message.type) {
-      case 'state.request':
-        sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }));
-        return;
       case 'network.connect':
         context.runtime.connect(message.networkId);
         return;
