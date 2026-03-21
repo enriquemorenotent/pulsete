@@ -1,7 +1,8 @@
 import WebSocket from 'ws';
 import type { ServerMessage } from '../shared/protocol.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import { RuntimeConversations } from './runtime-conversations.js';
+import { RuntimeConversationCommands } from './runtime-conversation-commands.js';
+import { RuntimeConversationProjector } from './runtime-conversation-projector.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
 import { getRequiredNetwork } from './runtime-operation-utils.js';
 import { RuntimeOperations } from './runtime-operations.js';
@@ -15,7 +16,7 @@ export class Runtime {
   readonly connections: RuntimeConnectionManager['connections'];
   private readonly socketHub: RuntimeSocketHub;
   private readonly publisher: RuntimePublisher;
-  private readonly conversations: RuntimeConversations;
+  private readonly conversations: RuntimeConversationCommands;
   private readonly connectionManager: RuntimeConnectionManager;
   private readonly operations: RuntimeOperations;
   private closing = false;
@@ -24,9 +25,9 @@ export class Runtime {
     this.store = store;
     this.socketHub = new RuntimeSocketHub((ws) => this.connectionManager.removeSocket(ws));
     this.publisher = new RuntimePublisher(this.socketHub);
-    this.conversations = new RuntimeConversations(store);
+    this.conversations = new RuntimeConversationCommands(store);
     const eventRouter = new RuntimeEventRouter({
-      conversations: this.conversations,
+      conversationProjector: new RuntimeConversationProjector(store),
       publish: (messages) => this.publisher.publish(messages),
       sendSocket: (ws, message) => this.publisher.sendSocket(ws, message),
       store,

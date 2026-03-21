@@ -1,33 +1,32 @@
-import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
-import type { FriendState, NetworkProfile, NetworkRuntimeState, ServerMessage } from '../shared/protocol.js';
+import type { FriendState, NetworkProfile, ServerMessage } from '../shared/protocol.js';
 import type WebSocket from 'ws';
 import type { IrcConnection } from './irc.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { translateRuntimeEvent } from './runtime-events.js';
-import { ChannelListSubscriptions } from './runtime-channel-lists.js';
-import type { RuntimeConversations } from './runtime-conversations.js';
+import { ChannelListDispatcher } from './runtime-channel-list-dispatcher.js';
+import type { RuntimeConversationProjector } from './runtime-conversation-projector.js';
+import { RuntimeFriendPresenceProjector } from './runtime-friend-presence-projector.js';
+import { createRuntimeProjectionSnapshot } from './runtime-snapshot-projector.js';
 import type { Storage } from './storage.js';
 
 type RuntimeEventRouterOptions = {
-  conversations: RuntimeConversations;
+  conversationProjector: RuntimeConversationProjector;
   publish(messages: ServerMessage[]): void;
   sendSocket(ws: WebSocket, message: ServerMessage): void;
   store: Storage;
 };
 
 export class RuntimeEventRouter {
-  private readonly channelLists: ChannelListSubscriptions;
-  private readonly friendPresenceByNetwork = new Map<string, Set<string>>();
-  private readonly friendPresenceCache = new Map<string, boolean>();
+  private readonly channelLists: ChannelListDispatcher;
+  private readonly friendPresence = new RuntimeFriendPresenceProjector();
 
   constructor(private readonly options: RuntimeEventRouterOptions) {
-    this.channelLists = new ChannelListSubscriptions((ws, message) => this.options.sendSocket(ws, message));
+    this.channelLists = new ChannelListDispatcher((ws, message) => this.options.sendSocket(ws, message));
   }
 
   clearAll() {
     this.channelLists.clearAll();
-    this.friendPresenceByNetwork.clear();
-    this.friendPresenceCache.clear();
+    this.friendPresence.clearAll();
   }
 
   clearNetwork(networkId: string) {
@@ -39,7 +38,7 @@ export class RuntimeEventRouter {
   }
 
   requestChannelList(networkId: string, connection: IrcConnection, requestId: string, requester?: WebSocket) {
-    return this.channelLists.request(networkId, connection.runtimeSession.channelList, requestId, requester);
+    return this.channelLists.request(networkId, connection, requestId, requester);
   }
 
   cancelChannelList(networkId: string, requester: WebSocket) {
@@ -47,66 +46,33 @@ export class RuntimeEventRouter {
   }
 
   snapshot(networks: NetworkProfile[], friends: FriendState[], connections: readonly IrcConnection[]) {
-    return {
-      pendingChannels: connections.flatMap((connection) => connection.runtimeSession.channels.listPendingChannels()),
-      friendPresence: this.computeFriendPresence(friends),
-      networkStates: Object.fromEntries(
-        networks.map((network) => {
-          const connection = connections.find((candidate) => candidate.profile.id === network.id);
-          return [network.id, toNetworkRuntimeState(connection, network.nick)];
-        })
-      ),
-    };
+    return createRuntimeProjectionSnapshot(networks, friends, connections, this.friendPresence);
   }
 
   removeNetworks(networkIds: readonly string[]) {
     for (const networkId of networkIds) {
       this.channelLists.clearNetwork(networkId);
-      this.friendPresenceByNetwork.delete(networkId);
     }
-    return this.collectFriendPresenceDiffs();
+    return this.friendPresence.removeNetworks(networkIds, this.options.store.listFriends());
   }
 
   deleteFriendPresenceCache(friendId: string) {
-    this.friendPresenceCache.delete(friendId);
+    this.friendPresence.deleteFriendPresenceCache(friendId);
   }
 
   collectFriendPresenceDiffs() {
-    const friends = this.options.store.listFriends();
-    const nextPresence = this.computeFriendPresence(friends);
-    const messages: ServerMessage[] = [];
-    for (const friend of friends) {
-      const online = nextPresence[friend.id] ?? false;
-      if (this.friendPresenceCache.get(friend.id) === online) {
-        continue;
-      }
-      this.friendPresenceCache.set(friend.id, online);
-      messages.push({ type: 'friend.presence', friendId: friend.id, online });
-    }
-    for (const friendId of Array.from(this.friendPresenceCache.keys())) {
-      if (friendId in nextPresence) {
-        continue;
-      }
-      this.friendPresenceCache.delete(friendId);
-    }
-    return messages;
+    return this.friendPresence.collectDiffs(this.options.store.listFriends());
   }
 
   route(event: RuntimeEvent) {
     if (event.type === 'friend-presence') {
-      this.friendPresenceByNetwork.set(
-        event.networkId,
-        new Set(event.onlineNicks.map(normalizeIrcIdentifier))
-      );
-      this.publish(this.collectFriendPresenceDiffs());
+      this.publish(this.friendPresence.project(event, this.options.store.listFriends()));
       return;
     }
 
     if (event.type === 'state' && event.phase === 'offline') {
       this.channelLists.clearNetwork(event.networkId);
-      if (this.friendPresenceByNetwork.delete(event.networkId)) {
-        this.publish(this.collectFriendPresenceDiffs());
-      }
+      this.publish(this.friendPresence.clearNetwork(event.networkId, this.options.store.listFriends()));
     }
 
     if (
@@ -114,11 +80,11 @@ export class RuntimeEventRouter {
       || event.type === 'channel-list-completed'
       || event.type === 'channel-list-failed'
     ) {
-      this.channelLists.handleEvent(event);
+      this.channelLists.handle(event);
       return;
     }
 
-    this.publish(translateRuntimeEvent(event, this.options.conversations));
+    this.publish(translateRuntimeEvent(event, this.options.conversationProjector));
   }
 
   private publish(messages: ServerMessage[]) {
@@ -126,30 +92,4 @@ export class RuntimeEventRouter {
       this.options.publish(messages);
     }
   }
-
-  private computeFriendPresence(friends: FriendState[]) {
-    return Object.fromEntries(friends.map((friend) => [friend.id, this.isFriendOnline(friend.nick)]));
-  }
-
-  private isFriendOnline(nick: string) {
-    const normalized = normalizeIrcIdentifier(nick);
-    for (const onlineNicks of this.friendPresenceByNetwork.values()) {
-      if (onlineNicks.has(normalized)) {
-        return true;
-      }
-    }
-    return false;
-  }
 }
-
-const toNetworkRuntimeState = (
-  connection: IrcConnection | undefined,
-  fallbackNick: string
-): NetworkRuntimeState =>
-  connection
-    ? connection.runtimeSession.lifecycle.state
-    : {
-        phase: 'offline',
-        serverName: null,
-        nick: fallbackNick,
-      };

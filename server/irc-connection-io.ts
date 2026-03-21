@@ -29,20 +29,20 @@ export const sendRaw = (connection: IrcRawIoContext, raw: string, statusTarget?:
 };
 
 export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourceTarget = 'server'): boolean => {
-  connection.prunePendingReplyContexts();
+  connection.ports.reply.prunePendingReplyContexts();
   const trimmed = raw.trim();
   const [commandToken = '', ...rest] = trimmed.split(/\s+/);
   const command = commandToken.toUpperCase();
   if (command === 'JOIN' && rest[0]) {
-    return connection.join(rest[0], sourceTarget, { visiblePending: true });
+    return connection.ports.command.join(rest[0], sourceTarget, { visiblePending: true });
   }
   if (command === 'PART' && rest[0]) {
-    return connection.part(rest[0], rest.slice(1).join(' ').replace(/^:/, '') || 'Leaving', sourceTarget);
+    return connection.ports.command.part(rest[0], rest.slice(1).join(' ').replace(/^:/, '') || 'Leaving', sourceTarget);
   }
   const replyContext = createReplyContextFromRaw(sourceTarget, raw);
   if (command === 'LIST') {
-    if (connection.isChannelListPending()) {
-      emitStatus(connection, connection.getChannelListRequestFailureMessage(), 'error', sourceTarget);
+    if (connection.ports.channelList.isChannelListPending()) {
+      emitStatus(connection, connection.ports.channelList.getChannelListRequestFailureMessage(), 'error', sourceTarget);
       return false;
     }
     if (!connection.lifecycle.connected) {
@@ -52,7 +52,7 @@ export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourc
     if (!sendRaw(connection, raw, sourceTarget)) {
       return false;
     }
-    connection.startChannelList('raw', { sourceTarget });
+    connection.ports.channelList.startChannelList('raw', { sourceTarget });
     return true;
   }
   return sendTrackedRaw(connection, raw, sourceTarget, replyContext);
@@ -103,7 +103,7 @@ export const sendTrackedRaw = (
     return false;
   }
   if (replyContext) {
-    connection.queueReplyContext(replyContext);
+    connection.ports.reply.queueReplyContext(replyContext);
   }
   return true;
 };

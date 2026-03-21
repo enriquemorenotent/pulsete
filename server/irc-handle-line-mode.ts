@@ -6,12 +6,12 @@ const channelModeArgumentTokens = new Set(['b', 'e', 'I', 'k']);
 const channelModeSetOnlyArgumentTokens = new Set(['L', 'f', 'j', 'l']);
 
 export const handleMode = (connection: IrcConnectionState, params: string[]) => {
-  const channel = connection.resolveTrackedChannel(params[0] ?? '');
+  const channel = connection.ports.channels.resolveTrackedChannel(params[0] ?? '');
   const modeSequence = params[1] ?? '';
   if (!channel || !modeSequence) {
     return;
   }
-  let users = connection.getTrackedChannelUsers(channel);
+  let users = connection.ports.channels.getTrackedChannelUsers(channel);
   let sign: '+' | '-' = '+';
   let parameterIndex = 2;
   let changed = false;
@@ -38,7 +38,7 @@ export const handleMode = (connection: IrcConnectionState, params: string[]) => 
     }
   }
   if (changed) {
-    connection.setTrackedChannelUsers(channel, users);
+    connection.ports.channels.setTrackedChannelUsers(channel, users);
     emitChannel(connection, channel, { users });
   }
 };

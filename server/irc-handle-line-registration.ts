@@ -19,7 +19,7 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
   if (command !== '001') {
     return false;
   }
-  connection.markRegistered(nick, params[0] ?? connection.profile.nick);
+  connection.ports.lifecycle.markRegistered(nick, params[0] ?? connection.profile.nick);
   for (const line of formatServerNumeric(command, params)) {
     emitStatus(connection, line);
   }
@@ -29,9 +29,9 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
       ? `* Connected securely via ${connection.lifecycle.socket.getProtocol() ?? 'TLS'} ${connection.lifecycle.socket.getCipher().standardName ?? connection.lifecycle.socket.getCipher().name}`
       : '* Connected via TCP'
   );
-  connection.refreshFriendPresence();
+  connection.ports.friendPresence.refreshFriendPresence();
   for (const channel of connection.profile.autoJoin) {
-    connection.join(channel);
+    connection.ports.command.join(channel);
   }
   return true;
 };
@@ -45,28 +45,28 @@ const handleNickConflict = (
   if (command !== '433') {
     return false;
   }
-  const replyContext = connection.consumeReplyContext(command, params, nick);
-  if (connection.lifecycle.connected && !replyContext && !connection.pendingNick) {
+  const replyContext = connection.ports.reply.consumeReplyContext(command, params, nick);
+  if (connection.lifecycle.connected && !replyContext && !connection.replyTracker.pendingNick) {
     return true;
   }
   const attemptedNick = replyContext?.kind === 'nick'
     ? replyContext.requestedNick
-    : connection.pendingNick ?? connection.lifecycle.currentNick;
+    : connection.replyTracker.pendingNick ?? connection.lifecycle.currentNick;
   const replyTarget = replyContext && 'sourceTarget' in replyContext ? replyContext.sourceTarget : undefined;
   if (
     replyContext?.kind === 'nick'
-    && connection.pendingNick
-    && !isSameIrcIdentifier(connection.pendingNick, attemptedNick)
+    && connection.replyTracker.pendingNick
+    && !isSameIrcIdentifier(connection.replyTracker.pendingNick, attemptedNick)
   ) {
-    emitStatus(connection, `${attemptedNick} is already in use. Keeping ${connection.pendingNick} as the pending nick.`, 'notice', replyTarget, true);
+    emitStatus(connection, `${attemptedNick} is already in use. Keeping ${connection.replyTracker.pendingNick} as the pending nick.`, 'notice', replyTarget, true);
     return true;
   }
   const fallbackNick = getNextNickOnConflict(connection, attemptedNick);
-  const shouldUpdatePendingNick = replyContext?.kind === 'nick' || !!connection.pendingNick;
-  if (!connection.sendRaw(`NICK ${fallbackNick}`)) {
+  const shouldUpdatePendingNick = replyContext?.kind === 'nick' || !!connection.replyTracker.pendingNick;
+  if (!connection.ports.transport.sendRaw(`NICK ${fallbackNick}`)) {
     return true;
   }
-  connection.applyNickFallback(fallbackNick, { replyTarget, updatePending: shouldUpdatePendingNick });
+  connection.ports.command.applyNickFallback(fallbackNick, { replyTarget, updatePending: shouldUpdatePendingNick });
   emitStatus(connection, `${attemptedNick} is already in use. Retrying with ${fallbackNick}...`, 'notice', replyTarget, true);
   return true;
 };
@@ -80,14 +80,14 @@ const handleNickRejected = (
   if (!nickRejectionCommands.has(command) || command === '433' || (command === '437' && isChannelTarget(params[1] ?? ''))) {
     return false;
   }
-  const replyContext = connection.consumeReplyContext(command, params, nick);
-  const rejectedNick = replyContext?.kind === 'nick' ? replyContext.requestedNick : connection.pendingNick;
+  const replyContext = connection.ports.reply.consumeReplyContext(command, params, nick);
+  const rejectedNick = replyContext?.kind === 'nick' ? replyContext.requestedNick : connection.replyTracker.pendingNick;
   if (!rejectedNick) {
     return false;
   }
   const replyTarget = replyContext && 'sourceTarget' in replyContext ? replyContext.sourceTarget : undefined;
   if (!replyContext) {
-    connection.clearPendingNick();
+    connection.ports.command.clearPendingNick();
   }
   emitStatus(connection, `${rejectedNick} was rejected by the server`, 'error', replyTarget, true);
   return true;

@@ -85,12 +85,12 @@ export const applyNickFallback = (
   options: { replyTarget?: string; updatePending: boolean }
 ) => {
   if (options.updatePending) {
-    connection.pendingNick = fallbackNick;
+    connection.replyTracker.setPendingNick(fallbackNick);
   } else {
     connection.lifecycle.currentNick = fallbackNick;
   }
   if (options.replyTarget) {
-    connection.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
+    connection.ports.reply.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
   }
 };
 
@@ -118,7 +118,7 @@ export const disconnect = (connection: IrcLifecycleContext, raw = 'QUIT :Client 
   clearReconnectTimer(connection);
   const socket = lifecycle.socket;
   if (socket) {
-    connection.sendRaw(raw);
+    connection.ports.transport.sendRaw(raw);
     socket.end();
     lifecycle.socket = null;
   }
@@ -141,7 +141,7 @@ export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNet
   const reconnectActiveSession = lifecycle.connected && requiresSessionReconnect(connection.profile, profile);
   const applyNickUpdate = lifecycle.connected
     && !reconnectActiveSession
-    && !isSameIrcIdentifier(connection.pendingNick ?? lifecycle.currentNick, profile.nick);
+    && !isSameIrcIdentifier(connection.replyTracker.pendingNick ?? lifecycle.currentNick, profile.nick);
   if (restartConnectingSocket) {
     const socket = lifecycle.socket;
     lifecycle.socket = null;
@@ -157,7 +157,7 @@ export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNet
   } else if (reconnectActiveSession) {
     reconnectWithUpdatedProfile(connection);
   } else if (applyNickUpdate) {
-    connection.setNick(profile.nick);
+    connection.ports.command.setNick(profile.nick);
   }
 };
 
@@ -199,7 +199,7 @@ export const reconnectWithUpdatedProfile = (connection: IrcConnectContext) => {
   lifecycle.connected = false;
   lifecycle.serverName = null;
   lifecycle.currentNick = connection.profile.nick;
-  connection.pendingNick = null;
+  connection.replyTracker.setPendingNick(null);
   lifecycle.lastFailureMessage = null;
   emitState(connection);
   emitStatus(connection, 'Reconnecting to apply updated network settings', 'notice');
@@ -224,7 +224,7 @@ export const scheduleReconnect = (connection: IrcLifecycleContext) => {
       return;
     }
     emitStatus(connection, `Reconnecting (${attempt}/3)`, 'notice');
-    connection.connect(false);
+    connection.ports.lifecycle.connect(false);
   }, 3000 * attempt);
   timer.unref?.();
   lifecycle.reconnectTimer = timer;

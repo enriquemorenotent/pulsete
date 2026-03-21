@@ -4,7 +4,8 @@ import { isSameIrcIdentifier } from './irc-parser.js';
 import type { IrcConnectionState } from './irc-types.js';
 
 export const isSelfNick = (connection: IrcConnectionState, nick: string | null) =>
-  isSameIrcIdentifier(nick, connection.currentNick) || isSameIrcIdentifier(nick, connection.pendingNick);
+  isSameIrcIdentifier(nick, connection.lifecycle.currentNick)
+  || isSameIrcIdentifier(nick, connection.replyTracker.pendingNick);
 
 export const createMessage = (
   connection: IrcConnectionState,

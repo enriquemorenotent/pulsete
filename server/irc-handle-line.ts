@@ -23,7 +23,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   const { prefix, command, params } = parseLine(line);
   const nick = nickFromPrefix(prefix);
   if (command === 'PING') {
-    connection.sendRaw(formatPingReply(line, params));
+    connection.ports.transport.sendRaw(formatPingReply(line, params));
     return;
   }
   if (handleRegistrationLine(connection, command, params, nick)) {
@@ -31,19 +31,22 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   }
   const isIsonUnsupported = command === '421' && (params[1] ?? '').toUpperCase() === 'ISON';
   const isonReplyContext = command === '303' || isIsonUnsupported
-    ? connection.consumeReplyContext(command, params, nick)
+    ? connection.ports.reply.consumeReplyContext(command, params, nick)
     : null;
   if (command === '303' && isonReplyContext?.kind === 'friend-presence') {
-    connection.handleFriendPresence(isonReplyContext.pollId, (params[1] ?? '').split(/\s+/).map((value) => value.trim()).filter(Boolean));
+    connection.ports.friendPresence.handleFriendPresence(
+      isonReplyContext.pollId,
+      (params[1] ?? '').split(/\s+/).map((value) => value.trim()).filter(Boolean)
+    );
     return;
   }
   if (isIsonUnsupported) {
-    connection.disableFriendPresence();
+    connection.ports.friendPresence.disableFriendPresence();
     if (isonReplyContext?.kind === 'friend-presence') {
       return;
     }
   }
-  if (connection.handleChannelListNumeric(command, params)) {
+  if (connection.ports.channelList.handleChannelListNumeric(command, params)) {
     return;
   }
   if (/^\d{3}$/.test(command)) {
@@ -77,18 +80,18 @@ const handleNumericReply = (
   command: string,
   params: string[],
   nick: string | null,
-  isonReplyContext: ReturnType<IrcConnectionState['consumeReplyContext']>
+  isonReplyContext: ReturnType<IrcConnectionState['ports']['reply']['consumeReplyContext']>
 ) => {
   const replyContext = isonReplyContext && 'sourceTarget' in isonReplyContext
     ? isonReplyContext
-    : connection.consumeReplyContext(command, params, nick);
+    : connection.ports.reply.consumeReplyContext(command, params, nick);
   let replyTarget = replyContext && 'sourceTarget' in replyContext ? replyContext.sourceTarget : null;
   const joinFailureChannel = channelJoinFailureCommands.has(command) ? params[1] ?? '' : '';
   if (joinFailureChannel) {
-    const session = connection.getChannelSession(joinFailureChannel);
+    const session = connection.ports.channels.getChannelSession(joinFailureChannel);
     if (session?.phase === 'joining') {
       replyTarget ??= session.sourceTarget;
-      connection.removeChannelSession(joinFailureChannel);
+      connection.ports.channels.removeChannelSession(joinFailureChannel);
     }
   }
   const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic-query';

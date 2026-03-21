@@ -8,7 +8,8 @@ import {
   createIrcTransportPort,
   createRuntimeIrcSession,
 } from './irc-ports.js';
-import { defineIrcConnectionAliases } from './irc-connection-aliases.js';
+import { defineLegacyIrcConnectionCompat, type LegacyIrcConnectionCompat } from './irc-connection-compat.js';
+import type { IrcConnectionPorts } from './irc-port-types.js';
 import { ReplyTracker } from './irc-reply-tracker.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 import type {
@@ -20,6 +21,7 @@ import type {
   IrcFriendPresenceState,
   IrcLifecycleState,
 } from './irc-types.js';
+import type { RuntimeIrcSession } from './irc-port-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 const defaultChannelJoinTimeoutMs = 15_000;
@@ -87,6 +89,8 @@ const createConnectionState = (
     friendPresence,
     channelList,
     replyTracker: new ReplyTracker(),
+    ports: null as unknown as IrcConnectionPorts,
+    runtimeSession: null as unknown as RuntimeIrcSession,
   } as unknown as IrcConnection;
 
   const lifecyclePort = createIrcLifecyclePort(connection);
@@ -97,39 +101,30 @@ const createConnectionState = (
   const channelListPort = createIrcChannelListPort(connection);
   const channelPort = createIrcChannelPort(connection);
 
-  Object.assign(
-    connection,
+  connection.ports = {
+    lifecycle: lifecyclePort,
+    command: commandPort,
+    friendPresence: friendPresencePort,
+    reply: replyPort,
+    transport: transportPort,
+    channelList: channelListPort,
+    channels: channelPort,
+  };
+  connection.runtimeSession = createRuntimeIrcSession({
+    lifecycle,
     lifecyclePort,
     commandPort,
     friendPresencePort,
-    replyPort,
     transportPort,
     channelListPort,
-    channelPort
-  );
-  defineIrcConnectionAliases({
-    connection,
-    lifecycle,
-    channels,
-    friendPresence,
-    channelList,
-    replyTracker: connection.replyTracker,
-    runtimeSession: createRuntimeIrcSession({
-      lifecycle,
-      lifecyclePort,
-      commandPort,
-      friendPresencePort,
-      transportPort,
-      channelListPort,
-      channelPort,
-    }),
-    state: () => lifecyclePort.state,
+    channelPort,
   });
+  defineLegacyIrcConnectionCompat(connection);
 
   return connection;
 };
 
-export interface IrcConnection extends IrcConnectionState {}
+export interface IrcConnection extends IrcConnectionState, LegacyIrcConnectionCompat {}
 
 export class IrcConnection {
   constructor(profile: RuntimeNetworkProfile, handlers: Handlers, options: IrcConnectionOptions = {}) {

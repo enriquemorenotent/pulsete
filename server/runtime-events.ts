@@ -1,10 +1,10 @@
 import type { ServerMessage } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { RuntimeConversations } from './runtime-conversations.js';
-import { RuntimeConversations as RuntimeConversationStore } from './runtime-conversations.js';
+import type { RuntimeConversationProjector } from './runtime-conversation-projector.js';
+import { RuntimeConversationProjector as RuntimeConversationStore } from './runtime-conversation-projector.js';
 import type { Storage } from './storage.js';
 
-type RuntimeEventConversations = Pick<RuntimeConversations, 'handleChannelEvent' | 'handleMessageEvent' | 'handleStatusEvent'>;
+type RuntimeEventConversations = Pick<RuntimeConversationProjector, 'handleChannelEvent' | 'handleMessageEvent' | 'handleStatusEvent'>;
 type RuntimeEventSink = {
   store: Storage;
   send(message: ServerMessage): void;

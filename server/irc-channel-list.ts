@@ -6,11 +6,11 @@ import { formatServerNumeric } from './irc-server-log.js';
 const channelListNumerics = new Set(['321', '322', '323', '263', '421', '461']);
 
 export const requestChannelList = (connection: IrcChannelListContext, requestId: string) => {
-  connection.prunePendingReplyContexts();
-  if (!connection.lifecycle.connected || connection.isChannelListPending()) {
+  connection.ports.reply.prunePendingReplyContexts();
+  if (!connection.lifecycle.connected || isChannelListPending(connection)) {
     return false;
   }
-  if (!connection.sendRaw('LIST', 'server')) {
+  if (!connection.ports.transport.sendRaw('LIST', 'server')) {
     return false;
   }
   startChannelList(connection, 'structured', { requestId });
@@ -35,8 +35,8 @@ export const finishChannelListRequest = (connection: IrcChannelListContext, requ
 };
 
 export const getChannelListRequestFailureMessage = (connection: IrcChannelListContext) => {
-  connection.prunePendingReplyContexts();
-  return connection.isChannelListPending()
+  connection.ports.reply.prunePendingReplyContexts();
+  return isChannelListPending(connection)
     ? 'Waiting for the previous channel list response to finish'
     : connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected';
 };
@@ -53,7 +53,7 @@ export const getActiveChannelListSnapshot = (connection: IrcChannelListContext) 
 };
 
 export const handleChannelListNumeric = (connection: IrcChannelListContext, command: string, params: string[]) => {
-  connection.prunePendingReplyContexts();
+  connection.ports.reply.prunePendingReplyContexts();
   if (!isChannelListNumeric(command, params)) {
     return false;
   }
@@ -145,7 +145,7 @@ export const clearDrainingChannelList = (connection: IrcChannelListContext) => {
 };
 
 export const isChannelListPending = (connection: IrcChannelListContext) => {
-  connection.prunePendingReplyContexts();
+  connection.ports.reply.prunePendingReplyContexts();
   return connection.channelList.active.mode !== null || connection.channelList.draining.mode !== null;
 };
 

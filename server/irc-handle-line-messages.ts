@@ -11,7 +11,7 @@ export const handleTextMessage = (
   nick: string | null
 ) => {
   const rawTarget = params[0] ?? 'server';
-  const trackedChannel = isChannelTarget(rawTarget) ? connection.resolveTrackedChannel(rawTarget) : null;
+  const trackedChannel = isChannelTarget(rawTarget) ? connection.ports.channels.resolveTrackedChannel(rawTarget) : null;
   if (isChannelTarget(rawTarget) && !trackedChannel) {
     return;
   }
@@ -21,7 +21,7 @@ export const handleTextMessage = (
   const isDirectCtcp = isDirectTarget && ctcp !== null && !ctcp.startsWith('ACTION ');
   const isDirectServiceMessage = isDirectTarget && command === 'PRIVMSG' && isServiceNick(nick);
   const replyTarget = isDirectTarget && command === 'NOTICE'
-    ? connection.consumeReplyTarget(command, params, nick, rawTarget)
+    ? connection.ports.reply.consumeReplyTarget(command, params, nick, rawTarget)
     : null;
   const target = isDirectTarget
     ? (replyTarget ?? (command === 'NOTICE' || isDirectCtcp || isDirectServiceMessage ? 'server' : nick ?? rawTarget))

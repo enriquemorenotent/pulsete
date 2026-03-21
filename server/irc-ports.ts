@@ -12,10 +12,7 @@ import type { NetworkRuntimeState } from '../shared/protocol.js';
 import type { IrcConnectionState, IrcLifecycleState } from './irc-types.js';
 
 type IrcLifecyclePortContext = IrcConnectContext;
-type IrcCommandContext = IrcClientIoContext & Pick<
-  IrcConnectionState,
-  'consumePendingNickReplyContexts' | 'getChannelSession' | 'pendingNick' | 'replyTracker' | 'sendRaw' | 'setChannelSession'
->;
+type IrcCommandContext = IrcClientIoContext & Pick<IrcConnectionState, 'replyTracker'>;
 
 export const createIrcLifecyclePort = (connection: IrcLifecyclePortContext): IrcLifecyclePort => ({
   get state() {
@@ -51,16 +48,16 @@ export const createIrcCommandPort = (connection: IrcCommandContext): IrcCommandP
       emitStatus(connection, connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
       return false;
     }
-    if (!connection.sendRaw(`JOIN ${channel}`, sourceTarget)) {
+    if (!connection.ports.transport.sendRaw(`JOIN ${channel}`, sourceTarget)) {
       return false;
     }
     const visiblePending = typeof options === 'string' ? false : options.visiblePending ?? false;
-    connection.setChannelSession(channel, 'joining', { sourceTarget, visiblePending });
+    connection.ports.channels.setChannelSession(channel, 'joining', { sourceTarget, visiblePending });
     return true;
   },
   part(channel, reason = 'Leaving', sourceTarget = channel) {
-    if (connection.getChannelSession(channel)?.phase === 'joined') {
-      connection.setChannelSession(channel, 'leaving', { sourceTarget, visiblePending: false });
+    if (connection.ports.channels.getChannelSession(channel)?.phase === 'joined') {
+      connection.ports.channels.setChannelSession(channel, 'leaving', { sourceTarget, visiblePending: false });
     }
     return sendTrackedRaw(connection, `PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
   },
@@ -84,16 +81,16 @@ export const createIrcCommandPort = (connection: IrcCommandContext): IrcCommandP
   clearPendingNick() { connection.replyTracker.clearPendingNick(); },
   applyNickFallback(fallbackNick, options) {
     if (options.updatePending) {
-      connection.pendingNick = fallbackNick;
+      connection.replyTracker.setPendingNick(fallbackNick);
     } else {
       connection.lifecycle.currentNick = fallbackNick;
     }
     if (options.replyTarget) {
-      connection.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
+      connection.ports.reply.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
     }
   },
   confirmNick(newNick) {
-    connection.consumePendingNickReplyContexts(newNick);
+    connection.ports.reply.consumePendingNickReplyContexts(newNick);
     connection.lifecycle.currentNick = newNick;
     emitState(connection);
   },

@@ -4,7 +4,7 @@ import type { AppSnapshot, NetworkProfile } from '../../shared/protocol.js';
 import { getConnectionInstances } from './workspace-helpers.js';
 import { buildEmptyWorkspace, buildResolvedWorkspace } from './workspace-builders.js';
 import { resolveWorkspace, type WorkspaceInput } from './workspace-resolve.js';
-import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
+import type { WorkspaceView } from './workspace-types.js';
 
 export type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
 export {

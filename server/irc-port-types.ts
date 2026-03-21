@@ -94,6 +94,16 @@ export type IrcChannelPort = {
   clearChannelSessions(): void;
 };
 
+export type IrcConnectionPorts = {
+  lifecycle: IrcLifecyclePort;
+  command: IrcCommandPort;
+  friendPresence: IrcFriendPresencePort;
+  reply: IrcReplyPort;
+  transport: IrcTransportPort;
+  channelList: IrcChannelListPort;
+  channels: IrcChannelPort;
+};
+
 export type RuntimeIrcSession = {
   readonly lifecycle: Pick<IrcLifecyclePort, 'state' | 'connect' | 'disconnect' | 'updateProfile'>;
   readonly command: Pick<IrcCommandPort, 'join' | 'part' | 'say' | 'action' | 'setNick'>;

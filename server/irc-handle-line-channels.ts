@@ -10,18 +10,18 @@ export const handleJoin = (connection: IrcConnectionState, params: string[], nic
     return;
   }
   const selfJoin = isSelfNick(connection, nick);
-  const pendingSession = selfJoin ? connection.getChannelSession(name) : null;
+  const pendingSession = selfJoin ? connection.ports.channels.getChannelSession(name) : null;
   if (selfJoin) {
-    connection.discardPendingChannelReplyContexts(name, (context) => context.operation === 'join');
+    connection.ports.reply.discardPendingChannelReplyContexts(name, (context) => context.operation === 'join');
     if (!pendingSession) {
-      connection.setChannelSession(name, 'joined', { sourceTarget: 'server' });
+      connection.ports.channels.setChannelSession(name, 'joined', { sourceTarget: 'server' });
     }
   }
-  const channel = connection.resolveTrackedChannel(name);
+  const channel = connection.ports.channels.resolveTrackedChannel(name);
   if (!channel) {
     return;
   }
-  const users = connection.updateChannelUsers(channel, nick, true);
+  const users = connection.ports.channels.updateChannelUsers(channel, nick, true);
   emitMessage(connection, createMessage(connection, {
     target: channel,
     nick,
@@ -31,23 +31,23 @@ export const handleJoin = (connection: IrcConnectionState, params: string[], nic
   }));
   emitChannel(connection, channel, { users });
   if (selfJoin && pendingSession) {
-    connection.setChannelSession(channel, 'joined', { sourceTarget: pendingSession.sourceTarget });
+    connection.ports.channels.setChannelSession(channel, 'joined', { sourceTarget: pendingSession.sourceTarget });
   }
 };
 
 export const handlePart = (connection: IrcConnectionState, params: string[], nick: string | null) => {
-  const channel = connection.resolveTrackedChannel(params[0] ?? '');
+  const channel = connection.ports.channels.resolveTrackedChannel(params[0] ?? '');
   if (!channel) {
     return;
   }
   const reason = params[1] ?? 'left';
   const selfPart = isSelfNick(connection, nick);
   if (selfPart) {
-    connection.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join');
+    connection.ports.reply.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join');
   }
-  const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
+  const users = selfPart ? [] : connection.ports.channels.updateChannelUsers(channel, nick, false);
   if (selfPart) {
-    connection.handleSelfChannelDeparture(channel);
+    connection.ports.channels.handleSelfChannelDeparture(channel);
   }
   emitMessage(connection, createMessage(connection, {
     target: channel,
@@ -62,19 +62,19 @@ export const handlePart = (connection: IrcConnectionState, params: string[], nic
 };
 
 export const handleKick = (connection: IrcConnectionState, params: string[], nick: string | null) => {
-  const channel = connection.resolveTrackedChannel(params[0] ?? '');
+  const channel = connection.ports.channels.resolveTrackedChannel(params[0] ?? '');
   const kickedNick = params[1] ?? '';
-  if (!channel || !kickedNick || !connection.resolveTrackedChannel(channel)) {
+  if (!channel || !kickedNick || !connection.ports.channels.resolveTrackedChannel(channel)) {
     return;
   }
   const selfKick = isSelfNick(connection, kickedNick);
   const reason = params[2] ?? 'kicked';
   if (selfKick) {
-    connection.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join');
+    connection.ports.reply.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join');
   }
-  const users = selfKick ? [] : connection.updateChannelUsers(channel, kickedNick, false);
+  const users = selfKick ? [] : connection.ports.channels.updateChannelUsers(channel, kickedNick, false);
   if (selfKick) {
-    connection.handleSelfChannelDeparture(channel);
+    connection.ports.channels.handleSelfChannelDeparture(channel);
   }
   emitMessage(connection, createMessage(connection, {
     target: channel,
@@ -93,8 +93,8 @@ export const handleQuit = (connection: IrcConnectionState, params: string[], nic
   if (!nick) {
     return;
   }
-  for (const [channel, users] of connection.getTrackedChannelUserEntries()) {
-    const nextUsers = connection.updateChannelUsers(channel, nick, false);
+  for (const [channel, users] of connection.ports.channels.getTrackedChannelUserEntries()) {
+    const nextUsers = connection.ports.channels.updateChannelUsers(channel, nick, false);
     if (nextUsers.length !== users.length) {
       emitChannel(connection, channel, { users: nextUsers });
     }
@@ -106,30 +106,30 @@ export const handleNick = (connection: IrcConnectionState, params: string[], nic
   if (!newNick) {
     return;
   }
-  for (const [channel, users] of connection.getTrackedChannelUserEntries()) {
+  for (const [channel, users] of connection.ports.channels.getTrackedChannelUserEntries()) {
     if (!nick) {
       continue;
     }
     const nextUsers = renameChannelUser(users, nick, newNick);
     if (nextUsers.length !== users.length || nextUsers.some((user, index) => user !== users[index])) {
-      connection.setTrackedChannelUsers(channel, nextUsers);
+      connection.ports.channels.setTrackedChannelUsers(channel, nextUsers);
       emitChannel(connection, channel, { users: nextUsers });
     }
   }
   if (isSelfNick(connection, nick)) {
-    connection.confirmNick(newNick);
+    connection.ports.command.confirmNick(newNick);
   }
   emitStatus(connection, `${nick ?? 'Someone'} is now known as ${newNick}`);
 };
 
 export const handleTopic = (connection: IrcConnectionState, params: string[], nick: string | null) => {
-  const channel = connection.resolveTrackedChannel(params[0] ?? '');
+  const channel = connection.ports.channels.resolveTrackedChannel(params[0] ?? '');
   const topic = params[1] ?? '';
   if (!channel) {
     return;
   }
   if (isSelfNick(connection, nick)) {
-    connection.discardPendingChannelReplyContexts(
+    connection.ports.reply.discardPendingChannelReplyContexts(
       channel,
       (context) => context.operation === 'topic-set' && context.requestedTopic === topic
     );
@@ -139,24 +139,24 @@ export const handleTopic = (connection: IrcConnectionState, params: string[], ni
 };
 
 export const handleTopicNumeric = (connection: IrcConnectionState, params: string[]) => {
-  const channel = connection.resolveTrackedChannel(params[1] ?? '');
+  const channel = connection.ports.channels.resolveTrackedChannel(params[1] ?? '');
   if (channel) {
     emitChannel(connection, channel, { topic: params[2] ?? '' });
   }
 };
 
 export const handleNamesNumeric = (connection: IrcConnectionState, params: string[]) => {
-  const channel = connection.resolveTrackedChannel(params[2] ?? '');
+  const channel = connection.ports.channels.resolveTrackedChannel(params[2] ?? '');
   if (!channel) {
     return;
   }
-  let knownUsers = connection.getTrackedChannelUsers(channel);
+  let knownUsers = connection.ports.channels.getTrackedChannelUsers(channel);
   for (const name of (params[3] ?? '').split(' ')) {
     const user = parseChannelUserToken(name);
     if (user) {
       knownUsers = upsertChannelUser(knownUsers, user);
     }
   }
-  connection.setTrackedChannelUsers(channel, knownUsers);
+  connection.ports.channels.setTrackedChannelUsers(channel, knownUsers);
   emitChannel(connection, channel, { users: knownUsers });
 };
