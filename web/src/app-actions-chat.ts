@@ -14,12 +14,13 @@ import {
 import { api } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
 import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
-import { dispatchLocalBufferRemoval } from './local-action-dispatch.js';
+import { syncMutationMessages } from './mutation-message-sync.js';
 
 type ChatActionParams = BannerActions & ConversationActions & DraftActions & GatewayActions & WorkspaceActions & {
   channelList: AppTransientState['channelList'];
   conversation: ConversationIndex;
   dispatch: AppDispatch;
+  gatewayStatus: AppDomainState['gatewayStatus'];
   networks: AppDomainState['networks'];
 };
 
@@ -28,6 +29,7 @@ export const createChatActions = ({
   conversation,
   dispatch,
   draft,
+  gatewayStatus,
   getGatewaySocket,
   joinChannel,
   networks,
@@ -95,8 +97,8 @@ export const createChatActions = ({
 
   const closeBuffer = async (buffer: BufferState) => {
     try {
-      await api.closeBuffer(buffer.id);
-      dispatchLocalBufferRemoval(dispatch, buffer.id, buffer.networkId);
+      const result = await api.closeBuffer(buffer.id);
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
     } catch (error) {
       updateBanner('error', error instanceof Error ? error.message : 'Failed to close private message');
     }

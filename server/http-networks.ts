@@ -7,25 +7,25 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
     return true;
   }
   if (req.method === 'POST' && pathname === '/api/networks') {
-    const result = context.runtime.saveNetwork(removeRequestNetworkId(await readJson(req)));
+    const result = context.runtime.saveNetworkResult(removeRequestNetworkId(await readJson(req)));
     writeJson(res, 200, result);
     return true;
   }
   const networkMatch = pathname.match(/^\/api\/networks\/([^/]+)$/);
   if (networkMatch && req.method === 'PUT') {
     const networkId = decodeRouteParam(networkMatch[1]);
-    const result = context.runtime.saveNetwork(await readJson(req), networkId);
+    const result = context.runtime.saveNetworkResult(await readJson(req), networkId);
     writeJson(res, 200, result);
     return true;
   }
   if (networkMatch && req.method === 'DELETE') {
-    const deletedNetworkIds = context.runtime.deleteNetwork(decodeRouteParam(networkMatch[1]));
-    writeJson(res, 200, { ok: true, deletedNetworkIds });
+    const result = context.runtime.deleteNetworkResult(decodeRouteParam(networkMatch[1]));
+    writeJson(res, 200, { ok: true, ...result });
     return true;
   }
   const duplicateMatch = pathname.match(/^\/api\/networks\/([^/]+)\/duplicate$/);
   if (duplicateMatch && req.method === 'POST') {
-    const result = context.runtime.duplicateNetwork(decodeRouteParam(duplicateMatch[1]));
+    const result = context.runtime.duplicateNetworkResult(decodeRouteParam(duplicateMatch[1]));
     writeJson(res, 200, result);
     return true;
   }

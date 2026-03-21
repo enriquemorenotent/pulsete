@@ -7,13 +7,13 @@ export const resolveNextSelection = (
   domain: AppDomainState,
   action: Action,
 ) => {
+  const selection = action.type === 'select' ? action.selection : previous.transient.selection;
   const conversation = buildConversationModel({
     buffers: domain.buffers,
     channels: domain.channels,
-    pendingChannels: domain.pendingChannels,
     messages: domain.messages,
+    pendingChannels: domain.pendingChannels,
   });
-  const selection = action.type === 'select' ? action.selection : previous.transient.selection;
 
   switch (action.type) {
     case 'snapshot':

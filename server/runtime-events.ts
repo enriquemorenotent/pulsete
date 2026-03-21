@@ -1,10 +1,9 @@
 import type { ServerMessage } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { RuntimeConversationProjector } from './runtime-conversation-projector.js';
-import { RuntimeConversationProjector as RuntimeConversationStore } from './runtime-conversation-projector.js';
+import { RuntimeConversationService } from './runtime-conversation-service.js';
 import type { Storage } from './storage.js';
 
-type RuntimeEventConversations = Pick<RuntimeConversationProjector, 'handleChannelEvent' | 'handleMessageEvent' | 'handleStatusEvent'>;
+type RuntimeEventConversations = Pick<RuntimeConversationService, 'handleChannelEvent' | 'handleMessageEvent' | 'handleStatusEvent'>;
 type RuntimeEventSink = {
   store: Storage;
   send(message: ServerMessage): void;
@@ -45,7 +44,10 @@ export function translateRuntimeEvent(
 }
 
 export function handleRuntimeEvent(runtime: RuntimeEventSink, event: RuntimeEvent) {
-  const conversations = new RuntimeConversationStore(runtime.store);
+  const conversations = new RuntimeConversationService({
+    conversations: runtime.store.conversations,
+    networks: runtime.store.networks,
+  });
   for (const message of translateRuntimeEvent(event, conversations)) {
     runtime.send(message);
   }

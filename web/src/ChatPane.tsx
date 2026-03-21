@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { memo, type RefObject } from 'react';
 import type { BufferState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Card } from '@/components/ui/card.js';
 import type { ChannelListState } from './app-types.js';
@@ -32,7 +32,7 @@ export type ChatPaneProps = {
   onOpenChannelList: () => void;
 };
 
-export function ChatPane(props: ChatPaneProps) {
+export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -77,4 +77,4 @@ export function ChatPane(props: ChatPaneProps) {
       />
     </section>
   );
-}
+});

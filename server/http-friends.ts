@@ -10,16 +10,14 @@ const friendInputSchema = z.object({
 export const handleFriendRoutes = async ({ req, res, pathname, context }: RouteArgs) => {
   if (pathname === '/api/friends' && req.method === 'POST') {
     const nick = readFriendNick(await readJson(req));
-    const friend = context.runtime.upsertFriend(nick);
-    writeJson(res, 200, { friend });
+    writeJson(res, 200, context.runtime.upsertFriendResult(nick));
     return true;
   }
 
   const friendMatch = pathname.match(/^\/api\/friends\/([^/]+)$/);
   if (friendMatch && req.method === 'DELETE') {
     const friendId = decodeRouteParam(friendMatch[1]);
-    context.runtime.removeFriend(friendId);
-    writeJson(res, 200, { ok: true });
+    writeJson(res, 200, { ok: true, ...context.runtime.removeFriendResult(friendId) });
     return true;
   }
 

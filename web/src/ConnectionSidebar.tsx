@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { ConnectionSidebarConnections } from './ConnectionSidebarConnections.js';
 import { ConnectionSidebarFriends } from './ConnectionSidebarFriends.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
 export type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
-export function ConnectionSidebar(props: ConnectionSidebarProps) {
+export const ConnectionSidebar = memo(function ConnectionSidebar(props: ConnectionSidebarProps) {
   const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
   const [friendDraft, setFriendDraft] = useState('');
 
@@ -35,4 +35,4 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
       />
     </aside>
   );
-}
+});

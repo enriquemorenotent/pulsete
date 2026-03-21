@@ -1,64 +1,23 @@
 import { useMemo } from 'react';
-import { listSavedNetworks } from '../../shared/network-model.js';
 import type { State } from './app-types.js';
-import type { ConversationIndex } from './conversation-selectors.js';
-import { buildConnectionSidebarView } from './connection-sidebar-view.js';
-import { buildManagedRuntime } from './network-manager-runtime.js';
-import { deriveWorkspace } from './workspace.js';
+import { buildAppModel, type AppModel } from './app-model.js';
 
-export function useAppDerivedState(
-  state: State,
-  conversation: ConversationIndex,
-) {
-  const { managedNetworkId, showFavoritesOnly } = state.transient.networkManager;
-  const workspace = useMemo(
+export function useAppDerivedState(state: State): AppModel {
+  return useMemo(
     () =>
-      deriveWorkspace({
-        networks: state.domain.networks,
-        conversation,
-        networkStates: state.domain.networkStates,
+      buildAppModel({
+        ...state.domain,
+        channelListNetworkId: state.transient.channelList.networkId,
+        managedNetworkId: state.transient.networkManager.managedNetworkId,
         selection: state.transient.selection,
+        showFavoritesOnly: state.transient.networkManager.showFavoritesOnly,
       }),
-    [conversation, state.domain.networkStates, state.domain.networks, state.transient.selection]
+    [
+      state.domain,
+      state.transient.channelList.networkId,
+      state.transient.networkManager.managedNetworkId,
+      state.transient.networkManager.showFavoritesOnly,
+      state.transient.selection,
+    ]
   );
-  const managerNetworks = useMemo(() => listSavedNetworks(state.domain.networks), [state.domain.networks]);
-  const visibleNetworks = useMemo(
-    () => (showFavoritesOnly ? managerNetworks.filter((network) => network.favorite) : managerNetworks),
-    [managerNetworks, showFavoritesOnly]
-  );
-  const managedNetwork = managerNetworks.find((network) => network.id === managedNetworkId) ?? null;
-  const visibleManagedNetwork = visibleNetworks.find((network) => network.id === managedNetworkId) ?? null;
-  const hiddenManagedNetworkName =
-    managedNetwork && !visibleManagedNetwork && showFavoritesOnly ? managedNetwork.name : null;
-  const managedRuntime = useMemo(
-    () => buildManagedRuntime(visibleManagedNetwork, workspace.connectionInstances, state.domain.networkStates),
-    [state.domain.networkStates, visibleManagedNetwork, workspace.connectionInstances]
-  );
-  const channelListNetwork =
-    state.domain.networks.find((network) => network.id === state.transient.channelList.networkId) ?? null;
-  const selectedMessages = useMemo(
-    () => conversation.selectMessages(workspace.selectedBuffer),
-    [conversation, workspace.selectedBuffer]
-  );
-  const sidebarConnections = useMemo(
-    () =>
-      buildConnectionSidebarView({
-        networks: workspace.connectionInstances,
-        conversation,
-        networkStates: state.domain.networkStates,
-        selection: workspace.selection,
-      }),
-    [conversation, state.domain.networkStates, workspace.connectionInstances, workspace.selection]
-  );
-
-  return {
-    channelListNetwork,
-    hiddenManagedNetworkName,
-    managedRuntime,
-    selectedMessages,
-    sidebarConnections,
-    visibleManagedNetwork,
-    visibleNetworks,
-    workspace,
-  };
 }

@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { memo, useMemo, type RefObject } from 'react';
 import { Plug2 } from 'lucide-react';
 import type { ChatMessage } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
@@ -26,8 +26,11 @@ type ChatPaneMessageListProps = {
   onOpenChannel: (channel: string) => void;
 };
 
-export function ChatPaneMessageList(props: ChatPaneMessageListProps) {
-  const renderBlocks = buildRenderBlocks(props.messages, props.listKind);
+export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: ChatPaneMessageListProps) {
+  const renderBlocks = useMemo(
+    () => buildRenderBlocks(props.messages, props.listKind),
+    [props.listKind, props.messages]
+  );
 
   return (
     <div ref={props.scrollRef} className="min-h-0 flex-1 overflow-y-auto bg-background/45 px-3 py-2">
@@ -94,4 +97,4 @@ export function ChatPaneMessageList(props: ChatPaneMessageListProps) {
       )}
     </div>
   );
-}
+});

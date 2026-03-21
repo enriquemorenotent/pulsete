@@ -1,26 +1,27 @@
 import { isConnectionInstance } from '../shared/network-model.js';
 import type { NetworkProfile } from '../shared/protocol.js';
-import type { NetworkInput, Storage } from './storage.js';
+import type { StorageNetworksRepository } from './storage-networks-repository.js';
+import type { NetworkInput } from './storage-types.js';
 
-export const listRelatedNetworkIds = (store: Storage, networkId: string) =>
-  store
-    .listNetworks()
+export const listRelatedNetworkIds = (networks: StorageNetworksRepository, networkId: string) =>
+  networks
+    .list()
     .filter((candidate) => candidate.id === networkId || (isConnectionInstance(candidate) && candidate.templateId === networkId))
     .map((candidate) => candidate.id);
 
 export const syncTemplateInstances = (
-  store: Storage,
+  networks: StorageNetworksRepository,
   profile: NetworkProfile,
   input: NetworkInput
 ) => {
   if (isConnectionInstance(profile)) {
     return [];
   }
-  return store
-    .listNetworks()
+  return networks
+    .list()
     .filter((candidate) => isConnectionInstance(candidate) && candidate.templateId === profile.id)
     .map((candidate) =>
-      store.upsertNetwork({
+      networks.upsert({
         id: candidate.id,
         templateId: profile.id,
         managerHidden: true,

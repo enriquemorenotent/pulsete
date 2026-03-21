@@ -2,12 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type { BufferState, ChannelState } from '../shared/protocol.js';
 import { badRequest, notFound } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { MessageInput, Storage } from './storage.js';
+import type { StorageConversationsRepository } from './storage-conversations-repository.js';
+import type { MessageInput } from './storage-types.js';
 
-export const openConversationQuery = (store: Storage, networkId: string, target: string) =>
+export const openConversationQuery = (store: StorageConversationsRepository, networkId: string, target: string) =>
   store.upsertQuery(networkId, target);
 
-export const closeConversationQueryBuffer = (store: Storage, bufferId: string) => {
+export const closeConversationQueryBuffer = (store: StorageConversationsRepository, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
   if (buffer.kind !== 'query') {
     throw badRequest('Only private message buffers can be closed');
@@ -15,7 +16,7 @@ export const closeConversationQueryBuffer = (store: Storage, bufferId: string) =
   return store.removeBuffer(bufferId) ?? buffer;
 };
 
-export const markConversationBufferRead = (store: Storage, bufferId: string) => {
+export const markConversationBufferRead = (store: StorageConversationsRepository, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
   if (buffer.unread === 0) {
     return buffer;
@@ -24,12 +25,12 @@ export const markConversationBufferRead = (store: Storage, bufferId: string) => 
   return getRequiredBuffer(store, bufferId);
 };
 
-export const listConversationBufferHistory = (store: Storage, bufferId: string, limit: number) => {
+export const listConversationBufferHistory = (store: StorageConversationsRepository, bufferId: string, limit: number) => {
   const buffer = getRequiredBuffer(store, bufferId);
   return store.listMessages(buffer.networkId, buffer.target, limit);
 };
 
-export const appendConversationMessage = (store: Storage, message: MessageInput) => {
+export const appendConversationMessage = (store: StorageConversationsRepository, message: MessageInput) => {
   const bufferUpdate = resolveMessageBuffer(store, message);
   return {
     saved: store.appendMessage(message),
@@ -38,7 +39,7 @@ export const appendConversationMessage = (store: Storage, message: MessageInput)
 };
 
 export const upsertConversationChannel = (
-  store: Storage,
+  store: StorageConversationsRepository,
   event: Extract<RuntimeEvent, { type: 'channel' }>
 ): { buffer: BufferState; channel: ChannelState } => {
   const channel = store.upsertChannel({
@@ -54,7 +55,7 @@ export const upsertConversationChannel = (
   };
 };
 
-const resolveMessageBuffer = (store: Storage, message: MessageInput) => {
+const resolveMessageBuffer = (store: StorageConversationsRepository, message: MessageInput) => {
   const existing = store.getBufferByTarget(message.networkId, message.target);
   const created = existing ?? createMessageBuffer(store, message);
   if (!created) {
@@ -69,7 +70,7 @@ const resolveMessageBuffer = (store: Storage, message: MessageInput) => {
   return store.getBuffer(created.id);
 };
 
-const createMessageBuffer = (store: Storage, message: MessageInput): BufferState | null => {
+const createMessageBuffer = (store: StorageConversationsRepository, message: MessageInput): BufferState | null => {
   if (message.target === 'server') {
     return store.getServerBuffer(message.networkId)
       ?? store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' });
@@ -86,7 +87,7 @@ const createMessageBuffer = (store: Storage, message: MessageInput): BufferState
   return null;
 };
 
-const getRequiredBuffer = (store: Storage, bufferId: string) => {
+const getRequiredBuffer = (store: StorageConversationsRepository, bufferId: string) => {
   const buffer = store.getBuffer(bufferId);
   if (!buffer) {
     throw notFound('Buffer not found');

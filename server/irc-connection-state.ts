@@ -19,6 +19,7 @@ export type IrcConnectionOptions = {
   channelJoinTimeoutMs?: number;
   channelListTimeoutMs?: number;
   channelListDrainGraceMs?: number;
+  legacyCompat?: boolean;
 };
 
 type DeferredAccess<T> = {

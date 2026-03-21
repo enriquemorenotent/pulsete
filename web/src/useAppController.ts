@@ -15,7 +15,7 @@ type AppController = {
 export function useAppController(): AppController {
   const composer = useComposerHistory();
   const ui = useAppUiState();
-  const { actions, derived, dispatch, state } = useAppModel({ composer, ui });
+  const { actions, model, dispatch, state } = useAppModel({ composer, ui });
 
   useAppLifecycle({
     banner: state.transient.banner,
@@ -23,15 +23,15 @@ export function useAppController(): AppController {
     networks: state.domain.networks,
     phase: state.domain.phase,
     networkManager: state.transient.networkManager,
-    workspace: derived.workspace,
-    visibleNetworks: derived.visibleNetworks,
+    workspace: model.workspace,
+    visibleNetworks: model.visibleNetworks,
     dispatch,
     socketRef: ui.socketRef,
     scrollRef: ui.scrollRef,
     didAutoOpenManagerRef: ui.didAutoOpenManagerRef,
   });
 
-  const desktopShellProps = useDesktopShellController({ actions, composer, derived, dispatch, state, ui });
+  const desktopShellProps = useDesktopShellController({ actions, composer, dispatch, model, state, ui });
 
   return {
     phase: state.domain.phase,

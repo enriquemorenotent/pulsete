@@ -47,7 +47,9 @@ const createConnectionState = (
   });
   setPorts(ports);
   setRuntimeSession(runtimeSession);
-  defineLegacyIrcConnectionCompat(connection);
+  if (options.legacyCompat ?? true) {
+    defineLegacyIrcConnectionCompat(connection);
+  }
 
   return connection as IrcConnection;
 };

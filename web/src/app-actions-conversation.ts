@@ -1,5 +1,5 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
-import type { AppDomainState, AppTransientState } from './app-types.js';
+import type { AppDomainState, AppTransientState, GatewayStatus } from './app-types.js';
 import type { ConversationIndex } from './conversation-selectors.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
@@ -11,10 +11,11 @@ import {
   type ConversationActions,
   type GatewayActions,
 } from './app-actions-types.js';
-import { dispatchLocalBufferUpsert } from './local-action-dispatch.js';
+import { syncMutationMessages } from './mutation-message-sync.js';
 
 type ConversationActionParams = {
   dispatch: AppDispatch;
+  gatewayStatus: GatewayStatus;
   networkStates: AppDomainState['networkStates'];
   channelList: AppTransientState['channelList'];
   conversation: ConversationIndex;
@@ -22,6 +23,7 @@ type ConversationActionParams = {
 
 export const createConversationActions = ({
   dispatch,
+  gatewayStatus,
   networkStates,
   channelList,
   updateBanner,
@@ -62,7 +64,7 @@ export const createConversationActions = ({
       return existingBuffer;
     }
     const result = await api.openQuery(network.id, nick);
-    dispatchLocalBufferUpsert(dispatch, result.buffer);
+    syncMutationMessages(gatewayStatus, result.messages, dispatch);
     selectBuffer(dispatch, result.buffer);
     return result.buffer;
   };

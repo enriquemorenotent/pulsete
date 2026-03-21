@@ -1,11 +1,12 @@
 import WebSocket from 'ws';
 import type { ServerMessage } from '../shared/protocol.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import { RuntimeConversationCommands } from './runtime-conversation-commands.js';
-import { RuntimeConversationProjector } from './runtime-conversation-projector.js';
+import { NetworkLifecycleService } from './network-lifecycle-service.js';
+import { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
-import { getRequiredNetwork } from './runtime-operation-utils.js';
-import { RuntimeOperations } from './runtime-operations.js';
+import { notFound } from './app-error.js';
+import { RuntimeFriendService } from './runtime-friend-service.js';
+import { RuntimeIrcService } from './runtime-irc-service.js';
 import { RuntimePublisher } from './runtime-publisher.js';
 import { RuntimeSocketHub } from './runtime-socket-hub.js';
 import { createRuntimeSnapshot } from './runtime-snapshot.js';
@@ -16,32 +17,50 @@ export class Runtime {
   readonly connections: RuntimeConnectionManager['connections'];
   private readonly socketHub: RuntimeSocketHub;
   private readonly publisher: RuntimePublisher;
-  private readonly conversations: RuntimeConversationCommands;
   private readonly connectionManager: RuntimeConnectionManager;
-  private readonly operations: RuntimeOperations;
+  private readonly conversations: RuntimeConversationService;
+  private readonly friends: RuntimeFriendService;
+  private readonly irc: RuntimeIrcService;
+  private readonly networks: NetworkLifecycleService;
   private closing = false;
 
   constructor(store: Storage) {
     this.store = store;
     this.socketHub = new RuntimeSocketHub((ws) => this.connectionManager.removeSocket(ws));
     this.publisher = new RuntimePublisher(this.socketHub);
-    this.conversations = new RuntimeConversationCommands(store);
+    this.conversations = new RuntimeConversationService({
+      conversations: store.conversations,
+      networks: store.networks,
+      publish: (messages) => this.publisher.publish(messages),
+    });
     const eventRouter = new RuntimeEventRouter({
-      conversationProjector: new RuntimeConversationProjector(store),
+      conversations: this.conversations,
+      friends: store.friends,
       publish: (messages) => this.publisher.publish(messages),
       sendSocket: (ws, message) => this.publisher.sendSocket(ws, message),
-      store,
     });
     this.connectionManager = new RuntimeConnectionManager({
       eventRouter,
-      store,
+      friends: store.friends,
+      networks: store.networks,
       isClosing: () => this.closing,
     });
-    this.operations = new RuntimeOperations({
-      store,
+    this.friends = new RuntimeFriendService({
       connectionManager: this.connectionManager,
-      conversations: this.conversations,
-    }, (messages) => this.publisher.publish(messages));
+      friends: store.friends,
+      publish: (messages) => this.publisher.publish(messages),
+    });
+    this.irc = new RuntimeIrcService({
+      connectionManager: this.connectionManager,
+      conversations: store.conversations,
+      networks: store.networks,
+    });
+    this.networks = new NetworkLifecycleService({
+      conversations: store.conversations,
+      connectionManager: this.connectionManager,
+      networks: store.networks,
+      publish: (messages) => this.publisher.publish(messages),
+    });
     this.connections = this.connectionManager.connections;
   }
 
@@ -72,65 +91,97 @@ export class Runtime {
   }
 
   connect(networkId: string) {
-    getRequiredNetwork(this.store, networkId);
+    if (!this.store.networks.get(networkId)) {
+      throw notFound('Network not found');
+    }
     this.connectionManager.connect(networkId);
   }
 
   disconnect(networkId: string) {
-    getRequiredNetwork(this.store, networkId);
+    if (!this.store.networks.get(networkId)) {
+      throw notFound('Network not found');
+    }
     this.connectionManager.disconnect(networkId);
   }
 
   join(networkId: string, channel: string, sourceBufferId?: string) {
-    return this.operations.join(networkId, channel, sourceBufferId);
+    return this.irc.join(networkId, channel, sourceBufferId);
   }
 
   part(networkId: string, channel: string, sourceBufferId?: string) {
-    return this.operations.part(networkId, channel, sourceBufferId);
+    return this.irc.part(networkId, channel, sourceBufferId);
   }
 
   openQuery(networkId: string, target: string) {
-    return this.operations.openQuery(networkId, target);
+    return this.conversations.openQuery(networkId, target);
+  }
+
+  openQueryResult(networkId: string, target: string) {
+    return this.conversations.openQueryResult(networkId, target);
   }
 
   duplicateNetwork(networkId: string) {
-    return this.operations.duplicateNetwork(networkId);
+    return this.networks.duplicateNetwork(networkId);
+  }
+
+  duplicateNetworkResult(networkId: string) {
+    return this.networks.duplicateNetworkResult(networkId);
   }
 
   upsertFriend(nick: string) {
-    return this.operations.upsertFriend(nick);
+    return this.friends.upsertFriend(nick);
+  }
+
+  upsertFriendResult(nick: string) {
+    return this.friends.upsertFriendResult(nick);
   }
 
   removeFriend(friendId: string) {
-    return this.operations.removeFriend(friendId);
+    return this.friends.removeFriend(friendId);
+  }
+
+  removeFriendResult(friendId: string) {
+    return this.friends.removeFriendResult(friendId);
   }
 
   closeBuffer(bufferId: string) {
-    return this.operations.closeBuffer(bufferId);
+    return this.conversations.closeQueryBuffer(bufferId);
+  }
+
+  closeBufferResult(bufferId: string) {
+    return this.conversations.closeQueryBufferResult(bufferId);
   }
 
   markBufferRead(bufferId: string) {
-    return this.operations.markBufferRead(bufferId);
+    return this.conversations.markBufferRead(bufferId);
+  }
+
+  markBufferReadResult(bufferId: string) {
+    return this.conversations.markBufferReadResult(bufferId);
   }
 
   history(bufferId: string, limit: number) {
-    return this.operations.history(bufferId, limit);
+    return this.conversations.listBufferHistory(bufferId, limit);
   }
 
   saveNetwork(data: unknown, networkId?: string) {
-    return this.operations.saveNetwork(data, networkId);
+    return this.networks.saveNetwork(data, networkId);
+  }
+
+  saveNetworkResult(data: unknown, networkId?: string) {
+    return this.networks.saveNetworkResult(data, networkId);
   }
 
   sendMessage(networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message', sourceBufferId?: string) {
-    return this.operations.sendMessage(networkId, target, body, kind, sourceBufferId);
+    return this.irc.sendMessage(networkId, target, body, kind, sourceBufferId);
   }
 
   sendRaw(networkId: string, raw: string, sourceBufferId?: string) {
-    return this.operations.sendRaw(networkId, raw, sourceBufferId);
+    return this.irc.sendRaw(networkId, raw, sourceBufferId);
   }
 
   requestChannelList(networkId: string, requester?: WebSocket) {
-    return this.operations.requestChannelList(networkId, requester);
+    return this.irc.requestChannelList(networkId, requester);
   }
 
   cancelChannelList(networkId: string, requester: WebSocket) {
@@ -138,6 +189,10 @@ export class Runtime {
   }
 
   deleteNetwork(networkId: string) {
-    return this.operations.deleteNetwork(networkId);
+    return this.networks.deleteNetwork(networkId);
+  }
+
+  deleteNetworkResult(networkId: string) {
+    return this.networks.deleteNetworkResult(networkId);
   }
 }

@@ -4,25 +4,29 @@ import type { FriendState, NetworkProfile } from '../shared/protocol.js';
 import { IrcConnection } from './irc.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
-import type { Storage } from './storage.js';
+import type { StorageFriendsRepository } from './storage-friends-repository.js';
+import type { StorageNetworksRepository } from './storage-networks-repository.js';
 
 type RuntimeConnectionManagerOptions = {
   eventRouter: RuntimeEventRouter;
   onConnectionEvent?(event: RuntimeEvent): void;
-  store: Storage;
+  friends: StorageFriendsRepository;
+  networks: StorageNetworksRepository;
   isClosing(): boolean;
 };
 
 export class RuntimeConnectionManager {
-  private readonly store: Storage;
+  private readonly friends: StorageFriendsRepository;
   private readonly eventRouter: RuntimeEventRouter;
+  private readonly networks: StorageNetworksRepository;
   private readonly onConnectionEvent: RuntimeConnectionManagerOptions['onConnectionEvent'];
   private readonly isClosing: RuntimeConnectionManagerOptions['isClosing'];
   readonly connections = new Map<string, IrcConnection>();
 
   constructor(options: RuntimeConnectionManagerOptions) {
-    this.store = options.store;
+    this.friends = options.friends;
     this.eventRouter = options.eventRouter;
+    this.networks = options.networks;
     this.onConnectionEvent = options.onConnectionEvent;
     this.isClosing = options.isClosing;
   }
@@ -49,8 +53,8 @@ export class RuntimeConnectionManager {
     if (!connection) {
       connection = new IrcConnection(profile, {
         onEvent: (event) => this.handleConnectionEvent(event),
-      });
-      connection.runtimeSession.friendPresence.setFriendNicks(this.store.listFriends().map((friend) => friend.nick));
+      }, { legacyCompat: false });
+      connection.runtimeSession.friendPresence.setFriendNicks(this.friends.list().map((friend) => friend.nick));
       this.connections.set(networkId, connection);
     }
     return connection;
@@ -79,7 +83,7 @@ export class RuntimeConnectionManager {
 
   updateProfiles(networkIds: string[]) {
     for (const networkId of networkIds) {
-      const runtimeProfile = this.store.getRuntimeNetwork(networkId);
+      const runtimeProfile = this.networks.getRuntime(networkId);
       if (runtimeProfile) {
         this.connections.get(networkId)?.runtimeSession.lifecycle.updateProfile(runtimeProfile);
       }
@@ -95,7 +99,7 @@ export class RuntimeConnectionManager {
   }
 
   syncFriendTracking() {
-    const friendNicks = this.store.listFriends().map((friend) => friend.nick);
+    const friendNicks = this.friends.list().map((friend) => friend.nick);
     for (const connection of this.connections.values()) {
       connection.runtimeSession.friendPresence.setFriendNicks(friendNicks);
     }
@@ -118,7 +122,7 @@ export class RuntimeConnectionManager {
   }
 
   private getRequiredRuntimeNetwork(networkId: string) {
-    const profile = this.store.getRuntimeNetwork(networkId);
+    const profile = this.networks.getRuntime(networkId);
     if (!profile) {
       throw new Error('Network not found');
     }

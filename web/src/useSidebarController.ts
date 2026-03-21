@@ -1,21 +1,22 @@
+import { useMemo } from 'react';
+import type { AppModel } from './app-model.js';
 import type { State } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
 import type { useAppActions } from './useAppActions.js';
-import type { useAppDerivedState } from './useAppDerivedState.js';
 
 type SidebarControllerParams = {
   actions: ReturnType<typeof useAppActions>;
-  derived: ReturnType<typeof useAppDerivedState>;
+  model: AppModel;
   state: State;
 };
 
 export function useSidebarController({
   actions,
-  derived,
+  model,
   state,
 }: SidebarControllerParams): DesktopShellProps['sidebar'] {
-  return {
-    connections: derived.sidebarConnections,
+  return useMemo(() => ({
+    connections: model.sidebarConnections,
     friends: state.domain.friends,
     friendPresence: state.domain.friendPresence,
     onAddFriend: actions.addFriend,
@@ -29,5 +30,20 @@ export function useSidebarController({
     onCloseConnection: actions.closeConnection,
     onCloseChannel: actions.closeChannel,
     onCloseBuffer: actions.closeBuffer,
-  };
+  }), [
+    actions.addFriend,
+    actions.closeBuffer,
+    actions.closeChannel,
+    actions.closeConnection,
+    actions.disconnectNetwork,
+    actions.reconnectNetwork,
+    actions.removeFriend,
+    actions.selectFriend,
+    actions.selectNetworkBuffer,
+    actions.selectPendingTab,
+    actions.selectTabBuffer,
+    model.sidebarConnections,
+    state.domain.friendPresence,
+    state.domain.friends,
+  ]);
 }

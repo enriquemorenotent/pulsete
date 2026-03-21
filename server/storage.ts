@@ -5,35 +5,12 @@ import {
 } from '../shared/protocol.js';
 import { initializeStorageDefaults, openStorageResources } from './storage-bootstrap.js';
 import {
-  deleteChannelByName,
-  getBuffer,
-  getBufferByTarget,
-  getChannel,
-  getChannelByName,
-  getServerBuffer,
-  listBuffers,
-  listChannels,
-  markBufferRead,
-  removeBuffer,
-  setBufferUnread,
-  updateChannelTopic,
-  updateChannelUsers,
-  upsertBuffer,
-  upsertChannel,
-} from './storage-buffers.js';
-import { runInTransaction } from './storage-db.js';
-import { getFriend, listFriends, removeFriend, upsertFriend } from './storage-friends.js';
-import { appendMessage, getMessageById, listMessages, listRecentMessages } from './storage-messages.js';
-import {
-  deleteNetwork,
-  getNetwork,
-  getRuntimeNetwork,
-  listNetworks,
-  upsertNetwork,
-} from './storage-networks.js';
-import { ensureNetworkBuffers } from './storage-network-invariants.js';
+  StorageConversationsRepository,
+} from './storage-conversations-repository.js';
+import { StorageFriendsRepository } from './storage-friends-repository.js';
+import { StorageNetworksRepository } from './storage-networks-repository.js';
 import { createStorageSnapshot } from './storage-snapshot.js';
-import type { ChannelInput, FriendInput, MessageInput, NetworkInput } from './storage-types.js';
+import type { BufferInput, ChannelInput, FriendInput, MessageInput, NetworkInput } from './storage-types.js';
 
 export { type MessageInput, type NetworkInput };
 
@@ -41,130 +18,132 @@ export class Storage {
   private readonly db: DatabaseSync;
   private readonly secretBox;
   private closed = false;
+  readonly networks: StorageNetworksRepository;
+  readonly conversations: StorageConversationsRepository;
+  readonly friends: StorageFriendsRepository;
 
   constructor(filePath?: string) {
     const resources = openStorageResources(filePath);
     this.db = resources.db;
     this.secretBox = resources.secretBox;
     initializeStorageDefaults(resources);
+    this.networks = new StorageNetworksRepository(this.db, this.secretBox);
+    this.conversations = new StorageConversationsRepository(this.db);
+    this.friends = new StorageFriendsRepository(this.db);
   }
 
   listNetworks() {
-    return listNetworks(this.db);
+    return this.networks.list();
   }
 
   getNetwork(networkId: string) {
-    return getNetwork(this.db, networkId);
+    return this.networks.get(networkId);
   }
 
   getRuntimeNetwork(networkId: string) {
-    return getRuntimeNetwork(this.db, networkId, this.secretBox);
+    return this.networks.getRuntime(networkId);
   }
 
   deleteNetwork(networkId: string) {
-    runInTransaction(this.db, () => deleteNetwork(this.db, networkId));
+    this.networks.delete(networkId);
   }
 
   listChannels(networkId?: string) {
-    return listChannels(this.db, networkId);
+    return this.conversations.listChannels(networkId);
   }
 
   listBuffers(networkId?: string) {
-    return listBuffers(this.db, networkId);
+    return this.conversations.listBuffers(networkId);
   }
 
   listFriends() {
-    return listFriends(this.db);
+    return this.friends.list();
   }
 
   getBuffer(bufferId: string) {
-    return getBuffer(this.db, bufferId);
+    return this.conversations.getBuffer(bufferId);
   }
 
   getBufferByTarget(networkId: string, target: string) {
-    return getBufferByTarget(this.db, networkId, target);
+    return this.conversations.getBufferByTarget(networkId, target);
   }
 
   getServerBuffer(networkId: string) {
-    return getServerBuffer(this.db, networkId);
+    return this.conversations.getServerBuffer(networkId);
   }
 
   getChannel(channelId: string) {
-    return getChannel(this.db, channelId);
+    return this.conversations.getChannel(channelId);
   }
 
   getChannelByName(networkId: string, name: string) {
-    return getChannelByName(this.db, networkId, name);
+    return this.conversations.getChannelByName(networkId, name);
   }
 
   getFriend(friendId: string) {
-    return getFriend(this.db, friendId);
+    return this.friends.get(friendId);
   }
 
   markBufferRead(bufferId: string) {
-    markBufferRead(this.db, bufferId);
+    this.conversations.markBufferRead(bufferId);
   }
 
   removeBuffer(bufferId: string) {
-    return removeBuffer(this.db, bufferId);
+    return this.conversations.removeBuffer(bufferId);
   }
 
   deleteChannelByName(networkId: string, channelName: string) {
-    deleteChannelByName(this.db, networkId, channelName);
+    this.conversations.deleteChannelByName(networkId, channelName);
   }
 
   setBufferUnread(bufferId: string, unread: number) {
-    setBufferUnread(this.db, bufferId, unread);
+    this.conversations.setBufferUnread(bufferId, unread);
   }
 
   updateChannelUsers(networkId: string, channelName: string, users: ChannelUserState[]) {
-    updateChannelUsers(this.db, networkId, channelName, users);
+    this.conversations.updateChannelUsers(networkId, channelName, users);
   }
 
   updateChannelTopic(networkId: string, channelName: string, topic: string) {
-    updateChannelTopic(this.db, networkId, channelName, topic);
+    this.conversations.updateChannelTopic(networkId, channelName, topic);
   }
 
   getMessageById(messageId: string) {
-    return getMessageById(this.db, messageId);
+    return this.conversations.getMessageById(messageId);
   }
 
   listMessages(networkId: string, target: string, limit?: number) {
-    return listMessages(this.db, networkId, target, limit);
+    return this.conversations.listMessages(networkId, target, limit);
   }
 
-  listRecentMessages(limit = 200) { return listRecentMessages(this.db, limit); }
+  listRecentMessages(limit = 200) { return this.conversations.listRecentMessages(limit); }
 
   upsertNetwork(input: NetworkInput) {
-    return runInTransaction(this.db, () => {
-      const network = upsertNetwork(this.db, input, this.secretBox);
-      ensureNetworkBuffers(this.db, network);
-      return network;
-    });
+    return this.networks.upsert(input);
   }
 
   upsertChannel(input: ChannelInput) {
-    return runInTransaction(this.db, () => upsertChannel(this.db, input));
+    return this.conversations.upsertChannel(input);
   }
 
-  upsertBuffer(input: { id?: string; networkId: string; kind: BufferState['kind']; target: string; unread?: number }) {
-    return upsertBuffer(this.db, input);
+  upsertBuffer(input: BufferInput) {
+    return this.conversations.upsertBuffer(input);
   }
 
   upsertQuery(networkId: string, target: string) {
-    return upsertBuffer(this.db, { networkId, kind: 'query', target });
+    return this.conversations.upsertQuery(networkId, target);
   }
 
   upsertFriend(input: FriendInput) {
-    return upsertFriend(this.db, input);
+    return this.friends.upsert(input);
   }
 
   removeFriend(friendId: string) {
-    return removeFriend(this.db, friendId);
+    return this.friends.remove(friendId);
   }
 
   appendMessage(input: MessageInput) {
-    return appendMessage(this.db, input, (messageId) => this.getMessageById(messageId));
+    return this.conversations.appendMessage(input);
   }
 
   snapshot() {

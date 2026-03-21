@@ -4,16 +4,16 @@ import type { IrcConnection } from './irc.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { translateRuntimeEvent } from './runtime-events.js';
 import { ChannelListDispatcher } from './runtime-channel-list-dispatcher.js';
-import type { RuntimeConversationProjector } from './runtime-conversation-projector.js';
+import type { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeFriendPresenceProjector } from './runtime-friend-presence-projector.js';
 import { createRuntimeProjectionSnapshot } from './runtime-snapshot-projector.js';
-import type { Storage } from './storage.js';
+import type { StorageFriendsRepository } from './storage-friends-repository.js';
 
 type RuntimeEventRouterOptions = {
-  conversationProjector: RuntimeConversationProjector;
+  conversations: RuntimeConversationService;
+  friends: StorageFriendsRepository;
   publish(messages: ServerMessage[]): void;
   sendSocket(ws: WebSocket, message: ServerMessage): void;
-  store: Storage;
 };
 
 export class RuntimeEventRouter {
@@ -53,7 +53,7 @@ export class RuntimeEventRouter {
     for (const networkId of networkIds) {
       this.channelLists.clearNetwork(networkId);
     }
-    return this.friendPresence.removeNetworks(networkIds, this.options.store.listFriends());
+    return this.friendPresence.removeNetworks(networkIds, this.options.friends.list());
   }
 
   deleteFriendPresenceCache(friendId: string) {
@@ -61,18 +61,18 @@ export class RuntimeEventRouter {
   }
 
   collectFriendPresenceDiffs() {
-    return this.friendPresence.collectDiffs(this.options.store.listFriends());
+    return this.friendPresence.collectDiffs(this.options.friends.list());
   }
 
   route(event: RuntimeEvent) {
     if (event.type === 'friend-presence') {
-      this.publish(this.friendPresence.project(event, this.options.store.listFriends()));
+      this.publish(this.friendPresence.project(event, this.options.friends.list()));
       return;
     }
 
     if (event.type === 'state' && event.phase === 'offline') {
       this.channelLists.clearNetwork(event.networkId);
-      this.publish(this.friendPresence.clearNetwork(event.networkId, this.options.store.listFriends()));
+      this.publish(this.friendPresence.clearNetwork(event.networkId, this.options.friends.list()));
     }
 
     if (
@@ -84,7 +84,7 @@ export class RuntimeEventRouter {
       return;
     }
 
-    this.publish(translateRuntimeEvent(event, this.options.conversationProjector));
+    this.publish(translateRuntimeEvent(event, this.options.conversations));
   }
 
   private publish(messages: ServerMessage[]) {

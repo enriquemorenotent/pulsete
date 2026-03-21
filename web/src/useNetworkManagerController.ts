@@ -1,14 +1,15 @@
+import { useCallback, useMemo } from 'react';
 import type { NetworkProfile } from '../../shared/protocol.js';
+import type { AppModel } from './app-model.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
 import type { useAppActions } from './useAppActions.js';
-import type { useAppDerivedState } from './useAppDerivedState.js';
 
 type NetworkManagerControllerParams = {
   actions: ReturnType<typeof useAppActions>;
-  derived: ReturnType<typeof useAppDerivedState>;
   dispatch: (action: Action) => void;
+  model: AppModel;
   state: State;
 };
 
@@ -17,36 +18,38 @@ const createOpenNewNetworkEditorDialog = (dispatch: (action: Action) => void) =>
 
 export function useNetworkManagerController({
   actions,
-  derived,
   dispatch,
+  model,
   state,
 }: NetworkManagerControllerParams): DesktopShellProps['networkManager'] {
-  const openNewNetworkEditorDialog = createOpenNewNetworkEditorDialog(dispatch);
+  const openNewNetworkEditorDialog = useCallback(createOpenNewNetworkEditorDialog(dispatch), [dispatch]);
   const networkManager = state.transient.networkManager;
 
-  const openExistingNetworkEditorDialog = (network: NetworkProfile) =>
-    openExistingNetworkEditor(network, { dispatch });
+  const openExistingNetworkEditorDialog = useCallback(
+    (network: NetworkProfile) => openExistingNetworkEditor(network, { dispatch }),
+    [dispatch]
+  );
 
-  const duplicateNetwork = async (network: NetworkProfile) => {
+  const duplicateNetwork = useCallback(async (network: NetworkProfile) => {
     const duplicate = await actions.duplicateNetwork(network);
     if (duplicate) {
       dispatch({ type: 'set-managed-network', networkId: duplicate.id });
     }
-  };
+  }, [actions.duplicateNetwork, dispatch]);
 
-  const connectNetwork = async (network: NetworkProfile) => {
+  const connectNetwork = useCallback(async (network: NetworkProfile) => {
     if (await actions.connectNetwork(network)) {
       dispatch({ type: 'close-network-manager' });
     }
-  };
+  }, [actions.connectNetwork, dispatch]);
 
-  return {
+  return useMemo(() => ({
     open: networkManager.mode === 'manager',
-    networks: derived.visibleNetworks,
-    selected: derived.visibleManagedNetwork,
-    runtime: derived.managedRuntime,
+    networks: model.visibleNetworks,
+    selected: model.visibleManagedNetwork,
+    runtime: model.managedRuntime,
     showFavoritesOnly: networkManager.showFavoritesOnly,
-    hiddenManagedNetworkName: derived.hiddenManagedNetworkName,
+    hiddenManagedNetworkName: model.hiddenManagedNetworkName,
     onSelect: (networkId) => dispatch({ type: 'set-managed-network', networkId }),
     onToggleFavorites: () =>
       dispatch({
@@ -55,12 +58,26 @@ export function useNetworkManagerController({
       }),
     onClose: () => dispatch({ type: 'close-network-manager' }),
     onAdd: openNewNetworkEditorDialog,
-    onEdit: () => derived.visibleManagedNetwork && openExistingNetworkEditorDialog(derived.visibleManagedNetwork),
-    onDuplicate: () => derived.visibleManagedNetwork && duplicateNetwork(derived.visibleManagedNetwork),
-    onRemove: () => derived.visibleManagedNetwork && actions.deleteNetwork(derived.visibleManagedNetwork.id),
-    onConnect: () => derived.visibleManagedNetwork && connectNetwork(derived.visibleManagedNetwork),
+    onEdit: () => model.visibleManagedNetwork && openExistingNetworkEditorDialog(model.visibleManagedNetwork),
+    onDuplicate: () => model.visibleManagedNetwork && duplicateNetwork(model.visibleManagedNetwork),
+    onRemove: () => model.visibleManagedNetwork && actions.deleteNetwork(model.visibleManagedNetwork.id),
+    onConnect: () => model.visibleManagedNetwork && connectNetwork(model.visibleManagedNetwork),
     onFavorite: () =>
-      derived.visibleManagedNetwork
-      && actions.saveFavorite(derived.visibleManagedNetwork, !derived.visibleManagedNetwork.favorite),
-  };
+      model.visibleManagedNetwork
+      && actions.saveFavorite(model.visibleManagedNetwork, !model.visibleManagedNetwork.favorite),
+  }), [
+    actions.deleteNetwork,
+    actions.saveFavorite,
+    connectNetwork,
+    dispatch,
+    duplicateNetwork,
+    model.hiddenManagedNetworkName,
+    model.managedRuntime,
+    model.visibleManagedNetwork,
+    model.visibleNetworks,
+    networkManager.mode,
+    networkManager.showFavoritesOnly,
+    openExistingNetworkEditorDialog,
+    openNewNetworkEditorDialog,
+  ]);
 }

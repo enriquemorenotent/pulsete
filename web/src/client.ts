@@ -30,7 +30,7 @@ const apiRequest = async <T>(path: string, init?: RequestInit) => {
 
 export const api = {
   saveNetwork: (payload: Partial<NetworkProfile> & { clearPassword?: boolean; id?: string; password?: string }) =>
-    apiRequest<{ network: NetworkProfile; serverBuffer: BufferState | null }>(
+    apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(
       payload.id ? `/api/networks/${payload.id}` : '/api/networks',
       {
       method: payload.id ? 'PUT' : 'POST',
@@ -38,12 +38,12 @@ export const api = {
       }
     ),
   deleteNetwork: (networkId: string) =>
-    apiRequest<{ ok: boolean; deletedNetworkIds: string[] }>(`/api/networks/${networkId}`, {
+    apiRequest<{ deletedNetworkIds: string[]; messages: ServerMessage[]; ok: boolean }>(`/api/networks/${networkId}`, {
       method: 'DELETE',
       body: '{}',
     }),
   duplicateNetwork: (networkId: string) =>
-    apiRequest<{ network: NetworkProfile; serverBuffer: BufferState | null }>(`/api/networks/${networkId}/duplicate`, {
+    apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(`/api/networks/${networkId}/duplicate`, {
       method: 'POST',
       body: '{}',
     }),
@@ -60,27 +60,27 @@ export const api = {
   loadHistory: (bufferId: string, limit = historyWindowLimit) =>
     apiRequest<{ messages: ChatMessage[] }>(`/api/buffers/${bufferId}/history?limit=${limit}`),
   markBufferRead: (bufferId: string) =>
-    apiRequest<{ buffer: BufferState }>(`/api/buffers/${bufferId}/read`, {
+    apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',
       body: '{}',
     }),
   addFriend: (nick: string) =>
-    apiRequest<{ friend: FriendState }>('/api/friends', {
+    apiRequest<{ friend: FriendState; messages: ServerMessage[] }>('/api/friends', {
       method: 'POST',
       body: JSON.stringify({ nick }),
     }),
   removeFriend: (friendId: string) =>
-    apiRequest<{ ok: boolean }>(`/api/friends/${friendId}`, {
+    apiRequest<{ ok: boolean; friendId: string; messages: ServerMessage[] }>(`/api/friends/${friendId}`, {
       method: 'DELETE',
       body: '{}',
     }),
   openQuery: (networkId: string, target: string) =>
-    apiRequest<{ buffer: BufferState }>(`/api/networks/${networkId}/queries`, {
+    apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/networks/${networkId}/queries`, {
       method: 'POST',
       body: JSON.stringify({ target }),
     }),
   closeBuffer: (bufferId: string) =>
-    apiRequest<{ ok: boolean }>(`/api/buffers/${bufferId}`, {
+    apiRequest<{ buffer: BufferState; messages: ServerMessage[]; ok: boolean }>(`/api/buffers/${bufferId}`, {
       method: 'DELETE',
       body: '{}',
     }),

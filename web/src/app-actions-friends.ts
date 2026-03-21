@@ -1,15 +1,17 @@
 import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type { GatewayStatus } from './app-types.js';
 import type { AppDomainState } from './app-types.js';
 import type { AppDispatch, BannerActions, ConversationActions } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
 import { api } from './client.js';
-import { dispatchLocalFriendRemoval, dispatchLocalFriendUpsert } from './local-action-dispatch.js';
 import { resolveFriendSelection } from './friend-selection.js';
+import { syncMutationMessages } from './mutation-message-sync.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 type FriendActionParams = BannerActions & ConversationActions & {
   buffers: AppDomainState['buffers'];
   dispatch: AppDispatch;
+  gatewayStatus: GatewayStatus;
   networkStates: AppDomainState['networkStates'];
   workspace: WorkspaceView;
 };
@@ -17,6 +19,7 @@ type FriendActionParams = BannerActions & ConversationActions & {
 export const createFriendActions = ({
   buffers,
   dispatch,
+  gatewayStatus,
   networkStates,
   openOrSelectQueryBuffer,
   updateBanner,
@@ -58,7 +61,7 @@ export const createFriendActions = ({
   const addFriend = async (nick: string) => {
     try {
       const result = await api.addFriend(nick);
-      dispatchLocalFriendUpsert(dispatch, result.friend);
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
       updateBanner('notice', 'Friend saved');
       return true;
     } catch (error) {
@@ -69,8 +72,8 @@ export const createFriendActions = ({
 
   const removeFriend = async (friendId: string) => {
     try {
-      await api.removeFriend(friendId);
-      dispatchLocalFriendRemoval(dispatch, friendId);
+      const result = await api.removeFriend(friendId);
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
       updateBanner('notice', 'Friend removed');
       return true;
     } catch (error) {

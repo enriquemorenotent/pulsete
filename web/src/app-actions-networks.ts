@@ -3,28 +3,17 @@ import type { AppDispatch, BannerActions } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
 import { api } from './client.js';
 import type { ConversationIndex } from './conversation-selectors.js';
-import {
-  dispatchLocalActions,
-  dispatchLocalNetworkRemoval,
-  dispatchLocalNetworkUpsert,
-} from './local-action-dispatch.js';
+import type { GatewayStatus } from './app-types.js';
+import { syncMutationMessages } from './mutation-message-sync.js';
 import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
-import type { Action } from './app-types.js';
 
 type NetworkActionParams = BannerActions & {
   conversation: ConversationIndex;
   dispatch: AppDispatch;
+  gatewayStatus: GatewayStatus;
 };
 
-export const createNetworkActions = ({ conversation, dispatch, updateBanner }: NetworkActionParams) => {
-  const dispatchSavedNetwork = (result: Awaited<ReturnType<typeof api.saveNetwork>>) => {
-    const actions: Action[] = [{ type: 'upsert-network', network: result.network }];
-    if (result.serverBuffer) {
-      actions.unshift({ type: 'upsert-buffer', buffer: result.serverBuffer });
-    }
-    dispatchLocalActions(dispatch, actions);
-  };
-
+export const createNetworkActions = ({ conversation, dispatch, gatewayStatus, updateBanner }: NetworkActionParams) => {
   const submitNetwork = async (form: NetworkForm) => {
     if (!form.name.trim()) {
       updateBanner('error', 'Network name is required');
@@ -40,7 +29,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
     }
     try {
       const result = await api.saveNetwork(toSaveNetworkPayload(form));
-      dispatchSavedNetwork(result);
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
       updateBanner('notice', 'Network saved');
       return result.network;
     } catch (error) {
@@ -52,9 +41,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const deleteNetwork = async (networkId: string) => {
     try {
       const result = await api.deleteNetwork(networkId);
-      for (const deletedNetworkId of result.deletedNetworkIds) {
-        dispatchLocalNetworkRemoval(dispatch, deletedNetworkId);
-      }
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
       updateBanner('notice', 'Network deleted');
       return result.deletedNetworkIds;
     } catch (error) {
@@ -66,7 +53,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const duplicateNetwork = async (network: NetworkProfile) => {
     try {
       const result = await api.duplicateNetwork(network.id);
-      dispatchLocalNetworkUpsert(dispatch, result.network);
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
       updateBanner('notice', 'Network duplicated');
       return result.network;
     } catch (error) {
@@ -78,7 +65,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const connectNetwork = async (network: NetworkProfile) => {
     try {
       const instance = await api.saveNetwork(createConnectionInstancePayload(network));
-      dispatchSavedNetwork(instance);
+      syncMutationMessages(gatewayStatus, instance.messages, dispatch);
       if (instance.serverBuffer) {
         selectBuffer(dispatch, instance.serverBuffer);
       }
@@ -116,9 +103,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const closeConnection = async (network: NetworkProfile) => {
     try {
       const result = await api.deleteNetwork(network.id);
-      for (const deletedNetworkId of result.deletedNetworkIds) {
-        dispatchLocalNetworkRemoval(dispatch, deletedNetworkId);
-      }
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
       updateBanner('notice', 'Connection instance closed');
       return result.deletedNetworkIds;
     } catch (error) {
@@ -130,7 +115,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const saveFavorite = async (network: NetworkProfile, favorite: boolean) => {
     try {
       const result = await api.saveNetwork({ ...network, favorite });
-      dispatchSavedNetwork(result);
+      syncMutationMessages(gatewayStatus, result.messages, dispatch);
       updateBanner('notice', favorite ? 'Marked as favorite' : 'Removed from favorites');
       return result.network;
     } catch (error) {

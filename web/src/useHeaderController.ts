@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { Action } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
 import type { useAppUiState } from './useAppUiState.js';
@@ -11,10 +12,10 @@ export function useHeaderController({
   dispatch,
   ui,
 }: HeaderControllerParams): DesktopShellProps['header'] {
-  return {
+  return useMemo(() => ({
     messageDisplayMode: ui.messageDisplayMode,
     showMessageDisplayModeToggle: import.meta.env.DEV,
     onMessageDisplayModeChange: ui.setMessageDisplayMode,
     onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
-  };
+  }), [dispatch, ui.messageDisplayMode, ui.setMessageDisplayMode]);
 }

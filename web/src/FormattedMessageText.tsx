@@ -1,4 +1,4 @@
-import { Fragment, type CSSProperties } from 'react';
+import { Fragment, memo, useMemo, type CSSProperties } from 'react';
 import { tokenizeFormattedMessage, tokenizeStrippedMessage, type MessageTextPart } from './formatted-message.js';
 import { escapeIrcTextForDebug } from './irc-format.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -9,13 +9,18 @@ type FormattedMessageTextProps = {
   mode?: MessageDisplayMode;
 };
 
-export function FormattedMessageText(props: FormattedMessageTextProps) {
+export const FormattedMessageText = memo(function FormattedMessageText(props: FormattedMessageTextProps) {
   if (props.mode === 'raw') {
     return <span className="font-mono">{escapeIrcTextForDebug(props.text)}</span>;
   }
 
-  const tokens = props.mode === 'stripped' ? tokenizeStrippedMessage(props.text) : tokenizeFormattedMessage(props.text);
-  const inlineImageHrefs = collectInlineImageHrefs(tokens);
+  const tokens = useMemo(
+    () => props.mode === 'stripped'
+      ? tokenizeStrippedMessage(props.text)
+      : tokenizeFormattedMessage(props.text),
+    [props.mode, props.text]
+  );
+  const inlineImageHrefs = useMemo(() => collectInlineImageHrefs(tokens), [tokens]);
 
   return (
     <>
@@ -75,7 +80,7 @@ export function FormattedMessageText(props: FormattedMessageTextProps) {
       ) : null}
     </>
   );
-}
+});
 
 const renderParts = (parts: MessageTextPart[], insideLink: boolean, tokenIndex: number) =>
   parts.map((part, partIndex) => {
