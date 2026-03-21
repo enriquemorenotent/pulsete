@@ -71,7 +71,7 @@ export type IrcConnectionState = {
   drainingChannelListRequestId: string | null;
   pendingNick: string | null;
   lastFailureMessage: string | null;
-  pendingReplyContexts: PendingReplyContext[];
+  pendingReplyContexts: readonly PendingReplyContext[];
   beginLogin(): void;
   clearConnectDeadlineTimer(): void;
   clearReconnectTimer(): void;

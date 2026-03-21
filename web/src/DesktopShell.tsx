@@ -1,10 +1,9 @@
-import { useRef, type CSSProperties, type RefObject } from 'react';
+import { useRef, type CSSProperties } from 'react';
 import { PanelsTopLeft } from 'lucide-react';
-import type { BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
-import type { ChannelListState } from './app-types.js';
+import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
-import { ChatPane } from './ChatPane.js';
-import { ConnectionSidebar } from './ConnectionSidebar.js';
+import { ChatPane, type ChatPaneProps } from './ChatPane.js';
+import { ConnectionSidebar, type ConnectionSidebarProps } from './ConnectionSidebar.js';
 import { MessageDisplayModeToggle } from './MessageDisplayModeToggle.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { NetworkEditorDialog } from './NetworkEditorDialog.js';
@@ -13,68 +12,50 @@ import { SidebarResizeHandle } from './SidebarResizeHandle.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 import { useSidebarResize } from './useSidebarResize.js';
-import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace.js';
+import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 
 type DesktopShellProps = {
   workspace: WorkspaceView;
-  connectionInstances: NetworkProfile[];
-  friends: FriendState[];
-  friendPresence: Record<string, boolean>;
-  buffers: BufferState[];
-  pendingChannels: PendingChannelState[];
-  networkStates: Record<string, NetworkRuntimeState>;
-  selection: SelectedBuffer | null;
-  selectedMessages: ChatMessage[];
-  draft: string;
-  messageDisplayMode: MessageDisplayMode;
-  showMessageDisplayModeToggle: boolean;
-  scrollRef: RefObject<HTMLDivElement | null>;
-  showNetworkManager: boolean;
-  showNetworkEditor: boolean;
-  managedNetwork: NetworkProfile | null;
-  managedRuntime: NetworkRuntimeState | null;
-  visibleNetworks: NetworkProfile[];
-  showFavoritesOnly: boolean;
-  hiddenManagedNetworkName: string | null;
-  networkForm: NetworkForm;
-  editorTab: EditorTab;
-  onMessageDisplayModeChange: (mode: MessageDisplayMode) => void;
-  onOpenNetworkManager: () => void;
-  onDraftChange: (value: string) => void;
-  onRecallOlderDraft: () => void;
-  onRecallNewerDraft: () => void;
-  onSendComposer: () => Promise<void>;
-  onReconnectNetwork: (network: NetworkProfile) => void;
-  onDisconnectNetwork: (networkId: string) => void;
-  onCloseConnection: (network: NetworkProfile) => void;
-  onAddFriend: (nick: string) => Promise<boolean>;
-  onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onSelectFriend: (friend: FriendState) => Promise<void>;
-  channelList: ChannelListState;
-  channelListNetwork: NetworkProfile | null;
-  onCloseChannelList: () => void;
-  onJoinChannelFromList: (channel: string) => Promise<void>;
-  onSelectNetworkBuffer: (network: NetworkProfile) => void;
-  onSelectTabBuffer: (buffer: BufferState) => void;
-  onSelectPendingChannel: (networkId: string, channel: string) => void;
-  onSelectPrivateBuffer: (network: NetworkProfile, nick: string) => void;
-  onOpenChannelList: () => void;
-  onOpenMentionedChannel: (channel: string) => void;
-  onCloseChannel: (networkId: string, channel: string) => void;
-  onCloseBuffer: (buffer: BufferState) => void;
-  onSelectManagedNetwork: (networkId: string) => void;
-  onToggleFavoritesOnly: () => void;
-  onCloseNetworkManager: () => void;
-  onOpenNewNetworkEditor: () => void;
-  onOpenManagedNetworkEditor: () => void;
-  onDuplicateManagedNetwork: () => void;
-  onDeleteManagedNetwork: () => void;
-  onConnectManagedNetwork: () => void;
-  onToggleFavoriteManagedNetwork: () => void;
-  onCloseNetworkEditor: () => void;
-  onSubmitNetwork: () => void;
-  onNetworkFormChange: (form: Partial<NetworkForm>) => void;
-  onEditorTabChange: (tab: EditorTab) => void;
+  header: {
+    messageDisplayMode: MessageDisplayMode;
+    showMessageDisplayModeToggle: boolean;
+    onMessageDisplayModeChange: (mode: MessageDisplayMode) => void;
+    onOpenNetworkManager: () => void;
+  };
+  sidebar: ConnectionSidebarProps;
+  chat: ChatPaneProps;
+  nicklist: {
+    friends: FriendState[];
+    onAddFriend: (nick: string) => Promise<boolean>;
+    onRemoveFriend: (friendId: string) => Promise<boolean>;
+    onSelectNick: (network: NetworkProfile, nick: string) => void;
+  };
+  networkManager: {
+    open: boolean;
+    networks: NetworkProfile[];
+    selected: NetworkProfile | null;
+    runtime: NetworkRuntimeState | null;
+    showFavoritesOnly: boolean;
+    hiddenManagedNetworkName: string | null;
+    onSelect: (networkId: string) => void;
+    onToggleFavorites: () => void;
+    onClose: () => void;
+    onAdd: () => void;
+    onEdit: () => void;
+    onDuplicate: () => void;
+    onRemove: () => void;
+    onConnect: () => void;
+    onFavorite: () => void;
+  };
+  networkEditor: {
+    open: boolean;
+    form: NetworkForm;
+    activeTab: EditorTab;
+    onTabChange: (tab: EditorTab) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+    onChange: (form: Partial<NetworkForm>) => void;
+  };
 };
 
 export function DesktopShell(props: DesktopShellProps) {
@@ -89,13 +70,13 @@ export function DesktopShell(props: DesktopShellProps) {
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 py-2">
         <span className="font-semibold tracking-tight">Pulsete</span>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {props.showMessageDisplayModeToggle ? (
+          {props.header.showMessageDisplayModeToggle ? (
             <MessageDisplayModeToggle
-              value={props.messageDisplayMode}
-              onChange={props.onMessageDisplayModeChange}
+              value={props.header.messageDisplayMode}
+              onChange={props.header.onMessageDisplayModeChange}
             />
           ) : null}
-          <Button variant="outline" size="sm" onClick={props.onOpenNetworkManager}>
+          <Button variant="outline" size="sm" onClick={props.header.onOpenNetworkManager}>
             <PanelsTopLeft />
             Network Manager
           </Button>
@@ -109,26 +90,7 @@ export function DesktopShell(props: DesktopShellProps) {
           className="flex h-full min-h-0 flex-1 flex-col gap-2 overflow-hidden xl:flex-row xl:gap-0"
         >
           <div className="min-h-0 xl:w-[var(--sidebar-width)] xl:shrink-0">
-            <ConnectionSidebar
-              networks={props.connectionInstances}
-              friends={props.friends}
-              friendPresence={props.friendPresence}
-              buffers={props.buffers}
-              pendingChannels={props.pendingChannels}
-              networkStates={props.networkStates}
-              onAddFriend={props.onAddFriend}
-              onRemoveFriend={props.onRemoveFriend}
-              onSelectFriend={props.onSelectFriend}
-              selection={props.selection}
-              onSelectNetwork={props.onSelectNetworkBuffer}
-              onSelectBuffer={props.onSelectTabBuffer}
-              onSelectPendingChannel={props.onSelectPendingChannel}
-              onReconnectNetwork={props.onReconnectNetwork}
-              onDisconnectNetwork={props.onDisconnectNetwork}
-              onCloseConnection={props.onCloseConnection}
-              onCloseChannel={props.onCloseChannel}
-              onCloseBuffer={props.onCloseBuffer}
-            />
+            <ConnectionSidebar {...props.sidebar} />
           </div>
           <SidebarResizeHandle
             sidebarWidth={sidebarResize.sidebarWidth}
@@ -138,70 +100,49 @@ export function DesktopShell(props: DesktopShellProps) {
             onReset={sidebarResize.resetWidth}
           />
           <div className="min-h-0 min-w-0 flex-1">
-            <ChatPane
-              workspace={props.workspace}
-              friends={props.friends}
-              selectedMessages={props.selectedMessages}
-              draft={props.draft}
-              messageDisplayMode={props.messageDisplayMode}
-              scrollRef={props.scrollRef}
-              onDraftChange={props.onDraftChange}
-              onRecallOlderDraft={props.onRecallOlderDraft}
-              onRecallNewerDraft={props.onRecallNewerDraft}
-              onSend={props.onSendComposer}
-              onAddFriend={props.onAddFriend}
-              onRemoveFriend={props.onRemoveFriend}
-              channelList={props.channelList}
-              channelListNetwork={props.channelListNetwork}
-              onCloseChannelList={props.onCloseChannelList}
-              onOpenMentionedChannel={props.onOpenMentionedChannel}
-              onJoinChannelFromList={props.onJoinChannelFromList}
-              onOpenChannelList={props.onOpenChannelList}
-              onCloseChannel={props.onCloseChannel}
-              onCloseBuffer={props.onCloseBuffer}
-            />
+            <ChatPane {...props.chat} />
           </div>
           {props.workspace.showNicklist && props.workspace.selectedChannel ? (
             <div className="min-h-0 xl:ml-2 xl:w-[13rem] xl:shrink-0">
               <NicklistPanel
                 network={props.workspace.selectedNetwork}
                 channel={props.workspace.selectedChannel}
-                friends={props.friends}
-                onAddFriend={props.onAddFriend}
-                onRemoveFriend={props.onRemoveFriend}
-                onSelectNick={props.onSelectPrivateBuffer}
+                friends={props.nicklist.friends}
+                onAddFriend={props.nicklist.onAddFriend}
+                onRemoveFriend={props.nicklist.onRemoveFriend}
+                onSelectNick={props.nicklist.onSelectNick}
               />
             </div>
           ) : null}
         </div>
       </main>
 
-      {props.showNetworkManager ? (
+      {props.networkManager.open ? (
         <NetworkManagerDialog
-          networks={props.visibleNetworks}
-          selected={props.managedNetwork}
-          runtime={props.managedRuntime}
-          showFavoritesOnly={props.showFavoritesOnly}
-          hiddenManagedNetworkName={props.hiddenManagedNetworkName}
-          onSelect={props.onSelectManagedNetwork}
-          onToggleFavorites={props.onToggleFavoritesOnly}
-          onClose={props.onCloseNetworkManager}
-          onAdd={props.onOpenNewNetworkEditor}
-          onEdit={props.onOpenManagedNetworkEditor}
-          onDuplicate={props.onDuplicateManagedNetwork}
-          onRemove={props.onDeleteManagedNetwork}
-          onConnect={props.onConnectManagedNetwork}
-          onFavorite={props.onToggleFavoriteManagedNetwork}
+          networks={props.networkManager.networks}
+          selected={props.networkManager.selected}
+          runtime={props.networkManager.runtime}
+          showFavoritesOnly={props.networkManager.showFavoritesOnly}
+          hiddenManagedNetworkName={props.networkManager.hiddenManagedNetworkName}
+          onSelect={props.networkManager.onSelect}
+          onToggleFavorites={props.networkManager.onToggleFavorites}
+          onClose={props.networkManager.onClose}
+          onAdd={props.networkManager.onAdd}
+          onEdit={props.networkManager.onEdit}
+          onDuplicate={props.networkManager.onDuplicate}
+          onRemove={props.networkManager.onRemove}
+          onConnect={props.networkManager.onConnect}
+          onFavorite={props.networkManager.onFavorite}
         />
       ) : null}
-      {props.showNetworkEditor ? (
+      {props.networkEditor.open ? (
         <NetworkEditorDialog
-          form={props.networkForm}
-          activeTab={props.editorTab}
-          onTabChange={props.onEditorTabChange}
-          onClose={props.onCloseNetworkEditor}
-          onSubmit={props.onSubmitNetwork}
-          onChange={props.onNetworkFormChange}
+          form={props.networkEditor.form}
+          activeTab={props.networkEditor.activeTab}
+          onTabChange={props.networkEditor.onTabChange}
+          onClose={props.networkEditor.onClose}
+          onSubmit={props.networkEditor.onSubmit}
+          onChange={props.networkEditor.onChange}
         />
       ) : null}
     </div>

@@ -4,7 +4,7 @@ import { getConnectionInstances, getConnectionStatus } from './workspace-helpers
 import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
 
 export type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
-export { getConnectionStatus, getConnectionLabel, getConnectionLabelParts } from './workspace-helpers.js';
+export { getConnectionStatus, getConnectionLabel, getConnectionLabelParts, type ConnectionLabelParts } from './workspace-helpers.js';
 
 type WorkspaceInput = {
   networks: NetworkProfile[];
@@ -13,6 +13,22 @@ type WorkspaceInput = {
   pendingChannels: PendingChannelState[];
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
+};
+
+type ResolvedWorkspace = {
+  connectionInstances: NetworkProfile[];
+  selectedNetwork: NetworkProfile;
+  selectedRuntime: NetworkRuntimeState | null;
+  selectedBuffer: BufferState | null;
+  selectedPendingChannel: PendingChannelState | null;
+  activeBuffer: BufferState | null;
+  activeSelection: SelectedBuffer | null;
+  activePendingChannel: PendingChannelState | null;
+  selectedChannel: ChannelState | null;
+  serverBuffer: BufferState | null;
+  connectedSubtitle: string;
+  connectionStatus: NetworkRuntimeState['phase'];
+  inputSelection: SelectedBuffer | null;
 };
 
 const selectionFor = (buffer: BufferState | null): SelectedBuffer | null =>
@@ -50,27 +66,17 @@ export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'bu
 };
 
 export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
-  const queries = createConversationQueries({ ...input, messages: [] });
+  const resolved = resolveWorkspace(input);
+  return resolved ? buildResolvedWorkspace(resolved) : buildEmptyWorkspace(getConnectionInstances(input.networks));
+};
+
+const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | null => {
   const connectionInstances = getConnectionInstances(input.networks);
   if (connectionInstances.length === 0) {
-    return {
-      mode: 'empty',
-      selection: null,
-      connectionInstances,
-      selectedNetwork: null,
-      selectedRuntime: null,
-      selectedBuffer: null,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: 'No active connection',
-      headerSubtitle: '',
-      composerMode: 'hidden',
-      composerPlaceholder: '',
-      emptyBody: 'Open Network Manager to create or connect an instance.',
-      showNicklist: false,
-    };
+    return null;
   }
 
+  const queries = createConversationQueries({ ...input, messages: [] });
   const selectedBuffer = queries.findSelectedBuffer(input.selection);
   const selectedPendingChannel = queries.findSelectedPendingChannel(input.selection);
   const selectedNetwork =
@@ -78,248 +84,215 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
       (network) => network.id === selectedBuffer?.networkId || network.id === selectedPendingChannel?.networkId
     ) ?? connectionInstances[0];
   const selectedRuntime = input.networkStates[selectedNetwork.id] ?? null;
-  const connectionStatus = getConnectionStatus(selectedRuntime);
   const serverBuffer = queries.findServerBuffer(selectedNetwork.id);
   const activeBuffer =
     !selectedBuffer || selectedBuffer.networkId !== selectedNetwork.id ? serverBuffer : selectedBuffer;
-  const activeSelection = selectionFor(activeBuffer);
   const activePendingChannel =
     selectedPendingChannel && selectedPendingChannel.networkId === selectedNetwork.id ? selectedPendingChannel : null;
-  const connectedSubtitle = `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`;
 
-  if (!serverBuffer) {
-    return {
-      mode: connectionStatus === 'connected' ? 'server-connected' : connectionStatus === 'connecting' ? 'server-connecting' : 'server-offline',
-      selection: null,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: null,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: '',
-      headerSubtitle: connectionStatus === 'connected' ? connectedSubtitle : '',
-      composerMode: 'hidden',
-      composerPlaceholder: '',
-      emptyBody:
-        connectionStatus === 'connected'
-          ? 'Loading the server buffer for this connection.'
-          : connectionStatus === 'connecting'
-            ? 'Starting the connection view. Wait for the server buffer to load.'
-            : 'Restoring the server buffer for this connection.',
-      showNicklist: false,
-    };
+  return {
+    connectionInstances,
+    selectedNetwork,
+    selectedRuntime,
+    selectedBuffer,
+    selectedPendingChannel,
+    activeBuffer,
+    activeSelection: selectionFor(activeBuffer),
+    activePendingChannel,
+    selectedChannel: activeBuffer ? queries.findChannelByBuffer(activeBuffer) : null,
+    serverBuffer,
+    connectedSubtitle: `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`,
+    connectionStatus: getConnectionStatus(selectedRuntime),
+    inputSelection: input.selection,
+  };
+};
+
+const buildResolvedWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => {
+  if (!resolved.serverBuffer) {
+    return buildServerBufferTransition(resolved);
   }
 
-  const selectedChannel = queries.findChannelByBuffer(activeBuffer);
-
-  if (activePendingChannel) {
-    return {
-      mode: 'channel-pending',
-      selection: input.selection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: null,
-      selectedChannel: null,
-      selectedPendingChannel: activePendingChannel,
-      headerTitle: activePendingChannel.channel,
-      headerSubtitle:
-        connectionStatus === 'connected'
-          ? connectedSubtitle
-          : 'Waiting for the connection to become available again.',
-      composerMode: 'hidden',
-      composerPlaceholder: '',
-      emptyBody: 'Joining channel. Wait for the server to confirm the membership.',
-      showNicklist: false,
-    };
+  if (resolved.activePendingChannel) {
+    return buildPendingChannelWorkspace(resolved);
   }
 
-  if (connectionStatus === 'offline' && activeBuffer?.kind === 'channel') {
-    return {
+  if (resolved.connectionStatus === 'offline') {
+    return buildOfflineWorkspace(resolved);
+  }
+
+  if (resolved.connectionStatus === 'connecting') {
+    return buildConnectingWorkspace(resolved);
+  }
+
+  return buildConnectedWorkspace(resolved);
+};
+
+const buildEmptyWorkspace = (connectionInstances: NetworkProfile[]): WorkspaceView => ({
+  mode: 'empty',
+  selection: null,
+  connectionInstances,
+  selectedNetwork: null,
+  selectedRuntime: null,
+  selectedBuffer: null,
+  selectedChannel: null,
+  selectedPendingChannel: null,
+  headerTitle: 'No active connection',
+  headerSubtitle: '',
+  composerMode: 'hidden',
+  composerPlaceholder: '',
+  emptyBody: 'Open Network Manager to create or connect an instance.',
+  showNicklist: false,
+});
+
+const createWorkspace = (
+  resolved: ResolvedWorkspace,
+  overrides: Partial<WorkspaceView> & Pick<WorkspaceView, 'mode'>
+): WorkspaceView => ({
+  selection: resolved.activeSelection,
+  connectionInstances: resolved.connectionInstances,
+  selectedNetwork: resolved.selectedNetwork,
+  selectedRuntime: resolved.selectedRuntime,
+  selectedBuffer: resolved.activeBuffer,
+  selectedChannel: resolved.selectedChannel,
+  selectedPendingChannel: null,
+  headerTitle: '',
+  headerSubtitle: '',
+  composerMode: 'hidden',
+  composerPlaceholder: '',
+  emptyBody: '',
+  showNicklist: false,
+  ...overrides,
+});
+
+const buildServerBufferTransition = (resolved: ResolvedWorkspace): WorkspaceView =>
+  createWorkspace(resolved, {
+    mode:
+      resolved.connectionStatus === 'connected'
+        ? 'server-connected'
+        : resolved.connectionStatus === 'connecting'
+          ? 'server-connecting'
+          : 'server-offline',
+    selection: null,
+    selectedBuffer: null,
+    selectedChannel: null,
+    headerSubtitle: resolved.connectionStatus === 'connected' ? resolved.connectedSubtitle : '',
+    emptyBody:
+      resolved.connectionStatus === 'connected'
+        ? 'Loading the server buffer for this connection.'
+        : resolved.connectionStatus === 'connecting'
+          ? 'Starting the connection view. Wait for the server buffer to load.'
+          : 'Restoring the server buffer for this connection.',
+  });
+
+const buildPendingChannelWorkspace = (resolved: ResolvedWorkspace): WorkspaceView =>
+  createWorkspace(resolved, {
+    mode: 'channel-pending',
+    selection: resolved.inputSelection,
+    selectedBuffer: null,
+    selectedChannel: null,
+    selectedPendingChannel: resolved.activePendingChannel,
+    headerTitle: resolved.activePendingChannel?.channel ?? '',
+    headerSubtitle:
+      resolved.connectionStatus === 'connected'
+        ? resolved.connectedSubtitle
+        : 'Waiting for the connection to become available again.',
+    emptyBody: 'Joining channel. Wait for the server to confirm the membership.',
+  });
+
+const buildOfflineWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => {
+  if (resolved.activeBuffer?.kind === 'channel') {
+    return createWorkspace(resolved, {
       mode: 'channel-offline',
-      selection: activeSelection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: activeBuffer,
-      selectedChannel,
-      selectedPendingChannel: null,
-      headerTitle: selectedChannel?.name ?? activeBuffer.target,
+      headerTitle: resolved.selectedChannel?.name ?? resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('offline'),
-      composerMode: 'hidden',
-      composerPlaceholder: '',
       emptyBody: getReadOnlyEmptyBody('channel', 'offline'),
-      showNicklist: false,
-    };
+    });
   }
 
-  if (connectionStatus === 'offline' && activeBuffer?.kind === 'query') {
-    return {
+  if (resolved.activeBuffer?.kind === 'query') {
+    return createWorkspace(resolved, {
       mode: 'query-offline',
-      selection: activeSelection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: activeBuffer,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: activeBuffer.target,
+      headerTitle: resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('offline'),
-      composerMode: 'hidden',
-      composerPlaceholder: '',
       emptyBody: getReadOnlyEmptyBody('query', 'offline'),
-      showNicklist: false,
-    };
+    });
   }
 
-  if (connectionStatus === 'offline') {
-    return {
-      mode: 'server-offline',
-      selection: selectionFor(serverBuffer),
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: serverBuffer,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: '',
-      headerSubtitle: '',
-      composerMode: 'hidden',
-      composerPlaceholder: '',
-      emptyBody: 'Reconnect to restore channels and private messages.',
-      showNicklist: false,
-    };
-  }
+  return createWorkspace(resolved, {
+    mode: 'server-offline',
+    selection: selectionFor(resolved.serverBuffer),
+    selectedBuffer: resolved.serverBuffer,
+    emptyBody: 'Reconnect to restore channels and private messages.',
+  });
+};
 
-  if (connectionStatus === 'connecting' && activeBuffer?.kind === 'channel') {
-    return {
+const buildConnectingWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => {
+  if (resolved.activeBuffer?.kind === 'channel') {
+    return createWorkspace(resolved, {
       mode: 'channel-connecting',
-      selection: activeSelection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: activeBuffer,
-      selectedChannel,
-      selectedPendingChannel: null,
-      headerTitle: selectedChannel?.name ?? activeBuffer.target,
+      headerTitle: resolved.selectedChannel?.name ?? resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('connecting'),
-      composerMode: 'hidden',
-      composerPlaceholder: '',
       emptyBody: getReadOnlyEmptyBody('channel', 'connecting'),
-      showNicklist: false,
-    };
+    });
   }
 
-  if (connectionStatus === 'connecting' && activeBuffer?.kind === 'query') {
-    return {
+  if (resolved.activeBuffer?.kind === 'query') {
+    return createWorkspace(resolved, {
       mode: 'query-connecting',
-      selection: activeSelection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: activeBuffer,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: activeBuffer.target,
+      headerTitle: resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('connecting'),
-      composerMode: 'hidden',
-      composerPlaceholder: '',
       emptyBody: getReadOnlyEmptyBody('query', 'connecting'),
-      showNicklist: false,
-    };
+    });
   }
 
-  if (connectionStatus === 'connecting') {
-    return {
-      mode: 'server-connecting',
-      selection: selectionFor(serverBuffer),
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: serverBuffer,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: '',
-      headerSubtitle: '',
-      composerMode: 'hidden',
-      composerPlaceholder: '',
-      emptyBody: 'Waiting for the server connection to finish.',
-      showNicklist: false,
-    };
-  }
+  return createWorkspace(resolved, {
+    mode: 'server-connecting',
+    selection: selectionFor(resolved.serverBuffer),
+    selectedBuffer: resolved.serverBuffer,
+    emptyBody: 'Waiting for the server connection to finish.',
+  });
+};
 
-  if (activeBuffer?.kind === 'channel' && selectedChannel) {
-    return {
+const buildConnectedWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => {
+  if (resolved.activeBuffer?.kind === 'channel' && resolved.selectedChannel) {
+    return createWorkspace(resolved, {
       mode: 'channel-connected',
-      selection: activeSelection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: activeBuffer,
-      selectedChannel,
-      selectedPendingChannel: null,
-      headerTitle: selectedChannel.name,
-      headerSubtitle: connectedSubtitle,
+      headerTitle: resolved.selectedChannel.name,
+      headerSubtitle: resolved.connectedSubtitle,
       composerMode: 'normal',
       composerPlaceholder: 'Type a message or /command',
       emptyBody: 'Wait for activity or send a message.',
       showNicklist: true,
-    };
+    });
   }
 
-  if (activeBuffer?.kind === 'query') {
-    return {
+  if (resolved.activeBuffer?.kind === 'query') {
+    return createWorkspace(resolved, {
       mode: 'query-connected',
-      selection: activeSelection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: activeBuffer,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: activeBuffer.target,
-      headerSubtitle: connectedSubtitle,
+      headerTitle: resolved.activeBuffer.target,
+      headerSubtitle: resolved.connectedSubtitle,
       composerMode: 'normal',
       composerPlaceholder: 'Type a message or /command',
       emptyBody: 'Wait for a reply or send a message.',
-      showNicklist: false,
-    };
+    });
   }
 
-  if (activeBuffer?.kind === 'channel') {
-    return {
+  if (resolved.activeBuffer?.kind === 'channel') {
+    return createWorkspace(resolved, {
       mode: 'channel-offline',
-      selection: activeSelection,
-      connectionInstances,
-      selectedNetwork,
-      selectedRuntime,
-      selectedBuffer: activeBuffer,
-      selectedChannel: null,
-      selectedPendingChannel: null,
-      headerTitle: activeBuffer.target,
+      headerTitle: resolved.activeBuffer.target,
       headerSubtitle: 'Not joined. History stays available until you rejoin this channel.',
-      composerMode: 'hidden',
-      composerPlaceholder: '',
       emptyBody: 'Use /join to re-enter this channel before sending messages.',
-      showNicklist: false,
-    };
+    });
   }
 
-  return {
+  return createWorkspace(resolved, {
     mode: 'server-connected',
-    selection: selectionFor(serverBuffer),
-    connectionInstances,
-    selectedNetwork,
-    selectedRuntime,
-    selectedBuffer: serverBuffer,
-    selectedChannel: null,
-    selectedPendingChannel: null,
-    headerTitle: '',
-    headerSubtitle: connectedSubtitle,
+    selection: selectionFor(resolved.serverBuffer),
+    selectedBuffer: resolved.serverBuffer,
+    headerSubtitle: resolved.connectedSubtitle,
     composerMode: 'commands',
     composerPlaceholder: 'Use /join #channel or another /command',
     emptyBody: 'Use /join #channel to enter a channel.',
-    showNicklist: false,
-  };
+  });
 };

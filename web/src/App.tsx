@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { reducer, initialState, useStateReducer } from './app-state.js';
 import type { SocketHandle } from './client.js';
 import { createConversationQueries } from './conversation-selectors.js';
+import { buildConnectionSidebarView } from './connection-sidebar-view.js';
 import { useComposerHistory } from './composer-history.js';
 import { DesktopShell } from './DesktopShell.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -63,6 +64,17 @@ function App() {
   const selectedMessages = useMemo(() => {
     return conversation.selectMessages(workspace.selectedBuffer);
   }, [conversation, workspace.selectedBuffer]);
+  const sidebarConnections = useMemo(
+    () =>
+      buildConnectionSidebarView({
+        networks: workspace.connectionInstances,
+        buffers: state.buffers,
+        pendingChannels: state.pendingChannels,
+        networkStates: state.networkStates,
+        selection: workspace.selection,
+      }),
+    [state.buffers, state.networkStates, state.pendingChannels, workspace.connectionInstances, workspace.selection]
+  );
 
   useAppLifecycle({
     state,
@@ -96,6 +108,83 @@ function App() {
     setShowNetworkEditor(false);
     setShowNetworkManager(true);
   };
+  const headerProps = {
+    messageDisplayMode,
+    showMessageDisplayModeToggle: import.meta.env.DEV,
+    onMessageDisplayModeChange: setMessageDisplayMode,
+    onOpenNetworkManager: () => setShowNetworkManager(true),
+  };
+  const sidebarProps = {
+    connections: sidebarConnections,
+    friends: state.friends,
+    friendPresence: state.friendPresence,
+    onAddFriend: actions.addFriend,
+    onRemoveFriend: actions.removeFriend,
+    onSelectFriend: actions.selectFriend,
+    onSelectNetwork: actions.selectNetworkBuffer,
+    onSelectBuffer: actions.selectTabBuffer,
+    onSelectPendingChannel: actions.selectPendingTab,
+    onReconnectNetwork: actions.reconnectNetwork,
+    onDisconnectNetwork: actions.disconnectNetwork,
+    onCloseConnection: actions.closeConnection,
+    onCloseChannel: actions.closeChannel,
+    onCloseBuffer: actions.closeBuffer,
+  };
+  const chatProps = {
+    workspace,
+    friends: state.friends,
+    selectedMessages,
+    draft,
+    messageDisplayMode,
+    scrollRef,
+    onDraftChange: setDraft,
+    onRecallOlderDraft: recallOlderDraft,
+    onRecallNewerDraft: recallNewerDraft,
+    onSend: actions.sendComposer,
+    onAddFriend: actions.addFriend,
+    onRemoveFriend: actions.removeFriend,
+    channelList: state.channelList,
+    channelListNetwork,
+    onCloseChannelList: actions.closeChannelList,
+    onJoinChannelFromList: actions.joinChannelFromList,
+    onOpenMentionedChannel: actions.openMentionedChannel,
+    onOpenChannelList: actions.openChannelList,
+    onCloseChannel: actions.closeChannel,
+    onCloseBuffer: actions.closeBuffer,
+  };
+  const nicklistProps = {
+    friends: state.friends,
+    onAddFriend: actions.addFriend,
+    onRemoveFriend: actions.removeFriend,
+    onSelectNick: actions.selectPrivateBuffer,
+  };
+  const networkManagerProps = {
+    open: showNetworkManager,
+    networks: visibleNetworks,
+    selected: visibleManagedNetwork,
+    runtime: managedRuntime,
+    showFavoritesOnly,
+    hiddenManagedNetworkName: hiddenManagedNetworkName,
+    onSelect: setManagedNetworkId,
+    onToggleFavorites: () => setShowFavoritesOnly((value) => !value),
+    onClose: () => setShowNetworkManager(false),
+    onAdd: actions.openNewNetworkEditor,
+    onEdit: () => visibleManagedNetwork && actions.openNetworkEditor(visibleManagedNetwork),
+    onDuplicate: () => visibleManagedNetwork && actions.duplicateNetwork(visibleManagedNetwork),
+    onRemove: () => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id),
+    onConnect: () => visibleManagedNetwork && actions.connectNetwork(visibleManagedNetwork),
+    onFavorite: () =>
+      visibleManagedNetwork && actions.saveFavorite(visibleManagedNetwork, !visibleManagedNetwork.favorite),
+  };
+  const networkEditorProps = {
+    open: showNetworkEditor,
+    form: state.networkForm,
+    activeTab: editorTab,
+    onTabChange: setEditorTab,
+    onClose: closeNetworkEditor,
+    onSubmit: actions.submitNetwork,
+    onChange: (form: Partial<(typeof state.networkForm)>) => dispatch({ type: 'set-network-form', form }),
+  };
 
   if (state.phase === 'loading') {
     return (
@@ -109,66 +198,12 @@ function App() {
     <>
       <DesktopShell
         workspace={workspace}
-        connectionInstances={workspace.connectionInstances}
-        friends={state.friends}
-        friendPresence={state.friendPresence}
-        buffers={state.buffers}
-        pendingChannels={state.pendingChannels}
-        networkStates={state.networkStates}
-        selection={workspace.selection}
-        selectedMessages={selectedMessages}
-        draft={draft}
-        messageDisplayMode={messageDisplayMode}
-        showMessageDisplayModeToggle={import.meta.env.DEV}
-        scrollRef={scrollRef}
-        showNetworkManager={showNetworkManager}
-        showNetworkEditor={showNetworkEditor}
-        managedNetwork={visibleManagedNetwork}
-        managedRuntime={managedRuntime}
-        visibleNetworks={visibleNetworks}
-        showFavoritesOnly={showFavoritesOnly}
-        hiddenManagedNetworkName={hiddenManagedNetworkName}
-        networkForm={state.networkForm}
-        editorTab={editorTab}
-        onMessageDisplayModeChange={setMessageDisplayMode}
-        onOpenNetworkManager={() => setShowNetworkManager(true)}
-        onDraftChange={setDraft}
-        onRecallOlderDraft={recallOlderDraft}
-        onRecallNewerDraft={recallNewerDraft}
-        onSendComposer={actions.sendComposer}
-        onReconnectNetwork={actions.reconnectNetwork}
-        onDisconnectNetwork={actions.disconnectNetwork}
-        onCloseConnection={actions.closeConnection}
-        onAddFriend={actions.addFriend}
-        onRemoveFriend={actions.removeFriend}
-        onSelectFriend={actions.selectFriend}
-        channelList={state.channelList}
-        channelListNetwork={channelListNetwork}
-        onCloseChannelList={actions.closeChannelList}
-        onJoinChannelFromList={actions.joinChannelFromList}
-        onOpenMentionedChannel={actions.openMentionedChannel}
-        onOpenChannelList={actions.openChannelList}
-        onSelectNetworkBuffer={actions.selectNetworkBuffer}
-        onSelectTabBuffer={actions.selectTabBuffer}
-        onSelectPendingChannel={actions.selectPendingTab}
-        onSelectPrivateBuffer={actions.selectPrivateBuffer}
-        onCloseChannel={actions.closeChannel}
-        onCloseBuffer={actions.closeBuffer}
-        onSelectManagedNetwork={setManagedNetworkId}
-        onToggleFavoritesOnly={() => setShowFavoritesOnly((value) => !value)}
-        onCloseNetworkManager={() => setShowNetworkManager(false)}
-        onOpenNewNetworkEditor={actions.openNewNetworkEditor}
-        onOpenManagedNetworkEditor={() => visibleManagedNetwork && actions.openNetworkEditor(visibleManagedNetwork)}
-        onDuplicateManagedNetwork={() => visibleManagedNetwork && actions.duplicateNetwork(visibleManagedNetwork)}
-        onDeleteManagedNetwork={() => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id)}
-        onConnectManagedNetwork={() => visibleManagedNetwork && actions.connectNetwork(visibleManagedNetwork)}
-        onToggleFavoriteManagedNetwork={() =>
-          visibleManagedNetwork && actions.saveFavorite(visibleManagedNetwork, !visibleManagedNetwork.favorite)
-        }
-        onCloseNetworkEditor={closeNetworkEditor}
-        onSubmitNetwork={actions.submitNetwork}
-        onNetworkFormChange={(form) => dispatch({ type: 'set-network-form', form })}
-        onEditorTabChange={setEditorTab}
+        header={headerProps}
+        sidebar={sidebarProps}
+        chat={chatProps}
+        nicklist={nicklistProps}
+        networkManager={networkManagerProps}
+        networkEditor={networkEditorProps}
       />
       <Toast banner={state.banner} onDismiss={() => dispatch({ type: 'set-banner', banner: null })} />
     </>

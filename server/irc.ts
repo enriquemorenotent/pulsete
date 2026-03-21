@@ -16,16 +16,14 @@ import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { removeChannelUser, upsertChannelUser } from '../shared/channel-users.js';
 import type { ChannelListEntry, ChannelUserState } from '../shared/protocol.js';
 import {
-  consumeReplyTarget,
-  consumeReplyContext,
   createFriendPresenceReplyContext,
   createChannelReplyContext,
   createMessageReplyContext,
-  getLatestPendingNick,
   createNickReplyContext,
   createReplyContextFromRaw,
   type PendingReplyContext,
 } from './irc-reply-context.js';
+import { ReplyTracker } from './irc-reply-tracker.js';
 import type { ChannelSessionPhase, ChannelSessionState, Handlers, IrcConnectionState, IrcSocket } from './irc-types.js';
 import { formatServerNumeric } from './irc-server-log.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
@@ -67,15 +65,14 @@ export class IrcConnection implements IrcConnectionState {
   drainingChannelListMode: 'raw' | 'structured' | null = null;
   drainingChannelListSourceTarget: string | null = null;
   drainingChannelListRequestId: string | null = null;
-  pendingNick: string | null = null;
   lastFailureMessage: string | null = null;
-  pendingReplyContexts: PendingReplyContext[] = [];
   profile: RuntimeNetworkProfile;
   private readonly channelJoinTimeoutMs: number;
   private channelListTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private drainingChannelListExpiresAt: number | null = null;
   private readonly channelListTimeoutMs: number;
   private readonly channelListDrainGraceMs: number;
+  private readonly replyTracker = new ReplyTracker();
 
   constructor(
     profile: RuntimeNetworkProfile,
@@ -95,6 +92,18 @@ export class IrcConnection implements IrcConnectionState {
       serverName: this.serverName,
       nick: this.currentNick,
     };
+  }
+
+  get pendingNick() {
+    return this.replyTracker.pendingNick;
+  }
+
+  set pendingNick(value: string | null) {
+    this.replyTracker.setPendingNick(value);
+  }
+
+  get pendingReplyContexts(): readonly PendingReplyContext[] {
+    return this.replyTracker.pendingReplyContexts;
   }
 
   openSocket(socket: IrcSocket) {
@@ -152,12 +161,11 @@ export class IrcConnection implements IrcConnectionState {
     this.reconnectAttempts = 0;
     this.currentNick = nick ?? this.profile.nick;
     this.discardPendingNickReplyContexts();
-    this.pendingNick = null;
     emitState(this);
   }
 
   clearPendingNick() {
-    this.pendingNick = null;
+    this.replyTracker.clearPendingNick();
   }
 
   applyNickFallback(
@@ -177,7 +185,6 @@ export class IrcConnection implements IrcConnectionState {
   confirmNick(newNick: string) {
     this.consumePendingNickReplyContexts(newNick);
     this.currentNick = newNick;
-    this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
     emitState(this);
   }
 
@@ -207,7 +214,6 @@ export class IrcConnection implements IrcConnectionState {
     this.connected = false;
     this.serverName = null;
     this.currentNick = this.profile.nick;
-    this.pendingNick = null;
     this.lastFailureMessage = null;
     if (wasActive) {
       emitState(this);
@@ -366,8 +372,7 @@ export class IrcConnection implements IrcConnectionState {
     this.clearChannelSessions();
     this.abortActiveChannelList('Channel list request was interrupted');
     this.clearDrainingChannelList();
-    this.pendingNick = null;
-    this.pendingReplyContexts = [];
+    this.replyTracker.reset();
     this.pendingFriendPresencePoll = null;
     this.clearConnectDeadlineTimer();
     this.clearFriendPresenceTimer();
@@ -375,24 +380,17 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   queueReplyContext(context: PendingReplyContext) {
-    this.pendingReplyContexts.push(context);
-    if (context.kind === 'nick') {
-      this.pendingNick = context.requestedNick;
-    }
+    this.replyTracker.queue(context);
   }
 
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string) {
     this.prunePendingReplyContexts();
-    const target = consumeReplyTarget(this.pendingReplyContexts, command, params, nick, rawTarget);
-    this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
-    return target;
+    return this.replyTracker.consumeReplyTarget(command, params, nick, rawTarget);
   }
 
   consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string) {
     this.prunePendingReplyContexts();
-    const context = consumeReplyContext(this.pendingReplyContexts, command, params, nick, rawTarget);
-    this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
-    return context;
+    return this.replyTracker.consumeReplyContext(command, params, nick, rawTarget);
   }
 
   sendRaw(raw: string, statusTarget?: string) {
@@ -859,40 +857,15 @@ export class IrcConnection implements IrcConnectionState {
     channel: string,
     predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
   ) {
-    const contexts: Array<Extract<PendingReplyContext, { kind: 'channel' }>> = [];
-    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
-      const context = this.pendingReplyContexts[index];
-      if (
-        context?.kind === 'channel'
-        && isSameIrcIdentifier(context.channel, channel)
-        && (!predicate || predicate(context))
-      ) {
-        contexts.push(this.pendingReplyContexts.splice(index, 1)[0] as Extract<PendingReplyContext, { kind: 'channel' }>);
-      }
-    }
-    return contexts;
+    return this.replyTracker.discardPendingChannelReplyContexts(channel, predicate);
   }
 
   consumePendingNickReplyContexts(requestedNick: string) {
-    const contexts: Array<Extract<PendingReplyContext, { kind: 'nick' }>> = [];
-    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
-      const context = this.pendingReplyContexts[index];
-      if (context?.kind === 'nick' && isSameIrcIdentifier(context.requestedNick, requestedNick)) {
-        contexts.push(this.pendingReplyContexts.splice(index, 1)[0] as Extract<PendingReplyContext, { kind: 'nick' }>);
-      }
-    }
-    return contexts;
+    return this.replyTracker.consumePendingNickReplyContexts(requestedNick);
   }
 
   discardPendingNickReplyContexts() {
-    const contexts: Array<Extract<PendingReplyContext, { kind: 'nick' }>> = [];
-    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
-      const context = this.pendingReplyContexts[index];
-      if (context?.kind === 'nick') {
-        contexts.push(this.pendingReplyContexts.splice(index, 1)[0] as Extract<PendingReplyContext, { kind: 'nick' }>);
-      }
-    }
-    return contexts;
+    return this.replyTracker.discardPendingNickReplyContexts();
   }
 
   private resolveTrackedChannelKey(channel: string, createIfMissing = true) {
@@ -1035,13 +1008,7 @@ export class IrcConnection implements IrcConnectionState {
 
   private prunePendingReplyContexts() {
     const now = Date.now();
-    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
-      const context = this.pendingReplyContexts[index];
-      if (!context || context.expiresAt >= now) {
-        continue;
-      }
-      this.pendingReplyContexts.splice(index, 1);
-    }
+    this.replyTracker.prune();
     if (
       this.drainingChannelListMode
       && this.drainingChannelListExpiresAt !== null

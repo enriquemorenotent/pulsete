@@ -1,10 +1,6 @@
-import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
-import { encode, type FriendState, type NetworkProfile, type NetworkRuntimeState, type ServerMessage } from '../shared/protocol.js';
-import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import type { NetworkProfile, ServerMessage } from '../shared/protocol.js';
 import { badRequest, notFound } from './app-error.js';
-import { IrcConnection } from './irc.js';
-import { ChannelListSubscriptions } from './runtime-channel-lists.js';
 import {
   normalizeChannelTarget,
   normalizeFriendNick,
@@ -13,84 +9,66 @@ import {
   normalizeQueryTarget,
   normalizeRawCommand,
 } from './irc-validate.js';
-import type { RuntimeEvent } from './irc-types.js';
+import type { IrcConnection } from './irc.js';
+import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { handleRuntimeEvent } from './runtime-events.js';
+import { RuntimeSocketHub } from './runtime-socket-hub.js';
 import { Storage, type NetworkInput } from './storage.js';
 
 export class Runtime {
   readonly store: Storage;
-  private readonly sockets = new Set<WebSocket>();
-  private readonly channelLists = new ChannelListSubscriptions((ws, message) => this.sendSocket(ws, message));
-  private readonly connections = new Map<string, IrcConnection>();
-  private readonly friendPresenceByNetwork = new Map<string, Set<string>>();
-  private readonly friendPresenceCache = new Map<string, boolean>();
+  readonly connections: Map<string, IrcConnection>;
+  private readonly socketHub: RuntimeSocketHub;
+  private readonly connectionManager: RuntimeConnectionManager;
   private closing = false;
 
   constructor(store: Storage) {
     this.store = store;
+    this.socketHub = new RuntimeSocketHub((ws) => this.connectionManager.removeSocket(ws));
+    this.connectionManager = new RuntimeConnectionManager({
+      store,
+      send: (message) => this.send(message),
+      sendSocket: (ws, message) => this.socketHub.sendSocket(ws, message),
+      onRuntimeEvent: (event) => handleRuntimeEvent(this, event),
+      isClosing: () => this.closing,
+    });
+    this.connections = this.connectionManager.connections;
   }
 
   attachSocket(ws: WebSocket) {
-    this.sockets.add(ws);
-    ws.on('close', () => {
-      this.sockets.delete(ws);
-      this.channelLists.removeSocket(ws);
-    });
+    this.socketHub.attach(ws);
   }
 
   detachSocket(ws: WebSocket) {
-    this.dropSocket(ws);
+    this.socketHub.detach(ws);
   }
 
   send(message: ServerMessage) {
-    const payload = encode(message);
-    for (const ws of Array.from(this.sockets)) {
-      this.sendPayload(ws, payload);
-    }
+    this.socketHub.broadcast(message);
   }
 
   close() {
     this.closing = true;
-    for (const ws of Array.from(this.sockets)) {
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.close(1001, 'Server shutting down');
-      }
-    }
-    this.sockets.clear();
-    this.channelLists.clearAll();
-    for (const connection of this.connections.values()) {
-      connection.disconnect();
-    }
-    this.connections.clear();
+    this.socketHub.closeAll();
+    this.connectionManager.close();
   }
 
   snapshot() {
     const snapshot = this.store.snapshot();
-    const pendingChannels = Array.from(this.connections.values()).flatMap((connection) => connection.listPendingChannels());
     return {
       ...snapshot,
-      pendingChannels,
-      friendPresence: this.computeFriendPresence(snapshot.friends),
-      networkStates: Object.fromEntries(
-        snapshot.networks.map((network) => {
-          const connection = this.connections.get(network.id);
-          return [
-            network.id,
-            toNetworkRuntimeState(connection, network.nick),
-          ];
-        })
-      ),
+      ...this.connectionManager.snapshot(snapshot.networks, snapshot.friends),
     };
   }
 
   connect(networkId: string) {
-    this.ensureConnection(networkId).connect();
+    this.getRequiredNetwork(networkId);
+    this.connectionManager.getConnection(networkId).connect();
   }
 
   disconnect(networkId: string) {
     this.getRequiredNetwork(networkId);
-    this.connections.get(networkId)?.disconnect();
-    this.channelLists.clearNetwork(networkId);
+    this.connectionManager.disconnect(networkId);
   }
 
   join(networkId: string, channel: string, sourceBufferId?: string) {
@@ -100,7 +78,7 @@ export class Runtime {
   part(networkId: string, channel: string, sourceBufferId?: string) {
     this.getRequiredNetwork(networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
-    this.ensureConnection(networkId)
+    this.connectionManager.getConnection(networkId)
       .part(normalizedChannel, 'Leaving', this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel));
   }
 
@@ -149,7 +127,7 @@ export class Runtime {
   }
 
   cancelChannelList(networkId: string, requester: WebSocket) {
-    this.channelLists.cancel(networkId, requester);
+    this.connectionManager.cancelChannelList(networkId, requester);
   }
 
   deleteNetwork(networkId: string) {
@@ -188,8 +166,8 @@ export class Runtime {
 
   private upsertFriendInternal(nick: string) {
     const friend = this.store.upsertFriend({ nick: normalizeFriendNick(nick) });
-    this.syncFriendTracking();
-    this.broadcastFriendPresenceDiffs();
+    this.connectionManager.syncFriendTracking();
+    this.connectionManager.broadcastFriendPresenceDiffs();
     return friend;
   }
 
@@ -198,9 +176,9 @@ export class Runtime {
     if (!friend) {
       throw notFound('Friend not found');
     }
-    this.friendPresenceCache.delete(friend.id);
-    this.syncFriendTracking();
-    this.broadcastFriendPresenceDiffs();
+    this.connectionManager.deleteFriendPresenceCache(friend.id);
+    this.connectionManager.syncFriendTracking();
+    this.connectionManager.broadcastFriendPresenceDiffs();
     return friend;
   }
 
@@ -209,7 +187,7 @@ export class Runtime {
     const normalizedChannel = normalizeChannelTarget(channel);
     const existingBuffer = this.store.getBufferByTarget(networkId, normalizedChannel);
     const existingChannel = this.store.getChannelByName(networkId, normalizedChannel);
-    const connection = this.ensureConnection(networkId);
+    const connection = this.connectionManager.getConnection(networkId);
     connection.join(
       normalizedChannel,
       this.resolveReplyTarget(networkId, sourceBufferId),
@@ -249,11 +227,8 @@ export class Runtime {
     const network = this.store.upsertNetwork(input);
     const updatedProfiles = [network, ...this.syncTemplateInstances(network, input)];
     let serverBuffer = network.managerHidden ? this.store.getServerBuffer(network.id) : null;
+    this.connectionManager.updateProfiles(updatedProfiles.map((profile) => profile.id));
     for (const updatedProfile of updatedProfiles) {
-      const runtimeProfile = this.store.getRuntimeNetwork(updatedProfile.id);
-      if (runtimeProfile) {
-        this.connections.get(updatedProfile.id)?.updateProfile(runtimeProfile);
-      }
       if (updatedProfile.managerHidden) {
         const nextServerBuffer = this.store.getServerBuffer(updatedProfile.id);
         if (nextServerBuffer) {
@@ -277,7 +252,7 @@ export class Runtime {
   ) {
     const normalizedTarget = normalizeMessageTarget(target);
     const normalizedBody = normalizeMessageBody(body);
-    const connection = this.ensureConnection(networkId);
+    const connection = this.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId, normalizedTarget);
     kind === 'action'
       ? connection.action(normalizedTarget, normalizedBody, replyTarget)
@@ -286,7 +261,7 @@ export class Runtime {
 
   private sendRawInternal(networkId: string, raw: string, sourceBufferId?: string) {
     const normalizedRaw = normalizeRawCommand(raw);
-    const connection = this.ensureConnection(networkId);
+    const connection = this.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId);
     if (/^\s*NICK\s+/i.test(normalizedRaw)) {
       const nextNick = normalizedRaw.trim().split(/\s+/)[1];
@@ -312,142 +287,17 @@ export class Runtime {
 
   private requestChannelListInternal(networkId: string, requester?: WebSocket) {
     this.getRequiredNetwork(networkId);
-    const connection = this.ensureConnection(networkId);
-    const requestId = randomUUID();
-    return this.channelLists.request(networkId, connection, requestId, requester);
+    return this.connectionManager.requestChannelList(networkId, requester);
   }
 
   private deleteNetworkInternal(networkId: string) {
     const deletedNetworkIds = this.getDeleteTargetIds(networkId);
-    for (const targetId of deletedNetworkIds) {
-      this.connections.get(targetId)?.disconnect();
-      this.connections.delete(targetId);
-      this.channelLists.clearNetwork(targetId);
-      this.friendPresenceByNetwork.delete(targetId);
-    }
-    this.broadcastFriendPresenceDiffs();
+    this.connectionManager.removeNetworks(deletedNetworkIds);
     this.store.deleteNetwork(networkId);
     for (const targetId of deletedNetworkIds) {
       this.send({ type: 'network.remove', networkId: targetId });
     }
     return deletedNetworkIds;
-  }
-
-  private ensureConnection(networkId: string) {
-    const profile = this.getRequiredRuntimeNetwork(networkId);
-    let connection = this.connections.get(networkId);
-    if (!connection) {
-      connection = new IrcConnection(profile, {
-        onEvent: (event) => {
-          if (!this.closing) {
-            if (event.type === 'friend-presence') {
-              this.handleFriendPresenceEvent(event.networkId, event.onlineNicks);
-              return;
-            }
-            if (event.type === 'state' && event.phase === 'offline') {
-              this.channelLists.clearNetwork(event.networkId);
-              if (this.friendPresenceByNetwork.delete(event.networkId)) {
-                this.broadcastFriendPresenceDiffs();
-              }
-            }
-            if (
-              event.type === 'channel-list-entry'
-              || event.type === 'channel-list-completed'
-              || event.type === 'channel-list-failed'
-            ) {
-              this.handleChannelListEvent(event);
-              return;
-            }
-            handleRuntimeEvent(this, event);
-          }
-        },
-      });
-      connection.setFriendNicks(this.store.listFriends().map((friend) => friend.nick));
-      this.connections.set(networkId, connection);
-    }
-    return connection;
-  }
-
-  private handleChannelListEvent(event: Extract<RuntimeEvent, { type: 'channel-list-entry' | 'channel-list-completed' | 'channel-list-failed' }>) {
-    this.channelLists.handleEvent(event);
-  }
-
-  private sendSocket(ws: WebSocket, message: ServerMessage) {
-    this.sendPayload(ws, encode(message));
-  }
-
-  private sendPayload(ws: WebSocket, payload: string) {
-    if (ws.readyState !== WebSocket.OPEN) {
-      this.dropSocket(ws);
-      return false;
-    }
-    try {
-      ws.send(payload);
-      return true;
-    } catch {
-      this.dropSocket(ws);
-      try {
-        ws.close();
-      } catch {
-        // Ignore close failures while cleaning up a broken socket.
-      }
-      return false;
-    }
-  }
-
-  private dropSocket(ws: WebSocket) {
-    this.sockets.delete(ws);
-    this.channelLists.removeSocket(ws);
-  }
-
-  private handleFriendPresenceEvent(networkId: string, onlineNicks: string[]) {
-    this.friendPresenceByNetwork.set(
-      networkId,
-      new Set(onlineNicks.map(normalizeIrcIdentifier))
-    );
-    this.broadcastFriendPresenceDiffs();
-  }
-
-  private syncFriendTracking() {
-    const friendNicks = this.store.listFriends().map((friend) => friend.nick);
-    for (const connection of this.connections.values()) {
-      connection.setFriendNicks(friendNicks);
-    }
-  }
-
-  private computeFriendPresence(friends: FriendState[]) {
-    return Object.fromEntries(
-      friends.map((friend) => [friend.id, this.isFriendOnline(friend.nick)])
-    );
-  }
-
-  private broadcastFriendPresenceDiffs() {
-    const friends = this.store.listFriends();
-    const nextPresence = this.computeFriendPresence(friends);
-    for (const friend of friends) {
-      const online = nextPresence[friend.id] ?? false;
-      if (this.friendPresenceCache.get(friend.id) === online) {
-        continue;
-      }
-      this.friendPresenceCache.set(friend.id, online);
-      this.send({ type: 'friend.presence', friendId: friend.id, online });
-    }
-    for (const friendId of Array.from(this.friendPresenceCache.keys())) {
-      if (friendId in nextPresence) {
-        continue;
-      }
-      this.friendPresenceCache.delete(friendId);
-    }
-  }
-
-  private isFriendOnline(nick: string) {
-    const normalized = normalizeIrcIdentifier(nick);
-    for (const onlineNicks of this.friendPresenceByNetwork.values()) {
-      if (onlineNicks.has(normalized)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private getRequiredRuntimeNetwork(networkId: string) {
@@ -519,19 +369,6 @@ export class Runtime {
     return buffer?.networkId === networkId ? buffer.target : fallbackTarget;
   }
 }
-
-const toNetworkRuntimeState = (connection: IrcConnection | undefined, fallbackNick: string): NetworkRuntimeState =>
-  connection
-    ? {
-        phase: connection.connected ? 'connected' : connection.socket ? 'connecting' : 'offline',
-        serverName: connection.serverName,
-        nick: connection.currentNick,
-      }
-    : {
-        phase: 'offline',
-        serverName: null,
-        nick: fallbackNick,
-      };
 
 const createDuplicateNetworkName = (name: string, networks: NetworkProfile[]) => {
   const existingNames = new Set(

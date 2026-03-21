@@ -3,6 +3,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ConnectionSidebar } from '../web/src/ConnectionSidebar.js';
 import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import { buildConnectionSidebarView } from '../web/src/connection-sidebar-view.js';
 import type { NetworkRuntimeState } from '../web/src/workspace.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
@@ -42,13 +43,15 @@ test('offline connections keep channel and query rows visible and selectable', (
   const query = makeBuffer({ id: 'query-1', kind: 'query', target: 'alice' });
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
-      networks={[network]}
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        buffers: [makeBuffer({ id: 'server-1' }), channel, query],
+        pendingChannels: [],
+        networkStates: { [network.id]: makeRuntime({ phase: 'offline' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
-      buffers={[makeBuffer({ id: 'server-1' }), channel, query]}
-      pendingChannels={[]}
-      networkStates={{ [network.id]: makeRuntime({ phase: 'offline' }) }}
-      selection={{ kind: 'buffer', bufferId: 'server-1' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -73,13 +76,15 @@ test('friend rows expose online and offline cues', () => {
   const friend: FriendState = { id: 'friend-1', nick: 'Alice' };
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
-      networks={[] satisfies NetworkProfile[]}
+      connections={buildConnectionSidebarView({
+        networks: [] satisfies NetworkProfile[],
+        buffers: [] satisfies BufferState[],
+        pendingChannels: [],
+        networkStates: {},
+        selection: null,
+      })}
       friends={[friend]}
       friendPresence={{ [friend.id]: true }}
-      buffers={[] satisfies BufferState[]}
-      pendingChannels={[]}
-      networkStates={{}}
-      selection={null}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -102,13 +107,15 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
   const network = makeNetwork();
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
-      networks={[network]}
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        buffers: [makeBuffer({ id: 'server-1' })],
+        pendingChannels: [{ networkId: network.id, channel: '#Help' }],
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'pending-channel', networkId: network.id, channel: '#help' },
+      })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
-      buffers={[makeBuffer({ id: 'server-1' })]}
-      pendingChannels={[{ networkId: network.id, channel: '#Help' }]}
-      networkStates={{ [network.id]: makeRuntime({ phase: 'connected' }) }}
-      selection={{ kind: 'pending-channel', networkId: network.id, channel: '#help' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}

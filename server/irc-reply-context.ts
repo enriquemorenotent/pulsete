@@ -172,16 +172,6 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
   return null;
 };
 
-export const getLatestPendingNick = (contexts: PendingReplyContext[]) => {
-  for (let index = contexts.length - 1; index >= 0; index -= 1) {
-    const context = contexts[index];
-    if (context?.kind === 'nick') {
-      return context.requestedNick;
-    }
-  }
-  return null;
-};
-
 type ReplyResolution = {
   matched: boolean;
   done: boolean;

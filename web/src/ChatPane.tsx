@@ -14,7 +14,7 @@ import { MessageAvatar } from './MessageAvatar.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
-type ChatPaneProps = {
+export type ChatPaneProps = {
   workspace: WorkspaceView;
   friends: FriendState[];
   selectedMessages: ChatMessage[];

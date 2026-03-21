@@ -1,22 +1,17 @@
 import { useState } from 'react';
 import { Hash, LoaderCircle, MessageSquareMore, Plus, PowerOff, RefreshCcw, X } from 'lucide-react';
 import type { BufferState, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
-import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { AddFriendDialog } from './AddFriendDialog.js';
 import { SidebarWidget } from './SidebarWidget.js';
-import type { NetworkRuntimeState, SelectedBuffer } from './workspace.js';
-import { getConnectionLabel, getConnectionLabelParts, getConnectionStatus } from './workspace.js';
+import type { SidebarConnectionView } from './connection-sidebar-view.js';
+import type { NetworkRuntimeState } from './workspace.js';
 
-type ConnectionSidebarProps = {
-  networks: NetworkProfile[];
+export type ConnectionSidebarProps = {
+  connections: SidebarConnectionView[];
   friends: FriendState[];
   friendPresence: Record<string, boolean>;
-  buffers: BufferState[];
-  pendingChannels: PendingChannelState[];
-  networkStates: Record<string, NetworkRuntimeState>;
-  selection: SelectedBuffer | null;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onSelectFriend: (friend: FriendState) => Promise<void>;
@@ -39,99 +34,85 @@ export function ConnectionSidebar(props: ConnectionSidebarProps) {
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border bg-card">
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-2">
-            {props.networks.length === 0 ? (
+            {props.connections.length === 0 ? (
               <div className="px-2 py-2 text-[13px] text-muted-foreground">
                 No open connections. Use Network Manager to connect.
               </div>
             ) : null}
 
-            {props.networks.map((network, index) => {
-              const runtime = props.networkStates[network.id] ?? null;
-              const networkBuffers = props.buffers.filter((buffer) => buffer.networkId === network.id);
-              const pendingChannels = props.pendingChannels.filter((pendingChannel) => pendingChannel.networkId === network.id);
-              const serverBuffer = networkBuffers.find((buffer) => buffer.kind === 'server') ?? null;
-              const childBuffers = networkBuffers.filter((buffer) => buffer.kind !== 'server').sort(compareBuffers);
-              const childBuffersDimmed = getConnectionStatus(runtime) !== 'connected';
-              const selectedServer = props.selection?.kind === 'buffer' && props.selection.bufferId === serverBuffer?.id;
-              const labelParts = getConnectionLabelParts(props.networks, network, runtime);
-              const label = getConnectionLabel(props.networks, network, runtime);
-
+            {props.connections.map((connection, index) => {
               return (
-                <section key={network.id} className={cn(index > 0 && 'mt-2 border-t border-border/70 pt-2')}>
-                  <div className={cn('flex items-stretch rounded-sm', selectedServer && 'bg-accent')}>
+                <section key={connection.network.id} className={cn(index > 0 && 'mt-2 border-t border-border/70 pt-2')}>
+                  <div className={cn('flex items-stretch rounded-sm', connection.selectedServer && 'bg-accent')}>
                     <button
                       className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left hover:bg-accent/70"
-                      onClick={() => props.onSelectNetwork(network)}
+                      onClick={() => props.onSelectNetwork(connection.network)}
                     >
-                      <span className={cn('size-2 shrink-0 rounded-full', dotTone(runtime))} />
+                      <span className={cn('size-2 shrink-0 rounded-full', dotTone(connection.runtime))} />
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-baseline gap-1.5">
-                          <span className="truncate text-[13px] font-medium text-foreground">{labelParts.name}</span>
+                          <span className="truncate text-[13px] font-medium text-foreground">{connection.labelParts.name}</span>
                           <span className="shrink-0 font-mono text-[11px] font-normal text-muted-foreground">
-                            as {labelParts.nick}
+                            as {connection.labelParts.nick}
                           </span>
-                          {labelParts.instanceIndex === null ? null : (
+                          {connection.labelParts.instanceIndex === null ? null : (
                             <span className="shrink-0 text-[11px] text-muted-foreground">
-                              · {labelParts.instanceIndex}
+                              · {connection.labelParts.instanceIndex}
                             </span>
                           )}
                         </div>
                       </div>
-                      {serverBuffer && serverBuffer.unread > 0 ? <UnreadBadge unread={serverBuffer.unread} /> : null}
+                      {connection.serverBuffer && connection.serverBuffer.unread > 0 ? <UnreadBadge unread={connection.serverBuffer.unread} /> : null}
                     </button>
                     <button
                       className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
                       onClick={() =>
-                        runtime?.phase === 'connected'
-                          ? props.onDisconnectNetwork(network.id)
-                          : props.onReconnectNetwork(network)
+                        connection.runtime?.phase === 'connected'
+                          ? props.onDisconnectNetwork(connection.network.id)
+                          : props.onReconnectNetwork(connection.network)
                       }
-                      aria-label={`${runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${label}`}
-                      disabled={runtime?.phase === 'connecting'}
+                      aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${connection.label}`}
+                      disabled={connection.runtime?.phase === 'connecting'}
                     >
-                      {runtime?.phase === 'connected' ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
+                      {connection.runtime?.phase === 'connected' ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
                     </button>
                     <button
                       className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"
-                      onClick={() => props.onCloseConnection(network)}
-                      aria-label={`Close ${label}`}
+                      onClick={() => props.onCloseConnection(connection.network)}
+                      aria-label={`Close ${connection.label}`}
                     >
                       <X className="size-3.5" />
                     </button>
                   </div>
 
-                  {childBuffers.length > 0 || pendingChannels.length > 0 ? (
+                  {connection.childBuffers.length > 0 || connection.pendingChannels.length > 0 ? (
                     <div className="mt-1 space-y-0.5 pl-4">
-                      {childBuffers.map((buffer) =>
+                      {connection.childBuffers.map(({ buffer, selected }) =>
                         buffer.kind === 'channel' ? (
                           <SidebarChannelRow
                             key={buffer.id}
                             buffer={buffer}
-                            dimmed={childBuffersDimmed}
-                            selected={props.selection?.kind === 'buffer' && props.selection.bufferId === buffer.id}
+                            dimmed={connection.childBuffersDimmed}
+                            selected={selected}
                             onSelect={() => props.onSelectBuffer(buffer)}
-                            onClose={() => props.onCloseChannel(network.id, buffer.target)}
+                            onClose={() => props.onCloseChannel(connection.network.id, buffer.target)}
                           />
                         ) : (
                           <SidebarQueryRow
                             key={buffer.id}
                             buffer={buffer}
-                            dimmed={childBuffersDimmed}
-                            selected={props.selection?.kind === 'buffer' && props.selection.bufferId === buffer.id}
+                            dimmed={connection.childBuffersDimmed}
+                            selected={selected}
                             onSelect={() => props.onSelectBuffer(buffer)}
                             onClose={() => props.onCloseBuffer(buffer)}
                           />
                         )
                       )}
-                      {pendingChannels.map((pendingChannel) => (
+                      {connection.pendingChannels.map(({ pendingChannel, selected }) => (
                         <SidebarPendingChannelRow
                           key={`${pendingChannel.networkId}:${pendingChannel.channel}`}
                           pendingChannel={pendingChannel}
-                          selected={
-                            props.selection?.kind === 'pending-channel'
-                            && props.selection.networkId === pendingChannel.networkId
-                            && isSameIrcIdentifier(props.selection.channel, pendingChannel.channel)
-                          }
+                          selected={selected}
                           onSelect={() => props.onSelectPendingChannel(pendingChannel.networkId, pendingChannel.channel)}
                         />
                       ))}
@@ -315,11 +296,6 @@ function UnreadBadge(props: { unread: number }) {
     </span>
   );
 }
-
-const compareBuffers = (left: BufferState, right: BufferState) => {
-  const order = { server: 0, channel: 1, query: 2 } satisfies Record<BufferState['kind'], number>;
-  return order[left.kind] - order[right.kind] || left.target.localeCompare(right.target);
-};
 
 const dotTone = (runtime: NetworkRuntimeState | null) => {
   if (runtime?.phase === 'connected') {
