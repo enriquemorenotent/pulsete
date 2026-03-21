@@ -1,9 +1,9 @@
 import type { NetworkProfile } from '../../shared/protocol.js';
+import { selectionFor } from './conversation-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import {
   getReadOnlyEmptyBody,
   getReadOnlySubtitle,
-  selectionFor,
   type ResolvedWorkspace,
 } from './workspace-resolve.js';
 

@@ -98,5 +98,3 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
       buffer ? messagesByTarget.get(toConversationMessageKey(buffer.networkId, buffer.target)) ?? [] : [],
   };
 };
-
-export const createConversationQueries = buildConversationIndex;

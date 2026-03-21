@@ -1,6 +1,6 @@
 import type { Action, ChannelListState, State } from './app-types.js';
-import { normalizeSelection } from './app-state-selection.js';
 import { removeNetworkMessages } from './conversation-message-state.js';
+import { buildConversationModel } from './conversation-model.js';
 import { gatewayReconnectMessage } from './gateway.js';
 
 const offlineNetworkStates = (state: Pick<State['domain'], 'networks'>) =>
@@ -65,12 +65,8 @@ export const reduceRuntimeAction = (
         ...nextState,
         transient: {
           ...nextState.transient,
-          selection: normalizeSelection(
-            {
-              networks: nextState.domain.networks,
-              buffers: nextState.domain.buffers,
-              pendingChannels: nextState.domain.pendingChannels,
-            },
+          selection: buildConversationModel(nextState.domain).normalizeSelection(
+            nextState.domain.networks,
             state.transient.selection
           ),
         },
@@ -133,12 +129,8 @@ export const reduceRuntimeAction = (
           selection:
             action.phase === 'connected'
               ? state.transient.selection
-              : normalizeSelection(
-                  {
-                    networks: nextState.domain.networks,
-                    buffers: nextState.domain.buffers,
-                    pendingChannels: nextState.domain.pendingChannels,
-                  },
+              : buildConversationModel(nextState.domain).normalizeSelection(
+                  nextState.domain.networks,
                   state.transient.selection,
                   action.networkId
                 ),
@@ -170,12 +162,8 @@ export const reduceRuntimeAction = (
         ...nextState,
         transient: {
           ...nextState.transient,
-          selection: normalizeSelection(
-            {
-              networks: nextState.domain.networks,
-              buffers: nextState.domain.buffers,
-              pendingChannels: nextState.domain.pendingChannels,
-            },
+          selection: buildConversationModel(nextState.domain).normalizeSelection(
+            nextState.domain.networks,
             state.transient.selection
           ),
         },

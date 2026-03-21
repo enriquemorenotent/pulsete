@@ -1,12 +1,12 @@
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import type { IrcFriendPresenceContext } from './irc-contexts.js';
 import { emitFriendPresence } from './irc-emit.js';
 import { maxIrcCommandBytes, maxIsonNickBytes } from './irc-limits.js';
 import { createFriendPresenceReplyContext } from './irc-reply-context.js';
-import type { IrcConnection } from './irc.js';
 
 const friendPresencePollMs = 60_000;
 
-export const setFriendNicks = (connection: IrcConnection, nicks: string[]) => {
+export const setFriendNicks = (connection: IrcFriendPresenceContext, nicks: string[]) => {
   const presence = connection.friendPresence;
   const lifecycle = connection.lifecycle;
   presence.nicks = dedupeFriendNicks(nicks);
@@ -23,7 +23,7 @@ export const setFriendNicks = (connection: IrcConnection, nicks: string[]) => {
   pollFriendPresence(connection);
 };
 
-export const refreshFriendPresence = (connection: IrcConnection) => {
+export const refreshFriendPresence = (connection: IrcFriendPresenceContext) => {
   const presence = connection.friendPresence;
   const lifecycle = connection.lifecycle;
   if (!lifecycle.connected || !lifecycle.socket || !presence.enabled || presence.nicks.length === 0) {
@@ -36,7 +36,11 @@ export const refreshFriendPresence = (connection: IrcConnection) => {
   pollFriendPresence(connection);
 };
 
-export const handleFriendPresence = (connection: IrcConnection, pollId: number, onlineNicks: string[]) => {
+export const handleFriendPresence = (
+  connection: IrcFriendPresenceContext,
+  pollId: number,
+  onlineNicks: string[]
+) => {
   const pendingPoll = connection.friendPresence.pendingPoll;
   if (!pendingPoll || pendingPoll.id !== pollId) {
     return;
@@ -50,14 +54,14 @@ export const handleFriendPresence = (connection: IrcConnection, pollId: number, 
   updateOnlineFriendKeys(connection, pendingPoll.onlineNicks);
 };
 
-export const disableFriendPresence = (connection: IrcConnection) => {
+export const disableFriendPresence = (connection: IrcFriendPresenceContext) => {
   connection.friendPresence.enabled = false;
   connection.friendPresence.pendingPoll = null;
   clearFriendPresenceTimer(connection);
   updateOnlineFriendKeys(connection, []);
 };
 
-export const ensureFriendPresenceTimer = (connection: IrcConnection) => {
+export const ensureFriendPresenceTimer = (connection: IrcFriendPresenceContext) => {
   if (connection.friendPresence.timer) {
     return;
   }
@@ -66,7 +70,7 @@ export const ensureFriendPresenceTimer = (connection: IrcConnection) => {
   connection.friendPresence.timer = timer;
 };
 
-export const clearFriendPresenceTimer = (connection: IrcConnection) => {
+export const clearFriendPresenceTimer = (connection: IrcFriendPresenceContext) => {
   const timer = connection.friendPresence.timer;
   if (!timer) {
     return;
@@ -75,7 +79,7 @@ export const clearFriendPresenceTimer = (connection: IrcConnection) => {
   connection.friendPresence.timer = null;
 };
 
-export const pollFriendPresence = (connection: IrcConnection) => {
+export const pollFriendPresence = (connection: IrcFriendPresenceContext) => {
   const lifecycle = connection.lifecycle;
   const presence = connection.friendPresence;
   if (!lifecycle.connected || !lifecycle.socket || !presence.enabled || presence.nicks.length === 0) {
@@ -110,7 +114,7 @@ export const pollFriendPresence = (connection: IrcConnection) => {
   }
 };
 
-export const updateOnlineFriendKeys = (connection: IrcConnection, onlineNicks: string[]) => {
+export const updateOnlineFriendKeys = (connection: IrcFriendPresenceContext, onlineNicks: string[]) => {
   const nextKeys = new Set(onlineNicks.map(normalizeIrcIdentifier));
   if (setsEqual(connection.friendPresence.onlineKeys, nextKeys)) {
     return;

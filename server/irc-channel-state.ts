@@ -1,12 +1,17 @@
 import { removeChannelUser, upsertChannelUser } from '../shared/channel-users.js';
 import type { ChannelUserState } from '../shared/protocol.js';
+import type { IrcChannelStateContext } from './irc-contexts.js';
 import { emitPendingChannel, emitPendingChannelRemoved, emitStatus } from './irc-emit.js';
 import { findIrcCaseMatch } from './irc-parser.js';
 import type { PendingReplyContext } from './irc-reply-context.js';
 import type { ChannelSessionPhase, ChannelSessionState } from './irc-types.js';
-import type { IrcConnection } from './irc.js';
 
-export const updateChannelUsers = (connection: IrcConnection, channel: string, nick: string | null, joined: boolean) => {
+export const updateChannelUsers = (
+  connection: IrcChannelStateContext,
+  channel: string,
+  nick: string | null,
+  joined: boolean
+) => {
   const channelKey = resolveTrackedChannelKey(connection, channel) ?? channel;
   const current = connection.channels.users.get(channelKey) ?? [];
   const nextUsers = !nick ? current : joined ? upsertChannelUser(current, { nick, mode: 'normal' }) : removeChannelUser(current, nick);
@@ -14,45 +19,49 @@ export const updateChannelUsers = (connection: IrcConnection, channel: string, n
   return nextUsers;
 };
 
-export const getTrackedChannelUsers = (connection: IrcConnection, channel: string) => {
+export const getTrackedChannelUsers = (connection: IrcChannelStateContext, channel: string) => {
   const key = resolveTrackedChannel(connection, channel);
   return key ? connection.channels.users.get(key) ?? [] : [];
 };
 
-export const setTrackedChannelUsers = (connection: IrcConnection, channel: string, users: ChannelUserState[]) => {
+export const setTrackedChannelUsers = (
+  connection: IrcChannelStateContext,
+  channel: string,
+  users: ChannelUserState[]
+) => {
   const key = resolveTrackedChannelKey(connection, channel) ?? channel;
   connection.channels.users.set(key, users);
   return users;
 };
 
-export const getTrackedChannelUserEntries = (connection: IrcConnection) =>
+export const getTrackedChannelUserEntries = (connection: IrcChannelStateContext) =>
   Array.from(connection.channels.users.entries(), ([channel, users]) => [channel, users] as [string, ChannelUserState[]]);
 
-export const resolveTrackedChannel = (connection: IrcConnection, channel: string) =>
+export const resolveTrackedChannel = (connection: IrcChannelStateContext, channel: string) =>
   resolveTrackedChannelKey(connection, channel, false);
 
-export const clearExpiredChannelSessions = (connection: IrcConnection) => {
+export const clearExpiredChannelSessions = (connection: IrcChannelStateContext) => {
   connection.prunePendingReplyContexts();
 };
 
-export const getChannelSession = (connection: IrcConnection, channel: string) => {
+export const getChannelSession = (connection: IrcChannelStateContext, channel: string) => {
   const key = resolveTrackedChannelKey(connection, channel, false);
   return key ? connection.channels.sessions.get(key) ?? null : null;
 };
 
-export const listPendingChannels = (connection: IrcConnection) =>
+export const listPendingChannels = (connection: IrcChannelStateContext) =>
   Array.from(connection.channels.sessions.values())
     .filter((session) => session.phase === 'joining' && session.visiblePending)
     .map((session) => ({ networkId: connection.profile.id, channel: session.channel }));
 
-export const trackChannel = (connection: IrcConnection, channel: string) =>
+export const trackChannel = (connection: IrcChannelStateContext, channel: string) =>
   setChannelSession(connection, channel, 'joined', { visiblePending: false }).channel;
 
-export const untrackChannel = (connection: IrcConnection, channel: string) => {
+export const untrackChannel = (connection: IrcChannelStateContext, channel: string) => {
   removeChannelSession(connection, channel);
 };
 
-export const removeChannelSession = (connection: IrcConnection, channel: string) => {
+export const removeChannelSession = (connection: IrcChannelStateContext, channel: string) => {
   const key = resolveTrackedChannelKey(connection, channel, false);
   if (!key) {
     return null;
@@ -68,7 +77,7 @@ export const removeChannelSession = (connection: IrcConnection, channel: string)
   return { ...session, joinTimeoutTimer: null };
 };
 
-export const handleSelfChannelDeparture = (connection: IrcConnection, channel: string) => {
+export const handleSelfChannelDeparture = (connection: IrcChannelStateContext, channel: string) => {
   const session = getChannelSession(connection, channel);
   if (session?.phase === 'joining') {
     setTrackedChannelUsers(connection, channel, []);
@@ -83,7 +92,7 @@ export const handleSelfChannelDeparture = (connection: IrcConnection, channel: s
 };
 
 export const setChannelSession = (
-  connection: IrcConnection,
+  connection: IrcChannelStateContext,
   channel: string,
   phase: ChannelSessionPhase,
   options: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean } = {}
@@ -121,7 +130,7 @@ export const setChannelSession = (
   return next;
 };
 
-export const clearChannelSessions = (connection: IrcConnection) => {
+export const clearChannelSessions = (connection: IrcChannelStateContext) => {
   for (const session of connection.channels.sessions.values()) {
     clearChannelJoinTimer(session);
     hidePendingChannel(connection, session);
@@ -131,17 +140,17 @@ export const clearChannelSessions = (connection: IrcConnection) => {
 };
 
 export const discardPendingChannelReplyContexts = (
-  connection: IrcConnection,
+  connection: IrcChannelStateContext,
   channel: string,
   predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
 ) => connection.replyTracker.discardPendingChannelReplyContexts(channel, predicate);
 
-const resolveTrackedChannelKey = (connection: IrcConnection, channel: string, createIfMissing = true) =>
+const resolveTrackedChannelKey = (connection: IrcChannelStateContext, channel: string, createIfMissing = true) =>
   findIrcCaseMatch(connection.channels.sessions.keys(), channel)
   ?? findIrcCaseMatch(connection.channels.users.keys(), channel)
   ?? (createIfMissing ? channel : null);
 
-const hidePendingChannel = (connection: IrcConnection, session: ChannelSessionState) => {
+const hidePendingChannel = (connection: IrcChannelStateContext, session: ChannelSessionState) => {
   if (session.visiblePending) {
     emitPendingChannelRemoved(connection, session.channel);
   }
@@ -155,7 +164,7 @@ const clearChannelJoinTimer = (session: ChannelSessionState) => {
   session.joinTimeoutTimer = null;
 };
 
-const createChannelJoinTimer = (connection: IrcConnection, channel: string) => {
+const createChannelJoinTimer = (connection: IrcChannelStateContext, channel: string) => {
   if (connection.channels.joinTimeoutMs <= 0) {
     return null;
   }
@@ -164,7 +173,7 @@ const createChannelJoinTimer = (connection: IrcConnection, channel: string) => {
   return timer;
 };
 
-const handleChannelJoinTimeout = (connection: IrcConnection, channel: string) => {
+const handleChannelJoinTimeout = (connection: IrcChannelStateContext, channel: string) => {
   const session = getChannelSession(connection, channel);
   if (!session || session.phase !== 'joining') {
     return;

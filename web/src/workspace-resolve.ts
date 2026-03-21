@@ -1,6 +1,6 @@
-import type { AppSnapshot, BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import { selectionFor } from './conversation-model.js';
 import type { ConversationIndex } from './conversation-selectors.js';
-import { buildConversationIndex } from './conversation-selectors.js';
 import { getConnectionInstances, getConnectionStatus } from './workspace-helpers.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
@@ -27,9 +27,6 @@ export type ResolvedWorkspace = {
   inputSelection: SelectedBuffer | null;
 };
 
-export const selectionFor = (buffer: BufferState | null): SelectedBuffer | null =>
-  buffer ? { kind: 'buffer', bufferId: buffer.id } : null;
-
 export const getReadOnlySubtitle = (status: 'offline' | 'connecting') =>
   status === 'offline'
     ? 'Offline. History only until you reconnect.'
@@ -46,17 +43,6 @@ export const getReadOnlyEmptyBody = (
     ? 'Reconnect to resume the conversation.'
     : 'Wait for the connection to finish to resume the conversation.';
   return `${prefix} ${suffix}`;
-};
-
-export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'buffers'>): SelectedBuffer | null => {
-  const instance = getConnectionInstances(snapshot.networks)[0];
-  const conversation = buildConversationIndex({
-    buffers: snapshot.buffers,
-    channels: [],
-    pendingChannels: [],
-    messages: {},
-  });
-  return selectionFor(instance ? conversation.findServerBuffer(instance.id) : null);
 };
 
 export const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | null => {

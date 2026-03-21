@@ -1,13 +1,14 @@
 import type { MessageInput } from './storage.js';
-import type { IrcConnectionState, RuntimeEvent } from './irc-types.js';
+import type { IrcEventContext, IrcStateContext } from './irc-contexts.js';
+import type { RuntimeEvent } from './irc-types.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 
-export const emitEvent = (connection: IrcConnectionState, event: RuntimeEvent) => {
+export const emitEvent = (connection: IrcEventContext, event: RuntimeEvent) => {
   connection.handlers.onEvent(event);
 };
 
 export const emitStatus = (
-  connection: IrcConnectionState,
+  connection: IrcEventContext,
   message: string,
   kind: 'notice' | 'error' | 'system' = 'system',
   target?: string,
@@ -23,7 +24,7 @@ export const emitStatus = (
   });
 };
 
-export const emitState = (connection: IrcConnectionState) => {
+export const emitState = (connection: IrcStateContext) => {
   const { lifecycle } = connection;
   emitEvent(connection, {
     type: 'state',
@@ -34,12 +35,12 @@ export const emitState = (connection: IrcConnectionState) => {
   });
 };
 
-export const emitMessage = (connection: IrcConnectionState, message: MessageInput) => {
+export const emitMessage = (connection: IrcEventContext, message: MessageInput) => {
   emitEvent(connection, { type: 'message', message });
 };
 
 export const emitChannelListEntry = (
-  connection: IrcConnectionState,
+  connection: IrcEventContext,
   requestId: string,
   entry: { name: string; users: number; topic: string }
 ) => {
@@ -51,7 +52,7 @@ export const emitChannelListEntry = (
   });
 };
 
-export const emitChannelListCompleted = (connection: IrcConnectionState, requestId: string) => {
+export const emitChannelListCompleted = (connection: IrcEventContext, requestId: string) => {
   emitEvent(connection, {
     type: 'channel-list-completed',
     networkId: connection.profile.id,
@@ -59,7 +60,7 @@ export const emitChannelListCompleted = (connection: IrcConnectionState, request
   });
 };
 
-export const emitChannelListFailed = (connection: IrcConnectionState, requestId: string, message: string) => {
+export const emitChannelListFailed = (connection: IrcEventContext, requestId: string, message: string) => {
   emitEvent(connection, {
     type: 'channel-list-failed',
     networkId: connection.profile.id,
@@ -68,7 +69,7 @@ export const emitChannelListFailed = (connection: IrcConnectionState, requestId:
   });
 };
 
-export const emitFriendPresence = (connection: IrcConnectionState, onlineNicks: string[]) => {
+export const emitFriendPresence = (connection: IrcEventContext, onlineNicks: string[]) => {
   emitEvent(connection, {
     type: 'friend-presence',
     networkId: connection.profile.id,
@@ -77,7 +78,7 @@ export const emitFriendPresence = (connection: IrcConnectionState, onlineNicks: 
 };
 
 export const emitChannel = (
-  connection: IrcConnectionState,
+  connection: IrcEventContext,
   channel: string,
   details: { topic?: string; users?: ChannelUserState[] } = {}
 ) => {
@@ -89,7 +90,7 @@ export const emitChannel = (
   });
 };
 
-export const emitPendingChannel = (connection: IrcConnectionState, channel: string) => {
+export const emitPendingChannel = (connection: IrcEventContext, channel: string) => {
   emitEvent(connection, {
     type: 'channel-pending',
     networkId: connection.profile.id,
@@ -97,7 +98,7 @@ export const emitPendingChannel = (connection: IrcConnectionState, channel: stri
   });
 };
 
-export const emitPendingChannelRemoved = (connection: IrcConnectionState, channel: string) => {
+export const emitPendingChannelRemoved = (connection: IrcEventContext, channel: string) => {
   emitEvent(connection, {
     type: 'channel-pending-remove',
     networkId: connection.profile.id,

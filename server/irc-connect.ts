@@ -1,12 +1,12 @@
 import net from 'node:net';
 import tls from 'node:tls';
+import type { IrcConnectContext } from './irc-contexts.js';
 import { formatTlsStatusLines } from './irc-server-log.js';
 import { emitStatus } from './irc-emit.js';
-import type { IrcConnectionState } from './irc-types.js';
 
 const defaultConnectTimeoutMs = 15_000;
 
-export const connectSocket = (connection: IrcConnectionState) => {
+export const connectSocket = (connection: IrcConnectContext) => {
   if (connection.lifecycle.socket) {
     return;
   }

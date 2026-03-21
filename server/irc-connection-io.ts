@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import type { IrcClientIoContext, IrcRawIoContext } from './irc-contexts.js';
 import { emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import { maxBufferedIrcBytes, maxIrcCommandBytes } from './irc-limits.js';
 import { createReplyContextFromRaw, type PendingReplyContext } from './irc-reply-context.js';
-import type { IrcConnection } from './irc.js';
+import type { IrcConnectionState } from './irc-types.js';
 import type { MessageInput } from './storage.js';
 
-export const sendRaw = (connection: IrcConnection, raw: string, statusTarget?: string) => {
+export const sendRaw = (connection: IrcRawIoContext, raw: string, statusTarget?: string) => {
   const lifecycle = connection.lifecycle;
   if (!lifecycle.socket) {
     emitStatus(connection, 'Not connected', 'error', statusTarget);
@@ -27,7 +28,7 @@ export const sendRaw = (connection: IrcConnection, raw: string, statusTarget?: s
   return true;
 };
 
-export const sendClientRaw = (connection: IrcConnection, raw: string, sourceTarget = 'server'): boolean => {
+export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourceTarget = 'server'): boolean => {
   connection.prunePendingReplyContexts();
   const trimmed = raw.trim();
   const [commandToken = '', ...rest] = trimmed.split(/\s+/);
@@ -57,7 +58,7 @@ export const sendClientRaw = (connection: IrcConnection, raw: string, sourceTarg
   return sendTrackedRaw(connection, raw, sourceTarget, replyContext);
 };
 
-export const consume = (connection: IrcConnection, chunk: string) => {
+export const consume = (connection: IrcConnectionState, chunk: string) => {
   connection.lifecycle.buffer += chunk;
   let newlineIndex = connection.lifecycle.buffer.indexOf('\n');
   while (newlineIndex !== -1) {
@@ -77,7 +78,7 @@ export const consume = (connection: IrcConnection, chunk: string) => {
   }
 };
 
-export const createSelfMessage = (connection: IrcConnection, target: string, body: string): MessageInput => ({
+export const createSelfMessage = (connection: IrcRawIoContext, target: string, body: string): MessageInput => ({
   id: randomUUID(),
   networkId: connection.profile.id,
   target,
@@ -89,7 +90,7 @@ export const createSelfMessage = (connection: IrcConnection, target: string, bod
 });
 
 export const sendTrackedRaw = (
-  connection: IrcConnection,
+  connection: IrcClientIoContext,
   raw: string,
   sourceTarget: string,
   replyContext: PendingReplyContext | null
@@ -107,7 +108,7 @@ export const sendTrackedRaw = (
   return true;
 };
 
-const handleOversizedServerLine = (connection: IrcConnection) => {
+const handleOversizedServerLine = (connection: IrcRawIoContext) => {
   connection.lifecycle.buffer = '';
   connection.lifecycle.lastFailureMessage = 'Server sent an oversized IRC line';
   emitStatus(connection, connection.lifecycle.lastFailureMessage, 'error');

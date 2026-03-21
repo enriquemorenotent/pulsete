@@ -1,9 +1,8 @@
 import type { BufferState, FriendState, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, ChannelListState, State } from './app-types.js';
-import { fallbackSelection, normalizeSelection } from './app-state-selection.js';
 import { appendConversationMessages, removeBufferMessages } from './conversation-message-state.js';
-import { buildConversationIndex } from './conversation-selectors.js';
+import { buildConversationModel } from './conversation-model.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -27,7 +26,8 @@ export const reduceConversationAction = (
   action: Action,
   initialChannelListState: ChannelListState
 ): State | null => {
-  const conversation = buildConversationIndex(state.domain);
+  void initialChannelListState;
+  const conversation = buildConversationModel(state.domain);
   switch (action.type) {
     case 'upsert-friend': {
       const friends = state.domain.friends.filter((friend) => friend.id !== action.friend.id);
@@ -86,14 +86,7 @@ export const reduceConversationAction = (
         ...nextState,
         transient: {
           ...nextState.transient,
-          selection: normalizeSelection(
-            {
-              networks: nextState.domain.networks,
-              buffers: nextState.domain.buffers,
-              pendingChannels: nextState.domain.pendingChannels,
-            },
-            selection
-          ),
+          selection: buildConversationModel(nextState.domain).normalizeSelection(nextState.domain.networks, selection),
         },
       };
     }
@@ -117,13 +110,7 @@ export const reduceConversationAction = (
           ...nextState.transient,
           selection:
             state.transient.selection?.kind === 'buffer' && state.transient.selection.bufferId === action.bufferId
-              ? fallbackSelection(
-                  {
-                    networks: nextState.domain.networks,
-                    buffers: nextState.domain.buffers,
-                  },
-                  action.networkId
-                )
+              ? buildConversationModel(nextState.domain).fallbackSelection(nextState.domain.networks, action.networkId)
               : state.transient.selection,
         },
       };
@@ -208,13 +195,7 @@ export const reduceConversationAction = (
             isSameIrcIdentifier(state.transient.selection.channel, action.channel)
               ? matchingChannelBuffer
                 ? { kind: 'buffer', bufferId: matchingChannelBuffer.id }
-                : fallbackSelection(
-                    {
-                      networks: nextState.domain.networks,
-                      buffers: nextState.domain.buffers,
-                    },
-                    action.networkId
-                  )
+                : buildConversationModel(nextState.domain).fallbackSelection(nextState.domain.networks, action.networkId)
               : state.transient.selection,
         },
       };

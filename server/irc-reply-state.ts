@@ -1,12 +1,14 @@
+import type { IrcReplyStateContext } from './irc-contexts.js';
 import type { PendingReplyContext } from './irc-reply-context.js';
-import type { IrcConnection } from './irc.js';
 
-export const queueReplyContext = (connection: IrcConnection, context: PendingReplyContext) => {
+type ReplyTrackerContext = Pick<IrcReplyStateContext, 'replyTracker'>;
+
+export const queueReplyContext = (connection: ReplyTrackerContext, context: PendingReplyContext) => {
   connection.replyTracker.queue(context);
 };
 
 export const consumeReplyTarget = (
-  connection: IrcConnection,
+  connection: IrcReplyStateContext,
   command: string,
   params: string[],
   nick: string | null,
@@ -17,7 +19,7 @@ export const consumeReplyTarget = (
 };
 
 export const consumeReplyContext = (
-  connection: IrcConnection,
+  connection: IrcReplyStateContext,
   command: string,
   params: string[],
   nick: string | null,
@@ -28,18 +30,18 @@ export const consumeReplyContext = (
 };
 
 export const discardPendingChannelReplyContexts = (
-  connection: IrcConnection,
+  connection: ReplyTrackerContext,
   channel: string,
   predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
 ) => connection.replyTracker.discardPendingChannelReplyContexts(channel, predicate);
 
-export const consumePendingNickReplyContexts = (connection: IrcConnection, requestedNick: string) =>
+export const consumePendingNickReplyContexts = (connection: ReplyTrackerContext, requestedNick: string) =>
   connection.replyTracker.consumePendingNickReplyContexts(requestedNick);
 
-export const discardPendingNickReplyContexts = (connection: IrcConnection) =>
+export const discardPendingNickReplyContexts = (connection: ReplyTrackerContext) =>
   connection.replyTracker.discardPendingNickReplyContexts();
 
-export const prunePendingReplyContexts = (connection: IrcConnection) => {
+export const prunePendingReplyContexts = (connection: IrcReplyStateContext) => {
   const now = Date.now();
   connection.replyTracker.prune();
   if (

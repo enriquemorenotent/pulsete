@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { initialState, reducer, useStateReducer } from './app-state.js';
 import type { State } from './app-types.js';
-import { buildConversationIndex } from './conversation-selectors.js';
+import { buildConversationModel } from './conversation-model.js';
 import { useAppActions } from './useAppActions.js';
 import { useAppDerivedState } from './useAppDerivedState.js';
 import { useAppLifecycle } from './useAppLifecycle.js';
@@ -20,7 +20,7 @@ export function useAppController(): AppController {
   const [state, dispatch] = useStateReducer(reducer, initialState);
   const composer = useComposerHistory();
   const ui = useAppUiState();
-  const conversation = useMemo(() => buildConversationIndex(state.domain), [state.domain]);
+  const conversation = useMemo(() => buildConversationModel(state.domain), [state.domain]);
   const derived = useAppDerivedState(state, conversation, ui.showFavoritesOnly, ui.managedNetworkId);
   const updateBanner = (kind: 'notice' | 'error', message: string) =>
     dispatch({ type: 'set-banner', banner: { kind, message } });

@@ -2,13 +2,13 @@ import { useReducer } from 'react';
 import type { AppSnapshot } from '../../shared/protocol.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
+import { buildConversationModel } from './conversation-model.js';
 import {
   reduceConversationAction,
   sortBuffers,
   sortFriends,
   sortPendingChannels,
 } from './app-state-conversations.js';
-import { normalizeSelection } from './app-state-selection.js';
 import { reduceRuntimeAction } from './app-state-runtime.js';
 import { initialChannelListState, reduceUiAction } from './app-state-ui.js';
 import { emptyNetworkForm } from './network-form.js';
@@ -46,14 +46,13 @@ const reduceSnapshotState = (state: State, snapshot: AppSnapshot): State => {
   const networks = snapshot.networks;
   const buffers = sortBuffers(snapshot.buffers);
   const pendingChannels = sortPendingChannels(snapshot.pendingChannels);
-  const selection = normalizeSelection(
-    {
-      networks,
-      buffers,
-      pendingChannels,
-    },
-    state.transient.selection
-  );
+  const conversation = buildConversationModel({
+    buffers,
+    channels: snapshot.channels,
+    pendingChannels,
+    messages: {},
+  });
+  const selection = conversation.normalizeSelection(networks, state.transient.selection);
   return {
     domain: {
       phase: 'ready',
