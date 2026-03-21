@@ -1,6 +1,11 @@
-import type { ParsedLine } from './irc-types.js';
 import { parseChannelUser } from '../shared/channel-users.js';
 export { findIrcCaseMatch, isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+
+export type ParsedLine = {
+  prefix: string | null;
+  command: string;
+  params: string[];
+};
 
 export const parseLine = (line: string): ParsedLine => {
   let rest = line.trimEnd();

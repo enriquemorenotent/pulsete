@@ -19,11 +19,21 @@ test('runtime join defers channel persistence until the server confirms the join
   let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
 
   (runtime as unknown as {
-    connections: Map<string, { join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean }>;
+    connections: Map<string, {
+      runtimeSession: {
+        command: {
+          join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+        };
+      };
+    }>;
   }).connections.set(network.id, {
-    join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
-      requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
-      return channel === '#missing';
+    runtimeSession: {
+      command: {
+        join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
+          requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
+          return channel === '#missing';
+        },
+      },
     },
   });
 
@@ -49,11 +59,21 @@ test('runtime rejoins existing channel buffers without surfacing a pending chann
   let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
 
   (runtime as unknown as {
-    connections: Map<string, { join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean }>;
+    connections: Map<string, {
+      runtimeSession: {
+        command: {
+          join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+        };
+      };
+    }>;
   }).connections.set(network.id, {
-    join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
-      requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
-      return channel === '#help';
+    runtimeSession: {
+      command: {
+        join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
+          requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
+          return channel === '#help';
+        },
+      },
     },
   });
 

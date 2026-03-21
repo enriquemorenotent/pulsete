@@ -3,15 +3,15 @@ import type { Action } from './app-types.js';
 
 type Dispatch = (action: Action) => void;
 
-export function dispatchServerMessage(message: ServerMessage, dispatch: Dispatch) {
+export function dispatchInboundServerMessage(message: ServerMessage, dispatch: Dispatch) {
   for (const action of toActions(message)) {
     dispatch(action);
   }
 }
 
-export function dispatchServerMessages(messages: readonly ServerMessage[], dispatch: Dispatch) {
+export function dispatchInboundServerMessages(messages: readonly ServerMessage[], dispatch: Dispatch) {
   for (const message of messages) {
-    dispatchServerMessage(message, dispatch);
+    dispatchInboundServerMessage(message, dispatch);
   }
 }
 

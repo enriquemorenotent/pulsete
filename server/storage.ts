@@ -1,7 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { isConnectionInstance } from '../shared/network-model.js';
 import {
-  historyWindowLimit,
   type BufferState,
   type ChannelUserState,
 } from '../shared/protocol.js';
@@ -33,6 +31,8 @@ import {
   listNetworks,
   upsertNetwork,
 } from './storage-networks.js';
+import { ensureNetworkBuffers } from './storage-network-invariants.js';
+import { createStorageSnapshot } from './storage-snapshot.js';
 import type { ChannelInput, FriendInput, MessageInput, NetworkInput } from './storage-types.js';
 
 export { type MessageInput, type NetworkInput };
@@ -138,9 +138,7 @@ export class Storage {
   upsertNetwork(input: NetworkInput) {
     return runInTransaction(this.db, () => {
       const network = upsertNetwork(this.db, input, this.secretBox);
-      if (isConnectionInstance(network)) {
-        this.ensureServerBuffer(network.id);
-      }
+      ensureNetworkBuffers(this.db, network);
       return network;
     });
   }
@@ -170,17 +168,7 @@ export class Storage {
   }
 
   snapshot() {
-    const networks = this.listNetworks();
-    return {
-      networks,
-      friends: this.listFriends(),
-      friendPresence: {},
-      buffers: this.listBuffers(),
-      channels: this.listChannels(),
-      pendingChannels: [],
-      messages: this.listRecentMessages(historyWindowLimit),
-      networkStates: {},
-    };
+    return createStorageSnapshot(this);
   }
 
   close() {
@@ -189,15 +177,5 @@ export class Storage {
     }
     this.closed = true;
     this.db.close();
-  }
-
-  private ensureServerBuffer(networkId: string) {
-    if (!getServerBuffer(this.db, networkId)) {
-      upsertBuffer(this.db, {
-        networkId,
-        kind: 'server',
-        target: 'server',
-      });
-    }
   }
 }

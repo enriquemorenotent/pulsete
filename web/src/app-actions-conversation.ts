@@ -10,7 +10,7 @@ import {
   type ConversationActions,
   type GatewayActions,
 } from './app-actions-types.js';
-import { dispatchServerMessages } from './server-message-actions.js';
+import { dispatchLocalBufferUpsert } from './local-action-dispatch.js';
 
 type ConversationActionParams = {
   dispatch: AppDispatch;
@@ -61,7 +61,7 @@ export const createConversationActions = ({
       return existingBuffer;
     }
     const result = await api.openQuery(network.id, nick);
-    dispatchServerMessages([{ type: 'buffer.upsert', buffer: result.buffer }], dispatch);
+    dispatchLocalBufferUpsert(dispatch, result.buffer);
     selectBuffer(dispatch, result.buffer);
     return result.buffer;
   };

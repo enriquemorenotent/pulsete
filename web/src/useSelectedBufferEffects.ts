@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { BufferState } from '../../shared/protocol.js';
 import type { Action, GatewayStatus } from './app-types.js';
 import { api } from './client.js';
-import { dispatchServerMessage } from './server-message-actions.js';
+import { dispatchLocalBufferUpsert } from './local-action-dispatch.js';
 
 type UseSelectedBufferEffectsParams = {
   dispatch: (action: Action) => void;
@@ -25,7 +25,7 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
     const unread = params.selectedBuffer?.unread ?? 0;
     if (params.selectedBuffer && unread > 0) {
       api.markBufferRead(params.selectedBuffer.id)
-        .then((payload) => dispatchServerMessage({ type: 'buffer.upsert', buffer: payload.buffer }, params.dispatch))
+        .then((payload) => dispatchLocalBufferUpsert(params.dispatch, payload.buffer))
         .catch(() => undefined);
     }
   }, [params.dispatch, params.selectedBuffer?.id, params.selectedBuffer?.unread]);

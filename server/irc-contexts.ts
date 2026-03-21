@@ -1,5 +1,4 @@
-import type { PendingReplyContext } from './irc-reply-context.js';
-import type { ReplyTracker } from './irc-reply-tracker.js';
+import type { PendingReplyContext } from './irc-reply-context-types.js';
 import type {
   Handlers,
   IrcChannelListState,
@@ -7,6 +6,7 @@ import type {
   IrcConnectionState,
   IrcFriendPresenceState,
   IrcLifecycleState,
+  IrcReplyTracker,
   IrcSocket,
 } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
@@ -23,7 +23,7 @@ export type IrcStateContext = IrcEventContext & {
 export type IrcReplyStateContext = {
   channelList: IrcChannelListState;
   clearDrainingChannelList(): void;
-  replyTracker: ReplyTracker;
+  replyTracker: IrcReplyTracker;
 };
 
 export type IrcChannelListContext = IrcStateContext & IrcReplyStateContext & {
@@ -36,12 +36,12 @@ export type IrcChannelStateContext = IrcEventContext & {
   channels: IrcChannelTrackingState;
   profile: RuntimeNetworkProfile;
   prunePendingReplyContexts(): void;
-  replyTracker: ReplyTracker;
+  replyTracker: IrcReplyTracker;
 };
 
 export type IrcFriendPresenceContext = IrcStateContext & {
   friendPresence: IrcFriendPresenceState;
-  replyTracker: ReplyTracker;
+  replyTracker: IrcReplyTracker;
   queueReplyContext(context: PendingReplyContext): void;
   sendRaw(raw: string, statusTarget?: string): boolean;
 };
@@ -63,7 +63,7 @@ export type IrcLifecycleContext = IrcChannelListContext & {
   friendPresence: IrcFriendPresenceState;
   pendingNick: string | null;
   queueReplyContext(context: PendingReplyContext): void;
-  replyTracker: ReplyTracker;
+  replyTracker: IrcReplyTracker;
   clearConnectDeadlineTimer(): void;
   clearReconnectTimer(): void;
   connect(resetRetryBudget?: boolean): void;

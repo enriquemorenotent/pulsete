@@ -3,7 +3,7 @@ import type { ChannelUserState } from '../shared/protocol.js';
 import type { IrcChannelStateContext } from './irc-contexts.js';
 import { emitPendingChannel, emitPendingChannelRemoved, emitStatus } from './irc-emit.js';
 import { findIrcCaseMatch } from './irc-parser.js';
-import type { PendingReplyContext } from './irc-reply-context.js';
+import type { PendingReplyContext } from './irc-reply-context-types.js';
 import type { ChannelSessionPhase, ChannelSessionState } from './irc-types.js';
 
 export const updateChannelUsers = (

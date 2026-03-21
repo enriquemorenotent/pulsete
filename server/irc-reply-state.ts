@@ -1,5 +1,5 @@
 import type { IrcReplyStateContext } from './irc-contexts.js';
-import type { PendingReplyContext } from './irc-reply-context.js';
+import type { PendingReplyContext } from './irc-reply-context-types.js';
 
 type ReplyTrackerContext = Pick<IrcReplyStateContext, 'replyTracker'>;
 

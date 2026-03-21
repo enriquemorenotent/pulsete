@@ -1,8 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import type { BufferState, MessageKind, ServerMessage } from '../shared/protocol.js';
-import { badRequest, notFound } from './app-error.js';
+import type { MessageKind, ServerMessage } from '../shared/protocol.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
+import {
+  appendConversationMessage,
+  closeConversationQueryBuffer,
+  listConversationBufferHistory,
+  markConversationBufferRead,
+  openConversationQuery,
+  upsertConversationChannel,
+} from './runtime-conversation-store.js';
 import { createRuntimeCommandResult } from './runtime-operation-types.js';
 import type { MessageInput, Storage } from './storage.js';
 
@@ -10,34 +17,24 @@ export class RuntimeConversations {
   constructor(private readonly store: Storage) {}
 
   openQuery(networkId: string, target: string) {
-    const buffer = this.store.upsertQuery(networkId, target);
+    const buffer = openConversationQuery(this.store, networkId, target);
     return createRuntimeCommandResult(buffer, [{ type: 'buffer.upsert', buffer }]);
   }
 
   closeQueryBuffer(bufferId: string) {
-    const buffer = this.getRequiredBuffer(bufferId);
-    if (buffer.kind !== 'query') {
-      throw badRequest('Only private message buffers can be closed');
-    }
-    const removedBuffer = this.store.removeBuffer(bufferId) ?? buffer;
+    const removedBuffer = closeConversationQueryBuffer(this.store, bufferId);
     return createRuntimeCommandResult(removedBuffer, [
       { type: 'buffer.remove', networkId: removedBuffer.networkId, bufferId: removedBuffer.id },
     ]);
   }
 
   markBufferRead(bufferId: string) {
-    const buffer = this.getRequiredBuffer(bufferId);
-    if (buffer.unread === 0) {
-      return createRuntimeCommandResult(buffer);
-    }
-    this.store.markBufferRead(bufferId);
-    const updatedBuffer = this.getRequiredBuffer(bufferId);
+    const updatedBuffer = markConversationBufferRead(this.store, bufferId);
     return createRuntimeCommandResult(updatedBuffer, [{ type: 'buffer.upsert', buffer: updatedBuffer }]);
   }
 
   listBufferHistory(bufferId: string, limit: number) {
-    const buffer = this.getRequiredBuffer(bufferId);
-    return createRuntimeCommandResult(this.store.listMessages(buffer.networkId, buffer.target, limit));
+    return createRuntimeCommandResult(listConversationBufferHistory(this.store, bufferId, limit));
   }
 
   handleStatusEvent(event: Extract<RuntimeEvent, { type: 'status' }>) {
@@ -100,22 +97,15 @@ export class RuntimeConversations {
   }
 
   handleChannelEvent(event: Extract<RuntimeEvent, { type: 'channel' }>) {
-    const channel = this.store.upsertChannel({
-      id: this.store.getChannelByName(event.networkId, event.channel)?.id ?? randomUUID(),
-      networkId: event.networkId,
-      name: event.channel,
-      topic: event.topic,
-      users: event.users,
-    });
+    const { buffer, channel } = upsertConversationChannel(this.store, event);
     return [
-      { type: 'buffer.upsert', buffer: this.store.getBuffer(channel.id)! },
+      { type: 'buffer.upsert', buffer },
       { type: 'channel.snapshot', channel },
     ] satisfies ServerMessage[];
   }
 
   private appendMessage(message: MessageInput) {
-    const bufferUpdate = this.resolveMessageBuffer(message);
-    const saved = this.store.appendMessage(message);
+    const { saved, bufferUpdate } = appendConversationMessage(this.store, message);
     const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
 
     if (bufferUpdate) {
@@ -137,49 +127,6 @@ export class RuntimeConversations {
     }
     return event.target;
   }
-
-  private resolveMessageBuffer(message: MessageInput) {
-    const existing = this.store.getBufferByTarget(message.networkId, message.target);
-    const created = existing ?? this.createMessageBuffer(message);
-    if (!created) {
-      return null;
-    }
-
-    const unread = shouldIncrementUnread(message) ? created.unread + 1 : created.unread;
-    if (unread === created.unread) {
-      return created;
-    }
-    this.store.setBufferUnread(created.id, unread);
-    return this.store.getBuffer(created.id);
-  }
-
-  private createMessageBuffer(message: MessageInput): BufferState | null {
-    if (message.target === 'server') {
-      return this.store.getServerBuffer(message.networkId)
-        ?? this.store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' });
-    }
-    if (isChannelTarget(message.target)) {
-      if (message.self && message.kind === 'part') {
-        return null;
-      }
-      return this.store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target });
-    }
-    if (message.kind === 'line') {
-      return this.store.upsertBuffer({ networkId: message.networkId, kind: 'query', target: message.target });
-    }
-    return null;
-  }
-
-  private getRequiredBuffer(bufferId: string) {
-    const buffer = this.store.getBuffer(bufferId);
-    if (!buffer) {
-      throw notFound('Buffer not found');
-    }
-    return buffer;
-  }
 }
-
-const shouldIncrementUnread = (message: MessageInput) =>
-  !message.self && (message.target === 'server' || message.kind !== 'system');
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

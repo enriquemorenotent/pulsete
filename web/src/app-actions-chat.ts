@@ -14,7 +14,7 @@ import {
 import { api } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
 import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
-import { dispatchServerMessages } from './server-message-actions.js';
+import { dispatchLocalBufferRemoval } from './local-action-dispatch.js';
 
 type ChatActionParams = BannerActions & ConversationActions & DraftActions & GatewayActions & WorkspaceActions & {
   channelList: AppTransientState['channelList'];
@@ -96,7 +96,7 @@ export const createChatActions = ({
   const closeBuffer = async (buffer: BufferState) => {
     try {
       await api.closeBuffer(buffer.id);
-      dispatchServerMessages([{ type: 'buffer.remove', networkId: buffer.networkId, bufferId: buffer.id }], dispatch);
+      dispatchLocalBufferRemoval(dispatch, buffer.id, buffer.networkId);
     } catch (error) {
       updateBanner('error', error instanceof Error ? error.message : 'Failed to close private message');
     }

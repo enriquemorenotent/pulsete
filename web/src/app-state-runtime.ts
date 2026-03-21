@@ -1,9 +1,7 @@
-import type { Action, ChannelListState, State } from './app-types.js';
+import type { Action, AppDomainState } from './app-types.js';
 import { removeNetworkMessages } from './conversation-message-state.js';
-import { gatewayReconnectMessage } from './gateway.js';
-import { createSelectionResolver } from './selection-state.js';
 
-const offlineNetworkStates = (state: Pick<State['domain'], 'networks'>) =>
+export const offlineNetworkStates = (state: Pick<AppDomainState, 'networks'>) =>
   Object.fromEntries(
     state.networks.map((network) => [
       network.id,
@@ -15,148 +13,75 @@ const offlineNetworkStates = (state: Pick<State['domain'], 'networks'>) =>
     ])
   );
 
-export const reduceRuntimeAction = (
-  state: State,
+export const reduceRuntimeDomain = (
+  domain: AppDomainState,
   action: Action,
-  initialChannelListState: ChannelListState
-): State | null => {
+): AppDomainState | null => {
   switch (action.type) {
     case 'gateway-connecting':
       return {
-        ...state,
-        domain: {
-          ...state.domain,
-          gatewayStatus: 'connecting',
-        },
-        transient: {
-          ...state.transient,
-          channelList: initialChannelListState,
-        },
+        ...domain,
+        gatewayStatus: 'connecting',
       };
     case 'gateway-connected':
       return {
-        ...state,
-        domain: {
-          ...state.domain,
-          gatewayStatus: 'connected',
-        },
-        transient: {
-          ...state.transient,
-          banner:
-            state.transient.banner?.message === gatewayReconnectMessage ? null : state.transient.banner,
-        },
+        ...domain,
+        gatewayStatus: 'connected',
       };
-    case 'gateway-disconnected': {
-      const nextState: State = {
-        ...state,
-        domain: {
-          ...state.domain,
-          gatewayStatus: 'disconnected',
-          pendingChannels: [],
-          networkStates: offlineNetworkStates(state.domain),
-        },
-        transient: {
-          ...state.transient,
-          channelList: initialChannelListState,
-          historyLoading: false,
-        },
-      };
+    case 'gateway-disconnected':
       return {
-        ...nextState,
-        transient: {
-          ...nextState.transient,
-          selection: createSelectionResolver(nextState.domain).normalizeSelection(state.transient.selection),
-        },
+        ...domain,
+        gatewayStatus: 'disconnected',
+        pendingChannels: [],
+        networkStates: offlineNetworkStates(domain),
       };
-    }
     case 'upsert-network': {
-      const networks = state.domain.networks.filter((network) => network.id !== action.network.id);
+      const networks = domain.networks.filter((network) => network.id !== action.network.id);
       networks.push(action.network);
-      const runtime = state.domain.networkStates[action.network.id] ?? null;
+      const runtime = domain.networkStates[action.network.id] ?? null;
       return {
-        ...state,
-        domain: {
-          ...state.domain,
-          networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
-          networkStates:
-            runtime?.phase === 'connected'
-              ? state.domain.networkStates
-              : {
-                  ...state.domain.networkStates,
-                  [action.network.id]: {
-                    phase: runtime?.phase ?? 'offline',
-                    serverName: runtime?.serverName ?? null,
-                    nick: action.network.nick,
-                  },
+        ...domain,
+        networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
+        networkStates:
+          runtime?.phase === 'connected'
+            ? domain.networkStates
+            : {
+                ...domain.networkStates,
+                [action.network.id]: {
+                  phase: runtime?.phase ?? 'offline',
+                  serverName: runtime?.serverName ?? null,
+                  nick: action.network.nick,
                 },
-        },
+              },
       };
     }
-    case 'network-state': {
-      const pendingChannels =
-        action.phase === 'connected'
-          ? state.domain.pendingChannels
-          : state.domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId);
-      const nextState: State = {
-        ...state,
-        domain: {
-          ...state.domain,
-          networkStates: {
-            ...state.domain.networkStates,
-            [action.networkId]: {
-              phase: action.phase,
-              serverName: action.serverName,
-              nick: action.nick,
-            },
+    case 'network-state':
+      return {
+        ...domain,
+        networkStates: {
+          ...domain.networkStates,
+          [action.networkId]: {
+            phase: action.phase,
+            serverName: action.serverName,
+            nick: action.nick,
           },
-          pendingChannels,
         },
-        transient: {
-          ...state.transient,
-          channelList:
-            action.phase !== 'connected' && state.transient.channelList.networkId === action.networkId
-              ? initialChannelListState
-              : state.transient.channelList,
-        },
+        pendingChannels:
+          action.phase === 'connected'
+            ? domain.pendingChannels
+            : domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
       };
-      return {
-        ...nextState,
-        transient: {
-          ...nextState.transient,
-          selection:
-            action.phase === 'connected'
-              ? state.transient.selection
-              : createSelectionResolver(nextState.domain).normalizeSelection(state.transient.selection, action.networkId),
-        },
-      };
-    }
     case 'remove-network': {
-      const networkStates = { ...state.domain.networkStates };
+      const networkStates = { ...domain.networkStates };
       delete networkStates[action.networkId];
-      const nextState: State = {
-        ...state,
-        domain: {
-          ...state.domain,
-          networks: state.domain.networks.filter((network) => network.id !== action.networkId),
-          buffers: state.domain.buffers.filter((buffer) => buffer.networkId !== action.networkId),
-          channels: state.domain.channels.filter((channel) => channel.networkId !== action.networkId),
-          pendingChannels: state.domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
-          messages: removeNetworkMessages(state.domain.messages, action.networkId),
-          networkStates,
-        },
-        transient: {
-          ...state.transient,
-          channelList:
-            state.transient.channelList.networkId === action.networkId ? initialChannelListState : state.transient.channelList,
-          historyLoading: false,
-        },
-      };
       return {
-        ...nextState,
-        transient: {
-          ...nextState.transient,
-          selection: createSelectionResolver(nextState.domain).normalizeSelection(state.transient.selection),
-        },
+        ...domain,
+        networks: domain.networks.filter((network) => network.id !== action.networkId),
+        buffers: domain.buffers.filter((buffer) => buffer.networkId !== action.networkId),
+        channels: domain.channels.filter((channel) => channel.networkId !== action.networkId),
+        pendingChannels: domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
+        messages: removeNetworkMessages(domain.messages, action.networkId),
+        networkStates,
       };
     }
     default:

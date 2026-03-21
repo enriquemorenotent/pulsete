@@ -1,18 +1,18 @@
 import WebSocket from 'ws';
 import type { ServerMessage } from '../shared/protocol.js';
-import type { IrcConnection } from './irc.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversations } from './runtime-conversations.js';
-import { handleRuntimeEvent } from './runtime-events.js';
+import { RuntimeEventRouter } from './runtime-event-router.js';
 import { getRequiredNetwork } from './runtime-operation-utils.js';
 import { RuntimeOperations } from './runtime-operations.js';
 import { RuntimePublisher } from './runtime-publisher.js';
 import { RuntimeSocketHub } from './runtime-socket-hub.js';
+import { createRuntimeSnapshot } from './runtime-snapshot.js';
 import { Storage } from './storage.js';
 
 export class Runtime {
   readonly store: Storage;
-  readonly connections: Map<string, IrcConnection>;
+  readonly connections: RuntimeConnectionManager['connections'];
   private readonly socketHub: RuntimeSocketHub;
   private readonly publisher: RuntimePublisher;
   private readonly conversations: RuntimeConversations;
@@ -25,11 +25,15 @@ export class Runtime {
     this.socketHub = new RuntimeSocketHub((ws) => this.connectionManager.removeSocket(ws));
     this.publisher = new RuntimePublisher(this.socketHub);
     this.conversations = new RuntimeConversations(store);
-    this.connectionManager = new RuntimeConnectionManager({
-      store,
+    const eventRouter = new RuntimeEventRouter({
+      conversations: this.conversations,
       publish: (messages) => this.publisher.publish(messages),
       sendSocket: (ws, message) => this.publisher.sendSocket(ws, message),
-      onRuntimeEvent: (event) => handleRuntimeEvent({ store: this.store }, event, this.conversations),
+      store,
+    });
+    this.connectionManager = new RuntimeConnectionManager({
+      eventRouter,
+      store,
       isClosing: () => this.closing,
     });
     this.operations = new RuntimeOperations({
@@ -63,16 +67,12 @@ export class Runtime {
   }
 
   snapshot() {
-    const snapshot = this.store.snapshot();
-    return {
-      ...snapshot,
-      ...this.connectionManager.snapshot(snapshot.networks, snapshot.friends),
-    };
+    return createRuntimeSnapshot(this.store, this.connectionManager);
   }
 
   connect(networkId: string) {
     getRequiredNetwork(this.store, networkId);
-    this.connectionManager.getConnection(networkId).lifecycleController.connect();
+    this.connectionManager.connect(networkId);
   }
 
   disconnect(networkId: string) {

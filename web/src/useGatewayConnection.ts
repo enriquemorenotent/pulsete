@@ -3,7 +3,7 @@ import type { ServerMessage } from '../../shared/protocol.js';
 import type { Action } from './app-types.js';
 import { connectSocket, type SocketHandle } from './client.js';
 import { gatewayReconnectMessage, getGatewayReconnectDelayMs } from './gateway.js';
-import { dispatchServerMessage } from './server-message-actions.js';
+import { dispatchInboundServerMessage } from './server-message-actions.js';
 
 type MutableRef<T> = { current: T };
 
@@ -74,7 +74,7 @@ export const createGatewaySocketCallbacks = ({
     if (message.type === 'state.ready') {
       reconnectAttemptRef.current = 0;
     }
-    dispatchServerMessage(message, dispatch);
+    dispatchInboundServerMessage(message, dispatch);
   },
   onOpen() {
     if (isClosedByClient() || socketRef.current !== getSocket()) {

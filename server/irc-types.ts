@@ -2,8 +2,7 @@ import type net from 'node:net';
 import type tls from 'node:tls';
 import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
 import type { MessageInput } from './storage.js';
-import type { PendingReplyContext } from './irc-reply-context.js';
-import type { ReplyTracker } from './irc-reply-tracker.js';
+import type { PendingReplyContext } from './irc-reply-context-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type ChannelSessionPhase = 'joining' | 'joined' | 'leaving';
@@ -105,10 +104,22 @@ export type IrcChannelListState = {
   drainGraceMs: number;
 };
 
-export type ParsedLine = {
-  prefix: string | null;
-  command: string;
-  params: string[];
+export type IrcReplyTracker = {
+  pendingNick: string | null;
+  pendingReplyContexts: readonly PendingReplyContext[];
+  setPendingNick(value: string | null): void;
+  clearPendingNick(): void;
+  reset(): void;
+  prune(): void;
+  queue(context: PendingReplyContext): void;
+  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
+  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
+  discardPendingChannelReplyContexts(
+    channel: string,
+    predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
+  ): Array<Extract<PendingReplyContext, { kind: 'channel' }>>;
+  consumePendingNickReplyContexts(requestedNick: string): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
+  discardPendingNickReplyContexts(): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
 };
 
 export type IrcConnectionState = {
@@ -118,7 +129,7 @@ export type IrcConnectionState = {
   channels: IrcChannelTrackingState;
   friendPresence: IrcFriendPresenceState;
   channelList: IrcChannelListState;
-  replyTracker: ReplyTracker;
+  replyTracker: IrcReplyTracker;
   socket: IrcSocket | null;
   buffer: string;
   channelUsers: Map<string, ChannelUserState[]>;
@@ -145,8 +156,10 @@ export type IrcConnectionState = {
   consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
   handleFriendPresence(pollId: number, onlineNicks: string[]): void;
   join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+  part(channel: string, reason?: string, sourceTarget?: string): boolean;
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
   queueReplyContext(context: PendingReplyContext): void;
+  prunePendingReplyContexts(): void;
   refreshFriendPresence(): void;
   finishChannelListRequest(requestId: string): void;
   getChannelListRequestFailureMessage(): string;

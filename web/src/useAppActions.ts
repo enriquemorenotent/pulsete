@@ -1,4 +1,4 @@
-import type { State } from './app-types.js';
+import type { AppDomainState, AppTransientState, State } from './app-types.js';
 import type { ConversationIndex } from './conversation-selectors.js';
 import { createChatActions } from './app-actions-chat.js';
 import { createConversationActions } from './app-actions-conversation.js';
@@ -11,22 +11,40 @@ import type { SocketHandle } from './client.js';
 type UseAppActionsParams = DraftActions & WorkspaceActions & {
   conversation: ConversationIndex;
   dispatch: AppDispatch;
+  state?: State;
+  buffers?: AppDomainState['buffers'];
+  channelList?: AppTransientState['channelList'];
+  gatewayStatus?: AppDomainState['gatewayStatus'];
+  networks?: AppDomainState['networks'];
+  networkStates?: AppDomainState['networkStates'];
   socketRef: MutableRef<SocketHandle | null>;
-  state: State;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
 export function useAppActions(params: UseAppActionsParams) {
+  const buffers = params.buffers ?? params.state?.domain.buffers ?? [];
+  const channelList = params.channelList ?? params.state?.transient.channelList;
+  const gatewayStatus = params.gatewayStatus ?? params.state?.domain.gatewayStatus ?? 'disconnected';
+  const networks = params.networks ?? params.state?.domain.networks ?? [];
+  const networkStates = params.networkStates ?? params.state?.domain.networkStates ?? {};
+  const resolvedChannelList = channelList ?? {
+    open: false,
+    networkId: null,
+    requestId: null,
+    status: 'idle',
+    entries: [],
+    error: null,
+  } satisfies AppTransientState['channelList'];
   const gateway = createGatewayActions({
-    gatewayStatus: params.state.domain.gatewayStatus,
+    gatewayStatus,
     socketRef: params.socketRef,
     updateBanner: params.updateBanner,
   });
   const conversation = createConversationActions({
-    channelList: params.state.transient.channelList,
+    channelList: resolvedChannelList,
     conversation: params.conversation,
     dispatch: params.dispatch,
-    networkStates: params.state.domain.networkStates,
+    networkStates,
     updateBanner: params.updateBanner,
     ...gateway,
   });
@@ -37,18 +55,18 @@ export function useAppActions(params: UseAppActionsParams) {
       updateBanner: params.updateBanner,
     }),
     ...createFriendActions({
-      buffers: params.state.domain.buffers,
+      buffers,
       dispatch: params.dispatch,
-      networkStates: params.state.domain.networkStates,
+      networkStates,
       updateBanner: params.updateBanner,
       workspace: params.workspace,
       ...conversation,
     }),
     ...createChatActions({
-      channelList: params.state.transient.channelList,
+      channelList: resolvedChannelList,
       conversation: params.conversation,
       dispatch: params.dispatch,
-      networks: params.state.domain.networks,
+      networks,
       updateBanner: params.updateBanner,
       workspace: params.workspace,
       draft: params.draft,

@@ -3,14 +3,14 @@ import type { AppSnapshot } from '../../shared/protocol.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
 import {
-  reduceConversationAction,
+  reduceConversationDomain,
   sortBuffers,
   sortFriends,
   sortPendingChannels,
 } from './app-state-conversations.js';
-import { reduceRuntimeAction } from './app-state-runtime.js';
-import { initialChannelListState, initialNetworkManagerState, reduceUiAction } from './app-state-ui.js';
-import { createSelectionResolver } from './selection-state.js';
+import { reconcileState } from './app-state-reconcile.js';
+import { reduceRuntimeDomain } from './app-state-runtime.js';
+import { initialChannelListState, initialNetworkManagerState, reduceTransientAction } from './app-state-ui.js';
 import type { Action, State } from './app-types.js';
 
 export { initialChannelListState } from './app-state-ui.js';
@@ -42,33 +42,21 @@ export const initialState: State = {
 };
 
 const reduceSnapshotState = (state: State, snapshot: AppSnapshot): State => {
-  const networks = snapshot.networks;
-  const buffers = sortBuffers(snapshot.buffers);
-  const pendingChannels = sortPendingChannels(snapshot.pendingChannels);
-  const nextDomain: AppDomainState = {
-    phase: 'ready',
-    gatewayStatus: state.domain.gatewayStatus,
-    networks,
-    friends: sortFriends(snapshot.friends),
-    friendPresence: snapshot.friendPresence,
-    buffers,
-    channels: snapshot.channels,
-    pendingChannels,
-    messages: indexConversationMessages(snapshot.messages),
-    networkStates: snapshot.networkStates,
-  };
-  const selection = createSelectionResolver({
-    buffers,
-    channels: snapshot.channels,
-    pendingChannels,
-    messages: nextDomain.messages,
-    networks,
-  }).normalizeSelection(state.transient.selection);
   return {
-    domain: nextDomain,
+    domain: {
+      phase: 'ready',
+      gatewayStatus: state.domain.gatewayStatus,
+      networks: snapshot.networks,
+      friends: sortFriends(snapshot.friends),
+      friendPresence: snapshot.friendPresence,
+      buffers: sortBuffers(snapshot.buffers),
+      channels: snapshot.channels,
+      pendingChannels: sortPendingChannels(snapshot.pendingChannels),
+      messages: indexConversationMessages(snapshot.messages),
+      networkStates: snapshot.networkStates,
+    },
     transient: {
       ...state.transient,
-      selection,
       banner: null,
       channelList: initialChannelListState,
       historyLoading: false,
@@ -77,26 +65,20 @@ const reduceSnapshotState = (state: State, snapshot: AppSnapshot): State => {
 };
 
 export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case 'snapshot':
-      return reduceSnapshotState(state, action.snapshot);
-    case 'select':
-      return {
-        ...state,
-        transient: {
-          ...state.transient,
-          selection: action.selection,
-          banner: null,
-        },
+  const nextState = action.type === 'snapshot'
+    ? reduceSnapshotState(state, action.snapshot)
+    : {
+        domain:
+          reduceRuntimeDomain(state.domain, action)
+          ?? reduceConversationDomain(state.domain, action)
+          ?? state.domain,
+        transient: reduceTransientAction(state.transient, action) ?? state.transient,
       };
-    default:
-      return (
-        reduceRuntimeAction(state, action, initialChannelListState) ??
-        reduceConversationAction(state, action, initialChannelListState) ??
-        reduceUiAction(state, action) ??
-        state
-      );
+
+  if (nextState.domain === state.domain && nextState.transient === state.transient) {
+    return state;
   }
+  return reconcileState(state, nextState, action);
 };
 
 export function useStateReducer(initialReducer: typeof reducer, state: State) {
