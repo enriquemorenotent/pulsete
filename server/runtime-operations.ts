@@ -1,4 +1,5 @@
 import type WebSocket from 'ws';
+import { isConnectionInstance } from '../shared/network-model.js';
 import type { NetworkProfile, ServerMessage } from '../shared/protocol.js';
 import { badRequest, notFound } from './app-error.js';
 import {
@@ -17,6 +18,7 @@ import {
   getRequiredRuntimeNetwork,
   resolveReplyTarget,
 } from './runtime-operation-utils.js';
+import { parseNetworkInput } from './network-input.js';
 import { type NetworkInput, Storage } from './storage.js';
 
 type RuntimeOperationsOptions = {
@@ -38,12 +40,14 @@ export class RuntimeOperations {
 
   openQuery(networkId: string, target: string) {
     getRequiredNetwork(this.store, networkId);
-    return this.store.upsertQuery(networkId, normalizeQueryTarget(target));
+    const buffer = this.store.upsertQuery(networkId, normalizeQueryTarget(target));
+    this.send({ type: 'buffer.upsert', buffer });
+    return buffer;
   }
 
   duplicateNetwork(networkId: string) {
     const network = getRequiredNetwork(this.store, networkId);
-    if (network.managerHidden) {
+    if (isConnectionInstance(network)) {
       throw badRequest('Only saved networks can be duplicated');
     }
     const runtimeProfile = getRequiredRuntimeNetwork(this.store, networkId);
@@ -68,6 +72,7 @@ export class RuntimeOperations {
 
   upsertFriend(nick: string) {
     const friend = this.store.upsertFriend({ nick: normalizeFriendNick(nick) });
+    this.send({ type: 'friend.upsert', friend });
     this.connectionManager.syncFriendTracking();
     this.connectionManager.broadcastFriendPresenceDiffs();
     return friend;
@@ -81,6 +86,7 @@ export class RuntimeOperations {
     this.connectionManager.deleteFriendPresenceCache(friend.id);
     this.connectionManager.syncFriendTracking();
     this.connectionManager.broadcastFriendPresenceDiffs();
+    this.send({ type: 'friend.remove', friendId: friend.id });
     return friend;
   }
 
@@ -108,7 +114,9 @@ export class RuntimeOperations {
     if (buffer.kind !== 'query') {
       throw badRequest('Only private message buffers can be closed');
     }
-    return this.store.removeBuffer(bufferId) ?? buffer;
+    const removedBuffer = this.store.removeBuffer(bufferId) ?? buffer;
+    this.send({ type: 'buffer.remove', networkId: removedBuffer.networkId, bufferId: removedBuffer.id });
+    return removedBuffer;
   }
 
   markBufferRead(bufferId: string) {
@@ -127,17 +135,17 @@ export class RuntimeOperations {
     return this.store.listMessages(buffer.networkId, buffer.target, limit);
   }
 
-  saveNetwork(data: unknown) {
-    const input = data as NetworkInput;
-    if (input.id) {
-      getRequiredNetwork(this.store, input.id);
+  saveNetwork(data: unknown, networkId?: string) {
+    const input = parseNetworkInput(data, networkId);
+    if (networkId) {
+      getRequiredNetwork(this.store, networkId);
     }
     const network = this.store.upsertNetwork(input);
     const updatedProfiles = [network, ...this.syncTemplateInstances(network, input)];
-    let serverBuffer = network.managerHidden ? this.store.getServerBuffer(network.id) : null;
+    let serverBuffer = isConnectionInstance(network) ? this.store.getServerBuffer(network.id) : null;
     this.connectionManager.updateProfiles(updatedProfiles.map((profile) => profile.id));
     for (const updatedProfile of updatedProfiles) {
-      if (updatedProfile.managerHidden) {
+      if (isConnectionInstance(updatedProfile)) {
         const nextServerBuffer = this.store.getServerBuffer(updatedProfile.id);
         if (nextServerBuffer) {
           this.send({ type: 'buffer.upsert', buffer: nextServerBuffer });
@@ -187,7 +195,7 @@ export class RuntimeOperations {
   deleteNetwork(networkId: string) {
     const deletedNetworkIds = this.store
       .listNetworks()
-      .filter((candidate) => candidate.id === networkId || candidate.templateId === networkId)
+      .filter((candidate) => candidate.id === networkId || (isConnectionInstance(candidate) && candidate.templateId === networkId))
       .map((candidate) => candidate.id);
     if (deletedNetworkIds.length === 0) {
       throw notFound('Network not found');
@@ -200,12 +208,12 @@ export class RuntimeOperations {
     return deletedNetworkIds;
   }
   private syncTemplateInstances(profile: NetworkProfile, input: NetworkInput) {
-    if (profile.managerHidden) {
+    if (isConnectionInstance(profile)) {
       return [];
     }
     return this.store
       .listNetworks()
-      .filter((candidate) => candidate.managerHidden && candidate.templateId === profile.id)
+      .filter((candidate) => isConnectionInstance(candidate) && candidate.templateId === profile.id)
       .map((candidate) => this.store.upsertNetwork({
         id: candidate.id,
         templateId: profile.id,

@@ -16,7 +16,6 @@ const stickyScrollThresholdPx = 24;
 
 type UseStickyScrollParams = {
   scrollRef: MutableRef<HTMLDivElement | null>;
-  messageCount: number;
   selectedBufferId: string | undefined;
 };
 
@@ -30,8 +29,16 @@ export function useStickyScroll(params: UseStickyScrollParams) {
     }
     stickToBottomRef.current = true;
     scrollNodeToBottom(node);
+  }, [params.scrollRef, params.selectedBufferId]);
+
+  useEffect(() => {
+    const node = params.scrollRef.current;
+    if (!node) {
+      return;
+    }
+    stickToBottomRef.current = true;
     return bindStickyScrollTracking({ node, stickToBottomRef, createResizeObserver: createResizeObserverFactory() });
-  }, [params.messageCount, params.scrollRef, params.selectedBufferId]);
+  }, [params.scrollRef, params.selectedBufferId]);
 }
 
 export const scrollNodeToBottom = (node: Pick<ScrollContainer, 'scrollHeight' | 'scrollTop'>) => {

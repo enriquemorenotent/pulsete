@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { isSavedNetwork } from '../../shared/network-model.js';
 import { reducer, initialState, useStateReducer } from './app-state.js';
 import type { SocketHandle } from './client.js';
 import { createConversationQueries } from './conversation-selectors.js';
@@ -6,11 +7,13 @@ import { buildConnectionSidebarView } from './connection-sidebar-view.js';
 import { useComposerHistory } from './composer-history.js';
 import { DesktopShell } from './DesktopShell.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
-import { getTemplateRootId, type EditorTab } from './network-form.js';
+import { buildManagedRuntime } from './network-manager-runtime.js';
+import type { EditorTab } from './network-form.js';
+import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
 import { Toast } from './Toast.js';
 import { useAppActions } from './useAppActions.js';
 import { useAppLifecycle } from './useAppLifecycle.js';
-import { deriveWorkspace, type NetworkRuntimeState } from './workspace.js';
+import { deriveWorkspace } from './workspace.js';
 
 function App() {
   const [state, dispatch] = useStateReducer(reducer, initialState);
@@ -43,7 +46,7 @@ function App() {
   );
 
   const managerNetworks = useMemo(
-    () => state.networks.filter((network) => !network.managerHidden),
+    () => state.networks.filter(isSavedNetwork),
     [state.networks]
   );
   const visibleNetworks = useMemo(
@@ -95,15 +98,48 @@ function App() {
     workspace,
     dispatch,
     socketRef,
-    setShowNetworkEditor,
-    setShowNetworkManager,
-    setManagedNetworkId,
-    setEditorTab,
     setDraft,
     recordComposerEntry,
     updateBanner: (kind, message) => dispatch({ type: 'set-banner', banner: { kind, message } }),
   });
 
+  const openNewNetworkEditorDialog = () =>
+    openNewNetworkEditor({
+      dispatch,
+      setEditorTab,
+      setManagedNetworkId,
+      setShowNetworkManager,
+      setShowNetworkEditor,
+      state,
+    });
+  const openExistingNetworkEditorDialog = (network: typeof state.networks[number]) =>
+    openExistingNetworkEditor(network, {
+      dispatch,
+      setEditorTab,
+      setManagedNetworkId,
+      setShowNetworkManager,
+      setShowNetworkEditor,
+    });
+  const submitNetwork = async () => {
+    const network = await actions.submitNetwork(state.networkForm);
+    if (!network) {
+      return;
+    }
+    setManagedNetworkId(network.id);
+    setShowNetworkEditor(false);
+    setShowNetworkManager(true);
+  };
+  const duplicateNetwork = async (network: typeof state.networks[number]) => {
+    const duplicate = await actions.duplicateNetwork(network);
+    if (duplicate) {
+      setManagedNetworkId(duplicate.id);
+    }
+  };
+  const connectNetwork = async (network: typeof state.networks[number]) => {
+    if (await actions.connectNetwork(network)) {
+      setShowNetworkManager(false);
+    }
+  };
   const closeNetworkEditor = () => {
     setShowNetworkEditor(false);
     setShowNetworkManager(true);
@@ -168,11 +204,11 @@ function App() {
     onSelect: setManagedNetworkId,
     onToggleFavorites: () => setShowFavoritesOnly((value) => !value),
     onClose: () => setShowNetworkManager(false),
-    onAdd: actions.openNewNetworkEditor,
-    onEdit: () => visibleManagedNetwork && actions.openNetworkEditor(visibleManagedNetwork),
-    onDuplicate: () => visibleManagedNetwork && actions.duplicateNetwork(visibleManagedNetwork),
+    onAdd: openNewNetworkEditorDialog,
+    onEdit: () => visibleManagedNetwork && openExistingNetworkEditorDialog(visibleManagedNetwork),
+    onDuplicate: () => visibleManagedNetwork && duplicateNetwork(visibleManagedNetwork),
     onRemove: () => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id),
-    onConnect: () => visibleManagedNetwork && actions.connectNetwork(visibleManagedNetwork),
+    onConnect: () => visibleManagedNetwork && connectNetwork(visibleManagedNetwork),
     onFavorite: () =>
       visibleManagedNetwork && actions.saveFavorite(visibleManagedNetwork, !visibleManagedNetwork.favorite),
   };
@@ -182,7 +218,7 @@ function App() {
     activeTab: editorTab,
     onTabChange: setEditorTab,
     onClose: closeNetworkEditor,
-    onSubmit: actions.submitNetwork,
+    onSubmit: submitNetwork,
     onChange: (form: Partial<(typeof state.networkForm)>) => dispatch({ type: 'set-network-form', form }),
   };
 
@@ -209,23 +245,4 @@ function App() {
     </>
   );
 }
-
-function buildManagedRuntime(
-  managedNetwork: (typeof initialState.networks)[number] | null,
-  connectionInstances: typeof initialState.networks,
-  networkStates: Record<string, NetworkRuntimeState>
-) {
-  if (!managedNetwork) {
-    return null;
-  }
-  const instances = connectionInstances.filter((network) => getTemplateRootId(network) === managedNetwork.id);
-  if (instances.some((network) => networkStates[network.id]?.phase === 'connected')) {
-    return { phase: 'connected' as const, serverName: null, nick: managedNetwork.nick };
-  }
-  if (instances.some((network) => networkStates[network.id]?.phase === 'connecting')) {
-    return { phase: 'connecting' as const, serverName: null, nick: managedNetwork.nick };
-  }
-  return instances.length > 0 ? { phase: 'offline' as const, serverName: null, nick: managedNetwork.nick } : null;
-}
-
 export default App;

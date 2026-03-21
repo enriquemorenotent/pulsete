@@ -2,8 +2,8 @@ import type { BufferState, ChatMessage, FriendState, PendingChannelState } from 
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, ChannelListState, State } from './app-types.js';
 import { fallbackSelection, normalizeSelection } from './app-state-selection.js';
+import { appendConversationMessages, removeBufferMessages } from './conversation-message-state.js';
 import { createConversationQueries } from './conversation-selectors.js';
-import { matchesBufferMessage } from './message-matching.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -21,17 +21,6 @@ export const sortPendingChannels = (pendingChannels: PendingChannelState[]) =>
       ? left.channel.localeCompare(right.channel)
       : left.networkId.localeCompare(right.networkId)
   );
-
-const mergeMessages = (current: ChatMessage[], incoming: ChatMessage[]) => {
-  const merged = new Map<string, ChatMessage>();
-  for (const message of current) {
-    merged.set(message.id, message);
-  }
-  for (const message of incoming) {
-    merged.set(message.id, message);
-  }
-  return Array.from(merged.values()).sort((left, right) => left.ts - right.ts);
-};
 
 export const reduceConversationAction = (
   state: State,
@@ -86,9 +75,7 @@ export const reduceConversationAction = (
       const removedBuffer = conversation.findBufferById(action.bufferId);
       const buffers = state.buffers.filter((buffer) => buffer.id !== action.bufferId);
       const channels = state.channels.filter((channel) => channel.id !== action.bufferId);
-      const messages = removedBuffer
-        ? state.messages.filter((message) => !matchesBufferMessage(removedBuffer, message))
-        : state.messages;
+      const messages = removedBuffer ? removeBufferMessages(state.messages, removedBuffer) : state.messages;
       const nextState = { ...state, buffers, channels, messages };
       return {
         ...nextState,
@@ -99,9 +86,9 @@ export const reduceConversationAction = (
       };
     }
     case 'append-message':
-      return { ...state, messages: mergeMessages(state.messages, [action.message]) };
+      return { ...state, messages: appendConversationMessages(state.messages, [action.message]) };
     case 'append-messages':
-      return { ...state, messages: mergeMessages(state.messages, action.messages) };
+      return { ...state, messages: appendConversationMessages(state.messages, action.messages) };
     case 'upsert-channel': {
       const channels = state.channels.filter((channel) => channel.id !== action.channel.id);
       channels.push(action.channel);
@@ -159,30 +146,6 @@ export const reduceConversationAction = (
             : channel
         ),
       };
-    case 'remove-network': {
-      const networks = state.networks.filter((network) => network.id !== action.networkId);
-      const buffers = state.buffers.filter((buffer) => buffer.networkId !== action.networkId);
-      const channels = state.channels.filter((channel) => channel.networkId !== action.networkId);
-      const pendingChannels = state.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId);
-      const messages = state.messages.filter((message) => message.networkId !== action.networkId);
-      const networkStates = { ...state.networkStates };
-      delete networkStates[action.networkId];
-      const nextState = {
-        ...state,
-        networks,
-        buffers,
-        channels,
-        pendingChannels,
-        messages,
-        networkStates,
-        channelList: state.channelList.networkId === action.networkId ? initialChannelListState : state.channelList,
-        historyLoading: false,
-      };
-      return {
-        ...nextState,
-        selection: normalizeSelection(nextState, state.selection),
-      };
-    }
     default:
       return null;
   }

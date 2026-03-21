@@ -53,7 +53,6 @@ export function useAppLifecycle(params: LifecycleParams) {
 
   useStickyScroll({
     scrollRef: params.scrollRef,
-    messageCount: params.state.messages.length,
     selectedBufferId: params.workspace.selectedBuffer?.id,
   });
 

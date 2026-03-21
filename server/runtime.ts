@@ -106,8 +106,8 @@ export class Runtime {
     return this.operations.history(bufferId, limit);
   }
 
-  saveNetwork(data: unknown) {
-    return this.operations.saveNetwork(data);
+  saveNetwork(data: unknown, networkId?: string) {
+    return this.operations.saveNetwork(data, networkId);
   }
 
   sendMessage(networkId: string, target: string, body: string, kind: 'message' | 'action' = 'message', sourceBufferId?: string) {

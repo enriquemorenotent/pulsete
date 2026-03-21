@@ -2,7 +2,6 @@ import type { BufferState, ClientMessage, NetworkProfile } from '../../shared/pr
 import { createConversationQueries } from './conversation-selectors.js';
 import type { Action, State } from './app-types.js';
 import type { SocketHandle } from './client.js';
-import type { EditorTab } from './network-form.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 export type MutableRef<T> = { current: T };
@@ -13,10 +12,6 @@ export type AppActionParams = {
   workspace: WorkspaceView;
   dispatch: (action: Action) => void;
   socketRef: MutableRef<SocketHandle | null>;
-  setShowNetworkEditor: (value: boolean) => void;
-  setShowNetworkManager: (value: boolean) => void;
-  setManagedNetworkId: (value: string | null) => void;
-  setEditorTab: (value: EditorTab) => void;
   setDraft: (value: string) => void;
   recordComposerEntry: (value: string) => void;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;

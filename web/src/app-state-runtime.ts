@@ -1,5 +1,6 @@
 import type { Action, ChannelListState, State } from './app-types.js';
 import { normalizeSelection } from './app-state-selection.js';
+import { removeNetworkMessages } from './conversation-message-state.js';
 import { gatewayReconnectMessage } from './gateway.js';
 
 const offlineNetworkStates = (state: Pick<State, 'networks'>) =>
@@ -93,6 +94,25 @@ export const reduceRuntimeAction = (
           action.phase === 'connected'
             ? state.selection
             : normalizeSelection(nextState, state.selection, action.networkId),
+      };
+    }
+    case 'remove-network': {
+      const networkStates = { ...state.networkStates };
+      delete networkStates[action.networkId];
+      const nextState = {
+        ...state,
+        networks: state.networks.filter((network) => network.id !== action.networkId),
+        buffers: state.buffers.filter((buffer) => buffer.networkId !== action.networkId),
+        channels: state.channels.filter((channel) => channel.networkId !== action.networkId),
+        pendingChannels: state.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
+        messages: removeNetworkMessages(state.messages, action.networkId),
+        networkStates,
+        channelList: state.channelList.networkId === action.networkId ? initialChannelListState : state.channelList,
+        historyLoading: false,
+      };
+      return {
+        ...nextState,
+        selection: normalizeSelection(nextState, state.selection),
       };
     }
     default:

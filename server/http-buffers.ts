@@ -29,7 +29,6 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
     const networkId = decodeRouteParam(queryMatch[1]);
     const target = readQueryTarget(await readJson(req));
     const buffer = context.runtime.openQuery(networkId, target);
-    context.runtime.send({ type: 'buffer.upsert', buffer });
     writeJson(res, 200, { buffer });
     return true;
   }
@@ -37,8 +36,7 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   const bufferMatch = pathname.match(/^\/api\/buffers\/([^/]+)$/);
   if (bufferMatch && req.method === 'DELETE') {
     const bufferId = decodeRouteParam(bufferMatch[1]);
-    const buffer = context.runtime.closeBuffer(bufferId);
-    context.runtime.send({ type: 'buffer.remove', networkId: buffer.networkId, bufferId: buffer.id });
+    context.runtime.closeBuffer(bufferId);
     writeJson(res, 200, { ok: true });
     return true;
   }

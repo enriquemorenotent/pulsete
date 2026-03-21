@@ -1,5 +1,6 @@
 import { useReducer } from 'react';
 import type { AppSnapshot } from '../../shared/protocol.js';
+import { indexConversationMessages } from './conversation-message-state.js';
 import {
   reduceConversationAction,
   sortBuffers,
@@ -23,7 +24,7 @@ export const initialState: State = {
   buffers: [],
   channels: [],
   pendingChannels: [],
-  messages: [],
+  messages: {},
   networkStates: {},
   selection: null,
   networkForm: emptyNetworkForm(),
@@ -43,7 +44,7 @@ const reduceSnapshotState = (state: State, snapshot: AppSnapshot): State => {
     buffers: sortBuffers(snapshot.buffers),
     channels: snapshot.channels,
     pendingChannels: sortPendingChannels(snapshot.pendingChannels),
-    messages: snapshot.messages,
+    messages: indexConversationMessages(snapshot.messages),
     networkStates: snapshot.networkStates,
     selection,
     banner: null,

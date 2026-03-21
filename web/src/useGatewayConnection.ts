@@ -3,6 +3,7 @@ import type { ServerMessage } from '../../shared/protocol.js';
 import type { Action } from './app-types.js';
 import { connectSocket, type SocketHandle } from './client.js';
 import { gatewayReconnectMessage, getGatewayReconnectDelayMs } from './gateway.js';
+import { dispatchServerMessage } from './server-message-actions.js';
 
 type MutableRef<T> = { current: T };
 
@@ -73,7 +74,7 @@ export const createGatewaySocketCallbacks = ({
     if (message.type === 'state.ready') {
       reconnectAttemptRef.current = 0;
     }
-    handleServerMessage(message, dispatch);
+    dispatchServerMessage(message, dispatch);
   },
   onOpen() {
     if (isClosedByClient() || socketRef.current !== getSocket()) {
@@ -99,69 +100,3 @@ export const createGatewaySocketCallbacks = ({
     }, delay);
   },
 });
-
-function handleServerMessage(message: ServerMessage, dispatch: (action: Action) => void) {
-  if (message.type === 'state.ready') {
-    dispatch({ type: 'gateway-connected' });
-    return void dispatch({ type: 'snapshot', snapshot: message.snapshot });
-  }
-  if (message.type === 'network.state') {
-    return void dispatch({
-      type: 'network-state',
-      networkId: message.networkId,
-      phase: message.phase,
-      serverName: message.serverName,
-      nick: message.nick,
-    });
-  }
-  if (message.type === 'network.upsert') return void dispatch({ type: 'upsert-network', network: message.network });
-  if (message.type === 'network.remove') return void dispatch({ type: 'remove-network', networkId: message.networkId });
-  if (message.type === 'friend.upsert') return void dispatch({ type: 'upsert-friend', friend: message.friend });
-  if (message.type === 'friend.remove') return void dispatch({ type: 'remove-friend', friendId: message.friendId });
-  if (message.type === 'friend.presence') {
-    return void dispatch({ type: 'friend-presence', friendId: message.friendId, online: message.online });
-  }
-  if (message.type === 'buffer.upsert') return void dispatch({ type: 'upsert-buffer', buffer: message.buffer });
-  if (message.type === 'buffer.remove') return void dispatch({ type: 'remove-buffer', networkId: message.networkId, bufferId: message.bufferId });
-  if (message.type === 'channel.snapshot') return void dispatch({ type: 'upsert-channel', channel: message.channel });
-  if (message.type === 'channel.pending') {
-    return void dispatch({ type: 'add-pending-channel', pendingChannel: message.pendingChannel });
-  }
-  if (message.type === 'channel.pending.remove') {
-    return void dispatch({ type: 'remove-pending-channel', networkId: message.networkId, channel: message.channel });
-  }
-  if (message.type === 'channel.list.started') {
-    return void dispatch({ type: 'channel-list-started', networkId: message.networkId, requestId: message.requestId });
-  }
-  if (message.type === 'channel.list.entry') {
-    return void dispatch({
-      type: 'channel-list-entry',
-      networkId: message.networkId,
-      requestId: message.requestId,
-      entry: message.entry,
-    });
-  }
-  if (message.type === 'channel.list.completed') {
-    return void dispatch({ type: 'channel-list-completed', networkId: message.networkId, requestId: message.requestId });
-  }
-  if (message.type === 'channel.list.failed') {
-    return void dispatch({
-      type: 'channel-list-failed',
-      networkId: message.networkId,
-      requestId: message.requestId,
-      message: message.message,
-    });
-  }
-  if (message.type === 'message.append') return void dispatch({ type: 'append-message', message: message.message });
-  if (message.type === 'presence.update') {
-    return void dispatch({
-      type: 'update-presence',
-      networkId: message.networkId,
-      channel: message.channel,
-      users: message.users,
-    });
-  }
-  if (message.type === 'notice' || message.type === 'error') {
-    dispatch({ type: 'set-banner', banner: { kind: message.type, message: message.message } });
-  }
-}

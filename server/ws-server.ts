@@ -52,7 +52,7 @@ const handleClientMessage = (
         context.runtime.part(message.networkId, message.channel, message.sourceBufferId);
         return;
       case 'query.open': {
-        context.runtime.send({ type: 'buffer.upsert', buffer: context.runtime.openQuery(message.networkId, message.target) });
+        context.runtime.openQuery(message.networkId, message.target);
         return;
       }
       case 'message.send':

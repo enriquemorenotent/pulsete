@@ -55,7 +55,7 @@ export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'bu
     buffers: snapshot.buffers,
     channels: [],
     pendingChannels: [],
-    messages: [],
+    messages: {},
   });
   return selectionFor(instance ? queries.findServerBuffer(instance.id) : null);
 };
@@ -66,7 +66,7 @@ export const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | nul
     return null;
   }
 
-  const queries = createConversationQueries({ ...input, messages: [] });
+  const queries = createConversationQueries({ ...input, messages: {} });
   const selectedBuffer = queries.findSelectedBuffer(input.selection);
   const selectedPendingChannel = queries.findSelectedPendingChannel(input.selection);
   const selectedNetwork =

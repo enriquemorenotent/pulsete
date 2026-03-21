@@ -1,12 +1,11 @@
-import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { BufferState, ChannelState, ChatMessage, PendingChannelState } from '../../shared/protocol.js';
 import type { State } from './app-types.js';
+import { toConversationMessageKey, type ConversationMessages } from './conversation-message-state.js';
 import type { SelectedBuffer } from './workspace-types.js';
 
-type ConversationState = Pick<State, 'buffers' | 'channels' | 'pendingChannels' | 'messages'>;
-
-const toNetworkTargetKey = (networkId: string, target: string) =>
-  `${networkId}:${normalizeIrcIdentifier(target)}`;
+type ConversationState = Pick<State, 'buffers' | 'channels' | 'pendingChannels'> & {
+  messages: ConversationMessages;
+};
 
 export const createConversationQueries = (state: ConversationState) => {
   const buffersById = new Map<string, BufferState>();
@@ -23,7 +22,7 @@ export const createConversationQueries = (state: ConversationState) => {
       serverBuffersByNetwork.set(buffer.networkId, buffer);
       continue;
     }
-    const key = toNetworkTargetKey(buffer.networkId, buffer.target);
+    const key = toConversationMessageKey(buffer.networkId, buffer.target);
     if (buffer.kind === 'channel') {
       channelBuffersByTarget.set(key, buffer);
       continue;
@@ -33,7 +32,7 @@ export const createConversationQueries = (state: ConversationState) => {
 
   for (const pendingChannel of state.pendingChannels) {
     pendingChannelsByTarget.set(
-      toNetworkTargetKey(pendingChannel.networkId, pendingChannel.channel),
+      toConversationMessageKey(pendingChannel.networkId, pendingChannel.channel),
       pendingChannel
     );
   }
@@ -42,40 +41,32 @@ export const createConversationQueries = (state: ConversationState) => {
     channelsById.set(channel.id, channel);
   }
 
-  for (const message of state.messages) {
-    const key = toNetworkTargetKey(message.networkId, message.target);
-    const messages = messagesByTarget.get(key);
-    if (messages) {
-      messages.push(message);
-      continue;
-    }
-    messagesByTarget.set(key, [message]);
+  for (const [key, messages] of Object.entries(state.messages)) {
+    messagesByTarget.set(key, messages);
   }
 
   const findSelectedBuffer = (selection: SelectedBuffer | null) =>
-    selection?.kind === 'buffer'
-      ? buffersById.get(selection.bufferId) ?? null
-      : null;
+    selection?.kind === 'buffer' ? buffersById.get(selection.bufferId) ?? null : null;
 
   const findSelectedPendingChannel = (selection: SelectedBuffer | null) =>
     selection?.kind === 'pending-channel'
-      ? pendingChannelsByTarget.get(toNetworkTargetKey(selection.networkId, selection.channel)) ?? null
+      ? pendingChannelsByTarget.get(toConversationMessageKey(selection.networkId, selection.channel)) ?? null
       : null;
 
   return {
     findBufferById: (bufferId: string) => buffersById.get(bufferId) ?? null,
     findServerBuffer: (networkId: string) => serverBuffersByNetwork.get(networkId) ?? null,
     findChannelBuffer: (networkId: string, channel: string) =>
-      channelBuffersByTarget.get(toNetworkTargetKey(networkId, channel)) ?? null,
+      channelBuffersByTarget.get(toConversationMessageKey(networkId, channel)) ?? null,
     findQueryBuffer: (networkId: string, nick: string) =>
-      queryBuffersByTarget.get(toNetworkTargetKey(networkId, nick)) ?? null,
+      queryBuffersByTarget.get(toConversationMessageKey(networkId, nick)) ?? null,
     findPendingChannel: (networkId: string, channel: string) =>
-      pendingChannelsByTarget.get(toNetworkTargetKey(networkId, channel)) ?? null,
+      pendingChannelsByTarget.get(toConversationMessageKey(networkId, channel)) ?? null,
     findSelectedBuffer,
     findSelectedPendingChannel,
     findChannelByBuffer: (buffer: BufferState | null) =>
       buffer?.kind === 'channel' ? channelsById.get(buffer.id) ?? null : null,
     selectMessages: (buffer: BufferState | null) =>
-      buffer ? messagesByTarget.get(toNetworkTargetKey(buffer.networkId, buffer.target)) ?? [] : [],
+      buffer ? messagesByTarget.get(toConversationMessageKey(buffer.networkId, buffer.target)) ?? [] : [],
   };
 };

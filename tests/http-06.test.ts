@@ -60,6 +60,7 @@ test('websocket commands use the live local state and forward runtime methods', 
   }) as Runtime['disconnect'];
   runtime.openQuery = ((networkId: string, target: string) => {
     calls.push(`query.open:${networkId}:${target}`);
+    runtime.send({ type: 'buffer.upsert', buffer: query });
     return query;
   }) as Runtime['openQuery'];
   runtime.requestChannelList = ((networkId: string) => {

@@ -9,6 +9,7 @@ import type {
   NetworkProfile,
   PendingChannelState,
 } from '../../shared/protocol.js';
+import type { ConversationMessages } from './conversation-message-state.js';
 import type { NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
@@ -33,7 +34,7 @@ export type State = {
   buffers: BufferState[];
   channels: ChannelState[];
   pendingChannels: PendingChannelState[];
-  messages: ChatMessage[];
+  messages: ConversationMessages;
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
   networkForm: NetworkForm;

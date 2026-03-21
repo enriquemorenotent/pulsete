@@ -1,4 +1,5 @@
 import type { NetworkProfile } from '../../shared/protocol.js';
+import { getNetworkRootId } from '../../shared/network-model.js';
 
 export type EditorTab = 'servers' | 'autojoin';
 
@@ -18,6 +19,22 @@ export type NetworkForm = {
   hasSavedPassword: boolean;
   favorite: boolean;
   autoJoin: string;
+};
+
+export type SaveNetworkPayload = {
+  id?: string;
+  name: string;
+  host: string;
+  port: number;
+  tls: boolean;
+  nick: string;
+  altNicks: string[];
+  username: string;
+  realName: string;
+  password?: string;
+  clearPassword?: boolean;
+  favorite: boolean;
+  autoJoin: string[];
 };
 
 export const emptyNetworkForm = (): NetworkForm => ({
@@ -61,10 +78,24 @@ export const toForm = (network: NetworkProfile): NetworkForm => ({
   autoJoin: network.autoJoin.join(', '),
 });
 
-export const getTemplateRootId = (network: NetworkProfile) => network.templateId ?? network.id;
+export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => ({
+  id: form.id,
+  name: form.name.trim(),
+  host: form.host.trim(),
+  port: Number(form.port),
+  tls: form.tls,
+  nick: form.nick.trim(),
+  altNicks: [form.nick2.trim(), form.nick3.trim()].filter(Boolean),
+  username: form.username.trim() || form.nick.trim(),
+  realName: form.realName.trim() || form.nick.trim(),
+  password: form.password.trim() || undefined,
+  clearPassword: form.password.trim() ? false : form.clearPassword || undefined,
+  favorite: form.favorite,
+  autoJoin: parseAutoJoin(form.autoJoin),
+});
 
 export const createConnectionInstancePayload = (network: NetworkProfile) => ({
-  templateId: getTemplateRootId(network),
+  templateId: getNetworkRootId(network),
   managerHidden: true,
   name: network.name,
   host: network.host,

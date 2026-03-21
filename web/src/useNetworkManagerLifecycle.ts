@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isSavedNetwork } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type { State } from './app-types.js';
 import { resolveManagedNetworkId } from './network-manager-state.js';
@@ -39,7 +40,7 @@ export function useManagedNetworkSelection(params: UseManagedNetworkSelectionPar
   useEffect(() => {
     const nextManagedNetworkId = resolveManagedNetworkId({
       phase: params.phase,
-      managerNetworks: params.networks.filter((network) => !network.managerHidden),
+      managerNetworks: params.networks.filter(isSavedNetwork),
       visibleNetworks: params.visibleNetworks,
       managedNetworkId: params.managedNetworkId,
     });

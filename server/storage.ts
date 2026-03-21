@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { isConnectionInstance } from '../shared/network-model.js';
 import {
   historyWindowLimit,
   type BufferState,
@@ -48,10 +49,10 @@ export class Storage {
     this.db = createDatabase(filePath);
     this.secretBox = createSecretBox(filePath, { createIfMissing: !hasEncryptedNetworkPasswords(this.db) });
     migrateLegacyNetworkPasswords(this.db, this.secretBox);
+    this.initializeDefaults();
   }
 
   listNetworks() {
-    this.ensureDefaultNetworks();
     return listNetworks(this.db);
   }
 
@@ -143,7 +144,7 @@ export class Storage {
 
   upsertNetwork(input: NetworkInput) {
     const network = upsertNetwork(this.db, input, this.secretBox);
-    if (network.managerHidden) {
+    if (isConnectionInstance(network)) {
       this.ensureServerBuffer(network.id);
     }
     return network;
@@ -174,8 +175,6 @@ export class Storage {
   }
 
   snapshot() {
-    this.ensureDefaultNetworks();
-    this.ensureServerBuffers();
     const networks = this.listNetworks();
     return {
       networks,
@@ -208,8 +207,13 @@ export class Storage {
   }
 
   private ensureServerBuffers() {
-    for (const network of this.listNetworks().filter((item) => item.managerHidden)) {
+    for (const network of this.listNetworks().filter(isConnectionInstance)) {
       this.ensureServerBuffer(network.id);
     }
+  }
+
+  private initializeDefaults() {
+    this.ensureDefaultNetworks();
+    this.ensureServerBuffers();
   }
 }

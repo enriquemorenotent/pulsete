@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { AppSnapshot,BufferState,ChatMessage,FriendState,NetworkProfile,PendingChannelState } from '../shared/protocol.js';
 import { initialChannelListState,initialState,reducer } from '../web/src/app-state.js';
 import type { State } from '../web/src/app-types.js';
+import { indexConversationMessages } from '../web/src/conversation-message-state.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
@@ -123,7 +124,7 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
     networks: [network],
     buffers: [serverBuffer],
     pendingChannels: [makePendingChannel()],
-    messages: [staleMessage],
+    messages: indexConversationMessages([staleMessage]),
     selection: { kind: 'pending-channel' as const, networkId: network.id, channel: '#help' },
   };
 
@@ -147,7 +148,7 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
     },
   });
 
-  assert.deepEqual(nextState.messages, [freshMessage]);
+  assert.deepEqual(nextState.messages, indexConversationMessages([freshMessage]));
   assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: serverBuffer.id });
 });
 
