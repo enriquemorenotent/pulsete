@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ChatMessage } from '../shared/protocol.js';
 import {
-  bindStickyScrollTracking,
   createGatewaySocketCallbacks,
+} from '../web/src/useGatewayConnection.js';
+import { loadSelectedBufferHistory } from '../web/src/useSelectedBufferEffects.js';
+import {
+  bindStickyScrollTracking,
   isScrollNearBottom,
-  loadSelectedBufferHistory,
   scrollNodeToBottom,
-} from '../web/src/useAppLifecycle.js';
+} from '../web/src/useStickyScroll.js';
 import type { SocketHandle } from '../web/src/client.js';
 
 const createSocket = (): SocketHandle => ({
