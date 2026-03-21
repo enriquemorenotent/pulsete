@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { connectSocket } from '../web/src/client.js';
-import { gatewaySocketClosedMessage, getGatewayReconnectDelayMs } from '../web/src/gateway.js';
+import { gatewaySocketClosedMessage,getGatewayReconnectDelayMs } from '../web/src/gateway.js';
 
 class FakeWebSocket {
   static CONNECTING = 0;

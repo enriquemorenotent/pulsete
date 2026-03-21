@@ -2,9 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import {
   historyWindowLimit,
   type BufferState,
-  type ChannelState,
   type ChannelUserState,
-  type FriendState,
 } from '../shared/protocol.js';
 import { createSecretBox } from './network-secret.js';
 import { createDatabase } from './storage-db.js';

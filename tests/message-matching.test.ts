@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState, ChatMessage } from '../shared/protocol.js';
+import type { BufferState,ChatMessage } from '../shared/protocol.js';
 import { matchesBufferMessage } from '../web/src/message-matching.js';
 
 const queryBuffer: BufferState = {
