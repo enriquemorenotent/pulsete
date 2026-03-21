@@ -10,6 +10,7 @@ import { ChannelListDialog } from './ChannelListDialog.js';
 import { findFriendByNick } from './friend-utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
 import { FriendToggleButton } from './FriendToggleButton.js';
+import { MessageAvatar } from './MessageAvatar.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -137,23 +138,37 @@ export function ChatPane(props: ChatPaneProps) {
                   />
                 ) : (
                   <article key={block.message.id} className={cn('border px-2 py-1.5', messageTone(block.message))}>
-                    <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                      <span>{formatTime(block.message.ts)}</span>
-                      {block.message.nick ? <span className="font-medium text-foreground">{block.message.nick}</span> : null}
-                      {showKindLabel(block.message) ? <span>{block.message.kind}</span> : null}
-                    </div>
-                    <p
+                    <div
                       className={cn(
-                        'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground',
-                        isActionBody(block.message) && 'italic'
+                        'grid gap-x-3',
+                        block.message.nick ? 'grid-cols-[2.75rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]'
                       )}
                     >
-                      <FormattedMessageText
-                        text={block.message.body}
-                        mode={props.messageDisplayMode}
-                        onOpenChannel={props.onOpenMentionedChannel}
-                      />
-                    </p>
+                      {block.message.nick ? (
+                        <div className="pt-0.5">
+                          <MessageAvatar nick={block.message.nick} />
+                        </div>
+                      ) : null}
+                      <div className="min-w-0">
+                        <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                          <span>{formatTime(block.message.ts)}</span>
+                          {block.message.nick ? <span className="font-medium text-foreground">{block.message.nick}</span> : null}
+                          {showKindLabel(block.message) ? <span>{block.message.kind}</span> : null}
+                        </div>
+                        <p
+                          className={cn(
+                            'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground',
+                            isActionBody(block.message) && 'italic'
+                          )}
+                        >
+                          <FormattedMessageText
+                            text={block.message.body}
+                            mode={props.messageDisplayMode}
+                            onOpenChannel={props.onOpenMentionedChannel}
+                          />
+                        </p>
+                      </div>
+                    </div>
                   </article>
                 )
               )}
@@ -223,8 +238,8 @@ function GroupedMessageBlock(props: {
 
   return (
     <article className={cn('border px-2 py-1.5', messageTone(firstMessage))}>
-      <div className="grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-3 gap-y-1">
-        <div />
+      <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-3 gap-y-1">
+        <div className="pt-0.5">{firstMessage.nick ? <MessageAvatar nick={firstMessage.nick} /> : null}</div>
         <div className="min-w-0">
           <div className="mb-0.5 flex flex-wrap items-baseline gap-2">
             <span className="font-sans text-[15px] font-semibold text-foreground">{props.sourceLabel}</span>
@@ -238,7 +253,7 @@ function GroupedMessageBlock(props: {
         </div>
 
         {continuationMessages.map((message) => (
-          <div key={message.id} className="group/line col-span-2 grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-3">
+          <div key={message.id} className="group/line col-span-2 grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-3">
             <span className="pr-1 pt-0.5 text-right text-[11px] leading-5 text-muted-foreground/85 opacity-0 transition-opacity group-hover/line:opacity-100">
               {formatTime(message.ts)}
             </span>
@@ -260,21 +275,29 @@ function CompactMessageRow(props: {
   const { message } = props;
   const actionBody = isActionBody(message);
   const showNick = message.nick && (message.kind === 'line' || showKindLabel(message));
+  const avatarNick = showNick ? message.nick : null;
 
   return (
     <article className={cn('border px-2 py-1.5', messageTone(message))}>
-      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] leading-5">
-        <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          {formatTime(message.ts)}
-        </span>
-        {showNick && !actionBody ? (
-          <span className="font-semibold text-foreground">{message.nick}</span>
+      <div className={cn('grid gap-x-3', avatarNick ? 'grid-cols-[2.75rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]')}>
+        {avatarNick ? (
+          <div className="pt-0.5">
+            <MessageAvatar nick={avatarNick} />
+          </div>
         ) : null}
-        {showKindLabel(message) ? <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
-        <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
-          <FormattedMessageText text={message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
-        </span>
-      </p>
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] leading-5">
+          <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+            {formatTime(message.ts)}
+          </span>
+          {showNick && !actionBody ? (
+            <span className="font-semibold text-foreground">{message.nick}</span>
+          ) : null}
+          {showKindLabel(message) ? <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
+          <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
+            <FormattedMessageText text={message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
+          </span>
+        </p>
+      </div>
     </article>
   );
 }

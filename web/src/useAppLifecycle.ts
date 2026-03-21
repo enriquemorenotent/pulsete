@@ -7,6 +7,18 @@ import { resolveManagedNetworkId } from './network-manager-state.js';
 import type { WorkspaceView } from './workspace.js';
 
 type MutableRef<T> = { current: T };
+type ScrollMetrics = Pick<HTMLDivElement, 'clientHeight' | 'scrollHeight' | 'scrollTop'>;
+type ScrollContainer = Pick<
+  HTMLDivElement,
+  'addEventListener' | 'clientHeight' | 'firstElementChild' | 'removeEventListener' | 'scrollHeight' | 'scrollTop'
+>;
+type ResizeObserverLike = {
+  observe: (target: Element) => void;
+  disconnect: () => void;
+};
+type ResizeObserverFactory = ((callback: () => void) => ResizeObserverLike) | null;
+
+const stickyScrollThresholdPx = 24;
 
 type LifecycleParams = {
   state: State;
@@ -25,6 +37,7 @@ export function useAppLifecycle(params: LifecycleParams) {
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptRef = useRef(0);
   const historyRequestRef = useRef(0);
+  const stickToBottomRef = useRef(true);
   const [socketGeneration, setSocketGeneration] = useState(0);
 
   useEffect(() => {
@@ -103,9 +116,12 @@ export function useAppLifecycle(params: LifecycleParams) {
 
   useEffect(() => {
     const node = params.scrollRef.current;
-    if (node) {
-      node.scrollTop = node.scrollHeight;
+    if (!node) {
+      return;
     }
+    stickToBottomRef.current = true;
+    scrollNodeToBottom(node);
+    return bindStickyScrollTracking({ node, stickToBottomRef, createResizeObserver: createResizeObserverFactory() });
   }, [params.state.messages.length, params.workspace.selectedBuffer?.id]);
 
   useEffect(() => {
@@ -119,6 +135,55 @@ export function useAppLifecycle(params: LifecycleParams) {
       params.setManagedNetworkId(nextManagedNetworkId);
     }
   }, [params.managedNetworkId, params.state.networks, params.state.phase, params.visibleNetworks]);
+}
+
+export const scrollNodeToBottom = (node: Pick<ScrollContainer, 'scrollHeight' | 'scrollTop'>) => {
+  node.scrollTop = node.scrollHeight;
+};
+
+export const isScrollNearBottom = (node: ScrollMetrics) =>
+  node.scrollHeight - node.scrollTop - node.clientHeight <= stickyScrollThresholdPx;
+
+export const createResizeObserverFactory = (): ResizeObserverFactory =>
+  typeof ResizeObserver === 'undefined'
+    ? null
+    : (callback) =>
+        new ResizeObserver(() => {
+          callback();
+        });
+
+export function bindStickyScrollTracking(params: {
+  node: ScrollContainer;
+  stickToBottomRef: MutableRef<boolean>;
+  createResizeObserver: ResizeObserverFactory;
+}) {
+  const updateStickiness = () => {
+    params.stickToBottomRef.current = isScrollNearBottom(params.node);
+  };
+
+  updateStickiness();
+  params.node.addEventListener('scroll', updateStickiness, { passive: true });
+
+  const content = params.node.firstElementChild;
+  const resizeObserver =
+    content && params.createResizeObserver
+      ? params.createResizeObserver(() => {
+          if (!params.stickToBottomRef.current) {
+            return;
+          }
+          scrollNodeToBottom(params.node);
+          params.stickToBottomRef.current = true;
+        })
+      : null;
+
+  if (content && resizeObserver) {
+    resizeObserver.observe(content);
+  }
+
+  return () => {
+    params.node.removeEventListener('scroll', updateStickiness);
+    resizeObserver?.disconnect();
+  };
 }
 
 type GatewaySocketCallbackParams = {
