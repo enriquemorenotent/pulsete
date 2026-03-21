@@ -20,8 +20,13 @@ export type IrcStateContext = IrcEventContext & {
   lifecycle: IrcLifecycleState;
 };
 
-export type IrcChannelListContext = IrcStateContext & {
+export type IrcReplyStateContext = {
   channelList: IrcChannelListState;
+  clearDrainingChannelList(): void;
+  replyTracker: ReplyTracker;
+};
+
+export type IrcChannelListContext = IrcStateContext & IrcReplyStateContext & {
   isChannelListPending(): boolean;
   prunePendingReplyContexts(): void;
   sendRaw(raw: string, statusTarget?: string): boolean;
@@ -36,19 +41,14 @@ export type IrcChannelStateContext = IrcEventContext & {
 
 export type IrcFriendPresenceContext = IrcStateContext & {
   friendPresence: IrcFriendPresenceState;
+  replyTracker: ReplyTracker;
   queueReplyContext(context: PendingReplyContext): void;
   sendRaw(raw: string, statusTarget?: string): boolean;
 };
 
-export type IrcReplyStateContext = {
-  channelList: IrcChannelListState;
-  clearDrainingChannelList(): void;
-  replyTracker: ReplyTracker;
-};
-
 export type IrcRawIoContext = IrcStateContext;
 
-export type IrcClientIoContext = IrcStateContext & {
+export type IrcClientIoContext = IrcStateContext & IrcReplyStateContext & {
   getChannelListRequestFailureMessage(): string;
   isChannelListPending(): boolean;
   join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;

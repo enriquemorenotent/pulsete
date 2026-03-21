@@ -2,7 +2,7 @@ import type { BufferState, FriendState, PendingChannelState } from '../../shared
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, ChannelListState, State } from './app-types.js';
 import { appendConversationMessages, removeBufferMessages } from './conversation-message-state.js';
-import { buildConversationModel } from './conversation-model.js';
+import { createSelectionResolver } from './selection-state.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -27,7 +27,8 @@ export const reduceConversationAction = (
   initialChannelListState: ChannelListState
 ): State | null => {
   void initialChannelListState;
-  const conversation = buildConversationModel(state.domain);
+  const selection = createSelectionResolver(state.domain);
+  const conversation = selection.conversation;
   switch (action.type) {
     case 'upsert-friend': {
       const friends = state.domain.friends.filter((friend) => friend.id !== action.friend.id);
@@ -86,7 +87,7 @@ export const reduceConversationAction = (
         ...nextState,
         transient: {
           ...nextState.transient,
-          selection: buildConversationModel(nextState.domain).normalizeSelection(nextState.domain.networks, selection),
+          selection: createSelectionResolver(nextState.domain).normalizeSelection(selection),
         },
       };
     }
@@ -110,7 +111,7 @@ export const reduceConversationAction = (
           ...nextState.transient,
           selection:
             state.transient.selection?.kind === 'buffer' && state.transient.selection.bufferId === action.bufferId
-              ? buildConversationModel(nextState.domain).fallbackSelection(nextState.domain.networks, action.networkId)
+              ? createSelectionResolver(nextState.domain).fallbackSelection(action.networkId)
               : state.transient.selection,
         },
       };
@@ -195,7 +196,7 @@ export const reduceConversationAction = (
             isSameIrcIdentifier(state.transient.selection.channel, action.channel)
               ? matchingChannelBuffer
                 ? { kind: 'buffer', bufferId: matchingChannelBuffer.id }
-                : buildConversationModel(nextState.domain).fallbackSelection(nextState.domain.networks, action.networkId)
+                : createSelectionResolver(nextState.domain).fallbackSelection(action.networkId)
               : state.transient.selection,
         },
       };

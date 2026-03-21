@@ -11,6 +11,30 @@ import {
 } from './runtime-operation-utils.js';
 import { createRuntimeCommandResult, type RuntimeOperationContext } from './runtime-operation-types.js';
 
+type CommandApi = {
+  action(target: string, text: string, sourceTarget?: string): void;
+  join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+  part(channel: string, reason?: string, sourceTarget?: string): boolean;
+  say(target: string, text: string, sourceTarget?: string): void;
+  setNick(nick: string, sourceTarget?: string): boolean;
+};
+
+type LifecycleApi = {
+  disconnect(raw?: string): void;
+};
+
+type TransportApi = {
+  sendClientRaw(raw: string, sourceTarget?: string): boolean;
+  sendRaw(raw: string, statusTarget?: string): boolean;
+};
+
+type RuntimeIrcConnection = CommandApi & LifecycleApi & TransportApi & {
+  socket?: unknown;
+  commandController?: CommandApi;
+  lifecycleController?: LifecycleApi;
+  transportController?: TransportApi;
+};
+
 export const join = (
   context: RuntimeOperationContext,
   networkId: string,
@@ -21,7 +45,7 @@ export const join = (
   const normalizedChannel = normalizeChannelTarget(channel);
   const existingBuffer = context.store.getBufferByTarget(networkId, normalizedChannel);
   const existingChannel = context.store.getChannelByName(networkId, normalizedChannel);
-  context.connectionManager.getConnection(networkId).join(
+  getCommandApi(context.connectionManager.getConnection(networkId)).join(
     normalizedChannel,
     resolveReplyTarget(context.store, networkId, sourceBufferId),
     { visiblePending: !(existingBuffer?.kind === 'channel' || existingChannel) }
@@ -37,7 +61,7 @@ export const part = (
 ) => {
   getRequiredNetwork(context.store, networkId);
   const normalizedChannel = normalizeChannelTarget(channel);
-  context.connectionManager.getConnection(networkId).part(
+  getCommandApi(context.connectionManager.getConnection(networkId)).part(
     normalizedChannel,
     'Leaving',
     resolveReplyTarget(context.store, networkId, sourceBufferId, normalizedChannel)
@@ -56,10 +80,11 @@ export const sendMessage = (
   const normalizedTarget = normalizeMessageTarget(target);
   const normalizedBody = normalizeMessageBody(body);
   const connection = context.connectionManager.getConnection(networkId);
+  const commandApi = getCommandApi(connection);
   const replyTarget = resolveReplyTarget(context.store, networkId, sourceBufferId, normalizedTarget);
   kind === 'action'
-    ? connection.action(normalizedTarget, normalizedBody, replyTarget)
-    : connection.say(normalizedTarget, normalizedBody, replyTarget);
+    ? commandApi.action(normalizedTarget, normalizedBody, replyTarget)
+    : commandApi.say(normalizedTarget, normalizedBody, replyTarget);
   return createRuntimeCommandResult(undefined);
 };
 
@@ -70,20 +95,27 @@ export const sendRaw = (
   sourceBufferId?: string,
 ) => {
   const normalizedRaw = normalizeRawCommand(raw);
-  const connection = context.connectionManager.getConnection(networkId);
+  const connection = context.connectionManager.getConnection(networkId) as RuntimeIrcConnection;
+  const commandApi = getCommandApi(connection);
+  const lifecycleApi = getLifecycleApi(connection);
+  const transportApi = getTransportApi(connection);
   const replyTarget = resolveReplyTarget(context.store, networkId, sourceBufferId);
   if (/^\s*NICK\s+/i.test(normalizedRaw)) {
     const nextNick = normalizedRaw.trim().split(/\s+/)[1];
     if (nextNick) {
-      connection.socket ? connection.setNick(nextNick, replyTarget) : connection.sendRaw(normalizedRaw, replyTarget);
+      connection.socket
+        ? commandApi.setNick(nextNick, replyTarget)
+        : transportApi.sendRaw(normalizedRaw, replyTarget);
       return createRuntimeCommandResult(undefined);
     }
   }
   if (/^\s*QUIT(?:\s|$)/i.test(normalizedRaw)) {
-    connection.socket ? connection.disconnect(normalizedRaw.trim()) : connection.sendRaw(normalizedRaw, replyTarget);
+    connection.socket
+      ? lifecycleApi.disconnect(normalizedRaw.trim())
+      : transportApi.sendRaw(normalizedRaw, replyTarget);
     return createRuntimeCommandResult(undefined);
   }
-  connection.sendClientRaw(normalizedRaw, replyTarget);
+  transportApi.sendClientRaw(normalizedRaw, replyTarget);
   return createRuntimeCommandResult(undefined);
 };
 
@@ -95,3 +127,12 @@ export const requestChannelList = (
   getRequiredNetwork(context.store, networkId);
   return createRuntimeCommandResult(context.connectionManager.requestChannelList(networkId, requester));
 };
+
+const getCommandApi = (connection: RuntimeIrcConnection): CommandApi =>
+  connection.commandController ?? connection;
+
+const getLifecycleApi = (connection: RuntimeIrcConnection): LifecycleApi =>
+  connection.lifecycleController ?? connection;
+
+const getTransportApi = (connection: RuntimeIrcConnection): TransportApi =>
+  connection.transportController ?? connection;

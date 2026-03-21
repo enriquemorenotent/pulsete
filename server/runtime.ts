@@ -72,7 +72,7 @@ export class Runtime {
 
   connect(networkId: string) {
     getRequiredNetwork(this.store, networkId);
-    this.connectionManager.getConnection(networkId).connect();
+    this.connectionManager.getConnection(networkId).lifecycleController.connect();
   }
 
   disconnect(networkId: string) {

@@ -38,7 +38,7 @@ export class RuntimeConnectionManager {
   close() {
     this.channelLists.clearAll();
     for (const connection of this.connections.values()) {
-      connection.disconnect();
+      connection.lifecycleController.disconnect();
     }
     this.connections.clear();
     this.friendPresenceByNetwork.clear();
@@ -50,7 +50,7 @@ export class RuntimeConnectionManager {
 
   snapshot(networks: NetworkProfile[], friends: FriendState[]) {
     return {
-      pendingChannels: Array.from(this.connections.values()).flatMap((connection) => connection.listPendingChannels()),
+      pendingChannels: Array.from(this.connections.values()).flatMap((connection) => connection.channelController.listPendingChannels()),
       friendPresence: this.computeFriendPresence(friends),
       networkStates: Object.fromEntries(
         networks.map((network) => {
@@ -68,14 +68,14 @@ export class RuntimeConnectionManager {
       connection = new IrcConnection(profile, {
         onEvent: (event) => this.handleConnectionEvent(event),
       });
-      connection.setFriendNicks(this.store.listFriends().map((friend) => friend.nick));
+      connection.friendPresenceController.setFriendNicks(this.store.listFriends().map((friend) => friend.nick));
       this.connections.set(networkId, connection);
     }
     return connection;
   }
 
   disconnect(networkId: string) {
-    this.connections.get(networkId)?.disconnect();
+    this.connections.get(networkId)?.lifecycleController.disconnect();
     this.channelLists.clearNetwork(networkId);
   }
 
@@ -91,14 +91,14 @@ export class RuntimeConnectionManager {
     for (const networkId of networkIds) {
       const runtimeProfile = this.store.getRuntimeNetwork(networkId);
       if (runtimeProfile) {
-        this.connections.get(networkId)?.updateProfile(runtimeProfile);
+        this.connections.get(networkId)?.lifecycleController.updateProfile(runtimeProfile);
       }
     }
   }
 
   removeNetworks(networkIds: string[]) {
     for (const networkId of networkIds) {
-      this.connections.get(networkId)?.disconnect();
+      this.connections.get(networkId)?.lifecycleController.disconnect();
       this.connections.delete(networkId);
       this.channelLists.clearNetwork(networkId);
       this.friendPresenceByNetwork.delete(networkId);
@@ -109,7 +109,7 @@ export class RuntimeConnectionManager {
   syncFriendTracking() {
     const friendNicks = this.store.listFriends().map((friend) => friend.nick);
     for (const connection of this.connections.values()) {
-      connection.setFriendNicks(friendNicks);
+      connection.friendPresenceController.setFriendNicks(friendNicks);
     }
   }
 
@@ -196,11 +196,7 @@ export class RuntimeConnectionManager {
 
 const toNetworkRuntimeState = (connection: IrcConnection | undefined, fallbackNick: string): NetworkRuntimeState =>
   connection
-    ? {
-        phase: connection.connected ? 'connected' : connection.socket ? 'connecting' : 'offline',
-        serverName: connection.serverName,
-        nick: connection.currentNick,
-      }
+    ? connection.lifecycleController.state
     : {
         phase: 'offline',
         serverName: null,

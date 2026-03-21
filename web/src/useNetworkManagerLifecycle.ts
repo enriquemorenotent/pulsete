@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
 import { isSavedNetwork } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
-import type { AppDomainState } from './app-types.js';
+import type { Action, AppDomainState, NetworkManagerState } from './app-types.js';
 import { resolveManagedNetworkId } from './network-manager-state.js';
 
 type MutableRef<T> = { current: T };
 
 type UseAutoOpenNetworkManagerParams = {
   phase: AppDomainState['phase'];
+  networkManagerMode: NetworkManagerState['mode'];
   connectionInstanceCount: number;
   didAutoOpenManagerRef: MutableRef<boolean>;
-  setShowNetworkManager: (value: boolean) => void;
+  dispatch: (action: Action) => void;
 };
 
 type UseManagedNetworkSelectionParams = {
@@ -18,22 +19,32 @@ type UseManagedNetworkSelectionParams = {
   networks: NetworkProfile[];
   visibleNetworks: NetworkProfile[];
   managedNetworkId: string | null;
-  setManagedNetworkId: (value: string | null) => void;
+  dispatch: (action: Action) => void;
 };
 
 export function useAutoOpenNetworkManager(params: UseAutoOpenNetworkManagerParams) {
   useEffect(() => {
     if (params.phase !== 'ready') {
       params.didAutoOpenManagerRef.current = false;
-      params.setShowNetworkManager(false);
+      if (params.networkManagerMode !== 'closed') {
+        params.dispatch({ type: 'close-network-manager' });
+      }
       return;
     }
     if (params.didAutoOpenManagerRef.current) {
       return;
     }
     params.didAutoOpenManagerRef.current = true;
-    params.setShowNetworkManager(params.connectionInstanceCount === 0);
-  }, [params.connectionInstanceCount, params.phase, params.setShowNetworkManager, params.didAutoOpenManagerRef]);
+    if (params.connectionInstanceCount === 0) {
+      params.dispatch({ type: 'open-network-manager' });
+    }
+  }, [
+    params.connectionInstanceCount,
+    params.dispatch,
+    params.didAutoOpenManagerRef,
+    params.networkManagerMode,
+    params.phase,
+  ]);
 }
 
 export function useManagedNetworkSelection(params: UseManagedNetworkSelectionParams) {
@@ -45,7 +56,7 @@ export function useManagedNetworkSelection(params: UseManagedNetworkSelectionPar
       managedNetworkId: params.managedNetworkId,
     });
     if (nextManagedNetworkId !== params.managedNetworkId) {
-      params.setManagedNetworkId(nextManagedNetworkId);
+      params.dispatch({ type: 'set-managed-network', networkId: nextManagedNetworkId });
     }
-  }, [params.managedNetworkId, params.networks, params.phase, params.setManagedNetworkId, params.visibleNetworks]);
+  }, [params.dispatch, params.managedNetworkId, params.networks, params.phase, params.visibleNetworks]);
 }

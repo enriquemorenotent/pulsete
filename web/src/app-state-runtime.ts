@@ -1,7 +1,7 @@
 import type { Action, ChannelListState, State } from './app-types.js';
 import { removeNetworkMessages } from './conversation-message-state.js';
-import { buildConversationModel } from './conversation-model.js';
 import { gatewayReconnectMessage } from './gateway.js';
+import { createSelectionResolver } from './selection-state.js';
 
 const offlineNetworkStates = (state: Pick<State['domain'], 'networks'>) =>
   Object.fromEntries(
@@ -65,10 +65,7 @@ export const reduceRuntimeAction = (
         ...nextState,
         transient: {
           ...nextState.transient,
-          selection: buildConversationModel(nextState.domain).normalizeSelection(
-            nextState.domain.networks,
-            state.transient.selection
-          ),
+          selection: createSelectionResolver(nextState.domain).normalizeSelection(state.transient.selection),
         },
       };
     }
@@ -129,11 +126,7 @@ export const reduceRuntimeAction = (
           selection:
             action.phase === 'connected'
               ? state.transient.selection
-              : buildConversationModel(nextState.domain).normalizeSelection(
-                  nextState.domain.networks,
-                  state.transient.selection,
-                  action.networkId
-                ),
+              : createSelectionResolver(nextState.domain).normalizeSelection(state.transient.selection, action.networkId),
         },
       };
     }
@@ -162,10 +155,7 @@ export const reduceRuntimeAction = (
         ...nextState,
         transient: {
           ...nextState.transient,
-          selection: buildConversationModel(nextState.domain).normalizeSelection(
-            nextState.domain.networks,
-            state.transient.selection
-          ),
+          selection: createSelectionResolver(nextState.domain).normalizeSelection(state.transient.selection),
         },
       };
     }

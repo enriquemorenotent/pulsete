@@ -10,7 +10,7 @@ import type {
   PendingChannelState,
 } from '../../shared/protocol.js';
 import type { ConversationMessages } from './conversation-message-state.js';
-import type { NetworkForm } from './network-form.js';
+import type { EditorTab, NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
 export type Banner = { kind: 'notice' | 'error'; message: string } | null;
@@ -23,6 +23,19 @@ export type ChannelListState = {
   status: 'idle' | 'loading' | 'ready' | 'error';
   entries: ChannelListEntry[];
   error: string | null;
+};
+
+export type NetworkEditorState = {
+  kind: 'new' | 'existing';
+  tab: EditorTab;
+  form: NetworkForm;
+};
+
+export type NetworkManagerState = {
+  mode: 'closed' | 'manager' | 'editor';
+  managedNetworkId: string | null;
+  showFavoritesOnly: boolean;
+  editor: NetworkEditorState | null;
 };
 
 export type AppDomainState = {
@@ -40,10 +53,10 @@ export type AppDomainState = {
 
 export type AppTransientState = {
   selection: SelectedBuffer | null;
-  networkForm: NetworkForm;
   banner: Banner;
   channelList: ChannelListState;
   historyLoading: boolean;
+  networkManager: NetworkManagerState;
 };
 
 export type State = {
@@ -78,7 +91,13 @@ export type Action =
   | { type: 'channel-list-entry'; networkId: string; requestId: string; entry: ChannelListEntry }
   | { type: 'channel-list-completed'; networkId: string; requestId: string }
   | { type: 'channel-list-failed'; networkId: string; requestId: string; message: string }
-  | { type: 'set-network-form'; form: Partial<NetworkForm> }
-  | { type: 'reset-network-form'; form?: Partial<NetworkForm> }
+  | { type: 'open-network-manager' }
+  | { type: 'close-network-manager' }
+  | { type: 'set-network-manager-favorites'; value: boolean }
+  | { type: 'set-managed-network'; networkId: string | null }
+  | { type: 'open-network-editor'; editor: NetworkEditorState; managedNetworkId: string | null }
+  | { type: 'close-network-editor' }
+  | { type: 'set-network-editor-tab'; tab: EditorTab }
+  | { type: 'update-network-editor-form'; form: Partial<NetworkForm> }
   | { type: 'set-history-loading'; value: boolean }
   | { type: 'remove-network'; networkId: string };

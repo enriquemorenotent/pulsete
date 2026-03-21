@@ -9,6 +9,12 @@ export function dispatchServerMessage(message: ServerMessage, dispatch: Dispatch
   }
 }
 
+export function dispatchServerMessages(messages: readonly ServerMessage[], dispatch: Dispatch) {
+  for (const message of messages) {
+    dispatchServerMessage(message, dispatch);
+  }
+}
+
 const toActions = (message: ServerMessage): Action[] => {
   switch (message.type) {
     case 'state.ready':

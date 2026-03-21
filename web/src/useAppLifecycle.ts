@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { NetworkProfile } from '../../shared/protocol.js';
-import type { Action, AppDomainState, Banner, GatewayStatus } from './app-types.js';
+import type { Action, AppDomainState, AppTransientState, Banner, GatewayStatus } from './app-types.js';
 import { gatewayReconnectMessage } from './gateway.js';
 import { useGatewayConnection } from './useGatewayConnection.js';
 import { useAutoOpenNetworkManager, useManagedNetworkSelection } from './useNetworkManagerLifecycle.js';
@@ -16,12 +16,10 @@ type LifecycleParams = {
   gatewayStatus: GatewayStatus;
   networks: AppDomainState['networks'];
   phase: AppDomainState['phase'];
+  networkManager: AppTransientState['networkManager'];
   workspace: WorkspaceView;
   visibleNetworks: NetworkProfile[];
-  managedNetworkId: string | null;
   dispatch: (action: Action) => void;
-  setShowNetworkManager: (value: boolean) => void;
-  setManagedNetworkId: (value: string | null) => void;
   socketRef: MutableRef<SocketHandle | null>;
   scrollRef: MutableRef<HTMLDivElement | null>;
   didAutoOpenManagerRef: MutableRef<boolean>;
@@ -30,9 +28,10 @@ type LifecycleParams = {
 export function useAppLifecycle(params: LifecycleParams) {
   useAutoOpenNetworkManager({
     phase: params.phase,
+    networkManagerMode: params.networkManager.mode,
     connectionInstanceCount: params.workspace.connectionInstances.length,
     didAutoOpenManagerRef: params.didAutoOpenManagerRef,
-    setShowNetworkManager: params.setShowNetworkManager,
+    dispatch: params.dispatch,
   });
 
   useEffect(() => {
@@ -63,7 +62,7 @@ export function useAppLifecycle(params: LifecycleParams) {
     phase: params.phase,
     networks: params.networks,
     visibleNetworks: params.visibleNetworks,
-    managedNetworkId: params.managedNetworkId,
-    setManagedNetworkId: params.setManagedNetworkId,
+    managedNetworkId: params.networkManager.managedNetworkId,
+    dispatch: params.dispatch,
   });
 }

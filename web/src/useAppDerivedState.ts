@@ -9,9 +9,8 @@ import { deriveWorkspace } from './workspace.js';
 export function useAppDerivedState(
   state: State,
   conversation: ConversationIndex,
-  showFavoritesOnly: boolean,
-  managedNetworkId: string | null,
 ) {
+  const { managedNetworkId, showFavoritesOnly } = state.transient.networkManager;
   const workspace = useMemo(
     () =>
       deriveWorkspace({

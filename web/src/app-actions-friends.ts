@@ -3,6 +3,7 @@ import type { AppDomainState } from './app-types.js';
 import type { AppDispatch, BannerActions, ConversationActions } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
 import { api } from './client.js';
+import { dispatchServerMessages } from './server-message-actions.js';
 import { resolveFriendSelection } from './friend-selection.js';
 import type { WorkspaceView } from './workspace-types.js';
 
@@ -57,7 +58,7 @@ export const createFriendActions = ({
   const addFriend = async (nick: string) => {
     try {
       const result = await api.addFriend(nick);
-      dispatch({ type: 'upsert-friend', friend: result.friend });
+      dispatchServerMessages([{ type: 'friend.upsert', friend: result.friend }], dispatch);
       updateBanner('notice', 'Friend saved');
       return true;
     } catch (error) {
@@ -69,7 +70,7 @@ export const createFriendActions = ({
   const removeFriend = async (friendId: string) => {
     try {
       await api.removeFriend(friendId);
-      dispatch({ type: 'remove-friend', friendId });
+      dispatchServerMessages([{ type: 'friend.remove', friendId }], dispatch);
       updateBanner('notice', 'Friend removed');
       return true;
     } catch (error) {

@@ -1,5 +1,4 @@
-import type { Action, ChannelListState, State } from './app-types.js';
-import { emptyNetworkForm } from './network-form.js';
+import type { Action, ChannelListState, NetworkManagerState, State } from './app-types.js';
 
 export const initialChannelListState: ChannelListState = {
   open: false,
@@ -8,6 +7,13 @@ export const initialChannelListState: ChannelListState = {
   status: 'idle',
   entries: [],
   error: null,
+};
+
+export const initialNetworkManagerState: NetworkManagerState = {
+  mode: 'closed',
+  managedNetworkId: null,
+  showFavoritesOnly: false,
+  editor: null,
 };
 
 export const reduceUiAction = (state: State, action: Action): State | null => {
@@ -108,20 +114,112 @@ export const reduceUiAction = (state: State, action: Action): State | null => {
           },
         },
       };
-    case 'set-network-form':
+    case 'open-network-manager':
       return {
         ...state,
         transient: {
           ...state.transient,
-          networkForm: { ...state.transient.networkForm, ...action.form },
+          networkManager: {
+            ...state.transient.networkManager,
+            mode: 'manager',
+            editor: null,
+          },
         },
       };
-    case 'reset-network-form':
+    case 'close-network-manager':
       return {
         ...state,
         transient: {
           ...state.transient,
-          networkForm: { ...emptyNetworkForm(), ...action.form },
+          networkManager: {
+            ...state.transient.networkManager,
+            mode: 'closed',
+            editor: null,
+          },
+        },
+      };
+    case 'set-network-manager-favorites':
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkManager: {
+            ...state.transient.networkManager,
+            showFavoritesOnly: action.value,
+          },
+        },
+      };
+    case 'set-managed-network':
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkManager: {
+            ...state.transient.networkManager,
+            managedNetworkId: action.networkId,
+          },
+        },
+      };
+    case 'open-network-editor':
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkManager: {
+            ...state.transient.networkManager,
+            mode: 'editor',
+            managedNetworkId: action.managedNetworkId,
+            editor: action.editor,
+          },
+        },
+      };
+    case 'close-network-editor':
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkManager: {
+            ...state.transient.networkManager,
+            mode: 'manager',
+            editor: null,
+          },
+        },
+      };
+    case 'set-network-editor-tab':
+      if (!state.transient.networkManager.editor) {
+        return state;
+      }
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkManager: {
+            ...state.transient.networkManager,
+            editor: {
+              ...state.transient.networkManager.editor,
+              tab: action.tab,
+            },
+          },
+        },
+      };
+    case 'update-network-editor-form':
+      if (!state.transient.networkManager.editor) {
+        return state;
+      }
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkManager: {
+            ...state.transient.networkManager,
+            editor: {
+              ...state.transient.networkManager.editor,
+              form: {
+                ...state.transient.networkManager.editor.form,
+                ...action.form,
+              },
+            },
+          },
         },
       };
     case 'set-history-loading':

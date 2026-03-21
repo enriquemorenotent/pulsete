@@ -3,6 +3,7 @@ import type tls from 'node:tls';
 import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
 import type { MessageInput } from './storage.js';
 import type { PendingReplyContext } from './irc-reply-context.js';
+import type { ReplyTracker } from './irc-reply-tracker.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type ChannelSessionPhase = 'joining' | 'joined' | 'leaving';
@@ -117,6 +118,7 @@ export type IrcConnectionState = {
   channels: IrcChannelTrackingState;
   friendPresence: IrcFriendPresenceState;
   channelList: IrcChannelListState;
+  replyTracker: ReplyTracker;
   socket: IrcSocket | null;
   buffer: string;
   channelUsers: Map<string, ChannelUserState[]>;
@@ -184,5 +186,8 @@ export type IrcConnectionState = {
   ): Array<Extract<PendingReplyContext, { kind: 'channel' }>>;
   consumePendingNickReplyContexts(requestedNick: string): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
   discardPendingNickReplyContexts(): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
+  clearDrainingChannelList(): void;
+  isChannelListPending(): boolean;
+  startChannelList(mode: 'raw' | 'structured', options: { requestId?: string; sourceTarget?: string }): void;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
 };

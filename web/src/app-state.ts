@@ -2,7 +2,6 @@ import { useReducer } from 'react';
 import type { AppSnapshot } from '../../shared/protocol.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
-import { buildConversationModel } from './conversation-model.js';
 import {
   reduceConversationAction,
   sortBuffers,
@@ -10,8 +9,8 @@ import {
   sortPendingChannels,
 } from './app-state-conversations.js';
 import { reduceRuntimeAction } from './app-state-runtime.js';
-import { initialChannelListState, reduceUiAction } from './app-state-ui.js';
-import { emptyNetworkForm } from './network-form.js';
+import { initialChannelListState, initialNetworkManagerState, reduceUiAction } from './app-state-ui.js';
+import { createSelectionResolver } from './selection-state.js';
 import type { Action, State } from './app-types.js';
 
 export { initialChannelListState } from './app-state-ui.js';
@@ -31,10 +30,10 @@ const initialDomainState: AppDomainState = {
 
 const initialTransientState: AppTransientState = {
   selection: null,
-  networkForm: emptyNetworkForm(),
   banner: null,
   channelList: initialChannelListState,
   historyLoading: false,
+  networkManager: initialNetworkManagerState,
 };
 
 export const initialState: State = {
@@ -46,26 +45,27 @@ const reduceSnapshotState = (state: State, snapshot: AppSnapshot): State => {
   const networks = snapshot.networks;
   const buffers = sortBuffers(snapshot.buffers);
   const pendingChannels = sortPendingChannels(snapshot.pendingChannels);
-  const conversation = buildConversationModel({
+  const nextDomain: AppDomainState = {
+    phase: 'ready',
+    gatewayStatus: state.domain.gatewayStatus,
+    networks,
+    friends: sortFriends(snapshot.friends),
+    friendPresence: snapshot.friendPresence,
     buffers,
     channels: snapshot.channels,
     pendingChannels,
-    messages: {},
-  });
-  const selection = conversation.normalizeSelection(networks, state.transient.selection);
+    messages: indexConversationMessages(snapshot.messages),
+    networkStates: snapshot.networkStates,
+  };
+  const selection = createSelectionResolver({
+    buffers,
+    channels: snapshot.channels,
+    pendingChannels,
+    messages: nextDomain.messages,
+    networks,
+  }).normalizeSelection(state.transient.selection);
   return {
-    domain: {
-      phase: 'ready',
-      gatewayStatus: state.domain.gatewayStatus,
-      networks,
-      friends: sortFriends(snapshot.friends),
-      friendPresence: snapshot.friendPresence,
-      buffers,
-      channels: snapshot.channels,
-      pendingChannels,
-      messages: indexConversationMessages(snapshot.messages),
-      networkStates: snapshot.networkStates,
-    },
+    domain: nextDomain,
     transient: {
       ...state.transient,
       selection,

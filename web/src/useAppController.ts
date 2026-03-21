@@ -21,7 +21,7 @@ export function useAppController(): AppController {
   const composer = useComposerHistory();
   const ui = useAppUiState();
   const conversation = useMemo(() => buildConversationModel(state.domain), [state.domain]);
-  const derived = useAppDerivedState(state, conversation, ui.showFavoritesOnly, ui.managedNetworkId);
+  const derived = useAppDerivedState(state, conversation);
   const updateBanner = (kind: 'notice' | 'error', message: string) =>
     dispatch({ type: 'set-banner', banner: { kind, message } });
 
@@ -30,12 +30,10 @@ export function useAppController(): AppController {
     gatewayStatus: state.domain.gatewayStatus,
     networks: state.domain.networks,
     phase: state.domain.phase,
+    networkManager: state.transient.networkManager,
     workspace: derived.workspace,
     visibleNetworks: derived.visibleNetworks,
-    managedNetworkId: ui.managedNetworkId,
     dispatch,
-    setShowNetworkManager: ui.setShowNetworkManager,
-    setManagedNetworkId: ui.setManagedNetworkId,
     socketRef: ui.socketRef,
     scrollRef: ui.scrollRef,
     didAutoOpenManagerRef: ui.didAutoOpenManagerRef,

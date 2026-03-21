@@ -1,9 +1,10 @@
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile, ServerMessage } from '../../shared/protocol.js';
 import type { AppDispatch, BannerActions } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
 import { api } from './client.js';
 import type { ConversationIndex } from './conversation-selectors.js';
-import { createConnectionInstancePayload, toForm, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
+import { dispatchServerMessages } from './server-message-actions.js';
+import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
 
 type NetworkActionParams = BannerActions & {
   conversation: ConversationIndex;
@@ -11,6 +12,14 @@ type NetworkActionParams = BannerActions & {
 };
 
 export const createNetworkActions = ({ conversation, dispatch, updateBanner }: NetworkActionParams) => {
+  const dispatchSavedNetwork = (result: Awaited<ReturnType<typeof api.saveNetwork>>) => {
+    const messages: ServerMessage[] = [{ type: 'network.upsert', network: result.network }];
+    if (result.serverBuffer) {
+      messages.unshift({ type: 'buffer.upsert', buffer: result.serverBuffer });
+    }
+    dispatchServerMessages(messages, dispatch);
+  };
+
   const submitNetwork = async (form: NetworkForm) => {
     if (!form.name.trim()) {
       updateBanner('error', 'Network name is required');
@@ -26,11 +35,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
     }
     try {
       const result = await api.saveNetwork(toSaveNetworkPayload(form));
-      dispatch({ type: 'upsert-network', network: result.network });
-      if (result.serverBuffer) {
-        dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
-      }
-      dispatch({ type: 'reset-network-form', form: toForm(result.network) });
+      dispatchSavedNetwork(result);
       updateBanner('notice', 'Network saved');
       return result.network;
     } catch (error) {
@@ -42,9 +47,10 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const deleteNetwork = async (networkId: string) => {
     try {
       const result = await api.deleteNetwork(networkId);
-      for (const deletedNetworkId of result.deletedNetworkIds) {
-        dispatch({ type: 'remove-network', networkId: deletedNetworkId });
-      }
+      dispatchServerMessages(
+        result.deletedNetworkIds.map((deletedNetworkId) => ({ type: 'network.remove' as const, networkId: deletedNetworkId })),
+        dispatch
+      );
       updateBanner('notice', 'Network deleted');
       return result.deletedNetworkIds;
     } catch (error) {
@@ -56,7 +62,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const duplicateNetwork = async (network: NetworkProfile) => {
     try {
       const result = await api.duplicateNetwork(network.id);
-      dispatch({ type: 'upsert-network', network: result.network });
+      dispatchServerMessages([{ type: 'network.upsert', network: result.network }], dispatch);
       updateBanner('notice', 'Network duplicated');
       return result.network;
     } catch (error) {
@@ -68,9 +74,8 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const connectNetwork = async (network: NetworkProfile) => {
     try {
       const instance = await api.saveNetwork(createConnectionInstancePayload(network));
-      dispatch({ type: 'upsert-network', network: instance.network });
+      dispatchSavedNetwork(instance);
       if (instance.serverBuffer) {
-        dispatch({ type: 'upsert-buffer', buffer: instance.serverBuffer });
         selectBuffer(dispatch, instance.serverBuffer);
       }
       await api.connectNetwork(instance.network.id);
@@ -107,9 +112,10 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const closeConnection = async (network: NetworkProfile) => {
     try {
       const result = await api.deleteNetwork(network.id);
-      for (const deletedNetworkId of result.deletedNetworkIds) {
-        dispatch({ type: 'remove-network', networkId: deletedNetworkId });
-      }
+      dispatchServerMessages(
+        result.deletedNetworkIds.map((deletedNetworkId) => ({ type: 'network.remove' as const, networkId: deletedNetworkId })),
+        dispatch
+      );
       updateBanner('notice', 'Connection instance closed');
       return result.deletedNetworkIds;
     } catch (error) {
@@ -121,10 +127,7 @@ export const createNetworkActions = ({ conversation, dispatch, updateBanner }: N
   const saveFavorite = async (network: NetworkProfile, favorite: boolean) => {
     try {
       const result = await api.saveNetwork({ ...network, favorite });
-      dispatch({ type: 'upsert-network', network: result.network });
-      if (result.serverBuffer) {
-        dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
-      }
+      dispatchSavedNetwork(result);
       updateBanner('notice', favorite ? 'Marked as favorite' : 'Removed from favorites');
       return result.network;
     } catch (error) {

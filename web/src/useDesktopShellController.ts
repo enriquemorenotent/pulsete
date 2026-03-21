@@ -2,6 +2,7 @@ import type { NetworkProfile } from '../../shared/protocol.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
+import { emptyNetworkForm } from './network-form.js';
 import type { useAppActions } from './useAppActions.js';
 import type { useAppDerivedState } from './useAppDerivedState.js';
 import type { useAppUiState } from './useAppUiState.js';
@@ -16,49 +17,42 @@ type DesktopShellControllerParams = {
   ui: ReturnType<typeof useAppUiState>;
 };
 
-type NetworkEditorControllerParams = Pick<DesktopShellControllerParams, 'actions' | 'dispatch' | 'state' | 'ui'>;
+type NetworkEditorControllerParams = Pick<DesktopShellControllerParams, 'actions' | 'dispatch' | 'state'>;
 
-type NetworkManagerControllerParams = Pick<DesktopShellControllerParams, 'actions' | 'derived' | 'dispatch' | 'ui'>;
+type NetworkManagerControllerParams = Pick<DesktopShellControllerParams, 'actions' | 'derived' | 'dispatch' | 'state'>;
 
-const createOpenNewNetworkEditorDialog = (
-  dispatch: (action: Action) => void,
-  ui: ReturnType<typeof useAppUiState>
-) => () =>
+const createOpenNewNetworkEditorDialog = (dispatch: (action: Action) => void) => () =>
   openNewNetworkEditor({
     dispatch,
-    setEditorTab: ui.setEditorTab,
-    setManagedNetworkId: ui.setManagedNetworkId,
-    setShowNetworkManager: ui.setShowNetworkManager,
-    setShowNetworkEditor: ui.setShowNetworkEditor,
   });
 
 function useNetworkEditorController({
   actions,
   dispatch,
   state,
-  ui,
 }: NetworkEditorControllerParams): DesktopShellProps['networkEditor'] {
+  const editor = state.transient.networkManager.editor;
+
   const submitNetwork = async () => {
-    const network = await actions.submitNetwork(state.transient.networkForm);
+    if (!editor) {
+      return;
+    }
+    const network = await actions.submitNetwork(editor.form);
     if (!network) {
       return;
     }
-    ui.setManagedNetworkId(network.id);
-    ui.setShowNetworkEditor(false);
-    ui.setShowNetworkManager(true);
+    dispatch({ type: 'set-managed-network', networkId: network.id });
+    dispatch({ type: 'close-network-editor' });
   };
 
   return {
-    open: ui.showNetworkEditor,
-    form: state.transient.networkForm,
-    activeTab: ui.editorTab,
-    onTabChange: ui.setEditorTab,
-    onClose: () => {
-      ui.setShowNetworkEditor(false);
-      ui.setShowNetworkManager(true);
-    },
+    open: state.transient.networkManager.mode === 'editor',
+    form: editor?.form ?? emptyNetworkForm(),
+    activeTab: editor?.tab ?? 'servers',
+    onTabChange: (tab) => dispatch({ type: 'set-network-editor-tab', tab }),
+    onClose: () => dispatch({ type: 'close-network-editor' }),
     onSubmit: submitNetwork,
-    onChange: (form) => dispatch({ type: 'set-network-form', form }),
+    onChange: (form) => dispatch({ type: 'update-network-editor-form', form }),
   };
 }
 
@@ -66,42 +60,43 @@ function useNetworkManagerController({
   actions,
   derived,
   dispatch,
-  ui,
+  state,
 }: NetworkManagerControllerParams): DesktopShellProps['networkManager'] {
-  const openNewNetworkEditorDialog = createOpenNewNetworkEditorDialog(dispatch, ui);
+  const openNewNetworkEditorDialog = createOpenNewNetworkEditorDialog(dispatch);
+  const networkManager = state.transient.networkManager;
 
   const openExistingNetworkEditorDialog = (network: NetworkProfile) =>
     openExistingNetworkEditor(network, {
       dispatch,
-      setEditorTab: ui.setEditorTab,
-      setManagedNetworkId: ui.setManagedNetworkId,
-      setShowNetworkManager: ui.setShowNetworkManager,
-      setShowNetworkEditor: ui.setShowNetworkEditor,
     });
 
   const duplicateNetwork = async (network: NetworkProfile) => {
     const duplicate = await actions.duplicateNetwork(network);
     if (duplicate) {
-      ui.setManagedNetworkId(duplicate.id);
+      dispatch({ type: 'set-managed-network', networkId: duplicate.id });
     }
   };
 
   const connectNetwork = async (network: NetworkProfile) => {
     if (await actions.connectNetwork(network)) {
-      ui.setShowNetworkManager(false);
+      dispatch({ type: 'close-network-manager' });
     }
   };
 
   return {
-    open: ui.showNetworkManager,
+    open: networkManager.mode === 'manager',
     networks: derived.visibleNetworks,
     selected: derived.visibleManagedNetwork,
     runtime: derived.managedRuntime,
-    showFavoritesOnly: ui.showFavoritesOnly,
+    showFavoritesOnly: networkManager.showFavoritesOnly,
     hiddenManagedNetworkName: derived.hiddenManagedNetworkName,
-    onSelect: ui.setManagedNetworkId,
-    onToggleFavorites: () => ui.setShowFavoritesOnly((value) => !value),
-    onClose: () => ui.setShowNetworkManager(false),
+    onSelect: (networkId) => dispatch({ type: 'set-managed-network', networkId }),
+    onToggleFavorites: () =>
+      dispatch({
+        type: 'set-network-manager-favorites',
+        value: !networkManager.showFavoritesOnly,
+      }),
+    onClose: () => dispatch({ type: 'close-network-manager' }),
     onAdd: openNewNetworkEditorDialog,
     onEdit: () => derived.visibleManagedNetwork && openExistingNetworkEditorDialog(derived.visibleManagedNetwork),
     onDuplicate: () => derived.visibleManagedNetwork && duplicateNetwork(derived.visibleManagedNetwork),
@@ -127,7 +122,7 @@ export function useDesktopShellController({
       messageDisplayMode: ui.messageDisplayMode,
       showMessageDisplayModeToggle: import.meta.env.DEV,
       onMessageDisplayModeChange: ui.setMessageDisplayMode,
-      onOpenNetworkManager: () => ui.setShowNetworkManager(true),
+      onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
     },
     sidebar: {
       connections: derived.sidebarConnections,
@@ -173,7 +168,7 @@ export function useDesktopShellController({
       onRemoveFriend: actions.removeFriend,
       onSelectNick: actions.selectPrivateBuffer,
     },
-    networkManager: useNetworkManagerController({ actions, derived, dispatch, ui }),
-    networkEditor: useNetworkEditorController({ actions, dispatch, state, ui }),
+    networkManager: useNetworkManagerController({ actions, derived, dispatch, state }),
+    networkEditor: useNetworkEditorController({ actions, dispatch, state }),
   };
 }

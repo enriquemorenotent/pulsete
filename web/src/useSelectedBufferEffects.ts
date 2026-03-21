@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { BufferState } from '../../shared/protocol.js';
 import type { Action, GatewayStatus } from './app-types.js';
 import { api } from './client.js';
+import { dispatchServerMessage } from './server-message-actions.js';
 
 type UseSelectedBufferEffectsParams = {
   dispatch: (action: Action) => void;
@@ -23,9 +24,11 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
   useEffect(() => {
     const unread = params.selectedBuffer?.unread ?? 0;
     if (params.selectedBuffer && unread > 0) {
-      api.markBufferRead(params.selectedBuffer.id).catch(() => undefined);
+      api.markBufferRead(params.selectedBuffer.id)
+        .then((payload) => dispatchServerMessage({ type: 'buffer.upsert', buffer: payload.buffer }, params.dispatch))
+        .catch(() => undefined);
     }
-  }, [params.selectedBuffer?.id, params.selectedBuffer?.unread]);
+  }, [params.dispatch, params.selectedBuffer?.id, params.selectedBuffer?.unread]);
 
   useEffect(() => {
     historyRequestRef.current += 1;

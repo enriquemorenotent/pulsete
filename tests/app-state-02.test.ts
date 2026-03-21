@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { BufferState,NetworkProfile,PendingChannelState } from '../shared/protocol.js';
 import { initialChannelListState,initialState,reducer } from '../web/src/app-state.js';
 import type { State } from '../web/src/app-types.js';
+import { emptyNetworkForm } from '../web/src/network-form.js';
 import { resolveManagedNetworkId } from '../web/src/network-manager-state.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
@@ -147,4 +148,52 @@ test('resolveManagedNetworkId keeps a hidden selection while favorites are filte
   });
 
   assert.equal(managedNetworkId, nonFavorite.id);
+});
+
+test('network manager transitions between manager and editor modes inside reducer state', () => {
+  const opened = reducer(initialState, { type: 'open-network-manager' });
+  const editing = reducer(opened, {
+    type: 'open-network-editor',
+    managedNetworkId: 'network-1',
+    editor: {
+      kind: 'existing',
+      tab: 'servers',
+      form: { ...emptyNetworkForm(), id: 'network-1', name: 'Libera.Chat' },
+    },
+  });
+  const updated = reducer(editing, { type: 'update-network-editor-form', form: { host: 'irc.libera.chat' } });
+  const closed = reducer(updated, { type: 'close-network-editor' });
+
+  assert.equal(opened.transient.networkManager.mode, 'manager');
+  assert.equal(editing.transient.networkManager.mode, 'editor');
+  assert.equal(editing.transient.networkManager.managedNetworkId, 'network-1');
+  assert.equal(updated.transient.networkManager.editor?.form.host, 'irc.libera.chat');
+  assert.equal(closed.transient.networkManager.mode, 'manager');
+  assert.equal(closed.transient.networkManager.editor, null);
+});
+
+test('closing the network manager clears editor state but preserves favorites filter', () => {
+  const state = makeState({
+    transient: {
+      networkManager: {
+        mode: 'editor',
+        managedNetworkId: 'network-1',
+        showFavoritesOnly: true,
+        editor: {
+          kind: 'new',
+          tab: 'autojoin',
+          form: emptyNetworkForm(),
+        },
+      },
+    },
+  });
+
+  const nextState = reducer(state, { type: 'close-network-manager' });
+
+  assert.deepEqual(nextState.transient.networkManager, {
+    mode: 'closed',
+    managedNetworkId: 'network-1',
+    showFavoritesOnly: true,
+    editor: null,
+  });
 });
