@@ -1,3 +1,4 @@
+import { getChannelListSession } from './irc-channel-list-session.js';
 import type { IrcReplyStateContext } from './irc-contexts.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
 
@@ -44,11 +45,8 @@ export const discardPendingNickReplyContexts = (connection: ReplyTrackerContext)
 export const prunePendingReplyContexts = (connection: IrcReplyStateContext) => {
   const now = Date.now();
   connection.replyTracker.prune();
-  if (
-    connection.channelList.draining.mode
-    && connection.channelList.draining.expiresAt !== null
-    && connection.channelList.draining.expiresAt < now
-  ) {
+  const session = getChannelListSession(connection.channelList);
+  if (session.phase === 'draining' && session.expiresAt < now) {
     connection.ports.channelList.clearDrainingChannelList();
   }
 };

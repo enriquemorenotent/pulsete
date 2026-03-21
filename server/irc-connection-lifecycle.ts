@@ -1,12 +1,13 @@
 import { connectSocket } from './irc-connect.js';
+import {
+  applyOfflineLifecycleState,
+  resetRuntimeSessionState,
+  resolveProfileUpdateStrategy,
+} from './irc-connection-lifecycle-state.js';
 import type { IrcConnectContext, IrcLifecycleContext } from './irc-contexts.js';
 import { emitState, emitStatus } from './irc-emit.js';
-import { abortActiveChannelList, clearDrainingChannelList } from './irc-channel-list.js';
-import { clearChannelSessions } from './irc-channel-state.js';
-import { clearFriendPresenceTimer, updateOnlineFriendKeys } from './irc-friend-presence.js';
 import { createNickReplyContext } from './irc-reply-context.js';
 import { consumePendingNickReplyContexts, discardPendingNickReplyContexts } from './irc-reply-state.js';
-import { isSameIrcIdentifier } from './irc-parser.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export const openSocket = (
@@ -51,10 +52,7 @@ export const handleSocketClosed = (
   const failureMessage = lifecycle.lastFailureMessage;
   lifecycle.socket = null;
   resetTransientState(connection);
-  lifecycle.connected = false;
-  lifecycle.serverName = null;
-  lifecycle.currentNick = connection.profile.nick;
-  lifecycle.lastFailureMessage = null;
+  applyOfflineLifecycleState(connection);
   emitState(connection);
   if (wasConnected) {
     emitStatus(connection, 'Disconnected from server');
@@ -124,10 +122,7 @@ export const disconnect = (connection: IrcLifecycleContext, raw = 'QUIT :Client 
   }
   const wasActive = lifecycle.connected || socket !== null || lifecycle.serverName !== null;
   resetTransientState(connection);
-  lifecycle.connected = false;
-  lifecycle.serverName = null;
-  lifecycle.currentNick = connection.profile.nick;
-  lifecycle.lastFailureMessage = null;
+  applyOfflineLifecycleState(connection);
   if (wasActive) {
     emitState(connection);
     emitStatus(connection, 'Disconnected from server');
@@ -136,13 +131,8 @@ export const disconnect = (connection: IrcLifecycleContext, raw = 'QUIT :Client 
 
 export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNetworkProfile) => {
   const lifecycle = connection.lifecycle;
-  const reconnectPending = !lifecycle.connected && lifecycle.socket !== null;
-  const restartConnectingSocket = reconnectPending && requiresConnectingReconnect(connection.profile, profile);
-  const reconnectActiveSession = lifecycle.connected && requiresSessionReconnect(connection.profile, profile);
-  const applyNickUpdate = lifecycle.connected
-    && !reconnectActiveSession
-    && !isSameIrcIdentifier(connection.replyTracker.pendingNick ?? lifecycle.currentNick, profile.nick);
-  if (restartConnectingSocket) {
+  const strategy = resolveProfileUpdateStrategy(connection, profile);
+  if (strategy === 'restart-connecting-socket') {
     const socket = lifecycle.socket;
     lifecycle.socket = null;
     resetTransientState(connection);
@@ -152,11 +142,11 @@ export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNet
   if (!lifecycle.connected) {
     lifecycle.currentNick = profile.nick;
   }
-  if (restartConnectingSocket) {
+  if (strategy === 'restart-connecting-socket') {
     connectSocket(connection);
-  } else if (reconnectActiveSession) {
+  } else if (strategy === 'reconnect-active-session') {
     reconnectWithUpdatedProfile(connection);
-  } else if (applyNickUpdate) {
+  } else if (strategy === 'update-live-nick') {
     connection.ports.command.setNick(profile.nick);
   }
 };
@@ -178,15 +168,8 @@ export const clearConnectDeadlineTimer = (connection: IrcLifecycleContext) => {
 };
 
 export const resetTransientState = (connection: IrcLifecycleContext) => {
-  connection.lifecycle.buffer = '';
-  clearChannelSessions(connection);
-  abortActiveChannelList(connection, 'Channel list request was interrupted');
-  clearDrainingChannelList(connection);
-  connection.replyTracker.reset();
-  connection.friendPresence.pendingPoll = null;
   clearConnectDeadlineTimer(connection);
-  clearFriendPresenceTimer(connection);
-  updateOnlineFriendKeys(connection, []);
+  resetRuntimeSessionState(connection);
 };
 
 export const reconnectWithUpdatedProfile = (connection: IrcConnectContext) => {
@@ -196,11 +179,8 @@ export const reconnectWithUpdatedProfile = (connection: IrcConnectContext) => {
   lifecycle.reconnectAttempts = 0;
   lifecycle.socket = null;
   resetTransientState(connection);
-  lifecycle.connected = false;
-  lifecycle.serverName = null;
-  lifecycle.currentNick = connection.profile.nick;
+  applyOfflineLifecycleState(connection);
   connection.replyTracker.setPendingNick(null);
-  lifecycle.lastFailureMessage = null;
   emitState(connection);
   emitStatus(connection, 'Reconnecting to apply updated network settings', 'notice');
   try {
@@ -232,17 +212,3 @@ export const scheduleReconnect = (connection: IrcLifecycleContext) => {
 
 export const formatConnectionFailure = (connection: IrcLifecycleContext, detail: string) =>
   `Unable to connect to ${connection.profile.host}:${connection.profile.port} (${detail})`;
-
-const requiresSocketRestart = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
-  current.host !== next.host || current.port !== next.port || current.tls !== next.tls;
-
-const requiresConnectingReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
-  current.nick !== next.nick || requiresSessionReconnect(current, next);
-
-const requiresSessionReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
-  requiresSocketRestart(current, next)
-  || current.password !== next.password
-  || current.username !== next.username
-  || getReportedRealName(current) !== getReportedRealName(next);
-
-const getReportedRealName = (profile: RuntimeNetworkProfile) => profile.realName || profile.name;

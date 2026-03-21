@@ -37,12 +37,12 @@ export type WorkspaceActions = {
   workspace: WorkspaceView;
 };
 
-export type DomainSlice = {
-  domain: Pick<AppDomainState, 'buffers' | 'networkStates' | 'networks'>;
-};
-
-export type ChannelListSlice = {
+export type AppActionState = {
+  buffers: AppDomainState['buffers'];
   channelList: AppTransientState['channelList'];
+  gatewayStatus: AppDomainState['gatewayStatus'];
+  networks: AppDomainState['networks'];
+  networkStates: AppDomainState['networkStates'];
 };
 
 export const selectBuffer = (dispatch: AppDispatch, buffer: BufferState) =>

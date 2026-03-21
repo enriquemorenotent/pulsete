@@ -103,9 +103,13 @@ const createParams = (options: {
     banners,
     composerEntries,
     params: {
+      buffers: state.domain.buffers,
+      channelList: state.transient.channelList,
       conversation: buildConversationIndex(state.domain),
-      state,
       draft: options.draft ?? '',
+      gatewayStatus: state.domain.gatewayStatus,
+      networks: state.domain.networks,
+      networkStates: state.domain.networkStates,
       workspace,
       dispatch: (action: Action) => {
         actions.push(action);
