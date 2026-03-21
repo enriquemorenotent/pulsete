@@ -1,55 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState,NetworkProfile,PendingChannelState } from '../shared/protocol.js';
 import { initialChannelListState,initialState,reducer } from '../web/src/app-state.js';
-import type { State } from '../web/src/app-types.js';
 import { emptyNetworkForm } from '../web/src/network-form.js';
 import { resolveManagedNetworkId } from '../web/src/network-manager-state.js';
-
-const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
-  id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? false,
-  name: overrides.name ?? 'Libera.Chat',
-  host: overrides.host ?? 'irc.libera.chat',
-  port: overrides.port ?? 6697,
-  tls: overrides.tls ?? true,
-  nick: overrides.nick ?? 'tester',
-  altNicks: overrides.altNicks ?? ['tester_', 'tester__'],
-  username: overrides.username ?? 'tester',
-  realName: overrides.realName ?? 'tester',
-  hasPassword: overrides.hasPassword ?? false,
-  favorite: overrides.favorite ?? false,
-  autoJoin: overrides.autoJoin ?? [],
-});
-
-const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
-  id: overrides.id ?? 'buffer-1',
-  networkId: overrides.networkId ?? 'network-1',
-  kind: overrides.kind ?? 'server',
-  target: overrides.target ?? 'server',
-  unread: overrides.unread ?? 0,
-});
-
-const makePendingChannel = (overrides: Partial<PendingChannelState> = {}): PendingChannelState => ({
-  networkId: overrides.networkId ?? 'network-1',
-  channel: overrides.channel ?? '#help',
-});
-
-const makeState = (overrides: {
-  domain?: Partial<State['domain']>;
-  transient?: Partial<State['transient']>;
-} = {}): State => ({
-  ...initialState,
-  domain: {
-    ...initialState.domain,
-    ...overrides.domain,
-  },
-  transient: {
-    ...initialState.transient,
-    ...overrides.transient,
-  },
-});
+import { makeBuffer, makeNetwork, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
 test('removing a pending channel falls back to the same network server buffer', () => {
   const serverBuffer = makeBuffer({ id: 'server-1', kind: 'server' });

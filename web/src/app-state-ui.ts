@@ -22,17 +22,9 @@ export const reduceTransientAction = (
   action: Action
 ): AppTransientState | null => {
   switch (action.type) {
-    case 'snapshot':
-      return {
-        ...transient,
-        banner: null,
-        channelList: initialChannelListState,
-        historyLoading: false,
-      };
     case 'select':
       return {
         ...transient,
-        selection: action.selection,
         banner: null,
       };
     case 'set-banner':

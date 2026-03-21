@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isSavedNetwork } from '../../shared/network-model.js';
+import { listSavedNetworks } from '../../shared/network-model.js';
 import type { State } from './app-types.js';
 import type { ConversationIndex } from './conversation-selectors.js';
 import { buildConnectionSidebarView } from './connection-sidebar-view.js';
@@ -21,7 +21,7 @@ export function useAppDerivedState(
       }),
     [conversation, state.domain.networkStates, state.domain.networks, state.transient.selection]
   );
-  const managerNetworks = useMemo(() => state.domain.networks.filter(isSavedNetwork), [state.domain.networks]);
+  const managerNetworks = useMemo(() => listSavedNetworks(state.domain.networks), [state.domain.networks]);
   const visibleNetworks = useMemo(
     () => (showFavoritesOnly ? managerNetworks.filter((network) => network.favorite) : managerNetworks),
     [managerNetworks, showFavoritesOnly]

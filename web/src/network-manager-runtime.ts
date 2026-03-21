@@ -1,4 +1,4 @@
-import { getNetworkRootId } from '../../shared/network-model.js';
+import { listConnectionPeers } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
@@ -10,7 +10,7 @@ export function buildManagedRuntime(
   if (!managedNetwork) {
     return null;
   }
-  const instances = connectionInstances.filter((network) => getNetworkRootId(network) === managedNetwork.id);
+  const instances = listConnectionPeers(connectionInstances, managedNetwork.id);
   if (instances.some((network) => networkStates[network.id]?.phase === 'connected')) {
     return { phase: 'connected' as const, serverName: null, nick: managedNetwork.nick };
   }

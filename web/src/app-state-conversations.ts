@@ -2,7 +2,7 @@ import type { AppDomainState, Action } from './app-types.js';
 import type { BufferState, FriendState, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { appendConversationMessages, removeBufferMessages } from './conversation-message-state.js';
-import { createSelectionResolver } from './selection-state.js';
+import { buildConversationIndex } from './conversation-selectors.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -25,7 +25,7 @@ export const reduceConversationDomain = (
   domain: AppDomainState,
   action: Action,
 ): AppDomainState | null => {
-  const conversation = createSelectionResolver(domain).conversation;
+  const conversation = buildConversationIndex(domain);
 
   switch (action.type) {
     case 'upsert-friend': {

@@ -18,3 +18,14 @@ export const isSavedNetwork = (network: NetworkProfile): network is SavedNetwork
 
 export const getNetworkRootId = (network: Pick<NetworkProfile, 'id' | 'templateId'>) =>
   network.templateId ?? network.id;
+
+export const listSavedNetworks = (networks: readonly NetworkProfile[]) =>
+  networks.filter(isSavedNetwork);
+
+export const listConnectionInstances = (networks: readonly NetworkProfile[]) =>
+  networks.filter(isConnectionInstance);
+
+export const listConnectionPeers = (
+  networks: readonly NetworkProfile[],
+  rootId: string
+) => listConnectionInstances(networks).filter((network) => getNetworkRootId(network) === rootId);

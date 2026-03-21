@@ -1,82 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AppSnapshot,BufferState,ChatMessage,FriendState,NetworkProfile,PendingChannelState } from '../shared/protocol.js';
 import { initialChannelListState,initialState,reducer } from '../web/src/app-state.js';
-import type { State } from '../web/src/app-types.js';
 import { indexConversationMessages } from '../web/src/conversation-message-state.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
-
-const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
-  id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? false,
-  name: overrides.name ?? 'Libera.Chat',
-  host: overrides.host ?? 'irc.libera.chat',
-  port: overrides.port ?? 6697,
-  tls: overrides.tls ?? true,
-  nick: overrides.nick ?? 'tester',
-  altNicks: overrides.altNicks ?? ['tester_', 'tester__'],
-  username: overrides.username ?? 'tester',
-  realName: overrides.realName ?? 'tester',
-  hasPassword: overrides.hasPassword ?? false,
-  favorite: overrides.favorite ?? false,
-  autoJoin: overrides.autoJoin ?? [],
-});
-
-const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
-  id: overrides.id ?? 'buffer-1',
-  networkId: overrides.networkId ?? 'network-1',
-  kind: overrides.kind ?? 'server',
-  target: overrides.target ?? 'server',
-  unread: overrides.unread ?? 0,
-});
-
-const makeFriend = (overrides: Partial<FriendState> = {}): FriendState => ({
-  id: overrides.id ?? 'friend-1',
-  nick: overrides.nick ?? 'alice',
-});
-
-const makePendingChannel = (overrides: Partial<PendingChannelState> = {}): PendingChannelState => ({
-  networkId: overrides.networkId ?? 'network-1',
-  channel: overrides.channel ?? '#help',
-});
-
-const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
-  id: overrides.id ?? 'message-1',
-  networkId: overrides.networkId ?? 'network-1',
-  target: overrides.target ?? '#help',
-  nick: overrides.nick ?? 'alice',
-  body: overrides.body ?? 'hello',
-  kind: overrides.kind ?? 'line',
-  self: overrides.self ?? false,
-  ts: overrides.ts ?? 1,
-});
-
-const emptySnapshot = (): AppSnapshot => ({
-  networks: [],
-  friends: [],
-  friendPresence: {},
-  buffers: [],
-  channels: [],
-  pendingChannels: [],
-  messages: [],
-  networkStates: {},
-});
-
-const makeState = (overrides: {
-  domain?: Partial<State['domain']>;
-  transient?: Partial<State['transient']>;
-} = {}): State => ({
-  ...initialState,
-  domain: {
-    ...initialState.domain,
-    ...overrides.domain,
-  },
-  transient: {
-    ...initialState.transient,
-    ...overrides.transient,
-  },
-});
+import { emptySnapshot, makeBuffer, makeFriend, makeMessage, makeNetwork, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
 test('snapshot enters the ready phase and clears any banner', () => {
   const dirtyState = makeState({

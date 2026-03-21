@@ -1,4 +1,4 @@
-import { isSavedNetwork } from '../shared/network-model.js';
+import { listSavedNetworks } from '../shared/network-model.js';
 import type { NetworkProfile } from '../shared/protocol.js';
 import { notFound } from './app-error.js';
 import { Storage } from './storage.js';
@@ -37,8 +37,7 @@ export const resolveReplyTarget = (store: Storage, networkId: string, sourceBuff
 
 export const createDuplicateNetworkName = (name: string, networks: NetworkProfile[]) => {
   const existingNames = new Set(
-    networks
-      .filter(isSavedNetwork)
+    listSavedNetworks(networks)
       .map((network) => network.name.toLocaleLowerCase())
   );
   const baseName = `${name} copy`;

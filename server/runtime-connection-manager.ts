@@ -50,7 +50,7 @@ export class RuntimeConnectionManager {
       connection = new IrcConnection(profile, {
         onEvent: (event) => this.handleConnectionEvent(event),
       });
-      connection.friendPresencePort.setFriendNicks(this.store.listFriends().map((friend) => friend.nick));
+      connection.runtimeSession.friendPresence.setFriendNicks(this.store.listFriends().map((friend) => friend.nick));
       this.connections.set(networkId, connection);
     }
     return connection;
@@ -97,7 +97,7 @@ export class RuntimeConnectionManager {
   syncFriendTracking() {
     const friendNicks = this.store.listFriends().map((friend) => friend.nick);
     for (const connection of this.connections.values()) {
-      connection.friendPresencePort.setFriendNicks(friendNicks);
+      connection.runtimeSession.friendPresence.setFriendNicks(friendNicks);
     }
   }
 
