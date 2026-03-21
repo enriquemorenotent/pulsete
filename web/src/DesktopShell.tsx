@@ -14,7 +14,7 @@ import type { EditorTab, NetworkForm } from './network-form.js';
 import { useSidebarResize } from './useSidebarResize.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 
-type DesktopShellProps = {
+export type DesktopShellProps = {
   workspace: WorkspaceView;
   header: {
     messageDisplayMode: MessageDisplayMode;
