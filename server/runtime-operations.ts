@@ -11,9 +11,9 @@ import {
   normalizeRawCommand,
 } from './irc-validate.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
+import { RuntimeConversations } from './runtime-conversations.js';
 import {
   createDuplicateNetworkName,
-  getRequiredBuffer,
   getRequiredNetwork,
   getRequiredRuntimeNetwork,
   resolveReplyTarget,
@@ -24,25 +24,26 @@ import { type NetworkInput, Storage } from './storage.js';
 type RuntimeOperationsOptions = {
   store: Storage;
   connectionManager: RuntimeConnectionManager;
+  conversations: RuntimeConversations;
   send(message: ServerMessage): void;
 };
 
 export class RuntimeOperations {
   private readonly store: Storage;
   private readonly connectionManager: RuntimeConnectionManager;
+  private readonly conversations: RuntimeConversations;
   private readonly send: RuntimeOperationsOptions['send'];
 
   constructor(options: RuntimeOperationsOptions) {
     this.store = options.store;
     this.connectionManager = options.connectionManager;
+    this.conversations = options.conversations;
     this.send = options.send;
   }
 
   openQuery(networkId: string, target: string) {
     getRequiredNetwork(this.store, networkId);
-    const buffer = this.store.upsertQuery(networkId, normalizeQueryTarget(target));
-    this.send({ type: 'buffer.upsert', buffer });
-    return buffer;
+    return this.conversations.openQuery(networkId, normalizeQueryTarget(target));
   }
 
   duplicateNetwork(networkId: string) {
@@ -110,29 +111,15 @@ export class RuntimeOperations {
   }
 
   closeBuffer(bufferId: string) {
-    const buffer = getRequiredBuffer(this.store, bufferId);
-    if (buffer.kind !== 'query') {
-      throw badRequest('Only private message buffers can be closed');
-    }
-    const removedBuffer = this.store.removeBuffer(bufferId) ?? buffer;
-    this.send({ type: 'buffer.remove', networkId: removedBuffer.networkId, bufferId: removedBuffer.id });
-    return removedBuffer;
+    return this.conversations.closeQueryBuffer(bufferId);
   }
 
   markBufferRead(bufferId: string) {
-    const buffer = getRequiredBuffer(this.store, bufferId);
-    if (buffer.unread === 0) {
-      return buffer;
-    }
-    this.store.markBufferRead(bufferId);
-    const updatedBuffer = getRequiredBuffer(this.store, bufferId);
-    this.send({ type: 'buffer.upsert', buffer: updatedBuffer });
-    return updatedBuffer;
+    return this.conversations.markBufferRead(bufferId);
   }
 
   history(bufferId: string, limit: number) {
-    const buffer = getRequiredBuffer(this.store, bufferId);
-    return this.store.listMessages(buffer.networkId, buffer.target, limit);
+    return this.conversations.listBufferHistory(bufferId, limit);
   }
 
   saveNetwork(data: unknown, networkId?: string) {

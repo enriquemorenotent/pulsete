@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import type { ServerMessage } from '../shared/protocol.js';
 import type { IrcConnection } from './irc.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
+import { RuntimeConversations } from './runtime-conversations.js';
 import { handleRuntimeEvent } from './runtime-events.js';
 import { getRequiredNetwork } from './runtime-operation-utils.js';
 import { RuntimeOperations } from './runtime-operations.js';
@@ -12,6 +13,7 @@ export class Runtime {
   readonly store: Storage;
   readonly connections: Map<string, IrcConnection>;
   private readonly socketHub: RuntimeSocketHub;
+  private readonly conversations: RuntimeConversations;
   private readonly connectionManager: RuntimeConnectionManager;
   private readonly operations: RuntimeOperations;
   private closing = false;
@@ -19,16 +21,21 @@ export class Runtime {
   constructor(store: Storage) {
     this.store = store;
     this.socketHub = new RuntimeSocketHub((ws) => this.connectionManager.removeSocket(ws));
+    this.conversations = new RuntimeConversations({
+      store,
+      send: (message) => this.send(message),
+    });
     this.connectionManager = new RuntimeConnectionManager({
       store,
       send: (message) => this.send(message),
       sendSocket: (ws, message) => this.socketHub.sendSocket(ws, message),
-      onRuntimeEvent: (event) => handleRuntimeEvent(this, event),
+      onRuntimeEvent: (event) => handleRuntimeEvent({ store: this.store, send: (message) => this.send(message) }, event, this.conversations),
       isClosing: () => this.closing,
     });
     this.operations = new RuntimeOperations({
       store,
       connectionManager: this.connectionManager,
+      conversations: this.conversations,
       send: (message) => this.send(message),
     });
     this.connections = this.connectionManager.connections;
