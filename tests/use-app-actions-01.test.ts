@@ -4,6 +4,7 @@ import type { BufferState,ChannelState,ClientMessage,NetworkProfile } from '../s
 import { initialState } from '../web/src/app-state.js';
 import type { Action,State } from '../web/src/app-types.js';
 import type { SocketHandle } from '../web/src/client.js';
+import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { useAppActions } from '../web/src/useAppActions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
@@ -58,23 +59,33 @@ const workspace: WorkspaceView = {
   showNicklist: true,
 };
 
-const makeState = (overrides: Partial<State> = {}): State => ({
+const makeState = (overrides: {
+  domain?: Partial<State['domain']>;
+  transient?: Partial<State['transient']>;
+} = {}): State => ({
   ...initialState,
-  phase: 'ready',
-  gatewayStatus: 'connected',
-  networks: [network],
-  buffers: [selectedBuffer],
-  channels: [selectedChannel],
-  pendingChannels: [],
-  selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-  networkStates: {
-    [network.id]: {
-      phase: 'connected',
-      serverName: 'irc.example.test',
-      nick: 'tester',
+  domain: {
+    ...initialState.domain,
+    phase: 'ready',
+    gatewayStatus: 'connected',
+    networks: [network],
+    buffers: [selectedBuffer],
+    channels: [selectedChannel],
+    pendingChannels: [],
+    networkStates: {
+      [network.id]: {
+        phase: 'connected',
+        serverName: 'irc.example.test',
+        nick: 'tester',
+      },
     },
+    ...overrides.domain,
   },
-  ...overrides,
+  transient: {
+    ...initialState.transient,
+    selection: { kind: 'buffer', bufferId: selectedBuffer.id },
+    ...overrides.transient,
+  },
 });
 
 const createParams = (options: {
@@ -92,6 +103,7 @@ const createParams = (options: {
     banners,
     composerEntries,
     params: {
+      conversation: buildConversationIndex(state.domain),
       state,
       draft: options.draft ?? '',
       workspace,
@@ -171,14 +183,18 @@ test('joinChannelFromList reuses an existing pending channel selection without s
   const sent: ClientMessage[] = [];
   const { params, actions: dispatched, banners } = createParams({
     state: makeState({
-      pendingChannels: [{ networkId: network.id, channel: '#help' }],
-      channelList: {
-        open: true,
-        networkId: network.id,
-        requestId: 'request-1',
-        status: 'ready',
-        entries: [],
-        error: null,
+      domain: {
+        pendingChannels: [{ networkId: network.id, channel: '#help' }],
+      },
+      transient: {
+        channelList: {
+          open: true,
+          networkId: network.id,
+          requestId: 'request-1',
+          status: 'ready',
+          entries: [],
+          error: null,
+        },
       },
     }),
     socket: {

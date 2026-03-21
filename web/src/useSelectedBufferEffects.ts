@@ -1,17 +1,17 @@
 import { useEffect, useRef } from 'react';
 import type { BufferState } from '../../shared/protocol.js';
-import type { Action, State } from './app-types.js';
+import type { Action, GatewayStatus } from './app-types.js';
 import { api } from './client.js';
 
 type UseSelectedBufferEffectsParams = {
   dispatch: (action: Action) => void;
-  gatewayStatus: State['gatewayStatus'];
+  gatewayStatus: GatewayStatus;
   selectedBuffer: BufferState | null;
 };
 
 type LoadSelectedBufferHistoryParams = {
   bufferId: string | null;
-  gatewayStatus: State['gatewayStatus'];
+  gatewayStatus: GatewayStatus;
   dispatch: (action: Action) => void;
   loadHistory: typeof api.loadHistory;
   isCurrentRequest: () => boolean;

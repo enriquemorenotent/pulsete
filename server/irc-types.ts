@@ -46,6 +46,64 @@ export type Handlers = {
 
 export type IrcSocket = net.Socket | tls.TLSSocket;
 
+export type IrcLifecycleState = {
+  socket: IrcSocket | null;
+  buffer: string;
+  connectDeadlineTimer: ReturnType<typeof setTimeout> | null;
+  manualDisconnect: boolean;
+  reconnectAttempts: number;
+  reconnectTimer: ReturnType<typeof setTimeout> | null;
+  connected: boolean;
+  serverName: string | null;
+  currentNick: string;
+  lastFailureMessage: string | null;
+};
+
+export type IrcChannelTrackingState = {
+  users: Map<string, ChannelUserState[]>;
+  sessions: Map<string, ChannelSessionState>;
+  joinTimeoutMs: number;
+};
+
+export type FriendPresencePollState = {
+  id: number;
+  remainingResponses: number;
+  onlineNicks: string[];
+};
+
+export type IrcFriendPresenceState = {
+  nicks: string[];
+  onlineKeys: Set<string>;
+  timer: ReturnType<typeof setInterval> | null;
+  pendingPoll: FriendPresencePollState | null;
+  nextPollId: number;
+  enabled: boolean;
+};
+
+type IrcChannelListMode = 'raw' | 'structured';
+
+export type IrcChannelListActiveState = {
+  mode: IrcChannelListMode | null;
+  sourceTarget: string | null;
+  requestId: string | null;
+  entries: ChannelListEntry[];
+};
+
+export type IrcChannelListDrainingState = {
+  mode: IrcChannelListMode | null;
+  sourceTarget: string | null;
+  requestId: string | null;
+  expiresAt: number | null;
+};
+
+export type IrcChannelListState = {
+  active: IrcChannelListActiveState;
+  draining: IrcChannelListDrainingState;
+  timeoutTimer: ReturnType<typeof setTimeout> | null;
+  timeoutMs: number;
+  drainGraceMs: number;
+};
+
 export type ParsedLine = {
   prefix: string | null;
   command: string;
@@ -55,6 +113,10 @@ export type ParsedLine = {
 export type IrcConnectionState = {
   profile: RuntimeNetworkProfile;
   handlers: Handlers;
+  lifecycle: IrcLifecycleState;
+  channels: IrcChannelTrackingState;
+  friendPresence: IrcFriendPresenceState;
+  channelList: IrcChannelListState;
   socket: IrcSocket | null;
   buffer: string;
   channelUsers: Map<string, ChannelUserState[]>;

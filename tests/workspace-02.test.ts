@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState,ChannelState,NetworkProfile,PendingChannelState } from '../shared/protocol.js';
+import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import {
   deriveWorkspace,
   type NetworkRuntimeState,
@@ -60,9 +61,12 @@ const derive = ({
 } = {}) =>
   deriveWorkspace({
     networks,
-    buffers,
-    channels,
-    pendingChannels,
+    conversation: buildConversationIndex({
+      buffers,
+      channels,
+      pendingChannels,
+      messages: {},
+    }),
     selection,
     networkStates: runtime ? { [networks[0].id]: runtime } : {},
   });

@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ConnectionSidebar } from '../web/src/ConnectionSidebar.js';
 import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import { buildConnectionSidebarView } from '../web/src/connection-sidebar-view.js';
+import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import type { NetworkRuntimeState } from '../web/src/workspace.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
@@ -45,8 +46,12 @@ test('offline connections keep channel and query rows visible and selectable', (
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
         networks: [network],
-        buffers: [makeBuffer({ id: 'server-1' }), channel, query],
-        pendingChannels: [],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), channel, query],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
         networkStates: { [network.id]: makeRuntime({ phase: 'offline' }) },
         selection: { kind: 'buffer', bufferId: 'server-1' },
       })}
@@ -78,8 +83,12 @@ test('friend rows expose online and offline cues', () => {
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
         networks: [] satisfies NetworkProfile[],
-        buffers: [] satisfies BufferState[],
-        pendingChannels: [],
+        conversation: buildConversationIndex({
+          buffers: [] satisfies BufferState[],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
         networkStates: {},
         selection: null,
       })}
@@ -109,8 +118,12 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
         networks: [network],
-        buffers: [makeBuffer({ id: 'server-1' })],
-        pendingChannels: [{ networkId: network.id, channel: '#Help' }],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' })],
+          channels: [],
+          pendingChannels: [{ networkId: network.id, channel: '#Help' }],
+          messages: {},
+        }),
         networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
         selection: { kind: 'pending-channel', networkId: network.id, channel: '#help' },
       })}

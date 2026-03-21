@@ -9,15 +9,15 @@ import type { Storage } from './storage.js';
 
 type RuntimeConnectionManagerOptions = {
   store: Storage;
-  send(message: ServerMessage): void;
+  publish(messages: ServerMessage[]): void;
   sendSocket(ws: WebSocket, message: ServerMessage): void;
-  onRuntimeEvent(event: RuntimeEvent): void;
+  onRuntimeEvent(event: RuntimeEvent): ServerMessage[];
   isClosing(): boolean;
 };
 
 export class RuntimeConnectionManager {
   private readonly store: Storage;
-  private readonly send: RuntimeConnectionManagerOptions['send'];
+  private readonly publish: RuntimeConnectionManagerOptions['publish'];
   private readonly sendSocket: RuntimeConnectionManagerOptions['sendSocket'];
   private readonly onRuntimeEvent: RuntimeConnectionManagerOptions['onRuntimeEvent'];
   private readonly isClosing: RuntimeConnectionManagerOptions['isClosing'];
@@ -28,7 +28,7 @@ export class RuntimeConnectionManager {
 
   constructor(options: RuntimeConnectionManagerOptions) {
     this.store = options.store;
-    this.send = options.send;
+    this.publish = options.publish;
     this.sendSocket = options.sendSocket;
     this.onRuntimeEvent = options.onRuntimeEvent;
     this.isClosing = options.isClosing;
@@ -103,7 +103,7 @@ export class RuntimeConnectionManager {
       this.channelLists.clearNetwork(networkId);
       this.friendPresenceByNetwork.delete(networkId);
     }
-    this.broadcastFriendPresenceDiffs();
+    return this.collectFriendPresenceDiffs();
   }
 
   syncFriendTracking() {
@@ -117,16 +117,17 @@ export class RuntimeConnectionManager {
     this.friendPresenceCache.delete(friendId);
   }
 
-  broadcastFriendPresenceDiffs() {
+  collectFriendPresenceDiffs() {
     const friends = this.store.listFriends();
     const nextPresence = this.computeFriendPresence(friends);
+    const messages: ServerMessage[] = [];
     for (const friend of friends) {
       const online = nextPresence[friend.id] ?? false;
       if (this.friendPresenceCache.get(friend.id) === online) {
         continue;
       }
       this.friendPresenceCache.set(friend.id, online);
-      this.send({ type: 'friend.presence', friendId: friend.id, online });
+      messages.push({ type: 'friend.presence', friendId: friend.id, online });
     }
     for (const friendId of Array.from(this.friendPresenceCache.keys())) {
       if (friendId in nextPresence) {
@@ -134,6 +135,7 @@ export class RuntimeConnectionManager {
       }
       this.friendPresenceCache.delete(friendId);
     }
+    return messages;
   }
 
   private handleConnectionEvent(event: RuntimeEvent) {
@@ -146,14 +148,14 @@ export class RuntimeConnectionManager {
         event.networkId,
         new Set(event.onlineNicks.map(normalizeIrcIdentifier))
       );
-      this.broadcastFriendPresenceDiffs();
+      this.publish(this.collectFriendPresenceDiffs());
       return;
     }
 
     if (event.type === 'state' && event.phase === 'offline') {
       this.channelLists.clearNetwork(event.networkId);
       if (this.friendPresenceByNetwork.delete(event.networkId)) {
-        this.broadcastFriendPresenceDiffs();
+        this.publish(this.collectFriendPresenceDiffs());
       }
     }
 
@@ -166,7 +168,7 @@ export class RuntimeConnectionManager {
       return;
     }
 
-    this.onRuntimeEvent(event);
+    this.publish(this.onRuntimeEvent(event));
   }
 
   private computeFriendPresence(friends: FriendState[]) {

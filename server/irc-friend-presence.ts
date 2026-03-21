@@ -7,13 +7,15 @@ import type { IrcConnection } from './irc.js';
 const friendPresencePollMs = 60_000;
 
 export const setFriendNicks = (connection: IrcConnection, nicks: string[]) => {
-  connection.friendNicks = dedupeFriendNicks(nicks);
-  const currentOnline = connection.friendNicks.filter(
-    (nick) => connection.onlineFriendKeys.has(normalizeIrcIdentifier(nick))
+  const presence = connection.friendPresence;
+  const lifecycle = connection.lifecycle;
+  presence.nicks = dedupeFriendNicks(nicks);
+  const currentOnline = presence.nicks.filter(
+    (nick) => presence.onlineKeys.has(normalizeIrcIdentifier(nick))
   );
   updateOnlineFriendKeys(connection, currentOnline);
-  if (!connection.connected || !connection.socket || !connection.friendPresenceEnabled || connection.friendNicks.length === 0) {
-    connection.pendingFriendPresencePoll = null;
+  if (!lifecycle.connected || !lifecycle.socket || !presence.enabled || presence.nicks.length === 0) {
+    presence.pendingPoll = null;
     clearFriendPresenceTimer(connection);
     return;
   }
@@ -22,8 +24,10 @@ export const setFriendNicks = (connection: IrcConnection, nicks: string[]) => {
 };
 
 export const refreshFriendPresence = (connection: IrcConnection) => {
-  if (!connection.connected || !connection.socket || !connection.friendPresenceEnabled || connection.friendNicks.length === 0) {
-    connection.pendingFriendPresencePoll = null;
+  const presence = connection.friendPresence;
+  const lifecycle = connection.lifecycle;
+  if (!lifecycle.connected || !lifecycle.socket || !presence.enabled || presence.nicks.length === 0) {
+    presence.pendingPoll = null;
     updateOnlineFriendKeys(connection, []);
     clearFriendPresenceTimer(connection);
     return;
@@ -33,7 +37,7 @@ export const refreshFriendPresence = (connection: IrcConnection) => {
 };
 
 export const handleFriendPresence = (connection: IrcConnection, pollId: number, onlineNicks: string[]) => {
-  const pendingPoll = connection.pendingFriendPresencePoll;
+  const pendingPoll = connection.friendPresence.pendingPoll;
   if (!pendingPoll || pendingPoll.id !== pollId) {
     return;
   }
@@ -42,46 +46,49 @@ export const handleFriendPresence = (connection: IrcConnection, pollId: number, 
   if (pendingPoll.remainingResponses > 0) {
     return;
   }
-  connection.pendingFriendPresencePoll = null;
+  connection.friendPresence.pendingPoll = null;
   updateOnlineFriendKeys(connection, pendingPoll.onlineNicks);
 };
 
 export const disableFriendPresence = (connection: IrcConnection) => {
-  connection.friendPresenceEnabled = false;
-  connection.pendingFriendPresencePoll = null;
+  connection.friendPresence.enabled = false;
+  connection.friendPresence.pendingPoll = null;
   clearFriendPresenceTimer(connection);
   updateOnlineFriendKeys(connection, []);
 };
 
 export const ensureFriendPresenceTimer = (connection: IrcConnection) => {
-  if (connection.friendPresenceTimer) {
+  if (connection.friendPresence.timer) {
     return;
   }
   const timer = setInterval(() => pollFriendPresence(connection), friendPresencePollMs);
   timer.unref?.();
-  connection.friendPresenceTimer = timer;
+  connection.friendPresence.timer = timer;
 };
 
 export const clearFriendPresenceTimer = (connection: IrcConnection) => {
-  if (!connection.friendPresenceTimer) {
+  const timer = connection.friendPresence.timer;
+  if (!timer) {
     return;
   }
-  clearInterval(connection.friendPresenceTimer);
-  connection.friendPresenceTimer = null;
+  clearInterval(timer);
+  connection.friendPresence.timer = null;
 };
 
 export const pollFriendPresence = (connection: IrcConnection) => {
-  if (!connection.connected || !connection.socket || !connection.friendPresenceEnabled || connection.friendNicks.length === 0) {
+  const lifecycle = connection.lifecycle;
+  const presence = connection.friendPresence;
+  if (!lifecycle.connected || !lifecycle.socket || !presence.enabled || presence.nicks.length === 0) {
     return;
   }
-  const batches = splitIsonNickBatches(connection.friendNicks);
+  const batches = splitIsonNickBatches(presence.nicks);
   if (batches.length === 0) {
-    connection.pendingFriendPresencePoll = null;
+    presence.pendingPoll = null;
     updateOnlineFriendKeys(connection, []);
     return;
   }
-  const pollId = ++connection.nextFriendPresencePollId;
-  connection.pendingFriendPresencePoll = {
+  const pollId = ++presence.nextPollId;
+  presence.pendingPoll = {
     id: pollId,
     remainingResponses: batches.length,
     onlineNicks: [],
@@ -94,19 +101,21 @@ export const pollFriendPresence = (connection: IrcConnection) => {
     }
   }
   if (sentBatches === 0) {
-    connection.pendingFriendPresencePoll = null;
+    presence.pendingPoll = null;
     updateOnlineFriendKeys(connection, []);
     return;
   }
-  connection.pendingFriendPresencePoll.remainingResponses = sentBatches;
+  if (presence.pendingPoll) {
+    presence.pendingPoll.remainingResponses = sentBatches;
+  }
 };
 
 export const updateOnlineFriendKeys = (connection: IrcConnection, onlineNicks: string[]) => {
   const nextKeys = new Set(onlineNicks.map(normalizeIrcIdentifier));
-  if (setsEqual(connection.onlineFriendKeys, nextKeys)) {
+  if (setsEqual(connection.friendPresence.onlineKeys, nextKeys)) {
     return;
   }
-  connection.onlineFriendKeys = nextKeys;
+  connection.friendPresence.onlineKeys = nextKeys;
   emitFriendPresence(connection, onlineNicks);
 };
 

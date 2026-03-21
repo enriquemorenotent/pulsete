@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { NetworkProfile } from '../../shared/protocol.js';
-import type { Action, State } from './app-types.js';
+import type { Action, AppDomainState, Banner, GatewayStatus } from './app-types.js';
 import { gatewayReconnectMessage } from './gateway.js';
 import { useGatewayConnection } from './useGatewayConnection.js';
 import { useAutoOpenNetworkManager, useManagedNetworkSelection } from './useNetworkManagerLifecycle.js';
@@ -12,7 +12,10 @@ import type { SocketHandle } from './client.js';
 type MutableRef<T> = { current: T };
 
 type LifecycleParams = {
-  state: State;
+  banner: Banner;
+  gatewayStatus: GatewayStatus;
+  networks: AppDomainState['networks'];
+  phase: AppDomainState['phase'];
   workspace: WorkspaceView;
   visibleNetworks: NetworkProfile[];
   managedNetworkId: string | null;
@@ -26,19 +29,19 @@ type LifecycleParams = {
 
 export function useAppLifecycle(params: LifecycleParams) {
   useAutoOpenNetworkManager({
-    phase: params.state.phase,
+    phase: params.phase,
     connectionInstanceCount: params.workspace.connectionInstances.length,
     didAutoOpenManagerRef: params.didAutoOpenManagerRef,
     setShowNetworkManager: params.setShowNetworkManager,
   });
 
   useEffect(() => {
-    if (!params.state.banner || params.state.banner.message === gatewayReconnectMessage) {
+    if (!params.banner || params.banner.message === gatewayReconnectMessage) {
       return;
     }
     const timer = window.setTimeout(() => params.dispatch({ type: 'set-banner', banner: null }), 4200);
     return () => window.clearTimeout(timer);
-  }, [params.dispatch, params.state.banner]);
+  }, [params.banner, params.dispatch]);
 
   useGatewayConnection({
     dispatch: params.dispatch,
@@ -47,7 +50,7 @@ export function useAppLifecycle(params: LifecycleParams) {
 
   useSelectedBufferEffects({
     dispatch: params.dispatch,
-    gatewayStatus: params.state.gatewayStatus,
+    gatewayStatus: params.gatewayStatus,
     selectedBuffer: params.workspace.selectedBuffer,
   });
 
@@ -57,8 +60,8 @@ export function useAppLifecycle(params: LifecycleParams) {
   });
 
   useManagedNetworkSelection({
-    phase: params.state.phase,
-    networks: params.state.networks,
+    phase: params.phase,
+    networks: params.networks,
     visibleNetworks: params.visibleNetworks,
     managedNetworkId: params.managedNetworkId,
     setManagedNetworkId: params.setManagedNetworkId,

@@ -1,20 +1,20 @@
 import { useEffect } from 'react';
 import { isSavedNetwork } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
-import type { State } from './app-types.js';
+import type { AppDomainState } from './app-types.js';
 import { resolveManagedNetworkId } from './network-manager-state.js';
 
 type MutableRef<T> = { current: T };
 
 type UseAutoOpenNetworkManagerParams = {
-  phase: State['phase'];
+  phase: AppDomainState['phase'];
   connectionInstanceCount: number;
   didAutoOpenManagerRef: MutableRef<boolean>;
   setShowNetworkManager: (value: boolean) => void;
 };
 
 type UseManagedNetworkSelectionParams = {
-  phase: State['phase'];
+  phase: AppDomainState['phase'];
   networks: NetworkProfile[];
   visibleNetworks: NetworkProfile[];
   managedNetworkId: string | null;

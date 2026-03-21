@@ -15,4 +15,3 @@ export const markBufferRead = (context: RuntimeOperationContext, bufferId: strin
 
 export const history = (context: RuntimeOperationContext, bufferId: string, limit: number) =>
   context.conversations.listBufferHistory(bufferId, limit);
-

@@ -1,13 +1,12 @@
 import type { AppSnapshot, BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
-import { createConversationQueries } from './conversation-selectors.js';
+import type { ConversationIndex } from './conversation-selectors.js';
+import { buildConversationIndex } from './conversation-selectors.js';
 import { getConnectionInstances, getConnectionStatus } from './workspace-helpers.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
 export type WorkspaceInput = {
   networks: NetworkProfile[];
-  buffers: BufferState[];
-  channels: ChannelState[];
-  pendingChannels: PendingChannelState[];
+  conversation: ConversationIndex;
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
 };
@@ -51,13 +50,13 @@ export const getReadOnlyEmptyBody = (
 
 export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'buffers'>): SelectedBuffer | null => {
   const instance = getConnectionInstances(snapshot.networks)[0];
-  const queries = createConversationQueries({
+  const conversation = buildConversationIndex({
     buffers: snapshot.buffers,
     channels: [],
     pendingChannels: [],
     messages: {},
   });
-  return selectionFor(instance ? queries.findServerBuffer(instance.id) : null);
+  return selectionFor(instance ? conversation.findServerBuffer(instance.id) : null);
 };
 
 export const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | null => {
@@ -66,15 +65,14 @@ export const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | nul
     return null;
   }
 
-  const queries = createConversationQueries({ ...input, messages: {} });
-  const selectedBuffer = queries.findSelectedBuffer(input.selection);
-  const selectedPendingChannel = queries.findSelectedPendingChannel(input.selection);
+  const selectedBuffer = input.conversation.findSelectedBuffer(input.selection);
+  const selectedPendingChannel = input.conversation.findSelectedPendingChannel(input.selection);
   const selectedNetwork =
     connectionInstances.find(
       (network) => network.id === selectedBuffer?.networkId || network.id === selectedPendingChannel?.networkId
     ) ?? connectionInstances[0];
   const selectedRuntime = input.networkStates[selectedNetwork.id] ?? null;
-  const serverBuffer = queries.findServerBuffer(selectedNetwork.id);
+  const serverBuffer = input.conversation.findServerBuffer(selectedNetwork.id);
   const activeBuffer =
     !selectedBuffer || selectedBuffer.networkId !== selectedNetwork.id ? serverBuffer : selectedBuffer;
   const activePendingChannel =
@@ -89,7 +87,7 @@ export const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | nul
     activeBuffer,
     activeSelection: selectionFor(activeBuffer),
     activePendingChannel,
-    selectedChannel: activeBuffer ? queries.findChannelByBuffer(activeBuffer) : null,
+    selectedChannel: activeBuffer ? input.conversation.findChannelByBuffer(activeBuffer) : null,
     serverBuffer,
     connectedSubtitle: `${selectedRuntime?.nick ?? selectedNetwork.nick} @ ${selectedRuntime?.serverName ?? 'server'}`,
     connectionStatus: getConnectionStatus(selectedRuntime),

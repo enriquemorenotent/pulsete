@@ -25,7 +25,7 @@ export type ChannelListState = {
   error: string | null;
 };
 
-export type State = {
+export type AppDomainState = {
   phase: 'loading' | 'ready';
   gatewayStatus: GatewayStatus;
   networks: NetworkProfile[];
@@ -36,11 +36,19 @@ export type State = {
   pendingChannels: PendingChannelState[];
   messages: ConversationMessages;
   networkStates: Record<string, NetworkRuntimeState>;
+};
+
+export type AppTransientState = {
   selection: SelectedBuffer | null;
   networkForm: NetworkForm;
   banner: Banner;
   channelList: ChannelListState;
   historyLoading: boolean;
+};
+
+export type State = {
+  domain: AppDomainState;
+  transient: AppTransientState;
 };
 
 export type Action =

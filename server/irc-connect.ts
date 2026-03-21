@@ -7,7 +7,7 @@ import type { IrcConnectionState } from './irc-types.js';
 const defaultConnectTimeoutMs = 15_000;
 
 export const connectSocket = (connection: IrcConnectionState) => {
-  if (connection.socket) {
+  if (connection.lifecycle.socket) {
     return;
   }
   connection.clearReconnectTimer();
@@ -16,10 +16,10 @@ export const connectSocket = (connection: IrcConnectionState) => {
     ? tls.connect({ host: connection.profile.host, port: connection.profile.port, servername: connection.profile.host })
     : net.connect({ host: connection.profile.host, port: connection.profile.port });
   connection.openSocket(socket);
-  const isCurrentSocket = () => connection.socket === socket;
+  const isCurrentSocket = () => connection.lifecycle.socket === socket;
   socket.setEncoding('utf8');
   const connectDeadline = setTimeout(() => {
-    if (!isCurrentSocket() || connection.connected) {
+    if (!isCurrentSocket() || connection.lifecycle.connected) {
       return;
     }
     connection.markConnectionFailure('Connection timed out');
@@ -52,7 +52,7 @@ export const connectSocket = (connection: IrcConnectionState) => {
     ];
     const sentAllLoginLines = loginLines.every((line) => connection.sendRaw(line));
     if (!sentAllLoginLines) {
-      if (!connection.lastFailureMessage) {
+      if (!connection.lifecycle.lastFailureMessage) {
         connection.markConnectionFailure('Login command exceeded the IRC line limit');
       }
       socket.destroy();

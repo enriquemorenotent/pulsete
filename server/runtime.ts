@@ -6,6 +6,7 @@ import { RuntimeConversations } from './runtime-conversations.js';
 import { handleRuntimeEvent } from './runtime-events.js';
 import { getRequiredNetwork } from './runtime-operation-utils.js';
 import { RuntimeOperations } from './runtime-operations.js';
+import { RuntimePublisher } from './runtime-publisher.js';
 import { RuntimeSocketHub } from './runtime-socket-hub.js';
 import { Storage } from './storage.js';
 
@@ -13,6 +14,7 @@ export class Runtime {
   readonly store: Storage;
   readonly connections: Map<string, IrcConnection>;
   private readonly socketHub: RuntimeSocketHub;
+  private readonly publisher: RuntimePublisher;
   private readonly conversations: RuntimeConversations;
   private readonly connectionManager: RuntimeConnectionManager;
   private readonly operations: RuntimeOperations;
@@ -21,23 +23,20 @@ export class Runtime {
   constructor(store: Storage) {
     this.store = store;
     this.socketHub = new RuntimeSocketHub((ws) => this.connectionManager.removeSocket(ws));
-    this.conversations = new RuntimeConversations({
-      store,
-      send: (message) => this.send(message),
-    });
+    this.publisher = new RuntimePublisher(this.socketHub);
+    this.conversations = new RuntimeConversations(store);
     this.connectionManager = new RuntimeConnectionManager({
       store,
-      send: (message) => this.send(message),
-      sendSocket: (ws, message) => this.socketHub.sendSocket(ws, message),
-      onRuntimeEvent: (event) => handleRuntimeEvent({ store: this.store, send: (message) => this.send(message) }, event, this.conversations),
+      publish: (messages) => this.publisher.publish(messages),
+      sendSocket: (ws, message) => this.publisher.sendSocket(ws, message),
+      onRuntimeEvent: (event) => handleRuntimeEvent({ store: this.store }, event, this.conversations),
       isClosing: () => this.closing,
     });
     this.operations = new RuntimeOperations({
       store,
       connectionManager: this.connectionManager,
       conversations: this.conversations,
-      send: (message) => this.send(message),
-    });
+    }, (messages) => this.publisher.publish(messages));
     this.connections = this.connectionManager.connections;
   }
 
@@ -49,8 +48,12 @@ export class Runtime {
     this.socketHub.detach(ws);
   }
 
+  publish(message: ServerMessage | readonly ServerMessage[]) {
+    this.publisher.publish(message);
+  }
+
   send(message: ServerMessage) {
-    this.socketHub.broadcast(message);
+    this.publish(message);
   }
 
   close() {

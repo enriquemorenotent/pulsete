@@ -1,9 +1,9 @@
 import { gatewayReconnectMessage } from './gateway.js';
-import type { AppActionParams, GatewayActions } from './app-actions-types.js';
+import type { GatewayActionParams, GatewayActions } from './app-actions-types.js';
 
-export const createGatewayActions = (params: AppActionParams): GatewayActions => {
+export const createGatewayActions = (params: GatewayActionParams): GatewayActions => {
   const getGatewaySocket = (showBanner = true) => {
-    if (params.state.gatewayStatus !== 'connected' || !params.socketRef.current) {
+    if (params.gatewayStatus !== 'connected' || !params.socketRef.current) {
       if (showBanner) {
         params.updateBanner('error', gatewayReconnectMessage);
       }

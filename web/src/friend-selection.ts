@@ -1,11 +1,11 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
-import type { State } from './app-types.js';
+import type { AppDomainState } from './app-types.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 
 type FriendSelectionInput = {
   nick: string;
-  buffers: State['buffers'];
+  buffers: AppDomainState['buffers'];
   workspace: Pick<WorkspaceView, 'connectionInstances' | 'selectedNetwork'>;
   networkStates: Record<string, NetworkRuntimeState>;
 };

@@ -1,5 +1,6 @@
 import type { BufferState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
+import type { ConversationIndex } from './conversation-selectors.js';
 import {
   getConnectionLabel,
   getConnectionLabelParts,
@@ -22,8 +23,7 @@ export type SidebarConnectionView = {
 
 type ConnectionSidebarViewInput = {
   networks: NetworkProfile[];
-  buffers: BufferState[];
-  pendingChannels: PendingChannelState[];
+  conversation: Pick<ConversationIndex, 'listBuffersForNetwork' | 'listPendingChannelsForNetwork'>;
   networkStates: Record<string, NetworkRuntimeState>;
   selection: SelectedBuffer | null;
 };
@@ -33,9 +33,9 @@ export const buildConnectionSidebarView = (
 ): SidebarConnectionView[] =>
   input.networks.map((network) => {
     const runtime = input.networkStates[network.id] ?? null;
-    const networkBuffers = input.buffers.filter((buffer) => buffer.networkId === network.id);
-    const pendingChannels = input.pendingChannels
-      .filter((pendingChannel) => pendingChannel.networkId === network.id)
+    const networkBuffers = input.conversation.listBuffersForNetwork(network.id);
+    const pendingChannels = input.conversation
+      .listPendingChannelsForNetwork(network.id)
       .map((pendingChannel) => ({
         pendingChannel,
         selected:

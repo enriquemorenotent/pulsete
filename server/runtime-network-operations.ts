@@ -1,5 +1,5 @@
 import { isConnectionInstance } from '../shared/network-model.js';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { NetworkProfile, ServerMessage } from '../shared/protocol.js';
 import { badRequest, notFound } from './app-error.js';
 import { parseNetworkInput } from './network-input.js';
 import {
@@ -7,7 +7,7 @@ import {
   getRequiredNetwork,
   getRequiredRuntimeNetwork,
 } from './runtime-operation-utils.js';
-import type { RuntimeOperationContext } from './runtime-operation-types.js';
+import { createRuntimeCommandResult, type RuntimeOperationContext } from './runtime-operation-types.js';
 import type { NetworkInput } from './storage.js';
 
 export const duplicateNetwork = (context: RuntimeOperationContext, networkId: string) => {
@@ -31,8 +31,10 @@ export const duplicateNetwork = (context: RuntimeOperationContext, networkId: st
     favorite: network.favorite,
     autoJoin: network.autoJoin,
   });
-  context.send({ type: 'network.upsert', network: duplicate });
-  return { network: duplicate, serverBuffer: null };
+  return createRuntimeCommandResult(
+    { network: duplicate, serverBuffer: null },
+    [{ type: 'network.upsert', network: duplicate }]
+  );
 };
 
 export const saveNetwork = (context: RuntimeOperationContext, data: unknown, networkId?: string) => {
@@ -43,20 +45,21 @@ export const saveNetwork = (context: RuntimeOperationContext, data: unknown, net
   const network = context.store.upsertNetwork(input);
   const updatedProfiles = [network, ...syncTemplateInstances(context, network, input)];
   let serverBuffer = isConnectionInstance(network) ? context.store.getServerBuffer(network.id) : null;
+  const messages: ServerMessage[] = [];
   context.connectionManager.updateProfiles(updatedProfiles.map((profile) => profile.id));
   for (const updatedProfile of updatedProfiles) {
     if (isConnectionInstance(updatedProfile)) {
       const nextServerBuffer = context.store.getServerBuffer(updatedProfile.id);
       if (nextServerBuffer) {
-        context.send({ type: 'buffer.upsert', buffer: nextServerBuffer });
+        messages.push({ type: 'buffer.upsert', buffer: nextServerBuffer });
         if (updatedProfile.id === network.id) {
           serverBuffer = nextServerBuffer;
         }
       }
     }
-    context.send({ type: 'network.upsert', network: updatedProfile });
+    messages.push({ type: 'network.upsert', network: updatedProfile });
   }
-  return { network, serverBuffer };
+  return createRuntimeCommandResult({ network, serverBuffer }, messages);
 };
 
 export const deleteNetwork = (context: RuntimeOperationContext, networkId: string) => {
@@ -67,12 +70,12 @@ export const deleteNetwork = (context: RuntimeOperationContext, networkId: strin
   if (deletedNetworkIds.length === 0) {
     throw notFound('Network not found');
   }
-  context.connectionManager.removeNetworks(deletedNetworkIds);
+  const messages = context.connectionManager.removeNetworks(deletedNetworkIds);
   context.store.deleteNetwork(networkId);
   for (const targetId of deletedNetworkIds) {
-    context.send({ type: 'network.remove', networkId: targetId });
+    messages.push({ type: 'network.remove', networkId: targetId });
   }
-  return deletedNetworkIds;
+  return createRuntimeCommandResult(deletedNetworkIds, messages);
 };
 
 const syncTemplateInstances = (
@@ -104,4 +107,3 @@ const syncTemplateInstances = (
       ...(input.clearPassword ? { clearPassword: true } : {}),
     }));
 };
-

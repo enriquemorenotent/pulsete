@@ -24,12 +24,13 @@ export const emitStatus = (
 };
 
 export const emitState = (connection: IrcConnectionState) => {
+  const { lifecycle } = connection;
   emitEvent(connection, {
     type: 'state',
     networkId: connection.profile.id,
-    phase: connection.connected ? 'connected' : connection.socket ? 'connecting' : 'offline',
-    serverName: connection.serverName,
-    nick: connection.currentNick,
+    phase: lifecycle.connected ? 'connected' : lifecycle.socket ? 'connecting' : 'offline',
+    serverName: lifecycle.serverName,
+    nick: lifecycle.currentNick,
   });
 };
 

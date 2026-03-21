@@ -5,8 +5,7 @@ import {
   type BufferState,
   type ChannelUserState,
 } from '../shared/protocol.js';
-import { createSecretBox } from './network-secret.js';
-import { createDatabase } from './storage-db.js';
+import { initializeStorageDefaults, openStorageResources } from './storage-bootstrap.js';
 import {
   deleteChannelByName,
   getBuffer,
@@ -24,16 +23,14 @@ import {
   upsertBuffer,
   upsertChannel,
 } from './storage-buffers.js';
+import { runInTransaction } from './storage-db.js';
 import { getFriend, listFriends, removeFriend, upsertFriend } from './storage-friends.js';
 import { appendMessage, getMessageById, listMessages, listRecentMessages } from './storage-messages.js';
 import {
   deleteNetwork,
-  ensureDefaultNetworks,
   getNetwork,
   getRuntimeNetwork,
-  hasEncryptedNetworkPasswords,
   listNetworks,
-  migrateLegacyNetworkPasswords,
   upsertNetwork,
 } from './storage-networks.js';
 import type { ChannelInput, FriendInput, MessageInput, NetworkInput } from './storage-types.js';
@@ -46,10 +43,10 @@ export class Storage {
   private closed = false;
 
   constructor(filePath?: string) {
-    this.db = createDatabase(filePath);
-    this.secretBox = createSecretBox(filePath, { createIfMissing: !hasEncryptedNetworkPasswords(this.db) });
-    migrateLegacyNetworkPasswords(this.db, this.secretBox);
-    this.initializeDefaults();
+    const resources = openStorageResources(filePath);
+    this.db = resources.db;
+    this.secretBox = resources.secretBox;
+    initializeStorageDefaults(resources);
   }
 
   listNetworks() {
@@ -65,7 +62,7 @@ export class Storage {
   }
 
   deleteNetwork(networkId: string) {
-    deleteNetwork(this.db, networkId);
+    runInTransaction(this.db, () => deleteNetwork(this.db, networkId));
   }
 
   listChannels(networkId?: string) {
@@ -138,20 +135,18 @@ export class Storage {
 
   listRecentMessages(limit = 200) { return listRecentMessages(this.db, limit); }
 
-  ensureDefaultNetworks() {
-    ensureDefaultNetworks(this.db, (input) => this.upsertNetwork(input));
-  }
-
   upsertNetwork(input: NetworkInput) {
-    const network = upsertNetwork(this.db, input, this.secretBox);
-    if (isConnectionInstance(network)) {
-      this.ensureServerBuffer(network.id);
-    }
-    return network;
+    return runInTransaction(this.db, () => {
+      const network = upsertNetwork(this.db, input, this.secretBox);
+      if (isConnectionInstance(network)) {
+        this.ensureServerBuffer(network.id);
+      }
+      return network;
+    });
   }
 
   upsertChannel(input: ChannelInput) {
-    return upsertChannel(this.db, input);
+    return runInTransaction(this.db, () => upsertChannel(this.db, input));
   }
 
   upsertBuffer(input: { id?: string; networkId: string; kind: BufferState['kind']; target: string; unread?: number }) {
@@ -204,16 +199,5 @@ export class Storage {
         target: 'server',
       });
     }
-  }
-
-  private ensureServerBuffers() {
-    for (const network of this.listNetworks().filter(isConnectionInstance)) {
-      this.ensureServerBuffer(network.id);
-    }
-  }
-
-  private initializeDefaults() {
-    this.ensureDefaultNetworks();
-    this.ensureServerBuffers();
   }
 }

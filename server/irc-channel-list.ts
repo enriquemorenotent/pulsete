@@ -7,7 +7,7 @@ const channelListNumerics = new Set(['321', '322', '323', '263', '421', '461']);
 
 export const requestChannelList = (connection: IrcConnection, requestId: string) => {
   connection.prunePendingReplyContexts();
-  if (!connection.connected || connection.isChannelListPending()) {
+  if (!connection.lifecycle.connected || connection.isChannelListPending()) {
     return false;
   }
   if (!connection.sendRaw('LIST', 'server')) {
@@ -18,18 +18,18 @@ export const requestChannelList = (connection: IrcConnection, requestId: string)
 };
 
 export const recordChannelListEntry = (connection: IrcConnection, requestId: string, entry: ChannelListEntry) => {
-  if (requestId !== connection.activeChannelListRequestId) {
+  if (requestId !== connection.channelList.active.requestId) {
     return;
   }
-  connection.activeChannelListEntries.push(entry);
+  connection.channelList.active.entries.push(entry);
   resetChannelListTimeout(connection, requestId);
 };
 
 export const finishChannelListRequest = (connection: IrcConnection, requestId: string) => {
-  if (requestId === connection.activeChannelListRequestId && connection.activeChannelListMode === 'structured') {
+  if (requestId === connection.channelList.active.requestId && connection.channelList.active.mode === 'structured') {
     clearActiveChannelList(connection);
   }
-  if (requestId === connection.drainingChannelListRequestId && connection.drainingChannelListMode === 'structured') {
+  if (requestId === connection.channelList.draining.requestId && connection.channelList.draining.mode === 'structured') {
     clearDrainingChannelList(connection);
   }
 };
@@ -38,16 +38,17 @@ export const getChannelListRequestFailureMessage = (connection: IrcConnection) =
   connection.prunePendingReplyContexts();
   return connection.isChannelListPending()
     ? 'Waiting for the previous channel list response to finish'
-    : connection.socket ? 'Still connecting to server' : 'Not connected';
+    : connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected';
 };
 
 export const getActiveChannelListSnapshot = (connection: IrcConnection) => {
-  if (connection.activeChannelListMode !== 'structured' || !connection.activeChannelListRequestId) {
+  const active = connection.channelList.active;
+  if (active.mode !== 'structured' || !active.requestId) {
     return null;
   }
   return {
-    requestId: connection.activeChannelListRequestId,
-    entries: [...connection.activeChannelListEntries],
+    requestId: active.requestId,
+    entries: [...active.entries],
   };
 };
 
@@ -56,13 +57,14 @@ export const handleChannelListNumeric = (connection: IrcConnection, command: str
   if (!isChannelListNumeric(command, params)) {
     return false;
   }
-  const mode = connection.activeChannelListMode ?? connection.drainingChannelListMode;
+  const { active, draining } = connection.channelList;
+  const mode = active.mode ?? draining.mode;
   if (!mode) {
     return true;
   }
-  const isDraining = connection.activeChannelListMode === null;
+  const isDraining = active.mode === null;
   if (mode === 'structured') {
-    const requestId = (isDraining ? connection.drainingChannelListRequestId : connection.activeChannelListRequestId) ?? null;
+    const requestId = (isDraining ? draining.requestId : active.requestId) ?? null;
     if (!requestId) {
       return false;
     }
@@ -95,7 +97,7 @@ export const handleChannelListNumeric = (connection: IrcConnection, command: str
     return true;
   }
 
-  const sourceTarget = (isDraining ? connection.drainingChannelListSourceTarget : connection.activeChannelListSourceTarget) ?? 'server';
+  const sourceTarget = (isDraining ? draining.sourceTarget : active.sourceTarget) ?? 'server';
   if (isDraining) {
     if (command === '323' || isChannelListFailureNumeric(command, params)) {
       clearDrainingChannelList(connection);
@@ -119,32 +121,32 @@ export const handleChannelListNumeric = (connection: IrcConnection, command: str
 };
 
 export const abortActiveChannelList = (connection: IrcConnection, message: string) => {
-  if (connection.activeChannelListMode) {
+  if (connection.channelList.active.mode) {
     failActiveChannelList(connection, message);
   }
 };
 
 export const clearActiveChannelList = (connection: IrcConnection) => {
-  if (connection.channelListTimeoutTimer) {
-    clearTimeout(connection.channelListTimeoutTimer);
-    connection.channelListTimeoutTimer = null;
+  if (connection.channelList.timeoutTimer) {
+    clearTimeout(connection.channelList.timeoutTimer);
+    connection.channelList.timeoutTimer = null;
   }
-  connection.activeChannelListMode = null;
-  connection.activeChannelListSourceTarget = null;
-  connection.activeChannelListRequestId = null;
-  connection.activeChannelListEntries = [];
+  connection.channelList.active.mode = null;
+  connection.channelList.active.sourceTarget = null;
+  connection.channelList.active.requestId = null;
+  connection.channelList.active.entries = [];
 };
 
 export const clearDrainingChannelList = (connection: IrcConnection) => {
-  connection.drainingChannelListMode = null;
-  connection.drainingChannelListSourceTarget = null;
-  connection.drainingChannelListRequestId = null;
-  connection.drainingChannelListExpiresAt = null;
+  connection.channelList.draining.mode = null;
+  connection.channelList.draining.sourceTarget = null;
+  connection.channelList.draining.requestId = null;
+  connection.channelList.draining.expiresAt = null;
 };
 
 export const isChannelListPending = (connection: IrcConnection) => {
   connection.prunePendingReplyContexts();
-  return connection.activeChannelListMode !== null || connection.drainingChannelListMode !== null;
+  return connection.channelList.active.mode !== null || connection.channelList.draining.mode !== null;
 };
 
 export const startChannelList = (
@@ -153,11 +155,11 @@ export const startChannelList = (
   options: { requestId?: string; sourceTarget?: string }
 ) => {
   clearActiveChannelList(connection);
-  connection.activeChannelListMode = mode;
-  connection.activeChannelListSourceTarget = mode === 'raw' ? options.sourceTarget ?? 'server' : null;
-  connection.activeChannelListRequestId = mode === 'structured' ? options.requestId ?? null : null;
-  connection.activeChannelListEntries = [];
-  resetChannelListTimeout(connection, connection.activeChannelListRequestId ?? '__raw__');
+  connection.channelList.active.mode = mode;
+  connection.channelList.active.sourceTarget = mode === 'raw' ? options.sourceTarget ?? 'server' : null;
+  connection.channelList.active.requestId = mode === 'structured' ? options.requestId ?? null : null;
+  connection.channelList.active.entries = [];
+  resetChannelListTimeout(connection, connection.channelList.active.requestId ?? '__raw__');
 };
 
 export const failActiveChannelList = (
@@ -165,9 +167,10 @@ export const failActiveChannelList = (
   message: string,
   options: { emitStructuredFailure?: boolean; sourceTarget?: string } = {}
 ) => {
-  const mode = connection.activeChannelListMode;
-  const requestId = connection.activeChannelListRequestId;
-  const sourceTarget = options.sourceTarget ?? connection.activeChannelListSourceTarget ?? 'server';
+  const { active } = connection.channelList;
+  const mode = active.mode;
+  const requestId = active.requestId;
+  const sourceTarget = options.sourceTarget ?? active.sourceTarget ?? 'server';
   if (!mode) {
     return;
   }
@@ -182,26 +185,27 @@ export const failActiveChannelList = (
 };
 
 const resetChannelListTimeout = (connection: IrcConnection, requestId: string) => {
-  if (connection.channelListTimeoutMs <= 0) {
+  if (connection.channelList.timeoutMs <= 0) {
     return;
   }
-  if (connection.channelListTimeoutTimer) {
-    clearTimeout(connection.channelListTimeoutTimer);
+  if (connection.channelList.timeoutTimer) {
+    clearTimeout(connection.channelList.timeoutTimer);
   }
   const timer = setTimeout(() => {
-    if (!connection.activeChannelListMode) {
+    const active = connection.channelList.active;
+    if (!active.mode) {
       return;
     }
-    if (connection.activeChannelListMode === 'structured' && connection.activeChannelListRequestId !== requestId) {
+    if (active.mode === 'structured' && active.requestId !== requestId) {
       return;
     }
-    if (connection.activeChannelListMode === 'raw' && requestId !== '__raw__') {
+    if (active.mode === 'raw' && requestId !== '__raw__') {
       return;
     }
     failActiveChannelList(connection, 'Channel list request timed out');
-  }, connection.channelListTimeoutMs);
+  }, connection.channelList.timeoutMs);
   timer.unref?.();
-  connection.channelListTimeoutTimer = timer;
+  connection.channelList.timeoutTimer = timer;
 };
 
 const markDrainingChannelList = (
@@ -211,10 +215,10 @@ const markDrainingChannelList = (
   sourceTarget: string
 ) => {
   clearActiveChannelList(connection);
-  connection.drainingChannelListMode = mode;
-  connection.drainingChannelListSourceTarget = mode === 'raw' ? sourceTarget : null;
-  connection.drainingChannelListRequestId = mode === 'structured' ? requestId : null;
-  connection.drainingChannelListExpiresAt = Date.now() + connection.channelListDrainGraceMs;
+  connection.channelList.draining.mode = mode;
+  connection.channelList.draining.sourceTarget = mode === 'raw' ? sourceTarget : null;
+  connection.channelList.draining.requestId = mode === 'structured' ? requestId : null;
+  connection.channelList.draining.expiresAt = Date.now() + connection.channelList.drainGraceMs;
 };
 
 const isChannelListNumeric = (command: string, params: string[]) =>

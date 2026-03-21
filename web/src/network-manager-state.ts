@@ -1,8 +1,8 @@
 import type { NetworkProfile } from '../../shared/protocol.js';
-import type { State } from './app-types.js';
+import type { AppDomainState } from './app-types.js';
 
 type ResolveManagedNetworkIdArgs = {
-  phase: State['phase'];
+  phase: AppDomainState['phase'];
   managerNetworks: NetworkProfile[];
   visibleNetworks: NetworkProfile[];
   managedNetworkId: string | null;

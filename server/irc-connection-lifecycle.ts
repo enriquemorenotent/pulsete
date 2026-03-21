@@ -10,44 +10,45 @@ import type { RuntimeNetworkProfile } from './storage-types.js';
 import type { IrcConnection } from './irc.js';
 
 export const openSocket = (connection: IrcConnection, socket: IrcConnection['socket']) => {
-  if (connection.socket === socket) {
+  if (connection.lifecycle.socket === socket) {
     return;
   }
   clearReconnectTimer(connection);
-  connection.manualDisconnect = false;
-  connection.lastFailureMessage = null;
-  connection.socket = socket;
+  connection.lifecycle.manualDisconnect = false;
+  connection.lifecycle.lastFailureMessage = null;
+  connection.lifecycle.socket = socket;
   emitState(connection);
 };
 
 export const beginLogin = (connection: IrcConnection) => {
-  connection.lastFailureMessage = null;
+  connection.lifecycle.lastFailureMessage = null;
 };
 
 export const setConnectDeadlineTimer = (connection: IrcConnection, timer: ReturnType<typeof setTimeout>) => {
   clearConnectDeadlineTimer(connection);
-  connection.connectDeadlineTimer = timer;
+  connection.lifecycle.connectDeadlineTimer = timer;
 };
 
 export const markConnectionFailure = (connection: IrcConnection, detail: string) => {
-  connection.lastFailureMessage = formatConnectionFailure(connection, detail);
-  emitStatus(connection, connection.lastFailureMessage, 'error');
+  connection.lifecycle.lastFailureMessage = formatConnectionFailure(connection, detail);
+  emitStatus(connection, connection.lifecycle.lastFailureMessage, 'error');
 };
 
 export const handleSocketClosed = (connection: IrcConnection, socket: NonNullable<IrcConnection['socket']>) => {
-  if (connection.socket !== socket) {
+  const lifecycle = connection.lifecycle;
+  if (lifecycle.socket !== socket) {
     return;
   }
   clearConnectDeadlineTimer(connection);
   clearReconnectTimer(connection);
-  const wasConnected = connection.connected;
-  const failureMessage = connection.lastFailureMessage;
-  connection.socket = null;
+  const wasConnected = lifecycle.connected;
+  const failureMessage = lifecycle.lastFailureMessage;
+  lifecycle.socket = null;
   resetTransientState(connection);
-  connection.connected = false;
-  connection.serverName = null;
-  connection.currentNick = connection.profile.nick;
-  connection.lastFailureMessage = null;
+  lifecycle.connected = false;
+  lifecycle.serverName = null;
+  lifecycle.currentNick = connection.profile.nick;
+  lifecycle.lastFailureMessage = null;
   emitState(connection);
   if (wasConnected) {
     emitStatus(connection, 'Disconnected from server');
@@ -58,11 +59,12 @@ export const handleSocketClosed = (connection: IrcConnection, socket: NonNullabl
 };
 
 export const markRegistered = (connection: IrcConnection, serverName: string | null, nick: string | null) => {
-  connection.connected = true;
+  const lifecycle = connection.lifecycle;
+  lifecycle.connected = true;
   clearConnectDeadlineTimer(connection);
-  connection.serverName = serverName ?? connection.profile.host;
-  connection.reconnectAttempts = 0;
-  connection.currentNick = nick ?? connection.profile.nick;
+  lifecycle.serverName = serverName ?? connection.profile.host;
+  lifecycle.reconnectAttempts = 0;
+  lifecycle.currentNick = nick ?? connection.profile.nick;
   discardPendingNickReplyContexts(connection);
   emitState(connection);
 };
@@ -95,30 +97,31 @@ export const confirmNick = (connection: IrcConnection, newNick: string) => {
 export const connect = (connection: IrcConnection, resetRetryBudget = true) => {
   clearReconnectTimer(connection);
   if (resetRetryBudget) {
-    connection.reconnectAttempts = 0;
+    connection.lifecycle.reconnectAttempts = 0;
   }
-  connection.friendPresenceEnabled = true;
-  connection.lastFailureMessage = null;
+  connection.friendPresence.enabled = true;
+  connection.lifecycle.lastFailureMessage = null;
   connectSocket(connection);
 };
 
 export const disconnect = (connection: IrcConnection, raw = 'QUIT :Client disconnecting') => {
-  connection.manualDisconnect = true;
-  connection.reconnectAttempts = 0;
+  const lifecycle = connection.lifecycle;
+  lifecycle.manualDisconnect = true;
+  lifecycle.reconnectAttempts = 0;
   clearConnectDeadlineTimer(connection);
   clearReconnectTimer(connection);
-  const socket = connection.socket;
+  const socket = lifecycle.socket;
   if (socket) {
     connection.sendRaw(raw);
     socket.end();
-    connection.socket = null;
+    lifecycle.socket = null;
   }
-  const wasActive = connection.connected || socket !== null || connection.serverName !== null;
+  const wasActive = lifecycle.connected || socket !== null || lifecycle.serverName !== null;
   resetTransientState(connection);
-  connection.connected = false;
-  connection.serverName = null;
-  connection.currentNick = connection.profile.nick;
-  connection.lastFailureMessage = null;
+  lifecycle.connected = false;
+  lifecycle.serverName = null;
+  lifecycle.currentNick = connection.profile.nick;
+  lifecycle.lastFailureMessage = null;
   if (wasActive) {
     emitState(connection);
     emitStatus(connection, 'Disconnected from server');
@@ -126,21 +129,22 @@ export const disconnect = (connection: IrcConnection, raw = 'QUIT :Client discon
 };
 
 export const updateProfile = (connection: IrcConnection, profile: RuntimeNetworkProfile) => {
-  const reconnectPending = !connection.connected && connection.socket !== null;
+  const lifecycle = connection.lifecycle;
+  const reconnectPending = !lifecycle.connected && lifecycle.socket !== null;
   const restartConnectingSocket = reconnectPending && requiresConnectingReconnect(connection.profile, profile);
-  const reconnectActiveSession = connection.connected && requiresSessionReconnect(connection.profile, profile);
-  const applyNickUpdate = connection.connected
+  const reconnectActiveSession = lifecycle.connected && requiresSessionReconnect(connection.profile, profile);
+  const applyNickUpdate = lifecycle.connected
     && !reconnectActiveSession
-    && !isSameIrcIdentifier(connection.pendingNick ?? connection.currentNick, profile.nick);
+    && !isSameIrcIdentifier(connection.pendingNick ?? lifecycle.currentNick, profile.nick);
   if (restartConnectingSocket) {
-    const socket = connection.socket;
-    connection.socket = null;
+    const socket = lifecycle.socket;
+    lifecycle.socket = null;
     resetTransientState(connection);
     socket?.destroy();
   }
   connection.profile = profile;
-  if (!connection.connected) {
-    connection.currentNick = profile.nick;
+  if (!lifecycle.connected) {
+    lifecycle.currentNick = profile.nick;
   }
   if (restartConnectingSocket) {
     connectSocket(connection);
@@ -152,42 +156,45 @@ export const updateProfile = (connection: IrcConnection, profile: RuntimeNetwork
 };
 
 export const clearReconnectTimer = (connection: IrcConnection) => {
-  if (connection.reconnectTimer) {
-    clearTimeout(connection.reconnectTimer);
-    connection.reconnectTimer = null;
+  const reconnectTimer = connection.lifecycle.reconnectTimer;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    connection.lifecycle.reconnectTimer = null;
   }
 };
 
 export const clearConnectDeadlineTimer = (connection: IrcConnection) => {
-  if (connection.connectDeadlineTimer) {
-    clearTimeout(connection.connectDeadlineTimer);
-    connection.connectDeadlineTimer = null;
+  const deadlineTimer = connection.lifecycle.connectDeadlineTimer;
+  if (deadlineTimer) {
+    clearTimeout(deadlineTimer);
+    connection.lifecycle.connectDeadlineTimer = null;
   }
 };
 
 export const resetTransientState = (connection: IrcConnection) => {
-  connection.buffer = '';
+  connection.lifecycle.buffer = '';
   clearChannelSessions(connection);
   abortActiveChannelList(connection, 'Channel list request was interrupted');
   clearDrainingChannelList(connection);
   connection.replyTracker.reset();
-  connection.pendingFriendPresencePoll = null;
+  connection.friendPresence.pendingPoll = null;
   clearConnectDeadlineTimer(connection);
   clearFriendPresenceTimer(connection);
   updateOnlineFriendKeys(connection, []);
 };
 
 export const reconnectWithUpdatedProfile = (connection: IrcConnection) => {
-  const socket = connection.socket;
+  const lifecycle = connection.lifecycle;
+  const socket = lifecycle.socket;
   clearReconnectTimer(connection);
-  connection.reconnectAttempts = 0;
-  connection.socket = null;
+  lifecycle.reconnectAttempts = 0;
+  lifecycle.socket = null;
   resetTransientState(connection);
-  connection.connected = false;
-  connection.serverName = null;
-  connection.currentNick = connection.profile.nick;
+  lifecycle.connected = false;
+  lifecycle.serverName = null;
+  lifecycle.currentNick = connection.profile.nick;
   connection.pendingNick = null;
-  connection.lastFailureMessage = null;
+  lifecycle.lastFailureMessage = null;
   emitState(connection);
   emitStatus(connection, 'Reconnecting to apply updated network settings', 'notice');
   try {
@@ -200,20 +207,21 @@ export const reconnectWithUpdatedProfile = (connection: IrcConnection) => {
 };
 
 export const scheduleReconnect = (connection: IrcConnection) => {
-  if (connection.manualDisconnect || connection.reconnectAttempts >= 3) {
+  const lifecycle = connection.lifecycle;
+  if (lifecycle.manualDisconnect || lifecycle.reconnectAttempts >= 3) {
     return;
   }
-  const attempt = ++connection.reconnectAttempts;
+  const attempt = ++lifecycle.reconnectAttempts;
   const timer = setTimeout(() => {
-    connection.reconnectTimer = null;
-    if (connection.socket || connection.manualDisconnect || attempt !== connection.reconnectAttempts) {
+    lifecycle.reconnectTimer = null;
+    if (lifecycle.socket || lifecycle.manualDisconnect || attempt !== lifecycle.reconnectAttempts) {
       return;
     }
     emitStatus(connection, `Reconnecting (${attempt}/3)`, 'notice');
     connection.connect(false);
   }, 3000 * attempt);
   timer.unref?.();
-  connection.reconnectTimer = timer;
+  lifecycle.reconnectTimer = timer;
 };
 
 export const formatConnectionFailure = (connection: IrcConnection, detail: string) =>

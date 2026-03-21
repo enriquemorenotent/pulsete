@@ -63,22 +63,38 @@ const emptySnapshot = (): AppSnapshot => ({
   networkStates: {},
 });
 
+const makeState = (overrides: {
+  domain?: Partial<State['domain']>;
+  transient?: Partial<State['transient']>;
+} = {}): State => ({
+  ...initialState,
+  domain: {
+    ...initialState.domain,
+    ...overrides.domain,
+  },
+  transient: {
+    ...initialState.transient,
+    ...overrides.transient,
+  },
+});
+
 test('snapshot enters the ready phase and clears any banner', () => {
-  const dirtyState = {
-    ...initialState,
-    banner: { kind: 'notice' as const, message: 'Stale banner' },
-    historyLoading: true,
-  };
+  const dirtyState = makeState({
+    transient: {
+      banner: { kind: 'notice', message: 'Stale banner' },
+      historyLoading: true,
+    },
+  });
 
   const nextState = reducer(dirtyState, {
     type: 'snapshot',
     snapshot: emptySnapshot(),
   });
 
-  assert.equal(nextState.phase, 'ready');
-  assert.equal(nextState.banner, null);
-  assert.equal(nextState.historyLoading, false);
-  assert.equal(nextState.selection, null);
+  assert.equal(nextState.domain.phase, 'ready');
+  assert.equal(nextState.transient.banner, null);
+  assert.equal(nextState.transient.historyLoading, false);
+  assert.equal(nextState.transient.selection, null);
 });
 
 test('snapshot selects the first instance server buffer', () => {
@@ -105,8 +121,8 @@ test('snapshot selects the first instance server buffer', () => {
     },
   });
 
-  assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: buffer.id });
-  assert.deepEqual(nextState.networkStates[network.id], {
+  assert.deepEqual(nextState.transient.selection, { kind: 'buffer', bufferId: buffer.id });
+  assert.deepEqual(nextState.domain.networkStates[network.id], {
     phase: 'connecting',
     serverName: null,
     nick: network.nick,
@@ -118,15 +134,18 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
   const serverBuffer = makeBuffer({ id: 'server-1', networkId: network.id });
   const staleMessage = makeMessage({ id: 'stale', body: 'stale', ts: 1 });
   const freshMessage = makeMessage({ id: 'fresh', body: 'fresh', ts: 2 });
-  const state = {
-    ...initialState,
-    phase: 'ready' as const,
-    networks: [network],
-    buffers: [serverBuffer],
-    pendingChannels: [makePendingChannel()],
-    messages: indexConversationMessages([staleMessage]),
-    selection: { kind: 'pending-channel' as const, networkId: network.id, channel: '#help' },
-  };
+  const state = makeState({
+    domain: {
+      phase: 'ready',
+      networks: [network],
+      buffers: [serverBuffer],
+      pendingChannels: [makePendingChannel()],
+      messages: indexConversationMessages([staleMessage]),
+    },
+    transient: {
+      selection: { kind: 'pending-channel', networkId: network.id, channel: '#help' },
+    },
+  });
 
   const nextState = reducer(state, {
     type: 'snapshot',
@@ -148,8 +167,8 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
     },
   });
 
-  assert.deepEqual(nextState.messages, indexConversationMessages([freshMessage]));
-  assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: serverBuffer.id });
+  assert.deepEqual(nextState.domain.messages, indexConversationMessages([freshMessage]));
+  assert.deepEqual(nextState.transient.selection, { kind: 'buffer', bufferId: serverBuffer.id });
 });
 
 test('friend updates are sorted alphabetically in state', () => {
@@ -163,7 +182,7 @@ test('friend updates are sorted alphabetically in state', () => {
     friend: makeFriend({ id: 'friend-1', nick: 'Alice' }),
   });
 
-  assert.deepEqual(nextState.friends.map((friend) => friend.nick), ['Alice', 'zoe']);
+  assert.deepEqual(nextState.domain.friends.map((friend) => friend.nick), ['Alice', 'zoe']);
 });
 
 test('friend presence updates track online state by friend id', () => {
@@ -172,66 +191,72 @@ test('friend presence updates track online state by friend id', () => {
   const withPresence = reducer(withFriend, { type: 'friend-presence', friendId: friend.id, online: true });
   const withoutFriend = reducer(withPresence, { type: 'remove-friend', friendId: friend.id });
 
-  assert.equal(withPresence.friendPresence[friend.id], true);
-  assert.equal(friend.id in withoutFriend.friendPresence, false);
+  assert.equal(withPresence.domain.friendPresence[friend.id], true);
+  assert.equal(friend.id in withoutFriend.domain.friendPresence, false);
 });
 
 test('gateway transitions reset transport state and clear the reconnect banner once ready', () => {
   const network = makeNetwork({ id: 'network-1', managerHidden: true, nick: 'tester' });
-  const loadingState: State = {
-    ...initialState,
-    phase: 'ready' as const,
-    gatewayStatus: 'connected' as const,
-    networks: [network],
-    pendingChannels: [makePendingChannel({ networkId: network.id })],
-    networkStates: {
-      [network.id]: {
-        phase: 'connected',
-        serverName: 'irc.libera.chat',
-        nick: 'tester_live',
+  const loadingState = makeState({
+    domain: {
+      phase: 'ready',
+      gatewayStatus: 'connected',
+      networks: [network],
+      pendingChannels: [makePendingChannel({ networkId: network.id })],
+      networkStates: {
+        [network.id]: {
+          phase: 'connected',
+          serverName: 'irc.libera.chat',
+          nick: 'tester_live',
+        },
       },
     },
-    banner: { kind: 'error' as const, message: gatewayReconnectMessage },
-    channelList: {
-      open: true,
-      networkId: 'network-1',
-      requestId: 'request-1',
-      status: 'loading' as const,
-      entries: [{ name: '#help', users: 42, topic: 'Support' }],
-      error: null,
+    transient: {
+      banner: { kind: 'error', message: gatewayReconnectMessage },
+      channelList: {
+        open: true,
+        networkId: 'network-1',
+        requestId: 'request-1',
+        status: 'loading',
+        entries: [{ name: '#help', users: 42, topic: 'Support' }],
+        error: null,
+      },
     },
-  };
+  });
 
   const disconnected = reducer(loadingState, { type: 'gateway-disconnected' });
   const reconnecting = reducer(disconnected, { type: 'gateway-connecting' });
   const connected = reducer(reconnecting, { type: 'gateway-connected' });
 
-  assert.equal(disconnected.gatewayStatus, 'disconnected');
-  assert.deepEqual(disconnected.channelList, initialChannelListState);
-  assert.deepEqual(disconnected.pendingChannels, []);
-  assert.deepEqual(disconnected.networkStates[network.id], {
+  assert.equal(disconnected.domain.gatewayStatus, 'disconnected');
+  assert.deepEqual(disconnected.transient.channelList, initialChannelListState);
+  assert.deepEqual(disconnected.domain.pendingChannels, []);
+  assert.deepEqual(disconnected.domain.networkStates[network.id], {
     phase: 'offline',
     serverName: null,
     nick: network.nick,
   });
-  assert.equal(disconnected.historyLoading, false);
-  assert.equal(reconnecting.gatewayStatus, 'connecting');
-  assert.deepEqual(reconnecting.channelList, initialChannelListState);
-  assert.equal(connected.gatewayStatus, 'connected');
-  assert.equal(connected.banner, null);
+  assert.equal(disconnected.transient.historyLoading, false);
+  assert.equal(reconnecting.domain.gatewayStatus, 'connecting');
+  assert.deepEqual(reconnecting.transient.channelList, initialChannelListState);
+  assert.equal(connected.domain.gatewayStatus, 'connected');
+  assert.equal(connected.transient.banner, null);
 });
 
 test('pending selections promote to the confirmed channel buffer', () => {
-  const state = {
-    ...initialState,
-    pendingChannels: [makePendingChannel({ networkId: 'network-1', channel: '#help' })],
-    selection: { kind: 'pending-channel' as const, networkId: 'network-1', channel: '#help' },
-  };
+  const state = makeState({
+    domain: {
+      pendingChannels: [makePendingChannel({ networkId: 'network-1', channel: '#help' })],
+    },
+    transient: {
+      selection: { kind: 'pending-channel', networkId: 'network-1', channel: '#help' },
+    },
+  });
 
   const nextState = reducer(state, {
     type: 'upsert-buffer',
     buffer: makeBuffer({ id: 'channel-1', kind: 'channel', target: '#help' }),
   });
 
-  assert.deepEqual(nextState.selection, { kind: 'buffer', bufferId: 'channel-1' });
+  assert.deepEqual(nextState.transient.selection, { kind: 'buffer', bufferId: 'channel-1' });
 });

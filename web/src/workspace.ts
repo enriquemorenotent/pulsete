@@ -1,3 +1,4 @@
+import type { ConversationIndex } from './conversation-selectors.js';
 import { getConnectionInstances } from './workspace-helpers.js';
 import { buildEmptyWorkspace, buildResolvedWorkspace } from './workspace-builders.js';
 import { resolveWorkspace, type WorkspaceInput } from './workspace-resolve.js';
@@ -16,3 +17,5 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   const resolved = resolveWorkspace(input);
   return resolved ? buildResolvedWorkspace(resolved) : buildEmptyWorkspace(getConnectionInstances(input.networks));
 };
+
+export type { ConversationIndex };

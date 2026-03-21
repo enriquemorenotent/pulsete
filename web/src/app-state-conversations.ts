@@ -1,9 +1,9 @@
-import type { BufferState, ChatMessage, FriendState, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, FriendState, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, ChannelListState, State } from './app-types.js';
 import { fallbackSelection, normalizeSelection } from './app-state-selection.js';
 import { appendConversationMessages, removeBufferMessages } from './conversation-message-state.js';
-import { createConversationQueries } from './conversation-selectors.js';
+import { buildConversationIndex } from './conversation-selectors.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -27,77 +27,141 @@ export const reduceConversationAction = (
   action: Action,
   initialChannelListState: ChannelListState
 ): State | null => {
-  const conversation = createConversationQueries(state);
+  const conversation = buildConversationIndex(state.domain);
   switch (action.type) {
     case 'upsert-friend': {
-      const friends = state.friends.filter((friend) => friend.id !== action.friend.id);
+      const friends = state.domain.friends.filter((friend) => friend.id !== action.friend.id);
       friends.push(action.friend);
-      return { ...state, friends: sortFriends(friends) };
+      return { ...state, domain: { ...state.domain, friends: sortFriends(friends) } };
     }
     case 'remove-friend':
       return {
         ...state,
-        friends: state.friends.filter((friend) => friend.id !== action.friendId),
-        friendPresence: Object.fromEntries(
-          Object.entries(state.friendPresence).filter(([friendId]) => friendId !== action.friendId)
-        ),
+        domain: {
+          ...state.domain,
+          friends: state.domain.friends.filter((friend) => friend.id !== action.friendId),
+          friendPresence: Object.fromEntries(
+            Object.entries(state.domain.friendPresence).filter(([friendId]) => friendId !== action.friendId)
+          ),
+        },
       };
     case 'friend-presence':
       return {
         ...state,
-        friendPresence: {
-          ...state.friendPresence,
-          [action.friendId]: action.online,
+        domain: {
+          ...state.domain,
+          friendPresence: {
+            ...state.domain.friendPresence,
+            [action.friendId]: action.online,
+          },
         },
       };
     case 'upsert-buffer': {
-      const buffers = state.buffers.filter((buffer) => buffer.id !== action.buffer.id);
+      const buffers = state.domain.buffers.filter((buffer) => buffer.id !== action.buffer.id);
       buffers.push(action.buffer);
       const pendingChannels =
         action.buffer.kind === 'channel'
-          ? state.pendingChannels.filter(
+          ? state.domain.pendingChannels.filter(
               (pendingChannel) =>
                 pendingChannel.networkId !== action.buffer.networkId ||
                 !isSameIrcIdentifier(pendingChannel.channel, action.buffer.target)
             )
-          : state.pendingChannels;
+          : state.domain.pendingChannels;
       const selection =
-        state.selection?.kind === 'pending-channel' &&
-        state.selection.networkId === action.buffer.networkId &&
-        isSameIrcIdentifier(state.selection.channel, action.buffer.target) &&
+        state.transient.selection?.kind === 'pending-channel' &&
+        state.transient.selection.networkId === action.buffer.networkId &&
+        isSameIrcIdentifier(state.transient.selection.channel, action.buffer.target) &&
         action.buffer.kind === 'channel'
           ? { kind: 'buffer' as const, bufferId: action.buffer.id }
-          : state.selection;
-      const nextState = { ...state, buffers: sortBuffers(buffers), pendingChannels };
-      return { ...nextState, selection: normalizeSelection(nextState, selection) };
+          : state.transient.selection;
+      const nextState: State = {
+        ...state,
+        domain: {
+          ...state.domain,
+          buffers: sortBuffers(buffers),
+          pendingChannels,
+        },
+      };
+      return {
+        ...nextState,
+        transient: {
+          ...nextState.transient,
+          selection: normalizeSelection(
+            {
+              networks: nextState.domain.networks,
+              buffers: nextState.domain.buffers,
+              pendingChannels: nextState.domain.pendingChannels,
+            },
+            selection
+          ),
+        },
+      };
     }
     case 'remove-buffer': {
       const removedBuffer = conversation.findBufferById(action.bufferId);
-      const buffers = state.buffers.filter((buffer) => buffer.id !== action.bufferId);
-      const channels = state.channels.filter((channel) => channel.id !== action.bufferId);
-      const messages = removedBuffer ? removeBufferMessages(state.messages, removedBuffer) : state.messages;
-      const nextState = { ...state, buffers, channels, messages };
+      const buffers = state.domain.buffers.filter((buffer) => buffer.id !== action.bufferId);
+      const channels = state.domain.channels.filter((channel) => channel.id !== action.bufferId);
+      const messages = removedBuffer ? removeBufferMessages(state.domain.messages, removedBuffer) : state.domain.messages;
+      const nextState: State = {
+        ...state,
+        domain: {
+          ...state.domain,
+          buffers,
+          channels,
+          messages,
+        },
+      };
       return {
         ...nextState,
-        selection:
-          state.selection?.kind === 'buffer' && state.selection.bufferId === action.bufferId
-            ? fallbackSelection(nextState, action.networkId)
-            : state.selection,
+        transient: {
+          ...nextState.transient,
+          selection:
+            state.transient.selection?.kind === 'buffer' && state.transient.selection.bufferId === action.bufferId
+              ? fallbackSelection(
+                  {
+                    networks: nextState.domain.networks,
+                    buffers: nextState.domain.buffers,
+                  },
+                  action.networkId
+                )
+              : state.transient.selection,
+        },
       };
     }
     case 'append-message':
-      return { ...state, messages: appendConversationMessages(state.messages, [action.message]) };
+      return {
+        ...state,
+        domain: {
+          ...state.domain,
+          messages: appendConversationMessages(state.domain.messages, [action.message]),
+        },
+      };
     case 'append-messages':
-      return { ...state, messages: appendConversationMessages(state.messages, action.messages) };
+      return {
+        ...state,
+        domain: {
+          ...state.domain,
+          messages: appendConversationMessages(state.domain.messages, action.messages),
+        },
+      };
     case 'upsert-channel': {
-      const channels = state.channels.filter((channel) => channel.id !== action.channel.id);
+      const channels = state.domain.channels.filter((channel) => channel.id !== action.channel.id);
       channels.push(action.channel);
-      return { ...state, channels: channels.sort((left, right) => left.name.localeCompare(right.name)) };
+      return {
+        ...state,
+        domain: {
+          ...state.domain,
+          channels: channels.sort((left, right) => left.name.localeCompare(right.name)),
+        },
+      };
     }
     case 'remove-channel':
       return {
         ...state,
-        channels: state.channels.filter((channel) => channel.id !== action.channelId),
+        domain: {
+          ...state.domain,
+          channels: state.domain.channels.filter((channel) => channel.id !== action.channelId),
+        },
       };
     case 'add-pending-channel': {
       const existingBuffer = conversation.findChannelBuffer(
@@ -107,7 +171,7 @@ export const reduceConversationAction = (
       if (existingBuffer) {
         return state;
       }
-      const pendingChannels = state.pendingChannels.filter(
+      const pendingChannels = state.domain.pendingChannels.filter(
         (pendingChannel) =>
           pendingChannel.networkId !== action.pendingChannel.networkId ||
           !isSameIrcIdentifier(pendingChannel.channel, action.pendingChannel.channel)
@@ -115,36 +179,57 @@ export const reduceConversationAction = (
       pendingChannels.push(action.pendingChannel);
       return {
         ...state,
-        pendingChannels: sortPendingChannels(pendingChannels),
+        domain: {
+          ...state.domain,
+          pendingChannels: sortPendingChannels(pendingChannels),
+        },
       };
     }
     case 'remove-pending-channel': {
-      const pendingChannels = state.pendingChannels.filter(
+      const pendingChannels = state.domain.pendingChannels.filter(
         (pendingChannel) =>
           pendingChannel.networkId !== action.networkId || !isSameIrcIdentifier(pendingChannel.channel, action.channel)
       );
       const matchingChannelBuffer = conversation.findChannelBuffer(action.networkId, action.channel);
-      const nextState = { ...state, pendingChannels };
+      const nextState: State = {
+        ...state,
+        domain: {
+          ...state.domain,
+          pendingChannels,
+        },
+      };
       return {
         ...nextState,
-        selection:
-          state.selection?.kind === 'pending-channel' &&
-          state.selection.networkId === action.networkId &&
-          isSameIrcIdentifier(state.selection.channel, action.channel)
-            ? matchingChannelBuffer
-              ? { kind: 'buffer', bufferId: matchingChannelBuffer.id }
-              : fallbackSelection(nextState, action.networkId)
-            : state.selection,
+        transient: {
+          ...nextState.transient,
+          selection:
+            state.transient.selection?.kind === 'pending-channel' &&
+            state.transient.selection.networkId === action.networkId &&
+            isSameIrcIdentifier(state.transient.selection.channel, action.channel)
+              ? matchingChannelBuffer
+                ? { kind: 'buffer', bufferId: matchingChannelBuffer.id }
+                : fallbackSelection(
+                    {
+                      networks: nextState.domain.networks,
+                      buffers: nextState.domain.buffers,
+                    },
+                    action.networkId
+                  )
+              : state.transient.selection,
+        },
       };
     }
     case 'update-presence':
       return {
         ...state,
-        channels: state.channels.map((channel) =>
-          channel.networkId === action.networkId && isSameIrcIdentifier(channel.name, action.channel)
-            ? { ...channel, users: action.users }
-            : channel
-        ),
+        domain: {
+          ...state.domain,
+          channels: state.domain.channels.map((channel) =>
+            channel.networkId === action.networkId && isSameIrcIdentifier(channel.name, action.channel)
+              ? { ...channel, users: action.users }
+              : channel
+          ),
+        },
       };
     default:
       return null;

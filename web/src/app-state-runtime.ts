@@ -3,7 +3,7 @@ import { normalizeSelection } from './app-state-selection.js';
 import { removeNetworkMessages } from './conversation-message-state.js';
 import { gatewayReconnectMessage } from './gateway.js';
 
-const offlineNetworkStates = (state: Pick<State, 'networks'>) =>
+const offlineNetworkStates = (state: Pick<State['domain'], 'networks'>) =>
   Object.fromEntries(
     state.networks.map((network) => [
       network.id,
@@ -24,95 +24,161 @@ export const reduceRuntimeAction = (
     case 'gateway-connecting':
       return {
         ...state,
-        gatewayStatus: 'connecting',
-        channelList: initialChannelListState,
+        domain: {
+          ...state.domain,
+          gatewayStatus: 'connecting',
+        },
+        transient: {
+          ...state.transient,
+          channelList: initialChannelListState,
+        },
       };
     case 'gateway-connected':
       return {
         ...state,
-        gatewayStatus: 'connected',
-        banner: state.banner?.message === gatewayReconnectMessage ? null : state.banner,
+        domain: {
+          ...state.domain,
+          gatewayStatus: 'connected',
+        },
+        transient: {
+          ...state.transient,
+          banner:
+            state.transient.banner?.message === gatewayReconnectMessage ? null : state.transient.banner,
+        },
       };
     case 'gateway-disconnected': {
-      const nextState = {
+      const nextState: State = {
         ...state,
-        gatewayStatus: 'disconnected' as const,
-        pendingChannels: [],
-        networkStates: offlineNetworkStates(state),
-        channelList: initialChannelListState,
-        historyLoading: false,
+        domain: {
+          ...state.domain,
+          gatewayStatus: 'disconnected',
+          pendingChannels: [],
+          networkStates: offlineNetworkStates(state.domain),
+        },
+        transient: {
+          ...state.transient,
+          channelList: initialChannelListState,
+          historyLoading: false,
+        },
       };
       return {
         ...nextState,
-        selection: normalizeSelection(nextState, state.selection),
+        transient: {
+          ...nextState.transient,
+          selection: normalizeSelection(
+            {
+              networks: nextState.domain.networks,
+              buffers: nextState.domain.buffers,
+              pendingChannels: nextState.domain.pendingChannels,
+            },
+            state.transient.selection
+          ),
+        },
       };
     }
     case 'upsert-network': {
-      const networks = state.networks.filter((network) => network.id !== action.network.id);
+      const networks = state.domain.networks.filter((network) => network.id !== action.network.id);
       networks.push(action.network);
-      const runtime = state.networkStates[action.network.id] ?? null;
+      const runtime = state.domain.networkStates[action.network.id] ?? null;
       return {
         ...state,
-        networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
-        networkStates:
-          runtime?.phase === 'connected'
-            ? state.networkStates
-            : {
-                ...state.networkStates,
-                [action.network.id]: {
-                  phase: runtime?.phase ?? 'offline',
-                  serverName: runtime?.serverName ?? null,
-                  nick: action.network.nick,
+        domain: {
+          ...state.domain,
+          networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
+          networkStates:
+            runtime?.phase === 'connected'
+              ? state.domain.networkStates
+              : {
+                  ...state.domain.networkStates,
+                  [action.network.id]: {
+                    phase: runtime?.phase ?? 'offline',
+                    serverName: runtime?.serverName ?? null,
+                    nick: action.network.nick,
+                  },
                 },
-              },
+        },
       };
     }
     case 'network-state': {
       const pendingChannels =
         action.phase === 'connected'
-          ? state.pendingChannels
-          : state.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId);
-      const nextState = {
+          ? state.domain.pendingChannels
+          : state.domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId);
+      const nextState: State = {
         ...state,
-        networkStates: {
-          ...state.networkStates,
-          [action.networkId]: {
-            phase: action.phase,
-            serverName: action.serverName,
-            nick: action.nick,
+        domain: {
+          ...state.domain,
+          networkStates: {
+            ...state.domain.networkStates,
+            [action.networkId]: {
+              phase: action.phase,
+              serverName: action.serverName,
+              nick: action.nick,
+            },
           },
+          pendingChannels,
         },
-        pendingChannels,
-        channelList:
-          action.phase !== 'connected' && state.channelList.networkId === action.networkId
-            ? initialChannelListState
-            : state.channelList,
+        transient: {
+          ...state.transient,
+          channelList:
+            action.phase !== 'connected' && state.transient.channelList.networkId === action.networkId
+              ? initialChannelListState
+              : state.transient.channelList,
+        },
       };
       return {
         ...nextState,
-        selection:
-          action.phase === 'connected'
-            ? state.selection
-            : normalizeSelection(nextState, state.selection, action.networkId),
+        transient: {
+          ...nextState.transient,
+          selection:
+            action.phase === 'connected'
+              ? state.transient.selection
+              : normalizeSelection(
+                  {
+                    networks: nextState.domain.networks,
+                    buffers: nextState.domain.buffers,
+                    pendingChannels: nextState.domain.pendingChannels,
+                  },
+                  state.transient.selection,
+                  action.networkId
+                ),
+        },
       };
     }
     case 'remove-network': {
-      const networkStates = { ...state.networkStates };
+      const networkStates = { ...state.domain.networkStates };
       delete networkStates[action.networkId];
-      const nextState = {
+      const nextState: State = {
         ...state,
-        networks: state.networks.filter((network) => network.id !== action.networkId),
-        buffers: state.buffers.filter((buffer) => buffer.networkId !== action.networkId),
-        channels: state.channels.filter((channel) => channel.networkId !== action.networkId),
-        pendingChannels: state.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
-        messages: removeNetworkMessages(state.messages, action.networkId),
-        networkStates,
-        channelList: state.channelList.networkId === action.networkId ? initialChannelListState : state.channelList,
-        historyLoading: false,
+        domain: {
+          ...state.domain,
+          networks: state.domain.networks.filter((network) => network.id !== action.networkId),
+          buffers: state.domain.buffers.filter((buffer) => buffer.networkId !== action.networkId),
+          channels: state.domain.channels.filter((channel) => channel.networkId !== action.networkId),
+          pendingChannels: state.domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
+          messages: removeNetworkMessages(state.domain.messages, action.networkId),
+          networkStates,
+        },
+        transient: {
+          ...state.transient,
+          channelList:
+            state.transient.channelList.networkId === action.networkId ? initialChannelListState : state.transient.channelList,
+          historyLoading: false,
+        },
       };
       return {
         ...nextState,
-        selection: normalizeSelection(nextState, state.selection),
+        transient: {
+          ...nextState.transient,
+          selection: normalizeSelection(
+            {
+              networks: nextState.domain.networks,
+              buffers: nextState.domain.buffers,
+              pendingChannels: nextState.domain.pendingChannels,
+            },
+            state.transient.selection
+          ),
+        },
       };
     }
     default:

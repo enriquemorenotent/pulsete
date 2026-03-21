@@ -5,74 +5,72 @@ import type { Storage } from './storage.js';
 
 type RuntimeContext = {
   store: Storage;
-  send(message: ServerMessage): void;
+  send?(message: ServerMessage): void;
 };
 
 export function handleRuntimeEvent(
   runtime: RuntimeContext,
   event: RuntimeEvent,
   conversations?: RuntimeConversations
-): void {
-  const conversationState = conversations ?? new RuntimeConversations({
-    store: runtime.store,
-    send: (message) => runtime.send(message),
-  });
+): ServerMessage[] {
+  const conversationState = conversations ?? new RuntimeConversations(runtime.store);
+  const publish = (messages: ServerMessage[]) => {
+    runtime.send?.(messages[0]!);
+    if (messages.length > 1) {
+      for (const message of messages.slice(1)) {
+        runtime.send?.(message);
+      }
+    }
+    return messages;
+  };
   if (event.type === 'state') {
-    runtime.send({
+    return publish([{
       type: 'network.state',
       networkId: event.networkId,
       phase: event.phase,
       serverName: event.serverName,
       nick: event.nick,
-    });
-    return;
+    } satisfies ServerMessage]);
   }
   if (event.type === 'status') {
-    conversationState.handleStatusEvent(event);
-    return;
+    return publish(conversationState.handleStatusEvent(event));
   }
   if (event.type === 'channel-pending') {
-    runtime.send({
+    return publish([{
       type: 'channel.pending',
       pendingChannel: { networkId: event.networkId, channel: event.channel },
-    });
-    return;
+    } satisfies ServerMessage]);
   }
   if (event.type === 'channel-pending-remove') {
-    runtime.send({ type: 'channel.pending.remove', networkId: event.networkId, channel: event.channel });
-    return;
+    return publish([{ type: 'channel.pending.remove', networkId: event.networkId, channel: event.channel } satisfies ServerMessage]);
   }
   if (event.type === 'channel-list-entry') {
-    runtime.send({
+    return publish([{
       type: 'channel.list.entry',
       networkId: event.networkId,
       requestId: event.requestId,
       entry: event.entry,
-    });
-    return;
+    } satisfies ServerMessage]);
   }
   if (event.type === 'channel-list-completed') {
-    runtime.send({ type: 'channel.list.completed', networkId: event.networkId, requestId: event.requestId });
-    return;
+    return publish([{ type: 'channel.list.completed', networkId: event.networkId, requestId: event.requestId } satisfies ServerMessage]);
   }
   if (event.type === 'channel-list-failed') {
-    runtime.send({
+    return publish([{
       type: 'channel.list.failed',
       networkId: event.networkId,
       requestId: event.requestId,
       message: event.message,
-    });
-    return;
+    } satisfies ServerMessage]);
   }
   if (event.type === 'message') {
-    conversationState.handleMessageEvent(event);
-    return;
+    return publish(conversationState.handleMessageEvent(event));
   }
   if (event.type === 'friend-presence') {
-    return;
+    return [];
   }
   if (event.type !== 'channel') {
-    return;
+    return [];
   }
-  conversationState.handleChannelEvent(event);
+  return publish(conversationState.handleChannelEvent(event));
 }

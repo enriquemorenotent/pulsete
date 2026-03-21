@@ -9,7 +9,7 @@ import {
   getRequiredNetwork,
   resolveReplyTarget,
 } from './runtime-operation-utils.js';
-import type { RuntimeOperationContext } from './runtime-operation-types.js';
+import { createRuntimeCommandResult, type RuntimeOperationContext } from './runtime-operation-types.js';
 
 export const join = (
   context: RuntimeOperationContext,
@@ -26,6 +26,7 @@ export const join = (
     resolveReplyTarget(context.store, networkId, sourceBufferId),
     { visiblePending: !(existingBuffer?.kind === 'channel' || existingChannel) }
   );
+  return createRuntimeCommandResult(undefined);
 };
 
 export const part = (
@@ -41,6 +42,7 @@ export const part = (
     'Leaving',
     resolveReplyTarget(context.store, networkId, sourceBufferId, normalizedChannel)
   );
+  return createRuntimeCommandResult(undefined);
 };
 
 export const sendMessage = (
@@ -58,6 +60,7 @@ export const sendMessage = (
   kind === 'action'
     ? connection.action(normalizedTarget, normalizedBody, replyTarget)
     : connection.say(normalizedTarget, normalizedBody, replyTarget);
+  return createRuntimeCommandResult(undefined);
 };
 
 export const sendRaw = (
@@ -73,14 +76,15 @@ export const sendRaw = (
     const nextNick = normalizedRaw.trim().split(/\s+/)[1];
     if (nextNick) {
       connection.socket ? connection.setNick(nextNick, replyTarget) : connection.sendRaw(normalizedRaw, replyTarget);
-      return;
+      return createRuntimeCommandResult(undefined);
     }
   }
   if (/^\s*QUIT(?:\s|$)/i.test(normalizedRaw)) {
     connection.socket ? connection.disconnect(normalizedRaw.trim()) : connection.sendRaw(normalizedRaw, replyTarget);
-    return;
+    return createRuntimeCommandResult(undefined);
   }
   connection.sendClientRaw(normalizedRaw, replyTarget);
+  return createRuntimeCommandResult(undefined);
 };
 
 export const requestChannelList = (
@@ -89,6 +93,5 @@ export const requestChannelList = (
   requester?: WebSocket,
 ) => {
   getRequiredNetwork(context.store, networkId);
-  return context.connectionManager.requestChannelList(networkId, requester);
+  return createRuntimeCommandResult(context.connectionManager.requestChannelList(networkId, requester));
 };
-

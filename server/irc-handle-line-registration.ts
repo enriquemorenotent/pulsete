@@ -25,8 +25,8 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
   }
   emitStatus(
     connection,
-    connection.socket instanceof tls.TLSSocket
-      ? `* Connected securely via ${connection.socket.getProtocol() ?? 'TLS'} ${connection.socket.getCipher().standardName ?? connection.socket.getCipher().name}`
+    connection.lifecycle.socket instanceof tls.TLSSocket
+      ? `* Connected securely via ${connection.lifecycle.socket.getProtocol() ?? 'TLS'} ${connection.lifecycle.socket.getCipher().standardName ?? connection.lifecycle.socket.getCipher().name}`
       : '* Connected via TCP'
   );
   connection.refreshFriendPresence();
@@ -46,12 +46,12 @@ const handleNickConflict = (
     return false;
   }
   const replyContext = connection.consumeReplyContext(command, params, nick);
-  if (connection.connected && !replyContext && !connection.pendingNick) {
+  if (connection.lifecycle.connected && !replyContext && !connection.pendingNick) {
     return true;
   }
   const attemptedNick = replyContext?.kind === 'nick'
     ? replyContext.requestedNick
-    : connection.pendingNick ?? connection.currentNick;
+    : connection.pendingNick ?? connection.lifecycle.currentNick;
   const replyTarget = replyContext && 'sourceTarget' in replyContext ? replyContext.sourceTarget : undefined;
   if (
     replyContext?.kind === 'nick'

@@ -43,9 +43,9 @@ export const prunePendingReplyContexts = (connection: IrcConnection) => {
   const now = Date.now();
   connection.replyTracker.prune();
   if (
-    connection.drainingChannelListMode
-    && connection.drainingChannelListExpiresAt !== null
-    && connection.drainingChannelListExpiresAt < now
+    connection.channelList.draining.mode
+    && connection.channelList.draining.expiresAt !== null
+    && connection.channelList.draining.expiresAt < now
   ) {
     connection.clearDrainingChannelList();
   }

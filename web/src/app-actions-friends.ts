@@ -1,50 +1,67 @@
 import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
-import { selectBuffer, type AppActionContext } from './app-actions-types.js';
+import type { AppDomainState } from './app-types.js';
+import type { AppDispatch, BannerActions, ConversationActions } from './app-actions-types.js';
+import { selectBuffer } from './app-actions-types.js';
 import { api } from './client.js';
 import { resolveFriendSelection } from './friend-selection.js';
+import type { WorkspaceView } from './workspace-types.js';
 
-export const createFriendActions = (context: AppActionContext) => {
+type FriendActionParams = BannerActions & ConversationActions & {
+  buffers: AppDomainState['buffers'];
+  dispatch: AppDispatch;
+  networkStates: AppDomainState['networkStates'];
+  workspace: WorkspaceView;
+};
+
+export const createFriendActions = ({
+  buffers,
+  dispatch,
+  networkStates,
+  openOrSelectQueryBuffer,
+  updateBanner,
+  workspace,
+}: FriendActionParams) => {
   const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
     try {
-      await context.openOrSelectQueryBuffer(network, nick);
+      await openOrSelectQueryBuffer(network, nick);
     } catch (error) {
-      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
+      updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
     }
   };
 
   const selectFriend = async (friend: FriendState) => {
     const decision = resolveFriendSelection({
       nick: friend.nick,
-      buffers: context.state.buffers,
-      workspace: context.workspace,
-      networkStates: context.state.networkStates,
+      buffers,
+      workspace,
+      networkStates,
     });
 
     if (decision.type === 'error') {
-      context.updateBanner('error', decision.message);
+      updateBanner('error', decision.message);
       return;
     }
 
     if (decision.type === 'select') {
-      selectBuffer(context.dispatch, decision.buffer);
+      selectBuffer(dispatch, decision.buffer);
       return;
     }
 
     try {
-      await context.openOrSelectQueryBuffer(decision.network, friend.nick);
+      await openOrSelectQueryBuffer(decision.network, friend.nick);
     } catch (error) {
-      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
+      updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
     }
   };
 
   const addFriend = async (nick: string) => {
     try {
       const result = await api.addFriend(nick);
-      context.dispatch({ type: 'upsert-friend', friend: result.friend });
-      context.updateBanner('notice', 'Friend saved');
+      dispatch({ type: 'upsert-friend', friend: result.friend });
+      updateBanner('notice', 'Friend saved');
       return true;
     } catch (error) {
-      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to save friend');
+      updateBanner('error', error instanceof Error ? error.message : 'Failed to save friend');
       return false;
     }
   };
@@ -52,11 +69,11 @@ export const createFriendActions = (context: AppActionContext) => {
   const removeFriend = async (friendId: string) => {
     try {
       await api.removeFriend(friendId);
-      context.dispatch({ type: 'remove-friend', friendId });
-      context.updateBanner('notice', 'Friend removed');
+      dispatch({ type: 'remove-friend', friendId });
+      updateBanner('notice', 'Friend removed');
       return true;
     } catch (error) {
-      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to remove friend');
+      updateBanner('error', error instanceof Error ? error.message : 'Failed to remove friend');
       return false;
     }
   };

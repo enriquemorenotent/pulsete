@@ -1,23 +1,44 @@
 import type { BufferState, ChannelState, ChatMessage, PendingChannelState } from '../../shared/protocol.js';
-import type { State } from './app-types.js';
+import type { AppDomainState } from './app-types.js';
 import { toConversationMessageKey, type ConversationMessages } from './conversation-message-state.js';
 import type { SelectedBuffer } from './workspace-types.js';
 
-type ConversationState = Pick<State, 'buffers' | 'channels' | 'pendingChannels'> & {
+type ConversationState = Pick<AppDomainState, 'buffers' | 'channels' | 'pendingChannels'> & {
   messages: ConversationMessages;
 };
 
-export const createConversationQueries = (state: ConversationState) => {
+export type ConversationIndex = {
+  buffersById: ReadonlyMap<string, BufferState>;
+  channelsById: ReadonlyMap<string, ChannelState>;
+  listBuffersForNetwork: (networkId: string) => BufferState[];
+  listPendingChannelsForNetwork: (networkId: string) => PendingChannelState[];
+  findBufferById: (bufferId: string) => BufferState | null;
+  findServerBuffer: (networkId: string) => BufferState | null;
+  findChannelBuffer: (networkId: string, channel: string) => BufferState | null;
+  findQueryBuffer: (networkId: string, nick: string) => BufferState | null;
+  findPendingChannel: (networkId: string, channel: string) => PendingChannelState | null;
+  findSelectedBuffer: (selection: SelectedBuffer | null) => BufferState | null;
+  findSelectedPendingChannel: (selection: SelectedBuffer | null) => PendingChannelState | null;
+  findChannelByBuffer: (buffer: BufferState | null) => ChannelState | null;
+  selectMessages: (buffer: BufferState | null) => ChatMessage[];
+};
+
+export const buildConversationIndex = (state: ConversationState): ConversationIndex => {
   const buffersById = new Map<string, BufferState>();
+  const buffersByNetwork = new Map<string, BufferState[]>();
   const serverBuffersByNetwork = new Map<string, BufferState>();
   const channelBuffersByTarget = new Map<string, BufferState>();
   const queryBuffersByTarget = new Map<string, BufferState>();
+  const pendingChannelsByNetwork = new Map<string, PendingChannelState[]>();
   const pendingChannelsByTarget = new Map<string, PendingChannelState>();
   const channelsById = new Map<string, ChannelState>();
   const messagesByTarget = new Map<string, ChatMessage[]>();
 
   for (const buffer of state.buffers) {
     buffersById.set(buffer.id, buffer);
+    const buffers = buffersByNetwork.get(buffer.networkId) ?? [];
+    buffers.push(buffer);
+    buffersByNetwork.set(buffer.networkId, buffers);
     if (buffer.kind === 'server') {
       serverBuffersByNetwork.set(buffer.networkId, buffer);
       continue;
@@ -31,6 +52,9 @@ export const createConversationQueries = (state: ConversationState) => {
   }
 
   for (const pendingChannel of state.pendingChannels) {
+    const pendingChannels = pendingChannelsByNetwork.get(pendingChannel.networkId) ?? [];
+    pendingChannels.push(pendingChannel);
+    pendingChannelsByNetwork.set(pendingChannel.networkId, pendingChannels);
     pendingChannelsByTarget.set(
       toConversationMessageKey(pendingChannel.networkId, pendingChannel.channel),
       pendingChannel
@@ -54,6 +78,10 @@ export const createConversationQueries = (state: ConversationState) => {
       : null;
 
   return {
+    buffersById,
+    channelsById,
+    listBuffersForNetwork: (networkId: string) => buffersByNetwork.get(networkId) ?? [],
+    listPendingChannelsForNetwork: (networkId: string) => pendingChannelsByNetwork.get(networkId) ?? [],
     findBufferById: (bufferId: string) => buffersById.get(bufferId) ?? null,
     findServerBuffer: (networkId: string) => serverBuffersByNetwork.get(networkId) ?? null,
     findChannelBuffer: (networkId: string, channel: string) =>
@@ -70,3 +98,5 @@ export const createConversationQueries = (state: ConversationState) => {
       buffer ? messagesByTarget.get(toConversationMessageKey(buffer.networkId, buffer.target)) ?? [] : [],
   };
 };
+
+export const createConversationQueries = buildConversationIndex;

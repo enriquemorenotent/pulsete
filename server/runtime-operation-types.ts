@@ -7,6 +7,14 @@ export type RuntimeOperationContext = {
   store: Storage;
   connectionManager: RuntimeConnectionManager;
   conversations: RuntimeConversations;
-  send(message: ServerMessage): void;
 };
 
+export type RuntimeCommandResult<T = void> = {
+  value: T;
+  messages: ServerMessage[];
+};
+
+export const createRuntimeCommandResult = <T>(value: T, messages: ServerMessage[] = []): RuntimeCommandResult<T> => ({
+  value,
+  messages,
+});

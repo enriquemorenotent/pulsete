@@ -1,5 +1,6 @@
 import { useReducer } from 'react';
 import type { AppSnapshot } from '../../shared/protocol.js';
+import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
 import {
   reduceConversationAction,
@@ -15,7 +16,7 @@ import type { Action, State } from './app-types.js';
 
 export { initialChannelListState } from './app-state-ui.js';
 
-export const initialState: State = {
+const initialDomainState: AppDomainState = {
   phase: 'loading',
   gatewayStatus: 'connecting',
   networks: [],
@@ -26,6 +27,9 @@ export const initialState: State = {
   pendingChannels: [],
   messages: {},
   networkStates: {},
+};
+
+const initialTransientState: AppTransientState = {
   selection: null,
   networkForm: emptyNetworkForm(),
   banner: null,
@@ -33,23 +37,43 @@ export const initialState: State = {
   historyLoading: false,
 };
 
+export const initialState: State = {
+  domain: initialDomainState,
+  transient: initialTransientState,
+};
+
 const reduceSnapshotState = (state: State, snapshot: AppSnapshot): State => {
-  const selection = normalizeSelection(snapshot, state.selection);
+  const networks = snapshot.networks;
+  const buffers = sortBuffers(snapshot.buffers);
+  const pendingChannels = sortPendingChannels(snapshot.pendingChannels);
+  const selection = normalizeSelection(
+    {
+      networks,
+      buffers,
+      pendingChannels,
+    },
+    state.transient.selection
+  );
   return {
-    ...state,
-    phase: 'ready',
-    networks: snapshot.networks,
-    friends: sortFriends(snapshot.friends),
-    friendPresence: snapshot.friendPresence,
-    buffers: sortBuffers(snapshot.buffers),
-    channels: snapshot.channels,
-    pendingChannels: sortPendingChannels(snapshot.pendingChannels),
-    messages: indexConversationMessages(snapshot.messages),
-    networkStates: snapshot.networkStates,
-    selection,
-    banner: null,
-    channelList: initialChannelListState,
-    historyLoading: false,
+    domain: {
+      phase: 'ready',
+      gatewayStatus: state.domain.gatewayStatus,
+      networks,
+      friends: sortFriends(snapshot.friends),
+      friendPresence: snapshot.friendPresence,
+      buffers,
+      channels: snapshot.channels,
+      pendingChannels,
+      messages: indexConversationMessages(snapshot.messages),
+      networkStates: snapshot.networkStates,
+    },
+    transient: {
+      ...state.transient,
+      selection,
+      banner: null,
+      channelList: initialChannelListState,
+      historyLoading: false,
+    },
   };
 };
 
@@ -58,7 +82,14 @@ export const reducer = (state: State, action: Action): State => {
     case 'snapshot':
       return reduceSnapshotState(state, action.snapshot);
     case 'select':
-      return { ...state, selection: action.selection, banner: null };
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          selection: action.selection,
+          banner: null,
+        },
+      };
     default:
       return (
         reduceRuntimeAction(state, action, initialChannelListState) ??

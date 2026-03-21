@@ -1,5 +1,5 @@
 import { getLocalIrcIdentity } from '../../shared/local-defaults.js';
-import type { Action, State } from './app-types.js';
+import type { Action, AppDomainState } from './app-types.js';
 import { toForm, type EditorTab } from './network-form.js';
 
 type EditorActionParams = {
@@ -8,7 +8,6 @@ type EditorActionParams = {
   setManagedNetworkId: (value: string | null) => void;
   setShowNetworkManager: (value: boolean) => void;
   setShowNetworkEditor: (value: boolean) => void;
-  state: State;
 };
 
 export function openNewNetworkEditor(params: EditorActionParams) {
@@ -29,7 +28,7 @@ export function openNewNetworkEditor(params: EditorActionParams) {
 }
 
 export function openExistingNetworkEditor(
-  network: State['networks'][number],
+  network: AppDomainState['networks'][number],
   params: Omit<EditorActionParams, 'state'>,
 ) {
   params.dispatch({ type: 'reset-network-form', form: toForm(network) });

@@ -3,26 +3,15 @@ import type { BufferState, MessageKind, ServerMessage } from '../shared/protocol
 import { badRequest, notFound } from './app-error.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
+import { createRuntimeCommandResult } from './runtime-operation-types.js';
 import type { MessageInput, Storage } from './storage.js';
 
-type RuntimeConversationsOptions = {
-  store: Storage;
-  send(message: ServerMessage): void;
-};
-
 export class RuntimeConversations {
-  private readonly store: Storage;
-  private readonly send: RuntimeConversationsOptions['send'];
-
-  constructor(options: RuntimeConversationsOptions) {
-    this.store = options.store;
-    this.send = options.send;
-  }
+  constructor(private readonly store: Storage) {}
 
   openQuery(networkId: string, target: string) {
     const buffer = this.store.upsertQuery(networkId, target);
-    this.send({ type: 'buffer.upsert', buffer });
-    return buffer;
+    return createRuntimeCommandResult(buffer, [{ type: 'buffer.upsert', buffer }]);
   }
 
   closeQueryBuffer(bufferId: string) {
@@ -31,24 +20,24 @@ export class RuntimeConversations {
       throw badRequest('Only private message buffers can be closed');
     }
     const removedBuffer = this.store.removeBuffer(bufferId) ?? buffer;
-    this.send({ type: 'buffer.remove', networkId: removedBuffer.networkId, bufferId: removedBuffer.id });
-    return removedBuffer;
+    return createRuntimeCommandResult(removedBuffer, [
+      { type: 'buffer.remove', networkId: removedBuffer.networkId, bufferId: removedBuffer.id },
+    ]);
   }
 
   markBufferRead(bufferId: string) {
     const buffer = this.getRequiredBuffer(bufferId);
     if (buffer.unread === 0) {
-      return buffer;
+      return createRuntimeCommandResult(buffer);
     }
     this.store.markBufferRead(bufferId);
     const updatedBuffer = this.getRequiredBuffer(bufferId);
-    this.send({ type: 'buffer.upsert', buffer: updatedBuffer });
-    return updatedBuffer;
+    return createRuntimeCommandResult(updatedBuffer, [{ type: 'buffer.upsert', buffer: updatedBuffer }]);
   }
 
   listBufferHistory(bufferId: string, limit: number) {
     const buffer = this.getRequiredBuffer(bufferId);
-    return this.store.listMessages(buffer.networkId, buffer.target, limit);
+    return createRuntimeCommandResult(this.store.listMessages(buffer.networkId, buffer.target, limit));
   }
 
   handleStatusEvent(event: Extract<RuntimeEvent, { type: 'status' }>) {
@@ -57,7 +46,7 @@ export class RuntimeConversations {
       : event.kind === 'notice'
         ? 'notice'
         : 'system';
-    this.appendMessage({
+    const messages = this.appendMessage({
       id: randomUUID(),
       networkId: event.networkId,
       target: this.resolveStatusTarget(event),
@@ -68,12 +57,13 @@ export class RuntimeConversations {
       ts: Date.now(),
     });
     if (event.kind !== 'system') {
-      this.send({
+      messages.push({
         type: event.kind === 'error' ? 'error' : 'notice',
         networkId: event.networkId,
         message: event.message,
       });
     }
+    return messages;
   }
 
   handleMessageEvent(event: Extract<RuntimeEvent, { type: 'message' }>) {
@@ -81,10 +71,10 @@ export class RuntimeConversations {
       ? this.store.getChannelByName(event.message.networkId, event.message.target)
       : null;
     if (event.message.self && event.message.kind === 'part' && !removedChannel) {
-      return;
+      return [];
     }
 
-    this.appendMessage(event.message);
+    const messages = this.appendMessage(event.message);
 
     const closedServiceQuery = !event.message.self
       && event.message.target === 'server'
@@ -95,13 +85,18 @@ export class RuntimeConversations {
 
     if (closedServiceQuery?.kind === 'query') {
       this.store.removeBuffer(closedServiceQuery.id);
-      this.send({ type: 'buffer.remove', networkId: closedServiceQuery.networkId, bufferId: closedServiceQuery.id });
+      messages.push({
+        type: 'buffer.remove',
+        networkId: closedServiceQuery.networkId,
+        bufferId: closedServiceQuery.id,
+      });
     }
 
     if (removedChannel) {
       this.store.deleteChannelByName(event.message.networkId, event.message.target);
-      this.send({ type: 'buffer.remove', networkId: removedChannel.networkId, bufferId: removedChannel.id });
+      messages.push({ type: 'buffer.remove', networkId: removedChannel.networkId, bufferId: removedChannel.id });
     }
+    return messages;
   }
 
   handleChannelEvent(event: Extract<RuntimeEvent, { type: 'channel' }>) {
@@ -112,18 +107,21 @@ export class RuntimeConversations {
       topic: event.topic,
       users: event.users,
     });
-    this.send({ type: 'buffer.upsert', buffer: this.store.getBuffer(channel.id)! });
-    this.send({ type: 'channel.snapshot', channel });
+    return [
+      { type: 'buffer.upsert', buffer: this.store.getBuffer(channel.id)! },
+      { type: 'channel.snapshot', channel },
+    ] satisfies ServerMessage[];
   }
 
   private appendMessage(message: MessageInput) {
     const bufferUpdate = this.resolveMessageBuffer(message);
     const saved = this.store.appendMessage(message);
+    const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
 
-    this.send({ type: 'message.append', message: saved });
     if (bufferUpdate) {
-      this.send({ type: 'buffer.upsert', buffer: bufferUpdate });
+      messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
     }
+    return messages;
   }
 
   private resolveStatusTarget(event: Extract<RuntimeEvent, { type: 'status' }>) {

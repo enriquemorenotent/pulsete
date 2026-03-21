@@ -13,92 +13,125 @@ export const initialChannelListState: ChannelListState = {
 export const reduceUiAction = (state: State, action: Action): State | null => {
   switch (action.type) {
     case 'set-banner':
-      return { ...state, banner: action.banner };
+      return { ...state, transient: { ...state.transient, banner: action.banner } };
     case 'open-channel-list':
       return {
         ...state,
-        channelList: {
-          open: true,
-          networkId: action.networkId,
-          requestId: null,
-          status: 'loading',
-          entries: [],
-          error: null,
+        transient: {
+          ...state.transient,
+          channelList: {
+            open: true,
+            networkId: action.networkId,
+            requestId: null,
+            status: 'loading',
+            entries: [],
+            error: null,
+          },
         },
       };
     case 'close-channel-list':
-      return { ...state, channelList: initialChannelListState };
+      return { ...state, transient: { ...state.transient, channelList: initialChannelListState } };
     case 'channel-list-started':
       if (
-        !state.channelList.open ||
-        state.channelList.networkId !== action.networkId ||
-        state.channelList.status !== 'loading' ||
-        state.channelList.requestId !== null
+        !state.transient.channelList.open ||
+        state.transient.channelList.networkId !== action.networkId ||
+        state.transient.channelList.status !== 'loading' ||
+        state.transient.channelList.requestId !== null
       ) {
         return state;
       }
       return {
         ...state,
-        channelList: {
-          ...state.channelList,
-          requestId: action.requestId,
+        transient: {
+          ...state.transient,
+          channelList: {
+            ...state.transient.channelList,
+            requestId: action.requestId,
+          },
         },
       };
     case 'channel-list-entry':
       if (
-        !state.channelList.open ||
-        state.channelList.networkId !== action.networkId ||
-        state.channelList.requestId !== action.requestId
+        !state.transient.channelList.open ||
+        state.transient.channelList.networkId !== action.networkId ||
+        state.transient.channelList.requestId !== action.requestId
       ) {
         return state;
       }
       return {
         ...state,
-        channelList: {
-          ...state.channelList,
-          entries: [...state.channelList.entries, action.entry],
+        transient: {
+          ...state.transient,
+          channelList: {
+            ...state.transient.channelList,
+            entries: [...state.transient.channelList.entries, action.entry],
+          },
         },
       };
     case 'channel-list-completed':
       if (
-        !state.channelList.open ||
-        state.channelList.networkId !== action.networkId ||
-        state.channelList.requestId !== action.requestId
+        !state.transient.channelList.open ||
+        state.transient.channelList.networkId !== action.networkId ||
+        state.transient.channelList.requestId !== action.requestId
       ) {
         return state;
       }
       return {
         ...state,
-        channelList: {
-          ...state.channelList,
-          status: 'ready',
-          error: null,
+        transient: {
+          ...state.transient,
+          channelList: {
+            ...state.transient.channelList,
+            status: 'ready',
+            error: null,
+          },
         },
       };
     case 'channel-list-failed':
       if (
-        !state.channelList.open ||
-        state.channelList.networkId !== action.networkId ||
-        (state.channelList.requestId !== null && state.channelList.requestId !== action.requestId) ||
-        (state.channelList.requestId === null && state.channelList.status !== 'loading')
+        !state.transient.channelList.open ||
+        state.transient.channelList.networkId !== action.networkId ||
+        (state.transient.channelList.requestId !== null && state.transient.channelList.requestId !== action.requestId) ||
+        (state.transient.channelList.requestId === null && state.transient.channelList.status !== 'loading')
       ) {
         return state;
       }
       return {
         ...state,
-        channelList: {
-          ...state.channelList,
-          requestId: action.requestId,
-          status: 'error',
-          error: action.message,
+        transient: {
+          ...state.transient,
+          channelList: {
+            ...state.transient.channelList,
+            requestId: action.requestId,
+            status: 'error',
+            error: action.message,
+          },
         },
       };
     case 'set-network-form':
-      return { ...state, networkForm: { ...state.networkForm, ...action.form } };
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkForm: { ...state.transient.networkForm, ...action.form },
+        },
+      };
     case 'reset-network-form':
-      return { ...state, networkForm: { ...emptyNetworkForm(), ...action.form } };
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          networkForm: { ...emptyNetworkForm(), ...action.form },
+        },
+      };
     case 'set-history-loading':
-      return { ...state, historyLoading: action.value };
+      return {
+        ...state,
+        transient: {
+          ...state.transient,
+          historyLoading: action.value,
+        },
+      };
     default:
       return null;
   }

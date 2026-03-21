@@ -1,10 +1,18 @@
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
-import type { State } from './app-types.js';
+import type { BufferState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
 import { selectDefaultBuffer } from './workspace.js';
+import type { SelectedBuffer } from './workspace-types.js';
 
-type SelectionState = Pick<State, 'networks' | 'buffers' | 'pendingChannels'>;
+type SelectionState = {
+  networks: NetworkProfile[];
+  buffers: BufferState[];
+  pendingChannels: PendingChannelState[];
+};
 
-export const fallbackSelection = (state: Pick<State, 'networks' | 'buffers'>, preferredNetworkId?: string | null) => {
+export const fallbackSelection = (
+  state: Pick<SelectionState, 'networks' | 'buffers'>,
+  preferredNetworkId?: string | null
+) => {
   if (preferredNetworkId) {
     const serverBuffer = state.buffers.find(
       (candidate) => candidate.networkId === preferredNetworkId && candidate.kind === 'server'
@@ -16,7 +24,7 @@ export const fallbackSelection = (state: Pick<State, 'networks' | 'buffers'>, pr
   return selectDefaultBuffer(state);
 };
 
-const getSelectionNetworkId = (state: SelectionState, selection: State['selection']) => {
+const getSelectionNetworkId = (state: SelectionState, selection: SelectedBuffer | null) => {
   if (!selection) {
     return null;
   }
@@ -26,7 +34,7 @@ const getSelectionNetworkId = (state: SelectionState, selection: State['selectio
   return state.buffers.find((buffer) => buffer.id === selection.bufferId)?.networkId ?? null;
 };
 
-const hasSelection = (state: SelectionState, selection: State['selection']) => {
+const hasSelection = (state: SelectionState, selection: SelectedBuffer | null) => {
   if (!selection) {
     return false;
   }
@@ -42,7 +50,7 @@ const hasSelection = (state: SelectionState, selection: State['selection']) => {
 
 export const normalizeSelection = (
   state: SelectionState,
-  selection: State['selection'],
+  selection: SelectedBuffer | null,
   preferredNetworkId?: string | null
 ) => {
   if (hasSelection(state, selection)) {

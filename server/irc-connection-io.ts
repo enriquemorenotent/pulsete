@@ -7,7 +7,8 @@ import type { IrcConnection } from './irc.js';
 import type { MessageInput } from './storage.js';
 
 export const sendRaw = (connection: IrcConnection, raw: string, statusTarget?: string) => {
-  if (!connection.socket) {
+  const lifecycle = connection.lifecycle;
+  if (!lifecycle.socket) {
     emitStatus(connection, 'Not connected', 'error', statusTarget);
     return false;
   }
@@ -16,11 +17,11 @@ export const sendRaw = (connection: IrcConnection, raw: string, statusTarget?: s
     return false;
   }
   try {
-    connection.socket.write(`${raw}\r\n`);
+    lifecycle.socket.write(`${raw}\r\n`);
   } catch {
-    connection.lastFailureMessage = 'Connection is no longer writable';
-    emitStatus(connection, connection.lastFailureMessage, 'error', statusTarget);
-    connection.socket.destroy();
+    lifecycle.lastFailureMessage = 'Connection is no longer writable';
+    emitStatus(connection, lifecycle.lastFailureMessage, 'error', statusTarget);
+    lifecycle.socket.destroy();
     return false;
   }
   return true;
@@ -43,8 +44,8 @@ export const sendClientRaw = (connection: IrcConnection, raw: string, sourceTarg
       emitStatus(connection, connection.getChannelListRequestFailureMessage(), 'error', sourceTarget);
       return false;
     }
-    if (!connection.connected) {
-      emitStatus(connection, connection.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
+    if (!connection.lifecycle.connected) {
+      emitStatus(connection, connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
       return false;
     }
     if (!sendRaw(connection, raw, sourceTarget)) {
@@ -57,11 +58,11 @@ export const sendClientRaw = (connection: IrcConnection, raw: string, sourceTarg
 };
 
 export const consume = (connection: IrcConnection, chunk: string) => {
-  connection.buffer += chunk;
-  let newlineIndex = connection.buffer.indexOf('\n');
+  connection.lifecycle.buffer += chunk;
+  let newlineIndex = connection.lifecycle.buffer.indexOf('\n');
   while (newlineIndex !== -1) {
-    const line = connection.buffer.slice(0, newlineIndex).replace(/\r$/, '');
-    connection.buffer = connection.buffer.slice(newlineIndex + 1);
+    const line = connection.lifecycle.buffer.slice(0, newlineIndex).replace(/\r$/, '');
+    connection.lifecycle.buffer = connection.lifecycle.buffer.slice(newlineIndex + 1);
     if (Buffer.byteLength(line, 'utf8') > maxBufferedIrcBytes) {
       handleOversizedServerLine(connection);
       return;
@@ -69,9 +70,9 @@ export const consume = (connection: IrcConnection, chunk: string) => {
     if (line.length > 0) {
       handleIrcLine(connection, line);
     }
-    newlineIndex = connection.buffer.indexOf('\n');
+    newlineIndex = connection.lifecycle.buffer.indexOf('\n');
   }
-  if (Buffer.byteLength(connection.buffer, 'utf8') > maxBufferedIrcBytes) {
+  if (Buffer.byteLength(connection.lifecycle.buffer, 'utf8') > maxBufferedIrcBytes) {
     handleOversizedServerLine(connection);
   }
 };
@@ -80,7 +81,7 @@ export const createSelfMessage = (connection: IrcConnection, target: string, bod
   id: randomUUID(),
   networkId: connection.profile.id,
   target,
-  nick: connection.currentNick,
+  nick: connection.lifecycle.currentNick,
   body,
   kind: 'line',
   self: true,
@@ -93,8 +94,8 @@ export const sendTrackedRaw = (
   sourceTarget: string,
   replyContext: PendingReplyContext | null
 ) => {
-  if (!connection.connected) {
-    emitStatus(connection, connection.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
+  if (!connection.lifecycle.connected) {
+    emitStatus(connection, connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
     return false;
   }
   if (!sendRaw(connection, raw, sourceTarget)) {
@@ -107,8 +108,8 @@ export const sendTrackedRaw = (
 };
 
 const handleOversizedServerLine = (connection: IrcConnection) => {
-  connection.buffer = '';
-  connection.lastFailureMessage = 'Server sent an oversized IRC line';
-  emitStatus(connection, connection.lastFailureMessage, 'error');
-  connection.socket?.destroy();
+  connection.lifecycle.buffer = '';
+  connection.lifecycle.lastFailureMessage = 'Server sent an oversized IRC line';
+  emitStatus(connection, connection.lifecycle.lastFailureMessage, 'error');
+  connection.lifecycle.socket?.destroy();
 };

@@ -4,6 +4,7 @@ import type { BufferState,ChannelState,ClientMessage,NetworkProfile } from '../s
 import { initialState } from '../web/src/app-state.js';
 import type { Action,State } from '../web/src/app-types.js';
 import type { SocketHandle } from '../web/src/client.js';
+import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { useAppActions } from '../web/src/useAppActions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
@@ -58,23 +59,33 @@ const workspace: WorkspaceView = {
   showNicklist: true,
 };
 
-const makeState = (overrides: Partial<State> = {}): State => ({
+const makeState = (overrides: {
+  domain?: Partial<State['domain']>;
+  transient?: Partial<State['transient']>;
+} = {}): State => ({
   ...initialState,
-  phase: 'ready',
-  gatewayStatus: 'connected',
-  networks: [network],
-  buffers: [selectedBuffer],
-  channels: [selectedChannel],
-  pendingChannels: [],
-  selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-  networkStates: {
-    [network.id]: {
-      phase: 'connected',
-      serverName: 'irc.example.test',
-      nick: 'tester',
+  domain: {
+    ...initialState.domain,
+    phase: 'ready',
+    gatewayStatus: 'connected',
+    networks: [network],
+    buffers: [selectedBuffer],
+    channels: [selectedChannel],
+    pendingChannels: [],
+    networkStates: {
+      [network.id]: {
+        phase: 'connected',
+        serverName: 'irc.example.test',
+        nick: 'tester',
+      },
     },
+    ...overrides.domain,
   },
-  ...overrides,
+  transient: {
+    ...initialState.transient,
+    selection: { kind: 'buffer', bufferId: selectedBuffer.id },
+    ...overrides.transient,
+  },
 });
 
 const createParams = (options: {
@@ -92,6 +103,7 @@ const createParams = (options: {
     banners,
     composerEntries,
     params: {
+      conversation: buildConversationIndex(state.domain),
       state,
       draft: options.draft ?? '',
       workspace,
@@ -117,14 +129,18 @@ const createParams = (options: {
 test('closeChannelList still clears local state while the gateway is unavailable', () => {
   const { params, actions: dispatched, banners } = createParams({
     state: makeState({
-      gatewayStatus: 'disconnected',
-      channelList: {
-        open: true,
-        networkId: network.id,
-        requestId: 'request-1',
-        status: 'loading',
-        entries: [],
-        error: null,
+      domain: {
+        gatewayStatus: 'disconnected',
+      },
+      transient: {
+        channelList: {
+          open: true,
+          networkId: network.id,
+          requestId: 'request-1',
+          status: 'loading',
+          entries: [],
+          error: null,
+        },
       },
     }),
   });
@@ -140,7 +156,11 @@ test('sendComposer blocks websocket-backed sends while the gateway is reconnecti
   const sent: ClientMessage[] = [];
   const { params, composerEntries, banners } = createParams({
     draft: 'hello',
-    state: makeState({ gatewayStatus: 'connecting' }),
+    state: makeState({
+      domain: {
+        gatewayStatus: 'connecting',
+      },
+    }),
     socket: {
       send(message) {
         sent.push(message);
