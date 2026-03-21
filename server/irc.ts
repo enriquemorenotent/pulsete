@@ -97,6 +97,90 @@ export class IrcConnection implements IrcConnectionState {
     };
   }
 
+  openSocket(socket: IrcSocket) {
+    if (this.socket === socket) {
+      return;
+    }
+    this.clearReconnectTimer();
+    this.manualDisconnect = false;
+    this.lastFailureMessage = null;
+    this.socket = socket;
+    emitState(this);
+  }
+
+  beginLogin() {
+    this.lastFailureMessage = null;
+  }
+
+  setConnectDeadlineTimer(timer: ReturnType<typeof setTimeout>) {
+    this.clearConnectDeadlineTimer();
+    this.connectDeadlineTimer = timer;
+  }
+
+  markConnectionFailure(detail: string) {
+    this.lastFailureMessage = this.formatConnectionFailure(detail);
+    emitStatus(this, this.lastFailureMessage, 'error');
+  }
+
+  handleSocketClosed(socket: IrcSocket) {
+    if (this.socket !== socket) {
+      return;
+    }
+    this.clearConnectDeadlineTimer();
+    this.clearReconnectTimer();
+    const wasConnected = this.connected;
+    const failureMessage = this.lastFailureMessage;
+    this.socket = null;
+    this.resetTransientState();
+    this.connected = false;
+    this.serverName = null;
+    this.currentNick = this.profile.nick;
+    this.lastFailureMessage = null;
+    emitState(this);
+    if (wasConnected) {
+      emitStatus(this, 'Disconnected from server');
+    } else if (!failureMessage) {
+      emitStatus(this, this.formatConnectionFailure('Connection closed'), 'error');
+    }
+    this.scheduleReconnect();
+  }
+
+  markRegistered(serverName: string | null, nick: string | null) {
+    this.connected = true;
+    this.clearConnectDeadlineTimer();
+    this.serverName = serverName ?? this.profile.host;
+    this.reconnectAttempts = 0;
+    this.currentNick = nick ?? this.profile.nick;
+    this.discardPendingNickReplyContexts();
+    this.pendingNick = null;
+    emitState(this);
+  }
+
+  clearPendingNick() {
+    this.pendingNick = null;
+  }
+
+  applyNickFallback(
+    fallbackNick: string,
+    options: { replyTarget?: string; updatePending: boolean }
+  ) {
+    if (options.updatePending) {
+      this.pendingNick = fallbackNick;
+    } else {
+      this.currentNick = fallbackNick;
+    }
+    if (options.replyTarget) {
+      this.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
+    }
+  }
+
+  confirmNick(newNick: string) {
+    this.consumePendingNickReplyContexts(newNick);
+    this.currentNick = newNick;
+    this.pendingNick = getLatestPendingNick(this.pendingReplyContexts);
+    emitState(this);
+  }
+
   connect(resetRetryBudget = true) {
     this.clearReconnectTimer();
     if (resetRetryBudget) {
@@ -399,6 +483,16 @@ export class IrcConnection implements IrcConnectionState {
     return this.socket ? 'Still connecting to server' : 'Not connected';
   }
 
+  getActiveChannelListSnapshot() {
+    if (this.activeChannelListMode !== 'structured' || !this.activeChannelListRequestId) {
+      return null;
+    }
+    return {
+      requestId: this.activeChannelListRequestId,
+      entries: [...this.activeChannelListEntries],
+    };
+  }
+
   consume(chunk: string) {
     this.buffer += chunk;
     let newlineIndex = this.buffer.indexOf('\n');
@@ -556,6 +650,25 @@ export class IrcConnection implements IrcConnectionState {
     return nextUsers;
   }
 
+  getTrackedChannelUsers(channel: string) {
+    const key = this.resolveTrackedChannel(channel);
+    return key ? this.channelUsers.get(key) ?? createEmptyChannelUsers() : createEmptyChannelUsers();
+  }
+
+  setTrackedChannelUsers(channel: string, users: ChannelUserState[]) {
+    const key = this.resolveTrackedChannelKey(channel) ?? channel;
+    this.channelUsers.set(key, users);
+    return users;
+  }
+
+  getTrackedChannelUserEntries() {
+    return Array.from(this.channelUsers.entries(), ([channel, users]) => [channel, users] as [string, ChannelUserState[]]);
+  }
+
+  resolveTrackedChannel(channel: string) {
+    return this.resolveTrackedChannelKey(channel, false);
+  }
+
   clearExpiredChannelSessions() {
     this.prunePendingReplyContexts();
   }
@@ -593,6 +706,20 @@ export class IrcConnection implements IrcConnectionState {
     this.channelSessions.delete(key);
     this.hidePendingChannel(session);
     return { ...session, joinTimeoutTimer: null };
+  }
+
+  handleSelfChannelDeparture(channel: string) {
+    const session = this.getChannelSession(channel);
+    if (session?.phase === 'joining') {
+      this.setTrackedChannelUsers(channel, []);
+      this.setChannelSession(channel, 'joining', {
+        sourceTarget: session.sourceTarget,
+        visiblePending: session.visiblePending,
+        previouslyJoined: false,
+      });
+      return;
+    }
+    this.removeChannelSession(channel);
   }
 
   setChannelSession(
@@ -728,6 +855,46 @@ export class IrcConnection implements IrcConnectionState {
     emitStatus(this, `Timed out joining ${channel}`, 'error', sourceTarget);
   }
 
+  discardPendingChannelReplyContexts(
+    channel: string,
+    predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
+  ) {
+    const contexts: Array<Extract<PendingReplyContext, { kind: 'channel' }>> = [];
+    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
+      const context = this.pendingReplyContexts[index];
+      if (
+        context?.kind === 'channel'
+        && isSameIrcIdentifier(context.channel, channel)
+        && (!predicate || predicate(context))
+      ) {
+        contexts.push(this.pendingReplyContexts.splice(index, 1)[0] as Extract<PendingReplyContext, { kind: 'channel' }>);
+      }
+    }
+    return contexts;
+  }
+
+  consumePendingNickReplyContexts(requestedNick: string) {
+    const contexts: Array<Extract<PendingReplyContext, { kind: 'nick' }>> = [];
+    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
+      const context = this.pendingReplyContexts[index];
+      if (context?.kind === 'nick' && isSameIrcIdentifier(context.requestedNick, requestedNick)) {
+        contexts.push(this.pendingReplyContexts.splice(index, 1)[0] as Extract<PendingReplyContext, { kind: 'nick' }>);
+      }
+    }
+    return contexts;
+  }
+
+  discardPendingNickReplyContexts() {
+    const contexts: Array<Extract<PendingReplyContext, { kind: 'nick' }>> = [];
+    for (let index = this.pendingReplyContexts.length - 1; index >= 0; index -= 1) {
+      const context = this.pendingReplyContexts[index];
+      if (context?.kind === 'nick') {
+        contexts.push(this.pendingReplyContexts.splice(index, 1)[0] as Extract<PendingReplyContext, { kind: 'nick' }>);
+      }
+    }
+    return contexts;
+  }
+
   private resolveTrackedChannelKey(channel: string, createIfMissing = true) {
     return findIrcCaseMatch(this.channelSessions.keys(), channel)
       ?? findIrcCaseMatch(this.channelUsers.keys(), channel)
@@ -829,6 +996,27 @@ export class IrcConnection implements IrcConnectionState {
       return;
     }
     this.pendingFriendPresencePoll.remainingResponses = sentBatches;
+  }
+
+  private scheduleReconnect() {
+    if (this.manualDisconnect || this.reconnectAttempts >= 3) {
+      return;
+    }
+    const attempt = ++this.reconnectAttempts;
+    const timer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (this.socket || this.manualDisconnect || attempt !== this.reconnectAttempts) {
+        return;
+      }
+      emitStatus(this, `Reconnecting (${attempt}/3)`, 'notice');
+      this.connect(false);
+    }, 3000 * attempt);
+    timer.unref?.();
+    this.reconnectTimer = timer;
+  }
+
+  private formatConnectionFailure(detail: string) {
+    return `Unable to connect to ${this.profile.host}:${this.profile.port} (${detail})`;
   }
 
   private updateOnlineFriendKeys(onlineNicks: string[]) {

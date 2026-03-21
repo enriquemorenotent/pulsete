@@ -10,7 +10,7 @@ import WebSocket from 'ws';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Runtime } from '../server/runtime.js';
 import { Storage, type NetworkInput } from '../server/storage.js';
-import type { ChannelUserState, ServerMessage } from '../shared/protocol.js';
+import type { ChannelListEntry, ChannelUserState, ServerMessage } from '../shared/protocol.js';
 
 const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
   nick,
@@ -1424,14 +1424,14 @@ test('runtime reports when a timed-out LIST is still draining late server replie
   runtime.attachSocket(socket);
   (runtime as unknown as {
     connections: Map<string, {
-      activeChannelListRequestId: string | null;
-      activeChannelListEntries: ServerMessage[];
+      getActiveChannelListSnapshot(): { requestId: string; entries: ChannelListEntry[] } | null;
       requestChannelList(requestId: string): boolean;
       getChannelListRequestFailureMessage(): string;
     }>;
   }).connections.set(network.id, {
-    activeChannelListRequestId: null,
-    activeChannelListEntries: [],
+    getActiveChannelListSnapshot() {
+      return null;
+    },
     requestChannelList() {
       return false;
     },

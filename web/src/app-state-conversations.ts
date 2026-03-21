@@ -2,6 +2,7 @@ import type { BufferState, ChatMessage, FriendState, PendingChannelState } from 
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, ChannelListState, State } from './app-types.js';
 import { fallbackSelection, normalizeSelection } from './app-state-selection.js';
+import { createConversationQueries } from './conversation-selectors.js';
 import { matchesBufferMessage } from './message-matching.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
@@ -37,6 +38,7 @@ export const reduceConversationAction = (
   action: Action,
   initialChannelListState: ChannelListState
 ): State | null => {
+  const conversation = createConversationQueries(state);
   switch (action.type) {
     case 'upsert-friend': {
       const friends = state.friends.filter((friend) => friend.id !== action.friend.id);
@@ -81,7 +83,7 @@ export const reduceConversationAction = (
       return { ...nextState, selection: normalizeSelection(nextState, selection) };
     }
     case 'remove-buffer': {
-      const removedBuffer = state.buffers.find((buffer) => buffer.id === action.bufferId) ?? null;
+      const removedBuffer = conversation.findBufferById(action.bufferId);
       const buffers = state.buffers.filter((buffer) => buffer.id !== action.bufferId);
       const channels = state.channels.filter((channel) => channel.id !== action.bufferId);
       const messages = removedBuffer
@@ -111,11 +113,9 @@ export const reduceConversationAction = (
         channels: state.channels.filter((channel) => channel.id !== action.channelId),
       };
     case 'add-pending-channel': {
-      const existingBuffer = state.buffers.find(
-        (buffer) =>
-          buffer.networkId === action.pendingChannel.networkId &&
-          buffer.kind === 'channel' &&
-          isSameIrcIdentifier(buffer.target, action.pendingChannel.channel)
+      const existingBuffer = conversation.findChannelBuffer(
+        action.pendingChannel.networkId,
+        action.pendingChannel.channel
       );
       if (existingBuffer) {
         return state;
@@ -136,13 +136,7 @@ export const reduceConversationAction = (
         (pendingChannel) =>
           pendingChannel.networkId !== action.networkId || !isSameIrcIdentifier(pendingChannel.channel, action.channel)
       );
-      const matchingChannelBuffer =
-        state.buffers.find(
-          (buffer) =>
-            buffer.networkId === action.networkId &&
-            buffer.kind === 'channel' &&
-            isSameIrcIdentifier(buffer.target, action.channel)
-        ) ?? null;
+      const matchingChannelBuffer = conversation.findChannelBuffer(action.networkId, action.channel);
       const nextState = { ...state, pendingChannels };
       return {
         ...nextState,

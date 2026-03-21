@@ -1,5 +1,5 @@
 import type { AppSnapshot, BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
-import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
+import { createConversationQueries } from './conversation-selectors.js';
 import { getConnectionInstances, getConnectionStatus } from './workspace-helpers.js';
 import type { NetworkRuntimeState, SelectedBuffer, WorkspaceView } from './workspace-types.js';
 
@@ -17,22 +17,6 @@ type WorkspaceInput = {
 
 const selectionFor = (buffer: BufferState | null): SelectedBuffer | null =>
   buffer ? { kind: 'buffer', bufferId: buffer.id } : null;
-
-const findServerBuffer = (buffers: BufferState[], networkId: string) =>
-  buffers.find((buffer) => buffer.networkId === networkId && buffer.kind === 'server') ?? null;
-
-const findSelectedBuffer = (buffers: BufferState[], selection: SelectedBuffer | null) =>
-  selection?.kind === 'buffer'
-    ? buffers.find((buffer) => buffer.id === selection.bufferId) ?? null
-    : null;
-
-const findSelectedPendingChannel = (pendingChannels: PendingChannelState[], selection: SelectedBuffer | null) =>
-  selection?.kind === 'pending-channel'
-    ? pendingChannels.find(
-        (pendingChannel) =>
-          pendingChannel.networkId === selection.networkId && isSameIrcIdentifier(pendingChannel.channel, selection.channel)
-      ) ?? null
-    : null;
 
 const getReadOnlySubtitle = (status: 'offline' | 'connecting') =>
   status === 'offline'
@@ -56,10 +40,17 @@ const getReadOnlyEmptyBody = (
 
 export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'buffers'>): SelectedBuffer | null => {
   const instance = getConnectionInstances(snapshot.networks)[0];
-  return selectionFor(instance ? findServerBuffer(snapshot.buffers, instance.id) : null);
+  const queries = createConversationQueries({
+    buffers: snapshot.buffers,
+    channels: [],
+    pendingChannels: [],
+    messages: [],
+  });
+  return selectionFor(instance ? queries.findServerBuffer(instance.id) : null);
 };
 
 export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
+  const queries = createConversationQueries({ ...input, messages: [] });
   const connectionInstances = getConnectionInstances(input.networks);
   if (connectionInstances.length === 0) {
     return {
@@ -80,15 +71,15 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     };
   }
 
-  const selectedBuffer = findSelectedBuffer(input.buffers, input.selection);
-  const selectedPendingChannel = findSelectedPendingChannel(input.pendingChannels, input.selection);
+  const selectedBuffer = queries.findSelectedBuffer(input.selection);
+  const selectedPendingChannel = queries.findSelectedPendingChannel(input.selection);
   const selectedNetwork =
     connectionInstances.find(
       (network) => network.id === selectedBuffer?.networkId || network.id === selectedPendingChannel?.networkId
     ) ?? connectionInstances[0];
   const selectedRuntime = input.networkStates[selectedNetwork.id] ?? null;
   const connectionStatus = getConnectionStatus(selectedRuntime);
-  const serverBuffer = findServerBuffer(input.buffers, selectedNetwork.id);
+  const serverBuffer = queries.findServerBuffer(selectedNetwork.id);
   const activeBuffer =
     !selectedBuffer || selectedBuffer.networkId !== selectedNetwork.id ? serverBuffer : selectedBuffer;
   const activeSelection = selectionFor(activeBuffer);
@@ -120,9 +111,7 @@ export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
     };
   }
 
-  const selectedChannel = activeBuffer?.kind === 'channel'
-    ? input.channels.find((channel) => channel.id === activeBuffer.id) ?? null
-    : null;
+  const selectedChannel = queries.findChannelByBuffer(activeBuffer);
 
   if (activePendingChannel) {
     return {

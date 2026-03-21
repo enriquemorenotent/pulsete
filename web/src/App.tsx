@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
 import { reducer, initialState, useStateReducer } from './app-state.js';
 import type { SocketHandle } from './client.js';
+import { createConversationQueries } from './conversation-selectors.js';
 import { useComposerHistory } from './composer-history.js';
 import { DesktopShell } from './DesktopShell.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
-import { matchesBufferMessage } from './message-matching.js';
 import { getTemplateRootId, type EditorTab } from './network-form.js';
 import { Toast } from './Toast.js';
 import { useAppActions } from './useAppActions.js';
@@ -36,6 +36,10 @@ function App() {
       }),
     [state.buffers, state.channels, state.networkStates, state.networks, state.pendingChannels, state.selection]
   );
+  const conversation = useMemo(
+    () => createConversationQueries(state),
+    [state.buffers, state.channels, state.messages, state.pendingChannels]
+  );
 
   const managerNetworks = useMemo(
     () => state.networks.filter((network) => !network.managerHidden),
@@ -57,14 +61,8 @@ function App() {
   const channelListNetwork = state.networks.find((network) => network.id === state.channelList.networkId) ?? null;
 
   const selectedMessages = useMemo(() => {
-    const selectedBuffer = workspace.selectedBuffer;
-    if (!selectedBuffer) {
-      return [];
-    }
-    return state.messages.filter(
-      (message) => matchesBufferMessage(selectedBuffer, message)
-    );
-  }, [state.messages, workspace.selectedBuffer]);
+    return conversation.selectMessages(workspace.selectedBuffer);
+  }, [conversation, workspace.selectedBuffer]);
 
   useAppLifecycle({
     state,

@@ -1,6 +1,6 @@
 import type { BufferState, ClientMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
-import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { Action, State } from './app-types.js';
+import { createConversationQueries } from './conversation-selectors.js';
 import { api, type SocketHandle } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
 import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
@@ -26,38 +26,22 @@ type AppActionParams = {
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
+type AppActionContext = AppActionParams & {
+  conversation: ReturnType<typeof createConversationQueries>;
+  getGatewaySocket: (showBanner?: boolean) => SocketHandle | null;
+  sendGatewayMessage: (message: ClientMessage, showBanner?: boolean) => boolean;
+  joinChannel: (networkId: string, channel: string, sourceBufferId?: string) => boolean;
+  openOrSelectQueryBuffer: (network: NetworkProfile, nick: string) => Promise<BufferState>;
+  openChannelListForNetwork: (networkId: string) => Promise<void>;
+};
+
 const selectBuffer = (dispatch: (action: Action) => void, buffer: BufferState) =>
   dispatch({ type: 'select', selection: { kind: 'buffer', bufferId: buffer.id } });
 
 const selectPendingChannel = (dispatch: (action: Action) => void, networkId: string, channel: string) =>
   dispatch({ type: 'select', selection: { kind: 'pending-channel', networkId, channel } });
 
-export function useAppActions(params: AppActionParams) {
-  const showNewNetworkEditor = () => openNewNetworkEditor(params);
-  const showExistingNetworkEditor = (network: NetworkProfile) => openExistingNetworkEditor(network, params);
-  const findServerBuffer = (networkId: string) =>
-    params.state.buffers.find((buffer) => buffer.networkId === networkId && buffer.kind === 'server') ?? null;
-  const findQueryBuffer = (networkId: string, nick: string) =>
-    params.state.buffers.find(
-      (buffer) =>
-        buffer.networkId === networkId
-        && buffer.kind === 'query'
-        && isSameIrcIdentifier(buffer.target, nick)
-    ) ?? null;
-  const findChannelBuffer = (networkId: string, channel: string) =>
-    params.state.buffers.find(
-      (buffer) =>
-        buffer.networkId === networkId
-        && buffer.kind === 'channel'
-        && isSameIrcIdentifier(buffer.target, channel)
-    ) ?? null;
-  const findPendingChannel = (networkId: string, channel: string) =>
-    params.state.pendingChannels.find(
-      (pendingChannel) =>
-        pendingChannel.networkId === networkId
-        && isSameIrcIdentifier(pendingChannel.channel, channel)
-    ) ?? null;
-
+const createGatewayHelpers = (params: AppActionParams) => {
   const getGatewaySocket = (showBanner = true) => {
     if (params.state.gatewayStatus !== 'connected' || !params.socketRef.current) {
       if (showBanner) {
@@ -84,14 +68,23 @@ export function useAppActions(params: AppActionParams) {
     }
   };
 
+  return { getGatewaySocket, sendGatewayMessage };
+};
+
+const createConversationHelpers = (
+  params: AppActionParams,
+  conversation: ReturnType<typeof createConversationQueries>,
+  sendGatewayMessage: AppActionContext['sendGatewayMessage'],
+  getGatewaySocket: AppActionContext['getGatewaySocket']
+) => {
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
-    const existingBuffer = findChannelBuffer(networkId, channel);
+    const existingBuffer = conversation.findChannelBuffer(networkId, channel);
     if (existingBuffer) {
       selectBuffer(params.dispatch, existingBuffer);
       return true;
     }
 
-    if (findPendingChannel(networkId, channel)) {
+    if (conversation.findPendingChannel(networkId, channel)) {
       selectPendingChannel(params.dispatch, networkId, channel);
       return true;
     }
@@ -111,7 +104,7 @@ export function useAppActions(params: AppActionParams) {
   };
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string) => {
-    const existingBuffer = findQueryBuffer(network.id, nick);
+    const existingBuffer = conversation.findQueryBuffer(network.id, nick);
     if (existingBuffer) {
       selectBuffer(params.dispatch, existingBuffer);
       return existingBuffer;
@@ -144,39 +137,46 @@ export function useAppActions(params: AppActionParams) {
     params.dispatch({ type: 'open-channel-list', networkId });
   };
 
+  return { joinChannel, openOrSelectQueryBuffer, openChannelListForNetwork };
+};
+
+const createNetworkActions = (context: AppActionContext) => {
+  const showNewNetworkEditor = () => openNewNetworkEditor(context);
+  const showExistingNetworkEditor = (network: NetworkProfile) => openExistingNetworkEditor(network, context);
+
   const submitNetwork = async () => {
-    if (!params.state.networkForm.name.trim()) return params.updateBanner('error', 'Network name is required');
-    if (!params.state.networkForm.host.trim()) return params.updateBanner('error', 'Server address is required');
-    if (!params.state.networkForm.nick.trim()) return params.updateBanner('error', 'Nick name is required');
+    if (!context.state.networkForm.name.trim()) return context.updateBanner('error', 'Network name is required');
+    if (!context.state.networkForm.host.trim()) return context.updateBanner('error', 'Server address is required');
+    if (!context.state.networkForm.nick.trim()) return context.updateBanner('error', 'Nick name is required');
     try {
       const result = await api.saveNetwork({
-        id: params.state.networkForm.id,
-        name: params.state.networkForm.name.trim(),
-        host: params.state.networkForm.host.trim(),
-        port: Number(params.state.networkForm.port),
-        tls: params.state.networkForm.tls,
-        nick: params.state.networkForm.nick.trim(),
-        altNicks: [params.state.networkForm.nick2.trim(), params.state.networkForm.nick3.trim()].filter(Boolean),
-        username: params.state.networkForm.username.trim() || params.state.networkForm.nick.trim(),
-        realName: params.state.networkForm.realName.trim() || params.state.networkForm.nick.trim(),
-        password: params.state.networkForm.password.trim() || undefined,
-        clearPassword: params.state.networkForm.password.trim()
+        id: context.state.networkForm.id,
+        name: context.state.networkForm.name.trim(),
+        host: context.state.networkForm.host.trim(),
+        port: Number(context.state.networkForm.port),
+        tls: context.state.networkForm.tls,
+        nick: context.state.networkForm.nick.trim(),
+        altNicks: [context.state.networkForm.nick2.trim(), context.state.networkForm.nick3.trim()].filter(Boolean),
+        username: context.state.networkForm.username.trim() || context.state.networkForm.nick.trim(),
+        realName: context.state.networkForm.realName.trim() || context.state.networkForm.nick.trim(),
+        password: context.state.networkForm.password.trim() || undefined,
+        clearPassword: context.state.networkForm.password.trim()
           ? false
-          : params.state.networkForm.clearPassword || undefined,
-        favorite: params.state.networkForm.favorite,
-        autoJoin: parseAutoJoin(params.state.networkForm.autoJoin),
+          : context.state.networkForm.clearPassword || undefined,
+        favorite: context.state.networkForm.favorite,
+        autoJoin: parseAutoJoin(context.state.networkForm.autoJoin),
       });
-      params.dispatch({ type: 'upsert-network', network: result.network });
+      context.dispatch({ type: 'upsert-network', network: result.network });
       if (result.serverBuffer) {
-        params.dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
+        context.dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
       }
-      params.dispatch({ type: 'reset-network-form', form: toForm(result.network) });
-      params.setManagedNetworkId(result.network.id);
-      params.setShowNetworkEditor(false);
-      params.setShowNetworkManager(true);
-      params.updateBanner('notice', 'Network saved');
+      context.dispatch({ type: 'reset-network-form', form: toForm(result.network) });
+      context.setManagedNetworkId(result.network.id);
+      context.setShowNetworkEditor(false);
+      context.setShowNetworkManager(true);
+      context.updateBanner('notice', 'Network saved');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to save network');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to save network');
     }
   };
 
@@ -184,56 +184,56 @@ export function useAppActions(params: AppActionParams) {
     try {
       const result = await api.deleteNetwork(networkId);
       for (const deletedNetworkId of result.deletedNetworkIds) {
-        params.dispatch({ type: 'remove-network', networkId: deletedNetworkId });
+        context.dispatch({ type: 'remove-network', networkId: deletedNetworkId });
       }
-      params.updateBanner('notice', 'Network deleted');
+      context.updateBanner('notice', 'Network deleted');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to delete network');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to delete network');
     }
   };
 
   const duplicateNetwork = async (network: NetworkProfile) => {
     try {
       const result = await api.duplicateNetwork(network.id);
-      params.dispatch({ type: 'upsert-network', network: result.network });
-      params.setManagedNetworkId(result.network.id);
-      params.updateBanner('notice', 'Network duplicated');
+      context.dispatch({ type: 'upsert-network', network: result.network });
+      context.setManagedNetworkId(result.network.id);
+      context.updateBanner('notice', 'Network duplicated');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to duplicate network');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to duplicate network');
     }
   };
 
   const connectNetwork = async (network: NetworkProfile) => {
     try {
       const instance = await api.saveNetwork(createConnectionInstancePayload(network));
-      params.dispatch({ type: 'upsert-network', network: instance.network });
+      context.dispatch({ type: 'upsert-network', network: instance.network });
       if (instance.serverBuffer) {
-        params.dispatch({ type: 'upsert-buffer', buffer: instance.serverBuffer });
-        selectBuffer(params.dispatch, instance.serverBuffer);
+        context.dispatch({ type: 'upsert-buffer', buffer: instance.serverBuffer });
+        selectBuffer(context.dispatch, instance.serverBuffer);
       }
       await api.connectNetwork(instance.network.id);
-      params.setShowNetworkManager(false);
-      params.updateBanner('notice', 'Opened connection instance');
+      context.setShowNetworkManager(false);
+      context.updateBanner('notice', 'Opened connection instance');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to connect');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to connect');
     }
   };
 
   const reconnectNetwork = async (network: NetworkProfile) => {
     try {
       await api.connectNetwork(network.id);
-      params.updateBanner('notice', 'Reconnect requested');
+      context.updateBanner('notice', 'Reconnect requested');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to reconnect');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to reconnect');
     }
   };
 
   const disconnectNetwork = async (networkId: string) => {
     try {
       await api.disconnectNetwork(networkId);
-      params.updateBanner('notice', 'Disconnect requested');
+      context.updateBanner('notice', 'Disconnect requested');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to disconnect');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to disconnect');
     }
   };
 
@@ -241,110 +241,91 @@ export function useAppActions(params: AppActionParams) {
     try {
       const result = await api.deleteNetwork(network.id);
       for (const deletedNetworkId of result.deletedNetworkIds) {
-        params.dispatch({ type: 'remove-network', networkId: deletedNetworkId });
+        context.dispatch({ type: 'remove-network', networkId: deletedNetworkId });
       }
-      params.updateBanner('notice', 'Connection instance closed');
+      context.updateBanner('notice', 'Connection instance closed');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to close connection');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to close connection');
     }
   };
 
   const saveFavorite = async (network: NetworkProfile, favorite: boolean) => {
     try {
       const result = await api.saveNetwork({ ...network, favorite });
-      params.dispatch({ type: 'upsert-network', network: result.network });
+      context.dispatch({ type: 'upsert-network', network: result.network });
       if (result.serverBuffer) {
-        params.dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
+        context.dispatch({ type: 'upsert-buffer', buffer: result.serverBuffer });
       }
-      params.updateBanner('notice', favorite ? 'Marked as favorite' : 'Removed from favorites');
+      context.updateBanner('notice', favorite ? 'Marked as favorite' : 'Removed from favorites');
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to update favorite');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to update favorite');
     }
   };
 
   const selectNetworkBuffer = (network: NetworkProfile) => {
-    const buffer = params.state.buffers.find((candidate) => candidate.networkId === network.id && candidate.kind === 'server') ?? null;
+    const buffer = context.conversation.findServerBuffer(network.id);
     if (buffer) {
-      selectBuffer(params.dispatch, buffer);
+      selectBuffer(context.dispatch, buffer);
     }
   };
 
-  const selectTabBuffer = (buffer: BufferState) => selectBuffer(params.dispatch, buffer);
-  const selectPendingTab = (networkId: string, channel: string) => selectPendingChannel(params.dispatch, networkId, channel);
-
-  const openMentionedChannel = async (channelName: string) => {
-    const network = params.workspace.selectedNetwork;
-    if (!network) {
-      return;
-    }
-    joinChannel(network.id, channelName, params.workspace.selectedBuffer?.id);
+  return {
+    closeConnection,
+    connectNetwork,
+    deleteNetwork,
+    disconnectNetwork,
+    duplicateNetwork,
+    openNetworkEditor: showExistingNetworkEditor,
+    openNewNetworkEditor: showNewNetworkEditor,
+    reconnectNetwork,
+    saveFavorite,
+    selectNetworkBuffer,
+    submitNetwork,
   };
+};
 
-  const openChannelList = async () => {
-    const network = params.workspace.selectedNetwork;
-    if (!network) {
-      return;
-    }
-    await openChannelListForNetwork(network.id);
-  };
-
-  const closeChannelList = () => {
-    const networkId = params.state.channelList.networkId;
-    if (networkId) {
-      sendGatewayMessage({ type: 'channel.list.cancel', networkId }, false);
-    }
-    params.dispatch({ type: 'close-channel-list' });
-  };
-
-  const joinChannelFromList = async (channel: string) => {
-    const networkId = params.state.channelList.networkId;
-    if (!networkId) {
-      return;
-    }
-    joinChannel(networkId, channel, findServerBuffer(networkId)?.id);
-  };
-
+const createFriendActions = (context: AppActionContext) => {
   const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
     try {
-      await openOrSelectQueryBuffer(network, nick);
+      await context.openOrSelectQueryBuffer(network, nick);
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
     }
   };
 
   const selectFriend = async (friend: FriendState) => {
     const decision = resolveFriendSelection({
       nick: friend.nick,
-      buffers: params.state.buffers,
-      workspace: params.workspace,
-      networkStates: params.state.networkStates,
+      buffers: context.state.buffers,
+      workspace: context.workspace,
+      networkStates: context.state.networkStates,
     });
 
     if (decision.type === 'error') {
-      params.updateBanner('error', decision.message);
+      context.updateBanner('error', decision.message);
       return;
     }
 
     if (decision.type === 'select') {
-      selectBuffer(params.dispatch, decision.buffer);
+      selectBuffer(context.dispatch, decision.buffer);
       return;
     }
 
     try {
-      await openOrSelectQueryBuffer(decision.network, friend.nick);
+      await context.openOrSelectQueryBuffer(decision.network, friend.nick);
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
     }
   };
 
   const addFriend = async (nick: string) => {
     try {
       const result = await api.addFriend(nick);
-      params.dispatch({ type: 'upsert-friend', friend: result.friend });
-      params.updateBanner('notice', 'Friend saved');
+      context.dispatch({ type: 'upsert-friend', friend: result.friend });
+      context.updateBanner('notice', 'Friend saved');
       return true;
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to save friend');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to save friend');
       return false;
     }
   };
@@ -352,99 +333,150 @@ export function useAppActions(params: AppActionParams) {
   const removeFriend = async (friendId: string) => {
     try {
       await api.removeFriend(friendId);
-      params.dispatch({ type: 'remove-friend', friendId });
-      params.updateBanner('notice', 'Friend removed');
+      context.dispatch({ type: 'remove-friend', friendId });
+      context.updateBanner('notice', 'Friend removed');
       return true;
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to remove friend');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to remove friend');
       return false;
     }
   };
 
+  return {
+    addFriend,
+    removeFriend,
+    selectFriend,
+    selectPrivateBuffer,
+  };
+};
+
+const createChatActions = (context: AppActionContext) => {
+  const selectTabBuffer = (buffer: BufferState) => selectBuffer(context.dispatch, buffer);
+  const selectPendingTab = (networkId: string, channel: string) =>
+    selectPendingChannel(context.dispatch, networkId, channel);
+
+  const openMentionedChannel = async (channelName: string) => {
+    const network = context.workspace.selectedNetwork;
+    if (!network) {
+      return;
+    }
+    context.joinChannel(network.id, channelName, context.workspace.selectedBuffer?.id);
+  };
+
+  const openChannelList = async () => {
+    const network = context.workspace.selectedNetwork;
+    if (!network) {
+      return;
+    }
+    await context.openChannelListForNetwork(network.id);
+  };
+
+  const closeChannelList = () => {
+    const networkId = context.state.channelList.networkId;
+    if (networkId) {
+      context.sendGatewayMessage({ type: 'channel.list.cancel', networkId }, false);
+    }
+    context.dispatch({ type: 'close-channel-list' });
+  };
+
+  const joinChannelFromList = async (channel: string) => {
+    const networkId = context.state.channelList.networkId;
+    if (!networkId) {
+      return;
+    }
+    context.joinChannel(networkId, channel, context.conversation.findServerBuffer(networkId)?.id);
+  };
+
   const closeChannel = (networkId: string, channel: string) => {
-    const socket = getGatewaySocket();
+    const socket = context.getGatewaySocket();
     if (!socket) {
       return;
     }
-    const buffer = params.state.buffers.find(
-      (candidate) => candidate.networkId === networkId && candidate.kind === 'channel' && candidate.target === channel
-    );
+    const buffer = context.conversation.findChannelBuffer(networkId, channel);
     try {
       socket.send({
         type: 'channel.part',
         networkId,
         channel,
-        sourceBufferId: buffer?.id ?? params.workspace.selectedBuffer?.id,
+        sourceBufferId: buffer?.id ?? context.workspace.selectedBuffer?.id,
       });
     } catch {
-      params.updateBanner('error', gatewayReconnectMessage);
+      context.updateBanner('error', gatewayReconnectMessage);
     }
   };
 
   const closeBuffer = async (buffer: BufferState) => {
     try {
       await api.closeBuffer(buffer.id);
-      params.dispatch({ type: 'remove-buffer', networkId: buffer.networkId, bufferId: buffer.id });
+      context.dispatch({ type: 'remove-buffer', networkId: buffer.networkId, bufferId: buffer.id });
     } catch (error) {
-      params.updateBanner('error', error instanceof Error ? error.message : 'Failed to close private message');
+      context.updateBanner('error', error instanceof Error ? error.message : 'Failed to close private message');
     }
   };
 
   const sendComposer = async () => {
-    if (params.draft.trim() && !getGatewaySocket()) {
+    if (context.draft.trim() && !context.getGatewaySocket()) {
       return;
     }
     try {
       const submitted = await sendComposerMessage({
-        draft: params.draft,
-        setDraft: params.setDraft,
-        socket: getGatewaySocket(false),
-        updateBanner: params.updateBanner,
-        workspace: params.workspace,
+        draft: context.draft,
+        setDraft: context.setDraft,
+        socket: context.getGatewaySocket(false),
+        updateBanner: context.updateBanner,
+        workspace: context.workspace,
         onJoinChannel: async (networkId, channel, sourceBufferId) => {
-          joinChannel(networkId, channel, sourceBufferId);
+          context.joinChannel(networkId, channel, sourceBufferId);
         },
-        onOpenChannelList: openChannelListForNetwork,
+        onOpenChannelList: context.openChannelListForNetwork,
         onOpenQuery: async (networkId, nick) => {
-          const network = params.state.networks.find((candidate) => candidate.id === networkId) ?? null;
+          const network = context.state.networks.find((candidate) => candidate.id === networkId) ?? null;
           if (!network) {
             throw new Error('Network not found');
           }
-          await openOrSelectQueryBuffer(network, nick);
+          await context.openOrSelectQueryBuffer(network, nick);
         },
       });
       if (submitted) {
-        params.recordComposerEntry(submitted);
+        context.recordComposerEntry(submitted);
       }
     } catch (error) {
-      params.updateBanner('error', toGatewayErrorMessage(error, 'Failed to send message'));
+      context.updateBanner('error', toGatewayErrorMessage(error, 'Failed to send message'));
     }
   };
 
   return {
-    addFriend,
     closeBuffer,
-    closeChannelList,
     closeChannel,
-    closeConnection,
-    connectNetwork,
-    duplicateNetwork,
-    deleteNetwork,
-    disconnectNetwork,
-    openMentionedChannel,
-    openChannelList,
-    openNetworkEditor: showExistingNetworkEditor,
-    openNewNetworkEditor: showNewNetworkEditor,
-    reconnectNetwork,
-    saveFavorite,
-    selectFriend,
+    closeChannelList,
     joinChannelFromList,
-    selectNetworkBuffer,
+    openChannelList,
+    openMentionedChannel,
     selectPendingTab,
-    selectPrivateBuffer,
     selectTabBuffer,
     sendComposer,
-    submitNetwork,
-    removeFriend,
+  };
+};
+
+export function useAppActions(params: AppActionParams) {
+  const conversation = createConversationQueries(params.state);
+  const gateway = createGatewayHelpers(params);
+  const helpers = createConversationHelpers(
+    params,
+    conversation,
+    gateway.sendGatewayMessage,
+    gateway.getGatewaySocket
+  );
+  const context: AppActionContext = {
+    ...params,
+    ...gateway,
+    ...helpers,
+    conversation,
+  };
+
+  return {
+    ...createNetworkActions(context),
+    ...createFriendActions(context),
+    ...createChatActions(context),
   };
 }

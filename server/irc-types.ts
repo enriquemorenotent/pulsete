@@ -72,6 +72,7 @@ export type IrcConnectionState = {
   pendingNick: string | null;
   lastFailureMessage: string | null;
   pendingReplyContexts: PendingReplyContext[];
+  beginLogin(): void;
   clearConnectDeadlineTimer(): void;
   clearReconnectTimer(): void;
   disableFriendPresence(): void;
@@ -85,21 +86,41 @@ export type IrcConnectionState = {
   refreshFriendPresence(): void;
   finishChannelListRequest(requestId: string): void;
   getChannelListRequestFailureMessage(): string;
+  getActiveChannelListSnapshot(): { requestId: string; entries: ChannelListEntry[] } | null;
   handleChannelListNumeric(command: string, params: string[]): boolean;
+  handleSelfChannelDeparture(channel: string): void;
   recordChannelListEntry(requestId: string, entry: ChannelListEntry): void;
   requestChannelList(requestId: string): boolean;
   resetTransientState(): void;
+  markConnectionFailure(detail: string): void;
+  markRegistered(serverName: string | null, nick: string | null): void;
+  openSocket(socket: IrcSocket): void;
+  handleSocketClosed(socket: IrcSocket): void;
+  setConnectDeadlineTimer(timer: ReturnType<typeof setTimeout>): void;
   sendRaw(raw: string, statusTarget?: string): boolean;
   sendClientRaw(raw: string, sourceTarget?: string): boolean;
   setFriendNicks(nicks: string[]): void;
   clearExpiredChannelSessions(): void;
+  clearPendingNick(): void;
+  confirmNick(newNick: string): void;
+  applyNickFallback(fallbackNick: string, options: { replyTarget?: string; updatePending: boolean }): void;
   getChannelSession(channel: string): ChannelSessionState | null;
+  getTrackedChannelUserEntries(): Array<[string, ChannelUserState[]]>;
+  getTrackedChannelUsers(channel: string): ChannelUserState[];
   listPendingChannels(): Array<{ networkId: string; channel: string }>;
   removeChannelSession(channel: string): ChannelSessionState | null;
+  resolveTrackedChannel(channel: string): string | null;
   setChannelSession(
     channel: string,
     phase: ChannelSessionPhase,
     options?: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean }
   ): ChannelSessionState;
+  setTrackedChannelUsers(channel: string, users: ChannelUserState[]): ChannelUserState[];
+  discardPendingChannelReplyContexts(
+    channel: string,
+    predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
+  ): Array<Extract<PendingReplyContext, { kind: 'channel' }>>;
+  consumePendingNickReplyContexts(requestedNick: string): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
+  discardPendingNickReplyContexts(): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
 };
