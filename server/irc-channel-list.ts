@@ -1,15 +1,20 @@
 import type { ChannelListEntry } from '../shared/protocol.js';
 import {
+  appendStructuredChannelListEntry,
   clearActiveChannelListSession,
   clearDrainingChannelListSession,
+  finishStructuredChannelListSession,
+  getActiveStructuredChannelListSnapshot,
   getChannelListSession,
+  isChannelListPending as isChannelListStatePending,
   matchesChannelListSession,
-  setActiveChannelListSession,
-  setDrainingChannelListSession,
-} from './irc-channel-list-session.js';
+  moveActiveChannelListToDraining,
+  startChannelListSession,
+} from './irc-channel-list-state.js';
 import type { IrcChannelListContext } from './irc-contexts.js';
 import { emitChannelListCompleted, emitChannelListEntry, emitChannelListFailed, emitStatus } from './irc-emit.js';
 import { formatServerNumeric } from './irc-server-log.js';
+import type { IrcChannelListMode } from './irc-state-types.js';
 
 const channelListNumerics = new Set(['321', '322', '323', '263', '421', '461']);
 
@@ -26,20 +31,17 @@ export const requestChannelList = (connection: IrcChannelListContext, requestId:
 };
 
 export const recordChannelListEntry = (connection: IrcChannelListContext, requestId: string, entry: ChannelListEntry) => {
-  const session = getChannelListSession(connection.channelList);
-  if (session.phase !== 'active' || session.mode !== 'structured' || requestId !== session.requestId) {
+  const session = appendStructuredChannelListEntry(connection.channelList, requestId, entry);
+  if (!session) {
     return;
   }
-  session.entries.push(entry);
   resetChannelListTimeout(connection, session);
 };
 
 export const finishChannelListRequest = (connection: IrcChannelListContext, requestId: string) => {
-  const session = getChannelListSession(connection.channelList);
-  if (session.phase === 'active' && session.mode === 'structured' && requestId === session.requestId) {
-    clearActiveChannelList(connection);
-  } else if (session.phase === 'draining' && session.mode === 'structured' && requestId === session.requestId) {
-    clearDrainingChannelList(connection);
+  const outcome = finishStructuredChannelListSession(connection.channelList, requestId);
+  if (outcome) {
+    clearChannelListTimeout(connection);
   }
 };
 
@@ -51,14 +53,7 @@ export const getChannelListRequestFailureMessage = (connection: IrcChannelListCo
 };
 
 export const getActiveChannelListSnapshot = (connection: IrcChannelListContext) => {
-  const session = getChannelListSession(connection.channelList);
-  if (session.phase !== 'active' || session.mode !== 'structured' || !session.requestId) {
-    return null;
-  }
-  return {
-    requestId: session.requestId,
-    entries: [...session.entries],
-  };
+  return getActiveStructuredChannelListSnapshot(connection.channelList);
 };
 
 export const handleChannelListNumeric = (connection: IrcChannelListContext, command: string, params: string[]) => {
@@ -70,60 +65,9 @@ export const handleChannelListNumeric = (connection: IrcChannelListContext, comm
   if (session.phase === 'idle') {
     return true;
   }
-  if (session.mode === 'structured') {
-    if (session.requestId === null) {
-      return session.phase === 'draining';
-    }
-    if (command === '321') {
-      return true;
-    }
-    if (command === '322') {
-      const entry = parseChannelListEntry(params);
-      if (entry && session.phase === 'active') {
-        recordChannelListEntry(connection, session.requestId, entry);
-        emitChannelListEntry(connection, session.requestId, entry);
-      }
-      return true;
-    }
-    if (command === '323') {
-      if (session.phase === 'draining') {
-        clearDrainingChannelList(connection);
-      } else {
-        clearActiveChannelList(connection);
-        emitChannelListCompleted(connection, session.requestId);
-      }
-      return true;
-    }
-    if (!isChannelListFailureNumeric(command, params)) {
-      return false;
-    }
-    session.phase === 'draining'
-      ? clearDrainingChannelList(connection)
-      : failActiveChannelList(connection, formatChannelListFailure(command, params));
-    return true;
-  }
-
-  const sourceTarget = session.sourceTarget ?? 'server';
-  if (session.phase === 'draining') {
-    if (command === '323' || isChannelListFailureNumeric(command, params)) {
-      clearDrainingChannelList(connection);
-    }
-    return true;
-  }
-  for (const line of formatChannelListReply(command, params)) {
-    emitStatus(connection, line, 'system', sourceTarget);
-  }
-  if (command === '323') {
-    clearActiveChannelList(connection);
-  } else if (isChannelListFailureNumeric(command, params)) {
-    failActiveChannelList(connection, formatChannelListFailure(command, params), {
-      emitStructuredFailure: false,
-      sourceTarget,
-    });
-  } else {
-    resetChannelListTimeout(connection, session);
-  }
-  return true;
+  return session.mode === 'structured'
+    ? handleStructuredChannelListNumeric(connection, session, command, params)
+    : handleRawChannelListNumeric(connection, session, command, params);
 };
 
 export const abortActiveChannelList = (connection: IrcChannelListContext, message: string) => {
@@ -133,10 +77,7 @@ export const abortActiveChannelList = (connection: IrcChannelListContext, messag
 };
 
 export const clearActiveChannelList = (connection: IrcChannelListContext) => {
-  if (connection.channelList.timeoutTimer) {
-    clearTimeout(connection.channelList.timeoutTimer);
-    connection.channelList.timeoutTimer = null;
-  }
+  clearChannelListTimeout(connection);
   clearActiveChannelListSession(connection.channelList);
 };
 
@@ -146,17 +87,17 @@ export const clearDrainingChannelList = (connection: IrcChannelListContext) => {
 
 export const isChannelListPending = (connection: IrcChannelListContext) => {
   connection.ports.reply.prunePendingReplyContexts();
-  return getChannelListSession(connection.channelList).phase !== 'idle';
+  return isChannelListStatePending(connection.channelList);
 };
 
 export const startChannelList = (
   connection: IrcChannelListContext,
-  mode: 'raw' | 'structured',
+  mode: IrcChannelListMode,
   options: { requestId?: string; sourceTarget?: string }
 ) => {
-  clearActiveChannelList(connection);
+  clearChannelListTimeout(connection);
   clearDrainingChannelList(connection);
-  setActiveChannelListSession(connection.channelList, mode, options);
+  startChannelListSession(connection.channelList, mode, options);
   const session = getChannelListSession(connection.channelList);
   if (session.phase === 'active') {
     resetChannelListTimeout(connection, session);
@@ -168,12 +109,12 @@ export const failActiveChannelList = (
   message: string,
   options: { emitStructuredFailure?: boolean; sourceTarget?: string } = {}
 ) => {
-  const session = getChannelListSession(connection.channelList);
-  if (session.phase !== 'active') {
+  const session = moveActiveChannelListToDraining(connection.channelList);
+  if (!session) {
     return;
   }
+  clearChannelListTimeout(connection);
   const sourceTarget = options.sourceTarget ?? session.sourceTarget ?? 'server';
-  markDrainingChannelList(connection, session);
   if (session.mode === 'structured') {
     if (session.requestId && options.emitStructuredFailure !== false) {
       emitChannelListFailed(connection, session.requestId, message);
@@ -204,12 +145,73 @@ const resetChannelListTimeout = (
   connection.channelList.timeoutTimer = timer;
 };
 
-const markDrainingChannelList = (
+const handleStructuredChannelListNumeric = (
   connection: IrcChannelListContext,
-  session: Extract<ReturnType<typeof getChannelListSession>, { phase: 'active' }>
+  session: Extract<ReturnType<typeof getChannelListSession>, { mode: 'structured' }>,
+  command: string,
+  params: string[]
 ) => {
-  clearActiveChannelList(connection);
-  setDrainingChannelListSession(connection.channelList, session);
+  if (session.requestId === null) {
+    return session.phase === 'draining';
+  }
+  if (command === '321') {
+    return true;
+  }
+  if (command === '322') {
+    const entry = parseChannelListEntry(params);
+    const activeSession = entry ? appendStructuredChannelListEntry(connection.channelList, session.requestId, entry) : null;
+    if (entry && activeSession) {
+      resetChannelListTimeout(connection, activeSession);
+      emitChannelListEntry(connection, session.requestId, entry);
+    }
+    return true;
+  }
+  if (command === '323') {
+    const outcome = finishStructuredChannelListSession(connection.channelList, session.requestId);
+    if (outcome) {
+      clearChannelListTimeout(connection);
+    }
+    if (outcome === 'completed') {
+      emitChannelListCompleted(connection, session.requestId);
+    }
+    return true;
+  }
+  if (!isChannelListFailureNumeric(command, params)) {
+    return false;
+  }
+  session.phase === 'draining'
+    ? clearDrainingChannelList(connection)
+    : failActiveChannelList(connection, formatChannelListFailure(command, params));
+  return true;
+};
+
+const handleRawChannelListNumeric = (
+  connection: IrcChannelListContext,
+  session: Extract<ReturnType<typeof getChannelListSession>, { mode: 'raw' }>,
+  command: string,
+  params: string[]
+) => {
+  const sourceTarget = session.sourceTarget ?? 'server';
+  if (session.phase === 'draining') {
+    if (command === '323' || isChannelListFailureNumeric(command, params)) {
+      clearDrainingChannelList(connection);
+    }
+    return true;
+  }
+  for (const line of formatChannelListReply(command, params)) {
+    emitStatus(connection, line, 'system', sourceTarget);
+  }
+  if (command === '323') {
+    clearActiveChannelList(connection);
+  } else if (isChannelListFailureNumeric(command, params)) {
+    failActiveChannelList(connection, formatChannelListFailure(command, params), {
+      emitStructuredFailure: false,
+      sourceTarget,
+    });
+  } else {
+    resetChannelListTimeout(connection, session);
+  }
+  return true;
 };
 
 const isChannelListNumeric = (command: string, params: string[]) =>
@@ -236,3 +238,11 @@ const formatChannelListFailure = (command: string, params: string[]) =>
 
 const formatChannelListReply = (command: string, params: string[]) =>
   channelListNumerics.has(command) ? formatServerNumeric(command, params) : [];
+
+const clearChannelListTimeout = (connection: IrcChannelListContext) => {
+  if (!connection.channelList.timeoutTimer) {
+    return;
+  }
+  clearTimeout(connection.channelList.timeoutTimer);
+  connection.channelList.timeoutTimer = null;
+};

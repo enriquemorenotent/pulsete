@@ -1,7 +1,7 @@
-import type { MessageInput } from './storage.js';
 import type { IrcEventContext, IrcStateContext } from './irc-contexts.js';
 import type { RuntimeEvent } from './irc-types.js';
 import type { ChannelUserState } from '../shared/protocol.js';
+import type { MessageInput } from './storage-types.js';
 
 export const emitEvent = (connection: IrcEventContext, event: RuntimeEvent) => {
   connection.handlers.onEvent(event);

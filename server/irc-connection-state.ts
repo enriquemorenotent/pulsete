@@ -3,13 +3,12 @@ import { ReplyTracker } from './irc-reply-tracker.js';
 import type { IrcConnectionPorts, RuntimeIrcSession } from './irc-port-types.js';
 import type {
   ChannelSessionState,
-  Handlers,
   IrcChannelListState,
   IrcChannelTrackingState,
-  IrcConnectionState,
   IrcFriendPresenceState,
   IrcLifecycleState,
-} from './irc-types.js';
+} from './irc-state-types.js';
+import type { Handlers, IrcConnectionState } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 const defaultChannelJoinTimeoutMs = 15_000;

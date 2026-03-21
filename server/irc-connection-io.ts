@@ -5,7 +5,7 @@ import { handleIrcLine } from './irc-handle-line.js';
 import { maxBufferedIrcBytes, maxIrcCommandBytes } from './irc-limits.js';
 import { createReplyContextFromRaw, type PendingReplyContext } from './irc-reply-context.js';
 import type { IrcConnectionState } from './irc-types.js';
-import type { MessageInput } from './storage.js';
+import type { MessageInput } from './storage-types.js';
 
 export const sendRaw = (connection: IrcRawIoContext, raw: string, statusTarget?: string) => {
   const lifecycle = connection.lifecycle;

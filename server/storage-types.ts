@@ -86,6 +86,14 @@ export type MessageInput = {
   ts: number;
 };
 
+export type StorageSnapshotSource = {
+  listBuffers(networkId?: string): BufferState[];
+  listChannels(networkId?: string): ChannelState[];
+  listFriends(): FriendState[];
+  listNetworks(): NetworkProfile[];
+  listRecentMessages(limit?: number): AppSnapshot['messages'];
+};
+
 export type CountRow = { count: number };
 
 export type NetworkCountRow = CountRow;

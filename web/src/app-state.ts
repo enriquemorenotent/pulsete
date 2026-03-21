@@ -8,12 +8,13 @@ import {
   sortFriends,
   sortPendingChannels,
 } from './app-state-conversations.js';
+import { initialChannelListState } from './app-state-channel-list.js';
 import { resolveNextSelection } from './app-state-selection.js';
 import { reduceRuntimeDomain } from './app-state-runtime.js';
-import { initialChannelListState, initialNetworkManagerState, reduceTransientAction } from './app-state-ui.js';
+import { initialNetworkManagerState, reduceTransientAction } from './app-state-ui.js';
 import type { Action, State } from './app-types.js';
 
-export { initialChannelListState } from './app-state-ui.js';
+export { initialChannelListState } from './app-state-channel-list.js';
 
 const initialDomainState: AppDomainState = {
   phase: 'loading',

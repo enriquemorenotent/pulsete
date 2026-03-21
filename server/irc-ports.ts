@@ -9,7 +9,8 @@ import type { IrcChannelListPort, IrcChannelPort, IrcCommandPort, IrcFriendPrese
 import { createChannelReplyContext, createMessageReplyContext, createNickReplyContext } from './irc-reply-context.js';
 import { consumePendingNickReplyContexts, consumeReplyContext, consumeReplyTarget, discardPendingNickReplyContexts, prunePendingReplyContexts, queueReplyContext } from './irc-reply-state.js';
 import type { NetworkRuntimeState } from '../shared/protocol.js';
-import type { IrcConnectionState, IrcLifecycleState } from './irc-types.js';
+import type { IrcConnectionState } from './irc-types.js';
+import type { IrcLifecycleState } from './irc-state-types.js';
 
 type IrcLifecyclePortContext = IrcConnectContext;
 type IrcCommandContext = IrcClientIoContext & Pick<IrcConnectionState, 'replyTracker'>;

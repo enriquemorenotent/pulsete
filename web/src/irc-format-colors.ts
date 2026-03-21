@@ -1,4 +1,4 @@
-import type { IrcTextStyle } from './irc-format.js';
+import type { IrcTextStyle } from './irc-format-types.js';
 
 const numericColorPalette = [
   '#FFFFFF',

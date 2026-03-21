@@ -1,6 +1,7 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import type { ConversationIndex } from './conversation-selectors.js';
+import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
 import {
   selectBuffer,
@@ -75,11 +76,7 @@ export const createConversationActions = ({
       updateBanner('error', 'Connect the network before listing channels');
       return;
     }
-    if (
-      channelList.open
-      && channelList.networkId === networkId
-      && channelList.status === 'loading'
-    ) {
+    if (isChannelListLoadingForNetwork(channelList, networkId)) {
       return;
     }
     if (!sendGatewayMessage({ type: 'channel.list.request', networkId })) {

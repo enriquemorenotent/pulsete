@@ -1,12 +1,12 @@
 import type {
-  Handlers,
   IrcChannelListState,
   IrcChannelTrackingState,
   IrcFriendPresenceState,
   IrcLifecycleState,
   IrcReplyTracker,
-} from './irc-types.js';
+} from './irc-state-types.js';
 import type { IrcConnectionPorts } from './irc-port-types.js';
+import type { Handlers } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type IrcEventContext = {

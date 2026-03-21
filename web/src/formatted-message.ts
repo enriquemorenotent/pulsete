@@ -1,4 +1,5 @@
-import { getVisibleIrcText, parseIrcFormatting, type IrcFormattedRun, type IrcTextStyle } from './irc-format.js';
+import { getVisibleIrcText, parseIrcFormatting, type IrcFormattedRun } from './irc-format.js';
+import type { IrcTextStyle } from './irc-format-types.js';
 import { findMessageLinkMatches, type MessageLinkMatch } from './message-linkify.js';
 
 export type MessageTextPart = {

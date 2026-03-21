@@ -1,7 +1,12 @@
-import { getChannelSession, removeChannelSession, setChannelSession } from './irc-channel-state.js';
 import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
-import type { ChannelSessionPhase, IrcLifecycleState, IrcSocket } from './irc-types.js';
+import type {
+  ChannelSessionPhase,
+  ChannelSessionState,
+  IrcChannelListMode,
+  IrcLifecycleState,
+  IrcSocket,
+} from './irc-state-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type IrcLifecyclePort = {
@@ -70,7 +75,7 @@ export type IrcChannelListPort = {
   abortActiveChannelList(message: string): void;
   clearDrainingChannelList(): void;
   isChannelListPending(): boolean;
-  startChannelList(mode: 'raw' | 'structured', options: { requestId?: string; sourceTarget?: string }): void;
+  startChannelList(mode: IrcChannelListMode, options: { requestId?: string; sourceTarget?: string }): void;
 };
 
 export type IrcChannelPort = {
@@ -80,17 +85,17 @@ export type IrcChannelPort = {
   getTrackedChannelUserEntries(): Array<[string, ChannelUserState[]]>;
   resolveTrackedChannel(channel: string): string | null;
   clearExpiredChannelSessions(): void;
-  getChannelSession(channel: string): ReturnType<typeof getChannelSession>;
+  getChannelSession(channel: string): ChannelSessionState | null;
   listPendingChannels(): Array<{ networkId: string; channel: string }>;
   trackChannel(channel: string): string;
   untrackChannel(channel: string): void;
-  removeChannelSession(channel: string): ReturnType<typeof removeChannelSession>;
+  removeChannelSession(channel: string): ChannelSessionState | null;
   handleSelfChannelDeparture(channel: string): void;
   setChannelSession(
     channel: string,
     phase: ChannelSessionPhase,
     options?: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean }
-  ): ReturnType<typeof setChannelSession>;
+  ): ChannelSessionState;
   clearChannelSessions(): void;
 };
 

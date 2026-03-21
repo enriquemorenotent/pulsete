@@ -1,5 +1,11 @@
 import type { PendingReplyContext } from './irc-reply-context-types.js';
-import type { IrcChannelListState, IrcChannelTrackingState, IrcFriendPresenceState, IrcSocket } from './irc-types.js';
+import type {
+  ChannelSessionState,
+  IrcChannelListState,
+  IrcChannelTrackingState,
+  IrcFriendPresenceState,
+  IrcSocket,
+} from './irc-state-types.js';
 import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
@@ -77,17 +83,17 @@ export type LegacyIrcConnectionCompat = {
   clearPendingNick(): void;
   confirmNick(newNick: string): void;
   applyNickFallback(fallbackNick: string, options: { replyTarget?: string; updatePending: boolean }): void;
-  getChannelSession(channel: string): IrcChannelTrackingState['sessions'] extends Map<string, infer Session> ? Session | null : never;
+  getChannelSession(channel: string): ChannelSessionState | null;
   getTrackedChannelUserEntries(): Array<[string, ChannelUserState[]]>;
   getTrackedChannelUsers(channel: string): ChannelUserState[];
   listPendingChannels(): Array<{ networkId: string; channel: string }>;
-  removeChannelSession(channel: string): IrcChannelTrackingState['sessions'] extends Map<string, infer Session> ? Session | null : never;
+  removeChannelSession(channel: string): ChannelSessionState | null;
   resolveTrackedChannel(channel: string): string | null;
   setChannelSession(
     channel: string,
     phase: 'joining' | 'joined' | 'leaving',
     options?: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean }
-  ): IrcChannelTrackingState['sessions'] extends Map<string, infer Session> ? Session : never;
+  ): ChannelSessionState;
   setTrackedChannelUsers(channel: string, users: ChannelUserState[]): ChannelUserState[];
   discardPendingChannelReplyContexts(
     channel: string,

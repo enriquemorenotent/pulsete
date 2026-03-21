@@ -1,4 +1,4 @@
-import { getChannelListSession } from './irc-channel-list-session.js';
+import { getChannelListSession } from './irc-channel-list-state.js';
 import type { IrcReplyStateContext } from './irc-contexts.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
 

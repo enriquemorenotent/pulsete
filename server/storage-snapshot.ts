@@ -1,10 +1,5 @@
 import { historyWindowLimit } from '../shared/protocol.js';
-import type { Storage } from './storage.js';
-
-type StorageSnapshotSource = Pick<
-  Storage,
-  'listBuffers' | 'listChannels' | 'listFriends' | 'listNetworks' | 'listRecentMessages'
->;
+import type { StorageSnapshotSource } from './storage-types.js';
 
 export const createStorageSnapshot = (store: StorageSnapshotSource) => {
   const networks = store.listNetworks();

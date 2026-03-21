@@ -1,14 +1,6 @@
-import type { Action, AppTransientState, Banner, ChannelListState, NetworkManagerState } from './app-types.js';
+import type { Action, AppTransientState, Banner, NetworkManagerState } from './app-types.js';
+import { reduceChannelListState } from './app-state-channel-list.js';
 import { gatewayReconnectMessage } from './gateway.js';
-
-export const initialChannelListState: ChannelListState = {
-  open: false,
-  networkId: null,
-  requestId: null,
-  status: 'idle',
-  entries: [],
-  error: null,
-};
 
 export const initialNetworkManagerState: NetworkManagerState = {
   mode: 'closed',
@@ -21,117 +13,21 @@ export const reduceTransientAction = (
   transient: AppTransientState,
   action: Action
 ): AppTransientState | null => {
+  const channelList = reduceChannelListState(transient.channelList, action);
+  const withChannelList = (patch: Omit<Partial<AppTransientState>, 'channelList'> = {}) =>
+    channelList === transient.channelList
+      ? { ...transient, ...patch }
+      : { ...transient, channelList, ...patch };
+
   switch (action.type) {
     case 'select':
-      return {
-        ...transient,
-        banner: null,
-      };
+      return withChannelList({ banner: null });
     case 'set-banner':
-      return { ...transient, banner: action.banner };
-    case 'gateway-connecting':
-      return {
-        ...transient,
-        channelList: initialChannelListState,
-      };
+      return withChannelList({ banner: action.banner });
     case 'gateway-connected':
-      return {
-        ...transient,
-        banner: clearReconnectBanner(transient.banner),
-      };
+      return withChannelList({ banner: clearReconnectBanner(transient.banner) });
     case 'gateway-disconnected':
-      return {
-        ...transient,
-        channelList: initialChannelListState,
-        historyLoading: false,
-      };
-    case 'open-channel-list':
-      return {
-        ...transient,
-        channelList: {
-          open: true,
-          networkId: action.networkId,
-          requestId: null,
-          status: 'loading',
-          entries: [],
-          error: null,
-        },
-      };
-    case 'close-channel-list':
-      return { ...transient, channelList: initialChannelListState };
-    case 'channel-list-started':
-      if (
-        !transient.channelList.open
-        || transient.channelList.networkId !== action.networkId
-        || transient.channelList.status !== 'loading'
-        || transient.channelList.requestId !== null
-      ) {
-        return transient;
-      }
-      return {
-        ...transient,
-        channelList: {
-          ...transient.channelList,
-          requestId: action.requestId,
-        },
-      };
-    case 'channel-list-entry':
-      if (
-        !transient.channelList.open
-        || transient.channelList.networkId !== action.networkId
-        || transient.channelList.requestId !== action.requestId
-      ) {
-        return transient;
-      }
-      return {
-        ...transient,
-        channelList: {
-          ...transient.channelList,
-          entries: [...transient.channelList.entries, action.entry],
-        },
-      };
-    case 'channel-list-completed':
-      if (
-        !transient.channelList.open
-        || transient.channelList.networkId !== action.networkId
-        || transient.channelList.requestId !== action.requestId
-      ) {
-        return transient;
-      }
-      return {
-        ...transient,
-        channelList: {
-          ...transient.channelList,
-          status: 'ready',
-          error: null,
-        },
-      };
-    case 'channel-list-failed':
-      if (
-        !transient.channelList.open
-        || transient.channelList.networkId !== action.networkId
-        || (transient.channelList.requestId !== null && transient.channelList.requestId !== action.requestId)
-        || (transient.channelList.requestId === null && transient.channelList.status !== 'loading')
-      ) {
-        return transient;
-      }
-      return {
-        ...transient,
-        channelList: {
-          ...transient.channelList,
-          requestId: action.requestId,
-          status: 'error',
-          error: action.message,
-        },
-      };
-    case 'network-state':
-      if (action.phase === 'connected' || transient.channelList.networkId !== action.networkId) {
-        return transient;
-      }
-      return {
-        ...transient,
-        channelList: initialChannelListState,
-      };
+      return withChannelList({ historyLoading: false });
     case 'open-network-manager':
       return {
         ...transient,
@@ -222,16 +118,12 @@ export const reduceTransientAction = (
         historyLoading: action.value,
       };
     case 'remove-network':
-      if (transient.channelList.networkId !== action.networkId) {
+      if (channelList === transient.channelList) {
         return transient;
       }
-      return {
-        ...transient,
-        channelList: initialChannelListState,
-        historyLoading: false,
-      };
+      return withChannelList({ historyLoading: false });
     default:
-      return null;
+      return channelList === transient.channelList ? null : withChannelList();
   }
 };
 

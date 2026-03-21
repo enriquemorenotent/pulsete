@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import type { MessageInput } from './storage.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import type { IrcConnectionState } from './irc-types.js';
+import type { MessageInput } from './storage-types.js';
 
 export const isSelfNick = (connection: IrcConnectionState, nick: string | null) =>
   isSameIrcIdentifier(nick, connection.lifecycle.currentNick)
