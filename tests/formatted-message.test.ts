@@ -112,6 +112,40 @@ test('renders stripped mode as plain visible text while keeping links clickable'
   assert.ok(!html.includes('\u000F'));
 });
 
+test('renders inline previews for direct image links', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Look https://cdn.example.com/cat.PNG?size=full',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assert.match(html, /<img[^>]*src="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assert.match(html, /alt="Inline image preview: cat\.PNG"/);
+  assert.match(html, /Look/);
+  assert.doesNotMatch(html, />https:\/\/cdn\.example\.com\/cat\.PNG\?size=full</);
+});
+
+test('does not render inline previews for non-image links or raw mode', () => {
+  const normalHtml = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Docs https://example.com/guide',
+      onOpenChannel() {},
+    })
+  );
+  const rawHtml = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Image https://cdn.example.com/cat.png',
+      mode: 'raw',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.doesNotMatch(normalHtml, /<img/);
+  assert.doesNotMatch(rawHtml, /<img/);
+});
+
 test('renders raw mode with visible escape sequences instead of hidden control characters', () => {
   const html = renderToStaticMarkup(
     createElement(FormattedMessageText, {
