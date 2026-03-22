@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { AppModel } from './app-model.js';
-import type { DesktopShellProps } from './DesktopShell.js';
+import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { State } from './app-types.js';
 import type { SidebarActionSet } from './useAppActions.js';
 
@@ -16,7 +16,7 @@ export function useSidebarController({
   connections,
   friendPresence,
   friends,
-}: SidebarControllerParams): DesktopShellProps['sidebar'] {
+}: SidebarControllerParams): DesktopShellModel['sidebar'] {
   return useMemo(() => ({
     connections,
     friends,

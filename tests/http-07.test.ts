@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
 import { waitFor } from './helpers/async-test-helpers.js';
@@ -16,10 +16,10 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketCloseDetails,waitForWeb
 test('websocket join, message, and part commands reach the live IRC connection', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const ircReceived: string[] = [];
   const ircServer = await createRegisteredServer(ircReceived);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: ircServer.port,
   }));
@@ -88,8 +88,8 @@ test('websocket join, message, and part commands reach the live IRC connection',
 test('oversized websocket payloads are rejected', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const runtime = new Runtime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
@@ -113,9 +113,9 @@ test('oversized websocket payloads are rejected', async () => {
 test('websocket validation returns errors for invalid channel, query, and message targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  storage.upsertQuery(network.id, 'helper');
-  const runtime = new Runtime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  storage.conversations.upsertQuery(network.id, 'helper');
+  const runtime = createRuntime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);

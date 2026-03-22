@@ -2,15 +2,15 @@ import { useMemo } from 'react';
 import type { AppModel } from './app-model.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { ComposerController } from './composer-history.js';
-import type { DesktopShellProps } from './DesktopShell.js';
+import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { ChatActionSet } from './useAppActions.js';
 
 type ChatControllerParams = {
   actions: ChatActionSet;
-  channelList: DesktopShellProps['chat']['channelList'];
+  channelList: DesktopShellModel['chat']['channelList'];
   channelListNetwork: AppModel['channelListNetwork'];
   composer: Pick<ComposerController, 'draft' | 'recallNewerDraft' | 'recallOlderDraft' | 'setDraft'>;
-  friends: DesktopShellProps['chat']['friends'];
+  friends: DesktopShellModel['chat']['friends'];
   messageDisplayMode: AppUiState['messageDisplayMode'];
   scrollRef: AppUiState['scrollRef'];
   selectedMessages: AppModel['selectedMessages'];
@@ -27,7 +27,7 @@ export function useChatController({
   scrollRef,
   selectedMessages,
   workspace,
-}: ChatControllerParams): DesktopShellProps['chat'] {
+}: ChatControllerParams): DesktopShellModel['chat'] {
   return useMemo(() => ({
     workspace,
     friends,

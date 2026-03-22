@@ -1,6 +1,6 @@
 import type { Action, State } from './app-types.js';
 import type { AppModel } from './app-model.js';
-import type { DesktopShellProps } from './DesktopShell.js';
+import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { ComposerController } from './composer-history.js';
@@ -11,7 +11,7 @@ import { useNetworkManagerController } from './useNetworkManagerController.js';
 import { useNicklistController } from './useNicklistController.js';
 import { useSidebarController } from './useSidebarController.js';
 
-type DesktopShellControllerParams = {
+type DesktopShellModelParams = {
   actions: AppActions;
   composer: ComposerController;
   dispatch: (action: Action) => void;
@@ -22,7 +22,7 @@ type DesktopShellControllerParams = {
   ui: Pick<AppUiState, 'messageDisplayMode' | 'scrollRef' | 'setMessageDisplayMode'>;
 };
 
-export function useDesktopShellController({
+export function useDesktopShellModel({
   actions,
   composer,
   dispatch,
@@ -31,7 +31,7 @@ export function useDesktopShellController({
   friends,
   friendPresence,
   ui,
-}: DesktopShellControllerParams): DesktopShellProps {
+}: DesktopShellModelParams): DesktopShellModel {
   return {
     workspace: model.workspace,
     header: useHeaderController({

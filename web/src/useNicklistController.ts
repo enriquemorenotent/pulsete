@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { DesktopShellProps } from './DesktopShell.js';
+import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { State } from './app-types.js';
 import type { NicklistActionSet } from './useAppActions.js';
 
@@ -11,7 +11,7 @@ type NicklistControllerParams = {
 export function useNicklistController({
   actions,
   friends,
-}: NicklistControllerParams): DesktopShellProps['nicklist'] {
+}: NicklistControllerParams): DesktopShellModel['nicklist'] {
   return useMemo(() => ({
     friends,
     onAddFriend: actions.addFriend,

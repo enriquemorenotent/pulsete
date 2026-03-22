@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { serveStatic } from '../server/static-handler.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
@@ -17,10 +17,10 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessage,waitForWebSocke
 test('http buffer mutation routes succeed and broadcast buffer changes', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const ircReceived: string[] = [];
   const ircServer = await createRegisteredServer(ircReceived);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: ircServer.port,
   }));
@@ -77,10 +77,10 @@ test('http buffer mutation routes succeed and broadcast buffer changes', async (
 test('http connect and disconnect routes drive the IRC connection lifecycle', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const ircReceived: string[] = [];
   const ircServer = await createRegisteredServer(ircReceived);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: ircServer.port,
   }));
@@ -174,7 +174,7 @@ test('static handler serves built assets and spa fallback from the asset root', 
 test('static handler does not expose repository files', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -189,8 +189,8 @@ test('static handler does not expose repository files', async () => {
 test('connect route does not allow GET side effects', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const network = storage.networks.upsert(createNetworkInput());
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {

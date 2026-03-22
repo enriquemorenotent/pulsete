@@ -87,7 +87,7 @@ test('versioned storage migrations add template metadata columns incrementally',
   existing.close();
 
   const storage = new Storage(file);
-  const network = storage.getNetwork('network-1');
+  const network = storage.networks.get('network-1');
   const upgraded = new DatabaseSync(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const columns = upgraded.prepare('PRAGMA table_info(networks)').all() as Array<{ name: string }>;

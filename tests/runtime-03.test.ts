@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import type { ServerMessage } from '../shared/protocol.js';
 import { createNetworkInput,makeUser,waitFor } from './helpers/runtime-test-common.js';
@@ -14,8 +14,8 @@ import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
 test('runtime join defers channel persistence until the server confirms the join', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
   let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
 
   (runtime as unknown as {
@@ -32,16 +32,16 @@ test('runtime join defers channel persistence until the server confirms the join
   runtime.irc.join(network.id, '#missing');
 
   assert.deepEqual(requestedJoin, { channel: '#missing', sourceTarget: 'server', visiblePending: true });
-  assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
-  assert.equal(storage.getChannelByName(network.id, '#missing'), null);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#missing'), null);
+  assert.equal(storage.conversations.getChannelByName(network.id, '#missing'), null);
 });
 
 test('runtime rejoins existing channel buffers without surfacing a pending channel row', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
-  const existing = storage.upsertChannel({
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const existing = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'saved topic',
@@ -64,17 +64,17 @@ test('runtime rejoins existing channel buffers without surfacing a pending chann
   runtime.irc.join(network.id, '#help');
 
   assert.deepEqual(requestedJoin, { channel: '#help', sourceTarget: 'server', visiblePending: false });
-  assert.equal(storage.getBuffer(existing.id)?.kind, 'channel');
-  assert.equal(storage.getChannelByName(network.id, '#help')?.topic, 'saved topic');
+  assert.equal(storage.conversations.getBuffer(existing.id)?.kind, 'channel');
+  assert.equal(storage.conversations.getChannelByName(network.id, '#help')?.topic, 'saved topic');
 });
 
 test('runtime validation rejects missing networks and invalid targets before touching storage', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
-  const query = storage.upsertQuery(network.id, 'helper');
-  const channel = storage.upsertChannel({
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  const channel = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
   });
@@ -106,18 +106,18 @@ test('runtime validation rejects missing networks and invalid targets before tou
     /Raw command cannot contain carriage returns or line feeds/
   );
 
-  assert.deepEqual(storage.listChannels(network.id), [channel]);
-  assert.equal(storage.getBuffer(query.id)?.target, 'helper');
-  assert.deepEqual(storage.listMessages(network.id, 'server', 10), []);
+  assert.deepEqual(storage.conversations.listChannels(network.id), [channel]);
+  assert.equal(storage.conversations.getBuffer(query.id)?.target, 'helper');
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10), []);
 });
 
 test('runtime sendRaw preserves quit commands and exact matching', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createRegisteredServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: handshake.port,
   }));
@@ -144,10 +144,10 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
 test('runtime streams structured channel list events from IRC LIST', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const listServer = await createListServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
   }));

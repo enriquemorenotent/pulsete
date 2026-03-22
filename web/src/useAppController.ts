@@ -1,13 +1,13 @@
 import type { State } from './app-types.js';
 import { useAppLifecycle } from './useAppLifecycle.js';
-import { useDesktopShellController } from './useDesktopShellController.js';
+import { useDesktopShellModel } from './useDesktopShellModel.js';
 import { useAppModel } from './useAppModel.js';
 import { useAppUiState } from './useAppUiState.js';
 import { useComposerHistory } from './composer-history.js';
 
 type AppController = {
   banner: State['transient']['banner'];
-  desktopShellProps: ReturnType<typeof useDesktopShellController>;
+  shell: ReturnType<typeof useDesktopShellModel>;
   dismissBanner: () => void;
   phase: State['domain']['phase'];
 };
@@ -31,7 +31,7 @@ export function useAppController(): AppController {
     didAutoOpenManagerRef: ui.didAutoOpenManagerRef,
   });
 
-  const desktopShellProps = useDesktopShellController({
+  const shell = useDesktopShellModel({
     actions,
     composer,
     dispatch,
@@ -46,6 +46,6 @@ export function useAppController(): AppController {
     phase: state.domain.phase,
     banner: state.transient.banner,
     dismissBanner: () => dispatch({ type: 'set-banner', banner: null }),
-    desktopShellProps,
+    shell,
   };
 }

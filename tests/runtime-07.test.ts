@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { createNetworkInput,makeUser,waitFor } from './helpers/runtime-test-common.js';
 import { createHandshakeServer } from './helpers/runtime-test-handshake-servers.js';
@@ -13,10 +13,10 @@ import { createHandshakeServer } from './helpers/runtime-test-handshake-servers.
 test('deleteNetwork removes runtime connections', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     name: 'DeleteNet',
     host: '127.0.0.1',
     port: handshake.port,
@@ -34,7 +34,7 @@ test('deleteNetwork removes runtime connections', async () => {
     runtime.networks.deleteNetwork(network.id);
 
     assert.equal(state.connections.has(network.id), false);
-    assert.equal(storage.getNetwork(network.id), null);
+    assert.equal(storage.networks.get(network.id), null);
   } finally {
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
@@ -44,9 +44,9 @@ test('deleteNetwork removes runtime connections', async () => {
 test('runtime close disconnects active connections without appending shutdown noise', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const handshake = await createHandshakeServer([]);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     name: 'CloseNet',
     host: '127.0.0.1',
     port: handshake.port,
@@ -60,14 +60,14 @@ test('runtime close disconnects active connections without appending shutdown no
   try {
     runtime.sessions.connect(network.id);
     await waitFor(() => handshake.hasConnections());
-    const beforeShutdownMessages = storage.listMessages(network.id, 'server', 20).map((message) => message.body);
+    const beforeShutdownMessages = storage.conversations.listMessages(network.id, 'server', 20).map((message) => message.body);
 
     runtime.gateway.close();
 
     await waitFor(() => !handshake.hasConnections());
     assert.equal(state.connections.size, 0);
     assert.deepEqual(
-      storage.listMessages(network.id, 'server', 20).map((message) => message.body),
+      storage.conversations.listMessages(network.id, 'server', 20).map((message) => message.body),
       beforeShutdownMessages
     );
   } finally {
@@ -79,17 +79,17 @@ test('runtime close disconnects active connections without appending shutdown no
 test('deleteNetwork removes hidden clone connections when deleting a template', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
     nick: 'template',
     altNicks: ['template_', 'template__'],
     username: 'template',
     realName: 'template',
   }));
-  const clone = storage.upsertNetwork(createNetworkInput({
+  const clone = storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     host: '127.0.0.1',
@@ -113,8 +113,8 @@ test('deleteNetwork removes hidden clone connections when deleting a template', 
     runtime.networks.deleteNetwork(template.id);
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    assert.equal(storage.getNetwork(template.id), null);
-    assert.equal(storage.getNetwork(clone.id), null);
+    assert.equal(storage.networks.get(template.id), null);
+    assert.equal(storage.networks.get(clone.id), null);
     assert.equal(state.connections.has(clone.id), false);
     assert.equal(uncaught, null);
   } finally {
@@ -127,8 +127,8 @@ test('deleteNetwork removes hidden clone connections when deleting a template', 
 test('self part events remove the channel and emit buffer.remove', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const channel = storage.upsertChannel({
+  const network = storage.networks.upsert(createNetworkInput());
+  const channel = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'support',
@@ -154,7 +154,7 @@ test('self part events remove the channel and emit buffer.remove', () => {
     }
   );
 
-  assert.equal(storage.getChannelByName(network.id, '#help'), null);
+  assert.equal(storage.conversations.getChannelByName(network.id, '#help'), null);
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.deepEqual(
     sent.find((message) => message.type === 'buffer.remove'),
@@ -169,8 +169,8 @@ test('self part events remove the channel and emit buffer.remove', () => {
 test('late duplicate self part events do not recreate the channel buffer', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  storage.upsertChannel({
+  const network = storage.networks.upsert(createNetworkInput());
+  storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'support',
@@ -195,15 +195,15 @@ test('late duplicate self part events do not recreate the channel buffer', () =>
   handleRuntimeEvent({ store: storage, publish() {} }, event());
   handleRuntimeEvent({ store: storage, publish() {} }, event());
 
-  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
-  assert.equal(storage.listMessages(network.id, '#help', 10).length, 1);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#help'), null);
+  assert.equal(storage.conversations.listMessages(network.id, '#help', 10).length, 1);
 });
 
 test('late duplicate self kick events do not append orphaned history', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  storage.upsertChannel({
+  const network = storage.networks.upsert(createNetworkInput());
+  storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'support',
@@ -228,6 +228,6 @@ test('late duplicate self kick events do not append orphaned history', () => {
   handleRuntimeEvent({ store: storage, publish() {} }, event());
   handleRuntimeEvent({ store: storage, publish() {} }, event());
 
-  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
-  assert.equal(storage.listMessages(network.id, '#help', 10).length, 1);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#help'), null);
+  assert.equal(storage.conversations.listMessages(network.id, '#help', 10).length, 1);
 });

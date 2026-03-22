@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
 import { type NetworkProfile } from '../shared/protocol.js';
@@ -17,15 +17,15 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessageType } from './h
 test('saving a hidden connection instance broadcasts its server buffer before the network update', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const template = storage.upsertNetwork(createNetworkInput({
+  const runtime = createRuntime(storage.runtimeStore);
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
     nick: 'oldnick',
     altNicks: ['oldnick_'],
     username: 'olduser',
     realName: 'Old User',
   }));
-  const instance = storage.upsertNetwork(createNetworkInput({
+  const instance = storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'Connection instance',
@@ -75,15 +75,15 @@ test('saving a hidden connection instance broadcasts its server buffer before th
 test('delete returns all deleted network ids when removing a template', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
   }));
-  const clone = storage.upsertNetwork(createNetworkInput({
+  const clone = storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'TemplateNet clone',
   }));
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -101,8 +101,8 @@ test('delete returns all deleted network ids when removing a template', async ()
 test('duplicate creates a new saved network and preserves encrypted passwords', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput({
     name: 'PrimaryNet',
     host: 'irc.primary.test',
     port: 6697,
@@ -140,7 +140,7 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     assert.equal(duplicate.managerHidden, false);
     assert.equal(duplicate.templateId, null);
     assert.equal(duplicate.hasPassword, true);
-    assert.equal(storage.getRuntimeNetwork(duplicate.id)?.password, 'hunter2');
+    assert.equal(storage.networks.getRuntime(duplicate.id)?.password, 'hunter2');
 
     const update = await updatePromise as { network: NetworkProfile };
     assert.equal(update.network.id, duplicate.id);
@@ -157,13 +157,13 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
 test('query routes validate missing networks and invalid targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const query = storage.upsertQuery(network.id, 'helper');
-  const channel = storage.upsertChannel({
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  const channel = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
   });
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -190,7 +190,7 @@ test('query routes validate missing networks and invalid targets', async () => {
     const invalidClose = await requestJson(port, 'DELETE', `/api/buffers/${channel.id}`);
     assert.equal(invalidClose.status, 400);
     assert.equal(invalidClose.json.message, 'Only private message buffers can be closed');
-    assert.equal(storage.getBuffer(query.id)?.target, 'helper');
+    assert.equal(storage.conversations.getBuffer(query.id)?.target, 'helper');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

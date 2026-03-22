@@ -1,64 +1,17 @@
 import { useRef, type CSSProperties } from 'react';
 import { PanelsTopLeft } from 'lucide-react';
-import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
-import { ChatPane, type ChatPaneProps } from './ChatPane.js';
-import { ConnectionSidebar, type ConnectionSidebarProps } from './ConnectionSidebar.js';
+import { ChatPane } from './ChatPane.js';
+import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { MessageDisplayModeToggle } from './MessageDisplayModeToggle.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { NetworkEditorDialog } from './NetworkEditorDialog.js';
 import { NetworkManagerDialog } from './NetworkManagerDialog.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
-import type { MessageDisplayMode } from './message-display-mode.js';
-import type { EditorTab, NetworkForm } from './network-form.js';
+import type { DesktopShellModel } from './desktop-shell-model.js';
 import { useSidebarResize } from './useSidebarResize.js';
-import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 
-export type DesktopShellProps = {
-  workspace: WorkspaceView;
-  header: {
-    messageDisplayMode: MessageDisplayMode;
-    showMessageDisplayModeToggle: boolean;
-    onMessageDisplayModeChange: (mode: MessageDisplayMode) => void;
-    onOpenNetworkManager: () => void;
-  };
-  sidebar: ConnectionSidebarProps;
-  chat: ChatPaneProps;
-  nicklist: {
-    friends: FriendState[];
-    onAddFriend: (nick: string) => Promise<boolean>;
-    onRemoveFriend: (friendId: string) => Promise<boolean>;
-    onSelectNick: (network: NetworkProfile, nick: string) => void;
-  };
-  networkManager: {
-    open: boolean;
-    networks: NetworkProfile[];
-    selected: NetworkProfile | null;
-    runtime: NetworkRuntimeState | null;
-    showFavoritesOnly: boolean;
-    hiddenManagedNetworkName: string | null;
-    onSelect: (networkId: string) => void;
-    onToggleFavorites: () => void;
-    onClose: () => void;
-    onAdd: () => void;
-    onEdit: () => void;
-    onDuplicate: () => void;
-    onRemove: () => void;
-    onConnect: () => void;
-    onFavorite: () => void;
-  };
-  networkEditor: {
-    open: boolean;
-    form: NetworkForm;
-    activeTab: EditorTab;
-    onTabChange: (tab: EditorTab) => void;
-    onClose: () => void;
-    onSubmit: () => void;
-    onChange: (form: Partial<NetworkForm>) => void;
-  };
-};
-
-export function DesktopShell(props: DesktopShellProps) {
+export function DesktopShell(props: DesktopShellModel) {
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const sidebarResize = useSidebarResize(layoutRef);
   const layoutStyle = {

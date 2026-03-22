@@ -11,7 +11,7 @@ import { createNetworkInput,makeUser } from './helpers/runtime-test-common.js';
 test('incoming private messages open query buffers automatically', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
+  const network = storage.networks.upsert(createNetworkInput());
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
@@ -31,19 +31,19 @@ test('incoming private messages open query buffers automatically', () => {
     }
   );
 
-  assert.equal(storage.getBufferByTarget(network.id, 'helper')?.target, 'helper');
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper')?.target, 'helper');
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
     type: 'buffer.upsert',
-    buffer: storage.getBufferByTarget(network.id, 'helper'),
+    buffer: storage.conversations.getBufferByTarget(network.id, 'helper'),
   });
 });
 
 test('incoming private messages reuse an existing query buffer across IRC nick casing', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const existingQuery = storage.upsertQuery(network.id, 'Alice');
+  const network = storage.networks.upsert(createNetworkInput());
+  const existingQuery = storage.conversations.upsertQuery(network.id, 'Alice');
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
@@ -63,18 +63,18 @@ test('incoming private messages reuse an existing query buffer across IRC nick c
     }
   );
 
-  assert.equal(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
-  assert.equal(storage.getBufferByTarget(network.id, 'ALICE')?.id, existingQuery.id);
+  assert.equal(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'ALICE')?.id, existingQuery.id);
   assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
     type: 'buffer.upsert',
-    buffer: storage.getBuffer(existingQuery.id),
+    buffer: storage.conversations.getBuffer(existingQuery.id),
   });
 });
 
 test('self-sent private messages open query buffers automatically', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
+  const network = storage.networks.upsert(createNetworkInput());
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
@@ -94,7 +94,7 @@ test('self-sent private messages open query buffers automatically', () => {
     }
   );
 
-  assert.equal(storage.getBufferByTarget(network.id, 'helper')?.kind, 'query');
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper')?.kind, 'query');
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.equal(
     sent.some((message) => {
@@ -108,8 +108,8 @@ test('self-sent private messages open query buffers automatically', () => {
 test('service messages on the server buffer close stale service queries', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const query = storage.upsertQuery(network.id, 'NickServ');
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'NickServ');
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
@@ -129,7 +129,7 @@ test('service messages on the server buffer close stale service queries', () => 
     }
   );
 
-  assert.equal(storage.getBufferByTarget(network.id, 'NickServ'), null);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'NickServ'), null);
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.deepEqual(sent.find((message) => message.type === 'buffer.remove'), {
     type: 'buffer.remove',
@@ -141,8 +141,8 @@ test('service messages on the server buffer close stale service queries', () => 
 test('status events keep their originating buffer target and message kind', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const channel = storage.upsertChannel({
+  const network = storage.networks.upsert(createNetworkInput());
+  const channel = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: '',
@@ -161,30 +161,30 @@ test('status events keep their originating buffer target and message kind', () =
     }
   );
 
-  const appended = storage.listMessages(network.id, '#help', 10);
+  const appended = storage.conversations.listMessages(network.id, '#help', 10);
   assert.equal(appended.length, 1);
   assert.equal(appended[0]?.target, '#help');
   assert.equal(appended[0]?.kind, 'error');
-  assert.equal(storage.getBuffer(channel.id)?.unread, 1);
+  assert.equal(storage.conversations.getBuffer(channel.id)?.unread, 1);
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
     type: 'buffer.upsert',
-    buffer: storage.getBuffer(channel.id),
+    buffer: storage.conversations.getBuffer(channel.id),
   });
 });
 
 test('late status events fall back to the server buffer after a channel closes', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const channel = storage.upsertChannel({
+  const network = storage.networks.upsert(createNetworkInput());
+  const channel = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: '',
     users: [makeUser('tester')],
   });
 
-  storage.deleteChannelByName(network.id, channel.name);
+  storage.conversations.deleteChannelByName(network.id, channel.name);
 
   handleRuntimeEvent(
     { store: storage, publish() {} },
@@ -197,17 +197,17 @@ test('late status events fall back to the server buffer after a channel closes',
     }
   );
 
-  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
-  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such channel');
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#help'), null);
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such channel');
 });
 
 test('late status events fall back to the server buffer after a query closes', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const query = storage.upsertQuery(network.id, 'helper');
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
 
-  storage.removeBuffer(query.id);
+  storage.conversations.removeBuffer(query.id);
 
   handleRuntimeEvent(
     { store: storage, publish() {} },
@@ -221,6 +221,6 @@ test('late status events fall back to the server buffer after a query closes', (
     }
   );
 
-  assert.equal(storage.getBufferByTarget(network.id, 'helper'), null);
-  assert.equal(storage.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such nick');
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper'), null);
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such nick');
 });

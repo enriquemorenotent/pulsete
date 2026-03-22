@@ -25,16 +25,16 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
 test('storage rejects changing a template relationship after creation', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
   }));
-  const otherTemplate = storage.upsertNetwork(createNetworkInput({
+  const otherTemplate = storage.networks.upsert(createNetworkInput({
     name: 'OtherTemplateNet',
     host: 'irc2.example.test',
     port: 6697,
     tls: true,
   }));
-  const clone = storage.upsertNetwork(createNetworkInput({
+  const clone = storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'Connection instance',
@@ -42,7 +42,7 @@ test('storage rejects changing a template relationship after creation', () => {
 
   assert.throws(
     () =>
-      storage.upsertNetwork({
+      storage.networks.upsert({
         ...template,
         templateId: otherTemplate.id,
         managerHidden: true,
@@ -51,7 +51,7 @@ test('storage rejects changing a template relationship after creation', () => {
   );
   assert.throws(
     () =>
-      storage.upsertNetwork({
+      storage.networks.upsert({
         ...clone,
         templateId: null,
         managerHidden: false,
@@ -60,7 +60,7 @@ test('storage rejects changing a template relationship after creation', () => {
   );
   assert.throws(
     () =>
-      storage.upsertNetwork({
+      storage.networks.upsert({
         ...clone,
         templateId: otherTemplate.id,
       }),
@@ -72,17 +72,17 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
   const storage = new Storage(file);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     name: 'SecretNet',
     port: 6697,
     tls: true,
     password: 'server-secret',
   }));
 
-  const publicProfile = storage.getNetwork(network.id);
+  const publicProfile = storage.networks.get(network.id);
   assert.equal(publicProfile?.hasPassword, true);
   assert.equal((publicProfile as { password?: string } | null)?.password, undefined);
-  assert.equal(storage.getRuntimeNetwork(network.id)?.password, 'server-secret');
+  assert.equal(storage.networks.getRuntime(network.id)?.password, 'server-secret');
 
   const db = new DatabaseSync(file);
   const row = db.prepare('SELECT password FROM networks WHERE id = ?').get(network.id) as { password: string };
@@ -90,7 +90,7 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
   assert.notEqual(row.password, 'server-secret');
   assert.match(row.password, /^enc-v1:/);
 
-  const clone = storage.upsertNetwork(createNetworkInput({
+  const clone = storage.networks.upsert(createNetworkInput({
     templateId: network.id,
     managerHidden: true,
     name: 'SecretNet clone',
@@ -98,27 +98,27 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
     tls: true,
   }));
   assert.equal(clone.hasPassword, true);
-  assert.equal(storage.getRuntimeNetwork(clone.id)?.password, 'server-secret');
+  assert.equal(storage.networks.getRuntime(clone.id)?.password, 'server-secret');
 
-  storage.upsertNetwork({
+  storage.networks.upsert({
     ...network,
     password: '',
   });
-  assert.equal(storage.getRuntimeNetwork(network.id)?.password, 'server-secret');
+  assert.equal(storage.networks.getRuntime(network.id)?.password, 'server-secret');
 
-  storage.upsertNetwork({
+  storage.networks.upsert({
     ...network,
     clearPassword: true,
   });
-  assert.equal(storage.getNetwork(network.id)?.hasPassword, false);
-  assert.equal(storage.getRuntimeNetwork(network.id)?.password, undefined);
+  assert.equal(storage.networks.get(network.id)?.hasPassword, false);
+  assert.equal(storage.networks.getRuntime(network.id)?.password, undefined);
 });
 
 test('storage fails fast when encrypted passwords exist but the secret key is missing', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
   const storage = new Storage(file);
-  storage.upsertNetwork(createNetworkInput({
+  storage.networks.upsert(createNetworkInput({
     name: 'SecretNet',
     port: 6697,
     tls: true,

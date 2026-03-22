@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import WebSocket from 'ws';
 import { createHttpHandler } from '../server/http-router.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer,initializeWebSocketConnection } from '../server/ws-server.js';
 import { listen } from './helpers/http-request-helpers.js';
@@ -53,9 +53,9 @@ test('websocket error replies detach the socket when a later send fails', () => 
 test('websocket commands use the live local state and forward runtime methods', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const query = storage.upsertQuery(network.id, 'helper');
-  const runtime = new Runtime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  const runtime = createRuntime(storage.runtimeStore);
   const calls: string[] = [];
   runtime.sessions.connect = ((networkId: string) => {
     calls.push(`connect:${networkId}`);
@@ -128,8 +128,8 @@ test('websocket commands use the live local state and forward runtime methods', 
 test('websocket query.open uses the live runtime path', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
@@ -145,7 +145,7 @@ test('websocket query.open uses the live runtime path', async () => {
     const opened = await queryOpenPromise as { buffer: { id: string; target: string; kind: string } };
     assert.equal(opened.buffer.target, 'helper');
     assert.equal(opened.buffer.kind, 'query');
-    assert.equal(storage.getBuffer(opened.buffer.id)?.target, 'helper');
+    assert.equal(storage.conversations.getBuffer(opened.buffer.id)?.target, 'helper');
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
@@ -155,7 +155,7 @@ test('websocket query.open uses the live runtime path', async () => {
 test('websocket channel.list.cancel ignores missing networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);

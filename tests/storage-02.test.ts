@@ -23,13 +23,13 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
 });
 
 const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkInput> = {}) => {
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: overrides.name ?? 'TemplateNet',
     host: overrides.host ?? 'irc.example.test',
     port: overrides.port ?? 6667,
     tls: overrides.tls ?? false,
   }));
-  return storage.upsertNetwork(createNetworkInput({
+  return storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: overrides.name ?? template.name,
@@ -157,25 +157,25 @@ test('friends persist and deduplicate case-insensitively', () => {
   const file = join(dir, 'db.sqlite');
   const storage = new Storage(file);
 
-  const friend = storage.upsertFriend({ nick: 'Alice' });
-  const duplicate = storage.upsertFriend({ nick: 'alice' });
+  const friend = storage.friends.upsert({ nick: 'Alice' });
+  const duplicate = storage.friends.upsert({ nick: 'alice' });
   storage.close();
 
   const reopened = new Storage(file);
-  const friends = reopened.listFriends();
+  const friends = reopened.friends.list();
 
   assert.equal(duplicate.id, friend.id);
   assert.deepEqual(friends, [friend]);
 
-  const removed = reopened.removeFriend(friend.id);
+  const removed = reopened.friends.remove(friend.id);
   assert.equal(removed?.id, friend.id);
-  assert.deepEqual(reopened.listFriends(), []);
+  assert.deepEqual(reopened.friends.list(), []);
 });
 
 test('deleting a template removes hidden clones', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
     nick: 'templated',
     altNicks: ['templated_', 'templated__'],
@@ -183,7 +183,7 @@ test('deleting a template removes hidden clones', () => {
     realName: 'templated',
   }));
 
-  storage.upsertNetwork(createNetworkInput({
+  storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'TemplateNet clone',
@@ -194,12 +194,12 @@ test('deleting a template removes hidden clones', () => {
   }));
 
   assert.equal(
-    storage.listNetworks().filter((network) => network.id === template.id || network.templateId === template.id).length,
+    storage.networks.list().filter((network) => network.id === template.id || network.templateId === template.id).length,
     2
   );
-  storage.deleteNetwork(template.id);
-  assert.equal(storage.listNetworks().some((network) => network.id === template.id), false);
-  assert.equal(storage.listNetworks().some((network) => network.templateId === template.id), false);
+  storage.networks.delete(template.id);
+  assert.equal(storage.networks.list().some((network) => network.id === template.id), false);
+  assert.equal(storage.networks.list().some((network) => network.templateId === template.id), false);
 });
 
 test('query buffers persist and can be closed', () => {
@@ -207,11 +207,11 @@ test('query buffers persist and can be closed', () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
 
-  const query = storage.upsertQuery(network.id, 'helper');
-  assert.equal(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  assert.equal(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
   assert.equal(storage.snapshot().buffers.some((buffer) => buffer.id === query.id), true);
 
-  storage.removeBuffer(query.id);
-  assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
+  storage.conversations.removeBuffer(query.id);
+  assert.deepEqual(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
   assert.equal(storage.snapshot().buffers.some((buffer) => buffer.id === query.id), false);
 });

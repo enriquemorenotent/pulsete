@@ -30,13 +30,13 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
 });
 
 const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkInput> = {}) => {
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: overrides.name ?? 'TemplateNet',
     host: overrides.host ?? 'irc.example.test',
     port: overrides.port ?? 6667,
     tls: overrides.tls ?? false,
   }));
-  return storage.upsertNetwork(createNetworkInput({
+  return storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: overrides.name ?? template.name,
@@ -81,7 +81,7 @@ test('listNetworks seeds fixed local networks without requiring a snapshot first
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
 
-  const networks = storage.listNetworks();
+  const networks = storage.networks.list();
 
   assert.equal(networks.length, 4);
   assert.deepEqual(
@@ -102,7 +102,7 @@ test('storage persists local workspace buffers and messages', () => {
     autoJoin: ['#archlinux'],
   });
 
-  const channel = storage.upsertChannel({
+  const channel = storage.conversations.upsertChannel({
     id: randomUUID(),
     networkId: network.id,
     name: '#archlinux',
@@ -110,9 +110,9 @@ test('storage persists local workspace buffers and messages', () => {
     unread: 2,
     users: [makeUser('alice'), makeUser('bob')],
   });
-  const query = storage.upsertQuery(network.id, 'helper');
-  const friend = storage.upsertFriend({ nick: 'alice' });
-  const message = storage.appendMessage({
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  const friend = storage.friends.upsert({ nick: 'alice' });
+  const message = storage.conversations.appendMessage({
     id: randomUUID(),
     networkId: network.id,
     target: '#archlinux',
@@ -123,16 +123,16 @@ test('storage persists local workspace buffers and messages', () => {
     ts: Date.now(),
   });
 
-  assert.deepEqual(storage.getNetwork(network.id), {
+  assert.deepEqual(storage.networks.get(network.id), {
     ...network,
     favorite: true,
     autoJoin: ['#archlinux'],
     hasPassword: false,
   });
-  assert.deepEqual(storage.getChannel(channel.id), channel);
-  assert.equal(storage.getBufferByTarget(network.id, 'helper')?.id, query.id);
-  assert.deepEqual(storage.listMessages(network.id, '#archlinux', 10), [message]);
-  assert.equal(storage.listFriends()[0]?.id, friend.id);
+  assert.deepEqual(storage.conversations.getChannel(channel.id), channel);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper')?.id, query.id);
+  assert.deepEqual(storage.conversations.listMessages(network.id, '#archlinux', 10), [message]);
+  assert.equal(storage.friends.list()[0]?.id, friend.id);
 
   const snapshot = storage.snapshot();
   assert.equal(snapshot.friends[0]?.id, friend.id);

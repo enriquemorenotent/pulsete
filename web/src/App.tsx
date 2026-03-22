@@ -15,7 +15,7 @@ function App() {
 
   return (
     <>
-      <DesktopShell {...controller.desktopShellProps} />
+      <DesktopShell {...controller.shell} />
       <Toast banner={controller.banner} onDismiss={controller.dismissBanner} />
     </>
   );

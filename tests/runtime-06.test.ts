@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import { createHandshakeServer,createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
@@ -13,10 +13,10 @@ import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
 test('runtime rejects oversized outbound lines without writing them to the socket', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const server = await createRegisteredServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
   }));
@@ -30,10 +30,10 @@ test('runtime rejects oversized outbound lines without writing them to the socke
 
     await waitFor(
       () =>
-        storage.listMessages(network.id, 'helper', 20)
+        storage.conversations.listMessages(network.id, 'helper', 20)
           .filter((message) => message.body === 'IRC command exceeds the 510-byte limit')
           .length >= 1
-        && storage.listMessages(network.id, 'server', 20)
+        && storage.conversations.listMessages(network.id, 'server', 20)
           .filter((message) => message.body === 'IRC command exceeds the 510-byte limit')
           .length >= 1
     );
@@ -49,30 +49,30 @@ test('runtime rejects oversized outbound lines without writing them to the socke
 test('runtime sendMessage does not persist unsent direct messages while disconnected', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
 
   runtime.irc.sendMessage(network.id, 'helper', 'hello');
 
-  assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
+  assert.deepEqual(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
   assert.deepEqual(
-    storage.listMessages(network.id, 'helper', 10).map((message) => ({
+    storage.conversations.listMessages(network.id, 'helper', 10).map((message) => ({
       target: message.target,
       kind: message.kind,
       body: message.body,
     })),
     [{ target: 'helper', kind: 'error', body: 'Not connected' }]
   );
-  assert.deepEqual(storage.listMessages(network.id, 'server', 10), []);
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10), []);
 });
 
 test('runtime rejects client commands while the network is still connecting', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: handshake.port,
   }));
@@ -90,18 +90,18 @@ test('runtime rejects client commands while the network is still connecting', as
     );
     await waitFor(
       () =>
-        storage.listMessages(network.id, 'server', 20)
+        storage.conversations.listMessages(network.id, 'server', 20)
           .filter((message) => message.body === 'Still connecting to server')
           .length >= 2
-        && storage.listMessages(network.id, 'helper', 20)
+        && storage.conversations.listMessages(network.id, 'helper', 20)
           .some((message) => message.body === 'Still connecting to server')
     );
 
     assert.equal(received.includes('JOIN #help'), false);
     assert.equal(received.includes('PRIVMSG helper :hello'), false);
     assert.equal(received.includes('WHOIS helper'), false);
-    assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'channel'), []);
-    assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
+    assert.deepEqual(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'channel'), []);
+    assert.deepEqual(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
   } finally {
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
@@ -111,8 +111,8 @@ test('runtime rejects client commands while the network is still connecting', as
 test('runtime reports a failed channel-list request while disconnected', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
   const socket = createSocketRecorder();
 
   runtime.gateway.attachSocket(socket);
@@ -133,8 +133,8 @@ test('runtime reports a failed channel-list request while disconnected', () => {
 test('runtime reports when a timed-out LIST is still draining late server replies', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
   const socket = createSocketRecorder();
 
   runtime.gateway.attachSocket(socket);
@@ -168,10 +168,10 @@ test('runtime reports when a timed-out LIST is still draining late server replie
 test('runtime removes channel-list subscribers after an immediate request failure', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const listServer = await createListServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
   }));

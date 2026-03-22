@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
 import { listen,requestJson } from './helpers/http-request-helpers.js';
@@ -15,7 +15,7 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessages } from './help
 test('network routes are available without cookies', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -30,7 +30,7 @@ test('network routes are available without cookies', async () => {
 test('connect and disconnect return not found for missing networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -49,7 +49,7 @@ test('connect and disconnect return not found for missing networks', async () =>
 test('network save rejects invalid payloads and IRC-unsafe fields', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -79,17 +79,17 @@ test('network save rejects invalid payloads and IRC-unsafe fields', async () => 
 test('network save rejects invalid and immutable template relationships', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const template = storage.upsertNetwork(createNetworkInput({
+  const runtime = createRuntime(storage.runtimeStore);
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
   }));
-  const otherTemplate = storage.upsertNetwork(createNetworkInput({
+  const otherTemplate = storage.networks.upsert(createNetworkInput({
     name: 'OtherTemplateNet',
     host: 'irc2.example.test',
     port: 6697,
     tls: true,
   }));
-  const clone = storage.upsertNetwork(createNetworkInput({
+  const clone = storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'Connection instance',
@@ -130,7 +130,7 @@ test('network save rejects invalid and immutable template relationships', async 
 test('network save rejects conflicting and empty password updates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -156,15 +156,15 @@ test('network save rejects conflicting and empty password updates', async () => 
 test('network save broadcasts template and instance updates over websocket', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const template = storage.upsertNetwork(createNetworkInput({
+  const runtime = createRuntime(storage.runtimeStore);
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
     nick: 'oldnick',
     altNicks: ['oldnick_'],
     username: 'olduser',
     realName: 'Old User',
   }));
-  const clone = storage.upsertNetwork(createNetworkInput({
+  const clone = storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'Connection instance',
@@ -194,8 +194,8 @@ test('network save broadcasts template and instance updates over websocket', asy
       updates.map((message) => (message.network as { id: string }).id).sort(),
       [clone.id, template.id].sort()
     );
-    assert.equal(storage.getNetwork(clone.id)?.nick, 'newnick');
-    assert.equal(storage.getNetwork(clone.id)?.username, 'newuser');
+    assert.equal(storage.networks.get(clone.id)?.nick, 'newnick');
+    assert.equal(storage.networks.get(clone.id)?.username, 'newuser');
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));

@@ -1,5 +1,5 @@
 import type { Action, State } from './app-types.js';
-import type { DesktopShellProps } from './DesktopShell.js';
+import type { DesktopShellModel } from './desktop-shell-model.js';
 import { emptyNetworkForm } from './network-form.js';
 import type { NetworkEditorActionSet } from './useAppActions.js';
 
@@ -15,7 +15,7 @@ export function useNetworkEditorController({
   dispatch,
   editor,
   mode,
-}: NetworkEditorControllerParams): DesktopShellProps['networkEditor'] {
+}: NetworkEditorControllerParams): DesktopShellModel['networkEditor'] {
   const submitNetwork = async () => {
     if (!editor) {
       return;

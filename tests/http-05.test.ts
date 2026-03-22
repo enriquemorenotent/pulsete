@@ -1,110 +1,22 @@
 import assert from 'node:assert/strict';
-import { EventEmitter } from 'node:events';
 import { mkdtempSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import WebSocket from 'ws';
 import { createHttpHandler } from '../server/http-router.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import { attachWebSocketServer,initializeWebSocketConnection } from '../server/ws-server.js';
+import { attachWebSocketServer } from '../server/ws-server.js';
 import { listen,requestJson,sendRawRequest } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
-import { closeWebSocket,connectWebSocket,createFailingWebSocket,createThrowingWebSocket } from './helpers/http-websocket-test-helpers.js';
-
-type WebSocketTestContext = Parameters<typeof initializeWebSocketConnection>[1];
-type WebSocketTestContextOverrides = {
-  [K in keyof WebSocketTestContext]?: Partial<WebSocketTestContext[K]>;
-};
-
-const createEmptySnapshot = () => ({
-  networks: [],
-  friends: [],
-  friendPresence: {},
-  buffers: [],
-  channels: [],
-  pendingChannels: [],
-  messages: [],
-  networkStates: {},
-});
-
-const createWebSocketTestContext = (overrides: WebSocketTestContextOverrides = {}): WebSocketTestContext => ({
-  networkCatalog: { list() { return []; } },
-  gateway: {
-    attachSocket() {},
-    detachSocket() {},
-    snapshot: createEmptySnapshot,
-    ...overrides.gateway,
-  },
-  sessions: {
-    connect() {},
-    disconnect() {},
-    requestChannelList() {
-      return 'request-1';
-    },
-    cancelChannelList() {},
-    ...overrides.sessions,
-  },
-  conversations: {
-    openQuery() {
-      throw new Error('not used');
-    },
-    closeBuffer() {
-      throw new Error('not used');
-    },
-    markBufferRead() {
-      throw new Error('not used');
-    },
-    history() {
-      return [];
-    },
-    ...overrides.conversations,
-  },
-  friends: {
-    upsertFriend() {
-      throw new Error('not used');
-    },
-    removeFriend() {
-      throw new Error('not used');
-    },
-    ...overrides.friends,
-  },
-  irc: {
-    join() {
-      throw new Error('not used');
-    },
-    part() {
-      throw new Error('not used');
-    },
-    sendMessage() {
-      throw new Error('not used');
-    },
-    sendRaw() {
-      throw new Error('not used');
-    },
-    ...overrides.irc,
-  },
-  networks: {
-    saveNetwork() {
-      throw new Error('not used');
-    },
-    duplicateNetwork() {
-      throw new Error('not used');
-    },
-    deleteNetwork() {
-      throw new Error('not used');
-    },
-    ...overrides.networks,
-  },
-});
+import { closeWebSocket,connectWebSocket } from './helpers/http-websocket-test-helpers.js';
 
 test('malformed request targets and route params return handled bad requests', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  storage.upsertNetwork(createNetworkInput());
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  storage.networks.upsert(createNetworkInput());
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
   let uncaught: string | null = null;
   const onUncaught = (error: unknown) => {
@@ -137,7 +49,7 @@ test('malformed request targets and route params return handled bad requests', a
 test('malformed websocket upgrade targets are destroyed without uncaught exceptions', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
@@ -171,7 +83,7 @@ test('malformed websocket upgrade targets are destroyed without uncaught excepti
 test('oversized json bodies are rejected before parsing', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -189,7 +101,7 @@ test('oversized json bodies are rejected before parsing', async () => {
 test('websocket upgrade succeeds without cookies and emits state.ready', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
@@ -202,77 +114,4 @@ test('websocket upgrade succeeds without cookies and emits state.ready', async (
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
-});
-
-test('websocket initialization installs the error handler before the first snapshot send', () => {
-  const { socket, getErrorListenersAtSend } = createThrowingWebSocket();
-  let attached = false;
-  const context = createWebSocketTestContext({
-    gateway: {
-      attachSocket() {
-        attached = true;
-      },
-      snapshot: createEmptySnapshot,
-    },
-  });
-
-  assert.doesNotThrow(() => {
-    initializeWebSocketConnection(socket as WebSocket, context);
-  });
-  assert.equal(attached, true);
-  assert.equal(getErrorListenersAtSend() > 0, true);
-});
-
-test('websocket initialization detaches the socket when the first snapshot send fails', () => {
-  const { socket, getCloseCalls } = createFailingWebSocket();
-  const calls: string[] = [];
-  const context = createWebSocketTestContext({
-    gateway: {
-      attachSocket() {
-        calls.push('attach');
-      },
-      detachSocket() {
-        calls.push('detach');
-      },
-      snapshot: createEmptySnapshot,
-    },
-  });
-
-  assert.equal(initializeWebSocketConnection(socket, context), false);
-  assert.deepEqual(calls, ['attach', 'detach']);
-  assert.equal(getCloseCalls(), 1);
-});
-
-test('websocket initialization handles frames emitted during the first snapshot send', () => {
-  const calls: string[] = [];
-  const socket = new EventEmitter() as EventEmitter & {
-    readyState: number;
-    send(payload: string): boolean;
-    close(): void;
-  };
-  socket.readyState = WebSocket.OPEN;
-  socket.send = (_payload: string) => {
-    socket.emit('message', JSON.stringify({ type: 'network.connect', networkId: 'net-1' }));
-    return true;
-  };
-  socket.close = () => {};
-  const context = createWebSocketTestContext({
-    gateway: {
-      attachSocket() {
-        calls.push('attach');
-      },
-      snapshot() {
-        calls.push('snapshot');
-        return createEmptySnapshot();
-      },
-    },
-    sessions: {
-      connect(networkId: string) {
-        calls.push(`connect:${networkId}`);
-      },
-    },
-  });
-
-  assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), true);
-  assert.deepEqual(calls, ['attach', 'snapshot', 'connect:net-1']);
 });

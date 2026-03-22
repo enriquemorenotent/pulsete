@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { createNetworkInput,makeUser,waitFor } from './helpers/runtime-test-common.js';
 import { createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
@@ -12,12 +12,12 @@ import { createRegisteredServer } from './helpers/runtime-test-handshake-servers
 test('saving a template network updates live hidden instances', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createRegisteredServer(firstReceived);
   const second = await createRegisteredServer(secondReceived);
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
     host: 'irc.example.test',
     port: 6667,
@@ -26,7 +26,7 @@ test('saving a template network updates live hidden instances', async () => {
     username: 'olduser',
     realName: 'Old User',
   }));
-  const clone = storage.upsertNetwork(createNetworkInput({
+  const clone = storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: 'Connection instance',
@@ -56,9 +56,9 @@ test('saving a template network updates live hidden instances', async () => {
     await waitFor(() => secondReceived.includes('NICK newnick'));
     await waitFor(() => secondReceived.includes('USER newuser 0 * :New User'));
     await waitFor(() => !first.hasConnections());
-    assert.equal(storage.getNetwork(clone.id)?.host, '127.0.0.1');
-    assert.equal(storage.getNetwork(clone.id)?.port, second.port);
-    assert.equal(storage.getNetwork(clone.id)?.nick, 'newnick');
+    assert.equal(storage.networks.get(clone.id)?.host, '127.0.0.1');
+    assert.equal(storage.networks.get(clone.id)?.port, second.port);
+    assert.equal(storage.networks.get(clone.id)?.nick, 'newnick');
   } finally {
     runtime.sessions.disconnect(clone.id);
     first.closeConnections();
@@ -71,9 +71,9 @@ test('saving a template network updates live hidden instances', async () => {
 test('channel events keep the untouched half of channel state', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
+  const network = storage.networks.upsert(createNetworkInput());
 
-  storage.upsertChannel({
+  storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'old topic',
@@ -87,14 +87,14 @@ test('channel events keep the untouched half of channel state', () => {
     channel: '#help',
     topic: 'new topic',
   });
-  assert.deepEqual(storage.getChannelByName(network.id, '#help'), {
-    id: storage.getChannelByName(network.id, '#help')?.id ?? '',
+  assert.deepEqual(storage.conversations.getChannelByName(network.id, '#help'), {
+    id: storage.conversations.getChannelByName(network.id, '#help')?.id ?? '',
     networkId: network.id,
     name: '#help',
     topic: 'new topic',
     users: [makeUser('alice'), makeUser('bob')],
   });
-  assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 2);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#help')?.unread, 2);
 
   handleRuntimeEvent({ store: storage, publish() {} }, {
     type: 'channel',
@@ -102,20 +102,20 @@ test('channel events keep the untouched half of channel state', () => {
     channel: '#help',
     users: [makeUser('carol')],
   });
-  assert.deepEqual(storage.getChannelByName(network.id, '#help'), {
-    id: storage.getChannelByName(network.id, '#help')?.id ?? '',
+  assert.deepEqual(storage.conversations.getChannelByName(network.id, '#help'), {
+    id: storage.conversations.getChannelByName(network.id, '#help')?.id ?? '',
     networkId: network.id,
     name: '#help',
     topic: 'new topic',
     users: [makeUser('carol')],
   });
-  assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 2);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#help')?.unread, 2);
 });
 
 test('system status events stay in the server buffer without banner notifications', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
+  const network = storage.networks.upsert(createNetworkInput());
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
@@ -130,13 +130,13 @@ test('system status events stay in the server buffer without banner notification
 
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.ok(!sent.some((message) => message.type === 'notice' || message.type === 'error'));
-  assert.equal(storage.listMessages(network.id, 'server', 5)[0]?.body, 'Connecting to irc.example.test:6667');
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 5)[0]?.body, 'Connecting to irc.example.test:6667');
 });
 
 test('self direct messages create query buffers when none exist', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
+  const network = storage.networks.upsert(createNetworkInput());
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
@@ -156,8 +156,8 @@ test('self direct messages create query buffers when none exist', () => {
     }
   );
 
-  assert.equal(storage.getBufferByTarget(network.id, 'HELPER')?.kind, 'query');
-  assert.equal(storage.listMessages(network.id, 'helper', 5)[0]?.body, 'hello there');
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'HELPER')?.kind, 'query');
+  assert.equal(storage.conversations.listMessages(network.id, 'helper', 5)[0]?.body, 'hello there');
   assert.ok(sent.some((message) => message.type === 'buffer.upsert'));
   assert.ok(sent.some((message) => message.type === 'message.append'));
 });
@@ -165,9 +165,9 @@ test('self direct messages create query buffers when none exist', () => {
 test('runtime join preserves existing channel metadata', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
-  const existing = storage.upsertChannel({
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const existing = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'saved topic',
@@ -177,22 +177,22 @@ test('runtime join preserves existing channel metadata', () => {
 
   runtime.irc.join(network.id, '#help');
 
-  assert.deepEqual(storage.getChannelByName(network.id, '#help'), existing);
-  assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 3);
+  assert.deepEqual(storage.conversations.getChannelByName(network.id, '#help'), existing);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#help')?.unread, 3);
 });
 
 test('runtime join does not create a channel buffer when the join command is not sent', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
 
   runtime.irc.join(network.id, '#missing');
 
-  assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
-  assert.equal(storage.getChannelByName(network.id, '#missing'), null);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#missing'), null);
+  assert.equal(storage.conversations.getChannelByName(network.id, '#missing'), null);
   assert.deepEqual(
-    storage.listMessages(network.id, 'server', 5).map((message) => message.body),
+    storage.conversations.listMessages(network.id, 'server', 5).map((message) => message.body),
     ['Not connected']
   );
 });
@@ -200,14 +200,14 @@ test('runtime join does not create a channel buffer when the join command is not
 test('runtime part reports not connected before the first connection exists', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
 
   runtime.irc.part(network.id, '#help');
 
-  assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, '#help'), null);
   assert.deepEqual(
-    storage.listMessages(network.id, 'server', 5).map((message) => message.body),
+    storage.conversations.listMessages(network.id, 'server', 5).map((message) => message.body),
     ['Not connected']
   );
 });

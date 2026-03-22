@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import WebSocket from 'ws';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import { createListServer,createStreamingListServer } from './helpers/runtime-test-list-servers.js';
@@ -13,10 +13,10 @@ import { createSocketRecorder,createThrowingSocket } from './helpers/runtime-tes
 test('runtime drops channel-list events after the requester disconnects mid-LIST', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const listServer = await createStreamingListServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
   }));
@@ -56,10 +56,10 @@ test('runtime drops channel-list events after the requester disconnects mid-LIST
 test('runtime reports a failed channel-list request when the network disconnects mid-LIST', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const listServer = await createStreamingListServer(received, 500);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
   }));
@@ -99,10 +99,10 @@ test('runtime reports a failed channel-list request when the network disconnects
 test('runtime reports a failed channel-list request when disconnect is requested mid-LIST', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const listServer = await createStreamingListServer(received, 500);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
   }));
@@ -142,10 +142,10 @@ test('runtime reports a failed channel-list request when disconnect is requested
 test('runtime removes channel-list subscribers after a request completes', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const listServer = await createListServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: listServer.port,
   }));
@@ -193,7 +193,7 @@ test('runtime removes channel-list subscribers after a request completes', async
 test('runtime drops sockets whose websocket send throws without aborting the broadcast', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const healthySocket = createSocketRecorder();
   const throwingSocket = createThrowingSocket();
 

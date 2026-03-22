@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import { createHandshakeServer,createIsonServer,createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
@@ -11,12 +11,12 @@ import { createHandshakeServer,createIsonServer,createRegisteredServer } from '.
 test('runtime uses updated network settings on reconnect', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createHandshakeServer(firstReceived);
   const second = await createHandshakeServer(secondReceived);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: first.port,
     nick: 'oldnick',
@@ -54,12 +54,12 @@ test('runtime uses updated network settings on reconnect', async () => {
 test('saving a connected network reconnects with updated settings', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createRegisteredServer(firstReceived);
   const second = await createRegisteredServer(secondReceived);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: first.port,
     nick: 'oldnick',
@@ -86,7 +86,7 @@ test('saving a connected network reconnects with updated settings', async () => 
     await waitFor(() => secondReceived.includes('NICK newnick'));
     await waitFor(() => secondReceived.includes('USER newuser 0 * :New User'));
     await waitFor(() => !first.hasConnections());
-    assert.equal(storage.getNetwork(network.id)?.nick, 'newnick');
+    assert.equal(storage.networks.get(network.id)?.nick, 'newnick');
   } finally {
     runtime.sessions.disconnect(network.id);
     first.closeConnections();
@@ -99,10 +99,10 @@ test('saving a connected network reconnects with updated settings', async () => 
 test('runtime snapshot includes live network states after a refresh point', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const server = await createRegisteredServer(received);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
     nick: 'tester',
@@ -130,10 +130,10 @@ test('runtime snapshot includes live network states after a refresh point', asyn
 test('runtime snapshot includes aggregated friend presence from live connections', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const server = await createIsonServer(received, ['Alice']);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
     nick: 'tester',
@@ -159,10 +159,10 @@ test('runtime snapshot includes aggregated friend presence from live connections
 test('runtime clears cached friend presence when a network disconnects', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const server = await createIsonServer(received, ['Alice']);
-  const network = storage.upsertNetwork(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
     nick: 'tester',

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
-import { Runtime } from '../server/runtime.js';
+import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
 import { historyWindowLimit } from '../shared/protocol.js';
@@ -17,8 +17,8 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessageType } from './h
 test('friend routes persist entries and broadcast updates without auth', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
@@ -43,7 +43,7 @@ test('friend routes persist entries and broadcast updates without auth', async (
     assert.equal(duplicateResponse.status, 200);
     assert.equal((duplicateResponse.json.friend as { id: string }).id, addMessage.friend.id);
 
-    const existingQuery = storage.upsertQuery(network.id, 'Alice');
+    const existingQuery = storage.conversations.upsertQuery(network.id, 'Alice');
     assert.equal(existingQuery.target, 'Alice');
 
     const removeMessagePromise = waitForWebSocketMessageType(socket, 'friend.remove');
@@ -53,7 +53,7 @@ test('friend routes persist entries and broadcast updates without auth', async (
 
     const removeMessage = await removeMessagePromise as { friendId: string };
     assert.equal(removeMessage.friendId, addMessage.friend.id);
-    assert.equal(storage.listFriends().length, 0);
+    assert.equal(storage.friends.list().length, 0);
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
@@ -63,7 +63,7 @@ test('friend routes persist entries and broadcast updates without auth', async (
 test('friend routes validate payloads and targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
+  const runtime = createRuntime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   const port = await listen(server);
 
@@ -99,9 +99,9 @@ test('friend routes validate payloads and targets', async () => {
 test('buffer read emits updates and clears unread counts without auth', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage.runtimeStore);
-  const network = storage.upsertNetwork(createNetworkInput());
-  const channel = storage.upsertChannel({
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const channel = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     unread: 0,
@@ -151,10 +151,10 @@ test('buffer read emits updates and clears unread counts without auth', async ()
 test('history clamps invalid and oversized limits to the default window', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.upsertNetwork(createNetworkInput());
-  const buffer = storage.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help' });
+  const network = storage.networks.upsert(createNetworkInput());
+  const buffer = storage.conversations.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help' });
   for (let index = 0; index < 250; index += 1) {
-    storage.appendMessage({
+    storage.conversations.appendMessage({
       id: `m${index}`,
       networkId: network.id,
       target: '#help',
@@ -165,7 +165,7 @@ test('history clamps invalid and oversized limits to the default window', async 
       ts: Date.now() + index,
     });
   }
-  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {

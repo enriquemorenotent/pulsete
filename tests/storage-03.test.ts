@@ -29,13 +29,13 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
 });
 
 const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkInput> = {}) => {
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: overrides.name ?? 'TemplateNet',
     host: overrides.host ?? 'irc.example.test',
     port: overrides.port ?? 6667,
     tls: overrides.tls ?? false,
   }));
-  return storage.upsertNetwork(createNetworkInput({
+  return storage.networks.upsert(createNetworkInput({
     templateId: template.id,
     managerHidden: true,
     name: overrides.name ?? template.name,
@@ -55,8 +55,8 @@ test('query buffers and history match IRC nick casing insensitively', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
-  const query = storage.upsertQuery(network.id, 'Alice');
-  const message = storage.appendMessage({
+  const query = storage.conversations.upsertQuery(network.id, 'Alice');
+  const message = storage.conversations.appendMessage({
     id: randomUUID(),
     networkId: network.id,
     target: 'alice',
@@ -67,8 +67,8 @@ test('query buffers and history match IRC nick casing insensitively', () => {
     ts: Date.now(),
   });
 
-  assert.equal(storage.getBufferByTarget(network.id, 'ALICE')?.id, query.id);
-  assert.deepEqual(storage.listMessages(network.id, 'ALICE', 10), [message]);
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'ALICE')?.id, query.id);
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'ALICE', 10), [message]);
 });
 
 test('unknown network filters do not fall back to global buffers or channels', () => {
@@ -76,16 +76,16 @@ test('unknown network filters do not fall back to global buffers or channels', (
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
 
-  storage.upsertQuery(network.id, 'helper');
-  storage.upsertChannel({
+  storage.conversations.upsertQuery(network.id, 'helper');
+  storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'Support',
     users: [makeUser('alice')],
   });
 
-  assert.deepEqual(storage.listBuffers('missing-network'), []);
-  assert.deepEqual(storage.listChannels('missing-network'), []);
+  assert.deepEqual(storage.conversations.listBuffers('missing-network'), []);
+  assert.deepEqual(storage.conversations.listChannels('missing-network'), []);
 });
 
 test('message history preserves insertion order when timestamps match', () => {
@@ -93,7 +93,7 @@ test('message history preserves insertion order when timestamps match', () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
   const ts = Date.now();
-  const first = storage.appendMessage({
+  const first = storage.conversations.appendMessage({
     id: randomUUID(),
     networkId: network.id,
     target: '#help',
@@ -103,7 +103,7 @@ test('message history preserves insertion order when timestamps match', () => {
     self: false,
     ts,
   });
-  const second = storage.appendMessage({
+  const second = storage.conversations.appendMessage({
     id: randomUUID(),
     networkId: network.id,
     target: '#help',
@@ -115,11 +115,11 @@ test('message history preserves insertion order when timestamps match', () => {
   });
 
   assert.deepEqual(
-    storage.listMessages(network.id, '#help', 10).map((message) => message.body),
+    storage.conversations.listMessages(network.id, '#help', 10).map((message) => message.body),
     [first.body, second.body]
   );
   assert.deepEqual(
-    storage.listRecentMessages(10).slice(-2).map((message) => message.body),
+    storage.conversations.listRecentMessages(10).slice(-2).map((message) => message.body),
     [first.body, second.body]
   );
 });
@@ -129,20 +129,20 @@ test('buffer upserts reuse case-insensitive query and channel ids', () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
 
-  const query = storage.upsertQuery(network.id, 'Alice');
-  const queryUpdate = storage.upsertQuery(network.id, 'alice');
+  const query = storage.conversations.upsertQuery(network.id, 'Alice');
+  const queryUpdate = storage.conversations.upsertQuery(network.id, 'alice');
   assert.equal(queryUpdate.id, query.id);
   assert.equal(queryUpdate.target, 'alice');
-  assert.equal(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
+  assert.equal(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query').length, 1);
 
-  const channel = storage.upsertChannel({
+  const channel = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#Help',
     topic: 'Original topic',
     unread: 2,
     users: [makeUser('alice')],
   });
-  const channelUpdate = storage.upsertChannel({
+  const channelUpdate = storage.conversations.upsertChannel({
     networkId: network.id,
     name: '#help',
     topic: 'Updated topic',
@@ -150,20 +150,20 @@ test('buffer upserts reuse case-insensitive query and channel ids', () => {
   assert.equal(channelUpdate.id, channel.id);
   assert.equal(channelUpdate.name, '#help');
   assert.equal(channelUpdate.topic, 'Updated topic');
-  assert.equal(storage.getBuffer(channel.id)?.target, '#help');
-  assert.equal(storage.listChannels(network.id).length, 1);
+  assert.equal(storage.conversations.getBuffer(channel.id)?.target, '#help');
+  assert.equal(storage.conversations.listChannels(network.id).length, 1);
 });
 
 test('storage rejects invalid template relationships', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.upsertNetwork(createNetworkInput({
+  const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
   }));
 
   assert.throws(
     () =>
-      storage.upsertNetwork(createNetworkInput({
+      storage.networks.upsert(createNetworkInput({
         ...template,
         id: undefined,
         templateId: template.id,
@@ -174,7 +174,7 @@ test('storage rejects invalid template relationships', () => {
   );
   assert.throws(
     () =>
-      storage.upsertNetwork(createNetworkInput({
+      storage.networks.upsert(createNetworkInput({
         ...template,
         id: undefined,
         templateId: null,
@@ -185,7 +185,7 @@ test('storage rejects invalid template relationships', () => {
   );
   assert.throws(
     () =>
-      storage.upsertNetwork(createNetworkInput({
+      storage.networks.upsert(createNetworkInput({
         ...template,
         id: undefined,
         templateId: 'missing-template',
