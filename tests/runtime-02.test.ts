@@ -39,11 +39,11 @@ test('saving a template network updates live hidden instances', async () => {
   }));
 
   try {
-    runtime.connect(clone.id);
+    runtime.sessions.connect(clone.id);
     await waitFor(() => firstReceived.includes('NICK oldnick'));
     await waitFor(() => firstReceived.includes('USER olduser 0 * :Old User'));
 
-    runtime.saveNetwork({
+    runtime.networks.saveNetwork({
       ...template,
       host: '127.0.0.1',
       port: second.port,
@@ -60,7 +60,7 @@ test('saving a template network updates live hidden instances', async () => {
     assert.equal(storage.getNetwork(clone.id)?.port, second.port);
     assert.equal(storage.getNetwork(clone.id)?.nick, 'newnick');
   } finally {
-    runtime.disconnect(clone.id);
+    runtime.sessions.disconnect(clone.id);
     first.closeConnections();
     second.closeConnections();
     await new Promise<void>((resolve, reject) => first.server.close((error) => (error ? reject(error) : resolve())));
@@ -81,7 +81,7 @@ test('channel events keep the untouched half of channel state', () => {
     users: [makeUser('alice'), makeUser('bob')],
   });
 
-  handleRuntimeEvent({ store: storage, send() {} }, {
+  handleRuntimeEvent({ store: storage, publish() {} }, {
     type: 'channel',
     networkId: network.id,
     channel: '#help',
@@ -96,7 +96,7 @@ test('channel events keep the untouched half of channel state', () => {
   });
   assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 2);
 
-  handleRuntimeEvent({ store: storage, send() {} }, {
+  handleRuntimeEvent({ store: storage, publish() {} }, {
     type: 'channel',
     networkId: network.id,
     channel: '#help',
@@ -119,7 +119,7 @@ test('system status events stay in the server buffer without banner notification
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'status',
       networkId: network.id,
@@ -140,7 +140,7 @@ test('self direct messages create query buffers when none exist', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -175,7 +175,7 @@ test('runtime join preserves existing channel metadata', () => {
     users: [makeUser('alice')],
   });
 
-  runtime.join(network.id, '#help');
+  runtime.irc.join(network.id, '#help');
 
   assert.deepEqual(storage.getChannelByName(network.id, '#help'), existing);
   assert.equal(storage.getBufferByTarget(network.id, '#help')?.unread, 3);
@@ -187,7 +187,7 @@ test('runtime join does not create a channel buffer when the join command is not
   const runtime = new Runtime(storage);
   const network = storage.upsertNetwork(createNetworkInput());
 
-  runtime.join(network.id, '#missing');
+  runtime.irc.join(network.id, '#missing');
 
   assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
   assert.equal(storage.getChannelByName(network.id, '#missing'), null);
@@ -203,7 +203,7 @@ test('runtime part reports not connected before the first connection exists', ()
   const runtime = new Runtime(storage);
   const network = storage.upsertNetwork(createNetworkInput());
 
-  runtime.part(network.id, '#help');
+  runtime.irc.part(network.id, '#help');
 
   assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
   assert.deepEqual(

@@ -24,12 +24,12 @@ test('runtime replays active LIST entries to a later requester without sending L
   const secondSocket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(firstSocket);
-    runtime.attachSocket(secondSocket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(firstSocket);
+    runtime.gateway.attachSocket(secondSocket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, firstSocket);
+    const requestId = runtime.sessions.requestChannelList(network.id, firstSocket);
     await waitFor(() =>
       firstSocket.sent.some(
         (message) =>
@@ -39,7 +39,7 @@ test('runtime replays active LIST entries to a later requester without sending L
       )
     );
 
-    const replayedRequestId = runtime.requestChannelList(network.id, secondSocket);
+    const replayedRequestId = runtime.sessions.requestChannelList(network.id, secondSocket);
     assert.equal(replayedRequestId, requestId);
     await waitFor(() =>
       secondSocket.sent.some(
@@ -77,7 +77,7 @@ test('runtime replays active LIST entries to a later requester without sending L
       ]
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -96,11 +96,11 @@ test('runtime does not replay active LIST entries twice to the same requester', 
   const socket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(socket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(socket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, socket);
+    const requestId = runtime.sessions.requestChannelList(network.id, socket);
     await waitFor(() =>
       socket.sent.some(
         (message) =>
@@ -110,7 +110,7 @@ test('runtime does not replay active LIST entries twice to the same requester', 
       )
     );
 
-    const repeatedRequestId = runtime.requestChannelList(network.id, socket);
+    const repeatedRequestId = runtime.sessions.requestChannelList(network.id, socket);
     assert.equal(repeatedRequestId, requestId);
     await waitFor(() =>
       socket.sent.some(
@@ -148,7 +148,7 @@ test('runtime does not replay active LIST entries twice to the same requester', 
       1
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -167,11 +167,11 @@ test('runtime replays active LIST entries after the same requester cancels and r
   const socket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(socket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(socket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, socket);
+    const requestId = runtime.sessions.requestChannelList(network.id, socket);
     await waitFor(() =>
       socket.sent.some(
         (message) =>
@@ -181,10 +181,10 @@ test('runtime replays active LIST entries after the same requester cancels and r
       )
     );
 
-    runtime.cancelChannelList(network.id, socket);
+    runtime.sessions.cancelChannelList(network.id, socket);
     socket.sent.length = 0;
 
-    const reopenedRequestId = runtime.requestChannelList(network.id, socket);
+    const reopenedRequestId = runtime.sessions.requestChannelList(network.id, socket);
     assert.equal(reopenedRequestId, requestId);
     await waitFor(() =>
       socket.sent.some(
@@ -205,7 +205,7 @@ test('runtime replays active LIST entries after the same requester cancels and r
       ]
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }

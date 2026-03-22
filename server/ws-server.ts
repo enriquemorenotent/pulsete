@@ -24,8 +24,8 @@ export const attachWebSocketServer = (server: Server, context: HttpContext) => {
 export const initializeWebSocketConnection = (ws: WebSocket, context: HttpContext) => {
   ws.on('error', () => {});
   ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
-  context.runtime.attachSocket(ws);
-  if (!sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.runtime.snapshot() }))) {
+  context.gateway.attachSocket(ws);
+  if (!sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.gateway.snapshot() }))) {
     return false;
   }
   return true;
@@ -40,23 +40,23 @@ const handleClientMessage = (
     const message = decodeClient(raw);
     switch (message.type) {
       case 'network.connect':
-        context.runtime.connect(message.networkId);
+        context.sessions.connect(message.networkId);
         return;
       case 'network.disconnect':
-        context.runtime.disconnect(message.networkId);
+        context.sessions.disconnect(message.networkId);
         return;
       case 'channel.join':
-        context.runtime.join(message.networkId, message.channel, message.sourceBufferId);
+        context.irc.join(message.networkId, message.channel, message.sourceBufferId);
         return;
       case 'channel.part':
-        context.runtime.part(message.networkId, message.channel, message.sourceBufferId);
+        context.irc.part(message.networkId, message.channel, message.sourceBufferId);
         return;
       case 'query.open': {
-        context.runtime.openQuery(message.networkId, message.target);
+        context.conversations.openQuery(message.networkId, message.target);
         return;
       }
       case 'message.send':
-        context.runtime.sendMessage(
+        context.irc.sendMessage(
           message.networkId,
           message.target,
           message.body,
@@ -65,13 +65,13 @@ const handleClientMessage = (
         );
         return;
       case 'raw.send':
-        context.runtime.sendRaw(message.networkId, message.raw, message.sourceBufferId);
+        context.irc.sendRaw(message.networkId, message.raw, message.sourceBufferId);
         return;
       case 'channel.list.request':
-        context.runtime.requestChannelList(message.networkId, ws);
+        context.sessions.requestChannelList(message.networkId, ws);
         return;
       case 'channel.list.cancel':
-        context.runtime.cancelChannelList(message.networkId, ws);
+        context.sessions.cancelChannelList(message.networkId, ws);
         return;
     }
   } catch (error) {
@@ -86,7 +86,7 @@ const sendManagedEncoded = (ws: WebSocket, context: HttpContext, payload: string
   if (sendEncoded(ws, payload)) {
     return true;
   }
-  context.runtime.detachSocket(ws);
+  context.gateway.detachSocket(ws);
   return false;
 };
 

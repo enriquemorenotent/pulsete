@@ -6,7 +6,7 @@ import type { Action,State } from '../web/src/app-types.js';
 import type { SocketHandle } from '../web/src/client.js';
 import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
-import { useAppActions } from '../web/src/useAppActions.js';
+import { createAppActions } from '../web/src/useAppActions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const network: NetworkProfile = {
@@ -148,7 +148,7 @@ test('closeChannelList still clears local state while the gateway is unavailable
       },
     }),
   });
-  const actions = useAppActions(params);
+  const actions = createAppActions(params);
 
   actions.closeChannelList();
 
@@ -172,7 +172,7 @@ test('sendComposer blocks websocket-backed sends while the gateway is reconnecti
       close() {},
     },
   });
-  const actions = useAppActions(params);
+  const actions = createAppActions(params);
 
   await actions.sendComposer();
 

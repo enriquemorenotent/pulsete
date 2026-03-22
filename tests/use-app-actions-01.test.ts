@@ -6,7 +6,7 @@ import type { Action,State } from '../web/src/app-types.js';
 import type { SocketHandle } from '../web/src/client.js';
 import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
-import { useAppActions } from '../web/src/useAppActions.js';
+import { createAppActions } from '../web/src/useAppActions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const network: NetworkProfile = {
@@ -140,9 +140,9 @@ test('openChannelList sends the request before opening local dialog state', asyn
       close() {},
     },
   });
-  const actions = useAppActions({
+  const actions = createAppActions({
     ...params,
-    dispatch: (action) => {
+    dispatch: (action: Action) => {
       log.push(`dispatch:${action.type}`);
     },
   });
@@ -162,7 +162,7 @@ test('openMentionedChannel sends channel.join and selects the pending channel lo
       close() {},
     },
   });
-  const actions = useAppActions(params);
+  const actions = createAppActions(params);
 
   await actions.openMentionedChannel('#help');
 
@@ -208,7 +208,7 @@ test('joinChannelFromList reuses an existing pending channel selection without s
       close() {},
     },
   });
-  const actions = useAppActions(params);
+  const actions = createAppActions(params);
 
   await actions.joinChannelFromList('#help');
 
@@ -231,7 +231,7 @@ test('openChannelList does not wedge loading state when the socket send fails', 
       close() {},
     },
   });
-  const actions = useAppActions(params);
+  const actions = createAppActions(params);
 
   await actions.openChannelList();
 

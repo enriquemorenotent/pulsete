@@ -31,7 +31,16 @@ export function useAppController(): AppController {
     didAutoOpenManagerRef: ui.didAutoOpenManagerRef,
   });
 
-  const desktopShellProps = useDesktopShellController({ actions, composer, dispatch, model, state, ui });
+  const desktopShellProps = useDesktopShellController({
+    actions,
+    composer,
+    dispatch,
+    model,
+    transient: state.transient,
+    friends: state.domain.friends,
+    friendPresence: state.domain.friendPresence,
+    ui,
+  });
 
   return {
     phase: state.domain.phase,

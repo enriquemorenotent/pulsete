@@ -14,11 +14,97 @@ import { listen,requestJson,sendRawRequest } from './helpers/http-request-helper
 import { createNetworkInput } from './helpers/http-server-helpers.js';
 import { closeWebSocket,connectWebSocket,createFailingWebSocket,createThrowingWebSocket } from './helpers/http-websocket-test-helpers.js';
 
+type WebSocketTestContext = Parameters<typeof initializeWebSocketConnection>[1];
+type WebSocketTestContextOverrides = {
+  [K in keyof WebSocketTestContext]?: Partial<WebSocketTestContext[K]>;
+};
+
+const createEmptySnapshot = () => ({
+  networks: [],
+  friends: [],
+  friendPresence: {},
+  buffers: [],
+  channels: [],
+  pendingChannels: [],
+  messages: [],
+  networkStates: {},
+});
+
+const createWebSocketTestContext = (overrides: WebSocketTestContextOverrides = {}): WebSocketTestContext => ({
+  storage: {} as Storage,
+  gateway: {
+    attachSocket() {},
+    detachSocket() {},
+    snapshot: createEmptySnapshot,
+    ...overrides.gateway,
+  },
+  sessions: {
+    connect() {},
+    disconnect() {},
+    requestChannelList() {
+      return 'request-1';
+    },
+    cancelChannelList() {},
+    ...overrides.sessions,
+  },
+  conversations: {
+    openQuery() {
+      throw new Error('not used');
+    },
+    closeBuffer() {
+      throw new Error('not used');
+    },
+    markBufferRead() {
+      throw new Error('not used');
+    },
+    history() {
+      return [];
+    },
+    ...overrides.conversations,
+  },
+  friends: {
+    upsertFriend() {
+      throw new Error('not used');
+    },
+    removeFriend() {
+      throw new Error('not used');
+    },
+    ...overrides.friends,
+  },
+  irc: {
+    join() {
+      throw new Error('not used');
+    },
+    part() {
+      throw new Error('not used');
+    },
+    sendMessage() {
+      throw new Error('not used');
+    },
+    sendRaw() {
+      throw new Error('not used');
+    },
+    ...overrides.irc,
+  },
+  networks: {
+    saveNetwork() {
+      throw new Error('not used');
+    },
+    duplicateNetwork() {
+      throw new Error('not used');
+    },
+    deleteNetwork() {
+      throw new Error('not used');
+    },
+    ...overrides.networks,
+  },
+});
+
 test('malformed request targets and route params return handled bad requests', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   storage.upsertNetwork(createNetworkInput());
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler(new Runtime(storage).context));
   const port = await listen(server);
   let uncaught: string | null = null;
   const onUncaught = (error: unknown) => {
@@ -52,8 +138,8 @@ test('malformed websocket upgrade targets are destroyed without uncaught excepti
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
   let uncaught: string | null = null;
   const onUncaught = (error: unknown) => {
@@ -85,7 +171,7 @@ test('malformed websocket upgrade targets are destroyed without uncaught excepti
 test('oversized json bodies are rejected before parsing', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler(new Runtime(storage).context));
   const port = await listen(server);
 
   try {
@@ -104,8 +190,8 @@ test('websocket upgrade succeeds without cookies and emits state.ready', async (
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
 
   try {
@@ -121,24 +207,14 @@ test('websocket upgrade succeeds without cookies and emits state.ready', async (
 test('websocket initialization installs the error handler before the first snapshot send', () => {
   const { socket, getErrorListenersAtSend } = createThrowingWebSocket();
   let attached = false;
-  const context = {
-    runtime: {
+  const context = createWebSocketTestContext({
+    gateway: {
       attachSocket() {
         attached = true;
       },
-      snapshot() {
-        return {
-          networks: [],
-          friends: [],
-          friendPresence: {},
-          buffers: [],
-          channels: [],
-          messages: [],
-          networkStates: {},
-        };
-      },
+      snapshot: createEmptySnapshot,
     },
-  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+  });
 
   assert.doesNotThrow(() => {
     initializeWebSocketConnection(socket as WebSocket, context);
@@ -150,27 +226,17 @@ test('websocket initialization installs the error handler before the first snaps
 test('websocket initialization detaches the socket when the first snapshot send fails', () => {
   const { socket, getCloseCalls } = createFailingWebSocket();
   const calls: string[] = [];
-  const context = {
-    runtime: {
+  const context = createWebSocketTestContext({
+    gateway: {
       attachSocket() {
         calls.push('attach');
       },
       detachSocket() {
         calls.push('detach');
       },
-      snapshot() {
-        return {
-          networks: [],
-          friends: [],
-          friendPresence: {},
-          buffers: [],
-          channels: [],
-          messages: [],
-          networkStates: {},
-        };
-      },
+      snapshot: createEmptySnapshot,
     },
-  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+  });
 
   assert.equal(initializeWebSocketConnection(socket, context), false);
   assert.deepEqual(calls, ['attach', 'detach']);
@@ -190,28 +256,22 @@ test('websocket initialization handles frames emitted during the first snapshot 
     return true;
   };
   socket.close = () => {};
-  const context = {
-    runtime: {
+  const context = createWebSocketTestContext({
+    gateway: {
       attachSocket() {
         calls.push('attach');
       },
+      snapshot() {
+        calls.push('snapshot');
+        return createEmptySnapshot();
+      },
+    },
+    sessions: {
       connect(networkId: string) {
         calls.push(`connect:${networkId}`);
       },
-      snapshot() {
-        calls.push('snapshot');
-        return {
-          networks: [],
-          friends: [],
-          friendPresence: {},
-          buffers: [],
-          channels: [],
-          messages: [],
-          networkStates: {},
-        };
-      },
     },
-  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+  });
 
   assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), true);
   assert.deepEqual(calls, ['attach', 'snapshot', 'connect:net-1']);

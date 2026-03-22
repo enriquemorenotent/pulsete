@@ -1,41 +1,48 @@
 import { useMemo } from 'react';
 import type { AppModel } from './app-model.js';
-import type { State } from './app-types.js';
+import type { AppUiState } from './useAppUiState.js';
+import type { ComposerController } from './composer-history.js';
 import type { DesktopShellProps } from './DesktopShell.js';
-import type { useAppActions } from './useAppActions.js';
-import type { useAppUiState } from './useAppUiState.js';
-import type { useComposerHistory } from './composer-history.js';
+import type { ChatActionSet } from './useAppActions.js';
 
 type ChatControllerParams = {
-  actions: ReturnType<typeof useAppActions>;
-  composer: ReturnType<typeof useComposerHistory>;
-  model: AppModel;
-  state: State;
-  ui: ReturnType<typeof useAppUiState>;
+  actions: ChatActionSet;
+  channelList: DesktopShellProps['chat']['channelList'];
+  channelListNetwork: AppModel['channelListNetwork'];
+  composer: Pick<ComposerController, 'draft' | 'recallNewerDraft' | 'recallOlderDraft' | 'setDraft'>;
+  friends: DesktopShellProps['chat']['friends'];
+  messageDisplayMode: AppUiState['messageDisplayMode'];
+  scrollRef: AppUiState['scrollRef'];
+  selectedMessages: AppModel['selectedMessages'];
+  workspace: AppModel['workspace'];
 };
 
 export function useChatController({
   actions,
+  channelList,
+  channelListNetwork,
   composer,
-  model,
-  state,
-  ui,
+  friends,
+  messageDisplayMode,
+  scrollRef,
+  selectedMessages,
+  workspace,
 }: ChatControllerParams): DesktopShellProps['chat'] {
   return useMemo(() => ({
-    workspace: model.workspace,
-    friends: state.domain.friends,
-    selectedMessages: model.selectedMessages,
+    workspace,
+    friends,
+    selectedMessages,
     draft: composer.draft,
-    messageDisplayMode: ui.messageDisplayMode,
-    scrollRef: ui.scrollRef,
+    messageDisplayMode,
+    scrollRef,
     onDraftChange: composer.setDraft,
     onRecallOlderDraft: composer.recallOlderDraft,
     onRecallNewerDraft: composer.recallNewerDraft,
     onSend: actions.sendComposer,
     onAddFriend: actions.addFriend,
     onRemoveFriend: actions.removeFriend,
-    channelList: state.transient.channelList,
-    channelListNetwork: model.channelListNetwork,
+    channelList,
+    channelListNetwork,
     onCloseChannelList: actions.closeChannelList,
     onJoinChannelFromList: actions.joinChannelFromList,
     onOpenMentionedChannel: actions.openMentionedChannel,
@@ -56,12 +63,12 @@ export function useChatController({
     composer.recallNewerDraft,
     composer.recallOlderDraft,
     composer.setDraft,
-    model.channelListNetwork,
-    model.selectedMessages,
-    model.workspace,
-    state.domain.friends,
-    state.transient.channelList,
-    ui.messageDisplayMode,
-    ui.scrollRef,
+    channelList,
+    channelListNetwork,
+    friends,
+    messageDisplayMode,
+    scrollRef,
+    selectedMessages,
+    workspace,
   ]);
 }

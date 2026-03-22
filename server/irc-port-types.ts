@@ -18,6 +18,7 @@ export type IrcLifecyclePort = {
   markRegistered(serverName: string | null, nick: string | null): void;
   connect(resetRetryBudget?: boolean): void;
   disconnect(raw?: string): void;
+  dispose(): void;
   updateProfile(profile: RuntimeNetworkProfile): void;
   clearReconnectTimer(): void;
   clearConnectDeadlineTimer(): void;

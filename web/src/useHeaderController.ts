@@ -1,21 +1,23 @@
 import { useMemo } from 'react';
 import type { Action } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
-import type { useAppUiState } from './useAppUiState.js';
+import type { AppUiState } from './useAppUiState.js';
 
 type HeaderControllerParams = {
   dispatch: (action: Action) => void;
-  ui: ReturnType<typeof useAppUiState>;
+  messageDisplayMode: AppUiState['messageDisplayMode'];
+  setMessageDisplayMode: AppUiState['setMessageDisplayMode'];
 };
 
 export function useHeaderController({
   dispatch,
-  ui,
+  messageDisplayMode,
+  setMessageDisplayMode,
 }: HeaderControllerParams): DesktopShellProps['header'] {
   return useMemo(() => ({
-    messageDisplayMode: ui.messageDisplayMode,
+    messageDisplayMode,
     showMessageDisplayModeToggle: import.meta.env.DEV,
-    onMessageDisplayModeChange: ui.setMessageDisplayMode,
+    onMessageDisplayModeChange: setMessageDisplayMode,
     onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
-  }), [dispatch, ui.messageDisplayMode, ui.setMessageDisplayMode]);
+  }), [dispatch, messageDisplayMode, setMessageDisplayMode]);
 }

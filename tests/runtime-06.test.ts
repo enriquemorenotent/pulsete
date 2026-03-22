@@ -22,11 +22,11 @@ test('runtime rejects oversized outbound lines without writing them to the socke
   }));
 
   try {
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => received.includes('NICK tester'));
 
-    runtime.sendMessage(network.id, 'helper', 'x'.repeat(600));
-    runtime.sendRaw(network.id, `NOTICE helper :${'y'.repeat(600)}`);
+    runtime.irc.sendMessage(network.id, 'helper', 'x'.repeat(600));
+    runtime.irc.sendRaw(network.id, `NOTICE helper :${'y'.repeat(600)}`);
 
     await waitFor(
       () =>
@@ -52,7 +52,7 @@ test('runtime sendMessage does not persist unsent direct messages while disconne
   const runtime = new Runtime(storage);
   const network = storage.upsertNetwork(createNetworkInput());
 
-  runtime.sendMessage(network.id, 'helper', 'hello');
+  runtime.irc.sendMessage(network.id, 'helper', 'hello');
 
   assert.deepEqual(storage.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
   assert.deepEqual(
@@ -78,10 +78,10 @@ test('runtime rejects client commands while the network is still connecting', as
   }));
 
   try {
-    runtime.connect(network.id);
-    runtime.join(network.id, '#help');
-    runtime.sendMessage(network.id, 'helper', 'hello');
-    runtime.sendRaw(network.id, 'WHOIS helper');
+    runtime.sessions.connect(network.id);
+    runtime.irc.join(network.id, '#help');
+    runtime.irc.sendMessage(network.id, 'helper', 'hello');
+    runtime.irc.sendRaw(network.id, 'WHOIS helper');
 
     await waitFor(
       () =>
@@ -115,9 +115,9 @@ test('runtime reports a failed channel-list request while disconnected', () => {
   const network = storage.upsertNetwork(createNetworkInput());
   const socket = createSocketRecorder();
 
-  runtime.attachSocket(socket);
+  runtime.gateway.attachSocket(socket);
 
-  const requestId = runtime.requestChannelList(network.id, socket);
+  const requestId = runtime.sessions.requestChannelList(network.id, socket);
 
   assert.equal(typeof requestId, 'string');
   assert.deepEqual(socket.sent, [
@@ -137,7 +137,7 @@ test('runtime reports when a timed-out LIST is still draining late server replie
   const network = storage.upsertNetwork(createNetworkInput());
   const socket = createSocketRecorder();
 
-  runtime.attachSocket(socket);
+  runtime.gateway.attachSocket(socket);
   (runtime as unknown as {
     connections: Map<string, {
       requestChannelList(requestId: string): boolean;
@@ -152,7 +152,7 @@ test('runtime reports when a timed-out LIST is still draining late server replie
     },
   });
 
-  const requestId = runtime.requestChannelList(network.id, socket);
+  const requestId = runtime.sessions.requestChannelList(network.id, socket);
 
   assert.equal(typeof requestId, 'string');
   assert.deepEqual(socket.sent, [
@@ -179,10 +179,10 @@ test('runtime removes channel-list subscribers after an immediate request failur
   const secondSocket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(firstSocket);
-    runtime.attachSocket(secondSocket);
+    runtime.gateway.attachSocket(firstSocket);
+    runtime.gateway.attachSocket(secondSocket);
 
-    const failedRequestId = runtime.requestChannelList(network.id, firstSocket);
+    const failedRequestId = runtime.sessions.requestChannelList(network.id, firstSocket);
     assert.deepEqual(firstSocket.sent, [
       {
         type: 'channel.list.failed',
@@ -194,10 +194,10 @@ test('runtime removes channel-list subscribers after an immediate request failur
 
     firstSocket.sent.length = 0;
 
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, secondSocket);
+    const requestId = runtime.sessions.requestChannelList(network.id, secondSocket);
     await waitFor(() =>
       secondSocket.sent.some(
         (message) =>
@@ -211,7 +211,7 @@ test('runtime removes channel-list subscribers after an immediate request failur
       []
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }

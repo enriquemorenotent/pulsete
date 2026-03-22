@@ -26,11 +26,11 @@ test('runtime uses updated network settings on reconnect', async () => {
   }));
 
   try {
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => firstReceived.includes('NICK oldnick'));
 
-    runtime.disconnect(network.id);
-    runtime.saveNetwork({
+    runtime.sessions.disconnect(network.id);
+    runtime.networks.saveNetwork({
       ...network,
       host: '127.0.0.1',
       port: second.port,
@@ -40,10 +40,10 @@ test('runtime uses updated network settings on reconnect', async () => {
       realName: 'New User',
     });
 
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => secondReceived.includes('NICK newnick'));
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     first.closeConnections();
     second.closeConnections();
     await new Promise<void>((resolve, reject) => first.server.close((error) => (error ? reject(error) : resolve())));
@@ -69,11 +69,11 @@ test('saving a connected network reconnects with updated settings', async () => 
   }));
 
   try {
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => firstReceived.includes('NICK oldnick'));
     await waitFor(() => firstReceived.includes('USER olduser 0 * :Old User'));
 
-    runtime.saveNetwork({
+    runtime.networks.saveNetwork({
       ...network,
       host: '127.0.0.1',
       port: second.port,
@@ -88,7 +88,7 @@ test('saving a connected network reconnects with updated settings', async () => 
     await waitFor(() => !first.hasConnections());
     assert.equal(storage.getNetwork(network.id)?.nick, 'newnick');
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     first.closeConnections();
     second.closeConnections();
     await new Promise<void>((resolve, reject) => first.server.close((error) => (error ? reject(error) : resolve())));
@@ -112,16 +112,16 @@ test('runtime snapshot includes live network states after a refresh point', asyn
   }));
 
   try {
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    assert.deepEqual(runtime.snapshot().networkStates[network.id], {
+    assert.deepEqual(runtime.gateway.snapshot().networkStates[network.id], {
       phase: 'connected',
       serverName: 'irc.example',
       nick: 'tester',
     });
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     server.closeConnections();
     await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -141,16 +141,16 @@ test('runtime snapshot includes aggregated friend presence from live connections
     username: 'tester',
     realName: 'Tester Example',
   }));
-  const friend = runtime.upsertFriend('Alice');
+  const friend = runtime.friends.upsertFriend('Alice').friend;
 
   try {
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => received.some((line) => line === 'ISON Alice'));
-    await waitFor(() => runtime.snapshot().friendPresence[friend.id] === true);
+    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === true);
 
-    assert.equal(runtime.snapshot().friendPresence[friend.id], true);
+    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], true);
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     server.closeConnections();
     await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -170,19 +170,19 @@ test('runtime clears cached friend presence when a network disconnects', async (
     username: 'tester',
     realName: 'Tester Example',
   }));
-  const friend = runtime.upsertFriend('Alice');
+  const friend = runtime.friends.upsertFriend('Alice').friend;
 
   try {
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => received.some((line) => line === 'ISON Alice'));
-    await waitFor(() => runtime.snapshot().friendPresence[friend.id] === true);
+    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === true);
 
-    runtime.disconnect(network.id);
-    await waitFor(() => runtime.snapshot().friendPresence[friend.id] === false);
+    runtime.sessions.disconnect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === false);
 
-    assert.equal(runtime.snapshot().friendPresence[friend.id], false);
+    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], false);
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     server.closeConnections();
     await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
   }

@@ -12,18 +12,12 @@ type NetworkLifecycleContext = {
   connectionManager: RuntimeConnectionManager;
   conversations: StorageConversationsRepository;
   networks: StorageNetworksRepository;
-  publish(messages: readonly ServerMessage[]): void;
 };
 
 export class NetworkLifecycleService {
   constructor(private readonly context: NetworkLifecycleContext) {}
 
   duplicateNetwork(networkId: string) {
-    const result = this.duplicateNetworkResult(networkId);
-    return { network: result.network, serverBuffer: result.serverBuffer };
-  }
-
-  duplicateNetworkResult(networkId: string) {
     const network = this.context.networks.get(networkId);
     if (!network) {
       throw notFound('Network not found');
@@ -51,16 +45,10 @@ export class NetworkLifecycleService {
       autoJoin: network.autoJoin,
     });
     const messages = [{ type: 'network.upsert', network: duplicate } satisfies ServerMessage];
-    this.context.publish(messages);
     return { network: duplicate, serverBuffer: null, messages };
   }
 
   saveNetwork(data: unknown, networkId?: string) {
-    const result = this.saveNetworkResult(data, networkId);
-    return { network: result.network, serverBuffer: result.serverBuffer };
-  }
-
-  saveNetworkResult(data: unknown, networkId?: string) {
     const input = parseNetworkInput(data, networkId);
     if (networkId && !this.context.networks.get(networkId)) {
       throw notFound('Network not found');
@@ -77,10 +65,6 @@ export class NetworkLifecycleService {
   }
 
   deleteNetwork(networkId: string) {
-    return this.deleteNetworkResult(networkId).deletedNetworkIds;
-  }
-
-  deleteNetworkResult(networkId: string) {
     const deletedNetworkIds = this.context.networks.deleteWithRelated(networkId);
     if (deletedNetworkIds.length === 0) {
       throw notFound('Network not found');
@@ -89,12 +73,10 @@ export class NetworkLifecycleService {
       ...this.context.connectionManager.removeNetworks(deletedNetworkIds),
       ...createNetworkRemoveMessages(deletedNetworkIds),
     ];
-    this.context.publish(messages);
     return { deletedNetworkIds, messages };
   }
 
   private applyMutation(updatedProfileIds: readonly string[], messages: ServerMessage[]) {
     this.context.connectionManager.updateProfiles([...updatedProfileIds]);
-    this.context.publish(messages);
   }
 }

@@ -11,10 +11,10 @@ import {
   type GatewayActions,
   type WorkspaceActions,
 } from './app-actions-types.js';
+import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
 import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
-import { syncMutationMessages } from './mutation-message-sync.js';
 
 type ChatActionParams = BannerActions & ConversationActions & DraftActions & GatewayActions & WorkspaceActions & {
   channelList: AppTransientState['channelList'];
@@ -41,6 +41,7 @@ export const createChatActions = ({
   updateBanner,
   workspace,
 }: ChatActionParams) => {
+  const executeMutation = createAppMutationExecutor({ dispatch, gatewayStatus, updateBanner });
   const selectTabBuffer = (buffer: BufferState) => selectBuffer(dispatch, buffer);
   const selectPendingTab = (networkId: string, channel: string) =>
     selectPendingChannel(dispatch, networkId, channel);
@@ -96,20 +97,19 @@ export const createChatActions = ({
   };
 
   const closeBuffer = async (buffer: BufferState) => {
-    try {
-      const result = await api.closeBuffer(buffer.id);
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to close private message');
-    }
+    await executeMutation({
+      request: () => api.closeBuffer(buffer.id),
+      errorMessage: 'Failed to close private message',
+      failureValue: undefined,
+    });
   };
 
   const sendComposer = async () => {
     if (draft.trim() && !getGatewaySocket()) {
       return;
     }
-    try {
-      const submitted = await sendComposerMessage({
+    await executeMutation({
+      request: () => sendComposerMessage({
         draft,
         setDraft,
         socket: getGatewaySocket(false),
@@ -126,13 +126,16 @@ export const createChatActions = ({
           }
           await openOrSelectQueryBuffer(network, nick);
         },
-      });
-      if (submitted) {
-        recordComposerEntry(submitted);
-      }
-    } catch (error) {
-      updateBanner('error', toGatewayErrorMessage(error, 'Failed to send message'));
-    }
+      }),
+      onSuccess: (submitted) => {
+        if (submitted) {
+          recordComposerEntry(submitted);
+        }
+      },
+      errorMessage: 'Failed to send message',
+      formatError: toGatewayErrorMessage,
+      failureValue: undefined,
+    });
   };
 
   return {

@@ -11,6 +11,14 @@ export type ComposerHistoryStep = {
   draft: string;
 };
 
+export type ComposerController = {
+  draft: string;
+  setDraft: (value: string) => void;
+  recordComposerEntry: (entry: string) => void;
+  recallOlderDraft: () => void;
+  recallNewerDraft: () => void;
+};
+
 export const composerHistoryLimit = 100;
 
 export const initialComposerHistoryState: ComposerHistoryState = {
@@ -83,7 +91,7 @@ export const stepComposerHistory = (
   };
 };
 
-export const useComposerHistory = () => {
+export const useComposerHistory = (): ComposerController => {
   const [draft, setDraft] = useState('');
   const [historyState, setHistoryState] = useState(initialComposerHistoryState);
 

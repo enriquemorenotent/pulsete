@@ -19,8 +19,8 @@ test('friend routes persist entries and broadcast updates without auth', async (
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
   const network = storage.upsertNetwork(createNetworkInput());
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -64,7 +64,7 @@ test('friend routes validate payloads and targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
+  const server = createServer(createHttpHandler(runtime.context));
   const port = await listen(server);
 
   try {
@@ -106,14 +106,14 @@ test('buffer read emits updates and clears unread counts without auth', async ()
     name: '#help',
     unread: 0,
   });
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
   try {
     const unreadBufferPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
-    handleRuntimeEvent(runtime, {
+    handleRuntimeEvent({ store: storage, publish: runtime.gateway.publish }, {
       type: 'message',
       message: {
         id: 'msg-1',
@@ -165,7 +165,7 @@ test('history clamps invalid and oversized limits to the default window', async 
       ts: Date.now() + index,
     });
   }
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler(new Runtime(storage).context));
   const port = await listen(server);
 
   try {

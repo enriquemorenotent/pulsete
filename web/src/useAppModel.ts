@@ -1,13 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { initialState, reducer, useStateReducer } from './app-state.js';
-import { useAppActions } from './useAppActions.js';
+import { createAppActions } from './useAppActions.js';
 import { useAppDerivedState } from './useAppDerivedState.js';
-import type { useComposerHistory } from './composer-history.js';
-import type { useAppUiState } from './useAppUiState.js';
+import type { ComposerController } from './composer-history.js';
+import type { AppUiState } from './useAppUiState.js';
 
 type UseAppModelParams = {
-  composer: ReturnType<typeof useComposerHistory>;
-  ui: ReturnType<typeof useAppUiState>;
+  composer: ComposerController;
+  ui: AppUiState;
 };
 
 export function useAppModel({ composer, ui }: UseAppModelParams) {
@@ -19,7 +19,7 @@ export function useAppModel({ composer, ui }: UseAppModelParams) {
     [dispatch]
   );
   const actions = useMemo(
-    () => useAppActions({
+    () => createAppActions({
       buffers: state.domain.buffers,
       channelList: state.transient.channelList,
       conversation: model.conversation,

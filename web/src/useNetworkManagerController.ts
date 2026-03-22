@@ -4,13 +4,16 @@ import type { AppModel } from './app-model.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
-import type { useAppActions } from './useAppActions.js';
+import type { NetworkManagerActionSet } from './useAppActions.js';
 
 type NetworkManagerControllerParams = {
-  actions: ReturnType<typeof useAppActions>;
+  actions: NetworkManagerActionSet;
   dispatch: (action: Action) => void;
-  model: AppModel;
-  state: State;
+  hiddenManagedNetworkName: AppModel['hiddenManagedNetworkName'];
+  managedRuntime: AppModel['managedRuntime'];
+  networkManager: State['transient']['networkManager'];
+  visibleManagedNetwork: AppModel['visibleManagedNetwork'];
+  visibleNetworks: AppModel['visibleNetworks'];
 };
 
 const createOpenNewNetworkEditorDialog = (dispatch: (action: Action) => void) => () =>
@@ -19,11 +22,13 @@ const createOpenNewNetworkEditorDialog = (dispatch: (action: Action) => void) =>
 export function useNetworkManagerController({
   actions,
   dispatch,
-  model,
-  state,
+  hiddenManagedNetworkName,
+  managedRuntime,
+  networkManager,
+  visibleManagedNetwork,
+  visibleNetworks,
 }: NetworkManagerControllerParams): DesktopShellProps['networkManager'] {
   const openNewNetworkEditorDialog = useCallback(createOpenNewNetworkEditorDialog(dispatch), [dispatch]);
-  const networkManager = state.transient.networkManager;
 
   const openExistingNetworkEditorDialog = useCallback(
     (network: NetworkProfile) => openExistingNetworkEditor(network, { dispatch }),
@@ -45,11 +50,11 @@ export function useNetworkManagerController({
 
   return useMemo(() => ({
     open: networkManager.mode === 'manager',
-    networks: model.visibleNetworks,
-    selected: model.visibleManagedNetwork,
-    runtime: model.managedRuntime,
+    networks: visibleNetworks,
+    selected: visibleManagedNetwork,
+    runtime: managedRuntime,
     showFavoritesOnly: networkManager.showFavoritesOnly,
-    hiddenManagedNetworkName: model.hiddenManagedNetworkName,
+    hiddenManagedNetworkName,
     onSelect: (networkId) => dispatch({ type: 'set-managed-network', networkId }),
     onToggleFavorites: () =>
       dispatch({
@@ -58,26 +63,26 @@ export function useNetworkManagerController({
       }),
     onClose: () => dispatch({ type: 'close-network-manager' }),
     onAdd: openNewNetworkEditorDialog,
-    onEdit: () => model.visibleManagedNetwork && openExistingNetworkEditorDialog(model.visibleManagedNetwork),
-    onDuplicate: () => model.visibleManagedNetwork && duplicateNetwork(model.visibleManagedNetwork),
-    onRemove: () => model.visibleManagedNetwork && actions.deleteNetwork(model.visibleManagedNetwork.id),
-    onConnect: () => model.visibleManagedNetwork && connectNetwork(model.visibleManagedNetwork),
+    onEdit: () => visibleManagedNetwork && openExistingNetworkEditorDialog(visibleManagedNetwork),
+    onDuplicate: () => visibleManagedNetwork && duplicateNetwork(visibleManagedNetwork),
+    onRemove: () => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id),
+    onConnect: () => visibleManagedNetwork && connectNetwork(visibleManagedNetwork),
     onFavorite: () =>
-      model.visibleManagedNetwork
-      && actions.saveFavorite(model.visibleManagedNetwork, !model.visibleManagedNetwork.favorite),
+      visibleManagedNetwork
+      && actions.saveFavorite(visibleManagedNetwork, !visibleManagedNetwork.favorite),
   }), [
     actions.deleteNetwork,
     actions.saveFavorite,
     connectNetwork,
     dispatch,
     duplicateNetwork,
-    model.hiddenManagedNetworkName,
-    model.managedRuntime,
-    model.visibleManagedNetwork,
-    model.visibleNetworks,
+    hiddenManagedNetworkName,
+    managedRuntime,
     networkManager.mode,
     networkManager.showFavoritesOnly,
     openExistingNetworkEditorDialog,
     openNewNetworkEditorDialog,
+    visibleManagedNetwork,
+    visibleNetworks,
   ]);
 }

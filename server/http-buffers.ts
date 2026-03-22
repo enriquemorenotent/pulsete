@@ -19,7 +19,7 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   if (channelMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(channelMatch[1]);
     const { channel, sourceBufferId } = readChannelTarget(await readJson(req));
-    context.runtime.join(networkId, channel, sourceBufferId);
+    context.irc.join(networkId, channel, sourceBufferId);
     writeJson(res, 202, { ok: true });
     return true;
   }
@@ -28,20 +28,20 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   if (queryMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(queryMatch[1]);
     const target = readQueryTarget(await readJson(req));
-    writeJson(res, 200, context.runtime.openQueryResult(networkId, target));
+    writeJson(res, 200, context.conversations.openQuery(networkId, target));
     return true;
   }
 
   const bufferMatch = pathname.match(/^\/api\/buffers\/([^/]+)$/);
   if (bufferMatch && req.method === 'DELETE') {
     const bufferId = decodeRouteParam(bufferMatch[1]);
-    writeJson(res, 200, { ok: true, ...context.runtime.closeBufferResult(bufferId) });
+    writeJson(res, 200, { ok: true, ...context.conversations.closeBuffer(bufferId) });
     return true;
   }
 
   const readMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/read$/);
   if (readMatch && req.method === 'POST') {
-    writeJson(res, 200, context.runtime.markBufferReadResult(decodeRouteParam(readMatch[1])));
+    writeJson(res, 200, context.conversations.markBufferRead(decodeRouteParam(readMatch[1])));
     return true;
   }
 
@@ -50,7 +50,7 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
     const bufferId = decodeRouteParam(historyMatch[1]);
     const limit = normalizeHistoryLimit(url.searchParams.get('limit'));
     writeJson(res, 200, {
-      messages: context.runtime.history(bufferId, limit),
+      messages: context.conversations.history(bufferId, limit),
     });
     return true;
   }

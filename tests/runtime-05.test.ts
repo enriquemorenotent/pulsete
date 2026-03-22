@@ -24,12 +24,12 @@ test('runtime drops channel-list events after the requester disconnects mid-LIST
   const observerSocket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(requesterSocket);
-    runtime.attachSocket(observerSocket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(requesterSocket);
+    runtime.gateway.attachSocket(observerSocket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, requesterSocket);
+    const requestId = runtime.sessions.requestChannelList(network.id, requesterSocket);
     await waitFor(() =>
       requesterSocket.sent.some(
         (message) =>
@@ -47,7 +47,7 @@ test('runtime drops channel-list events after the requester disconnects mid-LIST
       []
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -66,11 +66,11 @@ test('runtime reports a failed channel-list request when the network disconnects
   const socket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(socket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(socket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, socket);
+    const requestId = runtime.sessions.requestChannelList(network.id, socket);
     await waitFor(() =>
       socket.sent.some(
         (message) =>
@@ -91,7 +91,7 @@ test('runtime reports a failed channel-list request when the network disconnects
       )
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }
 });
@@ -109,11 +109,11 @@ test('runtime reports a failed channel-list request when disconnect is requested
   const socket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(socket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(socket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, socket);
+    const requestId = runtime.sessions.requestChannelList(network.id, socket);
     await waitFor(() =>
       socket.sent.some(
         (message) =>
@@ -123,7 +123,7 @@ test('runtime reports a failed channel-list request when disconnect is requested
       )
     );
 
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
 
     await waitFor(() =>
       socket.sent.some(
@@ -153,12 +153,12 @@ test('runtime removes channel-list subscribers after a request completes', async
   const secondSocket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(firstSocket);
-    runtime.attachSocket(secondSocket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(firstSocket);
+    runtime.gateway.attachSocket(secondSocket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const firstRequestId = runtime.requestChannelList(network.id, firstSocket);
+    const firstRequestId = runtime.sessions.requestChannelList(network.id, firstSocket);
     await waitFor(() =>
       firstSocket.sent.some(
         (message) =>
@@ -169,7 +169,7 @@ test('runtime removes channel-list subscribers after a request completes', async
 
     firstSocket.sent.length = 0;
 
-    const secondRequestId = runtime.requestChannelList(network.id, secondSocket);
+    const secondRequestId = runtime.sessions.requestChannelList(network.id, secondSocket);
     await waitFor(() =>
       secondSocket.sent.some(
         (message) =>
@@ -184,7 +184,7 @@ test('runtime removes channel-list subscribers after a request completes', async
       []
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -197,11 +197,11 @@ test('runtime drops sockets whose websocket send throws without aborting the bro
   const healthySocket = createSocketRecorder();
   const throwingSocket = createThrowingSocket();
 
-  runtime.attachSocket(healthySocket);
-  runtime.attachSocket(throwingSocket as WebSocket);
+  runtime.gateway.attachSocket(healthySocket);
+  runtime.gateway.attachSocket(throwingSocket as WebSocket);
 
   assert.doesNotThrow(() => {
-    runtime.send({ type: 'notice', networkId: null, message: 'hello' });
+    runtime.gateway.publish({ type: 'notice', networkId: null, message: 'hello' });
   });
   assert.deepEqual(healthySocket.sent, [{ type: 'notice', networkId: null, message: 'hello' }]);
   assert.equal(throwingSocket.closed, true);

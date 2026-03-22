@@ -114,6 +114,15 @@ export const disconnect = (connection: IrcLifecycleContext, raw = 'QUIT :Client 
   }
 };
 
+export const dispose = (connection: IrcLifecycleContext) => {
+  const socket = connection.lifecycle.socket;
+  applyOfflineTransition(connection, {
+    manualDisconnect: true,
+    reconnectAttempts: 0,
+  });
+  socket?.destroy();
+};
+
 export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNetworkProfile) => {
   const lifecycle = connection.lifecycle;
   const strategy = resolveProfileUpdateStrategy(connection, profile);

@@ -49,6 +49,7 @@ export type IrcConnectionApi = {
   disableFriendPresence(): void;
   connect(resetRetryBudget?: boolean): void;
   disconnect(raw?: string): void;
+  dispose(): void;
   consume(chunk: string): void;
   consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
   handleFriendPresence(pollId: number, onlineNicks: string[]): void;

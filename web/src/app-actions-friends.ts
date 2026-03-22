@@ -3,9 +3,9 @@ import type { GatewayStatus } from './app-types.js';
 import type { AppDomainState } from './app-types.js';
 import type { AppDispatch, BannerActions, ConversationActions } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
+import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import { resolveFriendSelection } from './friend-selection.js';
-import { syncMutationMessages } from './mutation-message-sync.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 type FriendActionParams = BannerActions & ConversationActions & {
@@ -25,6 +25,8 @@ export const createFriendActions = ({
   updateBanner,
   workspace,
 }: FriendActionParams) => {
+  const executeMutation = createAppMutationExecutor({ dispatch, gatewayStatus, updateBanner });
+
   const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
     try {
       await openOrSelectQueryBuffer(network, nick);
@@ -59,27 +61,23 @@ export const createFriendActions = ({
   };
 
   const addFriend = async (nick: string) => {
-    try {
-      const result = await api.addFriend(nick);
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-      updateBanner('notice', 'Friend saved');
-      return true;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to save friend');
-      return false;
-    }
+    return executeMutation({
+      request: () => api.addFriend(nick),
+      mapResult: () => true,
+      successMessage: 'Friend saved',
+      errorMessage: 'Failed to save friend',
+      failureValue: false,
+    });
   };
 
   const removeFriend = async (friendId: string) => {
-    try {
-      const result = await api.removeFriend(friendId);
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-      updateBanner('notice', 'Friend removed');
-      return true;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to remove friend');
-      return false;
-    }
+    return executeMutation({
+      request: () => api.removeFriend(friendId),
+      mapResult: () => true,
+      successMessage: 'Friend removed',
+      errorMessage: 'Failed to remove friend',
+      failureValue: false,
+    });
   };
 
   return {

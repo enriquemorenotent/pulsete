@@ -16,56 +16,34 @@ import type { StorageConversationsRepository } from './storage-conversations-rep
 import type { StorageNetworksRepository } from './storage-networks-repository.js';
 import type { MessageInput } from './storage-types.js';
 
-type PublishMessages = (messages: readonly ServerMessage[]) => void;
-
 type RuntimeConversationServiceOptions = {
   conversations: StorageConversationsRepository;
   networks: StorageNetworksRepository;
-  publish?: PublishMessages;
 };
 
 export class RuntimeConversationService {
-  private readonly publish: PublishMessages;
-
-  constructor(private readonly options: RuntimeConversationServiceOptions) {
-    this.publish = options.publish ?? (() => {});
-  }
+  constructor(private readonly options: RuntimeConversationServiceOptions) {}
 
   openQuery(networkId: string, target: string) {
-    return this.openQueryResult(networkId, target).buffer;
-  }
-
-  openQueryResult(networkId: string, target: string) {
     this.requireNetwork(networkId);
     const buffer = openConversationQuery(this.options.conversations, networkId, normalizeQueryTarget(target));
     const messages = [{ type: 'buffer.upsert', buffer } satisfies ServerMessage];
-    this.publishMessages(messages);
     return { buffer, messages };
   }
 
   closeQueryBuffer(bufferId: string) {
-    return this.closeQueryBufferResult(bufferId).buffer;
-  }
-
-  closeQueryBufferResult(bufferId: string) {
     const removedBuffer = closeConversationQueryBuffer(this.options.conversations, bufferId);
     const messages = [{
       type: 'buffer.remove',
       networkId: removedBuffer.networkId,
       bufferId: removedBuffer.id,
     } satisfies ServerMessage];
-    this.publishMessages(messages);
     return { buffer: removedBuffer, messages };
   }
 
   markBufferRead(bufferId: string) {
-    return this.markBufferReadResult(bufferId).buffer;
-  }
-
-  markBufferReadResult(bufferId: string) {
     const updatedBuffer = markConversationBufferRead(this.options.conversations, bufferId);
     const messages = [{ type: 'buffer.upsert', buffer: updatedBuffer } satisfies ServerMessage];
-    this.publishMessages(messages);
     return { buffer: updatedBuffer, messages };
   }
 
@@ -169,11 +147,6 @@ export class RuntimeConversationService {
     return event.target;
   }
 
-  private publishMessages(messages: readonly ServerMessage[]) {
-    if (messages.length > 0) {
-      this.publish(messages);
-    }
-  }
 }
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

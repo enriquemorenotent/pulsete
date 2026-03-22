@@ -1,21 +1,21 @@
 import { useMemo } from 'react';
-import type { State } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
-import type { useAppActions } from './useAppActions.js';
+import type { State } from './app-types.js';
+import type { NicklistActionSet } from './useAppActions.js';
 
 type NicklistControllerParams = {
-  actions: ReturnType<typeof useAppActions>;
-  state: State;
+  actions: NicklistActionSet;
+  friends: State['domain']['friends'];
 };
 
 export function useNicklistController({
   actions,
-  state,
+  friends,
 }: NicklistControllerParams): DesktopShellProps['nicklist'] {
   return useMemo(() => ({
-    friends: state.domain.friends,
+    friends,
     onAddFriend: actions.addFriend,
     onRemoveFriend: actions.removeFriend,
     onSelectNick: actions.selectPrivateBuffer,
-  }), [actions.addFriend, actions.removeFriend, actions.selectPrivateBuffer, state.domain.friends]);
+  }), [actions.addFriend, actions.removeFriend, actions.selectPrivateBuffer, friends]);
 }

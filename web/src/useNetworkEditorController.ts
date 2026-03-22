@@ -1,21 +1,21 @@
 import type { Action, State } from './app-types.js';
 import type { DesktopShellProps } from './DesktopShell.js';
 import { emptyNetworkForm } from './network-form.js';
-import type { useAppActions } from './useAppActions.js';
+import type { NetworkEditorActionSet } from './useAppActions.js';
 
 type NetworkEditorControllerParams = {
-  actions: ReturnType<typeof useAppActions>;
+  actions: NetworkEditorActionSet;
   dispatch: (action: Action) => void;
-  state: State;
+  editor: State['transient']['networkManager']['editor'];
+  mode: State['transient']['networkManager']['mode'];
 };
 
 export function useNetworkEditorController({
   actions,
   dispatch,
-  state,
+  editor,
+  mode,
 }: NetworkEditorControllerParams): DesktopShellProps['networkEditor'] {
-  const editor = state.transient.networkManager.editor;
-
   const submitNetwork = async () => {
     if (!editor) {
       return;
@@ -29,7 +29,7 @@ export function useNetworkEditorController({
   };
 
   return {
-    open: state.transient.networkManager.mode === 'editor',
+    open: mode === 'editor',
     form: editor?.form ?? emptyNetworkForm(),
     activeTab: editor?.tab ?? 'servers',
     onTabChange: (tab) => dispatch({ type: 'set-network-editor-tab', tab }),

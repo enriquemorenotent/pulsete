@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import type WebSocket from 'ws';
 import type { FriendState, NetworkProfile } from '../shared/protocol.js';
 import { IrcConnection } from './irc.js';
-import { applyOfflineLifecycleState, resetRuntimeSessionState } from './irc-connection-lifecycle-state.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
 import type { StorageFriendsRepository } from './storage-friends-repository.js';
@@ -130,14 +129,6 @@ export class RuntimeConnectionManager {
   }
 
   private disposeConnection(connection: IrcConnection) {
-    const socket = connection.lifecycle.socket;
-    connection.lifecycle.manualDisconnect = true;
-    connection.lifecycle.reconnectAttempts = 0;
-    connection.ports.lifecycle.clearConnectDeadlineTimer();
-    connection.ports.lifecycle.clearReconnectTimer();
-    connection.lifecycle.socket = null;
-    resetRuntimeSessionState(connection);
-    applyOfflineLifecycleState(connection);
-    socket?.destroy();
+    connection.dispose();
   }
 }

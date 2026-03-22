@@ -28,10 +28,10 @@ test('deleteNetwork removes runtime connections', async () => {
   const state = runtime as unknown as { connections: Map<string, unknown> };
 
   try {
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => state.connections.has(network.id));
 
-    runtime.deleteNetwork(network.id);
+    runtime.networks.deleteNetwork(network.id);
 
     assert.equal(state.connections.has(network.id), false);
     assert.equal(storage.getNetwork(network.id), null);
@@ -58,11 +58,11 @@ test('runtime close disconnects active connections without appending shutdown no
   const state = runtime as unknown as { connections: Map<string, unknown> };
 
   try {
-    runtime.connect(network.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => handshake.hasConnections());
     const beforeShutdownMessages = storage.listMessages(network.id, 'server', 20).map((message) => message.body);
 
-    runtime.close();
+    runtime.gateway.close();
 
     await waitFor(() => !handshake.hasConnections());
     assert.equal(state.connections.size, 0);
@@ -107,10 +107,10 @@ test('deleteNetwork removes hidden clone connections when deleting a template', 
   process.once('uncaughtException', onUncaught);
 
   try {
-    runtime.connect(clone.id);
+    runtime.sessions.connect(clone.id);
     await waitFor(() => received.includes('NICK template'));
 
-    runtime.deleteNetwork(template.id);
+    runtime.networks.deleteNetwork(template.id);
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     assert.equal(storage.getNetwork(template.id), null);
@@ -138,7 +138,7 @@ test('self part events remove the channel and emit buffer.remove', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -192,8 +192,8 @@ test('late duplicate self part events do not recreate the channel buffer', () =>
     },
   });
 
-  handleRuntimeEvent({ store: storage, send() {} }, event());
-  handleRuntimeEvent({ store: storage, send() {} }, event());
+  handleRuntimeEvent({ store: storage, publish() {} }, event());
+  handleRuntimeEvent({ store: storage, publish() {} }, event());
 
   assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
   assert.equal(storage.listMessages(network.id, '#help', 10).length, 1);
@@ -225,8 +225,8 @@ test('late duplicate self kick events do not append orphaned history', () => {
     },
   });
 
-  handleRuntimeEvent({ store: storage, send() {} }, event());
-  handleRuntimeEvent({ store: storage, send() {} }, event());
+  handleRuntimeEvent({ store: storage, publish() {} }, event());
+  handleRuntimeEvent({ store: storage, publish() {} }, event());
 
   assert.equal(storage.getBufferByTarget(network.id, '#help'), null);
   assert.equal(storage.listMessages(network.id, '#help', 10).length, 1);

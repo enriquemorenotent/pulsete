@@ -29,7 +29,7 @@ test('runtime join defers channel persistence until the server confirms the join
     },
   });
 
-  runtime.join(network.id, '#missing');
+  runtime.irc.join(network.id, '#missing');
 
   assert.deepEqual(requestedJoin, { channel: '#missing', sourceTarget: 'server', visiblePending: true });
   assert.equal(storage.getBufferByTarget(network.id, '#missing'), null);
@@ -61,7 +61,7 @@ test('runtime rejoins existing channel buffers without surfacing a pending chann
     },
   });
 
-  runtime.join(network.id, '#help');
+  runtime.irc.join(network.id, '#help');
 
   assert.deepEqual(requestedJoin, { channel: '#help', sourceTarget: 'server', visiblePending: false });
   assert.equal(storage.getBuffer(existing.id)?.kind, 'channel');
@@ -79,30 +79,30 @@ test('runtime validation rejects missing networks and invalid targets before tou
     name: '#help',
   });
 
-  assert.throws(() => runtime.join('missing-network', '#help'), /Network not found/);
-  assert.throws(() => runtime.part('missing-network', '#help'), /Network not found/);
-  assert.throws(() => runtime.closeBuffer('missing-buffer'), /Buffer not found/);
-  assert.throws(() => runtime.join(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
-  assert.throws(() => runtime.join(network.id, '#help,#ops'), /Channel name must refer to a single channel/);
-  assert.throws(() => runtime.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
-  assert.throws(() => runtime.openQuery(network.id, '   '), /Private-message target is required/);
-  assert.throws(() => runtime.openQuery(network.id, '#help'), /Private-message target is required/);
-  assert.throws(() => runtime.openQuery(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
-  assert.throws(() => runtime.upsertFriend('   '), /Private-message target is required/);
-  assert.throws(() => runtime.upsertFriend('#help'), /Private-message target is required/);
-  assert.throws(() => runtime.upsertFriend('alice,bob'), /Private-message target must refer to a single nick/);
-  assert.throws(() => runtime.removeFriend('missing-friend'), /Friend not found/);
-  assert.throws(() => runtime.closeBuffer(channel.id), /Only private message buffers can be closed/);
-  assert.throws(() => runtime.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
-  assert.throws(() => runtime.sendMessage(network.id, 'alice,bob', 'hello'), /Private-message target must refer to a single nick/);
-  assert.throws(() => runtime.sendMessage(network.id, '#help', '   '), /Message body is required/);
+  assert.throws(() => runtime.irc.join('missing-network', '#help'), /Network not found/);
+  assert.throws(() => runtime.irc.part('missing-network', '#help'), /Network not found/);
+  assert.throws(() => runtime.conversations.closeBuffer('missing-buffer'), /Buffer not found/);
+  assert.throws(() => runtime.irc.join(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
+  assert.throws(() => runtime.irc.join(network.id, '#help,#ops'), /Channel name must refer to a single channel/);
+  assert.throws(() => runtime.irc.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
+  assert.throws(() => runtime.conversations.openQuery(network.id, '   '), /Private-message target is required/);
+  assert.throws(() => runtime.conversations.openQuery(network.id, '#help'), /Private-message target is required/);
+  assert.throws(() => runtime.conversations.openQuery(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
+  assert.throws(() => runtime.friends.upsertFriend('   '), /Private-message target is required/);
+  assert.throws(() => runtime.friends.upsertFriend('#help'), /Private-message target is required/);
+  assert.throws(() => runtime.friends.upsertFriend('alice,bob'), /Private-message target must refer to a single nick/);
+  assert.throws(() => runtime.friends.removeFriend('missing-friend'), /Friend not found/);
+  assert.throws(() => runtime.conversations.closeBuffer(channel.id), /Only private message buffers can be closed/);
+  assert.throws(() => runtime.irc.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
+  assert.throws(() => runtime.irc.sendMessage(network.id, 'alice,bob', 'hello'), /Private-message target must refer to a single nick/);
+  assert.throws(() => runtime.irc.sendMessage(network.id, '#help', '   '), /Message body is required/);
   assert.throws(
-    () => runtime.sendMessage(network.id, '#help', 'hello\r\nOPER root'),
+    () => runtime.irc.sendMessage(network.id, '#help', 'hello\r\nOPER root'),
     /Message body cannot contain carriage returns or line feeds/
   );
-  assert.throws(() => runtime.sendRaw(network.id, '   '), /Raw command is required/);
+  assert.throws(() => runtime.irc.sendRaw(network.id, '   '), /Raw command is required/);
   assert.throws(
-    () => runtime.sendRaw(network.id, 'JOIN #help\r\nOPER root'),
+    () => runtime.irc.sendRaw(network.id, 'JOIN #help\r\nOPER root'),
     /Raw command cannot contain carriage returns or line feeds/
   );
 
@@ -123,15 +123,15 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
   }));
 
   try {
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    runtime.sendRaw(network.id, 'QUITTER test');
+    runtime.irc.sendRaw(network.id, 'QUITTER test');
     await waitFor(() => received.includes('QUITTER test'));
     assert.equal(received.includes('QUIT :Client disconnecting'), false);
     assert.equal(handshake.hasConnections(), true);
 
-    runtime.sendRaw(network.id, 'QUIT :Bye for now');
+    runtime.irc.sendRaw(network.id, 'QUIT :Bye for now');
     await waitFor(() => received.includes('QUIT :Bye for now'));
     assert.equal(received.includes('QUIT :Client disconnecting'), false);
     await waitFor(() => !handshake.hasConnections());
@@ -154,11 +154,11 @@ test('runtime streams structured channel list events from IRC LIST', async () =>
   const socket = createSocketRecorder();
 
   try {
-    runtime.attachSocket(socket);
-    runtime.connect(network.id);
-    await waitFor(() => runtime.snapshot().networkStates[network.id]?.phase === 'connected');
+    runtime.gateway.attachSocket(socket);
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
-    const requestId = runtime.requestChannelList(network.id, socket);
+    const requestId = runtime.sessions.requestChannelList(network.id, socket);
 
     await waitFor(() => received.includes('LIST'));
     await waitFor(() => socket.sent.some((message) => message.type === 'channel.list.completed' && message.requestId === requestId));
@@ -174,7 +174,7 @@ test('runtime streams structured channel list events from IRC LIST', async () =>
       ]
     );
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }

@@ -15,7 +15,7 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessages } from './help
 test('network routes are available without cookies', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler(new Runtime(storage).context));
   const port = await listen(server);
 
   try {
@@ -30,7 +30,7 @@ test('network routes are available without cookies', async () => {
 test('connect and disconnect return not found for missing networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler(new Runtime(storage).context));
   const port = await listen(server);
 
   try {
@@ -49,7 +49,7 @@ test('connect and disconnect return not found for missing networks', async () =>
 test('network save rejects invalid payloads and IRC-unsafe fields', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler(new Runtime(storage).context));
   const port = await listen(server);
 
   try {
@@ -94,7 +94,7 @@ test('network save rejects invalid and immutable template relationships', async 
     managerHidden: true,
     name: 'Connection instance',
   }));
-  const server = createServer(createHttpHandler({ storage, runtime }));
+  const server = createServer(createHttpHandler(runtime.context));
   const port = await listen(server);
 
   try {
@@ -130,7 +130,7 @@ test('network save rejects invalid and immutable template relationships', async 
 test('network save rejects conflicting and empty password updates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler({ storage, runtime: new Runtime(storage) }));
+  const server = createServer(createHttpHandler(new Runtime(storage).context));
   const port = await listen(server);
 
   try {
@@ -173,8 +173,8 @@ test('network save broadcasts template and instance updates over websocket', asy
     username: 'olduser',
     realName: 'Old User',
   }));
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 

@@ -5,8 +5,8 @@ import type { Storage } from './storage.js';
 
 type RuntimeEventConversations = Pick<RuntimeConversationService, 'handleChannelEvent' | 'handleMessageEvent' | 'handleStatusEvent'>;
 type RuntimeEventSink = {
+  publish(message: ServerMessage): void;
   store: Storage;
-  send(message: ServerMessage): void;
 };
 
 export function translateRuntimeEvent(
@@ -49,6 +49,6 @@ export function handleRuntimeEvent(runtime: RuntimeEventSink, event: RuntimeEven
     networks: runtime.store.networks,
   });
   for (const message of translateRuntimeEvent(event, conversations)) {
-    runtime.send(message);
+    runtime.publish(message);
   }
 }

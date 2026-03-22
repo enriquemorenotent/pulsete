@@ -1,7 +1,7 @@
 import { emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { abortActiveChannelList, clearActiveChannelList, clearDrainingChannelList, finishChannelListRequest, getActiveChannelListSnapshot, getChannelListRequestFailureMessage, handleChannelListNumeric, isChannelListPending, recordChannelListEntry, requestChannelList, startChannelList } from './irc-channel-list.js';
 import { clearChannelSessions, clearExpiredChannelSessions, getChannelSession, getTrackedChannelUserEntries, getTrackedChannelUsers, handleSelfChannelDeparture, listPendingChannels, removeChannelSession, resolveTrackedChannel, setChannelSession, setTrackedChannelUsers, trackChannel, untrackChannel, updateChannelUsers } from './irc-channel-state.js';
-import { beginLogin, clearConnectDeadlineTimer, clearReconnectTimer, connect, disconnect, handleSocketClosed, markConnectionFailure, markRegistered, openSocket, resetTransientState, setConnectDeadlineTimer, updateProfile } from './irc-connection-lifecycle.js';
+import { beginLogin, clearConnectDeadlineTimer, clearReconnectTimer, connect, disconnect, dispose, handleSocketClosed, markConnectionFailure, markRegistered, openSocket, resetTransientState, setConnectDeadlineTimer, updateProfile } from './irc-connection-lifecycle.js';
 import { consume, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
 import { clearFriendPresenceTimer, disableFriendPresence, handleFriendPresence, refreshFriendPresence, setFriendNicks, updateOnlineFriendKeys } from './irc-friend-presence.js';
 import type { IrcChannelListContext, IrcChannelStateContext, IrcClientIoContext, IrcConnectContext, IrcFriendPresenceContext, IrcReplyStateContext } from './irc-contexts.js';
@@ -36,6 +36,7 @@ export const createIrcLifecyclePort = (connection: IrcLifecyclePortContext): Irc
   markRegistered(serverName, nick) { markRegistered(connection, serverName, nick); },
   connect(resetRetryBudget = true) { connect(connection, resetRetryBudget); },
   disconnect(raw = 'QUIT :Client disconnecting') { disconnect(connection, raw); },
+  dispose() { dispose(connection); },
   updateProfile(profile) { updateProfile(connection, profile); },
   clearReconnectTimer() { clearReconnectTimer(connection); },
   clearConnectDeadlineTimer() { clearConnectDeadlineTimer(connection); },

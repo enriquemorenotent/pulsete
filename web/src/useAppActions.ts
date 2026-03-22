@@ -7,14 +7,14 @@ import { createNetworkActions } from './app-actions-networks.js';
 import type { AppActionState, AppDispatch, DraftActions, MutableRef, WorkspaceActions } from './app-actions-types.js';
 import type { SocketHandle } from './client.js';
 
-type UseAppActionsParams = AppActionState & DraftActions & WorkspaceActions & {
+type CreateAppActionsParams = AppActionState & DraftActions & WorkspaceActions & {
   conversation: ConversationIndex;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
-export function useAppActions(params: UseAppActionsParams) {
+export function createAppActions(params: CreateAppActionsParams) {
   const gateway = createGatewayActions({
     gatewayStatus: params.gatewayStatus,
     socketRef: params.socketRef,
@@ -61,3 +61,37 @@ export function useAppActions(params: UseAppActionsParams) {
     }),
   };
 }
+
+export type AppActions = ReturnType<typeof createAppActions>;
+export type ChatActionSet = Pick<
+  AppActions,
+  | 'addFriend'
+  | 'closeBuffer'
+  | 'closeChannel'
+  | 'closeChannelList'
+  | 'joinChannelFromList'
+  | 'openChannelList'
+  | 'openMentionedChannel'
+  | 'removeFriend'
+  | 'sendComposer'
+>;
+export type SidebarActionSet = Pick<
+  AppActions,
+  | 'addFriend'
+  | 'closeBuffer'
+  | 'closeChannel'
+  | 'closeConnection'
+  | 'disconnectNetwork'
+  | 'reconnectNetwork'
+  | 'removeFriend'
+  | 'selectFriend'
+  | 'selectNetworkBuffer'
+  | 'selectPendingTab'
+  | 'selectTabBuffer'
+>;
+export type NicklistActionSet = Pick<AppActions, 'addFriend' | 'removeFriend' | 'selectPrivateBuffer'>;
+export type NetworkManagerActionSet = Pick<
+  AppActions,
+  'connectNetwork' | 'deleteNetwork' | 'duplicateNetwork' | 'saveFavorite'
+>;
+export type NetworkEditorActionSet = Pick<AppActions, 'submitNetwork'>;

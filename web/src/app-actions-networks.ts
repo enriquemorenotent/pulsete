@@ -4,7 +4,7 @@ import { selectBuffer } from './app-actions-types.js';
 import { api } from './client.js';
 import type { ConversationIndex } from './conversation-selectors.js';
 import type { GatewayStatus } from './app-types.js';
-import { syncMutationMessages } from './mutation-message-sync.js';
+import { createAppMutationExecutor } from './app-mutation.js';
 import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
 
 type NetworkActionParams = BannerActions & {
@@ -14,6 +14,8 @@ type NetworkActionParams = BannerActions & {
 };
 
 export const createNetworkActions = ({ conversation, dispatch, gatewayStatus, updateBanner }: NetworkActionParams) => {
+  const executeMutation = createAppMutationExecutor({ dispatch, gatewayStatus, updateBanner });
+
   const submitNetwork = async (form: NetworkForm) => {
     if (!form.name.trim()) {
       updateBanner('error', 'Network name is required');
@@ -27,101 +29,92 @@ export const createNetworkActions = ({ conversation, dispatch, gatewayStatus, up
       updateBanner('error', 'Nick name is required');
       return null;
     }
-    try {
-      const result = await api.saveNetwork(toSaveNetworkPayload(form));
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-      updateBanner('notice', 'Network saved');
-      return result.network;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to save network');
-      return null;
-    }
+    return executeMutation({
+      request: () => api.saveNetwork(toSaveNetworkPayload(form)),
+      mapResult: (result) => result.network,
+      successMessage: 'Network saved',
+      errorMessage: 'Failed to save network',
+      failureValue: null,
+    });
   };
 
   const deleteNetwork = async (networkId: string) => {
-    try {
-      const result = await api.deleteNetwork(networkId);
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-      updateBanner('notice', 'Network deleted');
-      return result.deletedNetworkIds;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to delete network');
-      return null;
-    }
+    return executeMutation({
+      request: () => api.deleteNetwork(networkId),
+      mapResult: (result) => result.deletedNetworkIds,
+      successMessage: 'Network deleted',
+      errorMessage: 'Failed to delete network',
+      failureValue: null,
+    });
   };
 
   const duplicateNetwork = async (network: NetworkProfile) => {
-    try {
-      const result = await api.duplicateNetwork(network.id);
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-      updateBanner('notice', 'Network duplicated');
-      return result.network;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to duplicate network');
-      return null;
-    }
+    return executeMutation({
+      request: () => api.duplicateNetwork(network.id),
+      mapResult: (result) => result.network,
+      successMessage: 'Network duplicated',
+      errorMessage: 'Failed to duplicate network',
+      failureValue: null,
+    });
   };
 
   const connectNetwork = async (network: NetworkProfile) => {
-    try {
-      const instance = await api.saveNetwork(createConnectionInstancePayload(network));
-      syncMutationMessages(gatewayStatus, instance.messages, dispatch);
-      if (instance.serverBuffer) {
-        selectBuffer(dispatch, instance.serverBuffer);
-      }
-      await api.connectNetwork(instance.network.id);
-      updateBanner('notice', 'Opened connection instance');
-      return true;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to connect');
-      return false;
-    }
+    return executeMutation({
+      request: async () => {
+        const instance = await api.saveNetwork(createConnectionInstancePayload(network));
+        await api.connectNetwork(instance.network.id);
+        return { instance, messages: instance.messages };
+      },
+      onSuccess: ({ instance }) => {
+        if (instance.serverBuffer) {
+          selectBuffer(dispatch, instance.serverBuffer);
+        }
+      },
+      mapResult: () => true,
+      successMessage: 'Opened connection instance',
+      errorMessage: 'Failed to connect',
+      failureValue: false,
+    });
   };
 
   const reconnectNetwork = async (network: NetworkProfile) => {
-    try {
-      await api.connectNetwork(network.id);
-      updateBanner('notice', 'Reconnect requested');
-      return true;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to reconnect');
-      return false;
-    }
+    return executeMutation({
+      request: () => api.connectNetwork(network.id),
+      mapResult: () => true,
+      successMessage: 'Reconnect requested',
+      errorMessage: 'Failed to reconnect',
+      failureValue: false,
+    });
   };
 
   const disconnectNetwork = async (networkId: string) => {
-    try {
-      await api.disconnectNetwork(networkId);
-      updateBanner('notice', 'Disconnect requested');
-      return true;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to disconnect');
-      return false;
-    }
+    return executeMutation({
+      request: () => api.disconnectNetwork(networkId),
+      mapResult: () => true,
+      successMessage: 'Disconnect requested',
+      errorMessage: 'Failed to disconnect',
+      failureValue: false,
+    });
   };
 
   const closeConnection = async (network: NetworkProfile) => {
-    try {
-      const result = await api.deleteNetwork(network.id);
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-      updateBanner('notice', 'Connection instance closed');
-      return result.deletedNetworkIds;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to close connection');
-      return null;
-    }
+    return executeMutation({
+      request: () => api.deleteNetwork(network.id),
+      mapResult: (result) => result.deletedNetworkIds,
+      successMessage: 'Connection instance closed',
+      errorMessage: 'Failed to close connection',
+      failureValue: null,
+    });
   };
 
   const saveFavorite = async (network: NetworkProfile, favorite: boolean) => {
-    try {
-      const result = await api.saveNetwork({ ...network, favorite });
-      syncMutationMessages(gatewayStatus, result.messages, dispatch);
-      updateBanner('notice', favorite ? 'Marked as favorite' : 'Removed from favorites');
-      return result.network;
-    } catch (error) {
-      updateBanner('error', error instanceof Error ? error.message : 'Failed to update favorite');
-      return null;
-    }
+    return executeMutation({
+      request: () => api.saveNetwork({ ...network, favorite }),
+      mapResult: (result) => result.network,
+      successMessage: favorite ? 'Marked as favorite' : 'Removed from favorites',
+      errorMessage: 'Failed to update favorite',
+      failureValue: null,
+    });
   };
 
   const selectNetworkBuffer = (network: NetworkProfile) => {

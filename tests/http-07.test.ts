@@ -23,8 +23,8 @@ test('websocket join, message, and part commands reach the live IRC connection',
     host: '127.0.0.1',
     port: ircServer.port,
   }));
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -77,7 +77,7 @@ test('websocket join, message, and part commands reach the live IRC connection',
     socket.send(JSON.stringify({ type: 'channel.part', networkId: network.id, channel: '#help' }));
     await waitFor(() => ircReceived.some((line) => line.startsWith('PART #help :Leaving')));
   } finally {
-    runtime.disconnect(network.id);
+    runtime.sessions.disconnect(network.id);
     await closeWebSocket(socket);
     ircServer.closeConnections();
     await new Promise<void>((resolve, reject) => ircServer.server.close((error) => (error ? reject(error) : resolve())));
@@ -90,8 +90,8 @@ test('oversized websocket payloads are rejected', async () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
   const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -116,8 +116,8 @@ test('websocket validation returns errors for invalid channel, query, and messag
   const network = storage.upsertNetwork(createNetworkInput());
   storage.upsertQuery(network.id, 'helper');
   const runtime = new Runtime(storage);
-  const server = createServer(createHttpHandler({ storage, runtime }));
-  attachWebSocketServer(server, { storage, runtime });
+  const server = createServer(createHttpHandler(runtime.context));
+  attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 

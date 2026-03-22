@@ -13,6 +13,7 @@ export const createIrcConnectionMethodDescriptors = (
   disableFriendPresence: { enumerable: true, value: () => connection.ports.friendPresence.disableFriendPresence() },
   connect: { enumerable: true, value: (resetRetryBudget = true) => connection.ports.lifecycle.connect(resetRetryBudget) },
   disconnect: { enumerable: true, value: (raw?: string) => connection.ports.lifecycle.disconnect(raw) },
+  dispose: { enumerable: true, value: () => connection.ports.lifecycle.dispose() },
   consume: { enumerable: true, value: (chunk: string) => connection.ports.transport.consume(chunk) },
   consumeReplyContext: {
     enumerable: true,

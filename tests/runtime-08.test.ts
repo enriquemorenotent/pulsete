@@ -15,7 +15,7 @@ test('incoming private messages open query buffers automatically', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -47,7 +47,7 @@ test('incoming private messages reuse an existing query buffer across IRC nick c
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -78,7 +78,7 @@ test('self-sent private messages open query buffers automatically', () => {
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -113,7 +113,7 @@ test('service messages on the server buffer close stale service queries', () => 
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'message',
       message: {
@@ -151,7 +151,7 @@ test('status events keep their originating buffer target and message kind', () =
   const sent: Array<{ type: string; [key: string]: unknown }> = [];
 
   handleRuntimeEvent(
-    { store: storage, send(message) { sent.push(message); } },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'status',
       networkId: network.id,
@@ -187,7 +187,7 @@ test('late status events fall back to the server buffer after a channel closes',
   storage.deleteChannelByName(network.id, channel.name);
 
   handleRuntimeEvent(
-    { store: storage, send() {} },
+    { store: storage, publish() {} },
     {
       type: 'status',
       networkId: network.id,
@@ -210,7 +210,7 @@ test('late status events fall back to the server buffer after a query closes', (
   storage.removeBuffer(query.id);
 
   handleRuntimeEvent(
-    { store: storage, send() {} },
+    { store: storage, publish() {} },
     {
       type: 'status',
       networkId: network.id,
