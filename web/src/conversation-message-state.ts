@@ -8,11 +8,8 @@ export const toConversationMessageKey = (networkId: string, target: string) =>
 
 export const indexConversationMessages = (messages: ChatMessage[]): ConversationMessages => {
   const buckets: ConversationMessages = {};
-  for (const message of messages) {
-    buckets[toConversationMessageKey(message.networkId, message.target)] = mergeMessageBucket(
-      buckets[toConversationMessageKey(message.networkId, message.target)] ?? [],
-      [message]
-    );
+  for (const [key, bucket] of groupMessagesByConversation(messages)) {
+    buckets[key] = normalizeMessageBucket(bucket);
   }
   return buckets;
 };
@@ -25,9 +22,8 @@ export const appendConversationMessages = (
     return current;
   }
   const next = { ...current };
-  for (const message of incoming) {
-    const key = toConversationMessageKey(message.networkId, message.target);
-    next[key] = mergeMessageBucket(next[key] ?? [], [message]);
+  for (const [key, bucket] of groupMessagesByConversation(incoming)) {
+    next[key] = appendMessageBucket(next[key] ?? [], bucket);
   }
   return next;
 };
@@ -58,4 +54,64 @@ const mergeMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => 
     merged.set(message.id, message);
   }
   return Array.from(merged.values()).sort((left, right) => left.ts - right.ts);
+};
+
+const groupMessagesByConversation = (messages: ChatMessage[]) => {
+  const grouped = new Map<string, ChatMessage[]>();
+  for (const message of messages) {
+    const key = toConversationMessageKey(message.networkId, message.target);
+    const bucket = grouped.get(key);
+    if (bucket) {
+      bucket.push(message);
+      continue;
+    }
+    grouped.set(key, [message]);
+  }
+  return grouped;
+};
+
+const appendMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => {
+  const normalizedIncoming = normalizeMessageBucket(incoming);
+  if (normalizedIncoming.length === 0) {
+    return current;
+  }
+  if (current.length === 0) {
+    return normalizedIncoming;
+  }
+  if (canAppendWithoutResort(current, normalizedIncoming)) {
+    return [...current, ...normalizedIncoming];
+  }
+  return mergeMessageBucket(current, normalizedIncoming);
+};
+
+const normalizeMessageBucket = (messages: ChatMessage[]) => {
+  if (messages.length < 2) {
+    return messages;
+  }
+  const deduped = new Map<string, ChatMessage>();
+  let sorted = true;
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index];
+    deduped.set(message.id, message);
+    if (index > 0 && messages[index - 1].ts > message.ts) {
+      sorted = false;
+    }
+  }
+  const bucket = Array.from(deduped.values());
+  return sorted && bucket.length === messages.length
+    ? bucket
+    : bucket.sort((left, right) => left.ts - right.ts);
+};
+
+const canAppendWithoutResort = (current: ChatMessage[], incoming: ChatMessage[]) => {
+  if (current[current.length - 1]?.ts > incoming[0]?.ts) {
+    return false;
+  }
+  const currentIds = new Set(current.map((message) => message.id));
+  for (const message of incoming) {
+    if (currentIds.has(message.id)) {
+      return false;
+    }
+  }
+  return true;
 };

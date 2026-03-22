@@ -18,7 +18,6 @@ export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'bu
     buffers: snapshot.buffers,
     channels: [],
     pendingChannels: [],
-    messages: {},
   }).selectDefaultBuffer(snapshot.networks);
 
 export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {

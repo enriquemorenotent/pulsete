@@ -8,16 +8,22 @@ export const resolveNextSelection = (
   action: Action,
 ) => {
   const selection = action.type === 'select' ? action.selection : previous.transient.selection;
-  const conversation = buildConversationModel({
-    buffers: domain.buffers,
-    channels: domain.channels,
-    messages: domain.messages,
-    pendingChannels: domain.pendingChannels,
-  });
+  let conversation: ReturnType<typeof buildConversationModel> | null = null;
+  const getConversation = () => {
+    if (conversation) {
+      return conversation;
+    }
+    conversation = buildConversationModel({
+      buffers: domain.buffers,
+      channels: domain.channels,
+      pendingChannels: domain.pendingChannels,
+    });
+    return conversation;
+  };
 
   switch (action.type) {
     case 'snapshot':
-      return conversation.normalizeSelection(domain.networks, previous.transient.selection);
+      return getConversation().normalizeSelection(domain.networks, previous.transient.selection);
     case 'upsert-buffer':
       if (
         previous.transient.selection?.kind === 'pending-channel'
@@ -37,28 +43,28 @@ export const resolveNextSelection = (
         return selection;
       }
       return (
-        selectionFor(conversation.findChannelBuffer(action.networkId, action.channel))
-        ?? conversation.fallbackSelection(domain.networks, action.networkId)
+        selectionFor(getConversation().findChannelBuffer(action.networkId, action.channel))
+        ?? getConversation().fallbackSelection(domain.networks, action.networkId)
       );
     case 'remove-buffer':
       if (
         previous.transient.selection?.kind === 'buffer'
         && previous.transient.selection.bufferId === action.bufferId
       ) {
-        return conversation.fallbackSelection(domain.networks, action.networkId);
+        return getConversation().fallbackSelection(domain.networks, action.networkId);
       }
       return selection;
     case 'gateway-disconnected':
-      return conversation.normalizeSelection(domain.networks, previous.transient.selection);
+      return getConversation().normalizeSelection(domain.networks, previous.transient.selection);
     case 'network-state':
       return action.phase === 'connected'
         ? selection
-        : conversation.normalizeSelection(domain.networks, previous.transient.selection, action.networkId);
+        : getConversation().normalizeSelection(domain.networks, previous.transient.selection, action.networkId);
     case 'remove-network':
-      return conversation.normalizeSelection(domain.networks, previous.transient.selection);
+      return getConversation().normalizeSelection(domain.networks, previous.transient.selection);
     default:
       return domain === previous.domain
         ? selection
-        : conversation.normalizeSelection(domain.networks, selection);
+        : getConversation().normalizeSelection(domain.networks, selection);
   }
 };

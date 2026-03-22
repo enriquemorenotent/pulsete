@@ -4,7 +4,7 @@ import { toConversationMessageKey, type ConversationMessages } from './conversat
 import type { SelectedBuffer } from './workspace-types.js';
 
 type ConversationState = Pick<AppDomainState, 'buffers' | 'channels' | 'pendingChannels'> & {
-  messages: ConversationMessages;
+  messages?: ConversationMessages;
 };
 
 export type ConversationIndex = {
@@ -20,8 +20,13 @@ export type ConversationIndex = {
   findSelectedBuffer: (selection: SelectedBuffer | null) => BufferState | null;
   findSelectedPendingChannel: (selection: SelectedBuffer | null) => PendingChannelState | null;
   findChannelByBuffer: (buffer: BufferState | null) => ChannelState | null;
-  selectMessages: (buffer: BufferState | null) => ChatMessage[];
 };
+
+export const selectConversationMessages = (
+  messages: ConversationMessages,
+  buffer: BufferState | null
+): ChatMessage[] =>
+  buffer ? messages[toConversationMessageKey(buffer.networkId, buffer.target)] ?? [] : [];
 
 export const buildConversationIndex = (state: ConversationState): ConversationIndex => {
   const buffersById = new Map<string, BufferState>();
@@ -32,7 +37,6 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
   const pendingChannelsByNetwork = new Map<string, PendingChannelState[]>();
   const pendingChannelsByTarget = new Map<string, PendingChannelState>();
   const channelsById = new Map<string, ChannelState>();
-  const messagesByTarget = new Map<string, ChatMessage[]>();
 
   for (const buffer of state.buffers) {
     buffersById.set(buffer.id, buffer);
@@ -65,10 +69,6 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
     channelsById.set(channel.id, channel);
   }
 
-  for (const [key, messages] of Object.entries(state.messages)) {
-    messagesByTarget.set(key, messages);
-  }
-
   const findSelectedBuffer = (selection: SelectedBuffer | null) =>
     selection?.kind === 'buffer' ? buffersById.get(selection.bufferId) ?? null : null;
 
@@ -94,7 +94,5 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
     findSelectedPendingChannel,
     findChannelByBuffer: (buffer: BufferState | null) =>
       buffer?.kind === 'channel' ? channelsById.get(buffer.id) ?? null : null,
-    selectMessages: (buffer: BufferState | null) =>
-      buffer ? messagesByTarget.get(toConversationMessageKey(buffer.networkId, buffer.target)) ?? [] : [],
   };
 };

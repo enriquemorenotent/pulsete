@@ -10,17 +10,27 @@ type FormattedMessageTextProps = {
 };
 
 export const FormattedMessageText = memo(function FormattedMessageText(props: FormattedMessageTextProps) {
-  if (props.mode === 'raw') {
-    return <span className="font-mono">{escapeIrcTextForDebug(props.text)}</span>;
-  }
+  const rawMode = props.mode === 'raw';
 
   const tokens = useMemo(
-    () => props.mode === 'stripped'
-      ? tokenizeStrippedMessage(props.text)
-      : tokenizeFormattedMessage(props.text),
-    [props.mode, props.text]
+    () => {
+      if (rawMode) {
+        return [];
+      }
+      return props.mode === 'stripped'
+        ? tokenizeStrippedMessage(props.text)
+        : tokenizeFormattedMessage(props.text);
+    },
+    [rawMode, props.mode, props.text]
   );
-  const inlineImageHrefs = useMemo(() => collectInlineImageHrefs(tokens), [tokens]);
+  const inlineImageHrefs = useMemo(
+    () => rawMode ? [] : collectInlineImageHrefs(tokens),
+    [rawMode, tokens]
+  );
+
+  if (rawMode) {
+    return <span className="font-mono">{escapeIrcTextForDebug(props.text)}</span>;
+  }
 
   return (
     <>

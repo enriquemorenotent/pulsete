@@ -2,7 +2,6 @@ import type { AppDomainState, Action } from './app-types.js';
 import type { BufferState, FriendState, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { appendConversationMessages, removeBufferMessages } from './conversation-message-state.js';
-import { buildConversationIndex } from './conversation-selectors.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -21,12 +20,20 @@ export const sortPendingChannels = (pendingChannels: PendingChannelState[]) =>
       : left.networkId.localeCompare(right.networkId)
   );
 
+const findBufferById = (buffers: BufferState[], bufferId: string) =>
+  buffers.find((buffer) => buffer.id === bufferId) ?? null;
+
+const hasChannelBuffer = (buffers: BufferState[], networkId: string, channel: string) =>
+  buffers.some((buffer) =>
+    buffer.networkId === networkId
+    && buffer.kind === 'channel'
+    && isSameIrcIdentifier(buffer.target, channel)
+  );
+
 export const reduceConversationDomain = (
   domain: AppDomainState,
   action: Action,
 ): AppDomainState | null => {
-  const conversation = buildConversationIndex(domain);
-
   switch (action.type) {
     case 'upsert-friend': {
       const friends = domain.friends.filter((friend) => friend.id !== action.friend.id);
@@ -67,7 +74,7 @@ export const reduceConversationDomain = (
       };
     }
     case 'remove-buffer': {
-      const removedBuffer = conversation.findBufferById(action.bufferId);
+      const removedBuffer = findBufferById(domain.buffers, action.bufferId);
       return {
         ...domain,
         buffers: domain.buffers.filter((buffer) => buffer.id !== action.bufferId),
@@ -99,11 +106,7 @@ export const reduceConversationDomain = (
         channels: domain.channels.filter((channel) => channel.id !== action.channelId),
       };
     case 'add-pending-channel': {
-      const existingBuffer = conversation.findChannelBuffer(
-        action.pendingChannel.networkId,
-        action.pendingChannel.channel
-      );
-      if (existingBuffer) {
+      if (hasChannelBuffer(domain.buffers, action.pendingChannel.networkId, action.pendingChannel.channel)) {
         return domain;
       }
       const pendingChannels = domain.pendingChannels.filter(
