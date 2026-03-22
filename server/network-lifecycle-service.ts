@@ -1,7 +1,6 @@
 import { isConnectionInstance } from '../shared/network-model.js';
 import type { ServerMessage } from '../shared/protocol.js';
 import { collectRequestedServerBuffer, createNetworkRemoveMessages, createNetworkUpsertMessages } from './network-lifecycle-messages.js';
-import { listRelatedNetworkIds, syncTemplateInstances } from './network-template-sync.js';
 import { badRequest, notFound } from './app-error.js';
 import { createDuplicateNetworkName } from './network-name-utils.js';
 import { parseNetworkInput } from './network-input.js';
@@ -66,12 +65,14 @@ export class NetworkLifecycleService {
     if (networkId && !this.context.networks.get(networkId)) {
       throw notFound('Network not found');
     }
-    const network = this.context.networks.upsert(input);
-    const updatedProfiles = [network, ...syncTemplateInstances(this.context.networks, network, input)];
+    const updatedProfiles = this.context.networks.saveWithRelatedInstances(input);
+    const network = updatedProfiles[0] ?? null;
+    if (!network) {
+      throw notFound('Network not found');
+    }
     const serverBuffer = collectRequestedServerBuffer(this.context.conversations, network.id, updatedProfiles);
     const messages = createNetworkUpsertMessages(this.context.conversations, updatedProfiles);
-    this.context.connectionManager.updateProfiles(updatedProfiles.map((profile) => profile.id));
-    this.context.publish(messages);
+    this.applyMutation(updatedProfiles.map((profile) => profile.id), messages);
     return { network, serverBuffer, messages };
   }
 
@@ -80,14 +81,20 @@ export class NetworkLifecycleService {
   }
 
   deleteNetworkResult(networkId: string) {
-    const deletedNetworkIds = listRelatedNetworkIds(this.context.networks, networkId);
+    const deletedNetworkIds = this.context.networks.deleteWithRelated(networkId);
     if (deletedNetworkIds.length === 0) {
       throw notFound('Network not found');
     }
-    const messages = this.context.connectionManager.removeNetworks(deletedNetworkIds);
-    this.context.networks.delete(networkId);
-    messages.push(...createNetworkRemoveMessages(deletedNetworkIds));
+    const messages = [
+      ...this.context.connectionManager.removeNetworks(deletedNetworkIds),
+      ...createNetworkRemoveMessages(deletedNetworkIds),
+    ];
     this.context.publish(messages);
     return { deletedNetworkIds, messages };
+  }
+
+  private applyMutation(updatedProfileIds: readonly string[], messages: ServerMessage[]) {
+    this.context.connectionManager.updateProfiles([...updatedProfileIds]);
+    this.context.publish(messages);
   }
 }

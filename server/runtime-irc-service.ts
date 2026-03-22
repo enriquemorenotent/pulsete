@@ -24,7 +24,7 @@ export class RuntimeIrcService {
     const normalizedChannel = normalizeChannelTarget(channel);
     const existingBuffer = this.options.conversations.getBufferByTarget(networkId, normalizedChannel);
     const existingChannel = this.options.conversations.getChannelByName(networkId, normalizedChannel);
-    this.options.connectionManager.getSession(networkId).command.join(
+    this.options.connectionManager.getConnection(networkId).join(
       normalizedChannel,
       this.resolveReplyTarget(networkId, sourceBufferId),
       { visiblePending: !(existingBuffer?.kind === 'channel' || existingChannel) }
@@ -34,7 +34,7 @@ export class RuntimeIrcService {
   part(networkId: string, channel: string, sourceBufferId?: string) {
     this.requireNetwork(networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
-    this.options.connectionManager.getSession(networkId).command.part(
+    this.options.connectionManager.getConnection(networkId).part(
       normalizedChannel,
       'Leaving',
       this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel)
@@ -50,33 +50,33 @@ export class RuntimeIrcService {
   ) {
     const normalizedTarget = normalizeMessageTarget(target);
     const normalizedBody = normalizeMessageBody(body);
-    const session = this.options.connectionManager.getSession(networkId);
+    const connection = this.options.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId, normalizedTarget);
     kind === 'action'
-      ? session.command.action(normalizedTarget, normalizedBody, replyTarget)
-      : session.command.say(normalizedTarget, normalizedBody, replyTarget);
+      ? connection.action(normalizedTarget, normalizedBody, replyTarget)
+      : connection.say(normalizedTarget, normalizedBody, replyTarget);
   }
 
   sendRaw(networkId: string, raw: string, sourceBufferId?: string) {
     const normalizedRaw = normalizeRawCommand(raw);
-    const session = this.options.connectionManager.getSession(networkId);
+    const connection = this.options.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId);
     if (/^\s*NICK\s+/i.test(normalizedRaw)) {
       const nextNick = normalizedRaw.trim().split(/\s+/)[1];
       if (nextNick) {
-        session.socket
-          ? session.command.setNick(nextNick, replyTarget)
-          : session.transport.sendRaw(normalizedRaw, replyTarget);
+        connection.socket
+          ? connection.setNick(nextNick, replyTarget)
+          : connection.sendRaw(normalizedRaw, replyTarget);
         return;
       }
     }
     if (/^\s*QUIT(?:\s|$)/i.test(normalizedRaw)) {
-      session.socket
-        ? session.lifecycle.disconnect(normalizedRaw.trim())
-        : session.transport.sendRaw(normalizedRaw, replyTarget);
+      connection.socket
+        ? connection.disconnect(normalizedRaw.trim())
+        : connection.sendRaw(normalizedRaw, replyTarget);
       return;
     }
-    session.transport.sendClientRaw(normalizedRaw, replyTarget);
+    connection.sendClientRaw(normalizedRaw, replyTarget);
   }
 
   requestChannelList(networkId: string, requester?: WebSocket) {

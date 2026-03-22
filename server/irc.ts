@@ -6,9 +6,8 @@ import {
   createIrcLifecyclePort,
   createIrcReplyPort,
   createIrcTransportPort,
-  createRuntimeIrcSession,
 } from './irc-ports.js';
-import { defineLegacyIrcConnectionCompat, type LegacyIrcConnectionCompat } from './irc-connection-compat.js';
+import { defineIrcConnectionApi, type IrcConnectionApi } from './irc-connection-compat.js';
 import { createIrcConnectionAccess, type IrcConnectionOptions } from './irc-connection-state.js';
 import type { Handlers, IrcConnectionState } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
@@ -18,7 +17,7 @@ const createConnectionState = (
   handlers: Handlers,
   options: IrcConnectionOptions = {}
 ): IrcConnection => {
-  const { connection, setPorts, setRuntimeSession } = createIrcConnectionAccess(profile, handlers, options);
+  const { connection, setPorts } = createIrcConnectionAccess(profile, handlers, options);
 
   const lifecyclePort = createIrcLifecyclePort(connection);
   const commandPort = createIrcCommandPort(connection);
@@ -36,25 +35,13 @@ const createConnectionState = (
     channelList: channelListPort,
     channels: channelPort,
   };
-  const runtimeSession = createRuntimeIrcSession({
-    lifecycle: connection.lifecycle,
-    lifecyclePort,
-    commandPort,
-    friendPresencePort,
-    transportPort,
-    channelListPort,
-    channelPort,
-  });
   setPorts(ports);
-  setRuntimeSession(runtimeSession);
-  if (options.legacyCompat ?? true) {
-    defineLegacyIrcConnectionCompat(connection);
-  }
+  defineIrcConnectionApi(connection);
 
   return connection as IrcConnection;
 };
 
-export interface IrcConnection extends IrcConnectionState, LegacyIrcConnectionCompat {}
+export interface IrcConnection extends IrcConnectionState, IrcConnectionApi {}
 
 export class IrcConnection {
   constructor(profile: RuntimeNetworkProfile, handlers: Handlers, options: IrcConnectionOptions = {}) {

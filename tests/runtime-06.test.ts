@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { Runtime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import type { ChannelListEntry } from '../shared/protocol.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import { createHandshakeServer,createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
 import { createListServer } from './helpers/runtime-test-list-servers.js';
@@ -141,27 +140,15 @@ test('runtime reports when a timed-out LIST is still draining late server replie
   runtime.attachSocket(socket);
   (runtime as unknown as {
     connections: Map<string, {
-      runtimeSession: {
-        channelList: {
-          getActiveChannelListSnapshot(): { requestId: string; entries: ChannelListEntry[] } | null;
-          requestChannelList(requestId: string): boolean;
-          getChannelListRequestFailureMessage(): string;
-        };
-      };
+      requestChannelList(requestId: string): boolean;
+      getChannelListRequestFailureMessage(): string;
     }>;
   }).connections.set(network.id, {
-    runtimeSession: {
-      channelList: {
-        getActiveChannelListSnapshot() {
-          return null;
-        },
-        requestChannelList() {
-          return false;
-        },
-        getChannelListRequestFailureMessage() {
-          return 'Waiting for the previous channel list response to finish';
-        },
-      },
+    requestChannelList() {
+      return false;
+    },
+    getChannelListRequestFailureMessage() {
+      return 'Waiting for the previous channel list response to finish';
     },
   });
 

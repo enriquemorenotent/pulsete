@@ -1,13 +1,12 @@
 import type { IrcConnectionState } from './irc-types.js';
-import type { RuntimeIrcSession } from './irc-port-types.js';
 
 const readonlyAlias = <T>(get: () => T) => ({ enumerable: true, get });
 const mutableAlias = <T>(get: () => T, set: (value: T) => void) => ({ enumerable: true, get, set });
 
-export const createLegacyIrcConnectionPropertyDescriptors = (
-  connection: IrcConnectionState & { runtimeSession: RuntimeIrcSession }
+export const createIrcConnectionPropertyDescriptors = (
+  connection: IrcConnectionState
 ) => ({
-  state: readonlyAlias(() => connection.runtimeSession.lifecycle.state),
+  state: readonlyAlias(() => connection.ports.lifecycle.state),
   socket: mutableAlias(
     () => connection.lifecycle.socket,
     (value) => {

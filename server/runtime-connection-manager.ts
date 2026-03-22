@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type WebSocket from 'ws';
 import type { FriendState, NetworkProfile } from '../shared/protocol.js';
 import { IrcConnection } from './irc.js';
+import { applyOfflineLifecycleState, resetRuntimeSessionState } from './irc-connection-lifecycle-state.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
 import type { StorageFriendsRepository } from './storage-friends-repository.js';
@@ -34,7 +35,7 @@ export class RuntimeConnectionManager {
   close() {
     this.eventRouter.clearAll();
     for (const connection of this.connections.values()) {
-      connection.runtimeSession.lifecycle.disconnect();
+      connection.disconnect();
     }
     this.connections.clear();
   }
@@ -53,23 +54,19 @@ export class RuntimeConnectionManager {
     if (!connection) {
       connection = new IrcConnection(profile, {
         onEvent: (event) => this.handleConnectionEvent(event),
-      }, { legacyCompat: false });
-      connection.runtimeSession.friendPresence.setFriendNicks(this.friends.list().map((friend) => friend.nick));
+      });
+      connection.setFriendNicks(this.friends.list().map((friend) => friend.nick));
       this.connections.set(networkId, connection);
     }
     return connection;
   }
 
-  getSession(networkId: string) {
-    return this.getConnection(networkId).runtimeSession;
-  }
-
   connect(networkId: string) {
-    this.getConnection(networkId).runtimeSession.lifecycle.connect();
+    this.getConnection(networkId).connect();
   }
 
   disconnect(networkId: string) {
-    this.connections.get(networkId)?.runtimeSession.lifecycle.disconnect();
+    this.connections.get(networkId)?.disconnect();
     this.eventRouter.clearNetwork(networkId);
   }
 
@@ -85,14 +82,17 @@ export class RuntimeConnectionManager {
     for (const networkId of networkIds) {
       const runtimeProfile = this.networks.getRuntime(networkId);
       if (runtimeProfile) {
-        this.connections.get(networkId)?.runtimeSession.lifecycle.updateProfile(runtimeProfile);
+        this.connections.get(networkId)?.updateProfile(runtimeProfile);
       }
     }
   }
 
   removeNetworks(networkIds: string[]) {
     for (const networkId of networkIds) {
-      this.connections.get(networkId)?.runtimeSession.lifecycle.disconnect();
+      const connection = this.connections.get(networkId);
+      if (connection) {
+        this.disposeConnection(connection);
+      }
       this.connections.delete(networkId);
     }
     return this.eventRouter.removeNetworks(networkIds);
@@ -101,7 +101,7 @@ export class RuntimeConnectionManager {
   syncFriendTracking() {
     const friendNicks = this.friends.list().map((friend) => friend.nick);
     for (const connection of this.connections.values()) {
-      connection.runtimeSession.friendPresence.setFriendNicks(friendNicks);
+      connection.setFriendNicks(friendNicks);
     }
   }
 
@@ -127,5 +127,17 @@ export class RuntimeConnectionManager {
       throw new Error('Network not found');
     }
     return profile;
+  }
+
+  private disposeConnection(connection: IrcConnection) {
+    const socket = connection.lifecycle.socket;
+    connection.lifecycle.manualDisconnect = true;
+    connection.lifecycle.reconnectAttempts = 0;
+    connection.ports.lifecycle.clearConnectDeadlineTimer();
+    connection.ports.lifecycle.clearReconnectTimer();
+    connection.lifecycle.socket = null;
+    resetRuntimeSessionState(connection);
+    applyOfflineLifecycleState(connection);
+    socket?.destroy();
   }
 }

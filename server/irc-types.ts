@@ -1,5 +1,5 @@
 import type { ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
-import type { IrcConnectionPorts, RuntimeIrcSession } from './irc-port-types.js';
+import type { IrcConnectionPorts } from './irc-port-types.js';
 import type {
   IrcChannelListState,
   IrcChannelTrackingState,
@@ -46,7 +46,6 @@ export type IrcConnectionState = {
   channelList: IrcChannelListState;
   replyTracker: IrcReplyTracker;
   ports: IrcConnectionPorts;
-  runtimeSession: RuntimeIrcSession;
 };
 
 export type {

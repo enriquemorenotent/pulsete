@@ -9,7 +9,7 @@ import type {
 import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
-export type LegacyIrcConnectionCompat = {
+export type IrcConnectionApi = {
   readonly state: Pick<NetworkRuntimeState, 'phase' | 'serverName' | 'nick'>;
   socket: IrcSocket | null;
   buffer: string;

@@ -1,12 +1,11 @@
 import type { IrcConnectionState } from './irc-types.js';
-import type { RuntimeIrcSession } from './irc-port-types.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
 import type { ChannelListEntry, ChannelUserState } from '../shared/protocol.js';
 import type { IrcSocket } from './irc-state-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
-export const createLegacyIrcConnectionMethodDescriptors = (
-  connection: IrcConnectionState & { runtimeSession: RuntimeIrcSession }
+export const createIrcConnectionMethodDescriptors = (
+  connection: IrcConnectionState
 ) => ({
   beginLogin: { enumerable: true, value: () => connection.ports.lifecycle.beginLogin() },
   clearConnectDeadlineTimer: { enumerable: true, value: () => connection.ports.lifecycle.clearConnectDeadlineTimer() },

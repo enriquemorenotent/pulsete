@@ -3,7 +3,7 @@ import type WebSocket from 'ws';
 import type { IrcConnection } from './irc.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { translateRuntimeEvent } from './runtime-events.js';
-import { ChannelListDispatcher } from './runtime-channel-list-dispatcher.js';
+import { RuntimeChannelListService } from './runtime-channel-lists.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeFriendPresenceProjector } from './runtime-friend-presence-projector.js';
 import { createRuntimeProjectionSnapshot } from './runtime-snapshot-projector.js';
@@ -17,11 +17,11 @@ type RuntimeEventRouterOptions = {
 };
 
 export class RuntimeEventRouter {
-  private readonly channelLists: ChannelListDispatcher;
+  private readonly channelLists: RuntimeChannelListService;
   private readonly friendPresence = new RuntimeFriendPresenceProjector();
 
   constructor(private readonly options: RuntimeEventRouterOptions) {
-    this.channelLists = new ChannelListDispatcher((ws, message) => this.options.sendSocket(ws, message));
+    this.channelLists = new RuntimeChannelListService((ws, message) => this.options.sendSocket(ws, message));
   }
 
   clearAll() {

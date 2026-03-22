@@ -8,7 +8,7 @@ export const createRuntimeProjectionSnapshot = (
   connections: readonly IrcConnection[],
   friendPresence: RuntimeFriendPresenceProjector
 ) => ({
-  pendingChannels: connections.flatMap((connection) => connection.runtimeSession.channels.listPendingChannels()),
+  pendingChannels: connections.flatMap((connection) => connection.listPendingChannels()),
   friendPresence: friendPresence.snapshot(friends),
   networkStates: Object.fromEntries(
     networks.map((network) => {
@@ -23,7 +23,7 @@ const toNetworkRuntimeState = (
   fallbackNick: string
 ): NetworkRuntimeState =>
   connection
-    ? connection.runtimeSession.lifecycle.state
+    ? connection.state
     : {
         phase: 'offline',
         serverName: null,

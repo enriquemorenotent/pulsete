@@ -1,6 +1,6 @@
 import type { ChannelUserState } from '../shared/protocol.js';
 import { ReplyTracker } from './irc-reply-tracker.js';
-import type { IrcConnectionPorts, RuntimeIrcSession } from './irc-port-types.js';
+import type { IrcConnectionPorts } from './irc-port-types.js';
 import type {
   ChannelSessionState,
   IrcChannelListState,
@@ -19,7 +19,6 @@ export type IrcConnectionOptions = {
   channelJoinTimeoutMs?: number;
   channelListTimeoutMs?: number;
   channelListDrainGraceMs?: number;
-  legacyCompat?: boolean;
 };
 
 type DeferredAccess<T> = {
@@ -30,7 +29,6 @@ type DeferredAccess<T> = {
 type IrcConnectionAccess = {
   connection: IrcConnectionState;
   setPorts(value: IrcConnectionPorts): void;
-  setRuntimeSession(value: RuntimeIrcSession): void;
 };
 
 export const createIrcConnectionAccess = (
@@ -40,14 +38,10 @@ export const createIrcConnectionAccess = (
 ): IrcConnectionAccess => {
   const state = createIrcConnectionState(profile, handlers, options);
   const ports = createDeferredAccess<IrcConnectionPorts>('ports');
-  const runtimeSession = createDeferredAccess<RuntimeIrcSession>('runtime session');
   const connection = {
     ...state,
     get ports() {
       return ports.get();
-    },
-    get runtimeSession() {
-      return runtimeSession.get();
     },
   } as IrcConnectionState;
 
@@ -55,9 +49,6 @@ export const createIrcConnectionAccess = (
     connection,
     setPorts(value) {
       ports.set(value);
-    },
-    setRuntimeSession(value) {
-      runtimeSession.set(value);
     },
   };
 };

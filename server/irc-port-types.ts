@@ -4,7 +4,6 @@ import type {
   ChannelSessionPhase,
   ChannelSessionState,
   IrcChannelListMode,
-  IrcLifecycleState,
   IrcSocket,
 } from './irc-state-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
@@ -107,17 +106,4 @@ export type IrcConnectionPorts = {
   transport: IrcTransportPort;
   channelList: IrcChannelListPort;
   channels: IrcChannelPort;
-};
-
-export type RuntimeIrcSession = {
-  readonly lifecycle: Pick<IrcLifecyclePort, 'state' | 'connect' | 'disconnect' | 'updateProfile'>;
-  readonly command: Pick<IrcCommandPort, 'join' | 'part' | 'say' | 'action' | 'setNick'>;
-  readonly friendPresence: Pick<IrcFriendPresencePort, 'setFriendNicks'>;
-  readonly transport: Pick<IrcTransportPort, 'sendClientRaw' | 'sendRaw'>;
-  readonly channelList: Pick<
-    IrcChannelListPort,
-    'getActiveChannelListSnapshot' | 'requestChannelList' | 'getChannelListRequestFailureMessage'
-  >;
-  readonly channels: Pick<IrcChannelPort, 'listPendingChannels'>;
-  get socket(): IrcLifecycleState['socket'];
 };

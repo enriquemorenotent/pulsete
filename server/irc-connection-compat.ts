@@ -1,15 +1,14 @@
 import type { IrcConnectionState } from './irc-types.js';
-import type { RuntimeIrcSession } from './irc-port-types.js';
-import { createLegacyIrcConnectionMethodDescriptors } from './irc-connection-compat-methods.js';
-import { createLegacyIrcConnectionPropertyDescriptors } from './irc-connection-compat-properties.js';
+import { createIrcConnectionMethodDescriptors } from './irc-connection-compat-methods.js';
+import { createIrcConnectionPropertyDescriptors } from './irc-connection-compat-properties.js';
 
-export type { LegacyIrcConnectionCompat } from './irc-connection-compat-types.js';
+export type { IrcConnectionApi } from './irc-connection-compat-types.js';
 
-export const defineLegacyIrcConnectionCompat = (
-  connection: IrcConnectionState & { runtimeSession: RuntimeIrcSession }
+export const defineIrcConnectionApi = (
+  connection: IrcConnectionState
 ) => {
   Object.defineProperties(connection, {
-    ...createLegacyIrcConnectionPropertyDescriptors(connection),
-    ...createLegacyIrcConnectionMethodDescriptors(connection),
+    ...createIrcConnectionPropertyDescriptors(connection),
+    ...createIrcConnectionMethodDescriptors(connection),
   });
 };

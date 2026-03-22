@@ -1,61 +1,56 @@
 import type WebSocket from 'ws';
 import type { ChannelListEntry, ServerMessage } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
+import type { IrcConnection } from './irc.js';
 
 type ChannelListMessage = Extract<
   ServerMessage,
   { type: 'channel.list.started' | 'channel.list.entry' | 'channel.list.completed' | 'channel.list.failed' }
 >;
 
-type ChannelListConnection = {
-  getActiveChannelListSnapshot(): { requestId: string; entries: ChannelListEntry[] } | null;
-  requestChannelList(requestId: string): boolean;
-  getChannelListRequestFailureMessage(): string;
+type ChannelListConnection = Pick<
+  IrcConnection,
+  'requestChannelList' | 'getChannelListRequestFailureMessage'
+>;
+
+type ChannelListSession = {
+  entries: ChannelListEntry[];
+  requestId: string;
+  subscribers: Set<WebSocket>;
 };
 
-export class ChannelListSubscriptions {
-  private readonly subscribers = new Map<string, Set<WebSocket>>();
+export class RuntimeChannelListService {
+  private readonly sessions = new Map<string, ChannelListSession>();
 
   constructor(private readonly send: (ws: WebSocket, message: ChannelListMessage) => void) {}
 
   clearAll() {
-    this.subscribers.clear();
+    this.sessions.clear();
   }
 
   clearNetwork(networkId: string) {
-    this.subscribers.delete(networkId);
+    this.sessions.delete(networkId);
   }
 
   removeSocket(ws: WebSocket) {
-    for (const [networkId, subscribers] of Array.from(this.subscribers.entries())) {
-      subscribers.delete(ws);
-      if (subscribers.size === 0) {
-        this.subscribers.delete(networkId);
-      }
+    for (const session of this.sessions.values()) {
+      session.subscribers.delete(ws);
     }
   }
 
   cancel(networkId: string, ws: WebSocket) {
-    const subscribers = this.subscribers.get(networkId);
-    if (!subscribers) {
-      return;
-    }
-    subscribers.delete(ws);
-    if (subscribers.size === 0) {
-      this.subscribers.delete(networkId);
-    }
+    this.sessions.get(networkId)?.subscribers.delete(ws);
   }
 
   request(networkId: string, connection: ChannelListConnection, requestId: string, requester?: WebSocket) {
-    const alreadySubscribed = requester ? this.hasSubscriber(networkId, requester) : false;
-    if (requester && !alreadySubscribed) {
-      this.addSubscriber(networkId, requester);
-    }
-
-    const activeRequest = connection.getActiveChannelListSnapshot();
+    const activeRequest = this.sessions.get(networkId) ?? null;
     if (activeRequest) {
+      const alreadySubscribed = requester ? activeRequest.subscribers.has(requester) : false;
       if (alreadySubscribed) {
         return activeRequest.requestId;
+      }
+      if (requester) {
+        activeRequest.subscribers.add(requester);
       }
       this.sendMessage(networkId, { type: 'channel.list.started', networkId, requestId: activeRequest.requestId }, requester);
       for (const entry of activeRequest.entries) {
@@ -69,6 +64,12 @@ export class ChannelListSubscriptions {
     }
 
     if (connection.requestChannelList(requestId)) {
+      const session: ChannelListSession = {
+        entries: [],
+        requestId,
+        subscribers: requester ? new Set([requester]) : new Set<WebSocket>(),
+      };
+      this.sessions.set(networkId, session);
       this.sendMessage(networkId, { type: 'channel.list.started', networkId, requestId }, requester);
       return requestId;
     }
@@ -89,10 +90,15 @@ export class ChannelListSubscriptions {
     return requestId;
   }
 
-  handleEvent(
+  handle(
     event: Extract<RuntimeEvent, { type: 'channel-list-entry' | 'channel-list-completed' | 'channel-list-failed' }>
   ) {
+    const session = this.sessions.get(event.networkId);
+    if (!session || session.requestId !== event.requestId) {
+      return;
+    }
     if (event.type === 'channel-list-entry') {
+      session.entries.push(event.entry);
       this.sendMessage(event.networkId, {
         type: 'channel.list.entry',
         networkId: event.networkId,
@@ -108,7 +114,7 @@ export class ChannelListSubscriptions {
         networkId: event.networkId,
         requestId: event.requestId,
       });
-      this.clearNetwork(event.networkId);
+      this.sessions.delete(event.networkId);
       return;
     }
 
@@ -118,18 +124,7 @@ export class ChannelListSubscriptions {
       requestId: event.requestId,
       message: event.message,
     });
-    this.clearNetwork(event.networkId);
-  }
-
-  private hasSubscriber(networkId: string, ws: WebSocket) {
-    return this.subscribers.get(networkId)?.has(ws) ?? false;
-  }
-
-  private addSubscriber(networkId: string, ws: WebSocket) {
-    this.removeSocket(ws);
-    const subscribers = this.subscribers.get(networkId) ?? new Set<WebSocket>();
-    subscribers.add(ws);
-    this.subscribers.set(networkId, subscribers);
+    this.sessions.delete(event.networkId);
   }
 
   private sendMessage(networkId: string, message: ChannelListMessage, requester?: WebSocket) {
@@ -138,7 +133,7 @@ export class ChannelListSubscriptions {
       return;
     }
 
-    const subscribers = this.subscribers.get(networkId);
+    const subscribers = this.sessions.get(networkId)?.subscribers;
     if (!subscribers || subscribers.size === 0) {
       return;
     }

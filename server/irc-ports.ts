@@ -5,12 +5,11 @@ import { beginLogin, clearConnectDeadlineTimer, clearReconnectTimer, connect, di
 import { consume, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
 import { clearFriendPresenceTimer, disableFriendPresence, handleFriendPresence, refreshFriendPresence, setFriendNicks, updateOnlineFriendKeys } from './irc-friend-presence.js';
 import type { IrcChannelListContext, IrcChannelStateContext, IrcClientIoContext, IrcConnectContext, IrcFriendPresenceContext, IrcReplyStateContext } from './irc-contexts.js';
-import type { IrcChannelListPort, IrcChannelPort, IrcCommandPort, IrcFriendPresencePort, IrcLifecyclePort, IrcReplyPort, IrcTransportPort, RuntimeIrcSession } from './irc-port-types.js';
+import type { IrcChannelListPort, IrcChannelPort, IrcCommandPort, IrcFriendPresencePort, IrcLifecyclePort, IrcReplyPort, IrcTransportPort } from './irc-port-types.js';
 import { createChannelReplyContext, createMessageReplyContext, createNickReplyContext } from './irc-reply-context.js';
 import { consumePendingNickReplyContexts, consumeReplyContext, consumeReplyTarget, discardPendingNickReplyContexts, prunePendingReplyContexts, queueReplyContext } from './irc-reply-state.js';
 import type { NetworkRuntimeState } from '../shared/protocol.js';
 import type { IrcConnectionState } from './irc-types.js';
-import type { IrcLifecycleState } from './irc-state-types.js';
 
 type IrcLifecyclePortContext = IrcConnectContext;
 type IrcCommandContext = IrcClientIoContext & Pick<IrcConnectionState, 'replyTracker'>;
@@ -157,24 +156,4 @@ export const createIrcChannelPort = (connection: IrcChannelStateContext): IrcCha
   handleSelfChannelDeparture(channel) { handleSelfChannelDeparture(connection, channel); },
   setChannelSession(channel, phase, options = {}) { return setChannelSession(connection, channel, phase, options); },
   clearChannelSessions() { clearChannelSessions(connection); },
-});
-
-export const createRuntimeIrcSession = (connection: {
-  lifecycle: IrcLifecycleState;
-  lifecyclePort: IrcLifecyclePort;
-  commandPort: IrcCommandPort;
-  friendPresencePort: IrcFriendPresencePort;
-  transportPort: IrcTransportPort;
-  channelListPort: IrcChannelListPort;
-  channelPort: IrcChannelPort;
-}): RuntimeIrcSession => ({
-  lifecycle: connection.lifecyclePort,
-  command: connection.commandPort,
-  friendPresence: connection.friendPresencePort,
-  transport: connection.transportPort,
-  channelList: connection.channelListPort,
-  channels: connection.channelPort,
-  get socket() {
-    return connection.lifecycle.socket;
-  },
 });

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { SecretBox } from './network-secret.js';
+import { isConnectionInstance } from '../shared/network-model.js';
 import {
   deleteNetwork,
   getNetwork,
@@ -38,6 +39,55 @@ export class StorageNetworksRepository {
       const network = upsertNetwork(this.db, input, this.secretBox);
       ensureNetworkBuffers(this.db, network);
       return network;
+    });
+  }
+
+  saveWithRelatedInstances(input: NetworkInput) {
+    return runInTransaction(this.db, () => {
+      const network = upsertNetwork(this.db, input, this.secretBox);
+      ensureNetworkBuffers(this.db, network);
+      const profiles = [network];
+      if (isConnectionInstance(network)) {
+        return profiles;
+      }
+      for (const candidate of listNetworks(this.db)) {
+        if (!isConnectionInstance(candidate) || candidate.templateId !== network.id) {
+          continue;
+        }
+        const updated = upsertNetwork(this.db, {
+          id: candidate.id,
+          templateId: network.id,
+          managerHidden: true,
+          name: network.name,
+          host: network.host,
+          port: network.port,
+          tls: network.tls,
+          nick: network.nick,
+          altNicks: network.altNicks,
+          username: network.username,
+          realName: network.realName,
+          favorite: network.favorite,
+          autoJoin: network.autoJoin,
+          ...(input.password !== undefined ? { password: input.password } : {}),
+          ...(input.clearPassword ? { clearPassword: true } : {}),
+        }, this.secretBox);
+        ensureNetworkBuffers(this.db, updated);
+        profiles.push(updated);
+      }
+      return profiles;
+    });
+  }
+
+  deleteWithRelated(networkId: string) {
+    return runInTransaction(this.db, () => {
+      const relatedNetworkIds = listNetworks(this.db)
+        .filter((candidate) => candidate.id === networkId || (isConnectionInstance(candidate) && candidate.templateId === networkId))
+        .map((candidate) => candidate.id);
+      if (relatedNetworkIds.length === 0) {
+        return [];
+      }
+      deleteNetwork(this.db, networkId);
+      return relatedNetworkIds;
     });
   }
 }
