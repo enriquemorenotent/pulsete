@@ -35,12 +35,12 @@ test('reconnect timers are unrefd and cleared on manual disconnect', () => {
     connection.connect();
     socket.emit('close');
 
-    assert.notEqual(connection.reconnectTimer, null);
-    assert.equal(connection.reconnectTimer?.hasRef?.(), false);
+    assert.notEqual(connection.lifecycle.reconnectTimer, null);
+    assert.equal(connection.lifecycle.reconnectTimer?.hasRef?.(), false);
 
     connection.disconnect();
 
-    assert.equal(connection.reconnectTimer, null);
+    assert.equal(connection.lifecycle.reconnectTimer, null);
   } finally {
     net.connect = originalConnect;
   }
@@ -163,15 +163,15 @@ test('nick fallback uses the updated profile nick after reconnecting', () => {
     { onEvent() {} }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket() as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket() as any;
   connection.updateProfile({ ...connection.profile, nick: 'newnick', altNicks: ['newnick_', 'newnick__'] });
   connection.disconnect();
-  connection.socket = createMockSocket() as any;
+  connection.lifecycle.socket = createMockSocket() as any;
 
   handleIrcLine(connection, ':irc.example 433 * newnick :Nickname is already in use');
 
-  assert.equal(connection.currentNick, 'newnick_');
+  assert.equal(connection.lifecycle.currentNick, 'newnick_');
   assert.ok(writes.includes('NICK newnick_\r\n'));
 });
 
@@ -214,7 +214,7 @@ test('nick conflicts use configured alternate nicknames before suffix fallback',
     }
   );
 
-  connection.socket = socket as any;
+  connection.lifecycle.socket = socket as any;
   handleIrcLine(connection, ':irc.example 433 * primary :Nickname is already in use');
   handleIrcLine(connection, ':irc.example 433 * secondary :Nickname is already in use');
   handleIrcLine(connection, ':irc.example 433 * tertiary :Nickname is already in use');
@@ -229,5 +229,5 @@ test('nick conflicts use configured alternate nicknames before suffix fallback',
     'secondary is already in use. Retrying with tertiary...',
     'tertiary is already in use. Retrying with tertiary_...',
   ]);
-  assert.equal(connection.currentNick, 'tertiary_');
+  assert.equal(connection.lifecycle.currentNick, 'tertiary_');
 });

@@ -31,7 +31,7 @@ const createEmptySnapshot = () => ({
 });
 
 const createWebSocketTestContext = (overrides: WebSocketTestContextOverrides = {}): WebSocketTestContext => ({
-  storage: {} as Storage,
+  networkCatalog: { list() { return []; } },
   gateway: {
     attachSocket() {},
     detachSocket() {},
@@ -104,7 +104,7 @@ test('malformed request targets and route params return handled bad requests', a
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   storage.upsertNetwork(createNetworkInput());
-  const server = createServer(createHttpHandler(new Runtime(storage).context));
+  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
   const port = await listen(server);
   let uncaught: string | null = null;
   const onUncaught = (error: unknown) => {
@@ -137,7 +137,7 @@ test('malformed request targets and route params return handled bad requests', a
 test('malformed websocket upgrade targets are destroyed without uncaught exceptions', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
@@ -171,7 +171,7 @@ test('malformed websocket upgrade targets are destroyed without uncaught excepti
 test('oversized json bodies are rejected before parsing', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage).context));
+  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -189,7 +189,7 @@ test('oversized json bodies are rejected before parsing', async () => {
 test('websocket upgrade succeeds without cookies and emits state.ready', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);

@@ -1,12 +1,17 @@
 import type { ServerMessage } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
-import type { Storage } from './storage.js';
+import type { StorageConversationsRepository } from './storage-conversations-repository.js';
+import type { StorageNetworksRepository } from './storage-networks-repository.js';
 
 type RuntimeEventConversations = Pick<RuntimeConversationService, 'handleChannelEvent' | 'handleMessageEvent' | 'handleStatusEvent'>;
+type RuntimeEventStore = {
+  conversations: StorageConversationsRepository;
+  networks: StorageNetworksRepository;
+};
 type RuntimeEventSink = {
   publish(message: ServerMessage): void;
-  store: Storage;
+  store: RuntimeEventStore;
 };
 
 export function translateRuntimeEvent(

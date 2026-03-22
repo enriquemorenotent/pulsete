@@ -32,8 +32,8 @@ test('irc connection streams dedicated LIST replies without generic status noise
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -97,8 +97,8 @@ test('irc connection refuses a structured LIST while a raw LIST reply is still p
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -107,7 +107,7 @@ test('irc connection refuses a structured LIST while a raw LIST reply is still p
   connection.sendClientRaw('LIST', '#chat');
 
   assert.equal(connection.requestChannelList('request-1'), false);
-  assert.equal(connection.activeChannelListRequestId, null);
+  assert.equal(connection.channelList.active.requestId, null);
   assert.deepEqual(writes, ['LIST\r\n']);
   assert.equal(connection.getChannelListRequestFailureMessage(), 'Waiting for the previous channel list response to finish');
   assert.ok(!events.some((event) => event.type === 'channel-list-failed'));
@@ -146,8 +146,8 @@ test('irc connection times out a stalled LIST, drains late numerics, and retries
     { channelListTimeoutMs: 20 }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -163,15 +163,15 @@ test('irc connection times out a stalled LIST, drains late numerics, and retries
     )
   );
 
-  assert.equal(connection.activeChannelListRequestId, null);
-  assert.deepEqual(connection.activeChannelListEntries, []);
-  assert.equal(connection.drainingChannelListRequestId, 'request-1');
+  assert.equal(connection.channelList.active.requestId, null);
+  assert.deepEqual(connection.channelList.active.entries, []);
+  assert.equal(connection.channelList.draining.requestId, 'request-1');
   assert.equal(connection.requestChannelList('request-2'), false);
 
   connection.consume(':irc.example 322 tester #late 5 :Late room\r\n');
   connection.consume(':irc.example 323 tester :End of /LIST\r\n');
 
-  assert.equal(connection.drainingChannelListRequestId, null);
+  assert.equal(connection.channelList.draining.requestId, null);
   assert.equal(connection.requestChannelList('request-2'), true);
   assert.deepEqual(writes, ['LIST\r\n', 'LIST\r\n']);
   assert.ok(

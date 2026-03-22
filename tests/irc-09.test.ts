@@ -31,8 +31,8 @@ test('irc connection keeps delivery notices on the server buffer after channel m
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -92,8 +92,8 @@ test('irc connection keeps direct notices on the server buffer after generic raw
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -143,8 +143,8 @@ test('irc connection keeps raw MODE 401 replies from stale private-message conte
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

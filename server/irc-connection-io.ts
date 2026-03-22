@@ -6,6 +6,7 @@ import { maxBufferedIrcBytes, maxIrcCommandBytes } from './irc-limits.js';
 import { createReplyContextFromRaw, type PendingReplyContext } from './irc-reply-context.js';
 import type { IrcConnectionState } from './irc-types.js';
 import type { MessageInput } from './storage-types.js';
+import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
 export const sendRaw = (connection: IrcRawIoContext, raw: string, statusTarget?: string) => {
   const lifecycle = connection.lifecycle;
@@ -30,17 +31,22 @@ export const sendRaw = (connection: IrcRawIoContext, raw: string, statusTarget?:
 
 export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourceTarget = 'server'): boolean => {
   connection.ports.reply.prunePendingReplyContexts();
-  const trimmed = raw.trim();
-  const [commandToken = '', ...rest] = trimmed.split(/\s+/);
-  const command = commandToken.toUpperCase();
-  if (command === 'JOIN' && rest[0]) {
-    return connection.ports.command.join(rest[0], sourceTarget, { visiblePending: true });
+  const parsed = parseRawIrcClientCommand(raw);
+  if (!parsed) {
+    return false;
   }
-  if (command === 'PART' && rest[0]) {
-    return connection.ports.command.part(rest[0], rest.slice(1).join(' ').replace(/^:/, '') || 'Leaving', sourceTarget);
+  if (parsed.name === 'join' && parsed.args[0]) {
+    return connection.ports.command.join(parsed.args[0], sourceTarget, { visiblePending: true });
+  }
+  if (parsed.name === 'part' && parsed.args[0]) {
+    return connection.ports.command.part(
+      parsed.args[0],
+      parsed.args.slice(1).join(' ').replace(/^:/, '') || 'Leaving',
+      sourceTarget
+    );
   }
   const replyContext = createReplyContextFromRaw(sourceTarget, raw);
-  if (command === 'LIST') {
+  if (parsed.name === 'list') {
     if (connection.ports.channelList.isChannelListPending()) {
       emitStatus(connection, connection.ports.channelList.getChannelListRequestFailureMessage(), 'error', sourceTarget);
       return false;

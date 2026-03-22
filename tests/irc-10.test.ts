@@ -31,8 +31,8 @@ test('irc connection clears raw MODE contexts after untargeted mode errors', () 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -99,8 +99,8 @@ test('irc connection clears duplicate raw MODE contexts after untargeted mode er
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -159,8 +159,8 @@ test('irc connection clears duplicate raw MODE contexts after targeted mode erro
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

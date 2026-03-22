@@ -96,11 +96,11 @@ test('multi-line names replies accumulate users across repeated 353 numerics', (
     }
   );
 
-  connection.channelUsers.set('#help', []);
+  connection.channels.users.set('#help', []);
   handleIrcLine(connection, ':irc.example 353 tester = #help :@alice +bob');
   handleIrcLine(connection, ':irc.example 353 tester = #help :carol dave');
 
-  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [
+  assert.deepEqual(connection.channels.users.get('#help') ?? [], [
     makeUser('alice', 'op'),
     makeUser('bob', 'voice'),
     makeUser('carol'),
@@ -149,8 +149,8 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
   handleIrcLine(connection, ':helper!user@host NICK Helper');
   handleIrcLine(connection, ':HELPER!user@host QUIT :bye');
 
-  assert.deepEqual(Array.from(connection.channelUsers.keys()), ['#Help']);
-  assert.deepEqual(connection.channelUsers.get('#Help') ?? [], [makeUser('tester')]);
+  assert.deepEqual(Array.from(connection.channels.users.keys()), ['#Help']);
+  assert.deepEqual(connection.channels.users.get('#Help') ?? [], [makeUser('tester')]);
 
   const messageEvents = events.filter(
     (event): event is { type: 'message'; message: Record<string, unknown> } => event.type === 'message'
@@ -187,10 +187,10 @@ test('channel mode changes update nick privileges in the user list', () => {
     }
   );
 
-  connection.channelUsers.set('#help', [makeUser('alice'), makeUser('bob', 'voice')]);
+  connection.channels.users.set('#help', [makeUser('alice'), makeUser('bob', 'voice')]);
   handleIrcLine(connection, ':chanop!user@host MODE #help +o-v alice bob');
 
-  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [
+  assert.deepEqual(connection.channels.users.get('#help') ?? [], [
     makeUser('alice', 'op'),
     makeUser('bob'),
   ]);
@@ -226,8 +226,8 @@ test('channel mode changes preserve user updates when channel modes are mixed in
     }
   );
 
-  connection.channelUsers.set('#help', [makeUser('alice', 'op')]);
+  connection.channels.users.set('#help', [makeUser('alice', 'op')]);
   handleIrcLine(connection, ':chanop!user@host MODE #help +nt-o alice');
 
-  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [makeUser('alice')]);
+  assert.deepEqual(connection.channels.users.get('#help') ?? [], [makeUser('alice')]);
 });

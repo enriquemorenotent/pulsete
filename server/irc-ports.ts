@@ -1,10 +1,10 @@
 import { emitMessage, emitState, emitStatus } from './irc-emit.js';
 import { abortActiveChannelList, clearActiveChannelList, clearDrainingChannelList, finishChannelListRequest, getActiveChannelListSnapshot, getChannelListRequestFailureMessage, handleChannelListNumeric, isChannelListPending, recordChannelListEntry, requestChannelList, startChannelList } from './irc-channel-list.js';
 import { clearChannelSessions, clearExpiredChannelSessions, getChannelSession, getTrackedChannelUserEntries, getTrackedChannelUsers, handleSelfChannelDeparture, listPendingChannels, removeChannelSession, resolveTrackedChannel, setChannelSession, setTrackedChannelUsers, trackChannel, untrackChannel, updateChannelUsers } from './irc-channel-state.js';
-import { beginLogin, clearConnectDeadlineTimer, clearReconnectTimer, connect, disconnect, dispose, handleSocketClosed, markConnectionFailure, markRegistered, openSocket, resetTransientState, setConnectDeadlineTimer, updateProfile } from './irc-connection-lifecycle.js';
+import { applyNickFallback, beginLogin, clearConnectDeadlineTimer, clearPendingNick, clearReconnectTimer, confirmNick, connect, disconnect, dispose, handleSocketClosed, markConnectionFailure, markRegistered, openSocket, resetTransientState, setConnectDeadlineTimer, updateProfile } from './irc-connection-lifecycle.js';
 import { consume, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
 import { clearFriendPresenceTimer, disableFriendPresence, handleFriendPresence, refreshFriendPresence, setFriendNicks, updateOnlineFriendKeys } from './irc-friend-presence.js';
-import type { IrcChannelListContext, IrcChannelStateContext, IrcClientIoContext, IrcConnectContext, IrcFriendPresenceContext, IrcReplyStateContext } from './irc-contexts.js';
+import type { IrcChannelListContext, IrcChannelStateContext, IrcConnectContext, IrcFriendPresenceContext, IrcLifecycleContext, IrcReplyStateContext } from './irc-contexts.js';
 import type { IrcChannelListPort, IrcChannelPort, IrcCommandPort, IrcFriendPresencePort, IrcLifecyclePort, IrcReplyPort, IrcTransportPort } from './irc-port-types.js';
 import { createChannelReplyContext, createMessageReplyContext, createNickReplyContext } from './irc-reply-context.js';
 import { consumePendingNickReplyContexts, consumeReplyContext, consumeReplyTarget, discardPendingNickReplyContexts, prunePendingReplyContexts, queueReplyContext } from './irc-reply-state.js';
@@ -12,7 +12,7 @@ import type { NetworkRuntimeState } from '../shared/protocol.js';
 import type { IrcConnectionState } from './irc-types.js';
 
 type IrcLifecyclePortContext = IrcConnectContext;
-type IrcCommandContext = IrcClientIoContext & Pick<IrcConnectionState, 'replyTracker'>;
+type IrcCommandContext = IrcLifecycleContext;
 
 export const createIrcLifecyclePort = (connection: IrcLifecyclePortContext): IrcLifecyclePort => ({
   get state() {
@@ -79,22 +79,9 @@ export const createIrcCommandPort = (connection: IrcCommandContext): IrcCommandP
     }
     return sendTrackedRaw(connection, `NICK ${nick}`, sourceTarget, createNickReplyContext(sourceTarget, nick));
   },
-  clearPendingNick() { connection.replyTracker.clearPendingNick(); },
-  applyNickFallback(fallbackNick, options) {
-    if (options.updatePending) {
-      connection.replyTracker.setPendingNick(fallbackNick);
-    } else {
-      connection.lifecycle.currentNick = fallbackNick;
-    }
-    if (options.replyTarget) {
-      connection.ports.reply.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
-    }
-  },
-  confirmNick(newNick) {
-    connection.ports.reply.consumePendingNickReplyContexts(newNick);
-    connection.lifecycle.currentNick = newNick;
-    emitState(connection);
-  },
+  clearPendingNick() { clearPendingNick(connection); },
+  applyNickFallback(fallbackNick, options) { applyNickFallback(connection, fallbackNick, options); },
+  confirmNick(newNick) { confirmNick(connection, newNick); },
 });
 
 export const createIrcFriendPresencePort = (connection: IrcFriendPresenceContext): IrcFriendPresencePort => ({

@@ -12,7 +12,7 @@ import { createRegisteredServer } from './helpers/runtime-test-handshake-servers
 test('saving a template network updates live hidden instances', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createRegisteredServer(firstReceived);
@@ -165,7 +165,7 @@ test('self direct messages create query buffers when none exist', () => {
 test('runtime join preserves existing channel metadata', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
   const existing = storage.upsertChannel({
     networkId: network.id,
@@ -184,7 +184,7 @@ test('runtime join preserves existing channel metadata', () => {
 test('runtime join does not create a channel buffer when the join command is not sent', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
 
   runtime.irc.join(network.id, '#missing');
@@ -200,7 +200,7 @@ test('runtime join does not create a channel buffer when the join command is not
 test('runtime part reports not connected before the first connection exists', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
 
   runtime.irc.part(network.id, '#help');

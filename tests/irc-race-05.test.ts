@@ -35,15 +35,15 @@ test('older nick conflicts do not overwrite a newer pending nick request', () =>
     }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.setNick('new1', '#first');
   connection.setNick('new2', '#second');
 
   handleIrcLine(connection, ':irc.example 433 tester new1 :Nickname is already in use');
 
-  assert.equal(connection.currentNick, 'tester');
-  assert.equal(connection.pendingNick, 'new2');
+  assert.equal(connection.lifecycle.currentNick, 'tester');
+  assert.equal(connection.replyTracker.pendingNick, 'new2');
   assert.deepEqual(writes, [
     'NICK new1\r\n',
     'NICK new2\r\n',
@@ -75,14 +75,14 @@ test('profile updates retry a rejected connected nick change when the desired ni
     { onEvent() {} }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.updateProfile({ ...connection.profile, nick: 'newnick', altNicks: ['newnick_', 'newnick__'] });
   handleIrcLine(connection, ':irc.example 437 tester newnick :Nickname temporarily unavailable');
   connection.updateProfile({ ...connection.profile, favorite: true });
 
-  assert.equal(connection.currentNick, 'tester');
-  assert.equal(connection.pendingNick, 'newnick');
+  assert.equal(connection.lifecycle.currentNick, 'tester');
+  assert.equal(connection.replyTracker.pendingNick, 'newnick');
   assert.deepEqual(writes, [
     'NICK newnick\r\n',
     'NICK newnick\r\n',
@@ -118,7 +118,7 @@ test('connecting connections reject client commands before registration complete
     }
   );
 
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   const joinSent = connection.join('#help', '#join');
   connection.say('alice', 'hello', '#chat');
   const rawSent = connection.sendClientRaw('WHOIS alice', '#raw');
@@ -127,9 +127,9 @@ test('connecting connections reject client commands before registration complete
   assert.equal(joinSent, false);
   assert.equal(rawSent, false);
   assert.equal(nickSent, false);
-  assert.equal(connection.currentNick, 'tester');
-  assert.equal(connection.pendingNick, null);
-  assert.deepEqual(connection.pendingReplyContexts, []);
+  assert.equal(connection.lifecycle.currentNick, 'tester');
+  assert.equal(connection.replyTracker.pendingNick, null);
+  assert.deepEqual(connection.replyTracker.pendingReplyContexts, []);
   assert.deepEqual(writes, []);
   assert.deepEqual(errors, [
     { target: '#join', message: 'Still connecting to server' },
@@ -177,8 +177,8 @@ test('updating a profile while connecting restarts the handshake with the new se
 
   try {
     connection.connect();
-    connection.buffer = ':irc.example 001 oldnick';
-    connection.channelUsers.set('#help', [makeUser('alice')]);
+    connection.lifecycle.buffer = ':irc.example 001 oldnick';
+    connection.channels.users.set('#help', [makeUser('alice')]);
     connection.updateProfile({
       ...connection.profile,
       name: 'NewNet',
@@ -194,8 +194,8 @@ test('updating a profile while connecting restarts the handshake with the new se
 
     assert.equal(connectCalls, 2);
     assert.equal(sockets[0].destroyed, true);
-    assert.equal(connection.buffer, '');
-    assert.equal(connection.channelUsers.size, 0);
+    assert.equal(connection.lifecycle.buffer, '');
+    assert.equal(connection.channels.users.size, 0);
 
     sockets[0].emit('lookup', null, '127.0.0.1', 4, 'old.example.test');
     sockets[0].emit('connect');

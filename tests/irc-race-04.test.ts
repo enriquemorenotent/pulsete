@@ -38,16 +38,16 @@ test('queued connected nick changes keep the accepted nick after a later rejecti
     }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.setNick('new1', '#chat');
   connection.setNick('new2', '#chat');
 
   handleIrcLine(connection, ':tester!user@host NICK new1');
   handleIrcLine(connection, ':irc.example 433 tester new2 :Nickname is already in use');
 
-  assert.equal(connection.currentNick, 'new1');
-  assert.equal(connection.pendingNick, 'new2_');
+  assert.equal(connection.lifecycle.currentNick, 'new1');
+  assert.equal(connection.replyTracker.pendingNick, 'new2_');
   assert.deepEqual(states, ['new1']);
   assert.deepEqual(writes, [
     'NICK new1\r\n',
@@ -86,16 +86,16 @@ test('duplicate connected nick requests are fully retired after a successful sel
     }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.setNick('newnick', '#first');
   connection.setNick('newnick', '#second');
 
   handleIrcLine(connection, ':tester!user@host NICK newnick');
   handleIrcLine(connection, ':irc.example 433 tester newnick :Nickname is already in use');
 
-  assert.equal(connection.currentNick, 'newnick');
-  assert.equal(connection.pendingNick, null);
+  assert.equal(connection.lifecycle.currentNick, 'newnick');
+  assert.equal(connection.replyTracker.pendingNick, null);
   assert.deepEqual(states, ['newnick']);
   assert.deepEqual(writes, [
     'NICK newnick\r\n',
@@ -132,15 +132,15 @@ test('queued connected nick rejections keep the rejected nick bound to its origi
     }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.setNick('bad?', '#first');
   connection.setNick('new2', '#second');
 
   handleIrcLine(connection, ':irc.example 432 tester bad? :Erroneous nickname');
 
-  assert.equal(connection.currentNick, 'tester');
-  assert.equal(connection.pendingNick, 'new2');
+  assert.equal(connection.lifecycle.currentNick, 'tester');
+  assert.equal(connection.replyTracker.pendingNick, 'new2');
   assert.deepEqual(writes, [
     'NICK bad?\r\n',
     'NICK new2\r\n',
@@ -183,8 +183,8 @@ test('duplicate rejected nick requests do not leave stale pending nick state beh
     }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.setNick('bad?', '#first');
   connection.setNick('bad?', '#second');
 
@@ -192,8 +192,8 @@ test('duplicate rejected nick requests do not leave stale pending nick state beh
   connection.setNick('good', '#third');
   handleIrcLine(connection, ':tester!user@host NICK good');
 
-  assert.equal(connection.currentNick, 'good');
-  assert.equal(connection.pendingNick, null);
+  assert.equal(connection.lifecycle.currentNick, 'good');
+  assert.equal(connection.replyTracker.pendingNick, null);
   assert.deepEqual(states, ['good']);
   assert.deepEqual(writes, [
     'NICK bad?\r\n',

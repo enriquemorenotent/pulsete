@@ -7,6 +7,7 @@ export const createHandshakeServer = async (received: string[]) => {
     sockets.add(socket);
     socket.setEncoding('utf8');
     let buffer = '';
+    socket.on('error', () => {});
     socket.on('close', () => sockets.delete(socket));
     socket.on('data', (chunk) => {
       buffer += chunk;
@@ -49,6 +50,7 @@ export const createRegisteredServer = async (received: string[]) => {
     let buffer = '';
     let nick: string | null = null;
     let sawUser = false;
+    socket.on('error', () => {});
     socket.on('close', () => sockets.delete(socket));
     socket.on('data', (chunk) => {
       buffer += chunk;
@@ -101,6 +103,7 @@ export const createIsonServer = async (received: string[], onlineNicks: string[]
     let buffer = '';
     let nick: string | null = null;
     let sawUser = false;
+    socket.on('error', () => {});
     socket.on('close', () => sockets.delete(socket));
     socket.on('data', (chunk) => {
       buffer += chunk;

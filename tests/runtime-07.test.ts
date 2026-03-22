@@ -13,7 +13,7 @@ import { createHandshakeServer } from './helpers/runtime-test-handshake-servers.
 test('deleteNetwork removes runtime connections', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
   const network = storage.upsertNetwork(createNetworkInput({
@@ -44,7 +44,7 @@ test('deleteNetwork removes runtime connections', async () => {
 test('runtime close disconnects active connections without appending shutdown noise', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const handshake = await createHandshakeServer([]);
   const network = storage.upsertNetwork(createNetworkInput({
     name: 'CloseNet',
@@ -79,7 +79,7 @@ test('runtime close disconnects active connections without appending shutdown no
 test('deleteNetwork removes hidden clone connections when deleting a template', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
   const template = storage.upsertNetwork(createNetworkInput({

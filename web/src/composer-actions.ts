@@ -1,5 +1,6 @@
 import type { SocketHandle } from './client.js';
 import type { WorkspaceView } from './workspace-types.js';
+import { parseSlashIrcClientCommand } from '../../shared/irc-client-command.js';
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
 
@@ -52,9 +53,11 @@ async function runSlashCommand(text: string, params: ComposerParams) {
   if (!selection || !socket) {
     return;
   }
-  const [firstWord, ...rest] = text.slice(1).split(' ');
-  const command = normalizeCommand(firstWord);
-  const remainder = rest.join(' ').trim();
+  const parsed = parseSlashIrcClientCommand(text);
+  if (!parsed) {
+    return null;
+  }
+  const { name: command, args, remainder } = parsed;
 
   switch (command) {
     case 'join':
@@ -78,7 +81,7 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         params.updateBanner('error', 'Usage: /msg target text');
         return null;
       }
-      const [target, ...messageParts] = remainder.split(' ');
+      const [target, ...messageParts] = args;
       const body = messageParts.join(' ').trim();
       if (!target || !body) {
         params.updateBanner('error', 'Usage: /msg target text');
@@ -197,29 +200,3 @@ async function runSlashCommand(text: string, params: ComposerParams) {
   params.setDraft('');
   return text;
 }
-
-const normalizeCommand = (value: string) => {
-  const command = value.toLowerCase();
-  if (command === 'j') {
-    return 'join';
-  }
-  if (command === 'p') {
-    return 'part';
-  }
-  if (command === 'm') {
-    return 'msg';
-  }
-  if (command === 'n') {
-    return 'nick';
-  }
-  if (command === 'w') {
-    return 'whois';
-  }
-  if (command === 'ns') {
-    return 'nickserv';
-  }
-  if (command === 'cs') {
-    return 'chanserv';
-  }
-  return command;
-};

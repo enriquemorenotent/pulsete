@@ -31,8 +31,8 @@ test('irc connection keeps unrelated auth notices on the server buffer', () => {
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -82,8 +82,8 @@ test('irc connection keeps unrelated cannot-send notices on the server buffer', 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -133,8 +133,8 @@ test('irc connection keeps message blocked notices on the server buffer', () => 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -184,8 +184,8 @@ test('irc connection keeps ambiguous delivery notices on the server buffer', () 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

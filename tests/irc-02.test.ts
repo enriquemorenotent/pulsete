@@ -32,8 +32,8 @@ test('irc connection keeps tracked joins live before the nicklist arrives', () =
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

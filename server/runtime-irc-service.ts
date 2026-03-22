@@ -9,6 +9,7 @@ import {
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import type { StorageConversationsRepository } from './storage-conversations-repository.js';
 import type { StorageNetworksRepository } from './storage-networks-repository.js';
+import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
 type RuntimeIrcServiceOptions = {
   connectionManager: RuntimeConnectionManager;
@@ -61,17 +62,18 @@ export class RuntimeIrcService {
     const normalizedRaw = normalizeRawCommand(raw);
     const connection = this.options.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId);
-    if (/^\s*NICK\s+/i.test(normalizedRaw)) {
-      const nextNick = normalizedRaw.trim().split(/\s+/)[1];
+    const parsed = parseRawIrcClientCommand(normalizedRaw);
+    if (parsed?.name === 'nick') {
+      const nextNick = parsed.args[0];
       if (nextNick) {
-        connection.socket
+        connection.lifecycle.socket
           ? connection.setNick(nextNick, replyTarget)
           : connection.sendRaw(normalizedRaw, replyTarget);
         return;
       }
     }
-    if (/^\s*QUIT(?:\s|$)/i.test(normalizedRaw)) {
-      connection.socket
+    if (parsed?.name === 'quit') {
+      connection.lifecycle.socket
         ? connection.disconnect(normalizedRaw.trim())
         : connection.sendRaw(normalizedRaw, replyTarget);
       return;

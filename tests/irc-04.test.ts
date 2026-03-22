@@ -32,8 +32,8 @@ test('irc connection ignores stale ISON replies after friend tracking is cleared
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -69,8 +69,8 @@ test('irc connection skips oversized friend nicks when polling ISON', () => {
     { onEvent() {} }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

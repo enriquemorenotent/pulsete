@@ -17,7 +17,7 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessageType } from './h
 test('friend routes persist entries and broadcast updates without auth', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
@@ -63,7 +63,7 @@ test('friend routes persist entries and broadcast updates without auth', async (
 test('friend routes validate payloads and targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   const port = await listen(server);
 
@@ -99,7 +99,7 @@ test('friend routes validate payloads and targets', async () => {
 test('buffer read emits updates and clears unread counts without auth', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
   const channel = storage.upsertChannel({
     networkId: network.id,
@@ -165,7 +165,7 @@ test('history clamps invalid and oversized limits to the default window', async 
       ts: Date.now() + index,
     });
   }
-  const server = createServer(createHttpHandler(new Runtime(storage).context));
+  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {

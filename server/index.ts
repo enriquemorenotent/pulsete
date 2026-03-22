@@ -7,7 +7,7 @@ import { attachWebSocketServer } from './ws-server.js';
 const PORT = Number(process.env.PORT ?? 18487);
 const HOST = process.env.HOST ?? '127.0.0.1';
 const storage = new Storage();
-const runtime = new Runtime(storage);
+const runtime = new Runtime(storage.runtimeStore);
 const server = createServer(createHttpHandler(runtime.context));
 
 attachWebSocketServer(server, runtime.context);

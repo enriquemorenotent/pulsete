@@ -31,7 +31,7 @@ test('irc connection drops oversized pending lines instead of buffering indefini
     }
   );
 
-  connection.socket = {
+  connection.lifecycle.socket = {
     destroy() {
       destroyed = true;
     },
@@ -77,7 +77,7 @@ test('irc connection drops oversized complete lines before dispatching them', ()
     }
   );
 
-  connection.socket = {
+  connection.lifecycle.socket = {
     destroy() {
       destroyed = true;
     },
@@ -124,7 +124,7 @@ test('irc connection accepts large chunks when they contain complete IRC lines',
     }
   );
 
-  connection.socket = {
+  connection.lifecycle.socket = {
     destroy() {
       destroyed = true;
     },

@@ -29,10 +29,10 @@ test('channel mode changes keep user updates aligned after unknown arg-taking mo
     }
   );
 
-  connection.channelUsers.set('#help', [makeUser('alice')]);
+  connection.channels.users.set('#help', [makeUser('alice')]);
   handleIrcLine(connection, ':chanop!user@host MODE #help +Lo #overflow alice');
 
-  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [makeUser('alice', 'op')]);
+  assert.deepEqual(connection.channels.users.get('#help') ?? [], [makeUser('alice', 'op')]);
 });
 
 test('self kicks emit a self part message and remove channel membership', () => {
@@ -61,10 +61,10 @@ test('self kicks emit a self part message and remove channel membership', () => 
     }
   );
 
-  connection.channelUsers.set('#help', [makeUser('tester'), makeUser('alice')]);
+  connection.channels.users.set('#help', [makeUser('tester'), makeUser('alice')]);
   handleIrcLine(connection, ':op!user@host KICK #help tester :bye');
 
-  assert.equal(connection.channelUsers.has('#help'), false);
+  assert.equal(connection.channels.users.has('#help'), false);
   const messageEvent = events.find((event) => event.type === 'message') as {
     type: 'message';
     message: { networkId: string; target: string; nick: string; body: string; kind: string; self: boolean };
@@ -104,11 +104,11 @@ test('self part removes local channel state without emitting a replacement chann
     }
   );
 
-  connection.channelUsers.set('#help', [makeUser('tester'), makeUser('alice')]);
+  connection.channels.users.set('#help', [makeUser('tester'), makeUser('alice')]);
 
   handleIrcLine(connection, ':tester!user@host PART #help :Leaving');
 
-  assert.equal(connection.channelUsers.has('#help'), false);
+  assert.equal(connection.channels.users.has('#help'), false);
   assert.deepEqual(
     events.filter((event) => event.type === 'channel'),
     []
@@ -153,7 +153,7 @@ test('late channel events and messages do not recreate a self-parted channel', (
     }
   );
 
-  connection.channelUsers.set('#help', [makeUser('tester'), makeUser('alice')]);
+  connection.channels.users.set('#help', [makeUser('tester'), makeUser('alice')]);
   handleIrcLine(connection, ':tester!user@host PART #help :Leaving');
   const afterPartEvents = events.length;
 
@@ -164,7 +164,7 @@ test('late channel events and messages do not recreate a self-parted channel', (
   handleIrcLine(connection, ':irc.example 332 tester #help :Topic line');
   handleIrcLine(connection, ':irc.example 353 tester = #help :@tester +alice');
 
-  assert.equal(connection.channelUsers.has('#help'), false);
+  assert.equal(connection.channels.users.has('#help'), false);
   assert.deepEqual(
     events.slice(afterPartEvents).filter((event) => event.type === 'channel' || event.type === 'message'),
     []
@@ -199,14 +199,14 @@ test('socket close clears parser buffers and nick tracking', () => {
 
   try {
     connection.connect();
-    connection.buffer = ':irc.example 001 tester';
-    connection.channelUsers.set('#help', [makeUser('alice')]);
-    connection.manualDisconnect = true;
+    connection.lifecycle.buffer = ':irc.example 001 tester';
+    connection.channels.users.set('#help', [makeUser('alice')]);
+    connection.lifecycle.manualDisconnect = true;
 
     socket.emit('close');
 
-    assert.equal(connection.buffer, '');
-    assert.equal(connection.channelUsers.size, 0);
+    assert.equal(connection.lifecycle.buffer, '');
+    assert.equal(connection.channels.users.size, 0);
   } finally {
     net.connect = originalConnect;
   }

@@ -31,13 +31,13 @@ test('irc connection clears duplicate successful topic-change contexts before la
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channelUsers.set('#help', []);
+  connection.channels.users.set('#help', []);
 
   connection.sendClientRaw('TOPIC #help :one', '#topic-a');
   connection.sendClientRaw('TOPIC #help :two', '#topic-b');
@@ -89,8 +89,8 @@ test('irc connection clears duplicate topic-error contexts for the same channel'
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -103,7 +103,7 @@ test('irc connection clears duplicate topic-error contexts for the same channel'
 
   assert.deepEqual(writes, ['TOPIC #help :locked\r\n', 'TOPIC #help :locked\r\n']);
   assert.equal(
-    connection.pendingReplyContexts.some(
+    connection.replyTracker.pendingReplyContexts.some(
       (context) =>
         context.kind === 'channel'
         && context.operation === 'topic-set'
@@ -140,13 +140,13 @@ test('irc connection keeps older topic-change contexts after a later topic self 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channelUsers.set('#help', []);
+  connection.channels.users.set('#help', []);
 
   connection.sendClientRaw('TOPIC #help :one', '#topic-a');
   connection.sendClientRaw('TOPIC #help :two', '#topic-b');
@@ -200,8 +200,8 @@ test('irc connection surfaces otherwise unformatted numerics from raw commands',
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

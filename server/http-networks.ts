@@ -3,7 +3,7 @@ import type { RouteArgs } from './http-types.js';
 
 export const handleNetworkRoutes = async ({ req, res, pathname, context }: RouteArgs) => {
   if (req.method === 'GET' && pathname === '/api/networks') {
-    writeJson(res, 200, { networks: context.storage.listNetworks() });
+    writeJson(res, 200, { networks: context.networkCatalog.list() });
     return true;
   }
   if (req.method === 'POST' && pathname === '/api/networks') {

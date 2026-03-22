@@ -9,8 +9,10 @@ import {
 } from './storage-conversations-repository.js';
 import { StorageFriendsRepository } from './storage-friends-repository.js';
 import { StorageNetworksRepository } from './storage-networks-repository.js';
+import { createStorageViews } from './storage-runtime-store.js';
 import { createStorageSnapshot } from './storage-snapshot.js';
-import type { BufferInput, ChannelInput, FriendInput, MessageInput, NetworkInput } from './storage-types.js';
+import type { RuntimeStore } from './runtime-core.js';
+import type { BufferInput, ChannelInput, FriendInput, MessageInput, NetworkInput, StorageSnapshotSource } from './storage-types.js';
 
 export { type MessageInput, type NetworkInput };
 
@@ -21,6 +23,8 @@ export class Storage {
   readonly networks: StorageNetworksRepository;
   readonly conversations: StorageConversationsRepository;
   readonly friends: StorageFriendsRepository;
+  readonly snapshotSource: StorageSnapshotSource;
+  readonly runtimeStore: RuntimeStore;
 
   constructor(filePath?: string) {
     const resources = openStorageResources(filePath);
@@ -30,10 +34,17 @@ export class Storage {
     this.networks = new StorageNetworksRepository(this.db, this.secretBox);
     this.conversations = new StorageConversationsRepository(this.db);
     this.friends = new StorageFriendsRepository(this.db);
+    const views = createStorageViews({
+      conversations: this.conversations,
+      friends: this.friends,
+      networks: this.networks,
+    });
+    this.snapshotSource = views.snapshotSource;
+    this.runtimeStore = views.runtimeStore;
   }
 
   listNetworks() {
-    return this.networks.list();
+    return this.snapshotSource.listNetworks();
   }
 
   getNetwork(networkId: string) {
@@ -49,15 +60,15 @@ export class Storage {
   }
 
   listChannels(networkId?: string) {
-    return this.conversations.listChannels(networkId);
+    return this.snapshotSource.listChannels(networkId);
   }
 
   listBuffers(networkId?: string) {
-    return this.conversations.listBuffers(networkId);
+    return this.snapshotSource.listBuffers(networkId);
   }
 
   listFriends() {
-    return this.friends.list();
+    return this.snapshotSource.listFriends();
   }
 
   getBuffer(bufferId: string) {
@@ -116,7 +127,7 @@ export class Storage {
     return this.conversations.listMessages(networkId, target, limit);
   }
 
-  listRecentMessages(limit = 200) { return this.conversations.listRecentMessages(limit); }
+  listRecentMessages(limit = 200) { return this.snapshotSource.listRecentMessages(limit); }
 
   upsertNetwork(input: NetworkInput) {
     return this.networks.upsert(input);
@@ -147,7 +158,7 @@ export class Storage {
   }
 
   snapshot() {
-    return createStorageSnapshot(this);
+    return createStorageSnapshot(this.snapshotSource);
   }
 
   close() {

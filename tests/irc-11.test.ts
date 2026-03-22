@@ -31,8 +31,8 @@ test('irc connection keeps WHOIS 401 replies out of stale private-message contex
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -89,8 +89,8 @@ test('irc connection keeps private-message 401 replies on the source buffer', ()
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -146,8 +146,8 @@ test('irc connection keeps generic raw-command numerics on the server buffer', (
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

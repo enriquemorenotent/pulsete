@@ -31,8 +31,8 @@ test('irc connection refuses a raw LIST while a structured LIST is active', () =
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -78,13 +78,13 @@ test('irc connection routes topic change status to the affected channel', () => 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write() {
       return true;
     },
   } as unknown as net.Socket;
-  connection.channelUsers.set('#help', []);
+  connection.channels.users.set('#help', []);
 
   connection.consume(':alice!user@host TOPIC #help :new topic\r\n');
 
@@ -134,8 +134,8 @@ test('irc connection keeps topic errors bound to topic commands on the same chan
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -192,13 +192,13 @@ test('irc connection clears stale channel reply contexts after a self part', () 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channelUsers.set('#help', [{ nick: 'tester', mode: 'normal' }]);
+  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal' }]);
 
   connection.sendClientRaw('TOPIC #help :new topic', '#topic');
   connection.part('#help', 'Leaving', '#part');

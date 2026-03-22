@@ -31,8 +31,8 @@ test('irc connection keeps ambiguous same-channel 442 replies on the server buff
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -97,8 +97,8 @@ test('irc connection clears ambiguous same-channel 442 contexts before later rep
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -164,13 +164,13 @@ test('irc connection clears successful topic-change contexts before later topic 
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channelUsers.set('#help', []);
+  connection.channels.users.set('#help', []);
 
   connection.sendClientRaw('TOPIC #help :old topic', '#topic-old');
   connection.consume(':tester!user@host TOPIC #help :old topic\r\n');

@@ -32,8 +32,8 @@ test('raw ISON replies stay in the originating buffer and do not affect friend p
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -181,16 +181,16 @@ test('irc connection ignores stale ISON replies when polls overlap', () => {
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
   } as unknown as net.Socket;
 
-  connection.connected = false;
+  connection.lifecycle.connected = false;
   connection.setFriendNicks(['Alice']);
-  connection.connected = true;
+  connection.lifecycle.connected = true;
 
   connection.refreshFriendPresence();
   connection.refreshFriendPresence();

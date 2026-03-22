@@ -38,7 +38,7 @@ test('nick fallback keeps the attempted nick when the retry write fails', () => 
     }
   );
 
-  connection.socket = {
+  connection.lifecycle.socket = {
     write(line: string) {
       writes.push(line);
       throw new Error('boom');
@@ -54,8 +54,8 @@ test('nick fallback keeps the attempted nick when the retry write fails', () => 
   handleIrcLine(connection, ':irc.example 433 * primary :Nickname is already in use');
 
   assert.deepEqual(writes, ['NICK secondary\r\n']);
-  assert.equal(connection.currentNick, 'primary');
-  assert.equal(connection.pendingNick, null);
+  assert.equal(connection.lifecycle.currentNick, 'primary');
+  assert.equal(connection.replyTracker.pendingNick, null);
   assert.deepEqual(notices, []);
   assert.deepEqual(errors, ['Connection is no longer writable']);
 });
@@ -89,19 +89,19 @@ test('connected nick changes wait for server confirmation before mutating curren
     }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.setNick('newnick');
 
-  assert.equal(connection.currentNick, 'tester');
-  assert.equal(connection.pendingNick, 'newnick');
+  assert.equal(connection.lifecycle.currentNick, 'tester');
+  assert.equal(connection.replyTracker.pendingNick, 'newnick');
   assert.deepEqual(states, []);
   assert.deepEqual(writes, ['NICK newnick\r\n']);
 
   handleIrcLine(connection, ':tester!user@host NICK newnick');
 
-  assert.equal(connection.currentNick, 'newnick');
-  assert.equal(connection.pendingNick, null);
+  assert.equal(connection.lifecycle.currentNick, 'newnick');
+  assert.equal(connection.replyTracker.pendingNick, null);
   assert.deepEqual(states, ['newnick']);
 });
 
@@ -137,13 +137,13 @@ test('pending nick self events are handled before the nick echo arrives', () => 
     }
   );
 
-  connection.pendingNick = 'newnick';
+  connection.replyTracker.setPendingNick('newnick');
 
   handleIrcLine(connection, ':newnick!user@host JOIN #Help');
   handleIrcLine(connection, ':alice!user@host PRIVMSG NewNick :hello');
   handleIrcLine(connection, ':newnick!user@host PART #help :bye');
 
-  assert.equal(connection.channelUsers.has('#Help'), false);
+  assert.equal(connection.channels.users.has('#Help'), false);
   assert.equal(connection.getChannelSession('#help'), null);
   assert.deepEqual(messages.map((message) => ({ ...message, body: message.body.replace(/\s+/g, ' ') })), [
     { target: '#Help', body: 'newnick joined #Help', self: true },
@@ -181,13 +181,13 @@ test('rejected connected nick changes keep the last accepted nick', () => {
     }
   );
 
-  connection.connected = true;
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
   connection.setNick('newnick');
   handleIrcLine(connection, ':irc.example 437 tester newnick :Nickname temporarily unavailable');
 
-  assert.equal(connection.currentNick, 'tester');
-  assert.equal(connection.pendingNick, null);
+  assert.equal(connection.lifecycle.currentNick, 'tester');
+  assert.equal(connection.replyTracker.pendingNick, null);
   assert.deepEqual(writes, ['NICK newnick\r\n']);
   assert.deepEqual(statuses, ['newnick was rejected by the server']);
 });

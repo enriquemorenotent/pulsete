@@ -35,8 +35,8 @@ test('irc connection keeps an already joined channel after a retry JOIN times ou
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -51,7 +51,7 @@ test('irc connection keeps an already joined channel after a retry JOIN times ou
 
   assert.deepEqual(writes, ['JOIN #help\r\n', 'JOIN #help\r\n']);
   assert.equal(connection.getChannelSession('#help')?.phase, 'joined');
-  assert.deepEqual(connection.channelUsers.get('#help') ?? [], [
+  assert.deepEqual(connection.channels.users.get('#help') ?? [], [
     { nick: 'alice', mode: 'normal' },
     { nick: 'tester', mode: 'normal' },
   ]);

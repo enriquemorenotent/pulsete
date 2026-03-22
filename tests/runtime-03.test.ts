@@ -14,7 +14,7 @@ import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
 test('runtime join defers channel persistence until the server confirms the join', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
   let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
 
@@ -39,7 +39,7 @@ test('runtime join defers channel persistence until the server confirms the join
 test('runtime rejoins existing channel buffers without surfacing a pending channel row', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
   const existing = storage.upsertChannel({
     networkId: network.id,
@@ -71,7 +71,7 @@ test('runtime rejoins existing channel buffers without surfacing a pending chann
 test('runtime validation rejects missing networks and invalid targets before touching storage', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
   const query = storage.upsertQuery(network.id, 'helper');
   const channel = storage.upsertChannel({
@@ -114,7 +114,7 @@ test('runtime validation rejects missing networks and invalid targets before tou
 test('runtime sendRaw preserves quit commands and exact matching', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createRegisteredServer(received);
   const network = storage.upsertNetwork(createNetworkInput({
@@ -144,7 +144,7 @@ test('runtime sendRaw preserves quit commands and exact matching', async () => {
 test('runtime streams structured channel list events from IRC LIST', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const received: string[] = [];
   const listServer = await createListServer(received);
   const network = storage.upsertNetwork(createNetworkInput({

@@ -9,6 +9,7 @@ export const createListServer = async (received: string[]) => {
     let buffer = '';
     let nick: string | null = null;
     let sawUser = false;
+    socket.on('error', () => {});
     socket.on('close', () => sockets.delete(socket));
     socket.on('data', (chunk) => {
       buffer += chunk;
@@ -64,6 +65,7 @@ export const createStreamingListServer = async (received: string[], trailingDela
     let buffer = '';
     let nick: string | null = null;
     let sawUser = false;
+    socket.on('error', () => {});
     socket.on('close', () => sockets.delete(socket));
     socket.on('data', (chunk) => {
       buffer += chunk;

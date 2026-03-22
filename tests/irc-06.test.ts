@@ -163,8 +163,8 @@ test('irc connection routes duplicate WHOIS replies for the same nick in request
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

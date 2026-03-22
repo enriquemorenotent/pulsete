@@ -25,7 +25,7 @@ test('parseLine skips repeated spaces between IRC parameters', () => {
 test('PING replies preserve the original parameter framing', () => {
   const writes: string[] = [];
   const connection = createConnection();
-  connection.socket = createMockSocket(writes) as any;
+  connection.lifecycle.socket = createMockSocket(writes) as any;
 
   handleIrcLine(connection, 'PING  :abc def');
 
@@ -54,7 +54,7 @@ test('sendRaw degrades synchronous socket write failures into status events', ()
     events.push(event as Record<string, unknown>);
   });
   const socket = new ThrowingSocket();
-  connection.socket = socket as any;
+  connection.lifecycle.socket = socket as any;
 
   const sent = connection.sendRaw('PING :test', '#status');
 
@@ -102,7 +102,7 @@ test('login write failures keep the write error instead of being relabeled as a 
     connection.connect();
     socket.emit('connect');
 
-    assert.equal(connection.lastFailureMessage, 'Connection is no longer writable');
+    assert.equal(connection.lifecycle.lastFailureMessage, 'Connection is no longer writable');
     assert.equal(
       events.some(
         (event) =>
@@ -114,7 +114,7 @@ test('login write failures keep the write error instead of being relabeled as a 
   } finally {
     connection.clearConnectDeadlineTimer();
     connection.clearReconnectTimer();
-    connection.socket = null;
+    connection.lifecycle.socket = null;
     net.connect = originalConnect;
   }
 });
@@ -151,18 +151,18 @@ test('late close from an old socket does not disconnect the new connection', asy
 
   try {
     connection.connect();
-    await waitFor(() => connection.connected);
+    await waitFor(() => connection.lifecycle.connected);
 
     connection.disconnect();
     const disconnectStates = stateEvents.filter((phase) => phase === 'offline').length;
     connection.updateProfile({ ...connection.profile, port: second.port });
     connection.connect();
 
-    await waitFor(() => connection.connected && connection.socket !== null);
+    await waitFor(() => connection.lifecycle.connected && connection.lifecycle.socket !== null);
     await first.closeFinished;
     await new Promise((resolve) => setTimeout(resolve, 60));
 
-    assert.equal(connection.connected, true);
+    assert.equal(connection.lifecycle.connected, true);
     assert.equal(stateEvents.at(-1), 'connected');
     assert.equal(stateEvents.filter((phase) => phase === 'offline').length, disconnectStates);
   } finally {

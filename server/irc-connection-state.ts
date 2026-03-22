@@ -1,6 +1,5 @@
 import type { ChannelUserState } from '../shared/protocol.js';
 import { ReplyTracker } from './irc-reply-tracker.js';
-import type { IrcConnectionPorts } from './irc-port-types.js';
 import type {
   ChannelSessionState,
   IrcChannelListState,
@@ -21,43 +20,11 @@ export type IrcConnectionOptions = {
   channelListDrainGraceMs?: number;
 };
 
-type DeferredAccess<T> = {
-  get(): T;
-  set(value: T): void;
-};
-
-type IrcConnectionAccess = {
-  connection: IrcConnectionState;
-  setPorts(value: IrcConnectionPorts): void;
-};
-
-export const createIrcConnectionAccess = (
+export const createIrcConnectionState = (
   profile: RuntimeNetworkProfile,
   handlers: Handlers,
   options: IrcConnectionOptions = {}
-): IrcConnectionAccess => {
-  const state = createIrcConnectionState(profile, handlers, options);
-  const ports = createDeferredAccess<IrcConnectionPorts>('ports');
-  const connection = {
-    ...state,
-    get ports() {
-      return ports.get();
-    },
-  } as IrcConnectionState;
-
-  return {
-    connection,
-    setPorts(value) {
-      ports.set(value);
-    },
-  };
-};
-
-const createIrcConnectionState = (
-  profile: RuntimeNetworkProfile,
-  handlers: Handlers,
-  options: IrcConnectionOptions
-) => {
+): Omit<IrcConnectionState, 'ports'> => {
   const lifecycle: IrcLifecycleState = {
     socket: null,
     buffer: '',
@@ -109,20 +76,5 @@ const createIrcConnectionState = (
     friendPresence,
     channelList,
     replyTracker: new ReplyTracker(),
-  };
-};
-
-const createDeferredAccess = <T>(label: string): DeferredAccess<T> => {
-  let value: T | null = null;
-  return {
-    get() {
-      if (value === null) {
-        throw new Error(`IRC connection ${label} accessed before initialization`);
-      }
-      return value;
-    },
-    set(nextValue) {
-      value = nextValue;
-    },
   };
 };

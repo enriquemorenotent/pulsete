@@ -33,8 +33,8 @@ test('irc connection expires a stalled LIST drain and allows a later retry witho
     { channelListTimeoutMs: 20, channelListDrainGraceMs: 20 }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -54,7 +54,7 @@ test('irc connection expires a stalled LIST drain and allows a later retry witho
   await new Promise((resolve) => setTimeout(resolve, 30));
 
   assert.equal(connection.requestChannelList('request-2'), true);
-  assert.equal(connection.drainingChannelListRequestId, null);
+  assert.equal(connection.channelList.draining.requestId, null);
   assert.deepEqual(writes, ['LIST\r\n', 'LIST\r\n']);
 });
 
@@ -85,8 +85,8 @@ test('irc connection refuses a second LIST while one is already active', () => {
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -94,8 +94,8 @@ test('irc connection refuses a second LIST while one is already active', () => {
 
   assert.equal(connection.requestChannelList('request-1'), true);
   assert.equal(connection.requestChannelList('request-2'), false);
-  assert.equal(connection.activeChannelListRequestId, 'request-1');
-  assert.deepEqual(connection.activeChannelListEntries, []);
+  assert.equal(connection.channelList.active.requestId, 'request-1');
+  assert.deepEqual(connection.channelList.active.entries, []);
   assert.deepEqual(writes, ['LIST\r\n']);
   assert.ok(!events.some((event) => event.type === 'channel-list-failed'));
 });
@@ -127,8 +127,8 @@ test('irc connection keeps unrelated command errors from failing LIST', () => {
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },
@@ -187,8 +187,8 @@ test('irc connection keeps raw LIST numerics on the server buffer', () => {
     }
   );
 
-  connection.connected = true;
-  connection.socket = {
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
     write(chunk: string) {
       writes.push(chunk);
     },

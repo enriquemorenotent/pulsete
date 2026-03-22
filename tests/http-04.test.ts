@@ -17,7 +17,7 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessage,waitForWebSocke
 test('http buffer mutation routes succeed and broadcast buffer changes', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const ircReceived: string[] = [];
   const ircServer = await createRegisteredServer(ircReceived);
   const network = storage.upsertNetwork(createNetworkInput({
@@ -77,7 +77,7 @@ test('http buffer mutation routes succeed and broadcast buffer changes', async (
 test('http connect and disconnect routes drive the IRC connection lifecycle', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const ircReceived: string[] = [];
   const ircServer = await createRegisteredServer(ircReceived);
   const network = storage.upsertNetwork(createNetworkInput({
@@ -174,7 +174,7 @@ test('static handler serves built assets and spa fallback from the asset root', 
 test('static handler does not expose repository files', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(new Runtime(storage).context));
+  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {
@@ -190,7 +190,7 @@ test('connect route does not allow GET side effects', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
-  const server = createServer(createHttpHandler(new Runtime(storage).context));
+  const server = createServer(createHttpHandler(new Runtime(storage.runtimeStore).context));
   const port = await listen(server);
 
   try {

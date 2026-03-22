@@ -55,7 +55,7 @@ test('websocket commands use the live local state and forward runtime methods', 
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.upsertNetwork(createNetworkInput());
   const query = storage.upsertQuery(network.id, 'helper');
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const calls: string[] = [];
   runtime.sessions.connect = ((networkId: string) => {
     calls.push(`connect:${networkId}`);
@@ -128,7 +128,7 @@ test('websocket commands use the live local state and forward runtime methods', 
 test('websocket query.open uses the live runtime path', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const network = storage.upsertNetwork(createNetworkInput());
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
@@ -155,7 +155,7 @@ test('websocket query.open uses the live runtime path', async () => {
 test('websocket channel.list.cancel ignores missing networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = new Runtime(storage);
+  const runtime = new Runtime(storage.runtimeStore);
   const server = createServer(createHttpHandler(runtime.context));
   attachWebSocketServer(server, runtime.context);
   const port = await listen(server);
