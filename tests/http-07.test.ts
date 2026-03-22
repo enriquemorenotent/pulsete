@@ -23,8 +23,8 @@ test('websocket join, message, and part commands reach the live IRC connection',
     host: '127.0.0.1',
     port: ircServer.port,
   }));
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -90,8 +90,8 @@ test('oversized websocket payloads are rejected', async () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.networks.upsert(createNetworkInput());
   const runtime = createRuntime(storage.runtimeStore);
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -116,8 +116,8 @@ test('websocket validation returns errors for invalid channel, query, and messag
   const network = storage.networks.upsert(createNetworkInput());
   storage.conversations.upsertQuery(network.id, 'helper');
   const runtime = createRuntime(storage.runtimeStore);
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 

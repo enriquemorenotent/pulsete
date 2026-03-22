@@ -3,18 +3,23 @@ import type { AppDispatch, BannerActions } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
 import { api } from './client.js';
 import type { ConversationIndex } from './conversation-selectors.js';
-import type { GatewayStatus } from './app-types.js';
+import type { AppDomainState } from './app-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
 
 type NetworkActionParams = BannerActions & {
-  conversation: ConversationIndex;
   dispatch: AppDispatch;
-  gatewayStatus: GatewayStatus;
+  getConversation: () => ConversationIndex;
+  getGatewayStatus: () => AppDomainState['gatewayStatus'];
 };
 
-export const createNetworkActions = ({ conversation, dispatch, gatewayStatus, updateBanner }: NetworkActionParams) => {
-  const executeMutation = createAppMutationExecutor({ dispatch, gatewayStatus, updateBanner });
+export const createNetworkActions = ({
+  dispatch,
+  getConversation,
+  getGatewayStatus,
+  updateBanner,
+}: NetworkActionParams) => {
+  const executeMutation = createAppMutationExecutor({ dispatch, getGatewayStatus, updateBanner });
 
   const submitNetwork = async (form: NetworkForm) => {
     if (!form.name.trim()) {
@@ -118,6 +123,7 @@ export const createNetworkActions = ({ conversation, dispatch, gatewayStatus, up
   };
 
   const selectNetworkBuffer = (network: NetworkProfile) => {
+    const conversation = getConversation();
     const buffer = conversation.findServerBuffer(network.id);
     if (buffer) {
       selectBuffer(dispatch, buffer);

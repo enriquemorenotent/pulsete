@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import WebSocket from 'ws';
+import type { ClientMessage } from '../shared/protocol.js';
 import { createHttpHandler } from '../server/http-router.js';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
@@ -17,30 +18,26 @@ test('websocket error replies detach the socket when a later send fails', () => 
   const { socket, getCloseCalls } = createBootstrapThenFailingWebSocket();
   const calls: string[] = [];
   const context = {
-    gateway: {
-      attachSocket() {
-        calls.push('attach');
-      },
-      detachSocket() {
-        calls.push('detach');
-      },
-      snapshot() {
-        return {
-          networks: [],
-          friends: [],
-          friendPresence: {},
-          buffers: [],
-          channels: [],
-          messages: [],
-          networkStates: {},
-        };
-      },
+    attachSocket() {
+      calls.push('attach');
     },
-    conversations: { openQuery() { throw new Error('not used'); }, closeBuffer() { throw new Error('not used'); }, markBufferRead() { throw new Error('not used'); }, history() { return []; } },
-    friends: { upsertFriend() { throw new Error('not used'); }, removeFriend() { throw new Error('not used'); } },
-    irc: { join() { throw new Error('not used'); }, part() { throw new Error('not used'); }, sendMessage() { throw new Error('not used'); }, sendRaw() { throw new Error('not used'); } },
-    networks: { saveNetwork() { throw new Error('not used'); }, duplicateNetwork() { throw new Error('not used'); }, deleteNetwork() { throw new Error('not used'); } },
-    sessions: { connect() { throw new Error('not used'); }, disconnect() { throw new Error('not used'); }, requestChannelList() { throw new Error('not used'); }, cancelChannelList() {} },
+    detachSocket() {
+      calls.push('detach');
+    },
+    snapshot() {
+      return {
+        networks: [],
+        friends: [],
+        friendPresence: {},
+        buffers: [],
+        channels: [],
+        messages: [],
+        networkStates: {},
+      };
+    },
+    handleMessage() {
+      throw new Error('not used');
+    },
   } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
 
   assert.equal(initializeWebSocketConnection(socket, context), true);
@@ -57,31 +54,33 @@ test('websocket commands use the live local state and forward runtime methods', 
   const query = storage.conversations.upsertQuery(network.id, 'helper');
   const runtime = createRuntime(storage.runtimeStore);
   const calls: string[] = [];
-  runtime.sessions.connect = ((networkId: string) => {
+  const originalHandleMessage = runtime.ws.handleMessage;
+  runtime.http.networks.connect = ((networkId: string) => {
     calls.push(`connect:${networkId}`);
-  }) as typeof runtime.sessions.connect;
-  runtime.sessions.disconnect = ((networkId: string) => {
+  }) as typeof runtime.http.networks.connect;
+  runtime.http.networks.disconnect = ((networkId: string) => {
     calls.push(`disconnect:${networkId}`);
-  }) as typeof runtime.sessions.disconnect;
-  runtime.conversations.openQuery = ((networkId: string, target: string) => {
+  }) as typeof runtime.http.networks.disconnect;
+  runtime.http.buffers.openQuery = ((networkId: string, target: string) => {
     calls.push(`query.open:${networkId}:${target}`);
     runtime.gateway.publish({ type: 'buffer.upsert', buffer: query });
     return { buffer: query, messages: [] };
-  }) as typeof runtime.conversations.openQuery;
-  runtime.sessions.requestChannelList = ((networkId: string) => {
+  }) as typeof runtime.http.buffers.openQuery;
+  runtime.sessions.requestChannelList = ((networkId: string, _requester?: WebSocket) => {
     calls.push(`channel.list.request:${networkId}`);
     runtime.gateway.publish({ type: 'channel.list.started', networkId, requestId: 'request-1' });
     return 'request-1';
   }) as typeof runtime.sessions.requestChannelList;
-  runtime.sessions.cancelChannelList = ((networkId: string) => {
+  runtime.sessions.cancelChannelList = ((networkId: string, _requester: WebSocket) => {
     calls.push(`channel.list.cancel:${networkId}`);
   }) as typeof runtime.sessions.cancelChannelList;
   runtime.irc.sendRaw = ((networkId: string, raw: string, sourceBufferId?: string) => {
     calls.push(`raw.send:${networkId}:${raw}:${sourceBufferId ?? ''}`);
   }) as typeof runtime.irc.sendRaw;
+  runtime.ws.handleMessage = ((ws: WebSocket, message: ClientMessage) => originalHandleMessage(ws, message)) as typeof runtime.ws.handleMessage;
 
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket, ready } = await connectWebSocket(port);
 
@@ -130,8 +129,8 @@ test('websocket query.open uses the live runtime path', async () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
   const network = storage.networks.upsert(createNetworkInput());
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -156,8 +155,8 @@ test('websocket channel.list.cancel ignores missing networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
   const messages: Array<Record<string, unknown>> = [];

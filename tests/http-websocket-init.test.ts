@@ -6,9 +6,7 @@ import { initializeWebSocketConnection } from '../server/ws-server.js';
 import { createFailingWebSocket, createThrowingWebSocket } from './helpers/http-websocket-test-helpers.js';
 
 type WebSocketTestContext = Parameters<typeof initializeWebSocketConnection>[1];
-type WebSocketTestContextOverrides = {
-  [K in keyof WebSocketTestContext]?: Partial<WebSocketTestContext[K]>;
-};
+type WebSocketTestContextOverrides = Partial<WebSocketTestContext>;
 
 const createEmptySnapshot = () => ({
   networks: [],
@@ -22,85 +20,21 @@ const createEmptySnapshot = () => ({
 });
 
 const createWebSocketTestContext = (overrides: WebSocketTestContextOverrides = {}): WebSocketTestContext => ({
-  networkCatalog: { list() { return []; } },
-  gateway: {
-    attachSocket() {},
-    detachSocket() {},
-    snapshot: createEmptySnapshot,
-    ...overrides.gateway,
-  },
-  sessions: {
-    connect() {},
-    disconnect() {},
-    requestChannelList() {
-      return 'request-1';
-    },
-    cancelChannelList() {},
-    ...overrides.sessions,
-  },
-  conversations: {
-    openQuery() {
-      throw new Error('not used');
-    },
-    closeBuffer() {
-      throw new Error('not used');
-    },
-    markBufferRead() {
-      throw new Error('not used');
-    },
-    history() {
-      return [];
-    },
-    ...overrides.conversations,
-  },
-  friends: {
-    upsertFriend() {
-      throw new Error('not used');
-    },
-    removeFriend() {
-      throw new Error('not used');
-    },
-    ...overrides.friends,
-  },
-  irc: {
-    join() {
-      throw new Error('not used');
-    },
-    part() {
-      throw new Error('not used');
-    },
-    sendMessage() {
-      throw new Error('not used');
-    },
-    sendRaw() {
-      throw new Error('not used');
-    },
-    ...overrides.irc,
-  },
-  networks: {
-    saveNetwork() {
-      throw new Error('not used');
-    },
-    duplicateNetwork() {
-      throw new Error('not used');
-    },
-    deleteNetwork() {
-      throw new Error('not used');
-    },
-    ...overrides.networks,
-  },
+  attachSocket() {},
+  detachSocket() {},
+  snapshot: createEmptySnapshot,
+  handleMessage() {},
+  ...overrides,
 });
 
 test('websocket initialization installs the error handler before the first snapshot send', () => {
   const { socket, getErrorListenersAtSend } = createThrowingWebSocket();
   let attached = false;
   const context = createWebSocketTestContext({
-    gateway: {
-      attachSocket() {
-        attached = true;
-      },
-      snapshot: createEmptySnapshot,
+    attachSocket() {
+      attached = true;
     },
+    snapshot: createEmptySnapshot,
   });
 
   assert.doesNotThrow(() => {
@@ -114,15 +48,13 @@ test('websocket initialization detaches the socket when the first snapshot send 
   const { socket, getCloseCalls } = createFailingWebSocket();
   const calls: string[] = [];
   const context = createWebSocketTestContext({
-    gateway: {
-      attachSocket() {
-        calls.push('attach');
-      },
-      detachSocket() {
-        calls.push('detach');
-      },
-      snapshot: createEmptySnapshot,
+    attachSocket() {
+      calls.push('attach');
     },
+    detachSocket() {
+      calls.push('detach');
+    },
+    snapshot: createEmptySnapshot,
   });
 
   assert.equal(initializeWebSocketConnection(socket, context), false);
@@ -144,19 +76,17 @@ test('websocket initialization handles frames emitted during the first snapshot 
   };
   socket.close = () => {};
   const context = createWebSocketTestContext({
-    gateway: {
-      attachSocket() {
-        calls.push('attach');
-      },
-      snapshot() {
-        calls.push('snapshot');
-        return createEmptySnapshot();
-      },
+    attachSocket() {
+      calls.push('attach');
     },
-    sessions: {
-      connect(networkId: string) {
-        calls.push(`connect:${networkId}`);
-      },
+    snapshot() {
+      calls.push('snapshot');
+      return createEmptySnapshot();
+    },
+    handleMessage(_socket, message) {
+      if (message.type === 'network.connect') {
+        calls.push(`connect:${message.networkId}`);
+      }
     },
   });
 

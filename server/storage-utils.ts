@@ -1,5 +1,6 @@
 import { pbkdf2Sync } from 'node:crypto';
-import type { BufferState, ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { StoredNetworkProfile } from '../shared/network-model.js';
+import type { BufferState, ChannelState, ChannelUserState, FriendState } from '../shared/protocol.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
 import { getLocalIrcIdentity } from '../shared/local-defaults.js';
 import type { SecretBox } from './network-secret.js';
@@ -92,22 +93,27 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
   ];
 };
 
-export const toNetworkProfile = (row: NetworkRow): NetworkProfile => ({
-  id: row.id,
-  templateId: row.templateId,
-  managerHidden: Boolean(row.managerHidden),
-  name: row.name,
-  host: row.host,
-  port: row.port,
-  tls: Boolean(row.tls),
-  nick: row.nick,
-  altNicks: parseJson<string[]>(row.altNicks, []),
-  username: row.username,
-  realName: row.realName,
-  hasPassword: Boolean(row.password),
-  favorite: Boolean(row.favorite),
-  autoJoin: parseJson<string[]>(row.autoJoin, []),
-});
+export const toNetworkProfile = (row: NetworkRow): StoredNetworkProfile => {
+  const profile = {
+    id: row.id,
+    templateId: row.templateId,
+    managerHidden: Boolean(row.managerHidden),
+    name: row.name,
+    host: row.host,
+    port: row.port,
+    tls: Boolean(row.tls),
+    nick: row.nick,
+    altNicks: parseJson<string[]>(row.altNicks, []),
+    username: row.username,
+    realName: row.realName,
+    hasPassword: Boolean(row.password),
+    favorite: Boolean(row.favorite),
+    autoJoin: parseJson<string[]>(row.autoJoin, []),
+  };
+  return profile.managerHidden
+    ? profile as Extract<StoredNetworkProfile, { managerHidden: true }>
+    : profile as Extract<StoredNetworkProfile, { managerHidden: false }>;
+};
 
 export const toRuntimeNetworkProfile = (row: NetworkRow, secretBox: SecretBox): RuntimeNetworkProfile => ({
   ...toNetworkProfile(row),

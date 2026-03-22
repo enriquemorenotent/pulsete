@@ -1,5 +1,5 @@
 import type WebSocket from 'ws';
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ClientMessage, ServerMessage } from '../shared/protocol.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -54,14 +54,33 @@ export type RuntimeNetworkMutations = {
 
 export type RuntimeNetworkCatalog = Pick<StorageNetworksRepository, 'list'>;
 
-export type RuntimeContext = {
-  networkCatalog: RuntimeNetworkCatalog;
-  gateway: Pick<RuntimeGateway, 'attachSocket' | 'detachSocket' | 'snapshot'>;
-  sessions: RuntimeNetworkSessionService;
-  conversations: RuntimeConversationMutations;
-  friends: RuntimeFriendMutations;
-  irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
-  networks: RuntimeNetworkMutations;
+export type RuntimeHttpApi = {
+  networks: {
+    list: RuntimeNetworkCatalog['list'];
+    save: RuntimeNetworkMutations['saveNetwork'];
+    duplicate: RuntimeNetworkMutations['duplicateNetwork'];
+    remove: RuntimeNetworkMutations['deleteNetwork'];
+    connect(networkId: string): void;
+    disconnect(networkId: string): void;
+  };
+  buffers: {
+    joinChannel(networkId: string, channel: string, sourceBufferId?: string): void;
+    openQuery: RuntimeConversationMutations['openQuery'];
+    close: RuntimeConversationMutations['closeBuffer'];
+    markRead: RuntimeConversationMutations['markBufferRead'];
+    history: RuntimeConversationMutations['history'];
+  };
+  friends: {
+    add: RuntimeFriendMutations['upsertFriend'];
+    remove: RuntimeFriendMutations['removeFriend'];
+  };
+};
+
+export type RuntimeWebSocketApi = {
+  attachSocket(ws: WebSocket): void;
+  detachSocket(ws: WebSocket): void;
+  snapshot(): ReturnType<typeof createRuntimeSnapshot>;
+  handleMessage(ws: WebSocket, message: ClientMessage): void;
 };
 
 export type RuntimeServices = {
@@ -72,7 +91,8 @@ export type RuntimeServices = {
   friends: RuntimeFriendMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
-  context: RuntimeContext;
+  http: RuntimeHttpApi;
+  ws: RuntimeWebSocketApi;
 };
 
 export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
@@ -150,6 +170,69 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
     deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
   };
+  const http: RuntimeHttpApi = {
+    networks: {
+      list: () => store.networks.list(),
+      save: (data, networkId) => networks.saveNetwork(data, networkId),
+      duplicate: (networkId) => networks.duplicateNetwork(networkId),
+      remove: (networkId) => networks.deleteNetwork(networkId),
+      connect: (networkId) => sessions.connect(networkId),
+      disconnect: (networkId) => sessions.disconnect(networkId),
+    },
+    buffers: {
+      joinChannel: (networkId, channel, sourceBufferId) => irc.join(networkId, channel, sourceBufferId),
+      openQuery: (networkId, target) => conversations.openQuery(networkId, target),
+      close: (bufferId) => conversations.closeBuffer(bufferId),
+      markRead: (bufferId) => conversations.markBufferRead(bufferId),
+      history: (bufferId, limit) => conversations.history(bufferId, limit),
+    },
+    friends: {
+      add: (nick) => friends.upsertFriend(nick),
+      remove: (friendId) => friends.removeFriend(friendId),
+    },
+  };
+  const ws: RuntimeWebSocketApi = {
+    attachSocket: (ws) => gateway.attachSocket(ws),
+    detachSocket: (ws) => gateway.detachSocket(ws),
+    snapshot: () => gateway.snapshot(),
+    handleMessage: (ws, message) => {
+      switch (message.type) {
+        case 'network.connect':
+          http.networks.connect(message.networkId);
+          return;
+        case 'network.disconnect':
+          http.networks.disconnect(message.networkId);
+          return;
+        case 'channel.join':
+          http.buffers.joinChannel(message.networkId, message.channel, message.sourceBufferId);
+          return;
+        case 'channel.part':
+          irc.part(message.networkId, message.channel, message.sourceBufferId);
+          return;
+        case 'query.open':
+          http.buffers.openQuery(message.networkId, message.target);
+          return;
+        case 'message.send':
+          irc.sendMessage(
+            message.networkId,
+            message.target,
+            message.body,
+            message.kind,
+            message.sourceBufferId
+          );
+          return;
+        case 'raw.send':
+          irc.sendRaw(message.networkId, message.raw, message.sourceBufferId);
+          return;
+        case 'channel.list.request':
+          sessions.requestChannelList(message.networkId, ws);
+          return;
+        case 'channel.list.cancel':
+          sessions.cancelChannelList(message.networkId, ws);
+          return;
+      }
+    },
+  };
 
   return {
     connections: connectionManager.connections,
@@ -159,14 +242,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     friends,
     irc,
     networks,
-    context: {
-      networkCatalog: store.networks,
-      gateway,
-      sessions,
-      conversations,
-      friends,
-      irc,
-      networks,
-    },
+    http,
+    ws,
   };
 };

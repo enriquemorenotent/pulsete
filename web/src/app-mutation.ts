@@ -1,5 +1,5 @@
 import type { ServerMessage } from '../../shared/protocol.js';
-import type { AppDispatch } from './app-actions-types.js';
+import type { AppDispatch, ValueReader } from './app-actions-types.js';
 import type { GatewayStatus } from './app-types.js';
 import { syncMutationMessages } from './mutation-message-sync.js';
 
@@ -19,7 +19,7 @@ type AppMutationExecutorOptions<TResult, TValue> = {
 
 type AppMutationExecutorParams = {
   dispatch: AppDispatch;
-  gatewayStatus: GatewayStatus;
+  getGatewayStatus: ValueReader<GatewayStatus>;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
@@ -36,7 +36,7 @@ const toErrorMessage = (error: unknown, fallback: string) =>
 
 export const createAppMutationExecutor = ({
   dispatch,
-  gatewayStatus,
+  getGatewayStatus,
   updateBanner,
 }: AppMutationExecutorParams) => async <TResult, TValue = TResult>({
   request,
@@ -49,7 +49,7 @@ export const createAppMutationExecutor = ({
 }: AppMutationExecutorOptions<TResult, TValue>): Promise<TValue> => {
   try {
     const result = await request();
-    syncMutationMessages(gatewayStatus, readMutationMessages(result), dispatch);
+    syncMutationMessages(getGatewayStatus(), readMutationMessages(result), dispatch);
     onSuccess?.(result);
     const notice = typeof successMessage === 'function' ? successMessage(result) : successMessage;
     if (notice) {

@@ -3,7 +3,7 @@ import type { GatewayActionParams, GatewayActions } from './app-actions-types.js
 
 export const createGatewayActions = (params: GatewayActionParams): GatewayActions => {
   const getGatewaySocket = (showBanner = true) => {
-    if (params.gatewayStatus !== 'connected' || !params.socketRef.current) {
+    if (params.getGatewayStatus() !== 'connected' || !params.socketRef.current) {
       if (showBanner) {
         params.updateBanner('error', gatewayReconnectMessage);
       }

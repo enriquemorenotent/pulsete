@@ -34,8 +34,8 @@ test('saving a hidden connection instance broadcasts its server buffer before th
     username: 'olduser',
     realName: 'Old User',
   }));
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
   const messages: Record<string, unknown>[] = [];
@@ -83,7 +83,7 @@ test('delete returns all deleted network ids when removing a template', async ()
     managerHidden: true,
     name: 'TemplateNet clone',
   }));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
   const port = await listen(server);
 
   try {
@@ -115,8 +115,8 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     favorite: true,
     autoJoin: ['#help'],
   }));
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -163,7 +163,7 @@ test('query routes validate missing networks and invalid targets', async () => {
     networkId: network.id,
     name: '#help',
   });
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
   const port = await listen(server);
 
   try {

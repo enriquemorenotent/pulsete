@@ -1,27 +1,20 @@
-import { isConnectionInstance } from '../shared/network-model.js';
-import type { NetworkProfile, ServerMessage } from '../shared/protocol.js';
+import { isConnectionInstance, type StoredNetworkProfile } from '../shared/network-model.js';
+import type { ServerMessage } from '../shared/protocol.js';
 import type { StorageConversationsRepository } from './storage-conversations-repository.js';
 
 export const collectRequestedServerBuffer = (
   conversations: StorageConversationsRepository,
-  requestedNetworkId: string,
-  profiles: NetworkProfile[]
+  profile: StoredNetworkProfile
 ) => {
-  for (const profile of profiles) {
-    if (!isConnectionInstance(profile)) {
-      continue;
-    }
-    const serverBuffer = conversations.getServerBuffer(profile.id);
-    if (profile.id === requestedNetworkId) {
-      return serverBuffer;
-    }
+  if (isConnectionInstance(profile)) {
+    return conversations.getServerBuffer(profile.id);
   }
   return null;
 };
 
 export const createNetworkUpsertMessages = (
   conversations: StorageConversationsRepository,
-  profiles: NetworkProfile[]
+  profiles: readonly StoredNetworkProfile[]
 ) => {
   const messages: ServerMessage[] = [];
   for (const profile of profiles) {

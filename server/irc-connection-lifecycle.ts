@@ -95,7 +95,7 @@ export const disconnect = (connection: IrcLifecycleContext, raw = 'QUIT :Client 
   if (socket) {
     clearConnectDeadlineTimer(connection);
     clearReconnectTimer(connection);
-    connection.ports.transport.sendRaw(raw);
+    connection.sendRaw(raw);
     socket.end();
   }
   const wasActive = lifecycle.connected || socket !== null || lifecycle.serverName !== null;

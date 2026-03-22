@@ -41,7 +41,7 @@ export const resolveTrackedChannel = (connection: IrcChannelStateContext, channe
   resolveTrackedChannelKey(connection, channel, false);
 
 export const clearExpiredChannelSessions = (connection: IrcChannelStateContext) => {
-  connection.ports.reply.prunePendingReplyContexts();
+  connection.prunePendingReplyContexts();
 };
 
 export const getChannelSession = (connection: IrcChannelStateContext, channel: string) => {

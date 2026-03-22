@@ -4,6 +4,7 @@ import type { SocketHandle } from './client.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 export type MutableRef<T> = { current: T };
+export type ValueReader<T> = () => T;
 
 export type AppDispatch = (action: Action) => void;
 
@@ -18,7 +19,7 @@ export type DraftActions = {
 };
 
 export type GatewayActionParams = BannerActions & {
-  gatewayStatus: GatewayStatus;
+  getGatewayStatus: ValueReader<GatewayStatus>;
   socketRef: MutableRef<SocketHandle | null>;
 };
 
@@ -34,15 +35,15 @@ export type ConversationActions = {
 };
 
 export type WorkspaceActions = {
-  workspace: WorkspaceView;
+  getWorkspace: ValueReader<WorkspaceView>;
 };
 
 export type AppActionState = {
-  buffers: AppDomainState['buffers'];
-  channelList: AppTransientState['channelList'];
-  gatewayStatus: AppDomainState['gatewayStatus'];
-  networks: AppDomainState['networks'];
-  networkStates: AppDomainState['networkStates'];
+  getBuffers: ValueReader<AppDomainState['buffers']>;
+  getChannelList: ValueReader<AppTransientState['channelList']>;
+  getGatewayStatus: ValueReader<AppDomainState['gatewayStatus']>;
+  getNetworks: ValueReader<AppDomainState['networks']>;
+  getNetworkStates: ValueReader<AppDomainState['networkStates']>;
 };
 
 export const selectBuffer = (dispatch: AppDispatch, buffer: BufferState) =>
@@ -50,3 +51,5 @@ export const selectBuffer = (dispatch: AppDispatch, buffer: BufferState) =>
 
 export const selectPendingChannel = (dispatch: AppDispatch, networkId: string, channel: string) =>
   dispatch({ type: 'select', selection: { kind: 'pending-channel', networkId, channel } });
+
+export const constantReader = <T,>(value: T): ValueReader<T> => () => value;

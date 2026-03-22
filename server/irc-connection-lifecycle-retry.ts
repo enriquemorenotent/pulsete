@@ -34,7 +34,7 @@ export const scheduleReconnect = (connection: IrcLifecycleContext) => {
       return;
     }
     emitStatus(connection, `Reconnecting (${attempt}/3)`, 'notice');
-    connection.ports.lifecycle.connect(false);
+    connection.connect(false);
   }, 3000 * attempt);
   timer.unref?.();
   lifecycle.reconnectTimer = timer;

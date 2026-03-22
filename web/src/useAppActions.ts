@@ -4,63 +4,111 @@ import { createConversationActions } from './app-actions-conversation.js';
 import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
 import { createNetworkActions } from './app-actions-networks.js';
-import type { AppActionState, AppDispatch, DraftActions, MutableRef, WorkspaceActions } from './app-actions-types.js';
+import {
+  constantReader,
+  type AppActionState,
+  type AppDispatch,
+  type MutableRef,
+  type WorkspaceActions,
+} from './app-actions-types.js';
 import type { SocketHandle } from './client.js';
 
-type CreateAppActionsParams = AppActionState & DraftActions & WorkspaceActions & {
+type CreateAppActionsParams = AppActionState
+  & WorkspaceActions
+  & {
+      getConversation: () => ConversationIndex;
+      getDraft: () => string;
+      dispatch: AppDispatch;
+      socketRef: MutableRef<SocketHandle | null>;
+      recordComposerEntry: (value: string) => void;
+      setDraft: (value: string) => void;
+      updateBanner: (kind: 'notice' | 'error', message: string) => void;
+    };
+
+type CreateStaticAppActionsParams = {
+  buffers: ReturnType<CreateAppActionsParams['getBuffers']>;
+  channelList: ReturnType<CreateAppActionsParams['getChannelList']>;
   conversation: ConversationIndex;
+  draft: string;
+  gatewayStatus: ReturnType<CreateAppActionsParams['getGatewayStatus']>;
+  networks: ReturnType<CreateAppActionsParams['getNetworks']>;
+  networkStates: ReturnType<CreateAppActionsParams['getNetworkStates']>;
+  workspace: ReturnType<WorkspaceActions['getWorkspace']>;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
+  recordComposerEntry: (value: string) => void;
+  setDraft: (value: string) => void;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
-export function createAppActions(params: CreateAppActionsParams) {
+const createAppActionsFromReaders = (params: CreateAppActionsParams) => {
   const gateway = createGatewayActions({
-    gatewayStatus: params.gatewayStatus,
+    getGatewayStatus: params.getGatewayStatus,
     socketRef: params.socketRef,
     updateBanner: params.updateBanner,
   });
   const conversation = createConversationActions({
-    channelList: params.channelList,
-    conversation: params.conversation,
     dispatch: params.dispatch,
-    gatewayStatus: params.gatewayStatus,
-    networkStates: params.networkStates,
+    getChannelList: params.getChannelList,
+    getConversation: params.getConversation,
+    getGatewayStatus: params.getGatewayStatus,
+    getNetworkStates: params.getNetworkStates,
     updateBanner: params.updateBanner,
     ...gateway,
   });
   return {
     ...createNetworkActions({
-      conversation: params.conversation,
       dispatch: params.dispatch,
-      gatewayStatus: params.gatewayStatus,
+      getConversation: params.getConversation,
+      getGatewayStatus: params.getGatewayStatus,
       updateBanner: params.updateBanner,
     }),
     ...createFriendActions({
-      buffers: params.buffers,
       dispatch: params.dispatch,
-      gatewayStatus: params.gatewayStatus,
-      networkStates: params.networkStates,
+      getBuffers: params.getBuffers,
+      getGatewayStatus: params.getGatewayStatus,
+      getNetworkStates: params.getNetworkStates,
       updateBanner: params.updateBanner,
-      workspace: params.workspace,
+      getWorkspace: params.getWorkspace,
       ...conversation,
     }),
     ...createChatActions({
-      channelList: params.channelList,
-      conversation: params.conversation,
       dispatch: params.dispatch,
-      gatewayStatus: params.gatewayStatus,
-      networks: params.networks,
+      getChannelList: params.getChannelList,
+      getConversation: params.getConversation,
+      getDraft: params.getDraft,
+      getGatewayStatus: params.getGatewayStatus,
+      getNetworks: params.getNetworks,
+      getWorkspace: params.getWorkspace,
       updateBanner: params.updateBanner,
-      workspace: params.workspace,
-      draft: params.draft,
       setDraft: params.setDraft,
       recordComposerEntry: params.recordComposerEntry,
       ...gateway,
       ...conversation,
     }),
   };
+};
+
+export function createAppActions(params: CreateStaticAppActionsParams) {
+  return createAppActionsFromReaders({
+    getBuffers: constantReader(params.buffers),
+    getChannelList: constantReader(params.channelList),
+    getConversation: constantReader(params.conversation),
+    getDraft: constantReader(params.draft),
+    getGatewayStatus: constantReader(params.gatewayStatus),
+    getNetworks: constantReader(params.networks),
+    getNetworkStates: constantReader(params.networkStates),
+    getWorkspace: constantReader(params.workspace),
+    dispatch: params.dispatch,
+    socketRef: params.socketRef,
+    setDraft: params.setDraft,
+    recordComposerEntry: params.recordComposerEntry,
+    updateBanner: params.updateBanner,
+  });
 }
+
+export const createLiveAppActions = (params: CreateAppActionsParams) =>
+  createAppActionsFromReaders(params);
 
 export type AppActions = ReturnType<typeof createAppActions>;
 export type ChatActionSet = Pick<

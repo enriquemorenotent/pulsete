@@ -53,15 +53,12 @@ export class NetworkLifecycleService {
     if (networkId && !this.context.networks.get(networkId)) {
       throw notFound('Network not found');
     }
-    const updatedProfiles = this.context.networks.saveWithRelatedInstances(input);
-    const network = updatedProfiles[0] ?? null;
-    if (!network) {
-      throw notFound('Network not found');
-    }
-    const serverBuffer = collectRequestedServerBuffer(this.context.conversations, network.id, updatedProfiles);
+    const saveResult = this.context.networks.saveWithRelatedInstances(input);
+    const updatedProfiles = [saveResult.requested, ...saveResult.relatedInstances];
+    const serverBuffer = collectRequestedServerBuffer(this.context.conversations, saveResult.requested);
     const messages = createNetworkUpsertMessages(this.context.conversations, updatedProfiles);
     this.applyMutation(updatedProfiles.map((profile) => profile.id), messages);
-    return { network, serverBuffer, messages };
+    return { network: saveResult.requested, serverBuffer, messages };
   }
 
   deleteNetwork(networkId: string) {

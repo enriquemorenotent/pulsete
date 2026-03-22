@@ -1,3 +1,7 @@
+import type {
+  ConnectionInstanceProfile,
+  StoredNetworkProfile,
+} from '../shared/network-model.js';
 import type { AppSnapshot, BufferState, ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
 
 export type NetworkRow = {
@@ -55,15 +59,27 @@ export type FriendRow = {
   updatedAt: number;
 };
 
-export type RuntimeNetworkProfile = NetworkProfile & {
+export type RuntimeNetworkProfile = StoredNetworkProfile & {
   password?: string;
 };
 
-export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword'> & {
+type NetworkWriteInput = {
   id?: string;
   password?: string;
   clearPassword?: boolean;
 };
+
+export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword'> & NetworkWriteInput;
+
+export type NetworkSaveResult =
+  | {
+      requested: Extract<StoredNetworkProfile, { managerHidden: false }>;
+      relatedInstances: ConnectionInstanceProfile[];
+    }
+  | {
+      requested: ConnectionInstanceProfile;
+      relatedInstances: [];
+    };
 
 export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'users'> &
   Partial<Pick<ChannelState, 'id' | 'topic' | 'users'>> & {
@@ -90,7 +106,7 @@ export type StorageSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];
   listFriends(): FriendState[];
-  listNetworks(): NetworkProfile[];
+  listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
 };
 

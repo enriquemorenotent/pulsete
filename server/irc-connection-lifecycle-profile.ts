@@ -22,7 +22,7 @@ export const applyNickFallback = (
     connection.lifecycle.currentNick = fallbackNick;
   }
   if (options.replyTarget) {
-    connection.ports.reply.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
+    connection.queueReplyContext(createNickReplyContext(options.replyTarget, fallbackNick));
   }
 };
 
@@ -70,6 +70,6 @@ export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNet
   } else if (strategy === 'reconnect-active-session') {
     reconnectWithUpdatedProfile(connection);
   } else if (strategy === 'update-live-nick') {
-    connection.ports.command.setNick(profile.nick);
+    connection.setNick(profile.nick);
   }
 };

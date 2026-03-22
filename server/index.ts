@@ -8,9 +8,9 @@ const PORT = Number(process.env.PORT ?? 18487);
 const HOST = process.env.HOST ?? '127.0.0.1';
 const storage = new Storage();
 const runtime = createRuntime(storage.runtimeStore);
-const server = createServer(createHttpHandler(runtime.context));
+const server = createServer(createHttpHandler(runtime.http));
 
-attachWebSocketServer(server, runtime.context);
+attachWebSocketServer(server, runtime.ws);
 server.on('close', () => {
   runtime.gateway.close();
   storage.close();

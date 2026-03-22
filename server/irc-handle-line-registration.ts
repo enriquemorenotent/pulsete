@@ -19,7 +19,7 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
   if (command !== '001') {
     return false;
   }
-  connection.ports.lifecycle.markRegistered(nick, params[0] ?? connection.profile.nick);
+  connection.markRegistered(nick, params[0] ?? connection.profile.nick);
   for (const line of formatServerNumeric(command, params)) {
     emitStatus(connection, line);
   }
@@ -29,9 +29,9 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
       ? `* Connected securely via ${connection.lifecycle.socket.getProtocol() ?? 'TLS'} ${connection.lifecycle.socket.getCipher().standardName ?? connection.lifecycle.socket.getCipher().name}`
       : '* Connected via TCP'
   );
-  connection.ports.friendPresence.refreshFriendPresence();
+  connection.refreshFriendPresence();
   for (const channel of connection.profile.autoJoin) {
-    connection.ports.command.join(channel);
+    connection.join(channel);
   }
   return true;
 };
@@ -45,7 +45,7 @@ const handleNickConflict = (
   if (command !== '433') {
     return false;
   }
-  const replyContext = connection.ports.reply.consumeReplyContext(command, params, nick);
+  const replyContext = connection.consumeReplyContext(command, params, nick);
   if (connection.lifecycle.connected && !replyContext && !connection.replyTracker.pendingNick) {
     return true;
   }
@@ -63,10 +63,10 @@ const handleNickConflict = (
   }
   const fallbackNick = getNextNickOnConflict(connection, attemptedNick);
   const shouldUpdatePendingNick = replyContext?.kind === 'nick' || !!connection.replyTracker.pendingNick;
-  if (!connection.ports.transport.sendRaw(`NICK ${fallbackNick}`)) {
+  if (!connection.sendRaw(`NICK ${fallbackNick}`)) {
     return true;
   }
-  connection.ports.command.applyNickFallback(fallbackNick, { replyTarget, updatePending: shouldUpdatePendingNick });
+  connection.applyNickFallback(fallbackNick, { replyTarget, updatePending: shouldUpdatePendingNick });
   emitStatus(connection, `${attemptedNick} is already in use. Retrying with ${fallbackNick}...`, 'notice', replyTarget, true);
   return true;
 };
@@ -80,14 +80,14 @@ const handleNickRejected = (
   if (!nickRejectionCommands.has(command) || command === '433' || (command === '437' && isChannelTarget(params[1] ?? ''))) {
     return false;
   }
-  const replyContext = connection.ports.reply.consumeReplyContext(command, params, nick);
+  const replyContext = connection.consumeReplyContext(command, params, nick);
   const rejectedNick = replyContext?.kind === 'nick' ? replyContext.requestedNick : connection.replyTracker.pendingNick;
   if (!rejectedNick) {
     return false;
   }
   const replyTarget = replyContext && 'sourceTarget' in replyContext ? replyContext.sourceTarget : undefined;
   if (!replyContext) {
-    connection.ports.command.clearPendingNick();
+    connection.clearPendingNick();
   }
   emitStatus(connection, `${rejectedNick} was rejected by the server`, 'error', replyTarget, true);
   return true;

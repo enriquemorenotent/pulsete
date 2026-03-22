@@ -7,7 +7,7 @@ import type {
   IrcFriendPresenceState,
   IrcLifecycleState,
 } from './irc-state-types.js';
-import type { Handlers, IrcConnectionState } from './irc-types.js';
+import type { Handlers, IrcConnectionData } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 const defaultChannelJoinTimeoutMs = 15_000;
@@ -24,7 +24,7 @@ export const createIrcConnectionState = (
   profile: RuntimeNetworkProfile,
   handlers: Handlers,
   options: IrcConnectionOptions = {}
-): Omit<IrcConnectionState, 'ports'> => {
+): IrcConnectionData => {
   const lifecycle: IrcLifecycleState = {
     socket: null,
     buffer: '',

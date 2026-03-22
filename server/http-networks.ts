@@ -3,29 +3,29 @@ import type { RouteArgs } from './http-types.js';
 
 export const handleNetworkRoutes = async ({ req, res, pathname, context }: RouteArgs) => {
   if (req.method === 'GET' && pathname === '/api/networks') {
-    writeJson(res, 200, { networks: context.networkCatalog.list() });
+    writeJson(res, 200, { networks: context.networks.list() });
     return true;
   }
   if (req.method === 'POST' && pathname === '/api/networks') {
-    const result = context.networks.saveNetwork(removeRequestNetworkId(await readJson(req)));
+    const result = context.networks.save(removeRequestNetworkId(await readJson(req)));
     writeJson(res, 200, result);
     return true;
   }
   const networkMatch = pathname.match(/^\/api\/networks\/([^/]+)$/);
   if (networkMatch && req.method === 'PUT') {
     const networkId = decodeRouteParam(networkMatch[1]);
-    const result = context.networks.saveNetwork(await readJson(req), networkId);
+    const result = context.networks.save(await readJson(req), networkId);
     writeJson(res, 200, result);
     return true;
   }
   if (networkMatch && req.method === 'DELETE') {
-    const result = context.networks.deleteNetwork(decodeRouteParam(networkMatch[1]));
+    const result = context.networks.remove(decodeRouteParam(networkMatch[1]));
     writeJson(res, 200, { ok: true, ...result });
     return true;
   }
   const duplicateMatch = pathname.match(/^\/api\/networks\/([^/]+)\/duplicate$/);
   if (duplicateMatch && req.method === 'POST') {
-    const result = context.networks.duplicateNetwork(decodeRouteParam(duplicateMatch[1]));
+    const result = context.networks.duplicate(decodeRouteParam(duplicateMatch[1]));
     writeJson(res, 200, result);
     return true;
   }
@@ -33,8 +33,8 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
   if (connectMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(connectMatch[1]);
     connectMatch[2] === 'connect'
-      ? context.sessions.connect(networkId)
-      : context.sessions.disconnect(networkId);
+      ? context.networks.connect(networkId)
+      : context.networks.disconnect(networkId);
     writeJson(res, 200, { ok: true });
     return true;
   }

@@ -30,16 +30,16 @@ export const sendRaw = (connection: IrcRawIoContext, raw: string, statusTarget?:
 };
 
 export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourceTarget = 'server'): boolean => {
-  connection.ports.reply.prunePendingReplyContexts();
+  connection.prunePendingReplyContexts();
   const parsed = parseRawIrcClientCommand(raw);
   if (!parsed) {
     return false;
   }
   if (parsed.name === 'join' && parsed.args[0]) {
-    return connection.ports.command.join(parsed.args[0], sourceTarget, { visiblePending: true });
+    return connection.join(parsed.args[0], sourceTarget, { visiblePending: true });
   }
   if (parsed.name === 'part' && parsed.args[0]) {
-    return connection.ports.command.part(
+    return connection.part(
       parsed.args[0],
       parsed.args.slice(1).join(' ').replace(/^:/, '') || 'Leaving',
       sourceTarget
@@ -47,8 +47,8 @@ export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourc
   }
   const replyContext = createReplyContextFromRaw(sourceTarget, raw);
   if (parsed.name === 'list') {
-    if (connection.ports.channelList.isChannelListPending()) {
-      emitStatus(connection, connection.ports.channelList.getChannelListRequestFailureMessage(), 'error', sourceTarget);
+    if (connection.isChannelListPending()) {
+      emitStatus(connection, connection.getChannelListRequestFailureMessage(), 'error', sourceTarget);
       return false;
     }
     if (!connection.lifecycle.connected) {
@@ -58,7 +58,7 @@ export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourc
     if (!sendRaw(connection, raw, sourceTarget)) {
       return false;
     }
-    connection.ports.channelList.startChannelList('raw', { sourceTarget });
+    connection.startChannelList('raw', { sourceTarget });
     return true;
   }
   return sendTrackedRaw(connection, raw, sourceTarget, replyContext);
@@ -109,7 +109,7 @@ export const sendTrackedRaw = (
     return false;
   }
   if (replyContext) {
-    connection.ports.reply.queueReplyContext(replyContext);
+    connection.queueReplyContext(replyContext);
   }
   return true;
 };

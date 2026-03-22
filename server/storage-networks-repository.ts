@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { SecretBox } from './network-secret.js';
+import type { ConnectionInstanceProfile } from '../shared/network-model.js';
 import { isConnectionInstance } from '../shared/network-model.js';
 import {
   deleteNetwork,
@@ -10,7 +11,7 @@ import {
 } from './storage-networks.js';
 import { ensureNetworkBuffers } from './storage-network-invariants.js';
 import { runInTransaction } from './storage-db.js';
-import type { NetworkInput } from './storage-types.js';
+import type { NetworkInput, NetworkSaveResult } from './storage-types.js';
 
 export class StorageNetworksRepository {
   constructor(
@@ -42,14 +43,14 @@ export class StorageNetworksRepository {
     });
   }
 
-  saveWithRelatedInstances(input: NetworkInput) {
+  saveWithRelatedInstances(input: NetworkInput): NetworkSaveResult {
     return runInTransaction(this.db, () => {
       const network = upsertNetwork(this.db, input, this.secretBox);
       ensureNetworkBuffers(this.db, network);
-      const profiles = [network];
       if (isConnectionInstance(network)) {
-        return profiles;
+        return { requested: network, relatedInstances: [] };
       }
+      const relatedInstances: ConnectionInstanceProfile[] = [];
       for (const candidate of listNetworks(this.db)) {
         if (!isConnectionInstance(candidate) || candidate.templateId !== network.id) {
           continue;
@@ -71,10 +72,13 @@ export class StorageNetworksRepository {
           ...(input.password !== undefined ? { password: input.password } : {}),
           ...(input.clearPassword ? { clearPassword: true } : {}),
         }, this.secretBox);
+        if (!isConnectionInstance(updated)) {
+          throw new Error('Expected related connection instance update');
+        }
         ensureNetworkBuffers(this.db, updated);
-        profiles.push(updated);
+        relatedInstances.push(updated);
       }
-      return profiles;
+      return { requested: network, relatedInstances };
     });
   }
 

@@ -1,10 +1,10 @@
 import type { Server } from 'node:http';
 import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol.js';
-import type { HttpContext } from './http-types.js';
+import type { RuntimeWebSocketApi } from './runtime.js';
 import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
 
-export const attachWebSocketServer = (server: Server, context: HttpContext) => {
+export const attachWebSocketServer = (server: Server, context: RuntimeWebSocketApi) => {
   const wss = new WebSocketServer({ noServer: true, maxPayload: jsonBodyLimitBytes });
   server.on('upgrade', (req, socket, head) => {
     const url = tryParseRequestUrl(req.url);
@@ -21,11 +21,11 @@ export const attachWebSocketServer = (server: Server, context: HttpContext) => {
   });
 };
 
-export const initializeWebSocketConnection = (ws: WebSocket, context: HttpContext) => {
+export const initializeWebSocketConnection = (ws: WebSocket, context: RuntimeWebSocketApi) => {
   ws.on('error', () => {});
   ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
-  context.gateway.attachSocket(ws);
-  if (!sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.gateway.snapshot() }))) {
+  context.attachSocket(ws);
+  if (!sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.snapshot() }))) {
     return false;
   }
   return true;
@@ -33,47 +33,11 @@ export const initializeWebSocketConnection = (ws: WebSocket, context: HttpContex
 
 const handleClientMessage = (
   ws: WebSocket,
-  context: HttpContext,
+  context: RuntimeWebSocketApi,
   raw: string
 ) => {
   try {
-    const message = decodeClient(raw);
-    switch (message.type) {
-      case 'network.connect':
-        context.sessions.connect(message.networkId);
-        return;
-      case 'network.disconnect':
-        context.sessions.disconnect(message.networkId);
-        return;
-      case 'channel.join':
-        context.irc.join(message.networkId, message.channel, message.sourceBufferId);
-        return;
-      case 'channel.part':
-        context.irc.part(message.networkId, message.channel, message.sourceBufferId);
-        return;
-      case 'query.open': {
-        context.conversations.openQuery(message.networkId, message.target);
-        return;
-      }
-      case 'message.send':
-        context.irc.sendMessage(
-          message.networkId,
-          message.target,
-          message.body,
-          message.kind,
-          message.sourceBufferId
-        );
-        return;
-      case 'raw.send':
-        context.irc.sendRaw(message.networkId, message.raw, message.sourceBufferId);
-        return;
-      case 'channel.list.request':
-        context.sessions.requestChannelList(message.networkId, ws);
-        return;
-      case 'channel.list.cancel':
-        context.sessions.cancelChannelList(message.networkId, ws);
-        return;
-    }
+    context.handleMessage(ws, decodeClient(raw));
   } catch (error) {
     if (ws.readyState !== WebSocket.OPEN) {
       return;
@@ -82,11 +46,11 @@ const handleClientMessage = (
   }
 };
 
-const sendManagedEncoded = (ws: WebSocket, context: HttpContext, payload: string) => {
+const sendManagedEncoded = (ws: WebSocket, context: RuntimeWebSocketApi, payload: string) => {
   if (sendEncoded(ws, payload)) {
     return true;
   }
-  context.gateway.detachSocket(ws);
+  context.detachSocket(ws);
   return false;
 };
 

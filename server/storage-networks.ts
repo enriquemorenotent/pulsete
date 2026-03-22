@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { StoredNetworkProfile } from '../shared/network-model.js';
 import { isEncryptedSecret } from './network-secret.js';
 import { badRequest, notFound } from './app-error.js';
 import type { SecretBox } from './network-secret.js';
@@ -15,7 +15,7 @@ import {
 const networkColumns =
   'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin';
 
-export const listNetworks = (db: DatabaseSync): NetworkProfile[] => {
+export const listNetworks = (db: DatabaseSync): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
   return (db.prepare(sql).all() as NetworkRow[]).map(toNetworkProfile);
 };
@@ -30,7 +30,7 @@ export const ensureDefaultNetworks = (db: DatabaseSync, saveNetwork: SaveNetwork
   }
 };
 
-export const getNetwork = (db: DatabaseSync, networkId: string): NetworkProfile | null => {
+export const getNetwork = (db: DatabaseSync, networkId: string): StoredNetworkProfile | null => {
   const row = getNetworkRow(db, networkId);
   return row ? toNetworkProfile(row) : null;
 };
@@ -48,7 +48,7 @@ export const upsertNetwork = (
   db: DatabaseSync,
   input: NetworkInput,
   secretBox: SecretBox
-): NetworkProfile => {
+): StoredNetworkProfile => {
   const id = input.id ?? randomUUID();
   const now = Date.now();
   const existing = input.id ? (getNetworkRow(db, input.id) ?? null) : null;
@@ -170,4 +170,4 @@ const resolveStoredPassword = (
   return template?.password ?? null;
 };
 
-type SaveNetwork = (input: NetworkInput) => NetworkProfile;
+type SaveNetwork = (input: NetworkInput) => StoredNetworkProfile;

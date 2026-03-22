@@ -10,6 +10,8 @@ export type ConnectionInstanceProfile = NetworkProfile & {
   templateId: string;
 };
 
+export type StoredNetworkProfile = SavedNetworkProfile | ConnectionInstanceProfile;
+
 export const isConnectionInstance = (network: NetworkProfile): network is ConnectionInstanceProfile =>
   network.managerHidden;
 

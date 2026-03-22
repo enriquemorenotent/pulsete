@@ -19,8 +19,8 @@ test('friend routes persist entries and broadcast updates without auth', async (
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
   const network = storage.networks.upsert(createNetworkInput());
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -64,7 +64,7 @@ test('friend routes validate payloads and targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
-  const server = createServer(createHttpHandler(runtime.context));
+  const server = createServer(createHttpHandler(runtime.http));
   const port = await listen(server);
 
   try {
@@ -106,8 +106,8 @@ test('buffer read emits updates and clears unread counts without auth', async ()
     name: '#help',
     unread: 0,
   });
-  const server = createServer(createHttpHandler(runtime.context));
-  attachWebSocketServer(server, runtime.context);
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
   const { socket } = await connectWebSocket(port);
 
@@ -165,7 +165,7 @@ test('history clamps invalid and oversized limits to the default window', async 
       ts: Date.now() + index,
     });
   }
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).context));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
   const port = await listen(server);
 
   try {

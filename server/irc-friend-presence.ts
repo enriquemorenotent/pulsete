@@ -99,8 +99,8 @@ export const pollFriendPresence = (connection: IrcFriendPresenceContext) => {
   };
   let sentBatches = 0;
   for (const batch of batches) {
-    if (connection.ports.transport.sendRaw(`ISON ${batch.join(' ')}`)) {
-      connection.ports.reply.queueReplyContext(createFriendPresenceReplyContext(pollId));
+    if (connection.sendRaw(`ISON ${batch.join(' ')}`)) {
+      connection.queueReplyContext(createFriendPresenceReplyContext(pollId));
       sentBatches += 1;
     }
   }

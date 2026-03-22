@@ -1,60 +1,21 @@
-import type {
-  IrcChannelListState,
-  IrcChannelTrackingState,
-  IrcFriendPresenceState,
-  IrcLifecycleState,
-  IrcReplyTracker,
-} from './irc-state-types.js';
-import type { IrcConnectionPorts } from './irc-port-types.js';
-import type { Handlers } from './irc-types.js';
-import type { RuntimeNetworkProfile } from './storage-types.js';
+import type { IrcConnectionState } from './irc-types.js';
 
-export type IrcEventContext = {
-  handlers: Handlers;
-  profile: RuntimeNetworkProfile;
-};
+export type IrcEventContext = Pick<IrcConnectionState, 'handlers' | 'profile'>;
 
-export type IrcStateContext = IrcEventContext & {
-  lifecycle: IrcLifecycleState;
-  ports: IrcConnectionPorts;
-};
+export type IrcStateContext = Pick<IrcConnectionState, 'handlers' | 'profile' | 'lifecycle'>;
 
-export type IrcReplyStateContext = {
-  channelList: IrcChannelListState;
-  ports: Pick<IrcConnectionPorts, 'channelList'>;
-  replyTracker: IrcReplyTracker;
-};
+export type IrcReplyStateContext = IrcConnectionState;
 
-export type IrcChannelListContext = IrcStateContext & IrcReplyStateContext & {
-  ports: Pick<IrcConnectionPorts, 'channelList' | 'reply' | 'transport'>;
-};
+export type IrcChannelListContext = IrcConnectionState;
 
-export type IrcChannelStateContext = IrcEventContext & {
-  channels: IrcChannelTrackingState;
-  ports: Pick<IrcConnectionPorts, 'reply'>;
-  profile: RuntimeNetworkProfile;
-  replyTracker: IrcReplyTracker;
-};
+export type IrcChannelStateContext = IrcConnectionState;
 
-export type IrcFriendPresenceContext = IrcStateContext & {
-  friendPresence: IrcFriendPresenceState;
-  ports: Pick<IrcConnectionPorts, 'reply' | 'transport'>;
-  replyTracker: IrcReplyTracker;
-};
+export type IrcFriendPresenceContext = IrcConnectionState;
 
-export type IrcRawIoContext = IrcStateContext;
+export type IrcRawIoContext = IrcConnectionState;
 
-export type IrcClientIoContext = IrcStateContext & IrcReplyStateContext & {
-  ports: Pick<IrcConnectionPorts, 'channelList' | 'command' | 'channels' | 'reply' | 'transport'>;
-};
+export type IrcClientIoContext = IrcConnectionState;
 
-export type IrcLifecycleContext = IrcChannelListContext & {
-  channels: IrcChannelTrackingState;
-  friendPresence: IrcFriendPresenceState;
-  ports: Pick<IrcConnectionPorts, 'channelList' | 'command' | 'friendPresence' | 'lifecycle' | 'reply' | 'transport'>;
-  replyTracker: IrcReplyTracker;
-};
+export type IrcLifecycleContext = IrcConnectionState;
 
-export type IrcConnectContext = IrcLifecycleContext & {
-  ports: Pick<IrcConnectionPorts, 'lifecycle' | 'transport'>;
-};
+export type IrcConnectContext = IrcConnectionState;

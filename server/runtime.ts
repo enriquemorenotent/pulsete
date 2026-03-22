@@ -2,12 +2,13 @@ import { createRuntimeServices } from './runtime-core.js';
 import type { RuntimeStore } from './runtime-core.js';
 
 export type {
-  RuntimeContext,
   RuntimeConversationMutations,
   RuntimeFriendMutations,
   RuntimeGateway,
+  RuntimeHttpApi,
   RuntimeNetworkCatalog,
   RuntimeNetworkMutations,
+  RuntimeWebSocketApi,
   RuntimeStore,
 } from './runtime-core.js';
 

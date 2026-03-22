@@ -16,37 +16,44 @@ import { api } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
 import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
 
-type ChatActionParams = BannerActions & ConversationActions & DraftActions & GatewayActions & WorkspaceActions & {
-  channelList: AppTransientState['channelList'];
-  conversation: ConversationIndex;
+type ChatActionParams = BannerActions
+  & ConversationActions
+  & Pick<DraftActions, 'recordComposerEntry' | 'setDraft'>
+  & GatewayActions
+  & WorkspaceActions
+  & {
   dispatch: AppDispatch;
-  gatewayStatus: AppDomainState['gatewayStatus'];
-  networks: AppDomainState['networks'];
+  getChannelList: () => AppTransientState['channelList'];
+  getConversation: () => ConversationIndex;
+  getDraft: () => string;
+  getGatewayStatus: () => AppDomainState['gatewayStatus'];
+  getNetworks: () => AppDomainState['networks'];
 };
 
 export const createChatActions = ({
-  channelList,
-  conversation,
   dispatch,
-  draft,
-  gatewayStatus,
+  getChannelList,
+  getConversation,
+  getDraft,
+  getGatewayStatus,
   getGatewaySocket,
   joinChannel,
-  networks,
+  getNetworks,
   openChannelListForNetwork,
   openOrSelectQueryBuffer,
   recordComposerEntry,
   sendGatewayMessage,
   setDraft,
   updateBanner,
-  workspace,
+  getWorkspace,
 }: ChatActionParams) => {
-  const executeMutation = createAppMutationExecutor({ dispatch, gatewayStatus, updateBanner });
+  const executeMutation = createAppMutationExecutor({ dispatch, getGatewayStatus, updateBanner });
   const selectTabBuffer = (buffer: BufferState) => selectBuffer(dispatch, buffer);
   const selectPendingTab = (networkId: string, channel: string) =>
     selectPendingChannel(dispatch, networkId, channel);
 
   const openMentionedChannel = async (channelName: string) => {
+    const workspace = getWorkspace();
     const network = workspace.selectedNetwork;
     if (!network) {
       return;
@@ -55,6 +62,7 @@ export const createChatActions = ({
   };
 
   const openChannelList = async () => {
+    const workspace = getWorkspace();
     const network = workspace.selectedNetwork;
     if (!network) {
       return;
@@ -63,6 +71,7 @@ export const createChatActions = ({
   };
 
   const closeChannelList = () => {
+    const channelList = getChannelList();
     const networkId = channelList.networkId;
     if (networkId) {
       sendGatewayMessage({ type: 'channel.list.cancel', networkId }, false);
@@ -71,11 +80,12 @@ export const createChatActions = ({
   };
 
   const joinChannelFromList = async (channel: string) => {
+    const channelList = getChannelList();
     const networkId = channelList.networkId;
     if (!networkId) {
       return;
     }
-    joinChannel(networkId, channel, conversation.findServerBuffer(networkId)?.id);
+    joinChannel(networkId, channel, getConversation().findServerBuffer(networkId)?.id);
   };
 
   const closeChannel = (networkId: string, channel: string) => {
@@ -83,6 +93,8 @@ export const createChatActions = ({
     if (!socket) {
       return;
     }
+    const conversation = getConversation();
+    const workspace = getWorkspace();
     const buffer = conversation.findChannelBuffer(networkId, channel);
     try {
       socket.send({
@@ -105,6 +117,7 @@ export const createChatActions = ({
   };
 
   const sendComposer = async () => {
+    const draft = getDraft();
     if (draft.trim() && !getGatewaySocket()) {
       return;
     }
@@ -114,13 +127,13 @@ export const createChatActions = ({
         setDraft,
         socket: getGatewaySocket(false),
         updateBanner,
-        workspace,
+        workspace: getWorkspace(),
         onJoinChannel: async (networkId, channel, sourceBufferId) => {
           joinChannel(networkId, channel, sourceBufferId);
         },
         onOpenChannelList: openChannelListForNetwork,
         onOpenQuery: async (networkId, nick) => {
-          const network = networks.find((candidate) => candidate.id === networkId) ?? null;
+          const network = getNetworks().find((candidate) => candidate.id === networkId) ?? null;
           if (!network) {
             throw new Error('Network not found');
           }
