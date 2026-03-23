@@ -101,7 +101,7 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.equal(network?.authMethod, 'server-pass');
   assert.equal(network?.authTarget, 'NickServ');
   assert.equal(network?.authAccount, '');
-  assert.equal(version.user_version, 4);
+  assert.equal(version.user_version, 5);
   assert.equal(columns.some((column) => column.name === 'templateId'), true);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), true);
   assert.equal(columns.some((column) => column.name === 'authMethod'), true);
@@ -116,7 +116,7 @@ test('startup repairs auth columns even when user_version already claims the lat
   const now = Date.now();
 
   existing.exec(`
-    PRAGMA user_version = 4;
+    PRAGMA user_version = 5;
     CREATE TABLE networks (
       id TEXT PRIMARY KEY,
       templateId TEXT,

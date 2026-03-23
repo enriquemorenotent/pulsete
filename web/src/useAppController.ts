@@ -15,11 +15,13 @@ import {
   useDesktopNicklistModel,
   useDesktopSidebarModel,
 } from './useDesktopShellModel.js';
+import { useAssistantController } from './useAssistantController.js';
 import { useAppSession } from './useAppSession.js';
 import { useAppUiState } from './useAppUiState.js';
 import { useComposerHistory } from './composer-history.js';
 import { useNetworkEditorController } from './useNetworkEditorController.js';
 import { useNetworkManagerController } from './useNetworkManagerController.js';
+import { usePreferencesController } from './usePreferencesController.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 
 type AppController = {
@@ -98,6 +100,18 @@ export function useAppController(): AppController {
     actions,
     friends: state.domain.friends,
   });
+  const assistant = useAssistantController({
+    actions,
+    assistant: state.domain.assistant,
+    assistantThreads: state.domain.assistantThreads,
+    assistantUi: state.transient.assistant,
+    workspace,
+  });
+  const preferences = usePreferencesController({
+    actions,
+    assistant: state.domain.assistant,
+    ui,
+  });
   const networkManager = useNetworkManagerController({
     actions,
     dispatch,
@@ -119,6 +133,8 @@ export function useAppController(): AppController {
     sidebar,
     chat,
     nicklist,
+    assistant,
+    preferences,
     networkManager,
     networkEditor,
   };

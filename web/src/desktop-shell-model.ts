@@ -1,3 +1,5 @@
+import type { AssistantPanelProps } from './AssistantPanel.js';
+import type { PreferencesDialogProps } from './PreferencesDialog.js';
 import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
@@ -10,6 +12,7 @@ export type DesktopShellHeaderModel = {
   showMessageDisplayModeToggle: boolean;
   onMessageDisplayModeChange: (mode: MessageDisplayMode) => void;
   onOpenNetworkManager: () => void;
+  onOpenPreferences: () => void;
 };
 
 export type DesktopShellNicklistModel = {
@@ -53,6 +56,8 @@ export type DesktopShellModel = {
   sidebar: ConnectionSidebarProps;
   chat: ChatPaneProps;
   nicklist: DesktopShellNicklistModel;
+  assistant: AssistantPanelProps;
+  preferences: PreferencesDialogProps;
   networkManager: DesktopShellNetworkManagerModel;
   networkEditor: DesktopShellNetworkEditorModel;
 };

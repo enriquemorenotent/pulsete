@@ -1,4 +1,5 @@
 import type { AppSnapshot, BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import { emptyAssistantSnapshot } from '../../web/src/assistant-state.js';
 import { initialState } from '../../web/src/app-state.js';
 import type { State } from '../../web/src/app-types.js';
 
@@ -60,6 +61,7 @@ export const emptySnapshot = (): AppSnapshot => ({
   pendingChannels: [],
   messages: [],
   networkStates: {},
+  assistant: emptyAssistantSnapshot,
 });
 
 export const makeState = (overrides: {

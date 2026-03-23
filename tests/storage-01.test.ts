@@ -191,6 +191,6 @@ test('legacy auth databases are backed up and replaced with a fresh local databa
   fresh.close();
   assert.deepEqual(
     tables.map((entry) => entry.name),
-    ['buffers', 'channel_details', 'friends', 'messages', 'networks']
+    ['assistant_preferences', 'assistant_threads', 'buffers', 'channel_details', 'friends', 'messages', 'networks']
   );
 });

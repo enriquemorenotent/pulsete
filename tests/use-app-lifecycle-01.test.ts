@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ChatMessage } from '../shared/protocol.js';
+import { emptyAssistantSnapshot } from '../web/src/assistant-state.js';
 import type { SocketHandle } from '../web/src/client.js';
 import {
   createGatewaySocketCallbacks,
@@ -21,6 +22,7 @@ const emptySnapshot = {
   pendingChannels: [],
   messages: [],
   networkStates: {},
+  assistant: emptyAssistantSnapshot,
 };
 
 const message: ChatMessage = {

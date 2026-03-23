@@ -1,0 +1,65 @@
+import { useEffect, useRef, useState } from 'react';
+import { AssistantPanel, type AssistantPanelProps } from './AssistantPanel.js';
+import { NicklistPanel } from './NicklistPanel.js';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
+import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
+import type { WorkspaceView } from './workspace-types.js';
+
+type WorkspaceRightSidebarProps = {
+  workspace: WorkspaceView;
+  nicklist: DesktopShellNicklistModel;
+  assistant: AssistantPanelProps;
+};
+
+type SidebarTab = 'users' | 'assistant';
+
+const isAssistantWorkspace = (workspace: WorkspaceView) =>
+  workspace.selectedBuffer?.kind === 'channel' || workspace.selectedBuffer?.kind === 'query';
+
+export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
+  const [tab, setTab] = useState<SidebarTab>('users');
+  const hadNicklistTabsRef = useRef(false);
+  const showNicklistTabs = props.workspace.showNicklist && !!props.workspace.selectedChannel;
+
+  useEffect(() => {
+    if (!showNicklistTabs) {
+      setTab('assistant');
+    } else if (!hadNicklistTabsRef.current) {
+      setTab('users');
+    }
+    hadNicklistTabsRef.current = showNicklistTabs;
+  }, [showNicklistTabs]);
+
+  if (!isAssistantWorkspace(props.workspace)) {
+    return null;
+  }
+
+  if (!showNicklistTabs || !props.workspace.selectedChannel) {
+    return <AssistantPanel {...props.assistant} />;
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as SidebarTab)}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="users" className="min-w-0">Users</TabsTrigger>
+          <TabsTrigger value="assistant" className="min-w-0">Assistant</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="min-h-0 flex-1">
+        {tab === 'users' ? (
+          <NicklistPanel
+            network={props.workspace.selectedNetwork}
+            channel={props.workspace.selectedChannel}
+            friends={props.nicklist.friends}
+            onAddFriend={props.nicklist.onAddFriend}
+            onRemoveFriend={props.nicklist.onRemoveFriend}
+            onSelectNick={props.nicklist.onSelectNick}
+          />
+        ) : (
+          <AssistantPanel {...props.assistant} />
+        )}
+      </div>
+    </div>
+  );
+}

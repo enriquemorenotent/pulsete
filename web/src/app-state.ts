@@ -1,5 +1,6 @@
 import { useReducer } from 'react';
 import type { AppSnapshot } from '../../shared/protocol.js';
+import { emptyAssistantSnapshot, reduceAssistantDomain } from './assistant-state.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
 import {
@@ -27,6 +28,8 @@ const initialDomainState: AppDomainState = {
   pendingChannels: [],
   messages: {},
   networkStates: {},
+  assistant: emptyAssistantSnapshot,
+  assistantThreads: {},
 };
 
 const initialTransientState: AppTransientState = {
@@ -34,6 +37,11 @@ const initialTransientState: AppTransientState = {
   banner: null,
   channelList: initialChannelListState,
   historyLoading: false,
+  assistant: {
+    attemptedThreadId: null,
+    loadingThreadId: null,
+    selectedThreadId: null,
+  },
   networkManager: initialNetworkManagerState,
 };
 
@@ -53,12 +61,15 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
   pendingChannels: sortPendingChannels(snapshot.pendingChannels),
   messages: indexConversationMessages(snapshot.messages),
   networkStates: snapshot.networkStates,
+  assistant: snapshot.assistant,
+  assistantThreads: {},
 });
 
 export const reducer = (state: State, action: Action): State => {
   const domain = action.type === 'snapshot'
     ? reduceSnapshotDomain(state, action.snapshot)
     : reduceRuntimeDomain(state.domain, action)
+      ?? reduceAssistantDomain(state.domain, action)
       ?? reduceConversationDomain(state.domain, action)
       ?? state.domain;
   const selection = resolveNextSelection(state, domain, action);
@@ -69,6 +80,12 @@ export const reducer = (state: State, action: Action): State => {
         banner: null,
         channelList: initialChannelListState,
         historyLoading: false,
+        assistant: {
+          ...state.transient.assistant,
+          attemptedThreadId: null,
+          loadingThreadId: null,
+          selectedThreadId: action.snapshot.assistant.activeThreadId,
+        },
       }
     : selection === state.transient.selection
       ? state.transient

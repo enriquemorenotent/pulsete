@@ -45,6 +45,7 @@ test('snapshot selects the first instance server buffer', () => {
           nick: network.nick,
         },
       },
+      assistant: initialState.domain.assistant,
     },
   });
 
@@ -91,6 +92,7 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
           nick: 'tester',
         },
       },
+      assistant: initialState.domain.assistant,
     },
   });
 
@@ -168,6 +170,25 @@ test('gateway transitions reset transport state and clear the reconnect banner o
   assert.deepEqual(reconnecting.transient.channelList, initialChannelListState);
   assert.equal(connected.domain.gatewayStatus, 'connected');
   assert.equal(connected.transient.banner, null);
+});
+
+test('assistant thread load attempts reset on assistant snapshots', () => {
+  const loading = reducer(initialState, {
+    type: 'set-assistant-loading-thread',
+    threadId: 'thread-1',
+  });
+  const settled = reducer(loading, {
+    type: 'set-assistant-loading-thread',
+    threadId: null,
+  });
+  const refreshed = reducer(settled, {
+    type: 'assistant-snapshot',
+    assistant: emptySnapshot().assistant,
+  });
+
+  assert.equal(loading.transient.assistant.attemptedThreadId, 'thread-1');
+  assert.equal(settled.transient.assistant.attemptedThreadId, 'thread-1');
+  assert.equal(refreshed.transient.assistant.attemptedThreadId, null);
 });
 
 test('pending selections promote to the confirmed channel buffer', () => {

@@ -3,6 +3,9 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type {
+  AssistantPreferences,
+  AssistantTaskKind,
+  AssistantThreadSummary,
   AppSnapshot,
   BufferState,
   ChannelState,
@@ -70,6 +73,27 @@ export type FriendRow = {
   updatedAt: number;
 };
 
+export type AssistantThreadRow = {
+  id: string;
+  bufferId: string | null;
+  networkId: string | null;
+  target: string | null;
+  title: string;
+  task: AssistantTaskKind;
+  model: string;
+  turnStatus: AssistantThreadSummary['turnStatus'];
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type AssistantPreferencesRow = {
+  id: number;
+  defaultModel: string;
+  activeThreadId: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type RuntimeNetworkProfile = StoredNetworkProfile & {
   password?: string;
 };
@@ -113,12 +137,19 @@ export type MessageInput = {
   ts: number;
 };
 
+export type AssistantThreadInput = Omit<AssistantThreadSummary, 'createdAt' | 'updatedAt'> & {
+  createdAt?: number;
+  updatedAt?: number;
+};
+
 export type StorageSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];
   listFriends(): FriendState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
+  listAssistantThreads(): AssistantThreadSummary[];
+  getAssistantPreferences(): AssistantPreferences;
 };
 
 export type CountRow = { count: number };

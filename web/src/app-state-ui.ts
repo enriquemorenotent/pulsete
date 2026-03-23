@@ -28,6 +28,31 @@ export const reduceTransientAction = (
       return withChannelList({ banner: clearReconnectBanner(transient.banner) });
     case 'gateway-disconnected':
       return withChannelList({ historyLoading: false });
+    case 'set-assistant-loading-thread':
+      return {
+        ...transient,
+        assistant: {
+          ...transient.assistant,
+          attemptedThreadId: action.threadId ?? transient.assistant.attemptedThreadId,
+          loadingThreadId: action.threadId,
+        },
+      };
+    case 'assistant-snapshot':
+      return {
+        ...transient,
+        assistant: {
+          ...transient.assistant,
+          attemptedThreadId: null,
+        },
+      };
+    case 'select-assistant-thread':
+      return {
+        ...transient,
+        assistant: {
+          ...transient.assistant,
+          selectedThreadId: action.threadId,
+        },
+      };
     case 'open-network-manager':
       return {
         ...transient,

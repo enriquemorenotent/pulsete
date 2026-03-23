@@ -1,4 +1,8 @@
 import type {
+  AssistantItem,
+  AssistantSnapshot,
+  AssistantThread,
+  AssistantTurn,
   AppSnapshot,
   BufferState,
   ChannelState,
@@ -38,6 +42,12 @@ export type NetworkManagerState = {
   editor: NetworkEditorState | null;
 };
 
+export type AssistantState = {
+  attemptedThreadId: string | null;
+  loadingThreadId: string | null;
+  selectedThreadId: string | null;
+};
+
 export type AppDomainState = {
   phase: 'loading' | 'ready';
   gatewayStatus: GatewayStatus;
@@ -49,6 +59,8 @@ export type AppDomainState = {
   pendingChannels: PendingChannelState[];
   messages: ConversationMessages;
   networkStates: Record<string, NetworkRuntimeState>;
+  assistant: AssistantSnapshot;
+  assistantThreads: Record<string, AssistantThread>;
 };
 
 export type AppTransientState = {
@@ -56,6 +68,7 @@ export type AppTransientState = {
   banner: Banner;
   channelList: ChannelListState;
   historyLoading: boolean;
+  assistant: AssistantState;
   networkManager: NetworkManagerState;
 };
 
@@ -84,6 +97,13 @@ export type Action =
   | { type: 'remove-pending-channel'; networkId: string; channel: string }
   | { type: 'update-presence'; networkId: string; channel: string; users: ChannelUserState[] }
   | { type: 'network-state'; networkId: string; phase: NetworkRuntimeState['phase']; serverName: string | null; nick: string }
+  | { type: 'assistant-snapshot'; assistant: AssistantSnapshot }
+  | { type: 'assistant-thread-loaded'; thread: AssistantThread }
+  | { type: 'assistant-turn-started'; threadId: string; turn: AssistantTurn }
+  | { type: 'assistant-turn-completed'; threadId: string; turn: AssistantTurn }
+  | { type: 'assistant-item-started'; threadId: string; turnId: string; item: AssistantItem }
+  | { type: 'assistant-item-delta'; threadId: string; turnId: string; itemId: string; delta: string }
+  | { type: 'assistant-item-completed'; threadId: string; turnId: string; item: AssistantItem }
   | { type: 'set-banner'; banner: Banner }
   | { type: 'open-channel-list'; networkId: string }
   | { type: 'close-channel-list' }
@@ -91,6 +111,8 @@ export type Action =
   | { type: 'channel-list-entry'; networkId: string; requestId: string; entry: ChannelListEntry }
   | { type: 'channel-list-completed'; networkId: string; requestId: string }
   | { type: 'channel-list-failed'; networkId: string; requestId: string; message: string }
+  | { type: 'set-assistant-loading-thread'; threadId: string | null }
+  | { type: 'select-assistant-thread'; threadId: string | null }
   | { type: 'open-network-manager' }
   | { type: 'close-network-manager' }
   | { type: 'set-network-manager-favorites'; value: boolean }

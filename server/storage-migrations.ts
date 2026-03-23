@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { defaultAssistantModel } from '../shared/assistant-defaults.js';
 
-export const currentStorageSchemaVersion = 4;
+export const currentStorageSchemaVersion = 5;
 
 const schemaSql = `
   PRAGMA journal_mode = WAL;
@@ -66,6 +67,27 @@ const schemaSql = `
     updatedAt INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS assistant_threads (
+    id TEXT PRIMARY KEY,
+    bufferId TEXT,
+    networkId TEXT,
+    target TEXT,
+    title TEXT NOT NULL,
+    task TEXT NOT NULL,
+    model TEXT NOT NULL,
+    turnStatus TEXT,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS assistant_preferences (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    defaultModel TEXT NOT NULL,
+    activeThreadId TEXT,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_messages_buffer
     ON messages(networkId, target, ts DESC);
 
@@ -74,6 +96,9 @@ const schemaSql = `
 
   CREATE INDEX IF NOT EXISTS idx_friends_nick
     ON friends(nick COLLATE NOCASE, createdAt ASC);
+
+  CREATE INDEX IF NOT EXISTS idx_assistant_threads_updated
+    ON assistant_threads(updatedAt DESC, createdAt DESC);
 `;
 
 type StorageMigrationContext = {
@@ -119,6 +144,12 @@ const storageMigrations: readonly StorageMigration[] = [
     version: 4,
     apply: (db) => {
       ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
+    },
+  },
+  {
+    version: 5,
+    apply: (db) => {
+      ensureAssistantTables(db);
     },
   },
 ];
@@ -170,6 +201,7 @@ const repairStorageSchemaDrift = (db: DatabaseSync) => {
   const addedAuthMethod = ensureColumn(db, 'networks', 'authMethod', "TEXT NOT NULL DEFAULT 'none'");
   ensureColumn(db, 'networks', 'authTarget', "TEXT NOT NULL DEFAULT 'NickServ'");
   ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
+  ensureAssistantTables(db);
   if (addedAuthMethod) {
     db.exec("UPDATE networks SET authMethod = 'server-pass' WHERE password IS NOT NULL AND authMethod = 'none'");
   }
@@ -211,4 +243,43 @@ const setUserVersion = (db: DatabaseSync, version: number) => {
 const resetStoredMessageHistory = (db: DatabaseSync) => {
   db.exec('DELETE FROM messages');
   db.prepare('UPDATE buffers SET unread = 0, updatedAt = ?').run(Date.now());
+};
+
+const ensureAssistantTables = (db: DatabaseSync) => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS assistant_threads (
+      id TEXT PRIMARY KEY,
+      bufferId TEXT,
+      networkId TEXT,
+      target TEXT,
+      title TEXT NOT NULL,
+      task TEXT NOT NULL,
+      model TEXT NOT NULL,
+      turnStatus TEXT,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS assistant_preferences (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      defaultModel TEXT NOT NULL,
+      activeThreadId TEXT,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL
+    )
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_assistant_threads_updated
+      ON assistant_threads(updatedAt DESC, createdAt DESC)
+  `);
+  const count = db.prepare('SELECT COUNT(*) AS count FROM assistant_preferences').get() as { count?: number } | undefined;
+  if ((count?.count ?? 0) > 0) {
+    return;
+  }
+  const now = Date.now();
+  db.prepare(`
+    INSERT INTO assistant_preferences (id, defaultModel, activeThreadId, createdAt, updatedAt)
+    VALUES (1, ?, NULL, ?, ?)
+  `).run(defaultAssistantModel, now, now);
 };

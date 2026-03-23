@@ -98,6 +98,185 @@ export const networkRuntimeStateSchema = z.object({
 });
 export type NetworkRuntimeState = z.infer<typeof networkRuntimeStateSchema>;
 
+export const assistantTaskKindSchema = z.enum(['ask', 'summarize', 'draft']);
+export type AssistantTaskKind = z.infer<typeof assistantTaskKindSchema>;
+
+export const assistantServiceStatusSchema = z.enum(['starting', 'ready', 'error']);
+export type AssistantServiceStatus = z.infer<typeof assistantServiceStatusSchema>;
+
+export const assistantPlanTypeSchema = z.enum([
+  'free',
+  'go',
+  'plus',
+  'pro',
+  'team',
+  'business',
+  'enterprise',
+  'edu',
+  'unknown',
+]);
+export type AssistantPlanType = z.infer<typeof assistantPlanTypeSchema>;
+
+export const assistantAccountSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('apiKey'),
+  }),
+  z.object({
+    type: z.literal('chatgpt'),
+    email: z.string(),
+    planType: assistantPlanTypeSchema,
+  }),
+]);
+export type AssistantAccount = z.infer<typeof assistantAccountSchema>;
+
+export const assistantCreditsSchema = z.object({
+  hasCredits: z.boolean(),
+  unlimited: z.boolean(),
+  balance: z.string().nullable(),
+});
+export type AssistantCredits = z.infer<typeof assistantCreditsSchema>;
+
+export const assistantRateLimitWindowSchema = z.object({
+  usedPercent: z.number(),
+  windowDurationMins: z.number().nullable(),
+  resetsAt: z.number().nullable(),
+});
+export type AssistantRateLimitWindow = z.infer<typeof assistantRateLimitWindowSchema>;
+
+export const assistantRateLimitsSchema = z.object({
+  limitId: z.string().nullable(),
+  limitName: z.string().nullable(),
+  primary: assistantRateLimitWindowSchema.nullable(),
+  secondary: assistantRateLimitWindowSchema.nullable(),
+  credits: assistantCreditsSchema.nullable(),
+  planType: assistantPlanTypeSchema.nullable(),
+});
+export type AssistantRateLimits = z.infer<typeof assistantRateLimitsSchema>;
+
+export const assistantAuthSchema = z.object({
+  requiresOpenaiAuth: z.boolean(),
+  account: assistantAccountSchema.nullable(),
+  pendingLoginId: z.string().nullable(),
+  pendingAuthUrl: z.string().nullable(),
+  lastError: z.string().nullable(),
+});
+export type AssistantAuth = z.infer<typeof assistantAuthSchema>;
+
+export const assistantModelSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  description: z.string(),
+  isDefault: z.boolean(),
+  hidden: z.boolean(),
+});
+export type AssistantModel = z.infer<typeof assistantModelSchema>;
+
+export const assistantTurnStatusSchema = z.enum([
+  'inProgress',
+  'completed',
+  'failed',
+  'interrupted',
+]);
+export type AssistantTurnStatus = z.infer<typeof assistantTurnStatusSchema>;
+
+export const assistantSummaryArtifactSchema = z.object({
+  type: z.literal('summary'),
+  summary: z.string(),
+  highlights: z.array(z.string()),
+});
+export type AssistantSummaryArtifact = z.infer<typeof assistantSummaryArtifactSchema>;
+
+export const assistantDraftArtifactSchema = z.object({
+  type: z.literal('draft'),
+  draft: z.string(),
+});
+export type AssistantDraftArtifact = z.infer<typeof assistantDraftArtifactSchema>;
+
+export const assistantArtifactSchema = z.discriminatedUnion('type', [
+  assistantSummaryArtifactSchema,
+  assistantDraftArtifactSchema,
+]);
+export type AssistantArtifact = z.infer<typeof assistantArtifactSchema>;
+
+export const assistantItemSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('userMessage'),
+    id: z.string(),
+    text: z.string(),
+  }),
+  z.object({
+    type: z.literal('agentMessage'),
+    id: z.string(),
+    text: z.string(),
+    phase: z.string().nullable(),
+    artifact: assistantArtifactSchema.nullable(),
+  }),
+  z.object({
+    type: z.literal('plan'),
+    id: z.string(),
+    text: z.string(),
+  }),
+  z.object({
+    type: z.literal('reasoning'),
+    id: z.string(),
+    summary: z.array(z.string()),
+    content: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal('other'),
+    id: z.string(),
+    label: z.string(),
+    text: z.string(),
+  }),
+]);
+export type AssistantItem = z.infer<typeof assistantItemSchema>;
+
+export const assistantTurnSchema = z.object({
+  id: z.string(),
+  status: assistantTurnStatusSchema,
+  error: z.string().nullable(),
+  items: z.array(assistantItemSchema),
+});
+export type AssistantTurn = z.infer<typeof assistantTurnSchema>;
+
+export const assistantThreadSummarySchema = z.object({
+  id: z.string(),
+  bufferId: z.string().nullable(),
+  networkId: z.string().nullable(),
+  target: z.string().nullable(),
+  title: z.string(),
+  task: assistantTaskKindSchema,
+  model: z.string(),
+  turnStatus: assistantTurnStatusSchema.nullable(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type AssistantThreadSummary = z.infer<typeof assistantThreadSummarySchema>;
+
+export const assistantThreadSchema = assistantThreadSummarySchema.extend({
+  turns: z.array(assistantTurnSchema),
+});
+export type AssistantThread = z.infer<typeof assistantThreadSchema>;
+
+export const assistantPreferencesSchema = z.object({
+  defaultModel: z.string(),
+  activeThreadId: z.string().nullable(),
+});
+export type AssistantPreferences = z.infer<typeof assistantPreferencesSchema>;
+
+export const assistantSnapshotSchema = z.object({
+  serviceStatus: assistantServiceStatusSchema,
+  serviceError: z.string().nullable(),
+  auth: assistantAuthSchema,
+  rateLimits: assistantRateLimitsSchema.nullable(),
+  rateLimitBuckets: z.array(assistantRateLimitsSchema),
+  models: z.array(assistantModelSchema),
+  defaultModel: z.string(),
+  activeThreadId: z.string().nullable(),
+  threads: z.array(assistantThreadSummarySchema),
+});
+export type AssistantSnapshot = z.infer<typeof assistantSnapshotSchema>;
+
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
@@ -107,5 +286,6 @@ export const appSnapshotSchema = z.object({
   pendingChannels: z.array(pendingChannelSchema).default([]),
   messages: z.array(chatMessageSchema),
   networkStates: z.record(networkRuntimeStateSchema),
+  assistant: assistantSnapshotSchema,
 });
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;

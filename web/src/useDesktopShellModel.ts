@@ -10,7 +10,7 @@ import type { WorkspaceView } from './workspace-types.js';
 
 type DesktopHeaderModelParams = {
   dispatch: (action: Action) => void;
-  ui: Pick<AppUiState, 'messageDisplayMode' | 'setMessageDisplayMode'>;
+  ui: Pick<AppUiState, 'messageDisplayMode' | 'openPreferences' | 'setMessageDisplayMode'>;
 };
 
 type DesktopSidebarModelParams = {
@@ -45,7 +45,8 @@ export function useDesktopHeaderModel({
     showMessageDisplayModeToggle: import.meta.env.DEV,
     onMessageDisplayModeChange: ui.setMessageDisplayMode,
     onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
-  }), [dispatch, ui.messageDisplayMode, ui.setMessageDisplayMode]);
+    onOpenPreferences: ui.openPreferences,
+  }), [dispatch, ui.messageDisplayMode, ui.openPreferences, ui.setMessageDisplayMode]);
 }
 
 export function useDesktopSidebarModel({

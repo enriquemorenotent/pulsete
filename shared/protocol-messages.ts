@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import {
+  assistantItemSchema,
+  assistantSnapshotSchema,
+  assistantThreadSchema,
+  assistantTurnSchema,
   appSnapshotSchema,
   bufferSchema,
   channelListEntrySchema,
@@ -105,6 +109,37 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     message: z.string(),
   }),
   baseServerSchema.extend({ type: z.literal('message.append'), message: chatMessageSchema }),
+  baseServerSchema.extend({ type: z.literal('assistant.snapshot'), assistant: assistantSnapshotSchema }),
+  baseServerSchema.extend({ type: z.literal('assistant.thread.loaded'), thread: assistantThreadSchema }),
+  baseServerSchema.extend({
+    type: z.literal('assistant.turn.started'),
+    threadId: z.string(),
+    turn: assistantTurnSchema,
+  }),
+  baseServerSchema.extend({
+    type: z.literal('assistant.turn.completed'),
+    threadId: z.string(),
+    turn: assistantTurnSchema,
+  }),
+  baseServerSchema.extend({
+    type: z.literal('assistant.item.started'),
+    threadId: z.string(),
+    turnId: z.string(),
+    item: assistantItemSchema,
+  }),
+  baseServerSchema.extend({
+    type: z.literal('assistant.item.delta'),
+    threadId: z.string(),
+    turnId: z.string(),
+    itemId: z.string(),
+    delta: z.string(),
+  }),
+  baseServerSchema.extend({
+    type: z.literal('assistant.item.completed'),
+    threadId: z.string(),
+    turnId: z.string(),
+    item: assistantItemSchema,
+  }),
   baseServerSchema.extend({
     type: z.literal('presence.update'),
     networkId: z.string(),

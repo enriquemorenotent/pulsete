@@ -2,6 +2,8 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type {
+  AssistantPreferences,
+  AssistantThreadSummary,
   AppSnapshot,
   BufferState,
   ChannelState,
@@ -17,6 +19,9 @@ import type {
   NetworkSaveResult,
   RuntimeNetworkProfile,
 } from './storage-types.js';
+import type {
+  AssistantThreadInput,
+} from './storage-types.js';
 
 export type RuntimeSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
@@ -24,6 +29,8 @@ export type RuntimeSnapshotSource = {
   listFriends(): FriendState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
+  listAssistantThreads(): AssistantThreadSummary[];
+  getAssistantPreferences(): AssistantPreferences;
 };
 
 export type RuntimeConversationStore = {
@@ -53,6 +60,15 @@ export type RuntimeFriendStore = {
   remove(friendId: string): FriendState | null;
 };
 
+export type RuntimeAssistantStore = {
+  listThreads(): AssistantThreadSummary[];
+  getThread(threadId: string): AssistantThreadSummary | null;
+  upsertThread(input: AssistantThreadInput): AssistantThreadSummary | null;
+  removeThread(threadId: string): void;
+  getPreferences(): AssistantPreferences;
+  savePreferences(input: AssistantPreferences): AssistantPreferences;
+};
+
 export type RuntimeNetworkStore = {
   list(): StoredNetworkProfile[];
   get(networkId: string): StoredNetworkProfile | null;
@@ -69,4 +85,5 @@ export type RuntimeStore = {
   conversations: RuntimeConversationStore;
   friends: RuntimeFriendStore;
   networks: RuntimeNetworkStore;
+  assistant: RuntimeAssistantStore;
 };

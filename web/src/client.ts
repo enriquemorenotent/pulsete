@@ -1,4 +1,8 @@
 import {
+  type AssistantPreferences,
+  type AssistantTaskKind,
+  type AssistantThread,
+  type AssistantThreadSummary,
   clientMessageSchema,
   decodeServer,
   encode,
@@ -84,6 +88,46 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
+  startAssistantChatgptLogin: () =>
+    apiRequest<{ loginId: string; authUrl: string }>('/api/assistant/auth/chatgpt/start', {
+      method: 'POST',
+      body: '{}',
+    }),
+  cancelAssistantLogin: (loginId: string) =>
+    apiRequest<{ ok: boolean }>(`/api/assistant/auth/chatgpt/${encodeURIComponent(loginId)}/cancel`, {
+      method: 'POST',
+      body: '{}',
+    }),
+  logoutAssistant: () =>
+    apiRequest<{ ok: boolean }>('/api/assistant/logout', {
+      method: 'POST',
+      body: '{}',
+    }),
+  saveAssistantPreferences: (payload: Partial<AssistantPreferences>) =>
+    apiRequest<{ preferences: AssistantPreferences }>('/api/assistant/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  createAssistantThread: (payload: { bufferId: string | null; task: AssistantTaskKind; model?: string }) =>
+    apiRequest<{ thread: AssistantThreadSummary }>('/api/assistant/threads', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  loadAssistantThread: (threadId: string) =>
+    apiRequest<{ thread: AssistantThread }>(`/api/assistant/threads/${encodeURIComponent(threadId)}`),
+  startAssistantTurn: (threadId: string, payload: { prompt: string }) =>
+    apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}/turns`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  interruptAssistantTurn: (threadId: string, turnId: string) =>
+    apiRequest<{ ok: boolean }>(
+      `/api/assistant/threads/${encodeURIComponent(threadId)}/interrupt/${encodeURIComponent(turnId)}`,
+      {
+        method: 'POST',
+        body: '{}',
+      }
+    ),
 };
 
 export type SocketHandle = {

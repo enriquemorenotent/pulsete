@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ServerMessage } from '../shared/protocol.js';
+import { AssistantService } from './assistant-service.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -32,6 +33,8 @@ const tagMutationMessages = (messages: readonly ServerMessage[]) => {
   const mutationId = randomUUID();
   return messages.map((message) => ({ ...message, mutationId }));
 };
+
+const assistantAutoStart = !process.env.NODE_TEST_CONTEXT;
 
 export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
@@ -82,16 +85,24 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     connectionManager,
     networks: store.networks,
   });
+  const assistant = new AssistantService({
+    assistant: store.assistant,
+    conversations: store.conversations,
+    networks: store.networks,
+    autoStart: assistantAutoStart,
+    publish: (messages) => publisher.publish(messages),
+  });
   const closeGateway = () => {
     closing = true;
     socketHub.closeAll();
+    assistant.close();
     connectionManager.close();
   };
   const gateway: RuntimeGateway = {
     attachSocket: (ws) => socketHub.attach(ws),
     detachSocket: (ws) => socketHub.detach(ws),
     publish: (message) => publisher.publish(message),
-    snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager),
+    snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager, assistant.snapshot()),
     close: closeGateway,
   };
   const conversations: RuntimeConversationMutations = {
@@ -110,6 +121,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
   };
   const http = createRuntimeHttpApi({
+    assistant,
     catalog: store.networks,
     conversations,
     friends,
@@ -134,6 +146,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     friends,
     irc,
     networks,
+    assistant,
     http,
     ws,
   };

@@ -1,5 +1,12 @@
 import type WebSocket from 'ws';
-import type { ClientMessage, ServerMessage } from '../shared/protocol.js';
+import type {
+  AssistantPreferences,
+  AssistantTaskKind,
+  AssistantThread,
+  AssistantThreadSummary,
+  ClientMessage,
+  ServerMessage,
+} from '../shared/protocol.js';
 import type { NetworkLifecycleService } from './network-lifecycle-service.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -37,6 +44,27 @@ export type RuntimeNetworkMutations = {
   deleteNetwork: NetworkLifecycleService['deleteNetwork'];
 };
 
+export type RuntimeAssistantApi = {
+  startChatgptLogin(): Promise<{ loginId: string; authUrl: string }>;
+  cancelLogin(loginId: string): Promise<void>;
+  logout(): Promise<void>;
+  createThread(input: {
+    bufferId: string | null;
+    task: AssistantTaskKind;
+    model?: string;
+  }): Promise<AssistantThreadSummary>;
+  readThread(threadId: string): Promise<AssistantThread>;
+  startTurn(input: {
+    threadId: string;
+    prompt: string;
+  }): Promise<void>;
+  interruptTurn(threadId: string, turnId: string): Promise<void>;
+  updatePreferences(input: {
+    defaultModel?: string;
+    activeThreadId?: string | null;
+  }): AssistantPreferences;
+};
+
 export type RuntimeHttpApi = {
   networks: {
     list: RuntimeNetworkCatalog['list'];
@@ -57,6 +85,7 @@ export type RuntimeHttpApi = {
     add: RuntimeFriendMutations['upsertFriend'];
     remove: RuntimeFriendMutations['removeFriend'];
   };
+  assistant: RuntimeAssistantApi;
 };
 
 export type RuntimeWebSocketApi = {
@@ -74,6 +103,7 @@ export type RuntimeServices = {
   friends: RuntimeFriendMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
+  assistant: RuntimeAssistantApi;
   http: RuntimeHttpApi;
   ws: RuntimeWebSocketApi;
 };

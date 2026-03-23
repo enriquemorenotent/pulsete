@@ -1,19 +1,21 @@
 import { useRef, type CSSProperties } from 'react';
-import { PanelsTopLeft } from 'lucide-react';
+import { PanelsTopLeft, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { ChatPane } from './ChatPane.js';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { MessageDisplayModeToggle } from './MessageDisplayModeToggle.js';
-import { NicklistPanel } from './NicklistPanel.js';
 import { NetworkEditorDialog } from './NetworkEditorDialog.js';
 import { NetworkManagerDialog } from './NetworkManagerDialog.js';
+import { PreferencesDialog } from './PreferencesDialog.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
+import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import { useSidebarResize } from './useSidebarResize.js';
 
 export function DesktopShell(props: DesktopShellModel) {
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const sidebarResize = useSidebarResize(layoutRef);
+  const showRightSidebar = props.workspace.selectedBuffer?.kind === 'channel' || props.workspace.selectedBuffer?.kind === 'query';
   const layoutStyle = {
     '--sidebar-width': `${sidebarResize.sidebarWidth}px`,
   } as CSSProperties;
@@ -29,6 +31,10 @@ export function DesktopShell(props: DesktopShellModel) {
               onChange={props.header.onMessageDisplayModeChange}
             />
           ) : null}
+          <Button variant="outline" size="sm" onClick={props.header.onOpenPreferences}>
+            <Settings2 />
+            Preferences
+          </Button>
           <Button variant="outline" size="sm" onClick={props.header.onOpenNetworkManager}>
             <PanelsTopLeft />
             Network Manager
@@ -55,15 +61,12 @@ export function DesktopShell(props: DesktopShellModel) {
           <div className="min-h-0 min-w-0 flex-1">
             <ChatPane {...props.chat} />
           </div>
-          {props.workspace.showNicklist && props.workspace.selectedChannel ? (
-            <div className="min-h-0 xl:ml-2 xl:w-[13rem] xl:shrink-0">
-              <NicklistPanel
-                network={props.workspace.selectedNetwork}
-                channel={props.workspace.selectedChannel}
-                friends={props.nicklist.friends}
-                onAddFriend={props.nicklist.onAddFriend}
-                onRemoveFriend={props.nicklist.onRemoveFriend}
-                onSelectNick={props.nicklist.onSelectNick}
+          {showRightSidebar ? (
+            <div className="h-[28rem] min-h-[24rem] xl:ml-2 xl:h-full xl:min-h-0 xl:w-[22rem] xl:shrink-0">
+              <WorkspaceRightSidebar
+                workspace={props.workspace}
+                nicklist={props.nicklist}
+                assistant={props.assistant}
               />
             </div>
           ) : null}
@@ -88,6 +91,7 @@ export function DesktopShell(props: DesktopShellModel) {
           onFavorite={props.networkManager.onFavorite}
         />
       ) : null}
+      <PreferencesDialog {...props.preferences} />
       {props.networkEditor.open ? (
         <NetworkEditorDialog
           form={props.networkEditor.form}
