@@ -1,20 +1,16 @@
 import type WebSocket from 'ws';
-import type { ChannelListEntry, ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { IrcConnection } from './irc.js';
+import type { IrcRuntimeChannelListConnection } from './irc-types.js';
 
 type ChannelListMessage = Extract<
   ServerMessage,
   { type: 'channel.list.started' | 'channel.list.entry' | 'channel.list.completed' | 'channel.list.failed' }
 >;
 
-type ChannelListConnection = Pick<
-  IrcConnection,
-  'requestChannelList' | 'getChannelListRequestFailureMessage'
->;
+type ChannelListConnection = IrcRuntimeChannelListConnection;
 
 type ChannelListSession = {
-  entries: ChannelListEntry[];
   requestId: string;
   subscribers: Set<WebSocket>;
 };
@@ -43,33 +39,34 @@ export class RuntimeChannelListService {
   }
 
   request(networkId: string, connection: ChannelListConnection, requestId: string, requester?: WebSocket) {
-    const activeRequest = this.sessions.get(networkId) ?? null;
-    if (activeRequest) {
-      const alreadySubscribed = requester ? activeRequest.subscribers.has(requester) : false;
+    const activeSnapshot = connection.channelLists.getActiveChannelListSnapshot();
+    const activeSession = activeSnapshot
+      ? this.getOrCreateSession(networkId, activeSnapshot.requestId)
+      : null;
+    if (activeSnapshot && activeSession) {
+      const alreadySubscribed = requester ? activeSession.subscribers.has(requester) : false;
       if (alreadySubscribed) {
-        return activeRequest.requestId;
+        return activeSnapshot.requestId;
       }
       if (requester) {
-        activeRequest.subscribers.add(requester);
+        activeSession.subscribers.add(requester);
       }
-      this.sendMessage(networkId, { type: 'channel.list.started', networkId, requestId: activeRequest.requestId }, requester);
-      for (const entry of activeRequest.entries) {
+      this.sendMessage(networkId, { type: 'channel.list.started', networkId, requestId: activeSnapshot.requestId }, requester);
+      for (const entry of activeSnapshot.entries) {
         this.sendMessage(
           networkId,
-          { type: 'channel.list.entry', networkId, requestId: activeRequest.requestId, entry },
+          { type: 'channel.list.entry', networkId, requestId: activeSnapshot.requestId, entry },
           requester
         );
       }
-      return activeRequest.requestId;
+      return activeSnapshot.requestId;
     }
 
-    if (connection.requestChannelList(requestId)) {
-      const session: ChannelListSession = {
-        entries: [],
+    if (connection.channelLists.requestChannelList(requestId)) {
+      this.sessions.set(networkId, {
         requestId,
         subscribers: requester ? new Set([requester]) : new Set<WebSocket>(),
-      };
-      this.sessions.set(networkId, session);
+      });
       this.sendMessage(networkId, { type: 'channel.list.started', networkId, requestId }, requester);
       return requestId;
     }
@@ -80,7 +77,7 @@ export class RuntimeChannelListService {
         type: 'channel.list.failed',
         networkId,
         requestId,
-        message: connection.getChannelListRequestFailureMessage(),
+        message: connection.channelLists.getChannelListRequestFailureMessage(),
       },
       requester
     );
@@ -98,7 +95,6 @@ export class RuntimeChannelListService {
       return;
     }
     if (event.type === 'channel-list-entry') {
-      session.entries.push(event.entry);
       this.sendMessage(event.networkId, {
         type: 'channel.list.entry',
         networkId: event.networkId,
@@ -141,5 +137,15 @@ export class RuntimeChannelListService {
     for (const ws of Array.from(subscribers)) {
       this.send(ws, message);
     }
+  }
+
+  private getOrCreateSession(networkId: string, requestId: string) {
+    const existing = this.sessions.get(networkId);
+    if (existing?.requestId === requestId) {
+      return existing;
+    }
+    const created: ChannelListSession = { requestId, subscribers: new Set<WebSocket>() };
+    this.sessions.set(networkId, created);
+    return created;
   }
 }

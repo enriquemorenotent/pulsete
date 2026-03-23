@@ -2,10 +2,10 @@ import { emitMessage } from './irc-emit.js';
 import { isServiceNick } from './irc-services.js';
 import { isChannelTarget, stripCtcp } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
-import type { IrcConnectionState } from './irc-types.js';
+import type { IrcMessageEventContext } from './irc-contexts.js';
 
 export const handleTextMessage = (
-  connection: IrcConnectionState,
+  connection: IrcMessageEventContext,
   command: 'PRIVMSG' | 'NOTICE',
   params: string[],
   nick: string | null

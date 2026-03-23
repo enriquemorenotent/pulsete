@@ -20,12 +20,16 @@ test('runtime join defers channel persistence until the server confirms the join
 
   (runtime as unknown as {
     connections: Map<string, {
-      join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+      commands: {
+        join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+      };
     }>;
   }).connections.set(network.id, {
-    join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
-      requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
-      return channel === '#missing';
+    commands: {
+      join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
+        requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
+        return channel === '#missing';
+      },
     },
   });
 
@@ -52,12 +56,16 @@ test('runtime rejoins existing channel buffers without surfacing a pending chann
 
   (runtime as unknown as {
     connections: Map<string, {
-      join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+      commands: {
+        join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
+      };
     }>;
   }).connections.set(network.id, {
-    join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
-      requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
-      return channel === '#help';
+    commands: {
+      join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
+        requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
+        return channel === '#help';
+      },
     },
   });
 

@@ -2,12 +2,12 @@ import tls from 'node:tls';
 import { emitStatus } from './irc-emit.js';
 import { formatServerNumeric } from './irc-server-log.js';
 import { isChannelTarget, isSameIrcIdentifier } from './irc-parser.js';
-import type { IrcConnectionState } from './irc-types.js';
+import type { IrcRegistrationContext } from './irc-contexts.js';
 
 const nickRejectionCommands = new Set(['431', '432', '436', '437']);
 
 export const handleRegistrationLine = (
-  connection: IrcConnectionState,
+  connection: IrcRegistrationContext,
   command: string,
   params: string[],
   nick: string | null
@@ -15,7 +15,7 @@ export const handleRegistrationLine = (
   || handleNickConflict(connection, command, params, nick)
   || handleNickRejected(connection, command, params, nick);
 
-const handleWelcome = (connection: IrcConnectionState, command: string, params: string[], nick: string | null) => {
+const handleWelcome = (connection: IrcRegistrationContext, command: string, params: string[], nick: string | null) => {
   if (command !== '001') {
     return false;
   }
@@ -37,7 +37,7 @@ const handleWelcome = (connection: IrcConnectionState, command: string, params: 
 };
 
 const handleNickConflict = (
-  connection: IrcConnectionState,
+  connection: IrcRegistrationContext,
   command: string,
   params: string[],
   nick: string | null
@@ -72,7 +72,7 @@ const handleNickConflict = (
 };
 
 const handleNickRejected = (
-  connection: IrcConnectionState,
+  connection: IrcRegistrationContext,
   command: string,
   params: string[],
   nick: string | null
@@ -93,7 +93,7 @@ const handleNickRejected = (
   return true;
 };
 
-const getNextNickOnConflict = (connection: IrcConnectionState, attemptedNick: string) => {
+const getNextNickOnConflict = (connection: IrcRegistrationContext, attemptedNick: string) => {
   const fallbacks = [connection.profile.nick, ...connection.profile.altNicks]
     .filter((nick, index, list) => nick && list.indexOf(nick) === index);
   const currentIndex = fallbacks.indexOf(attemptedNick);

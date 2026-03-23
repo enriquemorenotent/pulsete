@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { isSameIrcIdentifier } from './irc-parser.js';
-import type { IrcConnectionState } from './irc-types.js';
+import type { IrcConnectionData } from './irc-types.js';
 import type { MessageInput } from './storage-types.js';
 
-export const isSelfNick = (connection: IrcConnectionState, nick: string | null) =>
+type IrcNickIdentityContext = Pick<IrcConnectionData, 'lifecycle' | 'profile' | 'replyTracker'>;
+type IrcMessageContext = Pick<IrcConnectionData, 'profile'>;
+
+export const isSelfNick = (connection: IrcNickIdentityContext, nick: string | null) =>
   isSameIrcIdentifier(nick, connection.lifecycle.currentNick)
   || isSameIrcIdentifier(nick, connection.replyTracker.pendingNick);
 
 export const createMessage = (
-  connection: IrcConnectionState,
+  connection: IrcMessageContext,
   input: Omit<MessageInput, 'id' | 'networkId' | 'ts'>
 ): MessageInput => ({
   id: randomUUID(),

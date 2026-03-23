@@ -1,7 +1,7 @@
 import type { FriendState, NetworkProfile, ServerMessage } from '../shared/protocol.js';
 import type WebSocket from 'ws';
 import type { IrcConnection } from './irc.js';
-import type { RuntimeEvent } from './irc-types.js';
+import type { RuntimeEvent, IrcRuntimeChannelListConnection } from './irc-types.js';
 import { translateRuntimeEvent } from './runtime-events.js';
 import { RuntimeChannelListService } from './runtime-channel-lists.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -37,7 +37,7 @@ export class RuntimeEventRouter {
     this.channelLists.removeSocket(ws);
   }
 
-  requestChannelList(networkId: string, connection: IrcConnection, requestId: string, requester?: WebSocket) {
+  requestChannelList(networkId: string, connection: IrcRuntimeChannelListConnection, requestId: string, requester?: WebSocket) {
     return this.channelLists.request(networkId, connection, requestId, requester);
   }
 

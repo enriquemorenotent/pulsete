@@ -224,6 +224,13 @@ export type IrcConnectionMethods = {
 
 export type IrcConnectionState = IrcConnectionData & IrcConnectionMethods;
 
+export type IrcRuntimeCommandConnection = Pick<
+  IrcConnectionState,
+  'commands' | 'io' | 'lifecycle' | 'lifecycleControl'
+>;
+
+export type IrcRuntimeChannelListConnection = Pick<IrcConnectionState, 'channelLists'>;
+
 export type {
   FriendPresencePollState,
   IrcChannelListActiveState,

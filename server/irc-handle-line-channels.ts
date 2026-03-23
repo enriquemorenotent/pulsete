@@ -2,9 +2,9 @@ import { emitChannel, emitMessage, emitStatus } from './irc-emit.js';
 import { renameChannelUser, upsertChannelUser } from '../shared/channel-users.js';
 import { parseChannelUserToken } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
-import type { IrcConnectionState } from './irc-types.js';
+import type { IrcChannelEventContext } from './irc-contexts.js';
 
-export const handleJoin = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+export const handleJoin = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
   const name = (params[0] ?? params[1] ?? '').replace(/^:/, '');
   if (!name) {
     return;
@@ -35,7 +35,7 @@ export const handleJoin = (connection: IrcConnectionState, params: string[], nic
   }
 };
 
-export const handlePart = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+export const handlePart = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
   const channel = connection.resolveTrackedChannel(params[0] ?? '');
   if (!channel) {
     return;
@@ -61,7 +61,7 @@ export const handlePart = (connection: IrcConnectionState, params: string[], nic
   }
 };
 
-export const handleKick = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+export const handleKick = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
   const channel = connection.resolveTrackedChannel(params[0] ?? '');
   const kickedNick = params[1] ?? '';
   if (!channel || !kickedNick || !connection.resolveTrackedChannel(channel)) {
@@ -88,7 +88,7 @@ export const handleKick = (connection: IrcConnectionState, params: string[], nic
   }
 };
 
-export const handleQuit = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+export const handleQuit = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
   emitStatus(connection, `${nick ?? 'Someone'} quit (${params[0] ?? 'quit'})`);
   if (!nick) {
     return;
@@ -101,7 +101,7 @@ export const handleQuit = (connection: IrcConnectionState, params: string[], nic
   }
 };
 
-export const handleNick = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+export const handleNick = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
   const newNick = params[0] ?? '';
   if (!newNick) {
     return;
@@ -122,7 +122,7 @@ export const handleNick = (connection: IrcConnectionState, params: string[], nic
   emitStatus(connection, `${nick ?? 'Someone'} is now known as ${newNick}`);
 };
 
-export const handleTopic = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+export const handleTopic = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
   const channel = connection.resolveTrackedChannel(params[0] ?? '');
   const topic = params[1] ?? '';
   if (!channel) {
@@ -138,14 +138,14 @@ export const handleTopic = (connection: IrcConnectionState, params: string[], ni
   emitStatus(connection, `${nick ?? 'Someone'} changed the topic for ${channel}`, 'system', channel, true);
 };
 
-export const handleTopicNumeric = (connection: IrcConnectionState, params: string[]) => {
+export const handleTopicNumeric = (connection: IrcChannelEventContext, params: string[]) => {
   const channel = connection.resolveTrackedChannel(params[1] ?? '');
   if (channel) {
     emitChannel(connection, channel, { topic: params[2] ?? '' });
   }
 };
 
-export const handleNamesNumeric = (connection: IrcConnectionState, params: string[]) => {
+export const handleNamesNumeric = (connection: IrcChannelEventContext, params: string[]) => {
   const channel = connection.resolveTrackedChannel(params[2] ?? '');
   if (!channel) {
     return;

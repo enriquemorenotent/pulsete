@@ -140,15 +140,23 @@ test('runtime reports when a timed-out LIST is still draining late server replie
   runtime.gateway.attachSocket(socket);
   (runtime as unknown as {
     connections: Map<string, {
-      requestChannelList(requestId: string): boolean;
-      getChannelListRequestFailureMessage(): string;
+      channelLists: {
+        getActiveChannelListSnapshot(): { requestId: string; entries: [] } | null;
+        requestChannelList(requestId: string): boolean;
+        getChannelListRequestFailureMessage(): string;
+      };
     }>;
   }).connections.set(network.id, {
-    requestChannelList() {
-      return false;
-    },
-    getChannelListRequestFailureMessage() {
-      return 'Waiting for the previous channel list response to finish';
+    channelLists: {
+      getActiveChannelListSnapshot() {
+        return null;
+      },
+      requestChannelList() {
+        return false;
+      },
+      getChannelListRequestFailureMessage() {
+        return 'Waiting for the previous channel list response to finish';
+      },
     },
   });
 
