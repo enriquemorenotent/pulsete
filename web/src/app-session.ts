@@ -1,10 +1,12 @@
-import type { AppModel } from './app-model.js';
+import type { ConversationModel } from './conversation-model.js';
 import type { State } from './app-types.js';
+import type { WorkspaceView } from './workspace-types.js';
 
 export type AppSessionSnapshot = {
+  conversation: ConversationModel;
   draft: string;
-  model: AppModel;
   state: State;
+  workspace: WorkspaceView;
 };
 
 export const createAppSessionSnapshot = (snapshot: AppSessionSnapshot): AppSessionSnapshot => snapshot;

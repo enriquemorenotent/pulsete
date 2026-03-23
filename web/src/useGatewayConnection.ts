@@ -8,6 +8,7 @@ import { dispatchInboundServerMessage } from './server-message-actions.js';
 type MutableRef<T> = { current: T };
 
 type UseGatewayConnectionParams = {
+  applySocketMessage: (message: ServerMessage) => void;
   dispatch: (action: Action) => void;
   socketRef: MutableRef<SocketHandle | null>;
 };
@@ -16,6 +17,7 @@ type GatewaySocketCallbackParams = {
   getSocket: () => SocketHandle;
   socketRef: MutableRef<SocketHandle | null>;
   isClosedByClient: () => boolean;
+  applySocketMessage?: (message: ServerMessage) => void;
   dispatch: (action: Action) => void;
   reconnectAttemptRef: MutableRef<number>;
   reconnectTimerRef: MutableRef<number | null>;
@@ -38,6 +40,7 @@ export function useGatewayConnection(params: UseGatewayConnectionParams) {
       getSocket: () => socket,
       socketRef: params.socketRef,
       isClosedByClient: () => closedByClient,
+      applySocketMessage: params.applySocketMessage,
       dispatch: params.dispatch,
       reconnectAttemptRef,
       reconnectTimerRef,
@@ -55,13 +58,14 @@ export function useGatewayConnection(params: UseGatewayConnectionParams) {
       }
       socket.close();
     };
-  }, [params.dispatch, params.socketRef, socketGeneration]);
+  }, [params.applySocketMessage, params.dispatch, params.socketRef, socketGeneration]);
 }
 
 export const createGatewaySocketCallbacks = ({
   getSocket,
   socketRef,
   isClosedByClient,
+  applySocketMessage = (message) => dispatchInboundServerMessage(message, dispatch),
   dispatch,
   reconnectAttemptRef,
   reconnectTimerRef,
@@ -74,7 +78,7 @@ export const createGatewaySocketCallbacks = ({
     if (message.type === 'state.ready') {
       reconnectAttemptRef.current = 0;
     }
-    dispatchInboundServerMessage(message, dispatch);
+    applySocketMessage(message);
   },
   onOpen() {
     if (isClosedByClient() || socketRef.current !== getSocket()) {

@@ -4,6 +4,7 @@ import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
 import { createNetworkActions } from './app-actions-networks.js';
 import {
+  type ApplyServerMessages,
   type AppSessionReader,
   constantReader,
   type AppDispatch,
@@ -11,8 +12,10 @@ import {
 } from './app-actions-types.js';
 import type { AppSessionSnapshot } from './app-session.js';
 import type { SocketHandle } from './client.js';
+import { createServerMessageBridge } from './server-message-bridge.js';
 
 type CreateAppActionsParams = {
+  applyServerMessages: ApplyServerMessages;
   readState: AppSessionReader;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
@@ -22,6 +25,7 @@ type CreateAppActionsParams = {
 };
 
 type CreateStaticAppActionsParams = {
+  applyServerMessages?: ApplyServerMessages;
   session: AppSessionSnapshot;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
@@ -31,32 +35,54 @@ type CreateStaticAppActionsParams = {
 };
 
 const createAppActionsFromStateReader = (params: CreateAppActionsParams) => {
+  const readDraft = () => params.readState().draft;
+  const readConversation = () => params.readState().conversation;
+  const readWorkspace = () => params.readState().workspace;
+  const readGatewayStatus = () => params.readState().state.domain.gatewayStatus;
+  const readChannelList = () => params.readState().state.transient.channelList;
+  const readNetworks = () => params.readState().state.domain.networks;
+  const readNetworkStates = () => params.readState().state.domain.networkStates;
+  const readFriendSelection = () => ({
+    buffers: params.readState().state.domain.buffers,
+    networkStates: params.readState().state.domain.networkStates,
+    workspace: params.readState().workspace,
+  });
   const gateway = createGatewayActions({
-    readState: params.readState,
+    readGatewayStatus,
     socketRef: params.socketRef,
     updateBanner: params.updateBanner,
   });
   const conversation = createConversationActions({
+    applyServerMessages: params.applyServerMessages,
     dispatch: params.dispatch,
-    readState: params.readState,
+    readChannelList,
+    readConversation,
+    readNetworkStates,
     updateBanner: params.updateBanner,
     ...gateway,
   });
   return {
     ...createNetworkActions({
+      applyServerMessages: params.applyServerMessages,
       dispatch: params.dispatch,
-      readState: params.readState,
+      readConversation,
       updateBanner: params.updateBanner,
     }),
     ...createFriendActions({
+      applyServerMessages: params.applyServerMessages,
       dispatch: params.dispatch,
-      readState: params.readState,
+      readFriendSelection,
       updateBanner: params.updateBanner,
       ...conversation,
     }),
     ...createChatActions({
+      applyServerMessages: params.applyServerMessages,
       dispatch: params.dispatch,
-      readState: params.readState,
+      readChannelList,
+      readConversation,
+      readDraft,
+      readNetworks,
+      readWorkspace,
       updateBanner: params.updateBanner,
       setDraft: params.setDraft,
       recordComposerEntry: params.recordComposerEntry,
@@ -67,7 +93,10 @@ const createAppActionsFromStateReader = (params: CreateAppActionsParams) => {
 };
 
 export function createAppActions(params: CreateStaticAppActionsParams) {
+  const applyServerMessages =
+    params.applyServerMessages ?? createServerMessageBridge(params.dispatch).applyMutationMessages;
   return createAppActionsFromStateReader({
+    applyServerMessages,
     readState: constantReader(params.session),
     dispatch: params.dispatch,
     socketRef: params.socketRef,

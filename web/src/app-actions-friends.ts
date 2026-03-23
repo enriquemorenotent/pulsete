@@ -1,22 +1,30 @@
 import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
-import type { AppDispatch, AppSessionReader, BannerActions, ConversationActions } from './app-actions-types.js';
+import type {
+  ApplyServerMessages,
+  AppDispatch,
+  BannerActions,
+  ConversationActions,
+  FriendSelectionReader,
+} from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import { resolveFriendSelection } from './friend-selection.js';
 
 type FriendActionParams = BannerActions & ConversationActions & {
+  applyServerMessages: ApplyServerMessages;
   dispatch: AppDispatch;
-  readState: AppSessionReader;
+  readFriendSelection: FriendSelectionReader;
 };
 
 export const createFriendActions = ({
+  applyServerMessages,
   dispatch,
-  readState,
+  readFriendSelection,
   openOrSelectQueryBuffer,
   updateBanner,
 }: FriendActionParams) => {
-  const executeMutation = createAppMutationExecutor({ dispatch, readState, updateBanner });
+  const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
 
   const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
     try {
@@ -27,8 +35,7 @@ export const createFriendActions = ({
   };
 
   const selectFriend = async (friend: FriendState) => {
-    const { buffers, networkStates } = readState().state.domain;
-    const { workspace } = readState().model;
+    const { buffers, networkStates, workspace } = readFriendSelection();
     const decision = resolveFriendSelection({
       nick: friend.nick,
       buffers,

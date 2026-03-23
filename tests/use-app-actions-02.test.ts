@@ -110,19 +110,10 @@ const createParams = (options: {
     composerEntries,
     params: {
       session: {
+        conversation,
         draft: options.draft ?? '',
-        model: {
-          channelListNetwork: null,
-          conversation,
-          hiddenManagedNetworkName: null,
-          managedRuntime: null,
-          selectedMessages: [],
-          sidebarConnections: [],
-          visibleManagedNetwork: null,
-          visibleNetworks: state.domain.networks,
-          workspace,
-        },
         state,
+        workspace,
       } satisfies AppSessionSnapshot,
       dispatch: (action: Action) => {
         actions.push(action);

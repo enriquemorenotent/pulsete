@@ -2,7 +2,8 @@ import { useCallback, useMemo, useRef } from 'react';
 import { initialState, reducer, useStateReducer } from './app-state.js';
 import { createAppSessionSnapshot, type AppSessionSnapshot } from './app-session.js';
 import { createLiveAppActions } from './useAppActions.js';
-import { useAppDerivedState } from './useAppDerivedState.js';
+import { createServerMessageBridge } from './server-message-bridge.js';
+import { useConversationModel, useWorkspaceView } from './useAppDerivedState.js';
 import type { ComposerController } from './composer-history.js';
 import type { AppUiState } from './useAppUiState.js';
 
@@ -13,14 +14,17 @@ type UseAppSessionParams = {
 
 export function useAppSession({ composer, ui }: UseAppSessionParams) {
   const [state, dispatch] = useStateReducer(reducer, initialState);
-  const model = useAppDerivedState(state);
+  const conversation = useConversationModel(state);
+  const workspace = useWorkspaceView(state, conversation);
   const session = useMemo(() => createAppSessionSnapshot({
+    conversation,
     draft: composer.draft,
-    model,
     state,
-  }), [composer.draft, model, state]);
+    workspace,
+  }), [composer.draft, conversation, state, workspace]);
   const liveSessionRef = useRef<AppSessionSnapshot>(session);
   liveSessionRef.current = session;
+  const serverMessages = useMemo(() => createServerMessageBridge(dispatch), [dispatch]);
   const updateBanner = useCallback(
     (kind: 'notice' | 'error', message: string) =>
       dispatch({ type: 'set-banner', banner: { kind, message } }),
@@ -28,6 +32,7 @@ export function useAppSession({ composer, ui }: UseAppSessionParams) {
   );
   const actions = useMemo(
     () => createLiveAppActions({
+      applyServerMessages: serverMessages.applyMutationMessages,
       readState: () => liveSessionRef.current,
       dispatch,
       socketRef: ui.socketRef,
@@ -39,6 +44,7 @@ export function useAppSession({ composer, ui }: UseAppSessionParams) {
       composer.recordComposerEntry,
       composer.setDraft,
       dispatch,
+      serverMessages,
       ui.socketRef,
       updateBanner,
     ]
@@ -46,9 +52,11 @@ export function useAppSession({ composer, ui }: UseAppSessionParams) {
 
   return {
     actions,
+    conversation,
     dispatch,
-    model,
+    serverMessages,
     session,
     state,
+    workspace,
   };
 }

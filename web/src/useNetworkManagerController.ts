@@ -1,19 +1,19 @@
 import { useCallback, useMemo } from 'react';
 import type { NetworkProfile } from '../../shared/protocol.js';
-import type { AppModel } from './app-model.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import { buildManagedRuntime } from './network-manager-runtime.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
 import type { NetworkManagerActionSet } from './useAppActions.js';
 
 type NetworkManagerControllerParams = {
   actions: NetworkManagerActionSet;
   dispatch: (action: Action) => void;
-  hiddenManagedNetworkName: AppModel['hiddenManagedNetworkName'];
-  managedRuntime: AppModel['managedRuntime'];
+  hiddenManagedNetworkName: string | null;
+  managedRuntime: ReturnType<typeof buildManagedRuntime>;
   networkManager: State['transient']['networkManager'];
-  visibleManagedNetwork: AppModel['visibleManagedNetwork'];
-  visibleNetworks: AppModel['visibleNetworks'];
+  visibleManagedNetwork: NetworkProfile | null;
+  visibleNetworks: NetworkProfile[];
 };
 
 const createOpenNewNetworkEditorDialog = (dispatch: (action: Action) => void) => () =>

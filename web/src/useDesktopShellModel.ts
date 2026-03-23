@@ -1,43 +1,61 @@
 import { useMemo } from 'react';
+import type { ChatPaneProps } from './ChatPane.js';
+import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
-import type { AppModel } from './app-model.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
-import type { AppActions } from './useAppActions.js';
-import type { AppUiState } from './useAppUiState.js';
 import type { ComposerController } from './composer-history.js';
-import { useNetworkEditorController } from './useNetworkEditorController.js';
-import { useNetworkManagerController } from './useNetworkManagerController.js';
+import type { AppUiState } from './useAppUiState.js';
+import type { ChatActionSet, NicklistActionSet, SidebarActionSet } from './useAppActions.js';
+import type { WorkspaceView } from './workspace-types.js';
 
-type DesktopShellModelParams = {
-  actions: AppActions;
-  composer: ComposerController;
+type DesktopHeaderModelParams = {
   dispatch: (action: Action) => void;
-  model: AppModel;
-  transient: State['transient'];
-  friends: State['domain']['friends'];
-  friendPresence: State['domain']['friendPresence'];
-  ui: Pick<AppUiState, 'messageDisplayMode' | 'scrollRef' | 'setMessageDisplayMode'>;
+  ui: Pick<AppUiState, 'messageDisplayMode' | 'setMessageDisplayMode'>;
 };
 
-export function useDesktopShellModel({
-  actions,
-  composer,
+type DesktopSidebarModelParams = {
+  actions: SidebarActionSet;
+  friends: State['domain']['friends'];
+  friendPresence: State['domain']['friendPresence'];
+  sidebarConnections: ConnectionSidebarProps['connections'];
+};
+
+type DesktopChatModelParams = {
+  actions: ChatActionSet;
+  composer: ComposerController;
+  friends: State['domain']['friends'];
+  channelList: State['transient']['channelList'];
+  channelListNetwork: ChatPaneProps['channelListNetwork'];
+  selectedMessages: ChatPaneProps['selectedMessages'];
+  workspace: WorkspaceView;
+  ui: Pick<AppUiState, 'messageDisplayMode' | 'scrollRef'>;
+};
+
+type DesktopNicklistModelParams = {
+  actions: NicklistActionSet;
+  friends: State['domain']['friends'];
+};
+
+export function useDesktopHeaderModel({
   dispatch,
-  model,
-  transient,
-  friends,
-  friendPresence,
   ui,
-}: DesktopShellModelParams): DesktopShellModel {
-  const header = useMemo(() => ({
+}: DesktopHeaderModelParams): DesktopShellModel['header'] {
+  return useMemo(() => ({
     messageDisplayMode: ui.messageDisplayMode,
     showMessageDisplayModeToggle: import.meta.env.DEV,
     onMessageDisplayModeChange: ui.setMessageDisplayMode,
     onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
   }), [dispatch, ui.messageDisplayMode, ui.setMessageDisplayMode]);
+}
 
-  const sidebar = useMemo(() => ({
-    connections: model.sidebarConnections,
+export function useDesktopSidebarModel({
+  actions,
+  friends,
+  friendPresence,
+  sidebarConnections,
+}: DesktopSidebarModelParams): DesktopShellModel['sidebar'] {
+  return useMemo(() => ({
+    connections: sidebarConnections,
     friends,
     friendPresence,
     onAddFriend: actions.addFriend,
@@ -65,13 +83,24 @@ export function useDesktopShellModel({
     actions.selectTabBuffer,
     friendPresence,
     friends,
-    model.sidebarConnections,
+    sidebarConnections,
   ]);
+}
 
-  const chat = useMemo(() => ({
-    workspace: model.workspace,
+export function useDesktopChatModel({
+  actions,
+  composer,
+  friends,
+  channelList,
+  channelListNetwork,
+  selectedMessages,
+  workspace,
+  ui,
+}: DesktopChatModelParams): DesktopShellModel['chat'] {
+  return useMemo(() => ({
+    workspace,
     friends,
-    selectedMessages: model.selectedMessages,
+    selectedMessages,
     draft: composer.draft,
     messageDisplayMode: ui.messageDisplayMode,
     scrollRef: ui.scrollRef,
@@ -81,8 +110,8 @@ export function useDesktopShellModel({
     onSend: actions.sendComposer,
     onAddFriend: actions.addFriend,
     onRemoveFriend: actions.removeFriend,
-    channelList: transient.channelList,
-    channelListNetwork: model.channelListNetwork,
+    channelList,
+    channelListNetwork,
     onCloseChannelList: actions.closeChannelList,
     onJoinChannelFromList: actions.joinChannelFromList,
     onOpenMentionedChannel: actions.openMentionedChannel,
@@ -99,46 +128,28 @@ export function useDesktopShellModel({
     actions.openMentionedChannel,
     actions.removeFriend,
     actions.sendComposer,
+    channelList,
+    channelListNetwork,
     composer.draft,
     composer.recallNewerDraft,
     composer.recallOlderDraft,
     composer.setDraft,
     friends,
-    model.channelListNetwork,
-    model.selectedMessages,
-    model.workspace,
-    transient.channelList,
+    selectedMessages,
     ui.messageDisplayMode,
     ui.scrollRef,
+    workspace,
   ]);
+}
 
-  const nicklist = useMemo(() => ({
+export function useDesktopNicklistModel({
+  actions,
+  friends,
+}: DesktopNicklistModelParams): DesktopShellModel['nicklist'] {
+  return useMemo(() => ({
     friends,
     onAddFriend: actions.addFriend,
     onRemoveFriend: actions.removeFriend,
     onSelectNick: actions.selectPrivateBuffer,
   }), [actions.addFriend, actions.removeFriend, actions.selectPrivateBuffer, friends]);
-
-  return {
-    workspace: model.workspace,
-    header,
-    sidebar,
-    chat,
-    nicklist,
-    networkManager: useNetworkManagerController({
-      actions,
-      dispatch,
-      hiddenManagedNetworkName: model.hiddenManagedNetworkName,
-      managedRuntime: model.managedRuntime,
-      networkManager: transient.networkManager,
-      visibleManagedNetwork: model.visibleManagedNetwork,
-      visibleNetworks: model.visibleNetworks,
-    }),
-    networkEditor: useNetworkEditorController({
-      actions,
-      dispatch,
-      editor: transient.networkManager.editor,
-      mode: transient.networkManager.mode,
-    }),
-  };
 }

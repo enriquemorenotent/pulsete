@@ -1,8 +1,13 @@
 import type { BufferState } from '../../shared/protocol.js';
 import {
+  type ApplyServerMessages,
+  type ChannelListReader,
+  type ConversationReader,
+  type DraftReader,
+  type NetworksReader,
   selectBuffer,
   selectPendingChannel,
-  type AppSessionReader,
+  type WorkspaceReader,
   type AppDispatch,
   type BannerActions,
   type ConversationActions,
@@ -19,13 +24,23 @@ type ChatActionParams = BannerActions
   & Pick<DraftActions, 'recordComposerEntry' | 'setDraft'>
   & GatewayActions
   & {
+  applyServerMessages: ApplyServerMessages;
   dispatch: AppDispatch;
-  readState: AppSessionReader;
+  readChannelList: ChannelListReader;
+  readConversation: ConversationReader;
+  readDraft: DraftReader;
+  readNetworks: NetworksReader;
+  readWorkspace: WorkspaceReader;
 };
 
 export const createChatActions = ({
+  applyServerMessages,
   dispatch,
-  readState,
+  readChannelList,
+  readConversation,
+  readDraft,
+  readNetworks,
+  readWorkspace,
   getGatewaySocket,
   joinChannel,
   openChannelListForNetwork,
@@ -35,23 +50,21 @@ export const createChatActions = ({
   setDraft,
   updateBanner,
 }: ChatActionParams) => {
-  const executeMutation = createAppMutationExecutor({ dispatch, readState, updateBanner });
+  const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
   const selectTabBuffer = (buffer: BufferState) => selectBuffer(dispatch, buffer);
   const selectPendingTab = (networkId: string, channel: string) =>
     selectPendingChannel(dispatch, networkId, channel);
 
   const openMentionedChannel = async (channelName: string) => {
-    const { workspace } = readState().model;
-    const network = workspace.selectedNetwork;
+    const network = readWorkspace().selectedNetwork;
     if (!network) {
       return;
     }
-    joinChannel(network.id, channelName, workspace.selectedBuffer?.id);
+    joinChannel(network.id, channelName, readWorkspace().selectedBuffer?.id);
   };
 
   const openChannelList = async () => {
-    const { workspace } = readState().model;
-    const network = workspace.selectedNetwork;
+    const network = readWorkspace().selectedNetwork;
     if (!network) {
       return;
     }
@@ -59,7 +72,7 @@ export const createChatActions = ({
   };
 
   const closeChannelList = () => {
-    const { channelList } = readState().state.transient;
+    const channelList = readChannelList();
     const networkId = channelList.networkId;
     if (networkId) {
       sendGatewayMessage({ type: 'channel.list.cancel', networkId }, false);
@@ -68,8 +81,8 @@ export const createChatActions = ({
   };
 
   const joinChannelFromList = async (channel: string) => {
-    const { channelList } = readState().state.transient;
-    const { conversation } = readState().model;
+    const channelList = readChannelList();
+    const conversation = readConversation();
     const networkId = channelList.networkId;
     if (!networkId) {
       return;
@@ -82,7 +95,8 @@ export const createChatActions = ({
     if (!socket) {
       return;
     }
-    const { conversation, workspace } = readState().model;
+    const conversation = readConversation();
+    const workspace = readWorkspace();
     const buffer = conversation.findChannelBuffer(networkId, channel);
     try {
       socket.send({
@@ -105,7 +119,7 @@ export const createChatActions = ({
   };
 
   const sendComposer = async () => {
-    const { draft } = readState();
+    const draft = readDraft();
     if (draft.trim() && !getGatewaySocket()) {
       return;
     }
@@ -115,13 +129,13 @@ export const createChatActions = ({
         setDraft,
         socket: getGatewaySocket(false),
         updateBanner,
-        workspace: readState().model.workspace,
+        workspace: readWorkspace(),
         onJoinChannel: async (networkId, channel, sourceBufferId) => {
           joinChannel(networkId, channel, sourceBufferId);
         },
         onOpenChannelList: openChannelListForNetwork,
         onOpenQuery: async (networkId, nick) => {
-          const { networks } = readState().state.domain;
+          const networks = readNetworks();
           const network = networks.find((candidate) => candidate.id === networkId) ?? null;
           if (!network) {
             throw new Error('Network not found');

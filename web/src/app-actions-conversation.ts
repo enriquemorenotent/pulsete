@@ -1,32 +1,40 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
-import type { AppSessionReader } from './app-actions-types.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
 import {
+  type ApplyServerMessages,
+  type ChannelListReader,
+  type ConversationReader,
   selectBuffer,
   selectPendingChannel,
   type AppDispatch,
   type BannerActions,
   type ConversationActions,
   type GatewayActions,
+  type NetworkStatesReader,
 } from './app-actions-types.js';
-import { syncMutationMessages } from './mutation-message-sync.js';
 
 type ConversationActionParams = {
+  applyServerMessages: ApplyServerMessages;
   dispatch: AppDispatch;
-  readState: AppSessionReader;
+  readChannelList: ChannelListReader;
+  readConversation: ConversationReader;
+  readNetworkStates: NetworkStatesReader;
 } & BannerActions & GatewayActions;
 
 export const createConversationActions = ({
+  applyServerMessages,
   dispatch,
-  readState,
+  readChannelList,
+  readConversation,
+  readNetworkStates,
   updateBanner,
   getGatewaySocket,
   sendGatewayMessage,
 }: ConversationActionParams): ConversationActions => {
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
-    const { conversation } = readState().model;
-    const { networkStates } = readState().state.domain;
+    const conversation = readConversation();
+    const networkStates = readNetworkStates();
     const existingBuffer = conversation.findChannelBuffer(networkId, channel);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
@@ -53,15 +61,14 @@ export const createConversationActions = ({
   };
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string): Promise<BufferState> => {
-    const { conversation } = readState().model;
-    const { gatewayStatus } = readState().state.domain;
+    const conversation = readConversation();
     const existingBuffer = conversation.findQueryBuffer(network.id, nick);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
       return existingBuffer;
     }
     const result = await api.openQuery(network.id, nick);
-    syncMutationMessages(gatewayStatus, result.messages, dispatch);
+    applyServerMessages(result.messages);
     selectBuffer(dispatch, result.buffer);
     return result.buffer;
   };
@@ -70,8 +77,8 @@ export const createConversationActions = ({
     if (!getGatewaySocket()) {
       return;
     }
-    const { channelList } = readState().state.transient;
-    const { networkStates } = readState().state.domain;
+    const channelList = readChannelList();
+    const networkStates = readNetworkStates();
     const runtime = networkStates[networkId] ?? null;
     if (runtime?.phase !== 'connected') {
       updateBanner('error', 'Connect the network before listing channels');

@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import type { BufferState } from '../../shared/protocol.js';
+import type { ApplyServerMessages } from './app-actions-types.js';
 import type { Action, GatewayStatus } from './app-types.js';
 import { api } from './client.js';
-import { syncMutationMessages } from './mutation-message-sync.js';
 
 type UseSelectedBufferEffectsParams = {
+  applyServerMessages: ApplyServerMessages;
   dispatch: (action: Action) => void;
   gatewayStatus: GatewayStatus;
   selectedBuffer: BufferState | null;
@@ -25,10 +26,10 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
     const unread = params.selectedBuffer?.unread ?? 0;
     if (params.selectedBuffer && unread > 0) {
       api.markBufferRead(params.selectedBuffer.id)
-        .then((payload) => syncMutationMessages(params.gatewayStatus, payload.messages, params.dispatch))
+        .then((payload) => params.applyServerMessages(payload.messages))
         .catch(() => undefined);
     }
-  }, [params.dispatch, params.gatewayStatus, params.selectedBuffer?.id, params.selectedBuffer?.unread]);
+  }, [params.applyServerMessages, params.selectedBuffer?.id, params.selectedBuffer?.unread]);
 
   useEffect(() => {
     historyRequestRef.current += 1;

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile, ServerMessage } from '../../shared/protocol.js';
+import type { ApplyServerMessages } from './app-actions-types.js';
 import type { Action, AppDomainState, AppTransientState, Banner, GatewayStatus } from './app-types.js';
 import { gatewayReconnectMessage } from './gateway.js';
 import { useGatewayConnection } from './useGatewayConnection.js';
@@ -12,6 +13,8 @@ import type { SocketHandle } from './client.js';
 type MutableRef<T> = { current: T };
 
 type LifecycleParams = {
+  applyServerMessages: ApplyServerMessages;
+  applySocketMessage: (message: ServerMessage) => void;
   banner: Banner;
   gatewayStatus: GatewayStatus;
   networks: AppDomainState['networks'];
@@ -43,11 +46,13 @@ export function useAppLifecycle(params: LifecycleParams) {
   }, [params.banner, params.dispatch]);
 
   useGatewayConnection({
+    applySocketMessage: params.applySocketMessage,
     dispatch: params.dispatch,
     socketRef: params.socketRef,
   });
 
   useSelectedBufferEffects({
+    applyServerMessages: params.applyServerMessages,
     dispatch: params.dispatch,
     gatewayStatus: params.gatewayStatus,
     selectedBuffer: params.workspace.selectedBuffer,

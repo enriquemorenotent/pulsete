@@ -1,5 +1,5 @@
-import type { BufferState, ClientMessage, NetworkProfile } from '../../shared/protocol.js';
-import type { Action } from './app-types.js';
+import type { BufferState, ClientMessage, NetworkProfile, ServerMessage } from '../../shared/protocol.js';
+import type { Action, State } from './app-types.js';
 import type { AppSessionSnapshot } from './app-session.js';
 import type { SocketHandle } from './client.js';
 
@@ -9,6 +9,19 @@ export type ValueReader<T> = () => T;
 export type AppDispatch = (action: Action) => void;
 
 export type AppSessionReader = ValueReader<AppSessionSnapshot>;
+export type ApplyServerMessages = (messages: readonly ServerMessage[]) => void;
+export type DraftReader = ValueReader<AppSessionSnapshot['draft']>;
+export type WorkspaceReader = ValueReader<AppSessionSnapshot['workspace']>;
+export type ConversationReader = ValueReader<AppSessionSnapshot['conversation']>;
+export type GatewayStatusReader = ValueReader<State['domain']['gatewayStatus']>;
+export type ChannelListReader = ValueReader<State['transient']['channelList']>;
+export type NetworksReader = ValueReader<State['domain']['networks']>;
+export type NetworkStatesReader = ValueReader<State['domain']['networkStates']>;
+export type FriendSelectionReader = ValueReader<{
+  buffers: State['domain']['buffers'];
+  networkStates: State['domain']['networkStates'];
+  workspace: AppSessionSnapshot['workspace'];
+}>;
 
 export type BannerActions = {
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
@@ -21,7 +34,7 @@ export type DraftActions = {
 };
 
 export type GatewayActionParams = BannerActions & {
-  readState: AppSessionReader;
+  readGatewayStatus: GatewayStatusReader;
   socketRef: MutableRef<SocketHandle | null>;
 };
 
