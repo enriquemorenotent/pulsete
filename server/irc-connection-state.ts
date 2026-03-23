@@ -51,18 +51,7 @@ export const createIrcConnectionState = (
     enabled: true,
   };
   const channelList: IrcChannelListState = {
-    active: {
-      mode: null,
-      sourceTarget: null,
-      requestId: null,
-      entries: [],
-    },
-    draining: {
-      mode: null,
-      sourceTarget: null,
-      requestId: null,
-      expiresAt: null,
-    },
+    session: { phase: 'idle' },
     timeoutTimer: null,
     timeoutMs: options.channelListTimeoutMs ?? defaultChannelListTimeoutMs,
     drainGraceMs: options.channelListDrainGraceMs ?? defaultChannelListDrainGraceMs,

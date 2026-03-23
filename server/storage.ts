@@ -5,7 +5,7 @@ import { StorageFriendsRepository } from './storage-friends-repository.js';
 import { StorageNetworksRepository } from './storage-networks-repository.js';
 import { createStorageViews } from './storage-runtime-store.js';
 import { createStorageSnapshot } from './storage-snapshot.js';
-import type { RuntimeStore } from './runtime-core.js';
+import type { RuntimeStore } from './runtime-service-types.js';
 import type { MessageInput, NetworkInput, StorageSnapshotSource } from './storage-types.js';
 
 export { type MessageInput, type NetworkInput };

@@ -1,30 +1,22 @@
 import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
-import type { AppDomainState } from './app-types.js';
-import type { AppDispatch, BannerActions, ConversationActions } from './app-actions-types.js';
+import type { AppDispatch, AppStateReader, BannerActions, ConversationActions } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import { resolveFriendSelection } from './friend-selection.js';
-import type { WorkspaceView } from './workspace-types.js';
 
 type FriendActionParams = BannerActions & ConversationActions & {
-  getBuffers: () => AppDomainState['buffers'];
   dispatch: AppDispatch;
-  getGatewayStatus: () => AppDomainState['gatewayStatus'];
-  getNetworkStates: () => AppDomainState['networkStates'];
-  getWorkspace: () => WorkspaceView;
+  readState: AppStateReader;
 };
 
 export const createFriendActions = ({
-  getBuffers,
   dispatch,
-  getGatewayStatus,
-  getNetworkStates,
+  readState,
   openOrSelectQueryBuffer,
   updateBanner,
-  getWorkspace,
 }: FriendActionParams) => {
-  const executeMutation = createAppMutationExecutor({ dispatch, getGatewayStatus, updateBanner });
+  const executeMutation = createAppMutationExecutor({ dispatch, readState, updateBanner });
 
   const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
     try {
@@ -35,11 +27,12 @@ export const createFriendActions = ({
   };
 
   const selectFriend = async (friend: FriendState) => {
+    const { buffers, networkStates, workspace } = readState();
     const decision = resolveFriendSelection({
       nick: friend.nick,
-      buffers: getBuffers(),
-      workspace: getWorkspace(),
-      networkStates: getNetworkStates(),
+      buffers,
+      workspace,
+      networkStates,
     });
 
     if (decision.type === 'error') {

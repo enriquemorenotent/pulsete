@@ -1,5 +1,5 @@
 import { createRuntimeServices } from './runtime-core.js';
-import type { RuntimeStore } from './runtime-core.js';
+import type { RuntimeServices, RuntimeStore } from './runtime-service-types.js';
 
 export type {
   RuntimeConversationMutations,
@@ -8,10 +8,11 @@ export type {
   RuntimeHttpApi,
   RuntimeNetworkCatalog,
   RuntimeNetworkMutations,
+  RuntimeServices,
   RuntimeWebSocketApi,
   RuntimeStore,
-} from './runtime-core.js';
+} from './runtime-service-types.js';
 
-export type Runtime = ReturnType<typeof createRuntimeServices>;
+export type Runtime = RuntimeServices;
 
 export const createRuntime = (store: RuntimeStore): Runtime => createRuntimeServices(store);

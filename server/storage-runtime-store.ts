@@ -1,4 +1,4 @@
-import type { RuntimeStore } from './runtime-core.js';
+import type { RuntimeStore } from './runtime-service-types.js';
 import type { StorageConversationsRepository } from './storage-conversations-repository.js';
 import type { StorageFriendsRepository } from './storage-friends-repository.js';
 import type { StorageNetworksRepository } from './storage-networks-repository.js';

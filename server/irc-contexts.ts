@@ -1,21 +1,57 @@
-import type { IrcConnectionState } from './irc-types.js';
+import type { IrcConnectionData, IrcConnectionMethods } from './irc-types.js';
 
-export type IrcEventContext = Pick<IrcConnectionState, 'handlers' | 'profile'>;
+type IrcConnectionPick<
+  TData extends keyof IrcConnectionData = never,
+  TMethods extends keyof IrcConnectionMethods = never,
+> = Pick<IrcConnectionData, TData> & Pick<IrcConnectionMethods, TMethods>;
 
-export type IrcStateContext = Pick<IrcConnectionState, 'handlers' | 'profile' | 'lifecycle'>;
+export type IrcEventContext = IrcConnectionPick<'handlers' | 'profile'>;
 
-export type IrcReplyStateContext = IrcConnectionState;
+export type IrcStateContext = IrcEventContext & IrcConnectionPick<'lifecycle'>;
 
-export type IrcChannelListContext = IrcConnectionState;
+export type IrcReplyStateContext = IrcConnectionPick<'channelList' | 'replyTracker', 'clearDrainingChannelList'>;
 
-export type IrcChannelStateContext = IrcConnectionState;
+export type IrcChannelListContext = IrcEventContext & IrcConnectionPick<
+  'channelList' | 'lifecycle',
+  'prunePendingReplyContexts' | 'sendRaw'
+>;
 
-export type IrcFriendPresenceContext = IrcConnectionState;
+export type IrcChannelStateContext = IrcEventContext & IrcConnectionPick<
+  'channels' | 'replyTracker',
+  'prunePendingReplyContexts'
+>;
 
-export type IrcRawIoContext = IrcConnectionState;
+export type IrcFriendPresenceContext = IrcEventContext & IrcConnectionPick<
+  'friendPresence' | 'lifecycle',
+  'queueReplyContext' | 'sendRaw'
+>;
 
-export type IrcClientIoContext = IrcConnectionState;
+export type IrcRawIoContext = IrcEventContext & IrcConnectionPick<'lifecycle'>;
 
-export type IrcLifecycleContext = IrcConnectionState;
+export type IrcClientIoContext = IrcRawIoContext & IrcConnectionPick<
+  never,
+  | 'getChannelListRequestFailureMessage'
+  | 'isChannelListPending'
+  | 'join'
+  | 'part'
+  | 'prunePendingReplyContexts'
+  | 'queueReplyContext'
+  | 'startChannelList'
+>;
 
-export type IrcConnectContext = IrcConnectionState;
+export type IrcLifecycleContext = IrcEventContext & IrcConnectionPick<
+  'channelList' | 'channels' | 'friendPresence' | 'lifecycle' | 'replyTracker',
+  'clearDrainingChannelList' | 'connect' | 'prunePendingReplyContexts' | 'queueReplyContext' | 'sendRaw'
+>;
+
+export type IrcConnectContext = IrcLifecycleContext & IrcConnectionPick<
+  never,
+  | 'beginLogin'
+  | 'clearReconnectTimer'
+  | 'consume'
+  | 'handleSocketClosed'
+  | 'markConnectionFailure'
+  | 'openSocket'
+  | 'setConnectDeadlineTimer'
+  | 'setNick'
+>;

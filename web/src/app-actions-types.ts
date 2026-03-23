@@ -1,12 +1,26 @@
 import type { BufferState, ClientMessage, NetworkProfile } from '../../shared/protocol.js';
-import type { Action, AppDomainState, AppTransientState, GatewayStatus } from './app-types.js';
+import type { Action, AppDomainState, AppTransientState } from './app-types.js';
 import type { SocketHandle } from './client.js';
+import type { ConversationIndex } from './conversation-selectors.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 export type MutableRef<T> = { current: T };
 export type ValueReader<T> = () => T;
 
 export type AppDispatch = (action: Action) => void;
+
+export type AppActionSnapshot = {
+  buffers: AppDomainState['buffers'];
+  channelList: AppTransientState['channelList'];
+  conversation: ConversationIndex;
+  draft: string;
+  gatewayStatus: AppDomainState['gatewayStatus'];
+  networks: AppDomainState['networks'];
+  networkStates: AppDomainState['networkStates'];
+  workspace: WorkspaceView;
+};
+
+export type AppStateReader = ValueReader<AppActionSnapshot>;
 
 export type BannerActions = {
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
@@ -19,7 +33,7 @@ export type DraftActions = {
 };
 
 export type GatewayActionParams = BannerActions & {
-  getGatewayStatus: ValueReader<GatewayStatus>;
+  readState: AppStateReader;
   socketRef: MutableRef<SocketHandle | null>;
 };
 
@@ -32,18 +46,6 @@ export type ConversationActions = {
   joinChannel: (networkId: string, channel: string, sourceBufferId?: string) => boolean;
   openOrSelectQueryBuffer: (network: NetworkProfile, nick: string) => Promise<BufferState>;
   openChannelListForNetwork: (networkId: string) => Promise<void>;
-};
-
-export type WorkspaceActions = {
-  getWorkspace: ValueReader<WorkspaceView>;
-};
-
-export type AppActionState = {
-  getBuffers: ValueReader<AppDomainState['buffers']>;
-  getChannelList: ValueReader<AppTransientState['channelList']>;
-  getGatewayStatus: ValueReader<AppDomainState['gatewayStatus']>;
-  getNetworks: ValueReader<AppDomainState['networks']>;
-  getNetworkStates: ValueReader<AppDomainState['networkStates']>;
 };
 
 export const selectBuffer = (dispatch: AppDispatch, buffer: BufferState) =>

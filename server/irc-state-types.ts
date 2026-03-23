@@ -52,23 +52,43 @@ export type IrcFriendPresenceState = {
 
 export type IrcChannelListMode = 'raw' | 'structured';
 
-export type IrcChannelListActiveState = {
-  mode: IrcChannelListMode | null;
-  sourceTarget: string | null;
-  requestId: string | null;
-  entries: ChannelListEntry[];
-};
+export type IrcChannelListSession =
+  | { phase: 'idle' }
+  | {
+      phase: 'active';
+      mode: 'structured';
+      sourceTarget: null;
+      requestId: string | null;
+      entries: ChannelListEntry[];
+    }
+  | {
+      phase: 'active';
+      mode: 'raw';
+      sourceTarget: string;
+      requestId: null;
+      entries: ChannelListEntry[];
+    }
+  | {
+      phase: 'draining';
+      mode: 'structured';
+      sourceTarget: null;
+      requestId: string | null;
+      expiresAt: number;
+    }
+  | {
+      phase: 'draining';
+      mode: 'raw';
+      sourceTarget: string;
+      requestId: null;
+      expiresAt: number;
+    };
 
-export type IrcChannelListDrainingState = {
-  mode: IrcChannelListMode | null;
-  sourceTarget: string | null;
-  requestId: string | null;
-  expiresAt: number | null;
-};
+export type IrcChannelListActiveState = Extract<IrcChannelListSession, { phase: 'active' }>;
+
+export type IrcChannelListDrainingState = Extract<IrcChannelListSession, { phase: 'draining' }>;
 
 export type IrcChannelListState = {
-  active: IrcChannelListActiveState;
-  draining: IrcChannelListDrainingState;
+  session: IrcChannelListSession;
   timeoutTimer: ReturnType<typeof setTimeout> | null;
   timeoutMs: number;
   drainGraceMs: number;

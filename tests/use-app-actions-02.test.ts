@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { BufferState,ChannelState,ClientMessage,NetworkProfile } from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action,State } from '../web/src/app-types.js';
+import type { AppActionSnapshot } from '../web/src/app-actions-types.js';
 import type { SocketHandle } from '../web/src/client.js';
 import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
@@ -103,22 +104,20 @@ const createParams = (options: {
     banners,
     composerEntries,
     params: {
-      buffers: state.domain.buffers,
-      channelList: state.transient.channelList,
-      conversation: buildConversationIndex(state.domain),
-      draft: options.draft ?? '',
-      gatewayStatus: state.domain.gatewayStatus,
-      networks: state.domain.networks,
-      networkStates: state.domain.networkStates,
-      workspace,
+      state: {
+        buffers: state.domain.buffers,
+        channelList: state.transient.channelList,
+        conversation: buildConversationIndex(state.domain),
+        draft: options.draft ?? '',
+        gatewayStatus: state.domain.gatewayStatus,
+        networks: state.domain.networks,
+        networkStates: state.domain.networkStates,
+        workspace,
+      } satisfies AppActionSnapshot,
       dispatch: (action: Action) => {
         actions.push(action);
       },
       socketRef: { current: options.socket ?? null },
-      setShowNetworkEditor: () => {},
-      setShowNetworkManager: () => {},
-      setManagedNetworkId: () => {},
-      setEditorTab: () => {},
       setDraft: () => {},
       recordComposerEntry: (value: string) => {
         composerEntries.push(value);

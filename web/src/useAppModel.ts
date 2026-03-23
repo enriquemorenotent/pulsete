@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { initialState, reducer, useStateReducer } from './app-state.js';
+import type { AppActionSnapshot } from './app-actions-types.js';
 import { createLiveAppActions } from './useAppActions.js';
 import { useAppDerivedState } from './useAppDerivedState.js';
 import type { ComposerController } from './composer-history.js';
@@ -13,7 +14,7 @@ type UseAppModelParams = {
 export function useAppModel({ composer, ui }: UseAppModelParams) {
   const [state, dispatch] = useStateReducer(reducer, initialState);
   const model = useAppDerivedState(state);
-  const liveStateRef = useRef({
+  const liveStateRef = useRef<AppActionSnapshot>({
     buffers: state.domain.buffers,
     channelList: state.transient.channelList,
     conversation: model.conversation,
@@ -40,14 +41,7 @@ export function useAppModel({ composer, ui }: UseAppModelParams) {
   );
   const actions = useMemo(
     () => createLiveAppActions({
-      getBuffers: () => liveStateRef.current.buffers,
-      getChannelList: () => liveStateRef.current.channelList,
-      getConversation: () => liveStateRef.current.conversation,
-      getDraft: () => liveStateRef.current.draft,
-      getGatewayStatus: () => liveStateRef.current.gatewayStatus,
-      getNetworks: () => liveStateRef.current.networks,
-      getNetworkStates: () => liveStateRef.current.networkStates,
-      getWorkspace: () => liveStateRef.current.workspace,
+      readState: () => liveStateRef.current,
       dispatch,
       socketRef: ui.socketRef,
       setDraft: composer.setDraft,

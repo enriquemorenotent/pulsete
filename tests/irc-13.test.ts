@@ -54,7 +54,7 @@ test('irc connection expires a stalled LIST drain and allows a later retry witho
   await new Promise((resolve) => setTimeout(resolve, 30));
 
   assert.equal(connection.requestChannelList('request-2'), true);
-  assert.equal(connection.channelList.draining.requestId, null);
+  assert.equal(connection.channelList.session.phase, 'active');
   assert.deepEqual(writes, ['LIST\r\n', 'LIST\r\n']);
 });
 
@@ -94,8 +94,9 @@ test('irc connection refuses a second LIST while one is already active', () => {
 
   assert.equal(connection.requestChannelList('request-1'), true);
   assert.equal(connection.requestChannelList('request-2'), false);
-  assert.equal(connection.channelList.active.requestId, 'request-1');
-  assert.deepEqual(connection.channelList.active.entries, []);
+  assert.equal(connection.channelList.session.phase, 'active');
+  assert.equal(connection.channelList.session.requestId, 'request-1');
+  assert.deepEqual(connection.channelList.session.entries, []);
   assert.deepEqual(writes, ['LIST\r\n']);
   assert.ok(!events.some((event) => event.type === 'channel-list-failed'));
 });
