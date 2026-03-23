@@ -4,16 +4,16 @@ import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
 import { createNetworkActions } from './app-actions-networks.js';
 import {
-  type AppActionSnapshot,
+  type AppSessionReader,
   constantReader,
-  type AppStateReader,
   type AppDispatch,
   type MutableRef,
 } from './app-actions-types.js';
+import type { AppSessionSnapshot } from './app-session.js';
 import type { SocketHandle } from './client.js';
 
 type CreateAppActionsParams = {
-  readState: AppStateReader;
+  readState: AppSessionReader;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
   recordComposerEntry: (value: string) => void;
@@ -22,7 +22,7 @@ type CreateAppActionsParams = {
 };
 
 type CreateStaticAppActionsParams = {
-  state: AppActionSnapshot;
+  session: AppSessionSnapshot;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
   recordComposerEntry: (value: string) => void;
@@ -68,7 +68,7 @@ const createAppActionsFromStateReader = (params: CreateAppActionsParams) => {
 
 export function createAppActions(params: CreateStaticAppActionsParams) {
   return createAppActionsFromStateReader({
-    readState: constantReader(params.state),
+    readState: constantReader(params.session),
     dispatch: params.dispatch,
     socketRef: params.socketRef,
     setDraft: params.setDraft,

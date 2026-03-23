@@ -3,6 +3,7 @@ import type { MessageKind, ServerMessage } from '../shared/protocol.js';
 import { normalizeQueryTarget } from './irc-validate.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
+import { requireStoredNetwork } from './runtime-network-guard.js';
 import {
   appendConversationMessage,
   closeConversationQueryBuffer,
@@ -11,21 +12,19 @@ import {
   openConversationQuery,
   upsertConversationChannel,
 } from './runtime-conversation-store.js';
-import { notFound } from './app-error.js';
-import type { StorageConversationsRepository } from './storage-conversations-repository.js';
-import type { StorageNetworksRepository } from './storage-networks-repository.js';
+import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
 import type { MessageInput } from './storage-types.js';
 
 type RuntimeConversationServiceOptions = {
-  conversations: StorageConversationsRepository;
-  networks: StorageNetworksRepository;
+  conversations: RuntimeConversationStore;
+  networks: Pick<RuntimeNetworkStore, 'get'>;
 };
 
 export class RuntimeConversationService {
   constructor(private readonly options: RuntimeConversationServiceOptions) {}
 
   openQuery(networkId: string, target: string) {
-    this.requireNetwork(networkId);
+    requireStoredNetwork(this.options.networks, networkId);
     const buffer = openConversationQuery(this.options.conversations, networkId, normalizeQueryTarget(target));
     const messages = [{ type: 'buffer.upsert', buffer } satisfies ServerMessage];
     return { buffer, messages };
@@ -125,12 +124,6 @@ export class RuntimeConversationService {
       messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
     }
     return messages;
-  }
-
-  private requireNetwork(networkId: string) {
-    if (!this.options.networks.get(networkId)) {
-      throw notFound('Network not found');
-    }
   }
 
   private resolveStatusTarget(event: Extract<RuntimeEvent, { type: 'status' }>) {

@@ -7,11 +7,11 @@ import { RuntimeChannelListService } from './runtime-channel-lists.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeFriendPresenceProjector } from './runtime-friend-presence-projector.js';
 import { createRuntimeProjectionSnapshot } from './runtime-snapshot-projector.js';
-import type { StorageFriendsRepository } from './storage-friends-repository.js';
+import type { RuntimeFriendStore } from './runtime-store-ports.js';
 
 type RuntimeEventRouterOptions = {
   conversations: RuntimeConversationService;
-  friends: StorageFriendsRepository;
+  friends: Pick<RuntimeFriendStore, 'list'>;
   publish(messages: ServerMessage[]): void;
   sendSocket(ws: WebSocket, message: ServerMessage): void;
 };

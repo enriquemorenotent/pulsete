@@ -1,72 +1,7 @@
 import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
-import {
-  abortActiveChannelList,
-  clearActiveChannelList,
-  clearDrainingChannelList,
-  finishChannelListRequest,
-  getActiveChannelListSnapshot,
-  getChannelListRequestFailureMessage,
-  handleChannelListNumeric,
-  isChannelListPending,
-  recordChannelListEntry,
-  requestChannelList,
-  startChannelList,
-} from './irc-channel-list.js';
-import {
-  clearChannelSessions,
-  clearExpiredChannelSessions,
-  getChannelSession,
-  getTrackedChannelUserEntries,
-  getTrackedChannelUsers,
-  handleSelfChannelDeparture,
-  listPendingChannels,
-  removeChannelSession,
-  resolveTrackedChannel,
-  setChannelSession,
-  setTrackedChannelUsers,
-  trackChannel,
-  untrackChannel,
-  updateChannelUsers,
-} from './irc-channel-state.js';
+import { createIrcControllers } from './irc-controls.js';
 import { createIrcConnectionState, type IrcConnectionOptions } from './irc-connection-state.js';
-import {
-  applyNickFallback,
-  beginLogin,
-  clearConnectDeadlineTimer,
-  clearPendingNick,
-  clearReconnectTimer,
-  confirmNick,
-  connect,
-  disconnect,
-  dispose,
-  handleSocketClosed,
-  markConnectionFailure,
-  markRegistered,
-  openSocket,
-  resetTransientState,
-  setConnectDeadlineTimer,
-  updateProfile,
-} from './irc-connection-lifecycle.js';
-import { consume, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
-import { emitMessage, emitStatus } from './irc-emit.js';
-import {
-  clearFriendPresenceTimer,
-  disableFriendPresence,
-  handleFriendPresence,
-  refreshFriendPresence,
-  setFriendNicks,
-  updateOnlineFriendKeys,
-} from './irc-friend-presence.js';
-import { createChannelReplyContext, createMessageReplyContext, createNickReplyContext } from './irc-reply-context.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
-import {
-  consumePendingNickReplyContexts,
-  consumeReplyContext,
-  consumeReplyTarget,
-  discardPendingNickReplyContexts,
-  prunePendingReplyContexts,
-  queueReplyContext,
-} from './irc-reply-state.js';
 import type {
   ChannelSessionPhase,
   ChannelSessionState,
@@ -77,7 +12,17 @@ import type {
   IrcReplyTracker,
   IrcSocket,
 } from './irc-state-types.js';
-import type { Handlers, IrcConnectionState } from './irc-types.js';
+import type {
+  Handlers,
+  IrcChannelController,
+  IrcChannelListController,
+  IrcCommandController,
+  IrcConnectionState,
+  IrcFriendPresenceController,
+  IrcIoController,
+  IrcLifecycleController,
+  IrcReplyController,
+} from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export class IrcConnection implements IrcConnectionState {
@@ -88,6 +33,13 @@ export class IrcConnection implements IrcConnectionState {
   readonly friendPresence: IrcFriendPresenceState;
   readonly channelList: IrcChannelListState;
   readonly replyTracker: IrcReplyTracker;
+  readonly lifecycleControl: IrcLifecycleController;
+  readonly io: IrcIoController;
+  readonly commands: IrcCommandController;
+  readonly friendsControl: IrcFriendPresenceController;
+  readonly channelLists: IrcChannelListController;
+  readonly channelsControl: IrcChannelController;
+  readonly replies: IrcReplyController;
 
   constructor(profile: RuntimeNetworkProfile, handlers: Handlers, options: IrcConnectionOptions = {}) {
     const state = createIrcConnectionState(profile, handlers, options);
@@ -98,6 +50,15 @@ export class IrcConnection implements IrcConnectionState {
     this.friendPresence = state.friendPresence;
     this.channelList = state.channelList;
     this.replyTracker = state.replyTracker;
+
+    const controls = createIrcControllers(this);
+    this.lifecycleControl = controls.lifecycleControl;
+    this.io = controls.io;
+    this.commands = controls.commands;
+    this.friendsControl = controls.friendsControl;
+    this.channelLists = controls.channelLists;
+    this.channelsControl = controls.channelsControl;
+    this.replies = controls.replies;
   }
 
   get state(): Pick<NetworkRuntimeState, 'phase' | 'serverName' | 'nick'> {
@@ -113,137 +74,96 @@ export class IrcConnection implements IrcConnectionState {
     };
   }
 
-  beginLogin() { beginLogin(this); }
-  connect(resetRetryBudget = true) { connect(this, resetRetryBudget); }
-  disconnect(raw?: string) { disconnect(this, raw); }
-  dispose() { dispose(this); }
-  updateProfile(profile: RuntimeNetworkProfile) { updateProfile(this, profile); }
-  clearReconnectTimer() { clearReconnectTimer(this); }
-  clearConnectDeadlineTimer() { clearConnectDeadlineTimer(this); }
-  resetTransientState() { resetTransientState(this); }
-  markConnectionFailure(detail: string) { markConnectionFailure(this, detail); }
-  markRegistered(serverName: string | null, nick: string | null) { markRegistered(this, serverName, nick); }
-  openSocket(socket: IrcSocket) { openSocket(this, socket); }
-  handleSocketClosed(socket: IrcSocket) { handleSocketClosed(this, socket); }
-  setConnectDeadlineTimer(timer: ReturnType<typeof setTimeout>) { setConnectDeadlineTimer(this, timer); }
-
-  consume(chunk: string) { consume(this, chunk); }
-  sendRaw(raw: string, statusTarget?: string) { return sendRaw(this, raw, statusTarget); }
-  sendClientRaw(raw: string, sourceTarget?: string) { return sendClientRaw(this, raw, sourceTarget); }
-
-  join(channel: string, sourceTarget = 'server', options: { visiblePending?: boolean } | string = {}) {
-    if (!this.lifecycle.connected) {
-      emitStatus(this, this.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
-      return false;
-    }
-    if (!this.sendRaw(`JOIN ${channel}`, sourceTarget)) {
-      return false;
-    }
-    const visiblePending = typeof options === 'string' ? false : options.visiblePending ?? false;
-    this.setChannelSession(channel, 'joining', { sourceTarget, visiblePending });
-    return true;
-  }
-
-  part(channel: string, reason = 'Leaving', sourceTarget = channel) {
-    if (this.getChannelSession(channel)?.phase === 'joined') {
-      this.setChannelSession(channel, 'leaving', { sourceTarget, visiblePending: false });
-    }
-    return sendTrackedRaw(this, `PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
-  }
-
-  say(target: string, text: string, sourceTarget = target) {
-    if (sendTrackedRaw(this, `PRIVMSG ${target} :${text}`, sourceTarget, createMessageReplyContext(sourceTarget, target))) {
-      emitMessage(this, createSelfMessage(this, target, text));
-    }
-  }
-
-  action(target: string, text: string, sourceTarget = target) {
-    if (
-      sendTrackedRaw(
-        this,
-        `PRIVMSG ${target} :\u0001ACTION ${text}\u0001`,
-        sourceTarget,
-        createMessageReplyContext(sourceTarget, target)
-      )
-    ) {
-      emitMessage(this, createSelfMessage(this, target, `* ${this.lifecycle.currentNick} ${text}`));
-    }
-  }
-
-  setNick(nick: string, sourceTarget = 'server') {
-    if (!this.lifecycle.connected) {
-      emitStatus(this, this.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
-      return false;
-    }
-    return sendTrackedRaw(this, `NICK ${nick}`, sourceTarget, createNickReplyContext(sourceTarget, nick));
-  }
-
-  clearPendingNick() { clearPendingNick(this); }
-  confirmNick(newNick: string) { confirmNick(this, newNick); }
+  beginLogin() { this.lifecycleControl.beginLogin(); }
+  connect(resetRetryBudget = true) { this.lifecycleControl.connect(resetRetryBudget); }
+  disconnect(raw?: string) { this.lifecycleControl.disconnect(raw); }
+  dispose() { this.lifecycleControl.dispose(); }
+  updateProfile(profile: RuntimeNetworkProfile) { this.lifecycleControl.updateProfile(profile); }
+  clearReconnectTimer() { this.lifecycleControl.clearReconnectTimer(); }
+  clearConnectDeadlineTimer() { this.lifecycleControl.clearConnectDeadlineTimer(); }
+  resetTransientState() { this.lifecycleControl.resetTransientState(); }
+  markConnectionFailure(detail: string) { this.lifecycleControl.markConnectionFailure(detail); }
+  markRegistered(serverName: string | null, nick: string | null) { this.lifecycleControl.markRegistered(serverName, nick); }
+  openSocket(socket: IrcSocket) { this.lifecycleControl.openSocket(socket); }
+  handleSocketClosed(socket: IrcSocket) { this.lifecycleControl.handleSocketClosed(socket); }
+  setConnectDeadlineTimer(timer: ReturnType<typeof setTimeout>) { this.lifecycleControl.setConnectDeadlineTimer(timer); }
+  clearPendingNick() { this.lifecycleControl.clearPendingNick(); }
+  confirmNick(newNick: string) { this.lifecycleControl.confirmNick(newNick); }
   applyNickFallback(fallbackNick: string, options: { replyTarget?: string; updatePending: boolean }) {
-    applyNickFallback(this, fallbackNick, options);
+    this.lifecycleControl.applyNickFallback(fallbackNick, options);
   }
 
-  setFriendNicks(nicks: string[]) { setFriendNicks(this, nicks); }
-  refreshFriendPresence() { refreshFriendPresence(this); }
-  handleFriendPresence(pollId: number, onlineNicks: string[]) { handleFriendPresence(this, pollId, onlineNicks); }
-  disableFriendPresence() { disableFriendPresence(this); }
-  clearFriendPresenceTimer() { clearFriendPresenceTimer(this); }
-  updateOnlineFriendKeys(onlineNicks: string[]) { updateOnlineFriendKeys(this, onlineNicks); }
+  consume(chunk: string) { this.io.consume(chunk); }
+  sendRaw(raw: string, statusTarget?: string) { return this.io.sendRaw(raw, statusTarget); }
+  sendClientRaw(raw: string, sourceTarget?: string) { return this.io.sendClientRaw(raw, sourceTarget); }
+  join(channel: string, sourceTarget = 'server', options: { visiblePending?: boolean } | string = {}) {
+    return this.commands.join(channel, sourceTarget, options);
+  }
+  part(channel: string, reason = 'Leaving', sourceTarget = channel) { return this.commands.part(channel, reason, sourceTarget); }
+  say(target: string, text: string, sourceTarget = target) { this.commands.say(target, text, sourceTarget); }
+  action(target: string, text: string, sourceTarget = target) { this.commands.action(target, text, sourceTarget); }
+  setNick(nick: string, sourceTarget = 'server') { return this.lifecycleControl.setNick(nick, sourceTarget); }
 
-  requestChannelList(requestId: string) { return requestChannelList(this, requestId); }
-  recordChannelListEntry(requestId: string, entry: ChannelListEntry) { recordChannelListEntry(this, requestId, entry); }
-  finishChannelListRequest(requestId: string) { finishChannelListRequest(this, requestId); }
-  getChannelListRequestFailureMessage() { return getChannelListRequestFailureMessage(this); }
-  getActiveChannelListSnapshot() { return getActiveChannelListSnapshot(this); }
-  handleChannelListNumeric(command: string, params: string[]) { return handleChannelListNumeric(this, command, params); }
-  clearActiveChannelList() { clearActiveChannelList(this); }
-  abortActiveChannelList(message: string) { abortActiveChannelList(this, message); }
-  clearDrainingChannelList() { clearDrainingChannelList(this); }
-  isChannelListPending() { return isChannelListPending(this); }
+  setFriendNicks(nicks: string[]) { this.friendsControl.setFriendNicks(nicks); }
+  refreshFriendPresence() { this.friendsControl.refreshFriendPresence(); }
+  handleFriendPresence(pollId: number, onlineNicks: string[]) { this.friendsControl.handleFriendPresence(pollId, onlineNicks); }
+  disableFriendPresence() { this.friendsControl.disableFriendPresence(); }
+  clearFriendPresenceTimer() { this.friendsControl.clearFriendPresenceTimer(); }
+  updateOnlineFriendKeys(onlineNicks: string[]) { this.friendsControl.updateOnlineFriendKeys(onlineNicks); }
+
+  requestChannelList(requestId: string) { return this.channelLists.requestChannelList(requestId); }
+  recordChannelListEntry(requestId: string, entry: ChannelListEntry) { this.channelLists.recordChannelListEntry(requestId, entry); }
+  finishChannelListRequest(requestId: string) { this.channelLists.finishChannelListRequest(requestId); }
+  getChannelListRequestFailureMessage() { return this.channelLists.getChannelListRequestFailureMessage(); }
+  getActiveChannelListSnapshot() { return this.channelLists.getActiveChannelListSnapshot(); }
+  handleChannelListNumeric(command: string, params: string[]) { return this.channelLists.handleChannelListNumeric(command, params); }
+  clearActiveChannelList() { this.channelLists.clearActiveChannelList(); }
+  abortActiveChannelList(message: string) { this.channelLists.abortActiveChannelList(message); }
+  clearDrainingChannelList() { this.channelLists.clearDrainingChannelList(); }
+  isChannelListPending() { return this.channelLists.isChannelListPending(); }
   startChannelList(mode: 'raw' | 'structured', options: { requestId?: string; sourceTarget?: string }) {
-    startChannelList(this, mode, options);
+    this.channelLists.startChannelList(mode, options);
   }
 
-  listPendingChannels() { return listPendingChannels(this); }
-  trackChannel(channel: string) { return trackChannel(this, channel); }
-  untrackChannel(channel: string) { untrackChannel(this, channel); }
-  getChannelSession(channel: string) { return getChannelSession(this, channel); }
+  listPendingChannels() { return this.channelsControl.listPendingChannels(); }
+  trackChannel(channel: string) { return this.channelsControl.trackChannel(channel); }
+  untrackChannel(channel: string) { this.channelsControl.untrackChannel(channel); }
+  getChannelSession(channel: string) { return this.channelsControl.getChannelSession(channel); }
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
-    return updateChannelUsers(this, channel, nick, joined);
+    return this.channelsControl.updateChannelUsers(channel, nick, joined);
   }
-  getTrackedChannelUsers(channel: string) { return getTrackedChannelUsers(this, channel); }
+  getTrackedChannelUsers(channel: string) { return this.channelsControl.getTrackedChannelUsers(channel); }
   setTrackedChannelUsers(channel: string, users: ChannelUserState[]) {
-    return setTrackedChannelUsers(this, channel, users);
+    return this.channelsControl.setTrackedChannelUsers(channel, users);
   }
-  getTrackedChannelUserEntries(): Array<[string, ChannelUserState[]]> { return getTrackedChannelUserEntries(this); }
-  resolveTrackedChannel(channel: string) { return resolveTrackedChannel(this, channel); }
-  clearExpiredChannelSessions() { clearExpiredChannelSessions(this); }
-  removeChannelSession(channel: string) { return removeChannelSession(this, channel); }
-  handleSelfChannelDeparture(channel: string) { handleSelfChannelDeparture(this, channel); }
+  getTrackedChannelUserEntries(): Array<[string, ChannelUserState[]]> { return this.channelsControl.getTrackedChannelUserEntries(); }
+  resolveTrackedChannel(channel: string) { return this.channelsControl.resolveTrackedChannel(channel); }
+  clearExpiredChannelSessions() { this.channelsControl.clearExpiredChannelSessions(); }
+  removeChannelSession(channel: string) { return this.channelsControl.removeChannelSession(channel); }
+  handleSelfChannelDeparture(channel: string) { this.channelsControl.handleSelfChannelDeparture(channel); }
   setChannelSession(
     channel: string,
     phase: ChannelSessionPhase,
     options?: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean }
   ): ChannelSessionState {
-    return setChannelSession(this, channel, phase, options);
+    return this.channelsControl.setChannelSession(channel, phase, options);
   }
-  clearChannelSessions() { clearChannelSessions(this); }
+  clearChannelSessions() { this.channelsControl.clearChannelSessions(); }
 
-  queueReplyContext(context: PendingReplyContext) { queueReplyContext(this, context); }
+  queueReplyContext(context: PendingReplyContext) { this.replies.queueReplyContext(context); }
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string) {
-    return consumeReplyTarget(this, command, params, nick, rawTarget);
+    return this.replies.consumeReplyTarget(command, params, nick, rawTarget);
   }
   consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string) {
-    return consumeReplyContext(this, command, params, nick, rawTarget);
+    return this.replies.consumeReplyContext(command, params, nick, rawTarget);
   }
-  prunePendingReplyContexts() { prunePendingReplyContexts(this); }
+  prunePendingReplyContexts() { this.replies.prunePendingReplyContexts(); }
   discardPendingChannelReplyContexts(
     channel: string,
     predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
   ) {
-    return this.replyTracker.discardPendingChannelReplyContexts(channel, predicate);
+    return this.replies.discardPendingChannelReplyContexts(channel, predicate);
   }
-  consumePendingNickReplyContexts(requestedNick: string) { return consumePendingNickReplyContexts(this, requestedNick); }
-  discardPendingNickReplyContexts() { return discardPendingNickReplyContexts(this); }
+  consumePendingNickReplyContexts(requestedNick: string) { return this.replies.consumePendingNickReplyContexts(requestedNick); }
+  discardPendingNickReplyContexts() { return this.replies.discardPendingNickReplyContexts(); }
 }

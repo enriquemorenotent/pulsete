@@ -1,8 +1,8 @@
-import type { RuntimeStore } from './runtime-service-types.js';
 import type { StorageConversationsRepository } from './storage-conversations-repository.js';
 import type { StorageFriendsRepository } from './storage-friends-repository.js';
 import type { StorageNetworksRepository } from './storage-networks-repository.js';
 import type { StorageSnapshotSource } from './storage-types.js';
+import type { RuntimeStore } from './runtime-store-ports.js';
 
 type StorageRepositories = {
   conversations: StorageConversationsRepository;

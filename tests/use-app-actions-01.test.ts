@@ -3,9 +3,9 @@ import test from 'node:test';
 import type { BufferState,ChannelState,ClientMessage,NetworkProfile } from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action,State } from '../web/src/app-types.js';
-import type { AppActionSnapshot } from '../web/src/app-actions-types.js';
+import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import type { SocketHandle } from '../web/src/client.js';
-import { buildConversationIndex } from '../web/src/conversation-selectors.js';
+import { buildConversationModel } from '../web/src/conversation-model.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { createAppActions } from '../web/src/useAppActions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
@@ -98,22 +98,32 @@ const createParams = (options: {
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
   const composerEntries: string[] = [];
   const state = options.state ?? makeState();
+  const conversation = buildConversationModel({
+    buffers: state.domain.buffers,
+    channels: state.domain.channels,
+    pendingChannels: state.domain.pendingChannels,
+  });
 
   return {
     actions,
     banners,
     composerEntries,
     params: {
-      state: {
-        buffers: state.domain.buffers,
-        channelList: state.transient.channelList,
-        conversation: buildConversationIndex(state.domain),
+      session: {
         draft: options.draft ?? '',
-        gatewayStatus: state.domain.gatewayStatus,
-        networks: state.domain.networks,
-        networkStates: state.domain.networkStates,
-        workspace,
-      } satisfies AppActionSnapshot,
+        model: {
+          channelListNetwork: null,
+          conversation,
+          hiddenManagedNetworkName: null,
+          managedRuntime: null,
+          selectedMessages: [],
+          sidebarConnections: [],
+          visibleManagedNetwork: null,
+          visibleNetworks: state.domain.networks,
+          workspace,
+        },
+        state,
+      } satisfies AppSessionSnapshot,
       dispatch: (action: Action) => {
         actions.push(action);
       },

@@ -1,5 +1,5 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
-import type { AppStateReader } from './app-actions-types.js';
+import type { AppSessionReader } from './app-actions-types.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
 import {
@@ -14,7 +14,7 @@ import { syncMutationMessages } from './mutation-message-sync.js';
 
 type ConversationActionParams = {
   dispatch: AppDispatch;
-  readState: AppStateReader;
+  readState: AppSessionReader;
 } & BannerActions & GatewayActions;
 
 export const createConversationActions = ({
@@ -25,7 +25,8 @@ export const createConversationActions = ({
   sendGatewayMessage,
 }: ConversationActionParams): ConversationActions => {
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
-    const { conversation, networkStates } = readState();
+    const { conversation } = readState().model;
+    const { networkStates } = readState().state.domain;
     const existingBuffer = conversation.findChannelBuffer(networkId, channel);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
@@ -52,7 +53,8 @@ export const createConversationActions = ({
   };
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string): Promise<BufferState> => {
-    const { conversation, gatewayStatus } = readState();
+    const { conversation } = readState().model;
+    const { gatewayStatus } = readState().state.domain;
     const existingBuffer = conversation.findQueryBuffer(network.id, nick);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
@@ -68,7 +70,8 @@ export const createConversationActions = ({
     if (!getGatewaySocket()) {
       return;
     }
-    const { channelList, networkStates } = readState();
+    const { channelList } = readState().state.transient;
+    const { networkStates } = readState().state.domain;
     const runtime = networkStates[networkId] ?? null;
     if (runtime?.phase !== 'connected') {
       updateBanner('error', 'Connect the network before listing channels');

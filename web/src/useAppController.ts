@@ -1,7 +1,7 @@
 import type { State } from './app-types.js';
 import { useAppLifecycle } from './useAppLifecycle.js';
 import { useDesktopShellModel } from './useDesktopShellModel.js';
-import { useAppModel } from './useAppModel.js';
+import { useAppSession } from './useAppSession.js';
 import { useAppUiState } from './useAppUiState.js';
 import { useComposerHistory } from './composer-history.js';
 
@@ -15,7 +15,7 @@ type AppController = {
 export function useAppController(): AppController {
   const composer = useComposerHistory();
   const ui = useAppUiState();
-  const { actions, model, dispatch, state } = useAppModel({ composer, ui });
+  const { actions, model, dispatch, state } = useAppSession({ composer, ui });
 
   useAppLifecycle({
     banner: state.transient.banner,

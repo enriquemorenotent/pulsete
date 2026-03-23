@@ -5,30 +5,27 @@ import { badRequest, notFound } from './app-error.js';
 import { createDuplicateNetworkName } from './network-name-utils.js';
 import { parseNetworkInput } from './network-input.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import type { StorageConversationsRepository } from './storage-conversations-repository.js';
-import type { StorageNetworksRepository } from './storage-networks-repository.js';
+import { requireRuntimeNetwork, requireStoredNetwork } from './runtime-network-guard.js';
+import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
 
 type NetworkLifecycleContext = {
   connectionManager: RuntimeConnectionManager;
-  conversations: StorageConversationsRepository;
-  networks: StorageNetworksRepository;
+  conversations: Pick<RuntimeConversationStore, 'getServerBuffer'>;
+  networks: Pick<
+    RuntimeNetworkStore,
+    'list' | 'get' | 'getRuntime' | 'upsert' | 'saveWithRelatedInstances' | 'deleteWithRelated'
+  >;
 };
 
 export class NetworkLifecycleService {
   constructor(private readonly context: NetworkLifecycleContext) {}
 
   duplicateNetwork(networkId: string) {
-    const network = this.context.networks.get(networkId);
-    if (!network) {
-      throw notFound('Network not found');
-    }
+    const network = requireStoredNetwork(this.context.networks, networkId);
     if (isConnectionInstance(network)) {
       throw badRequest('Only saved networks can be duplicated');
     }
-    const runtimeProfile = this.context.networks.getRuntime(networkId);
-    if (!runtimeProfile) {
-      throw notFound('Network not found');
-    }
+    const runtimeProfile = requireRuntimeNetwork(this.context.networks, networkId);
     const duplicate = this.context.networks.upsert({
       templateId: null,
       managerHidden: false,
@@ -50,14 +47,14 @@ export class NetworkLifecycleService {
 
   saveNetwork(data: unknown, networkId?: string) {
     const input = parseNetworkInput(data, networkId);
-    if (networkId && !this.context.networks.get(networkId)) {
-      throw notFound('Network not found');
+    if (networkId) {
+      requireStoredNetwork(this.context.networks, networkId);
     }
     const saveResult = this.context.networks.saveWithRelatedInstances(input);
     const updatedProfiles = [saveResult.requested, ...saveResult.relatedInstances];
     const serverBuffer = collectRequestedServerBuffer(this.context.conversations, saveResult.requested);
     const messages = createNetworkUpsertMessages(this.context.conversations, updatedProfiles);
-    this.applyMutation(updatedProfiles.map((profile) => profile.id), messages);
+    this.applyMutation(updatedProfiles.map((profile) => profile.id));
     return { network: saveResult.requested, serverBuffer, messages };
   }
 
@@ -73,7 +70,7 @@ export class NetworkLifecycleService {
     return { deletedNetworkIds, messages };
   }
 
-  private applyMutation(updatedProfileIds: readonly string[], messages: ServerMessage[]) {
+  private applyMutation(updatedProfileIds: readonly string[]) {
     this.context.connectionManager.updateProfiles([...updatedProfileIds]);
   }
 }

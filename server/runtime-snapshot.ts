@@ -1,8 +1,8 @@
 import { createStorageSnapshot } from './storage-snapshot.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import type { StorageSnapshotSource } from './storage-types.js';
+import type { RuntimeSnapshotSource } from './runtime-store-ports.js';
 
-export const createRuntimeSnapshot = (store: StorageSnapshotSource, connectionManager: RuntimeConnectionManager) => {
+export const createRuntimeSnapshot = (store: RuntimeSnapshotSource, connectionManager: RuntimeConnectionManager) => {
   const snapshot = createStorageSnapshot(store);
   return {
     ...snapshot,

@@ -2,13 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type { BufferState, ChannelState } from '../shared/protocol.js';
 import { badRequest, notFound } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { StorageConversationsRepository } from './storage-conversations-repository.js';
+import type { RuntimeConversationStore } from './runtime-store-ports.js';
 import type { MessageInput } from './storage-types.js';
 
-export const openConversationQuery = (store: StorageConversationsRepository, networkId: string, target: string) =>
+export const openConversationQuery = (store: RuntimeConversationStore, networkId: string, target: string) =>
   store.upsertQuery(networkId, target);
 
-export const closeConversationQueryBuffer = (store: StorageConversationsRepository, bufferId: string) => {
+export const closeConversationQueryBuffer = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
   if (buffer.kind !== 'query') {
     throw badRequest('Only private message buffers can be closed');
@@ -16,7 +16,7 @@ export const closeConversationQueryBuffer = (store: StorageConversationsReposito
   return store.removeBuffer(bufferId) ?? buffer;
 };
 
-export const markConversationBufferRead = (store: StorageConversationsRepository, bufferId: string) => {
+export const markConversationBufferRead = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
   if (buffer.unread === 0) {
     return buffer;
@@ -25,12 +25,12 @@ export const markConversationBufferRead = (store: StorageConversationsRepository
   return getRequiredBuffer(store, bufferId);
 };
 
-export const listConversationBufferHistory = (store: StorageConversationsRepository, bufferId: string, limit: number) => {
+export const listConversationBufferHistory = (store: RuntimeConversationStore, bufferId: string, limit: number) => {
   const buffer = getRequiredBuffer(store, bufferId);
   return store.listMessages(buffer.networkId, buffer.target, limit);
 };
 
-export const appendConversationMessage = (store: StorageConversationsRepository, message: MessageInput) => {
+export const appendConversationMessage = (store: RuntimeConversationStore, message: MessageInput) => {
   const bufferUpdate = resolveMessageBuffer(store, message);
   return {
     saved: store.appendMessage(message),
@@ -39,7 +39,7 @@ export const appendConversationMessage = (store: StorageConversationsRepository,
 };
 
 export const upsertConversationChannel = (
-  store: StorageConversationsRepository,
+  store: RuntimeConversationStore,
   event: Extract<RuntimeEvent, { type: 'channel' }>
 ): { buffer: BufferState; channel: ChannelState } => {
   const channel = store.upsertChannel({
@@ -55,7 +55,7 @@ export const upsertConversationChannel = (
   };
 };
 
-const resolveMessageBuffer = (store: StorageConversationsRepository, message: MessageInput) => {
+const resolveMessageBuffer = (store: RuntimeConversationStore, message: MessageInput) => {
   const existing = store.getBufferByTarget(message.networkId, message.target);
   const created = existing ?? createMessageBuffer(store, message);
   if (!created) {
@@ -70,7 +70,7 @@ const resolveMessageBuffer = (store: StorageConversationsRepository, message: Me
   return store.getBuffer(created.id);
 };
 
-const createMessageBuffer = (store: StorageConversationsRepository, message: MessageInput): BufferState | null => {
+const createMessageBuffer = (store: RuntimeConversationStore, message: MessageInput): BufferState | null => {
   if (message.target === 'server') {
     return store.getServerBuffer(message.networkId)
       ?? store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' });
@@ -87,7 +87,7 @@ const createMessageBuffer = (store: StorageConversationsRepository, message: Mes
   return null;
 };
 
-const getRequiredBuffer = (store: StorageConversationsRepository, bufferId: string) => {
+const getRequiredBuffer = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = store.getBuffer(bufferId);
   if (!buffer) {
     throw notFound('Buffer not found');

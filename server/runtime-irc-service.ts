@@ -1,5 +1,4 @@
 import type WebSocket from 'ws';
-import { notFound } from './app-error.js';
 import {
   normalizeChannelTarget,
   normalizeMessageBody,
@@ -7,25 +6,33 @@ import {
   normalizeRawCommand,
 } from './irc-validate.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import type { StorageConversationsRepository } from './storage-conversations-repository.js';
-import type { StorageNetworksRepository } from './storage-networks-repository.js';
+import { requireStoredNetwork } from './runtime-network-guard.js';
+import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
 import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
 type RuntimeIrcServiceOptions = {
   connectionManager: RuntimeConnectionManager;
-  conversations: StorageConversationsRepository;
-  networks: StorageNetworksRepository;
+  conversations: Pick<RuntimeConversationStore, 'getBuffer' | 'getBufferByTarget' | 'getChannelByName'>;
+  networks: Pick<RuntimeNetworkStore, 'get'>;
+};
+
+type RuntimeIrcConnection = ReturnType<RuntimeConnectionManager['getConnection']>;
+type RuntimeIrcCompatConnection = RuntimeIrcConnection & {
+  commands?: RuntimeIrcConnection['commands'];
+  io?: RuntimeIrcConnection['io'];
+  lifecycleControl?: RuntimeIrcConnection['lifecycleControl'];
 };
 
 export class RuntimeIrcService {
   constructor(private readonly options: RuntimeIrcServiceOptions) {}
 
   join(networkId: string, channel: string, sourceBufferId?: string) {
-    this.requireNetwork(networkId);
+    requireStoredNetwork(this.options.networks, networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
     const existingBuffer = this.options.conversations.getBufferByTarget(networkId, normalizedChannel);
     const existingChannel = this.options.conversations.getChannelByName(networkId, normalizedChannel);
-    this.options.connectionManager.getConnection(networkId).join(
+    joinConnection(
+      this.options.connectionManager.getConnection(networkId),
       normalizedChannel,
       this.resolveReplyTarget(networkId, sourceBufferId),
       { visiblePending: !(existingBuffer?.kind === 'channel' || existingChannel) }
@@ -33,9 +40,10 @@ export class RuntimeIrcService {
   }
 
   part(networkId: string, channel: string, sourceBufferId?: string) {
-    this.requireNetwork(networkId);
+    requireStoredNetwork(this.options.networks, networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
-    this.options.connectionManager.getConnection(networkId).part(
+    partConnection(
+      this.options.connectionManager.getConnection(networkId),
       normalizedChannel,
       'Leaving',
       this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel)
@@ -54,8 +62,8 @@ export class RuntimeIrcService {
     const connection = this.options.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId, normalizedTarget);
     kind === 'action'
-      ? connection.action(normalizedTarget, normalizedBody, replyTarget)
-      : connection.say(normalizedTarget, normalizedBody, replyTarget);
+      ? actionConnection(connection, normalizedTarget, normalizedBody, replyTarget)
+      : sayConnection(connection, normalizedTarget, normalizedBody, replyTarget);
   }
 
   sendRaw(networkId: string, raw: string, sourceBufferId?: string) {
@@ -67,29 +75,23 @@ export class RuntimeIrcService {
       const nextNick = parsed.args[0];
       if (nextNick) {
         connection.lifecycle.socket
-          ? connection.setNick(nextNick, replyTarget)
-          : connection.sendRaw(normalizedRaw, replyTarget);
+          ? setNickConnection(connection, nextNick, replyTarget)
+          : sendRawConnection(connection, normalizedRaw, replyTarget);
         return;
       }
     }
     if (parsed?.name === 'quit') {
       connection.lifecycle.socket
-        ? connection.disconnect(normalizedRaw.trim())
-        : connection.sendRaw(normalizedRaw, replyTarget);
+        ? disconnectConnection(connection, normalizedRaw.trim())
+        : sendRawConnection(connection, normalizedRaw, replyTarget);
       return;
     }
-    connection.sendClientRaw(normalizedRaw, replyTarget);
+    sendClientRawConnection(connection, normalizedRaw, replyTarget);
   }
 
   requestChannelList(networkId: string, requester?: WebSocket) {
-    this.requireNetwork(networkId);
+    requireStoredNetwork(this.options.networks, networkId);
     return this.options.connectionManager.requestChannelList(networkId, requester);
-  }
-
-  private requireNetwork(networkId: string) {
-    if (!this.options.networks.get(networkId)) {
-      throw notFound('Network not found');
-    }
   }
 
   private resolveReplyTarget(networkId: string, sourceBufferId?: string, fallbackTarget = 'server') {
@@ -100,3 +102,31 @@ export class RuntimeIrcService {
     return buffer?.networkId === networkId ? buffer.target : fallbackTarget;
   }
 }
+
+const joinConnection = (
+  connection: RuntimeIrcConnection,
+  channel: string,
+  sourceTarget?: string,
+  options?: { visiblePending?: boolean }
+) => ((connection as RuntimeIrcCompatConnection).commands?.join ?? connection.join)(channel, sourceTarget, options);
+
+const partConnection = (connection: RuntimeIrcConnection, channel: string, reason?: string, sourceTarget?: string) =>
+  ((connection as RuntimeIrcCompatConnection).commands?.part ?? connection.part)(channel, reason, sourceTarget);
+
+const sayConnection = (connection: RuntimeIrcConnection, target: string, text: string, sourceTarget?: string) =>
+  ((connection as RuntimeIrcCompatConnection).commands?.say ?? connection.say)(target, text, sourceTarget);
+
+const actionConnection = (connection: RuntimeIrcConnection, target: string, text: string, sourceTarget?: string) =>
+  ((connection as RuntimeIrcCompatConnection).commands?.action ?? connection.action)(target, text, sourceTarget);
+
+const setNickConnection = (connection: RuntimeIrcConnection, nick: string, sourceTarget?: string) =>
+  ((connection as RuntimeIrcCompatConnection).lifecycleControl?.setNick ?? connection.setNick)(nick, sourceTarget);
+
+const disconnectConnection = (connection: RuntimeIrcConnection, raw?: string) =>
+  ((connection as RuntimeIrcCompatConnection).lifecycleControl?.disconnect ?? connection.disconnect)(raw);
+
+const sendRawConnection = (connection: RuntimeIrcConnection, raw: string, sourceTarget?: string) =>
+  ((connection as RuntimeIrcCompatConnection).io?.sendRaw ?? connection.sendRaw)(raw, sourceTarget);
+
+const sendClientRawConnection = (connection: RuntimeIrcConnection, raw: string, sourceTarget?: string) =>
+  ((connection as RuntimeIrcCompatConnection).io?.sendClientRaw ?? connection.sendClientRaw)(raw, sourceTarget);

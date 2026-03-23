@@ -2,11 +2,11 @@ import type { ServerMessage } from '../shared/protocol.js';
 import { notFound } from './app-error.js';
 import { normalizeFriendNick } from './irc-validate.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import type { StorageFriendsRepository } from './storage-friends-repository.js';
+import type { RuntimeFriendStore } from './runtime-store-ports.js';
 
 type RuntimeFriendServiceOptions = {
   connectionManager: RuntimeConnectionManager;
-  friends: StorageFriendsRepository;
+  friends: RuntimeFriendStore;
 };
 
 export class RuntimeFriendService {

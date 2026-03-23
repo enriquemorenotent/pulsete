@@ -1,15 +1,15 @@
 import type { RuntimeIrcService } from './runtime-irc-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
-import type { StorageNetworksRepository } from './storage-networks-repository.js';
 import type {
   RuntimeConversationMutations,
   RuntimeFriendMutations,
   RuntimeHttpApi,
   RuntimeNetworkMutations,
 } from './runtime-service-types.js';
+import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
 
 type CreateRuntimeHttpApiParams = {
-  catalog: Pick<StorageNetworksRepository, 'list'>;
+  catalog: RuntimeNetworkCatalog;
   conversations: RuntimeConversationMutations;
   friends: RuntimeFriendMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;

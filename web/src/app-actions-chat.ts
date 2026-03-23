@@ -2,7 +2,7 @@ import type { BufferState } from '../../shared/protocol.js';
 import {
   selectBuffer,
   selectPendingChannel,
-  type AppStateReader,
+  type AppSessionReader,
   type AppDispatch,
   type BannerActions,
   type ConversationActions,
@@ -20,7 +20,7 @@ type ChatActionParams = BannerActions
   & GatewayActions
   & {
   dispatch: AppDispatch;
-  readState: AppStateReader;
+  readState: AppSessionReader;
 };
 
 export const createChatActions = ({
@@ -41,7 +41,7 @@ export const createChatActions = ({
     selectPendingChannel(dispatch, networkId, channel);
 
   const openMentionedChannel = async (channelName: string) => {
-    const { workspace } = readState();
+    const { workspace } = readState().model;
     const network = workspace.selectedNetwork;
     if (!network) {
       return;
@@ -50,7 +50,7 @@ export const createChatActions = ({
   };
 
   const openChannelList = async () => {
-    const { workspace } = readState();
+    const { workspace } = readState().model;
     const network = workspace.selectedNetwork;
     if (!network) {
       return;
@@ -59,7 +59,7 @@ export const createChatActions = ({
   };
 
   const closeChannelList = () => {
-    const { channelList } = readState();
+    const { channelList } = readState().state.transient;
     const networkId = channelList.networkId;
     if (networkId) {
       sendGatewayMessage({ type: 'channel.list.cancel', networkId }, false);
@@ -68,7 +68,8 @@ export const createChatActions = ({
   };
 
   const joinChannelFromList = async (channel: string) => {
-    const { channelList, conversation } = readState();
+    const { channelList } = readState().state.transient;
+    const { conversation } = readState().model;
     const networkId = channelList.networkId;
     if (!networkId) {
       return;
@@ -81,7 +82,7 @@ export const createChatActions = ({
     if (!socket) {
       return;
     }
-    const { conversation, workspace } = readState();
+    const { conversation, workspace } = readState().model;
     const buffer = conversation.findChannelBuffer(networkId, channel);
     try {
       socket.send({
@@ -114,13 +115,13 @@ export const createChatActions = ({
         setDraft,
         socket: getGatewaySocket(false),
         updateBanner,
-        workspace: readState().workspace,
+        workspace: readState().model.workspace,
         onJoinChannel: async (networkId, channel, sourceBufferId) => {
           joinChannel(networkId, channel, sourceBufferId);
         },
         onOpenChannelList: openChannelListForNetwork,
         onOpenQuery: async (networkId, nick) => {
-          const { networks } = readState();
+          const { networks } = readState().state.domain;
           const network = networks.find((candidate) => candidate.id === networkId) ?? null;
           if (!network) {
             throw new Error('Network not found');

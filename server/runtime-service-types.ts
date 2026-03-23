@@ -7,17 +7,9 @@ import type { RuntimeFriendService } from './runtime-friend-service.js';
 import type { RuntimeIrcService } from './runtime-irc-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type { createRuntimeSnapshot } from './runtime-snapshot.js';
-import type { StorageConversationsRepository } from './storage-conversations-repository.js';
-import type { StorageFriendsRepository } from './storage-friends-repository.js';
-import type { StorageNetworksRepository } from './storage-networks-repository.js';
-import type { StorageSnapshotSource } from './storage-types.js';
+import type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
 
-export type RuntimeStore = {
-  snapshotSource: StorageSnapshotSource;
-  conversations: StorageConversationsRepository;
-  friends: StorageFriendsRepository;
-  networks: StorageNetworksRepository;
-};
+export type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
 
 export type RuntimeGateway = {
   attachSocket(ws: WebSocket): void;
@@ -44,8 +36,6 @@ export type RuntimeNetworkMutations = {
   duplicateNetwork: NetworkLifecycleService['duplicateNetwork'];
   deleteNetwork: NetworkLifecycleService['deleteNetwork'];
 };
-
-export type RuntimeNetworkCatalog = Pick<StorageNetworksRepository, 'list'>;
 
 export type RuntimeHttpApi = {
   networks: {
