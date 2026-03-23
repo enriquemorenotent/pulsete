@@ -34,7 +34,7 @@ export class RuntimeConnectionManager {
   close() {
     this.eventRouter.clearAll();
     for (const connection of this.connections.values()) {
-      connection.lifecycleControl.disconnect();
+      connection.disconnect();
     }
     this.connections.clear();
   }
@@ -54,18 +54,18 @@ export class RuntimeConnectionManager {
       connection = new IrcConnection(profile, {
         onEvent: (event) => this.handleConnectionEvent(event),
       });
-      connection.friendsControl.setFriendNicks(this.friends.list().map((friend) => friend.nick));
+      connection.setFriendNicks(this.friends.list().map((friend) => friend.nick));
       this.connections.set(networkId, connection);
     }
     return connection;
   }
 
   connect(networkId: string) {
-    this.getConnection(networkId).lifecycleControl.connect();
+    this.getConnection(networkId).connect();
   }
 
   disconnect(networkId: string) {
-    this.connections.get(networkId)?.lifecycleControl.disconnect();
+    this.connections.get(networkId)?.disconnect();
     this.eventRouter.clearNetwork(networkId);
   }
 
@@ -81,7 +81,7 @@ export class RuntimeConnectionManager {
     for (const networkId of networkIds) {
       const runtimeProfile = this.networks.getRuntime(networkId);
       if (runtimeProfile) {
-        this.connections.get(networkId)?.lifecycleControl.updateProfile(runtimeProfile);
+        this.connections.get(networkId)?.updateProfile(runtimeProfile);
       }
     }
   }
@@ -100,7 +100,7 @@ export class RuntimeConnectionManager {
   syncFriendTracking() {
     const friendNicks = this.friends.list().map((friend) => friend.nick);
     for (const connection of this.connections.values()) {
-      connection.friendsControl.setFriendNicks(friendNicks);
+      connection.setFriendNicks(friendNicks);
     }
   }
 
@@ -125,6 +125,6 @@ export class RuntimeConnectionManager {
   }
 
   private disposeConnection(connection: IrcConnection) {
-    connection.lifecycleControl.dispose();
+    connection.dispose();
   }
 }

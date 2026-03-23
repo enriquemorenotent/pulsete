@@ -27,7 +27,7 @@ export class RuntimeIrcService {
     const existingBuffer = this.options.conversations.getBufferByTarget(networkId, normalizedChannel);
     const existingChannel = this.options.conversations.getChannelByName(networkId, normalizedChannel);
     const connection = this.options.connectionManager.getConnection(networkId);
-    connection.commands.join(
+    connection.join(
       normalizedChannel,
       this.resolveReplyTarget(networkId, sourceBufferId),
       { visiblePending: !(existingBuffer?.kind === 'channel' || existingChannel) }
@@ -38,7 +38,7 @@ export class RuntimeIrcService {
     requireStoredNetwork(this.options.networks, networkId);
     const normalizedChannel = normalizeChannelTarget(channel);
     const connection = this.options.connectionManager.getConnection(networkId);
-    connection.commands.part(
+    connection.part(
       normalizedChannel,
       'Leaving',
       this.resolveReplyTarget(networkId, sourceBufferId, normalizedChannel)
@@ -57,8 +57,8 @@ export class RuntimeIrcService {
     const connection = this.options.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId, normalizedTarget);
     kind === 'action'
-      ? connection.commands.action(normalizedTarget, normalizedBody, replyTarget)
-      : connection.commands.say(normalizedTarget, normalizedBody, replyTarget);
+      ? connection.action(normalizedTarget, normalizedBody, replyTarget)
+      : connection.say(normalizedTarget, normalizedBody, replyTarget);
   }
 
   sendRaw(networkId: string, raw: string, sourceBufferId?: string) {
@@ -70,18 +70,18 @@ export class RuntimeIrcService {
       const nextNick = parsed.args[0];
       if (nextNick) {
         connection.lifecycle.socket
-          ? connection.lifecycleControl.setNick(nextNick, replyTarget)
-          : connection.io.sendRaw(normalizedRaw, replyTarget);
+          ? connection.setNick(nextNick, replyTarget)
+          : connection.sendRaw(normalizedRaw, replyTarget);
         return;
       }
     }
     if (parsed?.name === 'quit') {
       connection.lifecycle.socket
-        ? connection.lifecycleControl.disconnect(normalizedRaw.trim())
-        : connection.io.sendRaw(normalizedRaw, replyTarget);
+        ? connection.disconnect(normalizedRaw.trim())
+        : connection.sendRaw(normalizedRaw, replyTarget);
       return;
     }
-    connection.io.sendClientRaw(normalizedRaw, replyTarget);
+    connection.sendClientRaw(normalizedRaw, replyTarget);
   }
   private resolveReplyTarget(networkId: string, sourceBufferId?: string, fallbackTarget = 'server') {
     if (!sourceBufferId) {

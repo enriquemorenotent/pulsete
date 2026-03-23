@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { ServerMessage } from '../shared/protocol.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
@@ -24,6 +25,14 @@ type MutationResult = {
   messages: readonly ServerMessage[];
 };
 
+const tagMutationMessages = (messages: readonly ServerMessage[]) => {
+  if (messages.length === 0) {
+    return messages;
+  }
+  const mutationId = randomUUID();
+  return messages.map((message) => ({ ...message, mutationId }));
+};
+
 export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
   let connectionManager!: RuntimeConnectionManager;
@@ -31,10 +40,11 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const socketHub = new RuntimeSocketHub((ws) => connectionManager.removeSocket(ws));
   const publisher = new RuntimePublisher(socketHub);
   const publishMutation = <T extends MutationResult>(result: T): T => {
-    if (result.messages.length > 0) {
-      publisher.publish(result.messages);
+    const messages = tagMutationMessages(result.messages);
+    if (messages.length > 0) {
+      publisher.publish(messages);
     }
-    return result;
+    return { ...result, messages } as T;
   };
 
   const conversationsService = new RuntimeConversationService({

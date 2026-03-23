@@ -4,9 +4,8 @@ import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
 import { createNetworkActions } from './app-actions-networks.js';
 import {
+  type AppActionContext,
   type ApplyServerMessages,
-  type AppSessionReader,
-  constantReader,
   type AppDispatch,
   type MutableRef,
 } from './app-actions-types.js';
@@ -16,7 +15,7 @@ import { createServerMessageBridge } from './server-message-bridge.js';
 
 type CreateAppActionsParams = {
   applyServerMessages: ApplyServerMessages;
-  readState: AppSessionReader;
+  getSession: AppActionContext['getSession'];
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
   recordComposerEntry: (value: string) => void;
@@ -34,58 +33,35 @@ type CreateStaticAppActionsParams = {
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
-const createAppActionsFromStateReader = (params: CreateAppActionsParams) => {
-  const readDraft = () => params.readState().draft;
-  const readConversation = () => params.readState().conversation;
-  const readWorkspace = () => params.readState().workspace;
-  const readGatewayStatus = () => params.readState().state.domain.gatewayStatus;
-  const readChannelList = () => params.readState().state.transient.channelList;
-  const readNetworks = () => params.readState().state.domain.networks;
-  const readNetworkStates = () => params.readState().state.domain.networkStates;
-  const readFriendSelection = () => ({
-    buffers: params.readState().state.domain.buffers,
-    networkStates: params.readState().state.domain.networkStates,
-    workspace: params.readState().workspace,
-  });
+const createAppActionsFromSession = (params: CreateAppActionsParams) => {
+  const actionContext: AppActionContext = {
+    getSession: params.getSession,
+    applyServerMessages: params.applyServerMessages,
+    dispatch: params.dispatch,
+    socketRef: params.socketRef,
+    setDraft: params.setDraft,
+    recordComposerEntry: params.recordComposerEntry,
+    updateBanner: params.updateBanner,
+  };
   const gateway = createGatewayActions({
-    readGatewayStatus,
+    getSession: params.getSession,
     socketRef: params.socketRef,
     updateBanner: params.updateBanner,
   });
   const conversation = createConversationActions({
-    applyServerMessages: params.applyServerMessages,
-    dispatch: params.dispatch,
-    readChannelList,
-    readConversation,
-    readNetworkStates,
-    updateBanner: params.updateBanner,
+    ...actionContext,
     ...gateway,
   });
   return {
     ...createNetworkActions({
-      applyServerMessages: params.applyServerMessages,
-      dispatch: params.dispatch,
-      readConversation,
-      updateBanner: params.updateBanner,
+      ...actionContext,
     }),
     ...createFriendActions({
-      applyServerMessages: params.applyServerMessages,
-      dispatch: params.dispatch,
-      readFriendSelection,
-      updateBanner: params.updateBanner,
+      ...actionContext,
       ...conversation,
     }),
     ...createChatActions({
-      applyServerMessages: params.applyServerMessages,
-      dispatch: params.dispatch,
-      readChannelList,
-      readConversation,
-      readDraft,
-      readNetworks,
-      readWorkspace,
-      updateBanner: params.updateBanner,
-      setDraft: params.setDraft,
-      recordComposerEntry: params.recordComposerEntry,
+      ...actionContext,
       ...gateway,
       ...conversation,
     }),
@@ -95,9 +71,9 @@ const createAppActionsFromStateReader = (params: CreateAppActionsParams) => {
 export function createAppActions(params: CreateStaticAppActionsParams) {
   const applyServerMessages =
     params.applyServerMessages ?? createServerMessageBridge(params.dispatch).applyMutationMessages;
-  return createAppActionsFromStateReader({
+  return createAppActionsFromSession({
     applyServerMessages,
-    readState: constantReader(params.session),
+    getSession: () => params.session,
     dispatch: params.dispatch,
     socketRef: params.socketRef,
     setDraft: params.setDraft,
@@ -107,7 +83,7 @@ export function createAppActions(params: CreateStaticAppActionsParams) {
 }
 
 export const createLiveAppActions = (params: CreateAppActionsParams) =>
-  createAppActionsFromStateReader(params);
+  createAppActionsFromSession(params);
 
 export type AppActions = ReturnType<typeof createAppActions>;
 export type ChatActionSet = Pick<

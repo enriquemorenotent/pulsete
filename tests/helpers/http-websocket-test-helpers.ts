@@ -1,6 +1,11 @@
 import { EventEmitter } from 'node:events';
 import WebSocket from 'ws';
 
+const normalizeWebSocketMessage = (payload: WebSocket.RawData) => {
+  const { mutationId: _mutationId, ...message } = JSON.parse(payload.toString()) as Record<string, unknown>;
+  return message;
+};
+
 export const connectWebSocket = (port: number) =>
   new Promise<{ socket: WebSocket; ready: Record<string, unknown> }>((resolve, reject) => {
     const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
@@ -10,7 +15,7 @@ export const connectWebSocket = (port: number) =>
       socket.off('close', handleClose);
     };
     const handleMessage = (payload: WebSocket.RawData) => {
-      const message = JSON.parse(payload.toString()) as Record<string, unknown>;
+      const message = normalizeWebSocketMessage(payload);
       if (message.type === 'state.ready') {
         cleanup();
         resolve({ socket, ready: message });
@@ -56,7 +61,7 @@ const waitForMessageWithCleanup = (
       socket.off('close', handleClose);
     };
     const handleMessage = (payload: WebSocket.RawData) => {
-      const message = JSON.parse(payload.toString()) as Record<string, unknown>;
+      const message = normalizeWebSocketMessage(payload);
       if (predicate(message)) {
         cleanup();
         resolve(message);
@@ -98,7 +103,7 @@ export const waitForWebSocketMessages = (socket: WebSocket, type: string, count:
       socket.off('close', handleClose);
     };
     const handleMessage = (payload: WebSocket.RawData) => {
-      const message = JSON.parse(payload.toString()) as Record<string, unknown>;
+      const message = normalizeWebSocketMessage(payload);
       if (message.type !== type) {
         return;
       }

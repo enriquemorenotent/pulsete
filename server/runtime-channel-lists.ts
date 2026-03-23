@@ -39,7 +39,7 @@ export class RuntimeChannelListService {
   }
 
   request(networkId: string, connection: ChannelListConnection, requestId: string, requester?: WebSocket) {
-    const activeSnapshot = connection.channelLists.getActiveChannelListSnapshot();
+    const activeSnapshot = connection.getActiveChannelListSnapshot();
     const activeSession = activeSnapshot
       ? this.getOrCreateSession(networkId, activeSnapshot.requestId)
       : null;
@@ -62,7 +62,7 @@ export class RuntimeChannelListService {
       return activeSnapshot.requestId;
     }
 
-    if (connection.channelLists.requestChannelList(requestId)) {
+    if (connection.requestChannelList(requestId)) {
       this.sessions.set(networkId, {
         requestId,
         subscribers: requester ? new Set([requester]) : new Set<WebSocket>(),
@@ -77,7 +77,7 @@ export class RuntimeChannelListService {
         type: 'channel.list.failed',
         networkId,
         requestId,
-        message: connection.channelLists.getChannelListRequestFailureMessage(),
+        message: connection.getChannelListRequestFailureMessage(),
       },
       requester
     );

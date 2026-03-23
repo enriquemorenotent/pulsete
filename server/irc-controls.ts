@@ -66,30 +66,11 @@ import {
   prunePendingReplyContexts,
   queueReplyContext,
 } from './irc-reply-state.js';
-import type {
-  IrcChannelController,
-  IrcChannelListController,
-  IrcCommandController,
-  IrcConnectionState,
-  IrcFriendPresenceController,
-  IrcIoController,
-  IrcLifecycleController,
-  IrcReplyController,
-} from './irc-types.js';
-import type { ChannelSessionPhase, ChannelSessionState, IrcSocket } from './irc-state-types.js';
+import type { IrcConnectionState } from './irc-types.js';
+import type { ChannelSessionPhase, ChannelSessionState, IrcChannelListMode, IrcSocket } from './irc-state-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
-type IrcControllers = {
-  lifecycleControl: IrcLifecycleController;
-  io: IrcIoController;
-  commands: IrcCommandController;
-  friendsControl: IrcFriendPresenceController;
-  channelLists: IrcChannelListController;
-  channelsControl: IrcChannelController;
-  replies: IrcReplyController;
-};
-
-export const createIrcControllers = (connection: IrcConnectionState): IrcControllers => ({
+export const createIrcControllers = (connection: IrcConnectionState) => ({
   lifecycleControl: {
     beginLogin: () => beginLogin(connection),
     connect: (resetRetryBudget = true) => connect(connection, resetRetryBudget),
@@ -127,16 +108,16 @@ export const createIrcControllers = (connection: IrcConnectionState): IrcControl
         emitStatus(connection, connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
         return false;
       }
-      if (!connection.io.sendRaw(`JOIN ${channel}`, sourceTarget)) {
+      if (!connection.sendRaw(`JOIN ${channel}`, sourceTarget)) {
         return false;
       }
       const visiblePending = typeof options === 'string' ? false : options.visiblePending ?? false;
-      connection.channelsControl.setChannelSession(channel, 'joining', { sourceTarget, visiblePending });
+      connection.setChannelSession(channel, 'joining', { sourceTarget, visiblePending });
       return true;
     },
     part: (channel: string, reason = 'Leaving', sourceTarget = channel) => {
-      if (connection.channelsControl.getChannelSession(channel)?.phase === 'joined') {
-        connection.channelsControl.setChannelSession(channel, 'leaving', { sourceTarget, visiblePending: false });
+      if (connection.getChannelSession(channel)?.phase === 'joined') {
+        connection.setChannelSession(channel, 'leaving', { sourceTarget, visiblePending: false });
       }
       return sendTrackedRaw(connection, `PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
     },
@@ -177,7 +158,8 @@ export const createIrcControllers = (connection: IrcConnectionState): IrcControl
     abortActiveChannelList: (message: string) => abortActiveChannelList(connection, message),
     clearDrainingChannelList: () => clearDrainingChannelList(connection),
     isChannelListPending: () => isChannelListPending(connection),
-    startChannelList: (mode, options) => startChannelList(connection, mode, options),
+    startChannelList: (mode: IrcChannelListMode, options: { requestId?: string; sourceTarget?: string }) =>
+      startChannelList(connection, mode, options),
   },
   channelsControl: {
     listPendingChannels: () => listPendingChannels(connection),

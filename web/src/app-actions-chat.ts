@@ -1,17 +1,9 @@
 import type { BufferState } from '../../shared/protocol.js';
 import {
-  type ApplyServerMessages,
-  type ChannelListReader,
-  type ConversationReader,
-  type DraftReader,
-  type NetworksReader,
+  type AppActionContext,
   selectBuffer,
   selectPendingChannel,
-  type WorkspaceReader,
-  type AppDispatch,
-  type BannerActions,
   type ConversationActions,
-  type DraftActions,
   type GatewayActions,
 } from './app-actions-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
@@ -19,28 +11,20 @@ import { api } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
 import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
 
-type ChatActionParams = BannerActions
-  & ConversationActions
-  & Pick<DraftActions, 'recordComposerEntry' | 'setDraft'>
-  & GatewayActions
-  & {
-  applyServerMessages: ApplyServerMessages;
-  dispatch: AppDispatch;
-  readChannelList: ChannelListReader;
-  readConversation: ConversationReader;
-  readDraft: DraftReader;
-  readNetworks: NetworksReader;
-  readWorkspace: WorkspaceReader;
-};
+type ChatActionParams = Pick<
+  AppActionContext,
+  | 'applyServerMessages'
+  | 'dispatch'
+  | 'getSession'
+  | 'recordComposerEntry'
+  | 'setDraft'
+  | 'updateBanner'
+> & ConversationActions & GatewayActions;
 
 export const createChatActions = ({
   applyServerMessages,
   dispatch,
-  readChannelList,
-  readConversation,
-  readDraft,
-  readNetworks,
-  readWorkspace,
+  getSession,
   getGatewaySocket,
   joinChannel,
   openChannelListForNetwork,
@@ -56,15 +40,17 @@ export const createChatActions = ({
     selectPendingChannel(dispatch, networkId, channel);
 
   const openMentionedChannel = async (channelName: string) => {
-    const network = readWorkspace().selectedNetwork;
+    const { workspace } = getSession();
+    const network = workspace.selectedNetwork;
     if (!network) {
       return;
     }
-    joinChannel(network.id, channelName, readWorkspace().selectedBuffer?.id);
+    joinChannel(network.id, channelName, workspace.selectedBuffer?.id);
   };
 
   const openChannelList = async () => {
-    const network = readWorkspace().selectedNetwork;
+    const { workspace } = getSession();
+    const network = workspace.selectedNetwork;
     if (!network) {
       return;
     }
@@ -72,7 +58,8 @@ export const createChatActions = ({
   };
 
   const closeChannelList = () => {
-    const channelList = readChannelList();
+    const { state } = getSession();
+    const channelList = state.transient.channelList;
     const networkId = channelList.networkId;
     if (networkId) {
       sendGatewayMessage({ type: 'channel.list.cancel', networkId }, false);
@@ -81,8 +68,8 @@ export const createChatActions = ({
   };
 
   const joinChannelFromList = async (channel: string) => {
-    const channelList = readChannelList();
-    const conversation = readConversation();
+    const { conversation, state } = getSession();
+    const channelList = state.transient.channelList;
     const networkId = channelList.networkId;
     if (!networkId) {
       return;
@@ -95,8 +82,7 @@ export const createChatActions = ({
     if (!socket) {
       return;
     }
-    const conversation = readConversation();
-    const workspace = readWorkspace();
+    const { conversation, workspace } = getSession();
     const buffer = conversation.findChannelBuffer(networkId, channel);
     try {
       socket.send({
@@ -119,7 +105,7 @@ export const createChatActions = ({
   };
 
   const sendComposer = async () => {
-    const draft = readDraft();
+    const { draft, workspace } = getSession();
     if (draft.trim() && !getGatewaySocket()) {
       return;
     }
@@ -129,13 +115,14 @@ export const createChatActions = ({
         setDraft,
         socket: getGatewaySocket(false),
         updateBanner,
-        workspace: readWorkspace(),
+        workspace,
         onJoinChannel: async (networkId, channel, sourceBufferId) => {
           joinChannel(networkId, channel, sourceBufferId);
         },
         onOpenChannelList: openChannelListForNetwork,
         onOpenQuery: async (networkId, nick) => {
-          const networks = readNetworks();
+          const { state } = getSession();
+          const networks = state.domain.networks;
           const network = networks.find((candidate) => candidate.id === networkId) ?? null;
           if (!network) {
             throw new Error('Network not found');

@@ -16,6 +16,10 @@ const baseClientSchema = z.object({
   type: z.string(),
 });
 
+const baseServerSchema = baseClientSchema.extend({
+  mutationId: z.string().optional(),
+});
+
 export const clientMessageSchema = z.discriminatedUnion('type', [
   baseClientSchema.extend({ type: z.literal('network.connect'), networkId: z.string() }),
   baseClientSchema.extend({ type: z.literal('network.disconnect'), networkId: z.string() }),
@@ -52,67 +56,67 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
 export type ClientMessage = z.infer<typeof clientMessageSchema>;
 
 export const serverMessageSchema = z.discriminatedUnion('type', [
-  baseClientSchema.extend({ type: z.literal('state.ready'), snapshot: appSnapshotSchema }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({ type: z.literal('state.ready'), snapshot: appSnapshotSchema }),
+  baseServerSchema.extend({
     type: z.literal('network.state'),
     networkId: z.string(),
     phase: networkRuntimePhaseSchema,
     serverName: z.string().nullable(),
     nick: z.string(),
   }),
-  baseClientSchema.extend({ type: z.literal('network.remove'), networkId: z.string() }),
-  baseClientSchema.extend({ type: z.literal('network.upsert'), network: networkSchema }),
-  baseClientSchema.extend({ type: z.literal('friend.upsert'), friend: friendSchema }),
-  baseClientSchema.extend({ type: z.literal('friend.remove'), friendId: z.string() }),
-  baseClientSchema.extend({ type: z.literal('friend.presence'), friendId: z.string(), online: z.boolean() }),
-  baseClientSchema.extend({ type: z.literal('buffer.upsert'), buffer: bufferSchema }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({ type: z.literal('network.remove'), networkId: z.string() }),
+  baseServerSchema.extend({ type: z.literal('network.upsert'), network: networkSchema }),
+  baseServerSchema.extend({ type: z.literal('friend.upsert'), friend: friendSchema }),
+  baseServerSchema.extend({ type: z.literal('friend.remove'), friendId: z.string() }),
+  baseServerSchema.extend({ type: z.literal('friend.presence'), friendId: z.string(), online: z.boolean() }),
+  baseServerSchema.extend({ type: z.literal('buffer.upsert'), buffer: bufferSchema }),
+  baseServerSchema.extend({
     type: z.literal('buffer.remove'),
     networkId: z.string(),
     bufferId: z.string(),
   }),
-  baseClientSchema.extend({ type: z.literal('channel.snapshot'), channel: channelSchema }),
-  baseClientSchema.extend({ type: z.literal('channel.pending'), pendingChannel: pendingChannelSchema }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({ type: z.literal('channel.snapshot'), channel: channelSchema }),
+  baseServerSchema.extend({ type: z.literal('channel.pending'), pendingChannel: pendingChannelSchema }),
+  baseServerSchema.extend({
     type: z.literal('channel.pending.remove'),
     networkId: z.string(),
     channel: z.string(),
   }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({
     type: z.literal('channel.list.started'),
     networkId: z.string(),
     requestId: z.string(),
   }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({
     type: z.literal('channel.list.entry'),
     networkId: z.string(),
     requestId: z.string(),
     entry: channelListEntrySchema,
   }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({
     type: z.literal('channel.list.completed'),
     networkId: z.string(),
     requestId: z.string(),
   }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({
     type: z.literal('channel.list.failed'),
     networkId: z.string(),
     requestId: z.string(),
     message: z.string(),
   }),
-  baseClientSchema.extend({ type: z.literal('message.append'), message: chatMessageSchema }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({ type: z.literal('message.append'), message: chatMessageSchema }),
+  baseServerSchema.extend({
     type: z.literal('presence.update'),
     networkId: z.string(),
     channel: z.string(),
     users: z.array(channelUserSchema),
   }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({
     type: z.literal('notice'),
     networkId: z.string().nullable(),
     message: z.string(),
   }),
-  baseClientSchema.extend({
+  baseServerSchema.extend({
     type: z.literal('error'),
     networkId: z.string().nullable(),
     message: z.string(),

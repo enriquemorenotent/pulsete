@@ -52,105 +52,8 @@ export type IrcConnectionData = {
   replyTracker: IrcReplyTracker;
 };
 
-export type IrcLifecycleController = {
-  beginLogin(): void;
-  connect(resetRetryBudget?: boolean): void;
-  disconnect(raw?: string): void;
-  dispose(): void;
-  updateProfile(profile: RuntimeNetworkProfile): void;
-  clearReconnectTimer(): void;
-  clearConnectDeadlineTimer(): void;
-  resetTransientState(): void;
-  markConnectionFailure(detail: string): void;
-  markRegistered(serverName: string | null, nick: string | null): void;
-  openSocket(socket: IrcSocket): void;
-  handleSocketClosed(socket: IrcSocket): void;
-  setConnectDeadlineTimer(timer: ReturnType<typeof setTimeout>): void;
-  setNick(nick: string, sourceTarget?: string): boolean;
-  clearPendingNick(): void;
-  confirmNick(newNick: string): void;
-  applyNickFallback(fallbackNick: string, options: { replyTarget?: string; updatePending: boolean }): void;
-};
-
-export type IrcIoController = {
-  consume(chunk: string): void;
-  sendRaw(raw: string, statusTarget?: string): boolean;
-  sendClientRaw(raw: string, sourceTarget?: string): boolean;
-};
-
-export type IrcCommandController = {
-  join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean } | string): boolean;
-  part(channel: string, reason?: string, sourceTarget?: string): boolean;
-  say(target: string, text: string, sourceTarget?: string): void;
-  action(target: string, text: string, sourceTarget?: string): void;
-};
-
-export type IrcFriendPresenceController = {
-  setFriendNicks(nicks: string[]): void;
-  refreshFriendPresence(): void;
-  handleFriendPresence(pollId: number, onlineNicks: string[]): void;
-  disableFriendPresence(): void;
-  clearFriendPresenceTimer(): void;
-  updateOnlineFriendKeys(onlineNicks: string[]): void;
-};
-
-export type IrcChannelListController = {
-  requestChannelList(requestId: string): boolean;
-  recordChannelListEntry(requestId: string, entry: ChannelListEntry): void;
-  finishChannelListRequest(requestId: string): void;
-  getChannelListRequestFailureMessage(): string;
-  getActiveChannelListSnapshot(): { requestId: string; entries: ChannelListEntry[] } | null;
-  handleChannelListNumeric(command: string, params: string[]): boolean;
-  clearActiveChannelList(): void;
-  abortActiveChannelList(message: string): void;
-  clearDrainingChannelList(): void;
-  isChannelListPending(): boolean;
-  startChannelList(mode: IrcChannelListMode, options: { requestId?: string; sourceTarget?: string }): void;
-};
-
-export type IrcChannelController = {
-  listPendingChannels(): Array<{ networkId: string; channel: string }>;
-  trackChannel(channel: string): string;
-  untrackChannel(channel: string): void;
-  getChannelSession(channel: string): ChannelSessionState | null;
-  updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
-  getTrackedChannelUsers(channel: string): ChannelUserState[];
-  setTrackedChannelUsers(channel: string, users: ChannelUserState[]): ChannelUserState[];
-  getTrackedChannelUserEntries(): Array<[string, ChannelUserState[]]>;
-  resolveTrackedChannel(channel: string): string | null;
-  clearExpiredChannelSessions(): void;
-  removeChannelSession(channel: string): ChannelSessionState | null;
-  handleSelfChannelDeparture(channel: string): void;
-  setChannelSession(
-    channel: string,
-    phase: ChannelSessionPhase,
-    options?: { sourceTarget?: string; visiblePending?: boolean; previouslyJoined?: boolean }
-  ): ChannelSessionState;
-  clearChannelSessions(): void;
-};
-
-export type IrcReplyController = {
-  queueReplyContext(context: PendingReplyContext): void;
-  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
-  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
-  prunePendingReplyContexts(): void;
-  discardPendingChannelReplyContexts(
-    channel: string,
-    predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean
-  ): Array<Extract<PendingReplyContext, { kind: 'channel' }>>;
-  consumePendingNickReplyContexts(requestedNick: string): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
-  discardPendingNickReplyContexts(): Array<Extract<PendingReplyContext, { kind: 'nick' }>>;
-};
-
 export type IrcConnectionMethods = {
   readonly state: Pick<NetworkRuntimeState, 'phase' | 'serverName' | 'nick'>;
-  readonly lifecycleControl: IrcLifecycleController;
-  readonly io: IrcIoController;
-  readonly commands: IrcCommandController;
-  readonly friendsControl: IrcFriendPresenceController;
-  readonly channelLists: IrcChannelListController;
-  readonly channelsControl: IrcChannelController;
-  readonly replies: IrcReplyController;
   beginLogin(): void;
   connect(resetRetryBudget?: boolean): void;
   disconnect(raw?: string): void;
@@ -226,10 +129,13 @@ export type IrcConnectionState = IrcConnectionData & IrcConnectionMethods;
 
 export type IrcRuntimeCommandConnection = Pick<
   IrcConnectionState,
-  'commands' | 'io' | 'lifecycle' | 'lifecycleControl'
+  'action' | 'disconnect' | 'join' | 'lifecycle' | 'part' | 'say' | 'sendClientRaw' | 'sendRaw' | 'setNick'
 >;
 
-export type IrcRuntimeChannelListConnection = Pick<IrcConnectionState, 'channelLists'>;
+export type IrcRuntimeChannelListConnection = Pick<
+  IrcConnectionState,
+  'getActiveChannelListSnapshot' | 'getChannelListRequestFailureMessage' | 'requestChannelList'
+>;
 
 export type {
   FriendPresencePollState,

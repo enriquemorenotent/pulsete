@@ -2,47 +2,49 @@ import type { ServerMessage } from '../../shared/protocol.js';
 import type { Action } from './app-types.js';
 import { dispatchInboundServerMessage } from './server-message-actions.js';
 
-const mutationEchoWindowMs = 1_500;
-const maxPendingEchoes = 200;
-
-const messageSignature = (message: ServerMessage) => JSON.stringify(message);
-
-const pruneExpiredEchoes = (pendingEchoes: Map<string, number>, now: number) => {
-  for (const [signature, expiresAt] of pendingEchoes) {
-    if (expiresAt > now) {
+const trackPendingMutationEchoes = (
+  pendingMutations: Map<string, number>,
+  messages: readonly ServerMessage[]
+) => {
+  for (const message of messages) {
+    if (!message.mutationId) {
       continue;
     }
-    pendingEchoes.delete(signature);
-  }
-
-  while (pendingEchoes.size > maxPendingEchoes) {
-    const oldest = pendingEchoes.keys().next().value;
-    if (!oldest) {
-      return;
-    }
-    pendingEchoes.delete(oldest);
+    pendingMutations.set(message.mutationId, (pendingMutations.get(message.mutationId) ?? 0) + 1);
   }
 };
 
+const consumePendingMutationEcho = (
+  pendingMutations: Map<string, number>,
+  message: ServerMessage
+) => {
+  if (!message.mutationId) {
+    return false;
+  }
+  const pendingCount = pendingMutations.get(message.mutationId);
+  if (!pendingCount) {
+    return false;
+  }
+  if (pendingCount === 1) {
+    pendingMutations.delete(message.mutationId);
+  } else {
+    pendingMutations.set(message.mutationId, pendingCount - 1);
+  }
+  return true;
+};
+
 export const createServerMessageBridge = (dispatch: (action: Action) => void) => {
-  const pendingEchoes = new Map<string, number>();
+  const pendingMutations = new Map<string, number>();
 
   const applyMutationMessages = (messages: readonly ServerMessage[]) => {
-    const now = Date.now();
-    pruneExpiredEchoes(pendingEchoes, now);
+    trackPendingMutationEchoes(pendingMutations, messages);
     for (const message of messages) {
-      pendingEchoes.set(messageSignature(message), now + mutationEchoWindowMs);
       dispatchInboundServerMessage(message, dispatch);
     }
   };
 
   const applySocketMessage = (message: ServerMessage) => {
-    const now = Date.now();
-    pruneExpiredEchoes(pendingEchoes, now);
-    const signature = messageSignature(message);
-    const pendingExpiry = pendingEchoes.get(signature);
-    if (pendingExpiry && pendingExpiry >= now) {
-      pendingEchoes.delete(signature);
+    if (consumePendingMutationEcho(pendingMutations, message)) {
       return;
     }
     dispatchInboundServerMessage(message, dispatch);

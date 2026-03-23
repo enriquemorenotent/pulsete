@@ -33,7 +33,7 @@ export function useAppSession({ composer, ui }: UseAppSessionParams) {
   const actions = useMemo(
     () => createLiveAppActions({
       applyServerMessages: serverMessages.applyMutationMessages,
-      readState: () => liveSessionRef.current,
+      getSession: () => liveSessionRef.current,
       dispatch,
       socketRef: ui.socketRef,
       setDraft: composer.setDraft,

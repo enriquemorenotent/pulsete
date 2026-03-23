@@ -2,39 +2,28 @@ import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
 import {
-  type ApplyServerMessages,
-  type ChannelListReader,
-  type ConversationReader,
+  type AppActionContext,
   selectBuffer,
   selectPendingChannel,
-  type AppDispatch,
-  type BannerActions,
   type ConversationActions,
   type GatewayActions,
-  type NetworkStatesReader,
 } from './app-actions-types.js';
 
-type ConversationActionParams = {
-  applyServerMessages: ApplyServerMessages;
-  dispatch: AppDispatch;
-  readChannelList: ChannelListReader;
-  readConversation: ConversationReader;
-  readNetworkStates: NetworkStatesReader;
-} & BannerActions & GatewayActions;
+type ConversationActionParams = Pick<
+  AppActionContext,
+  'applyServerMessages' | 'dispatch' | 'getSession' | 'updateBanner'
+> & GatewayActions;
 
 export const createConversationActions = ({
   applyServerMessages,
   dispatch,
-  readChannelList,
-  readConversation,
-  readNetworkStates,
+  getSession,
   updateBanner,
   getGatewaySocket,
   sendGatewayMessage,
 }: ConversationActionParams): ConversationActions => {
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
-    const conversation = readConversation();
-    const networkStates = readNetworkStates();
+    const { conversation, state } = getSession();
     const existingBuffer = conversation.findChannelBuffer(networkId, channel);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
@@ -46,7 +35,7 @@ export const createConversationActions = ({
       return true;
     }
 
-    const runtime = networkStates[networkId] ?? null;
+    const runtime = state.domain.networkStates[networkId] ?? null;
     if (runtime?.phase !== 'connected') {
       updateBanner('error', `Connect first to join ${channel}`);
       return false;
@@ -61,7 +50,7 @@ export const createConversationActions = ({
   };
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string): Promise<BufferState> => {
-    const conversation = readConversation();
+    const { conversation } = getSession();
     const existingBuffer = conversation.findQueryBuffer(network.id, nick);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
@@ -77,9 +66,9 @@ export const createConversationActions = ({
     if (!getGatewaySocket()) {
       return;
     }
-    const channelList = readChannelList();
-    const networkStates = readNetworkStates();
-    const runtime = networkStates[networkId] ?? null;
+    const { state } = getSession();
+    const channelList = state.transient.channelList;
+    const runtime = state.domain.networkStates[networkId] ?? null;
     if (runtime?.phase !== 'connected') {
       updateBanner('error', 'Connect the network before listing channels');
       return;
