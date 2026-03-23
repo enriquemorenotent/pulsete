@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { BufferState, ChannelUserState } from '../shared/protocol.js';
-import { appendMessage, getMessageById, listMessages, listRecentMessages } from './storage-messages.js';
+import { appendMessage, getMessageById, listAllMessages, listMessages, listRecentMessages } from './storage-messages.js';
 import {
   deleteChannelByName,
   getBuffer,
@@ -82,6 +82,10 @@ export class StorageConversationsRepository {
 
   listMessages(networkId: string, target: string, limit?: number) {
     return listMessages(this.db, networkId, target, limit);
+  }
+
+  listAllMessages(networkId: string, target: string) {
+    return listAllMessages(this.db, networkId, target);
   }
 
   listRecentMessages(limit = 200) {

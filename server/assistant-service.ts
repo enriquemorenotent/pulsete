@@ -24,6 +24,7 @@ import {
   getAssistantOutputSchema,
   parseAssistantArtifact,
 } from './assistant-prompts.js';
+import { buildAssistantHistoryContext } from './assistant-history-context.js';
 import type {
   RuntimeAssistantStore,
   RuntimeConversationStore,
@@ -31,9 +32,8 @@ import type {
 } from './runtime-store-ports.js';
 import { tmpdir } from 'node:os';
 
-const contextMessageLimit = 50;
 const assistantSandboxCwd = tmpdir();
-const assistantThreadSandbox = 'readOnly';
+const assistantThreadSandbox = 'read-only';
 const assistantTurnSandboxPolicy = {
   type: 'readOnly',
   access: {
@@ -254,7 +254,7 @@ export class AssistantService {
   }) {
     const summary = this.requireThread(input.threadId);
     await this.ensureThreadLoaded(summary);
-    const context = this.resolveContext(summary.bufferId, summary.networkId, summary.target);
+    const context = this.resolveContext(summary.bufferId, summary.networkId, summary.target, input.prompt, summary.task);
     this.params.assistant.upsertThread({
       ...summary,
       turnStatus: 'inProgress',
@@ -268,8 +268,8 @@ export class AssistantService {
           type: 'text',
           text: buildAssistantTurnInput({
             buffer: context.buffer,
+            context: context.context,
             network: context.network,
-            messages: context.messages,
             prompt: input.prompt,
             task: summary.task,
           }),
@@ -530,17 +530,29 @@ export class AssistantService {
     };
   }
 
-  private resolveContext(bufferId: string | null, networkId: string | null, target: string | null) {
+  private resolveContext(
+    bufferId: string | null,
+    networkId: string | null,
+    target: string | null,
+    prompt: string,
+    task: AssistantTaskKind,
+  ) {
     const buffer = bufferId ? this.params.conversations.getBuffer(bufferId) : null;
     const effectiveNetworkId = buffer?.networkId ?? networkId;
     const effectiveTarget = buffer?.target ?? target;
     const network = effectiveNetworkId ? this.params.networks.get(effectiveNetworkId) as NetworkProfile | null : null;
     const messages = effectiveNetworkId && effectiveTarget
-      ? this.params.conversations.listMessages(effectiveNetworkId, effectiveTarget, contextMessageLimit)
-          .slice()
-          .reverse()
+      ? this.params.conversations.listAllMessages(effectiveNetworkId, effectiveTarget)
       : [];
-    return { buffer: buffer as BufferState | null, network, messages };
+    return {
+      buffer: buffer as BufferState | null,
+      network,
+      context: buildAssistantHistoryContext({
+        messages,
+        prompt,
+        task,
+      }),
+    };
   }
 
   private async refreshAccount() {

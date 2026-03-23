@@ -13,6 +13,7 @@ import type {
   RuntimeConversationStore,
   RuntimeNetworkStore,
 } from '../server/runtime-store-ports.js';
+import type { ChatMessage } from '../shared/protocol.js';
 
 const preferences: AssistantPreferences = {
   defaultModel: 'gpt-5.4',
@@ -73,6 +74,7 @@ const conversationStore: RuntimeConversationStore = {
   updateChannelUsers: () => {},
   updateChannelTopic: () => {},
   listMessages: () => [],
+  listAllMessages: () => [],
   upsertChannel: () => {
     throw new Error('Not implemented in assistant-service test');
   },
@@ -216,7 +218,7 @@ test('assistant service starts threads with a locked-down codex config', async (
   assert.equal(threadStartParams.modelProvider, 'openai');
   assert.equal(threadStartParams.cwd, tmpdir());
   assert.equal(threadStartParams.approvalPolicy, 'never');
-  assert.equal(threadStartParams.sandbox, 'readOnly');
+  assert.equal(threadStartParams.sandbox, 'read-only');
   assert.equal(threadStartParams.personality, 'pragmatic');
   assert.equal(threadStartParams.serviceName, 'pulsete_assistant');
   assert.match(threadStartParams.baseInstructions, /Only use the IRC context included in the user input/);
@@ -329,7 +331,7 @@ test('assistant service rolls back optimistic thread status when turn start fail
       model: 'gpt-5.4',
       cwd: tmpdir(),
       approvalPolicy: 'never',
-      sandbox: 'readOnly',
+      sandbox: 'read-only',
       personality: 'pragmatic',
     },
   });
@@ -361,8 +363,75 @@ test('assistant service rolls back optimistic thread status when turn start fail
   assert.equal(turnStartParams.outputSchema, undefined);
   assert.equal(turnStartParams.input.length, 1);
   assert.equal(turnStartParams.input[0]?.type, 'text');
-  assert.match(turnStartParams.input[0]?.text ?? '', /Recent IRC transcript:/);
+  assert.match(turnStartParams.input[0]?.text ?? '', /IRC buffer context:/);
   assert.match(turnStartParams.input[0]?.text ?? '', /User request:[\s\S]*Hello/);
+});
+
+test('assistant service packs older matching history into the prompt context', async () => {
+  const assistantStore = createAssistantStore([
+    makeThread({ id: 'thread-1', turnStatus: null }),
+  ]);
+  const allMessages: ChatMessage[] = [
+    {
+      id: 'message-1',
+      networkId: 'network-1',
+      target: '#general',
+      nick: 'alice',
+      body: 'We should use postgres for analytics storage.',
+      kind: 'line',
+      self: false,
+      ts: Date.parse('2026-01-10T08:00:00Z'),
+    },
+    ...Array.from({ length: 700 }, (_, index) => ({
+      id: `noise-${index}`,
+      networkId: 'network-1',
+      target: '#general',
+      nick: 'bot',
+      body: `daily chatter ${index} `.repeat(6).trim(),
+      kind: 'line' as const,
+      self: false,
+      ts: Date.parse('2026-02-01T09:00:00Z') + index * 60_000,
+    })),
+  ];
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: {
+      ...conversationStore,
+      listAllMessages: () => allMessages,
+    },
+    networks: networkStore,
+    publish: () => {},
+    autoStart: false,
+  });
+  const calls: Array<{ method: string; params: unknown }> = [];
+  const privateService = service as unknown as {
+    appServer: {
+      call: (method: string, params?: unknown) => Promise<unknown>;
+    };
+  };
+  privateService.appServer = {
+    call: async (method: string, params?: unknown) => {
+      calls.push({ method, params });
+      if (method === 'thread/resume') {
+        return {};
+      }
+      if (method === 'turn/start') {
+        return {};
+      }
+      throw new Error(`Unexpected app-server method: ${method}`);
+    },
+  };
+
+  await service.startTurn({ threadId: 'thread-1', prompt: 'When did we talk about postgres?' });
+
+  assert.equal(calls[1]?.method, 'turn/start');
+  const turnStartParams = calls[1]?.params as {
+    input: Array<{ type: string; text: string }>;
+  };
+  const text = turnStartParams.input[0]?.text ?? '';
+  assert.match(text, /Prompt search terms: .*postgres/);
+  assert.match(text, /Historical windows:/);
+  assert.match(text, /use postgres for analytics storage/);
 });
 
 test('assistant service ignores stale login completions from superseded auth flows', async () => {

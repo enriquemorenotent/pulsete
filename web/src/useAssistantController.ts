@@ -30,11 +30,6 @@ export const shouldAutoLoadAssistantThread = (
   && attemptedThreadId !== selectedThreadId
 );
 
-export const assistantContextLabel = (workspace: WorkspaceView) =>
-  workspace.selectedBuffer
-    ? `${workspace.selectedNetwork?.name ?? workspace.selectedBuffer.networkId} · ${workspace.selectedBuffer.target} · last 50 messages`
-    : 'No selected buffer · no recent message context';
-
 export const isAssistantBusy = (
   selectedThreadSummary: AssistantThreadSummary | null,
   selectedThread: State['domain']['assistantThreads'][string] | null
@@ -42,10 +37,9 @@ export const isAssistantBusy = (
   || !!selectedThread?.turns.some((turn) => turn.status === 'inProgress');
 
 const askThreadsForWorkspace = (
-  workspace: WorkspaceView,
+  bufferId: string | null,
   threads: State['domain']['assistant']['threads']
 ) => {
-  const bufferId = workspace.selectedBuffer?.id;
   const visibleThreads = bufferId
     ? threads.filter((thread) => thread.bufferId === bufferId && thread.task === 'ask')
     : threads.filter((thread) => thread.task === 'ask');
@@ -59,9 +53,11 @@ export function useAssistantController({
   assistantUi,
   workspace,
 }: AssistantControllerParams): AssistantPanelProps {
+  const selectedBufferId = workspace.selectedBuffer?.id ?? null;
+  const contextKey = selectedBufferId ?? 'no-buffer';
   const threads = useMemo(
-    () => askThreadsForWorkspace(workspace, assistant.threads),
-    [assistant.threads, workspace.selectedBuffer?.id]
+    () => askThreadsForWorkspace(selectedBufferId, assistant.threads),
+    [assistant.threads, selectedBufferId]
   );
   const preferredThreadId = assistantUi.selectedThreadId ?? assistant.activeThreadId ?? null;
   const selectedThreadSummary = (
@@ -89,8 +85,8 @@ export function useAssistantController({
 
   return useMemo(() => ({
     assistant,
-    contextLabel: assistantContextLabel(workspace),
-    contextEmpty: !workspace.selectedBuffer,
+    contextKey,
+    contextEmpty: selectedBufferId === null,
     loading,
     busy,
     thread: selectedThread,
@@ -109,9 +105,10 @@ export function useAssistantController({
     actions.startAssistantTurn,
     assistant,
     busy,
+    contextKey,
     loading,
     selectedThread,
     selectedThreadId,
-    workspace,
+    selectedBufferId,
   ]);
 }

@@ -101,7 +101,7 @@ const assistantSnapshot: AssistantSnapshot = {
 
 const assistantProps: AssistantPanelProps = {
   assistant: assistantSnapshot,
-  contextLabel: '#general · last 50 messages',
+  contextKey: 'buffer-channel',
   contextEmpty: false,
   loading: false,
   busy: false,
@@ -163,15 +163,15 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
       nicklist={nicklist}
       assistant={{
         ...assistantProps,
-        contextLabel: 'alice · last 50 messages',
+        contextKey: 'buffer-query',
         thread: null,
       }}
     />
   );
 
-  assert.match(markup, /Assistant/);
+  assert.doesNotMatch(markup, /Assistant/);
   assert.doesNotMatch(markup, /Users/);
-  assert.match(markup, /Ask a question about this buffer/);
+  assert.match(markup, /Ask a question\./);
   assert.match(markup, /Send/);
   assert.doesNotMatch(markup, /Threads/);
   assert.doesNotMatch(markup, /Summarize/);

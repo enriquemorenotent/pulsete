@@ -1,4 +1,4 @@
-import type { AssistantArtifact, AssistantTaskKind, BufferState, ChatMessage, NetworkProfile } from '../shared/protocol.js';
+import type { AssistantArtifact, AssistantTaskKind, BufferState, NetworkProfile } from '../shared/protocol.js';
 
 const summaryOutputSchema = {
   type: 'object',
@@ -31,20 +31,20 @@ export const assistantBaseInstructions = [
 
 export const buildAssistantTurnInput = ({
   buffer,
+  context,
   network,
-  messages,
   prompt,
   task,
 }: {
   buffer: BufferState | null;
+  context: string;
   network: NetworkProfile | null;
-  messages: ChatMessage[];
   prompt: string;
   task: AssistantTaskKind;
 }) => {
   const sections = [
     `Task: ${describeTask(task)}`,
-    renderContext(buffer, network, messages),
+    renderContext(buffer, network, context),
     `User request:\n${(prompt.trim() || defaultPromptForTask(task)).trim()}`,
   ];
   return sections.join('\n\n');
@@ -93,31 +93,22 @@ export const parseAssistantArtifact = (task: AssistantTaskKind, text: string): A
 
 const defaultPromptForTask = (task: AssistantTaskKind) =>
   task === 'summarize'
-    ? 'Summarize the recent IRC discussion and call out the most important follow-up points.'
+    ? 'Summarize the IRC discussion and call out the most important follow-up points.'
     : task === 'draft'
-      ? 'Draft a reply that fits the recent IRC conversation.'
-      : 'Answer the question using the IRC context above.';
+      ? 'Draft a reply that fits the IRC conversation.'
+      : 'Answer the question using the IRC buffer context above.';
 
 const describeTask = (task: AssistantTaskKind) =>
   task === 'summarize' ? 'Summarize the IRC conversation' : task === 'draft' ? 'Draft a reply' : 'Answer a question';
 
-const renderContext = (buffer: BufferState | null, network: NetworkProfile | null, messages: ChatMessage[]) => {
+const renderContext = (buffer: BufferState | null, network: NetworkProfile | null, context: string) => {
   const header = [
     `Network: ${network?.name ?? 'None'}`,
     `Buffer: ${buffer?.target ?? 'None'}`,
-    `Transcript size: ${messages.length} recent messages`,
+    'Context source: prepared from the full buffer history and condensed when needed',
   ].join('\n');
-  if (messages.length === 0) {
-    return `${header}\n\nRecent IRC transcript:\n(no recent messages available)`;
+  if (!context.trim()) {
+    return `${header}\n\nIRC buffer context:\n(no history available)`;
   }
-  return `${header}\n\nRecent IRC transcript:\n${messages.map(formatMessage).join('\n')}`;
-};
-
-const formatMessage = (message: ChatMessage) => {
-  const time = new Date(message.ts).toISOString().slice(11, 16);
-  if (message.kind === 'join' || message.kind === 'part' || message.kind === 'system') {
-    return `[${time}] (${message.kind}) ${message.body}`;
-  }
-  const author = message.nick ?? (message.self ? 'you' : 'server');
-  return `[${time}] ${author}: ${message.body}`;
+  return `${header}\n\nIRC buffer context:\n${context}`;
 };

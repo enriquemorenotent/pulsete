@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildAssistantTurnInput, extractAssistantUserPrompt } from '../server/assistant-prompts.js';
-import type { BufferState, ChatMessage, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../shared/protocol.js';
 
 const network: NetworkProfile = {
   id: 'network-1',
@@ -28,23 +28,14 @@ const buffer: BufferState = {
   unread: 0,
 };
 
-const messages: ChatMessage[] = [{
-  id: 'message-1',
-  networkId: network.id,
-  target: buffer.target,
-  nick: 'alice',
-  body: 'Hello there',
-  kind: 'line',
-  self: false,
-  ts: Date.parse('2026-03-23T18:00:00Z'),
-}];
+const context = 'History coverage: full buffer history\n\nFull transcript:\n[2026-03-23 18:00] alice: Hello there';
 
 test('extractAssistantUserPrompt keeps only the typed request from the assistant envelope', () => {
   const prompt = 'Reply briefly and mention the last thing Alice said.';
   const input = buildAssistantTurnInput({
     buffer,
+    context,
     network,
-    messages,
     prompt,
     task: 'ask',
   });

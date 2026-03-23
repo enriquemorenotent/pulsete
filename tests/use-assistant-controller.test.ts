@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  assistantContextLabel,
   isAssistantBusy,
   isAssistantThreadLoading,
   shouldAutoLoadAssistantThread,
@@ -77,44 +76,4 @@ test('assistant stays busy while the loaded thread summary is still in progress'
     ),
     true,
   );
-});
-
-test('assistant context label includes network identity for duplicate targets', () => {
-  assert.equal(assistantContextLabel({
-    mode: 'channel-connected',
-    selection: { kind: 'buffer', bufferId: 'buffer-1' },
-    connectionInstances: [],
-    selectedNetwork: {
-      id: 'network-2',
-      templateId: null,
-      managerHidden: true,
-      name: 'OtherNet',
-      host: 'irc.other.example',
-      port: 6667,
-      tls: false,
-      nick: 'tester',
-      altNicks: [],
-      username: 'tester',
-      realName: 'Tester',
-      hasPassword: false,
-      favorite: false,
-      autoJoin: [],
-    },
-    selectedRuntime: null,
-    selectedBuffer: {
-      id: 'buffer-1',
-      networkId: 'network-2',
-      kind: 'channel',
-      target: '#general',
-      unread: 0,
-    },
-    selectedChannel: null,
-    selectedPendingChannel: null,
-    headerTitle: '#general',
-    headerSubtitle: '',
-    composerMode: 'normal',
-    composerPlaceholder: '',
-    emptyBody: '',
-    showNicklist: true,
-  }), 'OtherNet · #general · last 50 messages');
 });

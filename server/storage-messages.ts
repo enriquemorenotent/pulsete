@@ -32,16 +32,15 @@ export const listMessages = (db: DatabaseSync, networkId: string, target: string
   if (matchingTargets.length === 0) {
     return [];
   }
-  const placeholders = matchingTargets.map(() => '?').join(', ');
-  const sql = `
-    SELECT id, networkId, target, nick, body, kind, self, ts
-    FROM messages
-    WHERE networkId = ? AND target IN (${placeholders})
-    ORDER BY ts DESC, rowid DESC
-    LIMIT ?
-  `;
-  const rows = db.prepare(sql).all(networkId, ...matchingTargets, limit) as MessageRow[];
-  return rows.reverse().map(toMessage);
+  return selectMessages(db, networkId, matchingTargets, limit);
+};
+
+export const listAllMessages = (db: DatabaseSync, networkId: string, target: string) => {
+  const matchingTargets = listMatchingTargets(db, networkId, target);
+  if (matchingTargets.length === 0) {
+    return [];
+  }
+  return selectMessages(db, networkId, matchingTargets);
 };
 
 export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
@@ -57,4 +56,25 @@ const listMatchingTargets = (db: DatabaseSync, networkId: string, target: string
   return rows
     .map((row) => row.target)
     .filter((candidate) => isSameIrcIdentifier(candidate, target));
+};
+
+const selectMessages = (
+  db: DatabaseSync,
+  networkId: string,
+  matchingTargets: string[],
+  limit?: number,
+) => {
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const limitClause = typeof limit === 'number' ? '\n    LIMIT ?' : '';
+  const sql = `
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})
+    ORDER BY ts DESC, rowid DESC${limitClause}
+  `;
+  const args = typeof limit === 'number'
+    ? [networkId, ...matchingTargets, limit]
+    : [networkId, ...matchingTargets];
+  const rows = db.prepare(sql).all(...args) as MessageRow[];
+  return rows.reverse().map(toMessage);
 };
