@@ -1,4 +1,5 @@
 import { emitMessage } from './irc-emit.js';
+import { handleNickservAutoJoinMessage } from './irc-auth.js';
 import { isServiceNick } from './irc-services.js';
 import { isChannelTarget, stripCtcp } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
@@ -38,4 +39,5 @@ export const handleTextMessage = (
     kind: command === 'NOTICE' ? 'notice' : 'line',
     self: isSelfNick(connection, nick),
   }));
+  handleNickservAutoJoinMessage(connection, rawTarget, nick, payload);
 };

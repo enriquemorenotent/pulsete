@@ -1,6 +1,7 @@
 import net from 'node:net';
 import tls from 'node:tls';
 import type { IrcConnectContext } from './irc-contexts.js';
+import { buildRegistrationLines } from './irc-auth.js';
 import { formatTlsStatusLines } from './irc-server-log.js';
 import { emitStatus } from './irc-emit.js';
 
@@ -45,11 +46,7 @@ export const connectSocket = (connection: IrcConnectContext) => {
       }
     }
     emitStatus(connection, 'Connected. Now logging in.');
-    const loginLines = [
-      ...(connection.profile.password ? [`PASS ${connection.profile.password}`] : []),
-      `NICK ${connection.profile.nick}`,
-      `USER ${connection.profile.username} 0 * :${connection.profile.realName || connection.profile.name}`,
-    ];
+    const loginLines = buildRegistrationLines(connection.profile);
     const sentAllLoginLines = loginLines.every((line) => connection.sendRaw(line));
     if (!sentAllLoginLines) {
       if (!connection.lifecycle.lastFailureMessage) {

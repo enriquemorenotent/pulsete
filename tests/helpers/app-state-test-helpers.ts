@@ -15,6 +15,9 @@ export const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkPro
   username: overrides.username ?? 'tester',
   realName: overrides.realName ?? 'tester',
   hasPassword: overrides.hasPassword ?? false,
+  authMethod: overrides.authMethod ?? 'none',
+  authTarget: overrides.authTarget ?? 'NickServ',
+  authAccount: overrides.authAccount ?? '',
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
 });

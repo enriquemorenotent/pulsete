@@ -62,6 +62,7 @@ export const createNetworkInput = (overrides: Partial<NetworkInput> = {}): Netwo
   altNicks: ['tester_', 'tester__'],
   username: 'tester',
   realName: 'Tester Example',
+  authAccount: '',
   favorite: false,
   autoJoin: [],
   ...overrides,

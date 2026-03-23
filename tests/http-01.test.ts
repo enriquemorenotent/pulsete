@@ -71,6 +71,38 @@ test('network save rejects invalid payloads and IRC-unsafe fields', async () => 
     });
     assert.equal(unsafeResponse.status, 400);
     assert.equal(unsafeResponse.json.message, 'Real name cannot contain carriage returns or line feeds');
+
+    const unsafeAuthTarget = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      authMethod: 'nickserv',
+      authTarget: 'Nick Serv',
+    });
+    assert.equal(unsafeAuthTarget.status, 400);
+    assert.equal(unsafeAuthTarget.json.message, 'Authentication target must be a single nick');
+
+    const channelAuthTarget = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      authMethod: 'nickserv',
+      authTarget: '#ops',
+    });
+    assert.equal(channelAuthTarget.status, 400);
+    assert.equal(channelAuthTarget.json.message, 'Authentication target must be a single nick');
+
+    const multiAuthTarget = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      authMethod: 'nickserv',
+      authTarget: 'NickServ,alice',
+    });
+    assert.equal(multiAuthTarget.status, 400);
+    assert.equal(multiAuthTarget.json.message, 'Authentication target must refer to a single nick');
+
+    const unsafeAuthAccount = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      authMethod: 'sasl-plain',
+      authAccount: 'alice account',
+    });
+    assert.equal(unsafeAuthAccount.status, 400);
+    assert.equal(unsafeAuthAccount.json.message, 'Authentication account cannot contain whitespace');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -148,6 +180,37 @@ test('network save rejects conflicting and empty password updates', async () => 
     });
     assert.equal(empty.status, 400);
     assert.equal(empty.json.message, 'Password cannot be empty');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('network save rejects auth methods without a saved password', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const port = await listen(server);
+  const protectedNetwork = storage.networks.upsert(createNetworkInput({
+    authMethod: 'nickserv',
+    authTarget: 'NickServ',
+    password: 'secret',
+  }));
+
+  try {
+    const missingPassword = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      authMethod: 'sasl-plain',
+      authAccount: 'account',
+    });
+    assert.equal(missingPassword.status, 400);
+    assert.equal(missingPassword.json.message, 'Selected authentication method requires a saved password');
+
+    const clearedPassword = await requestJson(port, 'PUT', `/api/networks/${protectedNetwork.id}`, {
+      ...protectedNetwork,
+      clearPassword: true,
+    });
+    assert.equal(clearedPassword.status, 400);
+    assert.equal(clearedPassword.json.message, 'Selected authentication method requires a saved password');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

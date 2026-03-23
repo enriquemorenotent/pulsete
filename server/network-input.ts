@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { networkAuthMethodSchema } from '../shared/protocol.js';
 import { badRequest } from './app-error.js';
-import { normalizeChannelTarget, requireIrcToken, requireSingleLineValue } from './irc-validate.js';
+import { normalizeAuthTarget, normalizeChannelTarget, requireIrcToken, requireSingleLineValue } from './irc-validate.js';
 import type { NetworkInput } from './storage.js';
 
 const networkInputSchema = z.object({
@@ -14,6 +15,9 @@ const networkInputSchema = z.object({
   altNicks: z.array(z.string()).optional().default([]),
   username: z.string().trim().min(1, 'Username is required'),
   realName: z.string().optional().default(''),
+  authMethod: networkAuthMethodSchema.optional(),
+  authTarget: z.string().trim().optional(),
+  authAccount: z.string().trim().optional(),
   password: z.string().optional(),
   clearPassword: z.boolean().optional().default(false),
   favorite: z.boolean().optional().default(false),
@@ -44,6 +48,12 @@ export const parseNetworkInput = (body: unknown, id?: string): NetworkInput => {
   }
   requireIrcToken(data.username, 'Username cannot contain whitespace');
   requireSingleLineValue(data.realName, 'Real name cannot contain carriage returns or line feeds');
+  if (data.authTarget) {
+    normalizeAuthTarget(data.authTarget);
+  }
+  if (data.authAccount) {
+    requireIrcToken(data.authAccount, 'Authentication account cannot contain whitespace');
+  }
   if (data.password !== undefined) {
     requireIrcToken(data.password, 'Password cannot contain whitespace');
   }

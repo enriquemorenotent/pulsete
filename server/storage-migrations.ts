@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-export const currentStorageSchemaVersion = 2;
+export const currentStorageSchemaVersion = 4;
 
 const schemaSql = `
   PRAGMA journal_mode = WAL;
@@ -20,6 +20,9 @@ const schemaSql = `
     username TEXT NOT NULL,
     realName TEXT NOT NULL DEFAULT '',
     password TEXT,
+    authMethod TEXT NOT NULL DEFAULT 'none',
+    authTarget TEXT NOT NULL DEFAULT 'NickServ',
+    authAccount TEXT NOT NULL DEFAULT '',
     favorite INTEGER NOT NULL DEFAULT 0,
     autoJoin TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
@@ -103,6 +106,21 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureColumn(db, 'networks', 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
     },
   },
+  {
+    version: 3,
+    apply: (db) => {
+      ensureColumn(db, 'networks', 'authMethod', "TEXT NOT NULL DEFAULT 'none'");
+      ensureColumn(db, 'networks', 'authTarget', "TEXT NOT NULL DEFAULT 'NickServ'");
+      db.exec("UPDATE networks SET authMethod = 'server-pass' WHERE password IS NOT NULL AND authMethod = 'none'");
+      db.exec("UPDATE networks SET authTarget = 'NickServ' WHERE authTarget IS NULL OR authTarget = ''");
+    },
+  },
+  {
+    version: 4,
+    apply: (db) => {
+      ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: DatabaseSync) => {
@@ -119,6 +137,7 @@ export const applyStorageMigrations = (db: DatabaseSync, context: StorageMigrati
     setUserVersion(db, migration.version);
     version = migration.version;
   }
+  repairStorageSchemaDrift(db);
 };
 
 export const tableExists = (db: DatabaseSync, table: string) =>
@@ -135,7 +154,26 @@ export const tableHasColumn = (db: DatabaseSync, table: string, column: string) 
 const ensureColumn = (db: DatabaseSync, table: string, column: string, definition: string) => {
   if (!tableHasColumn(db, table, column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    return true;
   }
+  return false;
+};
+
+const repairStorageSchemaDrift = (db: DatabaseSync) => {
+  migrateLegacyBufferSchema(db);
+  ensureColumn(db, 'networks', 'autoJoin', "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(db, 'networks', 'altNicks', "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(db, 'networks', 'realName', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'networks', 'favorite', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'networks', 'templateId', 'TEXT');
+  ensureColumn(db, 'networks', 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
+  const addedAuthMethod = ensureColumn(db, 'networks', 'authMethod', "TEXT NOT NULL DEFAULT 'none'");
+  ensureColumn(db, 'networks', 'authTarget', "TEXT NOT NULL DEFAULT 'NickServ'");
+  ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
+  if (addedAuthMethod) {
+    db.exec("UPDATE networks SET authMethod = 'server-pass' WHERE password IS NOT NULL AND authMethod = 'none'");
+  }
+  db.exec("UPDATE networks SET authTarget = 'NickServ' WHERE authTarget IS NULL OR authTarget = ''");
 };
 
 const migrateLegacyBufferSchema = (db: DatabaseSync) => {

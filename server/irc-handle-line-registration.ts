@@ -1,4 +1,10 @@
 import tls from 'node:tls';
+import {
+  buildPostRegistrationAuthLines,
+  handleWelcomeAuthFallback,
+  handlePostRegistrationAutoJoin,
+  handleRegistrationAuthLine,
+} from './irc-auth.js';
 import { emitStatus } from './irc-emit.js';
 import { formatServerNumeric } from './irc-server-log.js';
 import { isChannelTarget, isSameIrcIdentifier } from './irc-parser.js';
@@ -11,7 +17,8 @@ export const handleRegistrationLine = (
   command: string,
   params: string[],
   nick: string | null
-) => handleWelcome(connection, command, params, nick)
+) => handleRegistrationAuthLine(connection, command, params)
+  || handleWelcome(connection, command, params, nick)
   || handleNickConflict(connection, command, params, nick)
   || handleNickRejected(connection, command, params, nick);
 
@@ -29,10 +36,12 @@ const handleWelcome = (connection: IrcRegistrationContext, command: string, para
       ? `* Connected securely via ${connection.lifecycle.socket.getProtocol() ?? 'TLS'} ${connection.lifecycle.socket.getCipher().standardName ?? connection.lifecycle.socket.getCipher().name}`
       : '* Connected via TCP'
   );
-  connection.refreshFriendPresence();
-  for (const channel of connection.profile.autoJoin) {
-    connection.join(channel);
+  handleWelcomeAuthFallback(connection);
+  for (const line of buildPostRegistrationAuthLines(connection.profile)) {
+    connection.sendRaw(line);
   }
+  connection.refreshFriendPresence();
+  handlePostRegistrationAutoJoin(connection);
   return true;
 };
 

@@ -76,6 +76,9 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
     name: 'SecretNet',
     port: 6697,
     tls: true,
+    authMethod: 'nickserv',
+    authTarget: 'AuthServ',
+    authAccount: 'sofia-account',
     password: 'server-secret',
   }));
 
@@ -98,6 +101,9 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
     tls: true,
   }));
   assert.equal(clone.hasPassword, true);
+  assert.equal(clone.authMethod, 'nickserv');
+  assert.equal(clone.authTarget, 'AuthServ');
+  assert.equal(clone.authAccount, 'sofia-account');
   assert.equal(storage.networks.getRuntime(clone.id)?.password, 'server-secret');
 
   storage.networks.upsert({
@@ -108,10 +114,57 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
 
   storage.networks.upsert({
     ...network,
+    authMethod: 'none',
     clearPassword: true,
   });
   assert.equal(storage.networks.get(network.id)?.hasPassword, false);
   assert.equal(storage.networks.getRuntime(network.id)?.password, undefined);
+});
+
+test('password-only updates infer server-pass when authMethod is omitted', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const network = storage.networks.upsert(createNetworkInput());
+
+  const updated = storage.networks.upsert(createNetworkInput({
+    id: network.id,
+    password: 'server-secret',
+  }));
+
+  assert.equal(updated.authMethod, 'server-pass');
+  assert.equal(updated.hasPassword, true);
+  assert.equal(storage.networks.getRuntime(network.id)?.password, 'server-secret');
+});
+
+test('storage rejects auth methods that do not have a saved password', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+
+  assert.throws(
+    () => storage.networks.upsert(createNetworkInput({
+      authMethod: 'sasl-plain',
+      authAccount: 'account',
+    })),
+    /Selected authentication method requires a saved password/
+  );
+
+  const network = storage.networks.upsert(createNetworkInput({
+    authMethod: 'nickserv',
+    authTarget: 'NickServ',
+    password: 'server-secret',
+  }));
+
+  assert.throws(
+    () => storage.networks.upsert(createNetworkInput({
+      id: network.id,
+      authMethod: 'nickserv',
+      authTarget: 'NickServ',
+      clearPassword: true,
+    })),
+    /Selected authentication method requires a saved password/
+  );
 });
 
 test('storage fails fast when encrypted passwords exist but the secret key is missing', () => {

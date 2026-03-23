@@ -56,7 +56,7 @@ export type IrcClientIoContext = IrcRawIoContext & IrcConnectionPick<
 
 export type IrcMessageEventContext = IrcEventContext & IrcConnectionPick<
   'lifecycle' | 'replyTracker',
-  'consumeReplyTarget' | 'resolveTrackedChannel'
+  'consumeReplyTarget' | 'join' | 'resolveTrackedChannel'
 >;
 
 export type IrcLifecycleContext = IrcEventContext & IrcConnectionPick<

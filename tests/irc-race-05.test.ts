@@ -89,6 +89,54 @@ test('profile updates retry a rejected connected nick change when the desired ni
   ]);
 });
 
+test('connected profiles do not reconnect when only an unused password changes', () => {
+  const writes: string[] = [];
+  const statuses: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: true,
+      authMethod: 'none',
+      password: 'oldpass',
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'status') {
+          statuses.push(event.message);
+        }
+      },
+    }
+  );
+
+  const socket = createMockSocket(writes);
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = socket as any;
+
+  connection.updateProfile({
+    ...connection.profile,
+    password: 'newpass',
+  });
+
+  assert.equal(connection.lifecycle.connected, true);
+  assert.equal(connection.lifecycle.socket, socket);
+  assert.equal(socket.destroyed, false);
+  assert.equal(connection.profile.password, 'newpass');
+  assert.deepEqual(writes, []);
+  assert.equal(statuses.includes('Reconnecting to apply updated network settings'), false);
+});
+
 test('connecting connections reject client commands before registration completes', () => {
   const writes: string[] = [];
   const errors: Array<{ target?: string; message: string }> = [];

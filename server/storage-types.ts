@@ -2,7 +2,15 @@ import type {
   ConnectionInstanceProfile,
   StoredNetworkProfile,
 } from '../shared/network-model.js';
-import type { AppSnapshot, BufferState, ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type {
+  AppSnapshot,
+  BufferState,
+  ChannelState,
+  ChannelUserState,
+  FriendState,
+  NetworkAuthMethod,
+  NetworkProfile,
+} from '../shared/protocol.js';
 
 export type NetworkRow = {
   id: string;
@@ -17,6 +25,9 @@ export type NetworkRow = {
   username: string;
   realName: string;
   password: string | null;
+  authMethod: NetworkAuthMethod;
+  authTarget: string;
+  authAccount: string;
   favorite: number;
   autoJoin: string;
   createdAt: number;

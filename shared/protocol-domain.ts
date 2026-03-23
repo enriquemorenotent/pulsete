@@ -17,6 +17,9 @@ export const chatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
+export const networkAuthMethodSchema = z.enum(['none', 'server-pass', 'nickserv', 'sasl-plain']);
+export type NetworkAuthMethod = z.infer<typeof networkAuthMethodSchema>;
+
 export const networkSchema = z.object({
   id: z.string(),
   templateId: z.string().nullable().default(null),
@@ -30,6 +33,9 @@ export const networkSchema = z.object({
   username: z.string(),
   realName: z.string().default(''),
   hasPassword: z.boolean().default(false),
+  authMethod: networkAuthMethodSchema.optional(),
+  authTarget: z.string().optional(),
+  authAccount: z.string().optional(),
   favorite: z.boolean().default(false),
   autoJoin: z.array(z.string()),
 });

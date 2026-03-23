@@ -16,6 +16,20 @@ export type ChannelSessionState = {
 
 export type IrcSocket = net.Socket | tls.TLSSocket;
 
+export type IrcSaslPhase =
+  | 'idle'
+  | 'awaiting-cap-list'
+  | 'awaiting-cap-ack'
+  | 'awaiting-authenticate-challenge'
+  | 'awaiting-authenticate-result'
+  | 'completed';
+
+export type IrcSaslState = {
+  phase: IrcSaslPhase;
+  capabilityAdvertised: boolean;
+  capEndSent: boolean;
+};
+
 export type IrcLifecycleState = {
   socket: IrcSocket | null;
   buffer: string;
@@ -27,6 +41,8 @@ export type IrcLifecycleState = {
   serverName: string | null;
   currentNick: string;
   lastFailureMessage: string | null;
+  sasl: IrcSaslState;
+  pendingNickservAutoJoinTarget: string | null;
 };
 
 export type IrcChannelTrackingState = {

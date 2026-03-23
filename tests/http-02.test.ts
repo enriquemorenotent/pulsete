@@ -111,6 +111,9 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     altNicks: ['sofia_', 'sofia__'],
     username: 'sofia',
     realName: 'Sofia',
+    authMethod: 'nickserv',
+    authTarget: 'AuthServ',
+    authAccount: 'sofia-account',
     password: 'hunter2',
     favorite: true,
     autoJoin: ['#help'],
@@ -135,6 +138,9 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     assert.deepEqual(duplicate.altNicks, network.altNicks);
     assert.equal(duplicate.username, network.username);
     assert.equal(duplicate.realName, network.realName);
+    assert.equal(duplicate.authMethod, 'nickserv');
+    assert.equal(duplicate.authTarget, 'AuthServ');
+    assert.equal(duplicate.authAccount, 'sofia-account');
     assert.equal(duplicate.favorite, true);
     assert.deepEqual(duplicate.autoJoin, ['#help']);
     assert.equal(duplicate.managerHidden, false);

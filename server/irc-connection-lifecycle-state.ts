@@ -1,8 +1,14 @@
 import { abortActiveChannelList, clearDrainingChannelList } from './irc-channel-list.js';
+import { createIdleSaslState } from './irc-auth.js';
 import { clearChannelSessions } from './irc-channel-state.js';
 import type { IrcConnectContext, IrcLifecycleContext } from './irc-contexts.js';
 import { clearFriendPresenceTimer, updateOnlineFriendKeys } from './irc-friend-presence.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
+import {
+  resolveNetworkAuthAccount,
+  resolveNetworkAuthMethod,
+  resolveNetworkAuthTarget,
+} from '../shared/network-model.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 
 export type IrcProfileUpdateStrategy =
@@ -13,6 +19,8 @@ export type IrcProfileUpdateStrategy =
 
 export const resetRuntimeSessionState = (connection: IrcLifecycleContext) => {
   connection.lifecycle.buffer = '';
+  connection.lifecycle.sasl = createIdleSaslState();
+  connection.lifecycle.pendingNickservAutoJoinTarget = null;
   clearChannelSessions(connection);
   abortActiveChannelList(connection, 'Channel list request was interrupted');
   clearDrainingChannelList(connection);
@@ -58,8 +66,40 @@ const requiresConnectingReconnect = (current: RuntimeNetworkProfile, next: Runti
 
 const requiresSessionReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
   requiresSocketRestart(current, next)
-  || current.password !== next.password
+  || requiresAuthPasswordReconnect(current, next)
+  || resolveNetworkAuthMethod(current) !== resolveNetworkAuthMethod(next)
+  || requiresAuthAccountReconnect(current, next)
+  || requiresAuthTargetReconnect(current, next)
   || current.username !== next.username
   || getReportedRealName(current) !== getReportedRealName(next);
 
 const getReportedRealName = (profile: RuntimeNetworkProfile) => profile.realName || profile.name;
+
+const requiresAuthTargetReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) => {
+  const currentMethod = resolveNetworkAuthMethod(current);
+  const nextMethod = resolveNetworkAuthMethod(next);
+  if (currentMethod !== 'nickserv' && nextMethod !== 'nickserv') {
+    return false;
+  }
+  return resolveNetworkAuthTarget(current.authTarget) !== resolveNetworkAuthTarget(next.authTarget);
+};
+
+const requiresAuthPasswordReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) => {
+  const currentMethod = resolveNetworkAuthMethod(current);
+  const nextMethod = resolveNetworkAuthMethod(next);
+  if (currentMethod === 'none' && nextMethod === 'none') {
+    return false;
+  }
+  return current.password !== next.password;
+};
+
+const requiresAuthAccountReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) => {
+  const currentMethod = resolveNetworkAuthMethod(current);
+  const nextMethod = resolveNetworkAuthMethod(next);
+  const currentUsesAuthAccount = currentMethod === 'nickserv' || currentMethod === 'sasl-plain';
+  const nextUsesAuthAccount = nextMethod === 'nickserv' || nextMethod === 'sasl-plain';
+  if (!currentUsesAuthAccount && !nextUsesAuthAccount) {
+    return false;
+  }
+  return resolveNetworkAuthAccount(current) !== resolveNetworkAuthAccount(next);
+};

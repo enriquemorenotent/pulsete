@@ -1,4 +1,5 @@
 import type { ChannelUserState } from '../shared/protocol.js';
+import { createIdleSaslState, resolveDeferredNickservAutoJoinTarget } from './irc-auth.js';
 import { ReplyTracker } from './irc-reply-tracker.js';
 import type {
   ChannelSessionState,
@@ -36,6 +37,8 @@ export const createIrcConnectionState = (
     serverName: null,
     currentNick: profile.nick,
     lastFailureMessage: null,
+    sasl: createIdleSaslState(),
+    pendingNickservAutoJoinTarget: resolveDeferredNickservAutoJoinTarget(profile),
   };
   const channels: IrcChannelTrackingState = {
     users: new Map<string, ChannelUserState[]>(),

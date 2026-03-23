@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import type { StoredNetworkProfile } from '../shared/network-model.js';
+import {
+  defaultNetworkAuthMethod,
+  resolveNetworkAuthTarget,
+  type StoredNetworkProfile,
+} from '../shared/network-model.js';
 import { isEncryptedSecret } from './network-secret.js';
 import { badRequest, notFound } from './app-error.js';
 import type { SecretBox } from './network-secret.js';
@@ -13,7 +17,7 @@ import {
 } from './storage-utils.js';
 
 const networkColumns =
-  'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin';
+  'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin';
 
 export const listNetworks = (db: DatabaseSync): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
@@ -54,10 +58,14 @@ export const upsertNetwork = (
   const existing = input.id ? (getNetworkRow(db, input.id) ?? null) : null;
   const template = validateTemplateRelationship(db, input, existing);
   const storedPassword = resolveStoredPassword(input, secretBox, existing, template);
+  const storedAuthMethod = resolveStoredAuthMethod(input, existing, template);
+  const storedAuthTarget = resolveStoredAuthTarget(input, existing, template);
+  const storedAuthAccount = resolveStoredAuthAccount(input, existing, template);
+  requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
   db.prepare(
     `INSERT INTO networks
-       (id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, favorite, autoJoin, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        templateId = excluded.templateId,
        managerHidden = excluded.managerHidden,
@@ -70,6 +78,9 @@ export const upsertNetwork = (
        username = excluded.username,
        realName = excluded.realName,
        password = excluded.password,
+       authMethod = excluded.authMethod,
+       authTarget = excluded.authTarget,
+       authAccount = excluded.authAccount,
        favorite = excluded.favorite,
        autoJoin = excluded.autoJoin,
        updatedAt = excluded.updatedAt`
@@ -86,6 +97,9 @@ export const upsertNetwork = (
     input.username,
     input.realName,
     storedPassword,
+    storedAuthMethod,
+    storedAuthTarget,
+    storedAuthAccount,
     input.favorite ? 1 : 0,
     JSON.stringify(input.autoJoin ?? []),
     now,
@@ -168,6 +182,70 @@ const resolveStoredPassword = (
     return existing.password;
   }
   return template?.password ?? null;
+};
+
+const resolveStoredAuthMethod = (
+  input: NetworkInput,
+  existing: NetworkRow | null,
+  template: NetworkRow | null
+) => {
+  if (input.authMethod !== undefined) {
+    return input.authMethod;
+  }
+  const inheritedAuthMethod = existing?.authMethod ?? template?.authMethod;
+  if (input.password !== undefined && input.password.length > 0 && (!inheritedAuthMethod || inheritedAuthMethod === 'none')) {
+    return defaultNetworkAuthMethod(true);
+  }
+  if (existing?.authMethod) {
+    return existing.authMethod;
+  }
+  if (template?.authMethod) {
+    return template.authMethod;
+  }
+  const hasSecret = input.password !== undefined
+    ? input.password.length > 0
+    : Boolean(existing?.password ?? template?.password);
+  return defaultNetworkAuthMethod(hasSecret);
+};
+
+const resolveStoredAuthTarget = (
+  input: NetworkInput,
+  existing: NetworkRow | null,
+  template: NetworkRow | null
+) => {
+  if (input.authTarget !== undefined) {
+    return resolveNetworkAuthTarget(input.authTarget);
+  }
+  if (existing?.authTarget) {
+    return resolveNetworkAuthTarget(existing.authTarget);
+  }
+  return resolveNetworkAuthTarget(template?.authTarget);
+};
+
+const resolveStoredAuthAccount = (
+  input: NetworkInput,
+  existing: NetworkRow | null,
+  template: NetworkRow | null
+) => {
+  if (input.authAccount !== undefined) {
+    return input.authAccount.trim();
+  }
+  if (existing) {
+    return existing.authAccount;
+  }
+  if (template) {
+    return template.authAccount;
+  }
+  return '';
+};
+
+const requireStoredPasswordForAuthMethod = (
+  authMethod: NetworkRow['authMethod'],
+  storedPassword: string | null
+) => {
+  if (authMethod !== 'none' && !storedPassword) {
+    throw badRequest('Selected authentication method requires a saved password');
+  }
 };
 
 type SaveNetwork = (input: NetworkInput) => StoredNetworkProfile;

@@ -36,7 +36,13 @@ export const normalizeChannelTarget = (value: string) => {
   return target;
 };
 
-export const normalizeQueryTarget = (value: string) => {
+const normalizeSingleNickTarget = (
+  value: string,
+  messages: {
+    requiredMessage: string;
+    singleTargetMessage: string;
+  }
+) => {
   const target = value.trim();
   if (
     !target
@@ -44,13 +50,23 @@ export const normalizeQueryTarget = (value: string) => {
     || channelTargetPattern.test(target)
     || whitespacePattern.test(target)
   ) {
-    throw badRequest('Private-message target is required');
+    throw badRequest(messages.requiredMessage);
   }
   if (multiTargetPattern.test(target)) {
-    throw badRequest('Private-message target must refer to a single nick');
+    throw badRequest(messages.singleTargetMessage);
   }
   return target;
 };
+
+export const normalizeQueryTarget = (value: string) => normalizeSingleNickTarget(value, {
+  requiredMessage: 'Private-message target is required',
+  singleTargetMessage: 'Private-message target must refer to a single nick',
+});
+
+export const normalizeAuthTarget = (value: string) => normalizeSingleNickTarget(value, {
+  requiredMessage: 'Authentication target must be a single nick',
+  singleTargetMessage: 'Authentication target must refer to a single nick',
+});
 
 export const normalizeFriendNick = (value: string) => {
   const nick = normalizeQueryTarget(value);

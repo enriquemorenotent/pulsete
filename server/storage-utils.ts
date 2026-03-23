@@ -107,6 +107,9 @@ export const toNetworkProfile = (row: NetworkRow): StoredNetworkProfile => {
     username: row.username,
     realName: row.realName,
     hasPassword: Boolean(row.password),
+    authMethod: row.authMethod,
+    authTarget: row.authTarget,
+    authAccount: row.authAccount,
     favorite: Boolean(row.favorite),
     autoJoin: parseJson<string[]>(row.autoJoin, []),
   };

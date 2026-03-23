@@ -1,4 +1,5 @@
 import { connectSocket } from './irc-connect.js';
+import { createLoginSaslState, resolveDeferredNickservAutoJoinTarget } from './irc-auth.js';
 import {
   clearConnectDeadlineTimer,
   clearReconnectTimer,
@@ -48,6 +49,8 @@ export const openSocket = (
 
 export const beginLogin = (connection: IrcLifecycleContext) => {
   connection.lifecycle.lastFailureMessage = null;
+  connection.lifecycle.sasl = createLoginSaslState(connection.profile);
+  connection.lifecycle.pendingNickservAutoJoinTarget = resolveDeferredNickservAutoJoinTarget(connection.profile);
 };
 
 export const markConnectionFailure = (connection: IrcLifecycleContext, detail: string) => {

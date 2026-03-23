@@ -79,6 +79,10 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
 }
 
 function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void }) {
+  const showPassword = props.form.authMethod !== 'none';
+  const showAuthTarget = props.form.authMethod === 'nickserv';
+  const showAuthAccount = props.form.authMethod === 'nickserv' || props.form.authMethod === 'sasl-plain';
+
   return (
     <div className="space-y-4">
       <div className="grid gap-2 md:grid-cols-2">
@@ -95,8 +99,40 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
         <TextField label="Third choice" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />
         <TextField label="Real name" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
         <TextField label="User name" value={props.form.username} onChange={(value) => props.onChange({ username: value })} />
-        <PasswordField form={props.form} onChange={props.onChange} />
+        <SelectField
+          label="Authentication"
+          value={props.form.authMethod}
+          options={[
+            { value: 'none', label: 'None' },
+            { value: 'server-pass', label: 'Server PASS' },
+            { value: 'sasl-plain', label: 'SASL (PLAIN)' },
+            { value: 'nickserv', label: 'NickServ message' },
+          ]}
+          onChange={(value) => props.onChange({ authMethod: value as NetworkForm['authMethod'] })}
+        />
+        {showAuthTarget ? (
+          <TextField
+            label="Service target"
+            value={props.form.authTarget}
+            onChange={(value) => props.onChange({ authTarget: value })}
+          />
+        ) : null}
+        {showAuthAccount ? (
+          <TextField
+            label={props.form.authMethod === 'sasl-plain' ? 'SASL account' : 'NickServ account'}
+            value={props.form.authAccount}
+            placeholder={props.form.nick || 'Uses Nick name when blank'}
+            onChange={(value) => props.onChange({ authAccount: value })}
+          />
+        ) : null}
+        {showPassword ? <PasswordField form={props.form} onChange={props.onChange} /> : null}
       </div>
+
+      {!showPassword ? (
+        <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
+          No automatic identify command will be sent after connect.
+        </div>
+      ) : null}
 
       {props.form.hasSavedPassword ? (
         <ToggleField
@@ -127,11 +163,35 @@ function AutojoinTab(props: { form: NetworkForm; onChange: (form: Partial<Networ
   );
 }
 
-function TextField(props: { label: string; value: string; onChange: (value: string) => void }) {
+function SelectField(props: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
   return (
     <div className="space-y-1">
       <Label>{props.label}</Label>
-      <Input value={props.value} onChange={(event) => props.onChange(event.target.value)} />
+      <select
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+        className="flex h-8 w-full rounded-sm border border-input bg-input px-2.5 py-1.5 text-[13px] text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50"
+      >
+        {props.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function TextField(props: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return (
+    <div className="space-y-1">
+      <Label>{props.label}</Label>
+      <Input value={props.value} placeholder={props.placeholder} onChange={(event) => props.onChange(event.target.value)} />
     </div>
   );
 }
@@ -150,13 +210,22 @@ function ToggleField(props: {
 }
 
 function PasswordField(props: { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void }) {
+  const label = props.form.authMethod === 'server-pass'
+    ? 'Server password'
+    : props.form.authMethod === 'sasl-plain'
+      ? 'SASL password'
+      : 'NickServ password';
+  const placeholder = props.form.hasSavedPassword && !props.form.clearPassword
+    ? 'Saved on server'
+    : '';
+
   return (
     <div className="space-y-1">
-      <Label>Password</Label>
+      <Label>{label}</Label>
       <Input
         type="password"
         value={props.form.password}
-        placeholder={props.form.hasSavedPassword && !props.form.clearPassword ? 'Saved on server' : ''}
+        placeholder={placeholder}
         onChange={(event) => props.onChange({ clearPassword: false, password: event.target.value })}
       />
     </div>
