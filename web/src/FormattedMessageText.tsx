@@ -9,6 +9,16 @@ type FormattedMessageTextProps = {
   mode?: MessageDisplayMode;
 };
 
+export const hasInlineImagePreview = (text: string, mode: MessageDisplayMode | undefined) => {
+  if (mode === 'raw') {
+    return false;
+  }
+  const tokens = mode === 'stripped'
+    ? tokenizeStrippedMessage(text)
+    : tokenizeFormattedMessage(text);
+  return collectInlineImageHrefs(tokens).length > 0;
+};
+
 export const FormattedMessageText = memo(function FormattedMessageText(props: FormattedMessageTextProps) {
   const rawMode = props.mode === 'raw';
 

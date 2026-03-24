@@ -146,6 +146,35 @@ test('compact sender rows keep a one-character nick label without avatar markup'
   assert.doesNotMatch(markup, /data-message-avatar=/);
 });
 
+test('transcript rows render without boxed message chrome', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: 'Joby', body: 'plain line', ts: 1 }),
+    makeMessage({ id: 'message-2', nick: 'Server', body: 'Heads up', kind: 'notice', ts: 2 }),
+  ]);
+
+  assert.doesNotMatch(markup, /border px-2 py-1\.5/);
+});
+
+test('part and quit rows render with distinct tones', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: 'Joby', body: 'left', kind: 'part', ts: 1 }),
+    makeMessage({ id: 'message-2', nick: 'Joby', body: 'quit', kind: 'quit', ts: 2 }),
+  ]);
+
+  assert.match(markup, /text-amber-300/);
+  assert.match(markup, /text-red-500/);
+});
+
+test('inline image previews move compact chat bodies onto a second line', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: 'Joby', body: 'https://example.test/cat.png', ts: 1 }),
+  ]);
+
+  assert.match(markup, /grid grid-cols-\[3\.5rem_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(markup, /Inline image preview: cat\.png/);
+  assert.match(markup, /<div class="col-start-2 min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
+});
+
 test('action rows keep the sender label and hide the duplicated nick in the body', () => {
   const markup = renderChatPane([
     makeMessage({ id: 'message-1', nick: 'cubanita', body: 'waves', kind: 'action', ts: 1 }),

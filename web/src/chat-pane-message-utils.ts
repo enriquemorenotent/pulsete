@@ -79,24 +79,24 @@ export const showKindLabel = (message: ChatMessage) =>
 
 export const messageTone = (message: ChatMessage) => {
   if (message.kind === 'error') {
-    return 'border-destructive/40 bg-destructive/10';
+    return 'text-destructive';
   }
   if (message.kind === 'notice') {
-    return 'border-primary/30 bg-primary/8';
+    return 'text-primary';
   }
   if (message.kind === 'join') {
-    return 'border-emerald-500/30 bg-emerald-500/10';
+    return 'text-emerald-300';
   }
   if (message.kind === 'part') {
-    return 'border-amber-400/30 bg-amber-400/10';
+    return 'text-amber-300';
   }
   if (message.kind === 'quit') {
-    return 'border-amber-400/30 bg-amber-400/10';
+    return 'text-red-500';
   }
   if (message.kind === 'system') {
-    return 'border-border bg-secondary';
+    return 'text-muted-foreground';
   }
-  return message.self ? 'border-primary/35 bg-accent' : 'border-border bg-card';
+  return '';
 };
 
 const canGroupMessage = (message: ChatMessage, mode: 'chat' | 'server') =>
