@@ -55,10 +55,38 @@ export const listPendingChannels = (connection: IrcChannelStateContext) =>
     .map((session) => ({ networkId: connection.profile.id, channel: session.channel }));
 
 export const trackChannel = (connection: IrcChannelStateContext, channel: string) =>
-  setChannelSession(connection, channel, 'joined', { visiblePending: false }).channel;
+  rememberReconnectChannel(connection, setChannelSession(connection, channel, 'joined', { visiblePending: false }).channel);
 
 export const untrackChannel = (connection: IrcChannelStateContext, channel: string) => {
+  forgetReconnectChannel(connection, channel);
   removeChannelSession(connection, channel);
+};
+
+export const setReconnectChannels = (connection: IrcChannelStateContext, channels: string[]) => {
+  connection.channels.reconnectChannels.clear();
+  for (const channel of channels) {
+    rememberReconnectChannel(connection, channel);
+  }
+};
+
+export const listReconnectChannels = (connection: IrcChannelStateContext) =>
+  Array.from(connection.channels.reconnectChannels);
+
+export const rememberReconnectChannel = (connection: IrcChannelStateContext, channel: string) => {
+  const existing = findIrcCaseMatch(connection.channels.reconnectChannels, channel);
+  if (existing) {
+    return existing;
+  }
+  connection.channels.reconnectChannels.add(channel);
+  return channel;
+};
+
+export const forgetReconnectChannel = (connection: IrcChannelStateContext, channel: string) => {
+  const existing = findIrcCaseMatch(connection.channels.reconnectChannels, channel);
+  if (existing) {
+    connection.channels.reconnectChannels.delete(existing);
+  }
+  return existing;
 };
 
 export const removeChannelSession = (connection: IrcChannelStateContext, channel: string) => {

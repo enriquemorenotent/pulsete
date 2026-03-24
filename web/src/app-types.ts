@@ -99,6 +99,8 @@ export type Action =
   | { type: 'network-state'; networkId: string; phase: NetworkRuntimeState['phase']; serverName: string | null; nick: string }
   | { type: 'assistant-snapshot'; assistant: AssistantSnapshot }
   | { type: 'assistant-thread-loaded'; thread: AssistantThread }
+  | { type: 'assistant-thread-removed'; threadId: string }
+  | { type: 'assistant-thread-stop-requested'; threadId: string }
   | { type: 'assistant-turn-started'; threadId: string; turn: AssistantTurn }
   | { type: 'assistant-turn-completed'; threadId: string; turn: AssistantTurn }
   | { type: 'assistant-item-started'; threadId: string; turnId: string; item: AssistantItem }

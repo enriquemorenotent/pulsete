@@ -105,6 +105,34 @@ test('self-sent private messages open query buffers automatically', () => {
   );
 });
 
+test('private action messages open query buffers automatically', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'helper',
+        nick: 'helper',
+        body: 'waves',
+        kind: 'action',
+        self: false,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper')?.kind, 'query');
+  assert.equal(storage.conversations.listMessages(network.id, 'helper', 5)[0]?.kind, 'action');
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+});
+
 test('service messages on the server buffer close stale service queries', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

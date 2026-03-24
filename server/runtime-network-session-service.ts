@@ -1,10 +1,12 @@
 import type WebSocket from 'ws';
 import { requireStoredNetwork } from './runtime-network-guard.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
+import type { RuntimeConversationStore } from './runtime-store-ports.js';
 import type { RuntimeNetworkStore } from './runtime-store-ports.js';
 
 type RuntimeNetworkSessionServiceOptions = {
   connectionManager: RuntimeConnectionManager;
+  conversations: Pick<RuntimeConversationStore, 'listChannels'>;
   networks: Pick<RuntimeNetworkStore, 'get'>;
 };
 
@@ -13,7 +15,10 @@ export class RuntimeNetworkSessionService {
 
   connect(networkId: string) {
     requireStoredNetwork(this.options.networks, networkId);
-    this.options.connectionManager.connect(networkId);
+    this.options.connectionManager.connect(
+      networkId,
+      this.options.conversations.listChannels(networkId).map((channel) => channel.name)
+    );
   }
 
   disconnect(networkId: string) {

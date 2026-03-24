@@ -27,6 +27,7 @@ export type DesktopShellNetworkManagerModel = {
   networks: NetworkProfile[];
   selected: NetworkProfile | null;
   runtime: NetworkRuntimeState | null;
+  runtimes: Record<string, NetworkRuntimeState | null>;
   showFavoritesOnly: boolean;
   hiddenManagedNetworkName: string | null;
   onSelect: (networkId: string) => void;

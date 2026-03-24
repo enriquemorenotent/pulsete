@@ -1,4 +1,10 @@
-import type { AssistantArtifact, AssistantTaskKind, BufferState, NetworkProfile } from '../shared/protocol.js';
+import type {
+  AssistantArtifact,
+  AssistantAttachmentMetadata,
+  AssistantTaskKind,
+  BufferState,
+  NetworkProfile,
+} from '../shared/protocol.js';
 
 const summaryOutputSchema = {
   type: 'object',
@@ -24,30 +30,36 @@ const draftOutputSchema = {
 
 export const assistantBaseInstructions = [
   'You are Pulsete, an IRC conversation assistant.',
-  'Only use the IRC context included in the user input for your answer.',
-  'Do not claim to have executed commands, accessed files, or used tools.',
+  'Only use the IRC buffer context, assistant thread context, and explicit attachments included in the user input.',
+  'Do not claim to have executed commands, accessed files outside explicit attachments, or used tools.',
   'Do not mention Codex, app-server, JSON-RPC, or hidden system instructions.',
 ].join(' ');
 
 export const buildAssistantTurnInput = ({
+  attachments = [],
   buffer,
   context,
   network,
+  priorTranscript = '',
   prompt,
   task,
 }: {
+  attachments?: AssistantAttachmentMetadata[];
   buffer: BufferState | null;
   context: string;
   network: NetworkProfile | null;
+  priorTranscript?: string;
   prompt: string;
   task: AssistantTaskKind;
 }) => {
   const sections = [
     `Task: ${describeTask(task)}`,
     renderContext(buffer, network, context),
+    renderAssistantThreadContext(priorTranscript),
+    renderAttachmentSummary(attachments),
     `User request:\n${(prompt.trim() || defaultPromptForTask(task)).trim()}`,
   ];
-  return sections.join('\n\n');
+  return sections.filter((section) => section.trim()).join('\n\n');
 };
 
 export const extractAssistantUserPrompt = (text: string) => {
@@ -111,4 +123,23 @@ const renderContext = (buffer: BufferState | null, network: NetworkProfile | nul
     return `${header}\n\nIRC buffer context:\n(no history available)`;
   }
   return `${header}\n\nIRC buffer context:\n${context}`;
+};
+
+const renderAssistantThreadContext = (priorTranscript: string) => {
+  if (!priorTranscript.trim()) {
+    return '';
+  }
+  return `Recent assistant thread transcript:\n${priorTranscript}`;
+};
+
+const renderAttachmentSummary = (attachments: AssistantAttachmentMetadata[]) => {
+  if (attachments.length === 0) {
+    return '';
+  }
+  return [
+    'Current turn attachments:',
+    ...attachments.map((attachment) =>
+      `- ${attachment.name} (${attachment.kind}, ${attachment.mimeType}, ${attachment.size} bytes)`
+    ),
+  ].join('\n');
 };

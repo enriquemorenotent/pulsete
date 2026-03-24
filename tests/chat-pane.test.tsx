@@ -125,10 +125,20 @@ test('grouped sender messages render one avatar with the first two nickname lett
 
 test('compact sender rows keep a one-letter avatar when the nickname is only one character', () => {
   const markup = renderChatPane([
-    makeMessage({ id: 'message-1', nick: 'Q', body: '* waves', ts: 1 }),
+    makeMessage({ id: 'message-1', nick: 'Q', body: 'waves', kind: 'action', ts: 1 }),
   ]);
 
   assert.match(markup, /data-message-avatar="Q"/);
+});
+
+test('action rows keep the sender label and hide the duplicated nick in the body', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: 'cubanita', body: 'waves', kind: 'action', ts: 1 }),
+  ]);
+
+  assert.match(markup, />cubanita</);
+  assert.match(markup, />waves</);
+  assert.ok(!markup.includes('* cubanita'));
 });
 
 test('standalone notice rows with a sender render the same avatar fallback', () => {

@@ -96,8 +96,12 @@ export type IrcConnectionMethods = {
   isChannelListPending(): boolean;
   startChannelList(mode: IrcChannelListMode, options: { requestId?: string; sourceTarget?: string }): void;
   listPendingChannels(): Array<{ networkId: string; channel: string }>;
+  listReconnectChannels(): string[];
   trackChannel(channel: string): string;
   untrackChannel(channel: string): void;
+  setReconnectChannels(channels: string[]): void;
+  rememberReconnectChannel(channel: string): string;
+  forgetReconnectChannel(channel: string): string | null;
   getChannelSession(channel: string): ChannelSessionState | null;
   updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
   getTrackedChannelUsers(channel: string): ChannelUserState[];

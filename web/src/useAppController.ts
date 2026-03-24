@@ -41,7 +41,7 @@ export function useAppController(): AppController {
     savedNetworks,
     state.transient.networkManager.showFavoritesOnly
   );
-  const { hiddenManagedNetworkName, managedRuntime, visibleManagedNetwork } = useManagedNetworkModel({
+  const { hiddenManagedNetworkName, managedRuntime, managedRuntimes, visibleManagedNetwork } = useManagedNetworkModel({
     connectionInstances,
     networkManager: state.transient.networkManager,
     networkStates: state.domain.networkStates,
@@ -117,6 +117,7 @@ export function useAppController(): AppController {
     dispatch,
     hiddenManagedNetworkName,
     managedRuntime,
+    managedRuntimes,
     networkManager: state.transient.networkManager,
     visibleManagedNetwork,
     visibleNetworks,

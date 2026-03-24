@@ -101,13 +101,17 @@ const assistantSnapshot: AssistantSnapshot = {
 
 const assistantProps: AssistantPanelProps = {
   assistant: assistantSnapshot,
+  canClearHistory: true,
+  canImportHistory: true,
   contextKey: 'buffer-channel',
   contextEmpty: false,
   loading: false,
   busy: false,
   thread: assistantThread,
+  onClearHistory: async () => true,
+  onImportHistory: async () => true,
+  onStop: async () => true,
   onSubmitPrompt: async () => true,
-  onInterruptTurn: async () => true,
 };
 
 const nicklist: DesktopShellNicklistModel = {
@@ -147,6 +151,7 @@ test('channel workspace renders user and assistant tabs', () => {
   assert.match(markup, /Users/);
   assert.match(markup, /Assistant/);
   assert.match(markup, /alice/);
+  assert.match(markup, /Clear/);
 });
 
 test('query workspace renders the assistant panel without sidebar tabs', () => {
@@ -163,6 +168,7 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
       nicklist={nicklist}
       assistant={{
         ...assistantProps,
+        canClearHistory: false,
         contextKey: 'buffer-query',
         thread: null,
       }}
@@ -172,10 +178,44 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
   assert.doesNotMatch(markup, /Assistant/);
   assert.doesNotMatch(markup, /Users/);
   assert.match(markup, /Ask a question\./);
+  assert.match(markup, /Add files/);
+  assert.match(markup, /Import logs/);
   assert.match(markup, /Send/);
+  assert.doesNotMatch(markup, /Clear/);
+  assert.doesNotMatch(markup, /Stop/);
+  assert.doesNotMatch(markup, /Drop files to attach/);
   assert.doesNotMatch(markup, /Threads/);
   assert.doesNotMatch(markup, /Summarize/);
   assert.doesNotMatch(markup, /Draft/);
   assert.doesNotMatch(markup, /Sign out/);
   assert.doesNotMatch(markup, /Default model/);
+});
+
+test('busy assistant state shows Stop instead of Send and hides import controls', () => {
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={createWorkspace({
+        mode: 'query-connected',
+        selection: { kind: 'buffer', bufferId: queryBuffer.id },
+        selectedBuffer: queryBuffer,
+        selectedChannel: null,
+        headerTitle: 'alice',
+        showNicklist: false,
+      })}
+      nicklist={nicklist}
+      assistant={{
+        ...assistantProps,
+        busy: true,
+        canClearHistory: false,
+        contextKey: 'buffer-query',
+        thread: assistantThread,
+      }}
+    />
+  );
+
+  assert.match(markup, /Thinking…/);
+  assert.match(markup, /Stop/);
+  assert.doesNotMatch(markup, /Send/);
+  assert.doesNotMatch(markup, /Import logs/);
+  assert.doesNotMatch(markup, /Add files/);
 });

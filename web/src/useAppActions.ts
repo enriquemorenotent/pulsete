@@ -120,8 +120,11 @@ export type NicklistActionSet = Pick<AppActions, 'addFriend' | 'removeFriend' | 
 export type AssistantActionSet = Pick<
   AppActions,
   | 'cancelAssistantLogin'
+  | 'clearAssistantThreads'
   | 'createAssistantThread'
+  | 'interruptAssistantThread'
   | 'interruptAssistantTurn'
+  | 'importAssistantHistory'
   | 'loadAssistantThread'
   | 'logoutAssistant'
   | 'setAssistantActiveThread'

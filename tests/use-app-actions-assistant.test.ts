@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AssistantThread, AssistantThreadSummary, BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
+import type {
+  AssistantThread,
+  AssistantThreadSummary,
+  AssistantTurnAttachmentInput,
+  BufferState,
+  ChannelState,
+  NetworkProfile,
+} from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
@@ -279,6 +286,179 @@ test('startAssistantChatgptLogin opens a placeholder window before the login req
         value: originalWindow,
       });
     }
+  }
+});
+
+test('startAssistantTurn sends structured attachment payloads', async () => {
+  const state = createState();
+  const { params, banners } = createParams(state);
+  const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
+  const attachments: AssistantTurnAttachmentInput[] = [
+    {
+      id: 'attachment-1',
+      kind: 'text',
+      name: 'notes.md',
+      mimeType: 'text/markdown',
+      size: 24,
+      text: 'Deploy notes',
+    },
+  ];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+      body: String(init?.body ?? ''),
+    });
+    if (String(input) === '/api/assistant/threads/thread-1/turns') {
+      return okJson({ ok: true });
+    }
+    throw new Error(`Unexpected fetch: ${String(input)}`);
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const started = await actions.startAssistantTurn('thread-1', 'Can you summarize this?', attachments);
+
+    assert.equal(started, true);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/assistant/threads/thread-1/turns',
+      method: 'POST',
+      body: JSON.stringify({
+        prompt: 'Can you summarize this?',
+        attachments,
+      }),
+    }]);
+    assert.deepEqual(banners, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('clearAssistantThreads deletes the current assistant threads and clears local state', async () => {
+  const state = createState({
+    domain: {
+      assistant: {
+        ...initialState.domain.assistant,
+        activeThreadId: askSummary.id,
+        threads: [askSummary],
+      },
+      assistantThreads: {
+        [askThread.id]: askThread,
+      },
+    },
+    transient: {
+      assistant: {
+        ...initialState.transient.assistant,
+        selectedThreadId: askThread.id,
+      },
+    },
+  });
+  const { params, dispatched, banners } = createParams(state);
+  const fetchCalls: Array<{ url: string; method: string }> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+    });
+    if (String(input) === '/api/assistant/threads/thread-1') {
+      return okJson({ ok: true });
+    }
+    throw new Error(`Unexpected fetch: ${String(input)}`);
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const cleared = await actions.clearAssistantThreads(['thread-1']);
+
+    assert.equal(cleared, true);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/assistant/threads/thread-1',
+      method: 'DELETE',
+    }]);
+    assert.deepEqual(dispatched.map((action) => action.type), ['assistant-thread-removed']);
+    assert.deepEqual(banners, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('interruptAssistantThread sends the thread-level interrupt request', async () => {
+  const state = createState();
+  const { params, banners, dispatched } = createParams(state);
+  const fetchCalls: Array<{ url: string; method: string }> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+    });
+    if (String(input) === '/api/assistant/threads/thread-1/interrupt') {
+      return okJson({ ok: true });
+    }
+    throw new Error(`Unexpected fetch: ${String(input)}`);
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const interrupted = await actions.interruptAssistantThread('thread-1');
+
+    assert.equal(interrupted, true);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/assistant/threads/thread-1/interrupt',
+      method: 'POST',
+    }]);
+    assert.deepEqual(dispatched.map((action) => action.type), ['assistant-thread-stop-requested']);
+    assert.deepEqual(banners, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('importAssistantHistory sends text attachments to the import endpoint', async () => {
+  const state = createState();
+  const { params, banners } = createParams(state);
+  const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
+  const attachments: AssistantTurnAttachmentInput[] = [
+    {
+      id: 'attachment-1',
+      kind: 'text',
+      name: 'pm.log',
+      mimeType: 'text/plain',
+      size: 42,
+      text: '[12:00] <alice> hello',
+    },
+  ];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+      body: String(init?.body ?? ''),
+    });
+    if (String(input) === '/api/assistant/threads/thread-1/import-history') {
+      return okJson({ ok: true });
+    }
+    throw new Error(`Unexpected fetch: ${String(input)}`);
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const started = await actions.importAssistantHistory('thread-1', 'Import this PM log.', attachments);
+
+    assert.equal(started, true);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/assistant/threads/thread-1/import-history',
+      method: 'POST',
+      body: JSON.stringify({
+        prompt: 'Import this PM log.',
+        attachments,
+      }),
+    }]);
+    assert.deepEqual(banners, []);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 

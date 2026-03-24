@@ -306,6 +306,9 @@ const formatMessage = (message: ChatMessage) => {
     return `[${time}] (${message.kind}) ${message.body}`;
   }
   const author = message.nick ?? (message.self ? 'you' : 'server');
+  if (message.kind === 'action') {
+    return `[${time}] * ${author} ${message.body}`;
+  }
   return `[${time}] ${author}: ${message.body}`;
 };
 

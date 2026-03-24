@@ -1,4 +1,9 @@
-import type { AssistantSnapshot, AssistantTaskKind, AssistantThreadSummary } from '../../shared/protocol.js';
+import type {
+  AssistantSnapshot,
+  AssistantTaskKind,
+  AssistantThreadSummary,
+  AssistantTurnAttachmentInput,
+} from '../../shared/protocol.js';
 import type { AppActionContext } from './app-actions-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
@@ -71,6 +76,13 @@ const closePendingAuthPopup = (popup: AuthPopup) => {
   } catch {
     // Ignore browser close failures; the popup is only a best-effort helper.
   }
+};
+
+const markAssistantThreadStopped = (
+  dispatch: AssistantActionParams['dispatch'],
+  threadId: string
+) => {
+  dispatch({ type: 'assistant-thread-stop-requested', threadId });
 };
 
 export const createAssistantActions = ({
@@ -229,22 +241,84 @@ export const createAssistantActions = ({
     return thread;
   };
 
-  const startAssistantTurn = async (threadId: string, prompt: string) =>
+  const clearAssistantThreads = async (threadIds: string[]) => {
+    if (threadIds.length === 0) {
+      return true;
+    }
+    for (const threadId of threadIds) {
+      try {
+        await api.deleteAssistantThread(threadId);
+        dispatch({ type: 'assistant-thread-removed', threadId });
+      } catch (error) {
+        updateBanner('error', error instanceof Error ? error.message : 'Failed to clear assistant chat history');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const startAssistantTurn = async (
+    threadId: string,
+    prompt: string,
+    attachments: AssistantTurnAttachmentInput[] = [],
+  ) =>
     executeMutation({
-      request: () => api.startAssistantTurn(threadId, { prompt }),
+      request: () => api.startAssistantTurn(threadId, { prompt, attachments }),
       failureValue: false,
       mapResult: () => true,
       successMessage: null,
       errorMessage: 'Failed to start assistant turn',
     });
 
+  const importAssistantHistory = async (
+    threadId: string,
+    prompt: string,
+    attachments: AssistantTurnAttachmentInput[],
+  ) => {
+    const session = getSession();
+    if (!session.workspace.selectedBuffer || session.workspace.selectedBuffer.kind === 'server') {
+      updateBanner('error', 'Select a channel or private message before importing history');
+      return false;
+    }
+    if (attachments.length === 0) {
+      updateBanner('error', 'Attach at least one text log file to import');
+      return false;
+    }
+    if (attachments.some((attachment) => attachment.kind !== 'text')) {
+      updateBanner('error', 'Only text log files can be imported into chat history');
+      return false;
+    }
+    return executeMutation({
+      request: () => api.importAssistantHistory(threadId, { prompt, attachments }),
+      failureValue: false,
+      mapResult: () => true,
+      successMessage: null,
+      errorMessage: 'Failed to import chat history',
+    });
+  };
+
   const interruptAssistantTurn = async (threadId: string, turnId: string) =>
     executeMutation({
       request: () => api.interruptAssistantTurn(threadId, turnId),
       failureValue: false,
       mapResult: () => true,
+      onSuccess: () => {
+        markAssistantThreadStopped(dispatch, threadId);
+      },
       successMessage: null,
       errorMessage: 'Failed to interrupt assistant turn',
+    });
+
+  const interruptAssistantThread = async (threadId: string) =>
+    executeMutation({
+      request: () => api.interruptAssistantThread(threadId),
+      failureValue: false,
+      mapResult: () => true,
+      onSuccess: () => {
+        markAssistantThreadStopped(dispatch, threadId);
+      },
+      successMessage: null,
+      errorMessage: 'Failed to stop assistant turn',
     });
 
   const useAssistantDraft = (draft: string) => {
@@ -253,8 +327,11 @@ export const createAssistantActions = ({
 
   return {
     cancelAssistantLogin,
+    clearAssistantThreads,
     createAssistantThread,
+    interruptAssistantThread,
     interruptAssistantTurn,
+    importAssistantHistory,
     loadAssistantThread,
     logoutAssistant,
     setAssistantActiveThread,

@@ -27,8 +27,10 @@ export const handleTextMessage = (
   const target = isDirectTarget
     ? (replyTarget ?? (command === 'NOTICE' || isDirectCtcp || isDirectServiceMessage ? 'server' : nick ?? rawTarget))
     : trackedChannel ?? rawTarget;
-  const body = ctcp?.startsWith('ACTION ')
-    ? `* ${nick ?? target} ${ctcp.slice('ACTION '.length)}`
+  const isAction = ctcp?.startsWith('ACTION ') ?? false;
+  const actionBody = isAction && ctcp ? ctcp.slice('ACTION '.length) : null;
+  const body = actionBody !== null
+    ? actionBody
     : isDirectCtcp
       ? `<${ctcp}>`
       : payload;
@@ -36,7 +38,7 @@ export const handleTextMessage = (
     target,
     nick,
     body,
-    kind: command === 'NOTICE' ? 'notice' : 'line',
+    kind: command === 'NOTICE' ? 'notice' : isAction ? 'action' : 'line',
     self: isSelfNick(connection, nick),
   }));
   handleNickservAutoJoinMessage(connection, rawTarget, nick, payload);

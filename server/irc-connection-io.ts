@@ -95,6 +95,17 @@ export const createSelfMessage = (connection: IrcRawIoContext, target: string, b
   ts: Date.now(),
 });
 
+export const createSelfActionMessage = (connection: IrcRawIoContext, target: string, body: string): MessageInput => ({
+  id: randomUUID(),
+  networkId: connection.profile.id,
+  target,
+  nick: connection.lifecycle.currentNick,
+  body,
+  kind: 'action',
+  self: true,
+  ts: Date.now(),
+});
+
 export const sendTrackedRaw = (
   connection: IrcClientIoContext,
   raw: string,

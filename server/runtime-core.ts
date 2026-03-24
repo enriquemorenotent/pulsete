@@ -83,6 +83,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   });
   const sessions = new RuntimeNetworkSessionService({
     connectionManager,
+    conversations: store.conversations,
     networks: store.networks,
   });
   const assistant = new AssistantService({

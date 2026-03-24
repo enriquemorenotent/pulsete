@@ -60,8 +60,10 @@ export class RuntimeConnectionManager {
     return connection;
   }
 
-  connect(networkId: string) {
-    this.getConnection(networkId).connect();
+  connect(networkId: string, reconnectChannels: string[] = []) {
+    const connection = this.getConnection(networkId);
+    connection.setReconnectChannels(reconnectChannels);
+    connection.connect();
   }
 
   disconnect(networkId: string) {

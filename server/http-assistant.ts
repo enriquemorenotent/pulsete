@@ -1,4 +1,6 @@
 import {
+  assistantRequestBodyLimitBytes,
+  parseAssistantImportInput,
   parseAssistantPreferencesInput,
   parseAssistantTurnInput,
   parseCreateAssistantThreadInput,
@@ -18,12 +20,16 @@ export const handleAssistantRoutes = async ({ req, res, pathname, context }: Rou
     return true;
   }
   if (req.method === 'PUT' && pathname === '/api/assistant/preferences') {
-    const preferences = context.assistant.updatePreferences(parseAssistantPreferencesInput(await readJson(req)));
+    const preferences = context.assistant.updatePreferences(
+      parseAssistantPreferencesInput(await readJson(req, assistantRequestBodyLimitBytes))
+    );
     writeJson(res, 200, { preferences });
     return true;
   }
   if (req.method === 'POST' && pathname === '/api/assistant/threads') {
-    const thread = await context.assistant.createThread(parseCreateAssistantThreadInput(await readJson(req)));
+    const thread = await context.assistant.createThread(
+      parseCreateAssistantThreadInput(await readJson(req, assistantRequestBodyLimitBytes))
+    );
     writeJson(res, 200, { thread });
     return true;
   }
@@ -34,6 +40,11 @@ export const handleAssistantRoutes = async ({ req, res, pathname, context }: Rou
     return true;
   }
   const threadMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)$/);
+  if (threadMatch && req.method === 'DELETE') {
+    await context.assistant.deleteThread(decodeRouteParam(threadMatch[1]));
+    writeJson(res, 200, { ok: true });
+    return true;
+  }
   if (threadMatch && req.method === 'GET') {
     const thread = await context.assistant.readThread(decodeRouteParam(threadMatch[1]));
     writeJson(res, 200, { thread });
@@ -44,16 +55,32 @@ export const handleAssistantRoutes = async ({ req, res, pathname, context }: Rou
     const threadId = decodeRouteParam(threadTurnsMatch[1]);
     await context.assistant.startTurn({
       threadId,
-      ...parseAssistantTurnInput(await readJson(req)),
+      ...parseAssistantTurnInput(await readJson(req, assistantRequestBodyLimitBytes)),
     });
     writeJson(res, 200, { ok: true });
     return true;
   }
-  const threadInterruptMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)\/interrupt\/([^/]+)$/);
+  const threadImportMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)\/import-history$/);
+  if (threadImportMatch && req.method === 'POST') {
+    const threadId = decodeRouteParam(threadImportMatch[1]);
+    await context.assistant.importHistory({
+      threadId,
+      ...parseAssistantImportInput(await readJson(req, assistantRequestBodyLimitBytes)),
+    });
+    writeJson(res, 200, { ok: true });
+    return true;
+  }
+  const threadInterruptMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)\/interrupt$/);
   if (threadInterruptMatch && req.method === 'POST') {
+    await context.assistant.interruptThread(decodeRouteParam(threadInterruptMatch[1]));
+    writeJson(res, 200, { ok: true });
+    return true;
+  }
+  const turnInterruptMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)\/interrupt\/([^/]+)$/);
+  if (turnInterruptMatch && req.method === 'POST') {
     await context.assistant.interruptTurn(
-      decodeRouteParam(threadInterruptMatch[1]),
-      decodeRouteParam(threadInterruptMatch[2])
+      decodeRouteParam(turnInterruptMatch[1]),
+      decodeRouteParam(turnInterruptMatch[2])
     );
     writeJson(res, 200, { ok: true });
     return true;

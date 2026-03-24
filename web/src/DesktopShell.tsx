@@ -78,6 +78,7 @@ export function DesktopShell(props: DesktopShellModel) {
           networks={props.networkManager.networks}
           selected={props.networkManager.selected}
           runtime={props.networkManager.runtime}
+          runtimes={props.networkManager.runtimes}
           showFavoritesOnly={props.networkManager.showFavoritesOnly}
           hiddenManagedNetworkName={props.networkManager.hiddenManagedNetworkName}
           onSelect={props.networkManager.onSelect}

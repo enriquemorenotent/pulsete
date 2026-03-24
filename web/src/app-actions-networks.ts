@@ -1,8 +1,10 @@
+import { getNetworkRootId, listConnectionPeers } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type {
   AppActionContext,
 } from './app-actions-types.js';
 import { selectBuffer } from './app-actions-types.js';
+import type { State } from './app-types.js';
 import { api } from './client.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
@@ -11,6 +13,34 @@ type NetworkActionParams = Pick<
   AppActionContext,
   'applyServerMessages' | 'dispatch' | 'getSession' | 'updateBanner'
 >;
+
+export type ManagedNetworkConnectPlan =
+  | { kind: 'noop-connected' }
+  | { kind: 'noop-connecting' }
+  | { kind: 'reconnect-existing-peer'; peer: NetworkProfile }
+  | { kind: 'create-new-peer' };
+
+export const resolveManagedNetworkConnectPlan = ({
+  network,
+  networks,
+  networkStates,
+}: {
+  network: NetworkProfile;
+  networks: readonly NetworkProfile[];
+  networkStates: State['domain']['networkStates'];
+}): ManagedNetworkConnectPlan => {
+  const peers = listConnectionPeers(networks, getNetworkRootId(network));
+  if (peers.some((peer) => networkStates[peer.id]?.phase === 'connected')) {
+    return { kind: 'noop-connected' };
+  }
+  if (peers.some((peer) => networkStates[peer.id]?.phase === 'connecting')) {
+    return { kind: 'noop-connecting' };
+  }
+  const existingPeer = peers[0];
+  return existingPeer
+    ? { kind: 'reconnect-existing-peer', peer: existingPeer }
+    : { kind: 'create-new-peer' };
+};
 
 export const createNetworkActions = ({
   applyServerMessages,
@@ -63,6 +93,30 @@ export const createNetworkActions = ({
   };
 
   const connectNetwork = async (network: NetworkProfile) => {
+    const { conversation, state } = getSession();
+    const plan = resolveManagedNetworkConnectPlan({
+      network,
+      networks: state.domain.networks,
+      networkStates: state.domain.networkStates,
+    });
+    if (plan.kind === 'noop-connected' || plan.kind === 'noop-connecting') {
+      return false;
+    }
+    if (plan.kind === 'reconnect-existing-peer') {
+      return executeMutation({
+        request: () => api.connectNetwork(plan.peer.id),
+        onSuccess: () => {
+          const buffer = conversation.findServerBuffer(plan.peer.id);
+          if (buffer) {
+            selectBuffer(dispatch, buffer);
+          }
+        },
+        mapResult: () => true,
+        successMessage: 'Reconnect requested',
+        errorMessage: 'Failed to reconnect',
+        failureValue: false,
+      });
+    }
     return executeMutation({
       request: async () => {
         const instance = await api.saveNetwork(createConnectionInstancePayload(network));

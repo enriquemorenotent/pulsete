@@ -11,13 +11,15 @@ export const handleJoin = (connection: IrcChannelEventContext, params: string[],
   }
   const selfJoin = isSelfNick(connection, nick);
   const pendingSession = selfJoin ? connection.getChannelSession(name) : null;
+  const trackedChannel = connection.resolveTrackedChannel(name);
   if (selfJoin) {
+    connection.rememberReconnectChannel(trackedChannel ?? name);
     connection.discardPendingChannelReplyContexts(name, (context) => context.operation === 'join');
     if (!pendingSession) {
       connection.setChannelSession(name, 'joined', { sourceTarget: 'server' });
     }
   }
-  const channel = connection.resolveTrackedChannel(name);
+  const channel = trackedChannel ?? connection.resolveTrackedChannel(name);
   if (!channel) {
     return;
   }
@@ -42,7 +44,11 @@ export const handlePart = (connection: IrcChannelEventContext, params: string[],
   }
   const reason = params[1] ?? 'left';
   const selfPart = isSelfNick(connection, nick);
+  const session = selfPart ? connection.getChannelSession(channel) : null;
   if (selfPart) {
+    if (session?.phase !== 'joining') {
+      connection.forgetReconnectChannel(channel);
+    }
     connection.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join');
   }
   const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
@@ -69,7 +75,11 @@ export const handleKick = (connection: IrcChannelEventContext, params: string[],
   }
   const selfKick = isSelfNick(connection, kickedNick);
   const reason = params[2] ?? 'kicked';
+  const session = selfKick ? connection.getChannelSession(channel) : null;
   if (selfKick) {
+    if (session?.phase !== 'joining') {
+      connection.forgetReconnectChannel(channel);
+    }
     connection.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join');
   }
   const users = selfKick ? [] : connection.updateChannelUsers(channel, kickedNick, false);

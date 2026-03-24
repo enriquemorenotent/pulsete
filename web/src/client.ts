@@ -1,4 +1,5 @@
 import {
+  type AssistantTurnAttachmentInput,
   type AssistantPreferences,
   type AssistantTaskKind,
   type AssistantThread,
@@ -113,13 +114,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  deleteAssistantThread: (threadId: string) =>
+    apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}`, {
+      method: 'DELETE',
+      body: '{}',
+    }),
   loadAssistantThread: (threadId: string) =>
     apiRequest<{ thread: AssistantThread }>(`/api/assistant/threads/${encodeURIComponent(threadId)}`),
-  startAssistantTurn: (threadId: string, payload: { prompt: string }) =>
+  startAssistantTurn: (threadId: string, payload: { prompt: string; attachments?: AssistantTurnAttachmentInput[] }) =>
     apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}/turns`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  importAssistantHistory: (
+    threadId: string,
+    payload: { prompt?: string; attachments: AssistantTurnAttachmentInput[] },
+  ) =>
+    apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}/import-history`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  interruptAssistantThread: (threadId: string) =>
+    apiRequest<{ ok: boolean }>(
+      `/api/assistant/threads/${encodeURIComponent(threadId)}/interrupt`,
+      {
+        method: 'POST',
+        body: '{}',
+      }
+    ),
   interruptAssistantTurn: (threadId: string, turnId: string) =>
     apiRequest<{ ok: boolean }>(
       `/api/assistant/threads/${encodeURIComponent(threadId)}/interrupt/${encodeURIComponent(turnId)}`,

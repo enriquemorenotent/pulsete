@@ -43,6 +43,7 @@ export const createIrcConnectionState = (
   const channels: IrcChannelTrackingState = {
     users: new Map<string, ChannelUserState[]>(),
     sessions: new Map<string, ChannelSessionState>(),
+    reconnectChannels: new Set<string>(),
     joinTimeoutMs: options.channelJoinTimeoutMs ?? defaultChannelJoinTimeoutMs,
   };
   const friendPresence: IrcFriendPresenceState = {

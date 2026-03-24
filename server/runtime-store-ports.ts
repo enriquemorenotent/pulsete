@@ -2,6 +2,7 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type {
+  AssistantTurn,
   AssistantPreferences,
   AssistantThreadSummary,
   AppSnapshot,
@@ -64,6 +65,8 @@ export type RuntimeFriendStore = {
 export type RuntimeAssistantStore = {
   listThreads(): AssistantThreadSummary[];
   getThread(threadId: string): AssistantThreadSummary | null;
+  getThreadTurns(threadId: string): AssistantTurn[] | null;
+  saveThreadTurns(threadId: string, turns: AssistantTurn[]): void;
   upsertThread(input: AssistantThreadInput): AssistantThreadSummary | null;
   removeThread(threadId: string): void;
   getPreferences(): AssistantPreferences;

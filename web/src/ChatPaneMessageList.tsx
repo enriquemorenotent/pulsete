@@ -11,7 +11,7 @@ import {
   buildRenderBlocks,
   formatMessageTime,
   getGroupSourceLabel,
-  isActionBody,
+  isActionMessage,
   isCompactMessage,
   messageTone,
   showKindLabel,
@@ -83,7 +83,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
                     <p
                       className={cn(
                         'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground',
-                        isActionBody(block.message) && 'italic'
+                        isActionMessage(block.message) && 'italic'
                       )}
                     >
                       <FormattedMessageText text={block.message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />

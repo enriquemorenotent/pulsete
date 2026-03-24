@@ -4,7 +4,7 @@ import type { State } from './app-types.js';
 import { buildConnectionSidebarView } from './connection-sidebar-view.js';
 import { buildConversationModel, type ConversationModel } from './conversation-model.js';
 import { selectConversationMessages } from './conversation-selectors.js';
-import { buildManagedRuntime } from './network-manager-runtime.js';
+import { buildManagedRuntime, buildManagedRuntimeMap } from './network-manager-runtime.js';
 import type { WorkspaceView } from './workspace-types.js';
 import { deriveWorkspace } from './workspace.js';
 import { getConnectionInstances } from './workspace-helpers.js';
@@ -102,10 +102,15 @@ export function useManagedNetworkModel({
     () => buildManagedRuntime(visibleManagedNetwork, connectionInstances, networkStates),
     [connectionInstances, networkStates, visibleManagedNetwork]
   );
+  const managedRuntimes = useMemo(
+    () => buildManagedRuntimeMap(visibleNetworks, connectionInstances, networkStates),
+    [connectionInstances, networkStates, visibleNetworks]
+  );
 
   return {
     hiddenManagedNetworkName,
     managedRuntime,
+    managedRuntimes,
     visibleManagedNetwork,
   };
 }

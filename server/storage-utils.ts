@@ -1,4 +1,5 @@
 import { pbkdf2Sync } from 'node:crypto';
+import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { BufferState, ChannelState, ChannelUserState, FriendState } from '../shared/protocol.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
@@ -160,8 +161,30 @@ export const toMessage = (row: MessageRow): MessageInput => ({
   networkId: row.networkId,
   target: row.target,
   nick: row.nick,
-  body: row.body,
-  kind: row.kind as MessageInput['kind'],
+  body: normalizeMessageBody(row),
+  kind: normalizeMessageKind(row),
   self: Boolean(row.self),
   ts: row.ts,
 });
+
+const normalizeMessageKind = (row: MessageRow): MessageInput['kind'] =>
+  isLegacyActionRow(row) ? 'action' : row.kind as MessageInput['kind'];
+
+const normalizeMessageBody = (row: MessageRow) => {
+  const match = getLegacyActionMatch(row);
+  return match ? match[2] : row.body;
+};
+
+const isLegacyActionRow = (row: MessageRow) =>
+  row.kind === 'line' && getLegacyActionMatch(row) !== null;
+
+const getLegacyActionMatch = (row: MessageRow) => {
+  if (row.kind !== 'line' || !row.nick) {
+    return null;
+  }
+  const match = /^\*\s+(\S+)\s+([\s\S]+)$/.exec(row.body);
+  if (!match) {
+    return null;
+  }
+  return isSameIrcIdentifier(match[1], row.nick) ? match : null;
+};

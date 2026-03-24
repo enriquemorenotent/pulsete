@@ -5,7 +5,7 @@ import { MessageAvatar } from './MessageAvatar.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import {
   formatMessageTime,
-  isActionBody,
+  isActionMessage,
   messageTone,
   showKindLabel,
 } from './chat-pane-message-utils.js';
@@ -18,8 +18,8 @@ type ChatPaneCompactMessageRowProps = {
 
 export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps) {
   const { message } = props;
-  const actionBody = isActionBody(message);
-  const showNick = message.nick && (message.kind === 'line' || showKindLabel(message));
+  const isAction = isActionMessage(message);
+  const showNick = message.nick && (message.kind === 'line' || message.kind === 'action' || showKindLabel(message));
   const avatarNick = showNick ? message.nick : null;
 
   return (
@@ -34,11 +34,11 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
           <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
             {formatMessageTime(message.ts)}
           </span>
-          {showNick && !actionBody ? (
+          {showNick ? (
             <span className="font-semibold text-foreground">{message.nick}</span>
           ) : null}
           {showKindLabel(message) ? <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
-          <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', actionBody && 'italic')}>
+          <span className={cn('min-w-0 break-words font-sans text-[13px] text-foreground', isAction && 'italic')}>
             <FormattedMessageText text={message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
           </span>
         </p>

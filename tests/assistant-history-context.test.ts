@@ -60,3 +60,25 @@ test('assistant history context packs older matching windows when the transcript
   assert.match(context, /use postgres for analytics storage/);
   assert.match(context, /Recent tail:/);
 });
+
+test('assistant history context formats action messages as transcript actions', () => {
+  const messages: ChatMessage[] = [{
+    id: 'message-1',
+    networkId: 'network-1',
+    target: '#general',
+    nick: 'alice',
+    body: 'waves',
+    kind: 'action',
+    self: false,
+    ts: Date.parse('2026-03-23T18:00:00Z'),
+  }];
+
+  const context = buildAssistantHistoryContext({
+    messages,
+    prompt: 'What happened?',
+    task: 'ask',
+  });
+
+  assert.match(context, /\* alice waves/);
+  assert.doesNotMatch(context, /alice: waves/);
+});

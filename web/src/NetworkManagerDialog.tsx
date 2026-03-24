@@ -19,6 +19,7 @@ type NetworkManagerDialogProps = {
   networks: NetworkProfile[];
   selected: NetworkProfile | null;
   runtime: NetworkRuntimeState | null;
+  runtimes: Record<string, NetworkRuntimeState | null>;
   showFavoritesOnly: boolean;
   hiddenManagedNetworkName: string | null;
   onSelect: (networkId: string) => void;
@@ -32,7 +33,25 @@ type NetworkManagerDialogProps = {
   onFavorite: () => void;
 };
 
+export const getNetworkManagerRowStatus = (runtime: NetworkRuntimeState | null) =>
+  runtime?.phase === 'connected' ? 'online' : runtime?.phase === 'connecting' ? 'connecting' : null;
+
+export const getNetworkManagerConnectButtonState = (
+  selected: NetworkProfile | null,
+  runtime: NetworkRuntimeState | null,
+) => ({
+  label:
+    runtime?.phase === 'connected'
+      ? 'Connected'
+      : runtime?.phase === 'connecting'
+        ? 'Connecting'
+        : 'Connect',
+  disabled: !selected || runtime?.phase === 'connected' || runtime?.phase === 'connecting',
+});
+
 export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
+  const connectButton = getNetworkManagerConnectButtonState(props.selected, props.runtime);
+
   return (
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
       <DialogContent
@@ -92,8 +111,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
 
                 {props.networks.map((network) => {
                   const selected = props.selected?.id === network.id;
-                  const online = selected && props.runtime?.phase === 'connected';
-                  const connecting = selected && props.runtime?.phase === 'connecting';
+                  const rowStatus = getNetworkManagerRowStatus(props.runtimes[network.id] ?? null);
 
                   return (
                     <button
@@ -108,8 +126,8 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="truncate font-medium text-foreground">{network.name}</span>
-                            {online ? <Badge variant="success">Online</Badge> : null}
-                            {connecting ? <Badge variant="outline">Connecting</Badge> : null}
+                            {rowStatus === 'online' ? <Badge variant="success">Online</Badge> : null}
+                            {rowStatus === 'connecting' ? <Badge variant="outline">Connecting</Badge> : null}
                           </div>
                           <p className="truncate font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
                             {network.host}:{network.port} {network.tls ? 'SSL' : 'TCP'}
@@ -148,9 +166,9 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                 <Button variant="outline" onClick={props.onClose}>
                   Close
                 </Button>
-                <Button variant="secondary" onClick={props.onConnect} disabled={!props.selected}>
+                <Button variant="secondary" onClick={props.onConnect} disabled={connectButton.disabled}>
                   <Power />
-                  Connect
+                  {connectButton.label}
                 </Button>
               </DialogFooter>
             </div>

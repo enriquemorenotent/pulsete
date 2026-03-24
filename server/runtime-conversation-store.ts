@@ -81,7 +81,7 @@ const createMessageBuffer = (store: RuntimeConversationStore, message: MessageIn
     }
     return store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target });
   }
-  if (message.kind === 'line') {
+  if (message.kind === 'line' || message.kind === 'action') {
     return store.upsertBuffer({ networkId: message.networkId, kind: 'query', target: message.target });
   }
   return null;

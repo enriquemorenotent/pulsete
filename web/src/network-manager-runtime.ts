@@ -19,3 +19,13 @@ export function buildManagedRuntime(
   }
   return instances.length > 0 ? { phase: 'offline' as const, serverName: null, nick: managedNetwork.nick } : null;
 }
+
+export const buildManagedRuntimeMap = (
+  managedNetworks: readonly NetworkProfile[],
+  connectionInstances: NetworkProfile[],
+  networkStates: Record<string, NetworkRuntimeState>,
+) =>
+  managedNetworks.reduce<Record<string, NetworkRuntimeState | null>>((runtimes, network) => {
+    runtimes[network.id] = buildManagedRuntime(network, connectionInstances, networkStates);
+    return runtimes;
+  }, {});

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { z } from 'zod';
 import { defaultAssistantModel } from '../shared/assistant-defaults.js';
-import type { AssistantPreferences } from '../shared/protocol.js';
+import { assistantTurnSchema, type AssistantPreferences, type AssistantTurn } from '../shared/protocol.js';
 import type {
   AssistantPreferencesRow,
   AssistantThreadInput,
@@ -8,6 +9,7 @@ import type {
 } from './storage-types.js';
 
 const preferencesId = 1;
+const assistantTurnsSchema = z.array(assistantTurnSchema);
 
 export class StorageAssistantRepository {
   constructor(private readonly db: DatabaseSync) {}
@@ -21,21 +23,32 @@ export class StorageAssistantRepository {
   }
 
   getThread(threadId: string) {
-    const row = this.db.prepare(`
-      SELECT id, bufferId, networkId, target, title, task, model, turnStatus, createdAt, updatedAt
-      FROM assistant_threads
-      WHERE id = ?
-    `).get(threadId) as AssistantThreadRow | undefined;
+    const row = this.getThreadRow(threadId);
     return row ? mapThreadRow(row) : null;
+  }
+
+  getThreadTurns(threadId: string): AssistantTurn[] | null {
+    const row = this.getThreadRow(threadId);
+    return row ? parseTurnsJson(row.turnsJson) : null;
+  }
+
+  saveThreadTurns(threadId: string, turns: AssistantTurn[]) {
+    const encodedTurns = JSON.stringify(assistantTurnsSchema.parse(turns));
+    this.db.prepare(`
+      UPDATE assistant_threads
+      SET turnsJson = ?, updatedAt = ?
+      WHERE id = ?
+    `).run(encodedTurns, Date.now(), threadId);
   }
 
   upsertThread(input: AssistantThreadInput) {
     const now = Date.now();
-    const createdAt = input.createdAt ?? this.getThread(threadIdOrThrow(input.id))?.createdAt ?? now;
+    const existing = this.getThreadRow(threadIdOrThrow(input.id));
+    const createdAt = input.createdAt ?? existing?.createdAt ?? now;
     this.db.prepare(`
       INSERT INTO assistant_threads (
-        id, bufferId, networkId, target, title, task, model, turnStatus, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, bufferId, networkId, target, title, task, model, turnStatus, turnsJson, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         bufferId = excluded.bufferId,
         networkId = excluded.networkId,
@@ -54,6 +67,7 @@ export class StorageAssistantRepository {
       input.task,
       input.model,
       input.turnStatus,
+      existing?.turnsJson ?? '[]',
       createdAt,
       input.updatedAt ?? now
     );
@@ -113,6 +127,14 @@ export class StorageAssistantRepository {
     );
     return this.getPreferences();
   }
+
+  private getThreadRow(threadId: string) {
+    return this.db.prepare(`
+      SELECT id, bufferId, networkId, target, title, task, model, turnStatus, turnsJson, createdAt, updatedAt
+      FROM assistant_threads
+      WHERE id = ?
+    `).get(threadId) as AssistantThreadRow | undefined;
+  }
 }
 
 const mapThreadRow = (row: AssistantThreadRow) => ({
@@ -127,6 +149,15 @@ const mapThreadRow = (row: AssistantThreadRow) => ({
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
+
+const parseTurnsJson = (turnsJson: string) => {
+  try {
+    const parsed = assistantTurnsSchema.safeParse(JSON.parse(turnsJson));
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
+};
 
 const threadIdOrThrow = (threadId: string) => {
   if (!threadId) {

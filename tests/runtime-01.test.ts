@@ -96,6 +96,67 @@ test('saving a connected network reconnects with updated settings', async () => 
   }
 });
 
+test('runtime reconnect restores saved channel buffers', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const received: string[] = [];
+  const server = await createRegisteredServer(received);
+  const network = storage.networks.upsert(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+  }));
+
+  storage.conversations.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: 'Saved topic',
+  });
+
+  try {
+    runtime.sessions.connect(network.id);
+
+    await waitFor(() => received.includes('JOIN #help'));
+
+    assert.deepEqual(runtime.gateway.snapshot().pendingChannels, []);
+  } finally {
+    runtime.sessions.disconnect(network.id);
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime reconnect deduplicates saved channels against autoJoin', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const received: string[] = [];
+  const server = await createRegisteredServer(received);
+  const network = storage.networks.upsert(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+    autoJoin: ['#help', '#ops'],
+  }));
+
+  storage.conversations.upsertChannel({
+    networkId: network.id,
+    name: '#Help',
+  });
+
+  try {
+    runtime.sessions.connect(network.id);
+
+    await waitFor(() => received.includes('JOIN #help') && received.includes('JOIN #ops'));
+
+    assert.equal(received.filter((line) => line === 'JOIN #help').length, 1);
+    assert.equal(received.filter((line) => line === 'JOIN #ops').length, 1);
+  } finally {
+    runtime.sessions.disconnect(network.id);
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('runtime snapshot includes live network states after a refresh point', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

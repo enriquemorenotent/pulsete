@@ -22,7 +22,9 @@ const nickservIdentifySuccessPatterns = [
   /\byou are now logged in\b/i,
 ];
 
-type IrcDeferredAutoJoinContext = Pick<IrcConnectionData, 'lifecycle' | 'profile'> & Pick<IrcConnectionMethods, 'join'>;
+type IrcDeferredAutoJoinContext =
+  Pick<IrcConnectionData, 'lifecycle' | 'profile'>
+  & Pick<IrcConnectionMethods, 'join' | 'listReconnectChannels'>;
 
 export const buildRegistrationLines = (profile: RuntimeNetworkProfile) => [
   ...buildServerPassLines(profile),
@@ -327,7 +329,11 @@ const isNickservReplyTarget = (rawTarget: string, pendingTarget: string, current
 
 const joinConfiguredChannels = (connection: IrcDeferredAutoJoinContext) => {
   let joinedAny = false;
-  for (const channel of connection.profile.autoJoin) {
+  const configuredChannels = [...connection.profile.autoJoin, ...connection.listReconnectChannels()]
+    .filter((channel, index, channels) =>
+      channels.findIndex((candidate) => isSameIrcIdentifier(candidate, channel)) === index
+    );
+  for (const channel of configuredChannels) {
     connection.join(channel);
     joinedAny = true;
   }

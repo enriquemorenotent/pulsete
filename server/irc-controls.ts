@@ -15,13 +15,17 @@ import {
 import {
   clearChannelSessions,
   clearExpiredChannelSessions,
+  forgetReconnectChannel,
   getChannelSession,
+  listReconnectChannels,
   getTrackedChannelUserEntries,
   getTrackedChannelUsers,
   handleSelfChannelDeparture,
+  rememberReconnectChannel,
   listPendingChannels,
   removeChannelSession,
   resolveTrackedChannel,
+  setReconnectChannels,
   setChannelSession,
   setTrackedChannelUsers,
   trackChannel,
@@ -46,7 +50,7 @@ import {
   setConnectDeadlineTimer,
   updateProfile,
 } from './irc-connection-lifecycle.js';
-import { consume, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
+import { consume, createSelfActionMessage, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
 import { emitMessage, emitStatus } from './irc-emit.js';
 import {
   clearFriendPresenceTimer,
@@ -135,7 +139,7 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
           createMessageReplyContext(sourceTarget, target)
         )
       ) {
-        emitMessage(connection, createSelfMessage(connection, target, `* ${connection.lifecycle.currentNick} ${text}`));
+        emitMessage(connection, createSelfActionMessage(connection, target, text));
       }
     },
   },
@@ -163,8 +167,12 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
   },
   channelsControl: {
     listPendingChannels: () => listPendingChannels(connection),
+    listReconnectChannels: () => listReconnectChannels(connection),
     trackChannel: (channel: string) => trackChannel(connection, channel),
     untrackChannel: (channel: string) => untrackChannel(connection, channel),
+    setReconnectChannels: (channels: string[]) => setReconnectChannels(connection, channels),
+    rememberReconnectChannel: (channel: string) => rememberReconnectChannel(connection, channel),
+    forgetReconnectChannel: (channel: string) => forgetReconnectChannel(connection, channel) ?? null,
     getChannelSession: (channel: string) => getChannelSession(connection, channel),
     updateChannelUsers: (channel: string, nick: string | null, joined: boolean) =>
       updateChannelUsers(connection, channel, nick, joined),

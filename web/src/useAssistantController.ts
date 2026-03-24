@@ -1,3 +1,4 @@
+import type { AssistantTurnAttachmentInput } from '../../shared/protocol.js';
 import { useEffect, useMemo } from 'react';
 import type { State } from './app-types.js';
 import type { AssistantPanelProps } from './AssistantPanel.js';
@@ -35,6 +36,23 @@ export const isAssistantBusy = (
   selectedThread: State['domain']['assistantThreads'][string] | null
 ) => selectedThreadSummary?.turnStatus === 'inProgress'
   || !!selectedThread?.turns.some((turn) => turn.status === 'inProgress');
+
+const assistantImportIntentVerbPattern = /\b(import|merge|add|append|insert|load|ingest|update|edit)\b/i;
+const assistantImportIntentTargetPattern = /\b(history|messages|transcript|log|logs|buffer)\b/i;
+
+export const shouldImportAssistantPrompt = (
+  prompt: string,
+  attachments: AssistantTurnAttachmentInput[],
+  canImportHistory: boolean,
+) => {
+  const text = prompt.trim();
+  return canImportHistory
+    && text.length > 0
+    && attachments.length > 0
+    && attachments.every((attachment) => attachment.kind === 'text')
+    && assistantImportIntentVerbPattern.test(text)
+    && assistantImportIntentTargetPattern.test(text);
+};
 
 const askThreadsForWorkspace = (
   bufferId: string | null,
@@ -75,6 +93,7 @@ export function useAssistantController({
     selectedThread,
   );
   const busy = isAssistantBusy(selectedThreadSummary, selectedThread);
+  const canImportHistory = workspace.selectedBuffer?.kind === 'channel' || workspace.selectedBuffer?.kind === 'query';
 
   useEffect(() => {
     if (!shouldLoadThread || !selectedThreadId) {
@@ -85,30 +104,46 @@ export function useAssistantController({
 
   return useMemo(() => ({
     assistant,
+    canImportHistory,
+    canClearHistory: threads.length > 0,
     contextKey,
     contextEmpty: selectedBufferId === null,
     loading,
     busy,
     thread: selectedThread,
-    onSubmitPrompt: async (prompt) => {
+    onClearHistory: async () => actions.clearAssistantThreads(threads.map((thread) => thread.id)),
+    onStop: async () => selectedThreadId ? actions.interruptAssistantThread(selectedThreadId) : false,
+    onSubmitPrompt: async (prompt, attachments: AssistantTurnAttachmentInput[]) => {
       const text = prompt.trim();
       if (!text) {
         return false;
       }
       const threadId = selectedThreadId ?? (await actions.createAssistantThread('ask'))?.id ?? null;
-      return threadId ? actions.startAssistantTurn(threadId, text) : false;
+      if (!threadId) {
+        return false;
+      }
+      return shouldImportAssistantPrompt(text, attachments, canImportHistory)
+        ? actions.importAssistantHistory(threadId, text, attachments)
+        : actions.startAssistantTurn(threadId, text, attachments);
     },
-    onInterruptTurn: async (turnId) => selectedThreadId ? actions.interruptAssistantTurn(selectedThreadId, turnId) : false,
+    onImportHistory: async (prompt, attachments: AssistantTurnAttachmentInput[]) => {
+      const threadId = selectedThreadId ?? (await actions.createAssistantThread('ask'))?.id ?? null;
+      return threadId ? actions.importAssistantHistory(threadId, prompt.trim(), attachments) : false;
+    },
   }), [
     actions.createAssistantThread,
-    actions.interruptAssistantTurn,
+    actions.clearAssistantThreads,
+    actions.importAssistantHistory,
+    actions.interruptAssistantThread,
     actions.startAssistantTurn,
     assistant,
     busy,
+    canImportHistory,
     contextKey,
     loading,
     selectedThread,
     selectedThreadId,
     selectedBufferId,
+    threads,
   ]);
 }

@@ -105,8 +105,12 @@ export class IrcConnection implements IrcConnectionState {
   }
 
   listPendingChannels() { return this.controls.channelsControl.listPendingChannels(); }
+  listReconnectChannels() { return this.controls.channelsControl.listReconnectChannels(); }
   trackChannel(channel: string) { return this.controls.channelsControl.trackChannel(channel); }
   untrackChannel(channel: string) { this.controls.channelsControl.untrackChannel(channel); }
+  setReconnectChannels(channels: string[]) { this.controls.channelsControl.setReconnectChannels(channels); }
+  rememberReconnectChannel(channel: string) { return this.controls.channelsControl.rememberReconnectChannel(channel); }
+  forgetReconnectChannel(channel: string) { return this.controls.channelsControl.forgetReconnectChannel(channel); }
   getChannelSession(channel: string) { return this.controls.channelsControl.getChannelSession(channel); }
   updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
     return this.controls.channelsControl.updateChannelUsers(channel, nick, joined);

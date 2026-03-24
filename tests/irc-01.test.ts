@@ -46,7 +46,11 @@ test('irc connection negotiates, joins, and parses messages', async () => {
 
         if (line.startsWith('PRIVMSG ')) {
           const target = line.split(' ')[1];
-          socket.write(`:other!user@host PRIVMSG ${target} :\u0002reply from server\u000f\r\n`);
+          if (line.includes('\u0001ACTION ')) {
+            socket.write(`:other!user@host PRIVMSG ${target} :\u0001ACTION waves back\u0001\r\n`);
+          } else {
+            socket.write(`:other!user@host PRIVMSG ${target} :\u0002reply from server\u000f\r\n`);
+          }
         }
 
         index = buffer.indexOf('\n');
@@ -116,6 +120,30 @@ test('irc connection negotiates, joins, and parses messages', async () => {
       )
   );
 
+  connection.action('#chat', 'waves');
+
+  await waitFor(
+    () =>
+      events.some(
+        (event) =>
+          event.type === 'message' &&
+          (event as { type: string; message: { kind: string; body: string; self: boolean } }).message.kind === 'action' &&
+          (event as { type: string; message: { kind: string; body: string; self: boolean } }).message.body === 'waves' &&
+          (event as { type: string; message: { kind: string; body: string; self: boolean } }).message.self === true
+      )
+  );
+
+  await waitFor(
+    () =>
+      events.some(
+        (event) =>
+          event.type === 'message' &&
+          (event as { type: string; message: { kind: string; body: string; self: boolean } }).message.kind === 'action' &&
+          (event as { type: string; message: { kind: string; body: string; self: boolean } }).message.body === 'waves back' &&
+          (event as { type: string; message: { kind: string; body: string; self: boolean } }).message.self === false
+      )
+  );
+
   await waitFor(
     () =>
       events.some(
@@ -149,6 +177,7 @@ test('irc connection negotiates, joins, and parses messages', async () => {
 
   assert.ok(received.some((line) => line.startsWith('NICK tester')));
   assert.ok(received.some((line) => line.startsWith('PRIVMSG #chat :hello there')));
+  assert.ok(received.some((line) => line.startsWith('PRIVMSG #chat :\u0001ACTION waves\u0001')));
   assert.ok(events.some((event) => event.type === 'channel'));
 });
 

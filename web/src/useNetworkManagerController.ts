@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import { buildManagedRuntime } from './network-manager-runtime.js';
@@ -11,6 +11,7 @@ type NetworkManagerControllerParams = {
   dispatch: (action: Action) => void;
   hiddenManagedNetworkName: string | null;
   managedRuntime: ReturnType<typeof buildManagedRuntime>;
+  managedRuntimes: Record<string, NetworkRuntimeState | null>;
   networkManager: State['transient']['networkManager'];
   visibleManagedNetwork: NetworkProfile | null;
   visibleNetworks: NetworkProfile[];
@@ -24,6 +25,7 @@ export function useNetworkManagerController({
   dispatch,
   hiddenManagedNetworkName,
   managedRuntime,
+  managedRuntimes,
   networkManager,
   visibleManagedNetwork,
   visibleNetworks,
@@ -53,6 +55,7 @@ export function useNetworkManagerController({
     networks: visibleNetworks,
     selected: visibleManagedNetwork,
     runtime: managedRuntime,
+    runtimes: managedRuntimes,
     showFavoritesOnly: networkManager.showFavoritesOnly,
     hiddenManagedNetworkName,
     onSelect: (networkId) => dispatch({ type: 'set-managed-network', networkId }),
@@ -78,6 +81,7 @@ export function useNetworkManagerController({
     duplicateNetwork,
     hiddenManagedNetworkName,
     managedRuntime,
+    managedRuntimes,
     networkManager.mode,
     networkManager.showFavoritesOnly,
     openExistingNetworkEditorDialog,

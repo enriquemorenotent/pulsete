@@ -39,6 +39,20 @@ export const reduceAssistantDomain = (
           [action.thread.id]: action.thread,
         },
       };
+    case 'assistant-thread-removed':
+      return {
+        ...domain,
+        assistant: {
+          ...domain.assistant,
+          activeThreadId: domain.assistant.activeThreadId === action.threadId ? null : domain.assistant.activeThreadId,
+          threads: domain.assistant.threads.filter((thread) => thread.id !== action.threadId),
+        },
+        assistantThreads: Object.fromEntries(
+          Object.entries(domain.assistantThreads).filter(([threadId]) => threadId !== action.threadId)
+        ),
+      };
+    case 'assistant-thread-stop-requested':
+      return interruptAssistantThread(domain, action.threadId);
     case 'assistant-turn-started':
     case 'assistant-turn-completed':
       return updateAssistantTurn(domain, action.threadId, action.turn);
@@ -57,6 +71,56 @@ const pruneAssistantThreads = (threads: Record<string, AssistantThread>, threadI
   return Object.fromEntries(
     Object.entries(threads).filter(([threadId]) => allowed.has(threadId))
   );
+};
+
+const interruptAssistantThread = (domain: AppDomainState, threadId: string) => {
+  const updatedAt = Date.now();
+  const interruptedStatus = 'interrupted' as const;
+  let summaryChanged = false;
+  const threads = domain.assistant.threads.map((thread) => {
+    if (thread.id !== threadId || thread.turnStatus !== 'inProgress') {
+      return thread;
+    }
+    summaryChanged = true;
+    return {
+      ...thread,
+      turnStatus: interruptedStatus,
+      updatedAt,
+    };
+  });
+  const loadedThread = domain.assistantThreads[threadId];
+  const nextThread = !loadedThread ? null : {
+    ...loadedThread,
+    turnStatus: loadedThread.turnStatus === 'inProgress' ? interruptedStatus : loadedThread.turnStatus,
+    updatedAt,
+    turns: loadedThread.turns.map((turn) => (
+      turn.status === 'inProgress'
+        ? { ...turn, status: interruptedStatus, error: null }
+        : turn
+    )),
+  };
+  const threadChanged = loadedThread !== undefined && nextThread !== null && (
+    nextThread.turnStatus !== loadedThread.turnStatus
+    || nextThread.turns.some((turn, index) => turn !== loadedThread.turns[index])
+  );
+  if (!summaryChanged && !threadChanged) {
+    return null;
+  }
+  return {
+    ...domain,
+    assistant: summaryChanged
+      ? {
+          ...domain.assistant,
+          threads,
+        }
+      : domain.assistant,
+    assistantThreads: threadChanged
+      ? {
+          ...domain.assistantThreads,
+          [threadId]: nextThread,
+        }
+      : domain.assistantThreads,
+  };
 };
 
 const updateAssistantTurn = (domain: AppDomainState, threadId: string, turn: AssistantTurn) => {

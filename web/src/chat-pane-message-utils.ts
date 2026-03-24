@@ -62,10 +62,9 @@ export const getGroupSourceLabel = (message: ChatMessage, mode: 'chat' | 'server
 };
 
 export const isCompactMessage = (message: ChatMessage) =>
-  message.kind === 'line' || message.kind === 'join' || message.kind === 'part';
+  message.kind === 'line' || message.kind === 'action' || message.kind === 'join' || message.kind === 'part';
 
-export const isActionBody = (message: ChatMessage) =>
-  message.kind === 'line' && message.body.startsWith('* ');
+export const isActionMessage = (message: ChatMessage) => message.kind === 'action';
 
 export const showKindLabel = (message: ChatMessage) =>
   message.kind === 'notice' || message.kind === 'error';
@@ -91,8 +90,8 @@ export const messageTone = (message: ChatMessage) => {
 
 const canGroupMessage = (message: ChatMessage, mode: 'chat' | 'server') =>
   mode === 'server'
-    ? getGroupSourceLabel(message, mode).length > 0 && !isActionBody(message)
-    : message.kind === 'line' && message.nick !== null && !isActionBody(message);
+    ? getGroupSourceLabel(message, mode).length > 0 && !isActionMessage(message)
+    : message.kind === 'line' && message.nick !== null;
 
 const canContinueGroup = (previous: ChatMessage, next: ChatMessage, mode: 'chat' | 'server') =>
   getGroupSourceKey(previous, mode) === getGroupSourceKey(next, mode) &&

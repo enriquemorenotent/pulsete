@@ -25,10 +25,12 @@ export type IrcChannelEventContext = IrcEventContext & IrcConnectionPick<
   'lifecycle' | 'replyTracker',
   | 'confirmNick'
   | 'discardPendingChannelReplyContexts'
+  | 'forgetReconnectChannel'
   | 'getChannelSession'
   | 'getTrackedChannelUserEntries'
   | 'getTrackedChannelUsers'
   | 'handleSelfChannelDeparture'
+  | 'rememberReconnectChannel'
   | 'removeChannelSession'
   | 'resolveTrackedChannel'
   | 'setChannelSession'
@@ -56,7 +58,7 @@ export type IrcClientIoContext = IrcRawIoContext & IrcConnectionPick<
 
 export type IrcMessageEventContext = IrcEventContext & IrcConnectionPick<
   'lifecycle' | 'replyTracker',
-  'consumeReplyTarget' | 'join' | 'resolveTrackedChannel'
+  'consumeReplyTarget' | 'join' | 'listReconnectChannels' | 'resolveTrackedChannel'
 >;
 
 export type IrcLifecycleContext = IrcEventContext & IrcConnectionPick<
@@ -82,6 +84,7 @@ export type IrcRegistrationContext = IrcEventContext & IrcConnectionPick<
   | 'clearPendingNick'
   | 'consumeReplyContext'
   | 'join'
+  | 'listReconnectChannels'
   | 'markRegistered'
   | 'refreshFriendPresence'
   | 'sendRaw'

@@ -48,6 +48,7 @@ export type IrcLifecycleState = {
 export type IrcChannelTrackingState = {
   users: Map<string, ChannelUserState[]>;
   sessions: Map<string, ChannelSessionState>;
+  reconnectChannels: Set<string>;
   joinTimeoutMs: number;
 };
 

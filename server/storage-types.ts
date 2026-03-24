@@ -3,6 +3,7 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type {
+  AssistantTurn,
   AssistantPreferences,
   AssistantTaskKind,
   AssistantThreadSummary,
@@ -82,6 +83,7 @@ export type AssistantThreadRow = {
   task: AssistantTaskKind;
   model: string;
   turnStatus: AssistantThreadSummary['turnStatus'];
+  turnsJson: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -140,6 +142,11 @@ export type MessageInput = {
 export type AssistantThreadInput = Omit<AssistantThreadSummary, 'createdAt' | 'updatedAt'> & {
   createdAt?: number;
   updatedAt?: number;
+};
+
+export type AssistantThreadTurnsInput = {
+  threadId: string;
+  turns: AssistantTurn[];
 };
 
 export type StorageSnapshotSource = {

@@ -4,6 +4,7 @@ import type {
   AssistantTaskKind,
   AssistantThread,
   AssistantThreadSummary,
+  AssistantTurnAttachmentInput,
   ClientMessage,
   ServerMessage,
 } from '../shared/protocol.js';
@@ -53,11 +54,19 @@ export type RuntimeAssistantApi = {
     task: AssistantTaskKind;
     model?: string;
   }): Promise<AssistantThreadSummary>;
+  deleteThread(threadId: string): Promise<void>;
   readThread(threadId: string): Promise<AssistantThread>;
   startTurn(input: {
     threadId: string;
     prompt: string;
+    attachments?: AssistantTurnAttachmentInput[];
   }): Promise<void>;
+  importHistory(input: {
+    threadId: string;
+    prompt?: string;
+    attachments: AssistantTurnAttachmentInput[];
+  }): Promise<void>;
+  interruptThread(threadId: string): Promise<void>;
   interruptTurn(threadId: string, turnId: string): Promise<void>;
   updatePreferences(input: {
     defaultModel?: string;

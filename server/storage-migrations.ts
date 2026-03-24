@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { defaultAssistantModel } from '../shared/assistant-defaults.js';
 
-export const currentStorageSchemaVersion = 5;
+export const currentStorageSchemaVersion = 6;
 
 const schemaSql = `
   PRAGMA journal_mode = WAL;
@@ -76,6 +76,7 @@ const schemaSql = `
     task TEXT NOT NULL,
     model TEXT NOT NULL,
     turnStatus TEXT,
+    turnsJson TEXT NOT NULL DEFAULT '[]',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
   );
@@ -150,6 +151,12 @@ const storageMigrations: readonly StorageMigration[] = [
     version: 5,
     apply: (db) => {
       ensureAssistantTables(db);
+    },
+  },
+  {
+    version: 6,
+    apply: (db) => {
+      ensureColumn(db, 'assistant_threads', 'turnsJson', "TEXT NOT NULL DEFAULT '[]'");
     },
   },
 ];
@@ -256,10 +263,12 @@ const ensureAssistantTables = (db: DatabaseSync) => {
       task TEXT NOT NULL,
       model TEXT NOT NULL,
       turnStatus TEXT,
+      turnsJson TEXT NOT NULL DEFAULT '[]',
       createdAt INTEGER NOT NULL,
       updatedAt INTEGER NOT NULL
     )
   `);
+  ensureColumn(db, 'assistant_threads', 'turnsJson', "TEXT NOT NULL DEFAULT '[]'");
   db.exec(`
     CREATE TABLE IF NOT EXISTS assistant_preferences (
       id INTEGER PRIMARY KEY CHECK (id = 1),

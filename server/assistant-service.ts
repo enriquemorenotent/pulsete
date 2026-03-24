@@ -1,6 +1,7 @@
 import type {
   AssistantAccount,
   AssistantArtifact,
+  AssistantAttachmentMetadata,
   AssistantItem,
   AssistantModel,
   AssistantRateLimits,
@@ -8,6 +9,7 @@ import type {
   AssistantTaskKind,
   AssistantThread,
   AssistantThreadSummary,
+  AssistantTurnAttachmentInput,
   AssistantTurn,
   AssistantTurnStatus,
   BufferState,
@@ -24,13 +26,23 @@ import {
   getAssistantOutputSchema,
   parseAssistantArtifact,
 } from './assistant-prompts.js';
+import {
+  type AssistantHistoryImportResult,
+  assistantHistoryImportOutputSchema,
+  buildAssistantHistoryImportInput,
+  buildAssistantHistoryImportSummary,
+  parseAssistantHistoryImportResult,
+} from './assistant-history-import.js';
 import { buildAssistantHistoryContext } from './assistant-history-context.js';
 import type {
   RuntimeAssistantStore,
   RuntimeConversationStore,
   RuntimeNetworkStore,
 } from './runtime-store-ports.js';
+import type { MessageInput } from './storage-types.js';
+import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
+import { badRequest } from './app-error.js';
 
 const assistantSandboxCwd = tmpdir();
 const assistantThreadSandbox = 'read-only';
@@ -113,12 +125,34 @@ type LoginResponse = {
 
 type LiveTurnState = {
   threadId: string;
+  executionThreadId: string;
   turn: AssistantTurn;
 };
 
+type PendingExecutionBase = {
+  attachments: AssistantAttachmentMetadata[];
+  executionThreadId: string;
+  prompt: string;
+  threadId: string;
+};
+
+type PendingTurnExecution = PendingExecutionBase & {
+  kind: 'turn';
+};
+
+type PendingImportExecution = PendingExecutionBase & {
+  kind: 'import';
+};
+
+type PendingExecution = PendingTurnExecution | PendingImportExecution;
+
+const localAssistantThreadIdPrefix = 'assistant:';
+const assistantTranscriptTurnLimit = 8;
+
 export class AssistantService {
   private readonly appServer: AssistantAppServer;
-  private readonly loadedThreads = new Set<string>();
+  private readonly executionThreads = new Map<string, PendingExecution>();
+  private readonly interruptRequests = new Set<string>();
   private readonly liveTurns = new Map<string, LiveTurnState>();
   private serviceStatus: AssistantSnapshot['serviceStatus'] = 'starting';
   private serviceError: string | null = null;
@@ -211,10 +245,9 @@ export class AssistantService {
     const model = this.sanitizeModel(input.model);
     const buffer = input.bufferId ? this.params.conversations.getBuffer(input.bufferId) : null;
     const target = buffer?.target ?? null;
-    const threadResponse = await this.appServer.call<RawThreadStartResponse>('thread/start', this.buildThreadStartParams(model));
-    this.loadedThreads.add(threadResponse.thread.id);
+    const threadId = `${localAssistantThreadIdPrefix}${randomUUID()}`;
     const summary = this.params.assistant.upsertThread({
-      id: threadResponse.thread.id,
+      id: threadId,
       bufferId: buffer?.id ?? null,
       networkId: buffer?.networkId ?? null,
       target,
@@ -226,7 +259,7 @@ export class AssistantService {
     const preferences = this.params.assistant.getPreferences();
     this.params.assistant.savePreferences({
       ...preferences,
-      activeThreadId: threadResponse.thread.id,
+      activeThreadId: threadId,
     });
     this.publishSnapshot();
     if (!summary) {
@@ -237,24 +270,120 @@ export class AssistantService {
 
   async readThread(threadId: string): Promise<AssistantThread> {
     const summary = this.requireThread(threadId);
-    const response = await this.appServer.call<RawThreadReadResponse>('thread/read', {
-      threadId,
-      includeTurns: true,
-    });
-    const turns = Array.isArray(response.thread?.turns) ? response.thread.turns : [];
+    const localTurns = this.params.assistant.getThreadTurns(threadId) ?? [];
+    if (localTurns.length > 0 || isLocalAssistantThreadId(threadId)) {
+      return {
+        ...summary,
+        turns: localTurns,
+      };
+    }
+    const turns = await this.importLegacyThreadTurns(summary);
     return {
       ...summary,
-      turns: turns.map((turn) => this.mapTurn(summary.task, turn)),
+      turns,
     };
   }
 
+  async deleteThread(threadId: string) {
+    const summary = this.requireThread(threadId);
+    const live = this.findLiveTurn(summary.id);
+    const pendingExecution = this.hasPendingExecution(summary.id);
+    if (live) {
+      try {
+        await this.appServer.call('turn/interrupt', {
+          threadId: live.executionThreadId,
+          turnId: live.turn.id,
+        });
+      } catch {
+        // Ignore interrupt races while clearing; late events are discarded once the thread is removed.
+      }
+    } else if (pendingExecution) {
+      this.interruptRequests.add(summary.id);
+    } else {
+      this.interruptRequests.delete(summary.id);
+    }
+    this.discardLiveThreadState(summary.id);
+    this.params.assistant.removeThread(summary.id);
+    this.publishSnapshot();
+  }
+
   async startTurn(input: {
+    attachments?: AssistantTurnAttachmentInput[];
     threadId: string;
     prompt: string;
   }) {
+    await this.startExecution({
+      attachments: input.attachments ?? [],
+      mode: 'turn',
+      prompt: input.prompt,
+      threadId: input.threadId,
+    });
+  }
+
+  async importHistory(input: {
+    attachments: AssistantTurnAttachmentInput[];
+    prompt?: string;
+    threadId: string;
+  }) {
+    const prompt = input.prompt?.trim() || 'Import the attached logs into this buffer history.';
+    await this.startExecution({
+      attachments: input.attachments,
+      mode: 'import',
+      prompt,
+      threadId: input.threadId,
+    });
+  }
+
+  async interruptThread(threadId: string) {
+    const summary = this.requireThread(threadId);
+    const live = this.findLiveTurn(summary.id);
+    if (live) {
+      await this.appServer.call('turn/interrupt', {
+        threadId: live.executionThreadId,
+        turnId: live.turn.id,
+      });
+      return;
+    }
+    if (this.hasPendingExecution(summary.id)) {
+      this.interruptRequests.add(summary.id);
+    }
+  }
+
+  async interruptTurn(threadId: string, turnId: string) {
+    const live = this.liveTurns.get(turnId);
+    if (!live || live.threadId !== threadId) {
+      return;
+    }
+    await this.appServer.call('turn/interrupt', { threadId: live.executionThreadId, turnId });
+  }
+
+  private async startExecution(input: {
+    attachments: AssistantTurnAttachmentInput[];
+    mode: PendingExecution['kind'];
+    prompt: string;
+    threadId: string;
+  }) {
     const summary = this.requireThread(input.threadId);
-    await this.ensureThreadLoaded(summary);
-    const context = this.resolveContext(summary.bufferId, summary.networkId, summary.target, input.prompt, summary.task);
+    if (summary.turnStatus === 'inProgress' || this.hasLiveExecution(summary.id)) {
+      throw badRequest('Wait for the current assistant turn to stop before starting another one');
+    }
+    this.interruptRequests.delete(summary.id);
+    const context = input.mode === 'turn'
+      ? this.resolveContext(summary.bufferId, summary.networkId, summary.target, input.prompt, summary.task)
+      : null;
+    const importBuffer = input.mode === 'import' ? this.resolveImportBuffer(summary) : null;
+    const importNetwork = importBuffer
+      ? this.params.networks.get(importBuffer.networkId) as NetworkProfile | null
+      : null;
+    const execution = await this.appServer.call<RawThreadStartResponse>('thread/start', this.buildThreadStartParams(summary.model));
+    const attachments = input.attachments.map(toAttachmentMetadata);
+    this.executionThreads.set(execution.thread.id, {
+      kind: input.mode,
+      attachments,
+      executionThreadId: execution.thread.id,
+      prompt: input.prompt,
+      threadId: summary.id,
+    });
     this.params.assistant.upsertThread({
       ...summary,
       turnStatus: 'inProgress',
@@ -263,33 +392,39 @@ export class AssistantService {
     this.publishSnapshot();
     try {
       await this.appServer.call('turn/start', {
-        threadId: summary.id,
-        input: [{
-          type: 'text',
-          text: buildAssistantTurnInput({
-            buffer: context.buffer,
-            context: context.context,
-            network: context.network,
-            prompt: input.prompt,
-            task: summary.task,
-          }),
-        }],
+        threadId: execution.thread.id,
+        input: input.mode === 'import'
+          ? buildAssistantImportExecutionInput({
+              attachments: input.attachments,
+              buffer: importBuffer!,
+              network: importNetwork,
+              prompt: input.prompt,
+            })
+          : buildAssistantExecutionInput({
+              attachments: input.attachments,
+              buffer: context?.buffer ?? null,
+              context: context?.context ?? '',
+              network: context?.network ?? null,
+              prompt: input.prompt,
+              task: summary.task,
+              priorTranscript: buildAssistantTranscript(this.params.assistant.getThreadTurns(summary.id) ?? []),
+            }),
         cwd: assistantSandboxCwd,
         approvalPolicy: 'never',
         sandboxPolicy: assistantTurnSandboxPolicy,
         model: summary.model,
         personality: 'pragmatic',
-        outputSchema: getAssistantOutputSchema(summary.task),
+        outputSchema: input.mode === 'import'
+          ? assistantHistoryImportOutputSchema
+          : getAssistantOutputSchema(summary.task),
       });
     } catch (error) {
+      this.executionThreads.delete(execution.thread.id);
+      this.interruptRequests.delete(summary.id);
       this.params.assistant.upsertThread(summary);
       this.publishSnapshot();
       throw error;
     }
-  }
-
-  async interruptTurn(threadId: string, turnId: string) {
-    await this.appServer.call('turn/interrupt', { threadId, turnId });
   }
 
   updatePreferences(input: {
@@ -326,7 +461,8 @@ export class AssistantService {
 
   private handleUnavailable(error: Error | null) {
     const failedMessages = this.failInProgressTurns(error);
-    this.loadedThreads.clear();
+    this.executionThreads.clear();
+    this.interruptRequests.clear();
     this.liveTurns.clear();
     this.serviceStatus = error ? 'error' : 'starting';
     this.serviceError = error?.message ?? null;
@@ -406,36 +542,92 @@ export class AssistantService {
   }
 
   private handleTurnStarted(params: { threadId: string; turn: RawTurn }) {
-    const summary = this.requireThread(params.threadId);
-    const turn = this.mapTurn(summary.task, params.turn);
-    this.liveTurns.set(turn.id, { threadId: params.threadId, turn });
-    this.publish({
-      type: 'assistant.turn.started',
-      threadId: params.threadId,
+    const threadId = this.resolveExecutionThreadOwner(params.threadId);
+    const summary = this.params.assistant.getThread(threadId);
+    if (!summary) {
+      if (this.interruptRequests.delete(threadId)) {
+        this.runAppServerTask(async () => {
+          await this.appServer.call('turn/interrupt', {
+            threadId: params.threadId,
+            turnId: params.turn.id,
+          });
+        });
+      }
+      return;
+    }
+    const execution = this.executionThreads.get(params.threadId);
+    const mapped = this.mapTurn(summary.task, params.turn);
+    const turn = execution?.kind === 'import'
+      ? {
+          ...mapped,
+          items: buildPendingUserItems(params.turn.id, execution),
+        }
+      : {
+          ...mapped,
+          items: injectPendingUserMessage(mapped.items, params.turn.id, execution),
+        };
+    this.liveTurns.set(turn.id, {
+      threadId,
+      executionThreadId: params.threadId,
       turn,
     });
+    this.publish({
+      type: 'assistant.turn.started',
+      threadId,
+      turn,
+    });
+    if (this.interruptRequests.delete(threadId)) {
+      this.runAppServerTask(async () => {
+        await this.appServer.call('turn/interrupt', {
+          threadId: params.threadId,
+          turnId: turn.id,
+        });
+      });
+    }
   }
 
   private handleTurnCompleted(params: { threadId: string; turn: RawTurn }) {
-    const summary = this.requireThread(params.threadId);
+    const threadId = this.resolveExecutionThreadOwner(params.threadId);
+    const summary = this.params.assistant.getThread(threadId);
+    if (!summary) {
+      this.liveTurns.delete(params.turn.id);
+      this.executionThreads.delete(params.threadId);
+      this.interruptRequests.delete(threadId);
+      return;
+    }
     const live = this.liveTurns.get(params.turn.id);
-    const next = live
-      ? {
-          ...live.turn,
-          status: toTurnStatus(params.turn.status),
-          error: toTurnError(params.turn.error),
-        }
-      : this.mapTurn(summary.task, params.turn);
+    const execution = this.executionThreads.get(params.threadId);
+    const mapped = this.mapTurn(summary.task, params.turn);
+    const importCompletion = execution?.kind === 'import'
+      ? this.completeImportTurn(summary, params.turn, execution, live?.turn ?? null)
+      : null;
+    const next = importCompletion?.turn ?? (
+      live
+        ? {
+            ...live.turn,
+            status: toTurnStatus(params.turn.status),
+            error: toTurnError(params.turn.error),
+          }
+        : {
+            ...mapped,
+            items: injectPendingUserMessage(mapped.items, params.turn.id, execution),
+          }
+    );
     this.liveTurns.delete(params.turn.id);
+    this.executionThreads.delete(params.threadId);
+    this.interruptRequests.delete(threadId);
+    this.persistTurn(threadId, next);
     this.params.assistant.upsertThread({
       ...summary,
       turnStatus: next.status,
       updatedAt: Date.now(),
     });
+    const publishedMessages = importCompletion?.messages ?? [];
     this.publish([
+      ...publishedMessages,
       {
         type: 'assistant.turn.completed',
-        threadId: params.threadId,
+        threadId,
         turn: next,
       },
       {
@@ -446,14 +638,23 @@ export class AssistantService {
   }
 
   private handleItemStarted(params: { threadId: string; turnId: string; item: RawThreadItem }) {
-    const summary = this.requireThread(params.threadId);
+    const execution = this.executionThreads.get(params.threadId);
+    if (params.item.type === 'userMessage' || execution?.kind === 'import') {
+      return;
+    }
+    const threadId = this.resolveExecutionThreadOwner(params.threadId);
+    const summary = this.params.assistant.getThread(threadId);
+    if (!summary) {
+      return;
+    }
     const live = this.liveTurns.get(params.turnId) ?? {
-      threadId: params.threadId,
+      threadId,
+      executionThreadId: params.threadId,
       turn: {
         id: params.turnId,
         status: 'inProgress' as const,
         error: null,
-        items: [],
+        items: buildPendingUserItems(params.turnId, execution),
       },
     };
     const item = this.mapItem(summary.task, params.item);
@@ -461,13 +662,16 @@ export class AssistantService {
     this.liveTurns.set(params.turnId, live);
     this.publish({
       type: 'assistant.item.started',
-      threadId: params.threadId,
+      threadId,
       turnId: params.turnId,
       item,
     });
   }
 
   private handleItemDelta(params: { threadId: string; turnId: string; itemId: string; delta: string }) {
+    if (this.executionThreads.get(params.threadId)?.kind === 'import') {
+      return;
+    }
     const live = this.liveTurns.get(params.turnId);
     if (!live) {
       return;
@@ -479,7 +683,7 @@ export class AssistantService {
     );
     this.publish({
       type: 'assistant.item.delta',
-      threadId: params.threadId,
+      threadId: live.threadId,
       turnId: params.turnId,
       itemId: params.itemId,
       delta: params.delta,
@@ -487,7 +691,15 @@ export class AssistantService {
   }
 
   private handleItemCompleted(params: { threadId: string; turnId: string; item: RawThreadItem }) {
-    const summary = this.requireThread(params.threadId);
+    const execution = this.executionThreads.get(params.threadId);
+    if (params.item.type === 'userMessage' || execution?.kind === 'import') {
+      return;
+    }
+    const threadId = this.resolveExecutionThreadOwner(params.threadId);
+    const summary = this.params.assistant.getThread(threadId);
+    if (!summary) {
+      return;
+    }
     const live = this.liveTurns.get(params.turnId);
     if (!live) {
       return;
@@ -496,25 +708,10 @@ export class AssistantService {
     live.turn.items = upsertTurnItem(live.turn.items, item);
     this.publish({
       type: 'assistant.item.completed',
-      threadId: params.threadId,
+      threadId,
       turnId: params.turnId,
       item,
     });
-  }
-
-  private async ensureThreadLoaded(summary: AssistantThreadSummary) {
-    if (this.loadedThreads.has(summary.id)) {
-      return;
-    }
-    await this.appServer.call('thread/resume', {
-      threadId: summary.id,
-      model: summary.model,
-      cwd: assistantSandboxCwd,
-      approvalPolicy: 'never',
-      sandbox: assistantThreadSandbox,
-      personality: 'pragmatic',
-    });
-    this.loadedThreads.add(summary.id);
   }
 
   private buildThreadStartParams(model: string) {
@@ -553,6 +750,98 @@ export class AssistantService {
         task,
       }),
     };
+  }
+
+  private completeImportTurn(
+    summary: AssistantThreadSummary,
+    rawTurn: RawTurn,
+    execution: PendingImportExecution,
+    liveTurn: AssistantTurn | null,
+  ): { turn: AssistantTurn; messages: ServerMessage[] } {
+    const baseItems = liveTurn?.items ?? buildPendingUserItems(rawTurn.id, execution);
+    const failedTurn = {
+      id: rawTurn.id,
+      status: 'failed' as const,
+      error: toTurnError(rawTurn.error) ?? 'Assistant turn failed',
+      items: baseItems,
+    };
+    if (toTurnStatus(rawTurn.status) !== 'completed') {
+      return {
+        turn: failedTurn,
+        messages: [],
+      };
+    }
+    try {
+      const result = parseAssistantHistoryImportResult(extractAgentMessageText(rawTurn.items));
+      const importedMessages = this.importHistoryMessages(summary, rawTurn.id, result);
+      const summaryText = buildAssistantHistoryImportSummary({
+        attachments: execution.attachments,
+        importedCount: importedMessages.length,
+        notes: result.notes,
+        target: summary.target ?? summary.title,
+      });
+      return {
+        turn: {
+          id: rawTurn.id,
+          status: 'completed',
+          error: null,
+          items: [
+            ...baseItems,
+            {
+              type: 'agentMessage',
+              id: `${rawTurn.id}:assistant`,
+              text: summaryText,
+              phase: null,
+              artifact: null,
+            },
+          ],
+        },
+        messages: importedMessages.map((message) => ({
+          type: 'message.append',
+          message,
+        })),
+      };
+    } catch (error) {
+      return {
+        turn: {
+          ...failedTurn,
+          error: error instanceof Error ? error.message : 'Failed to import chat history',
+        },
+        messages: [],
+      };
+    }
+  }
+
+  private importHistoryMessages(
+    summary: AssistantThreadSummary,
+    turnId: string,
+    parsedResult: ReturnType<typeof parseAssistantHistoryImportResult>,
+  ) {
+    const buffer = this.resolveImportBuffer(summary);
+    const network = this.params.networks.get(buffer.networkId) as NetworkProfile | null;
+    return parsedResult.messages
+      .map((message, index) => normalizeImportedMessage(buffer, network, message, turnId, index))
+      .filter((message): message is ImportedConversationMessage => message !== null)
+      .sort(compareImportedMessages)
+      .map(({ order: _order, ...message }) => this.params.conversations.appendMessage(message));
+  }
+
+  private resolveImportBuffer(summary: AssistantThreadSummary) {
+    const existing = summary.bufferId ? this.params.conversations.getBuffer(summary.bufferId) : null;
+    if (existing && existing.kind !== 'server') {
+      return existing;
+    }
+    if (!summary.networkId || !summary.target || summary.target === 'server') {
+      throw badRequest('Select a channel or private message buffer before importing history');
+    }
+    if (isChannelBufferTarget(summary.target)) {
+      return this.params.conversations.upsertBuffer({
+        networkId: summary.networkId,
+        kind: 'channel',
+        target: summary.target,
+      });
+    }
+    return this.params.conversations.upsertQuery(summary.networkId, summary.target);
   }
 
   private async refreshAccount() {
@@ -629,6 +918,80 @@ export class AssistantService {
     return available[0] ?? defaultAssistantModel;
   }
 
+  private async importLegacyThreadTurns(summary: AssistantThreadSummary) {
+    try {
+      const response = await this.appServer.call<RawThreadReadResponse>('thread/read', {
+        threadId: summary.id,
+        includeTurns: true,
+      });
+      const turns = Array.isArray(response.thread?.turns)
+        ? response.thread.turns.map((turn) => this.mapTurn(summary.task, turn))
+        : [];
+      this.params.assistant.saveThreadTurns(summary.id, turns);
+      return turns;
+    } catch {
+      return [];
+    }
+  }
+
+  private resolveExecutionThreadOwner(executionThreadId: string) {
+    const execution = this.executionThreads.get(executionThreadId);
+    if (execution) {
+      return execution.threadId;
+    }
+    for (const live of this.liveTurns.values()) {
+      if (live.executionThreadId === executionThreadId) {
+        return live.threadId;
+      }
+    }
+    return executionThreadId;
+  }
+
+  private persistTurn(threadId: string, turn: AssistantTurn) {
+    const turns = this.params.assistant.getThreadTurns(threadId) ?? [];
+    this.params.assistant.saveThreadTurns(threadId, upsertTurn(turns, turn));
+  }
+
+  private hasLiveExecution(threadId: string) {
+    for (const execution of this.executionThreads.values()) {
+      if (execution.threadId === threadId) {
+        return true;
+      }
+    }
+    for (const live of this.liveTurns.values()) {
+      if (live.threadId === threadId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private hasPendingExecution(threadId: string) {
+    for (const execution of this.executionThreads.values()) {
+      if (execution.threadId === threadId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private findLiveTurn(threadId: string) {
+    for (const live of this.liveTurns.values()) {
+      if (live.threadId === threadId) {
+        return live;
+      }
+    }
+    return null;
+  }
+
+  private discardLiveThreadState(threadId: string) {
+    for (const [turnId, live] of this.liveTurns.entries()) {
+      if (live.threadId === threadId) {
+        this.liveTurns.delete(turnId);
+      }
+    }
+  }
+
   private requireThread(threadId: string) {
     const thread = this.params.assistant.getThread(threadId);
     if (!thread) {
@@ -659,6 +1022,7 @@ export class AssistantService {
             .join('\n')
             .trim()
         ),
+        attachments: [],
       };
     }
     if (item.type === 'agentMessage') {
@@ -715,15 +1079,19 @@ export class AssistantService {
         updatedAt,
       });
     }
-    return [...this.liveTurns.values()].map((live) => ({
-      type: 'assistant.turn.completed' as const,
-      threadId: live.threadId,
-      turn: {
+    return [...this.liveTurns.values()].map((live) => {
+      const failedTurn = {
         ...live.turn,
-        status: 'failed',
+        status: 'failed' as const,
         error: failureMessage,
-      },
-    }));
+      };
+      this.persistTurn(live.threadId, failedTurn);
+      return {
+        type: 'assistant.turn.completed' as const,
+        threadId: live.threadId,
+        turn: failedTurn,
+      };
+    });
   }
 
   private publish(message: ServerMessage | readonly ServerMessage[]) {
@@ -738,6 +1106,211 @@ const upsertTurnItem = (items: AssistantItem[], nextItem: AssistantItem) => {
   }
   return items.map((item, itemIndex) => itemIndex === index ? nextItem : item);
 };
+
+const upsertTurn = (turns: AssistantTurn[], nextTurn: AssistantTurn) => {
+  const index = turns.findIndex((turn) => turn.id === nextTurn.id);
+  if (index === -1) {
+    return [...turns, nextTurn];
+  }
+  return turns.map((turn, turnIndex) => turnIndex === index ? nextTurn : turn);
+};
+
+const buildAssistantExecutionInput = ({
+  attachments,
+  buffer,
+  context,
+  network,
+  priorTranscript,
+  prompt,
+  task,
+}: {
+  attachments: AssistantTurnAttachmentInput[];
+  buffer: BufferState | null;
+  context: string;
+  network: NetworkProfile | null;
+  priorTranscript: string;
+  prompt: string;
+  task: AssistantTaskKind;
+}) => {
+  const items: Array<
+    | { type: 'text'; text: string }
+    | { type: 'image'; url: string }
+  > = [{
+    type: 'text',
+    text: buildAssistantTurnInput({
+      attachments: attachments.map(toAttachmentMetadata),
+      buffer,
+      context,
+      network,
+      priorTranscript,
+      prompt,
+      task,
+    }),
+  }];
+  for (const attachment of attachments) {
+    if (attachment.kind === 'text') {
+      items.push({
+        type: 'text' as const,
+        text: [
+          `Attached text file: ${attachment.name}`,
+          `Mime type: ${attachment.mimeType}`,
+          `Size: ${attachment.size} bytes`,
+          '',
+          attachment.text,
+        ].join('\n'),
+      });
+      continue;
+    }
+    items.push({
+      type: 'image' as const,
+      url: attachment.dataUrl,
+    });
+  }
+  return items;
+};
+
+const buildAssistantImportExecutionInput = ({
+  attachments,
+  buffer,
+  network,
+  prompt,
+}: {
+  attachments: AssistantTurnAttachmentInput[];
+  buffer: BufferState;
+  network: NetworkProfile | null;
+  prompt: string;
+}) => {
+  const items: Array<{ type: 'text'; text: string }> = [{
+    type: 'text',
+    text: buildAssistantHistoryImportInput({
+      attachments: attachments.map(toAttachmentMetadata),
+      buffer,
+      network,
+      prompt,
+    }),
+  }];
+  for (const attachment of attachments) {
+    if (attachment.kind !== 'text') {
+      throw badRequest('Only text log files can be imported into chat history');
+    }
+    items.push({
+      type: 'text',
+      text: [
+        `Attached log file: ${attachment.name}`,
+        `Mime type: ${attachment.mimeType}`,
+        `Size: ${attachment.size} bytes`,
+        '',
+        attachment.text,
+      ].join('\n'),
+    });
+  }
+  return items;
+};
+
+const buildPendingUserItems = (turnId: string, execution: PendingExecution | undefined) =>
+  execution ? [buildPendingUserMessage(turnId, execution)] : [];
+
+const injectPendingUserMessage = (
+  items: AssistantItem[],
+  turnId: string,
+  execution: PendingExecution | undefined,
+) => {
+  const filtered = items.filter((item) => item.type !== 'userMessage');
+  return execution ? [buildPendingUserMessage(turnId, execution), ...filtered] : filtered;
+};
+
+const buildPendingUserMessage = (turnId: string, execution: PendingExecution): AssistantItem => ({
+  type: 'userMessage',
+  id: `${turnId}:user`,
+  text: execution.prompt.trim(),
+  attachments: execution.attachments,
+});
+
+const buildAssistantTranscript = (turns: AssistantTurn[]) => {
+  const recentTurns = turns.slice(-assistantTranscriptTurnLimit);
+  const entries = recentTurns.flatMap((turn) => {
+    const transcript = turn.items.flatMap((item) => {
+      if (item.type === 'userMessage') {
+        const sections = [`User: ${truncateTranscriptText(item.text.trim() || '(empty request)')}`];
+        if (item.attachments.length > 0) {
+          sections.push(`Attachments: ${item.attachments.map(renderAttachmentLabel).join(', ')}`);
+        }
+        return [sections.join('\n')];
+      }
+      if (item.type === 'agentMessage' && item.text.trim()) {
+        return [`Assistant: ${truncateTranscriptText(item.text.trim())}`];
+      }
+      return [];
+    });
+    if (turn.status === 'failed' && turn.error) {
+      transcript.push(`Turn error: ${turn.error}`);
+    }
+    return transcript.length > 0 ? [transcript.join('\n\n')] : [];
+  });
+  return entries.join('\n\n---\n\n');
+};
+
+const truncateTranscriptText = (text: string, limit = 2000) =>
+  text.length > limit ? `${text.slice(0, limit).trimEnd()}\n[…truncated…]` : text;
+
+const renderAttachmentLabel = (attachment: AssistantAttachmentMetadata) =>
+  `${attachment.name} (${attachment.kind}, ${attachment.mimeType}, ${attachment.size} bytes)`;
+
+const toAttachmentMetadata = (attachment: AssistantTurnAttachmentInput): AssistantAttachmentMetadata => ({
+  id: attachment.id,
+  name: attachment.name,
+  mimeType: attachment.mimeType,
+  size: attachment.size,
+  kind: attachment.kind,
+});
+
+type ImportedConversationMessage = MessageInput & {
+  order: number;
+};
+
+const extractAgentMessageText = (items: RawThreadItem[]) => {
+  const agentMessages = items.flatMap((item) =>
+    item.type === 'agentMessage' && typeof item.text === 'string' && item.text.trim()
+      ? [item.text]
+      : []
+  );
+  const text = agentMessages.at(-1)?.trim();
+  if (!text) {
+    throw new Error('Assistant did not return import data');
+  }
+  return text;
+};
+
+const normalizeImportedMessage = (
+  buffer: BufferState,
+  network: NetworkProfile | null,
+  message: AssistantHistoryImportResult['messages'][number],
+  turnId: string,
+  index: number,
+): ImportedConversationMessage | null => {
+  const body = message.body.trim();
+  if (!body) {
+    return null;
+  }
+  return {
+    id: `import:${turnId}:${index}`,
+    networkId: buffer.networkId,
+    target: buffer.target,
+    nick: message.self ? (message.nick ?? network?.nick ?? null) : message.nick,
+    body,
+    kind: 'line',
+    self: message.self,
+    ts: message.ts,
+    order: index,
+  };
+};
+
+const compareImportedMessages = (left: ImportedConversationMessage, right: ImportedConversationMessage) =>
+  left.ts - right.ts || left.order - right.order;
+
+const isChannelBufferTarget = (target: string) => /^[#&+!]/.test(target);
+
+const isLocalAssistantThreadId = (threadId: string) => threadId.startsWith(localAssistantThreadIdPrefix);
 
 const toTurnStatus = (status: string): AssistantTurnStatus =>
   status === 'completed' || status === 'failed' || status === 'interrupted'

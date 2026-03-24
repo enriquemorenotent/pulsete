@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const historyWindowLimit = 250;
 
-export const messageKindSchema = z.enum(['line', 'join', 'part', 'notice', 'error', 'system']);
+export const messageKindSchema = z.enum(['line', 'action', 'join', 'part', 'notice', 'error', 'system']);
 export type MessageKind = z.infer<typeof messageKindSchema>;
 
 export const chatMessageSchema = z.object({
@@ -198,11 +198,41 @@ export const assistantArtifactSchema = z.discriminatedUnion('type', [
 ]);
 export type AssistantArtifact = z.infer<typeof assistantArtifactSchema>;
 
+const assistantAttachmentMetadataBaseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  mimeType: z.string(),
+  size: z.number().int().nonnegative(),
+});
+
+export const assistantAttachmentMetadataSchema = z.discriminatedUnion('kind', [
+  assistantAttachmentMetadataBaseSchema.extend({
+    kind: z.literal('text'),
+  }),
+  assistantAttachmentMetadataBaseSchema.extend({
+    kind: z.literal('image'),
+  }),
+]);
+export type AssistantAttachmentMetadata = z.infer<typeof assistantAttachmentMetadataSchema>;
+
+export const assistantTurnAttachmentInputSchema = z.discriminatedUnion('kind', [
+  assistantAttachmentMetadataBaseSchema.extend({
+    kind: z.literal('text'),
+    text: z.string(),
+  }),
+  assistantAttachmentMetadataBaseSchema.extend({
+    kind: z.literal('image'),
+    dataUrl: z.string().regex(/^data:image\//, 'Image attachment must be encoded as a data URL'),
+  }),
+]);
+export type AssistantTurnAttachmentInput = z.infer<typeof assistantTurnAttachmentInputSchema>;
+
 export const assistantItemSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('userMessage'),
     id: z.string(),
     text: z.string(),
+    attachments: z.array(assistantAttachmentMetadataSchema).default([]),
   }),
   z.object({
     type: z.literal('agentMessage'),

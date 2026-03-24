@@ -124,6 +124,28 @@ test('message history preserves insertion order when timestamps match', () => {
   );
 });
 
+test('legacy stored action rows are normalized when read back', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+
+  const saved = storage.conversations.appendMessage({
+    id: randomUUID(),
+    networkId: network.id,
+    target: 'alice',
+    nick: 'alice',
+    body: '* alice waves',
+    kind: 'line',
+    self: false,
+    ts: Date.now(),
+  });
+
+  assert.equal(saved.kind, 'action');
+  assert.equal(saved.body, 'waves');
+  assert.equal(storage.conversations.listMessages(network.id, 'alice', 5)[0]?.kind, 'action');
+  assert.equal(storage.conversations.listRecentMessages(5).at(-1)?.body, 'waves');
+});
+
 test('buffer upserts reuse case-insensitive query and channel ids', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

@@ -148,7 +148,7 @@ test('existing local databases reset stored messages and unread counts on the fo
   const count = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
   upgraded.close();
 
-  assert.equal(version.user_version, 5);
+  assert.equal(version.user_version, 6);
   assert.equal(count.count, 0);
 });
 

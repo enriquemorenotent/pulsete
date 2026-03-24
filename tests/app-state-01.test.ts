@@ -191,6 +191,115 @@ test('assistant thread load attempts reset on assistant snapshots', () => {
   assert.equal(refreshed.transient.assistant.attemptedThreadId, null);
 });
 
+test('assistant thread removal clears loaded history and assistant selection state', () => {
+  const state = makeState({
+    domain: {
+      assistant: {
+        ...initialState.domain.assistant,
+        activeThreadId: 'thread-1',
+        threads: [{
+          id: 'thread-1',
+          bufferId: 'buffer-1',
+          networkId: 'network-1',
+          target: '#help',
+          title: 'Ask · #help',
+          task: 'ask',
+          model: 'gpt-5.4',
+          turnStatus: null,
+          createdAt: 1,
+          updatedAt: 1,
+        }],
+      },
+      assistantThreads: {
+        'thread-1': {
+          id: 'thread-1',
+          bufferId: 'buffer-1',
+          networkId: 'network-1',
+          target: '#help',
+          title: 'Ask · #help',
+          task: 'ask',
+          model: 'gpt-5.4',
+          turnStatus: null,
+          createdAt: 1,
+          updatedAt: 1,
+          turns: [],
+        },
+      },
+    },
+    transient: {
+      assistant: {
+        attemptedThreadId: 'thread-1',
+        loadingThreadId: 'thread-1',
+        selectedThreadId: 'thread-1',
+      },
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'assistant-thread-removed',
+    threadId: 'thread-1',
+  });
+
+  assert.equal(nextState.domain.assistant.activeThreadId, null);
+  assert.deepEqual(nextState.domain.assistant.threads, []);
+  assert.deepEqual(nextState.domain.assistantThreads, {});
+  assert.equal(nextState.transient.assistant.attemptedThreadId, null);
+  assert.equal(nextState.transient.assistant.loadingThreadId, null);
+  assert.equal(nextState.transient.assistant.selectedThreadId, null);
+});
+
+test('assistant stop requests clear local busy state for the current thread immediately', () => {
+  const state = makeState({
+    domain: {
+      assistant: {
+        ...initialState.domain.assistant,
+        threads: [{
+          id: 'thread-1',
+          bufferId: 'buffer-1',
+          networkId: 'network-1',
+          target: '#help',
+          title: 'Ask · #help',
+          task: 'ask',
+          model: 'gpt-5.4',
+          turnStatus: 'inProgress',
+          createdAt: 1,
+          updatedAt: 1,
+        }],
+      },
+      assistantThreads: {
+        'thread-1': {
+          id: 'thread-1',
+          bufferId: 'buffer-1',
+          networkId: 'network-1',
+          target: '#help',
+          title: 'Ask · #help',
+          task: 'ask',
+          model: 'gpt-5.4',
+          turnStatus: 'inProgress',
+          createdAt: 1,
+          updatedAt: 1,
+          turns: [{
+            id: 'turn-1',
+            status: 'inProgress',
+            error: null,
+            items: [],
+          }],
+        },
+      },
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'assistant-thread-stop-requested',
+    threadId: 'thread-1',
+  });
+
+  assert.equal(nextState.domain.assistant.threads[0]?.turnStatus, 'interrupted');
+  assert.equal(nextState.domain.assistantThreads['thread-1']?.turnStatus, 'interrupted');
+  assert.equal(nextState.domain.assistantThreads['thread-1']?.turns[0]?.status, 'interrupted');
+  assert.equal(nextState.domain.assistantThreads['thread-1']?.turns[0]?.error, null);
+});
+
 test('pending selections promote to the confirmed channel buffer', () => {
   const state = makeState({
     domain: {
