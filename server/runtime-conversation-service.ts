@@ -72,28 +72,44 @@ export class RuntimeConversationService {
   }
 
   handleStatusEvent(event: Extract<RuntimeEvent, { type: 'status' }>) {
-    const kind: MessageKind = event.kind === 'error'
-      ? 'error'
-      : event.kind === 'notice'
-        ? 'notice'
-        : 'system';
-    const messages = this.appendMessage({
+    if (event.kind !== 'system') {
+      return [{
+        type: event.kind === 'error' ? 'error' : 'notice',
+        networkId: event.networkId,
+        message: event.message,
+      } satisfies ServerMessage];
+    }
+
+    return this.appendMessage({
       id: randomUUID(),
       networkId: event.networkId,
       target: this.resolveStatusTarget(event),
       nick: null,
       body: event.message,
-      kind,
+      kind: 'system' satisfies MessageKind,
       self: false,
       ts: Date.now(),
     });
-    if (event.kind !== 'system') {
-      messages.push({
-        type: event.kind === 'error' ? 'error' : 'notice',
-        networkId: event.networkId,
-        message: event.message,
-      });
+  }
+
+  handleSendFailure(event: Extract<RuntimeEvent, { type: 'send-failed' }>) {
+    const messages: ServerMessage[] = [];
+    if (event.rollbackMessageId) {
+      const deletedMessages = this.options.conversations.deleteMessagesByIdPrefixes([event.rollbackMessageId]);
+      if (deletedMessages.length > 0) {
+        messages.push({
+          type: 'message.remove',
+          networkId: event.networkId,
+          target: event.target,
+          messageIds: deletedMessages.map((message) => message.id),
+        });
+      }
     }
+    messages.push({
+      type: 'error',
+      networkId: event.networkId,
+      message: event.message,
+    });
     return messages;
   }
 

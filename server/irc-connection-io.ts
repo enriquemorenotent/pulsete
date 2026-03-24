@@ -84,8 +84,13 @@ export const consume = (connection: IrcConnectionState, chunk: string) => {
   }
 };
 
-export const createSelfMessage = (connection: IrcRawIoContext, target: string, body: string): MessageInput => ({
-  id: randomUUID(),
+export const createSelfMessage = (
+  connection: IrcRawIoContext,
+  target: string,
+  body: string,
+  id = randomUUID()
+): MessageInput => ({
+  id,
   networkId: connection.profile.id,
   target,
   nick: connection.lifecycle.currentNick,
@@ -95,8 +100,13 @@ export const createSelfMessage = (connection: IrcRawIoContext, target: string, b
   ts: Date.now(),
 });
 
-export const createSelfActionMessage = (connection: IrcRawIoContext, target: string, body: string): MessageInput => ({
-  id: randomUUID(),
+export const createSelfActionMessage = (
+  connection: IrcRawIoContext,
+  target: string,
+  body: string,
+  id = randomUUID()
+): MessageInput => ({
+  id,
   networkId: connection.profile.id,
   target,
   nick: connection.lifecycle.currentNick,

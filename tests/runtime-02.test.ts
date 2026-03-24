@@ -191,10 +191,7 @@ test('runtime join does not create a channel buffer when the join command is not
 
   assert.equal(storage.conversations.getBufferByTarget(network.id, '#missing'), null);
   assert.equal(storage.conversations.getChannelByName(network.id, '#missing'), null);
-  assert.deepEqual(
-    storage.conversations.listMessages(network.id, 'server', 5).map((message) => message.body),
-    ['Not connected']
-  );
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 5), []);
 });
 
 test('runtime part reports not connected before the first connection exists', () => {
@@ -206,8 +203,5 @@ test('runtime part reports not connected before the first connection exists', ()
   runtime.irc.part(network.id, '#help');
 
   assert.equal(storage.conversations.getBufferByTarget(network.id, '#help'), null);
-  assert.deepEqual(
-    storage.conversations.listMessages(network.id, 'server', 5).map((message) => message.body),
-    ['Not connected']
-  );
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 5), []);
 });

@@ -28,18 +28,18 @@ test('runtime rejects oversized outbound lines without writing them to the socke
     runtime.irc.sendMessage(network.id, 'helper', 'x'.repeat(600));
     runtime.irc.sendRaw(network.id, `NOTICE helper :${'y'.repeat(600)}`);
 
-    await waitFor(
-      () =>
-        storage.conversations.listMessages(network.id, 'helper', 20)
-          .filter((message) => message.body === 'IRC command exceeds the 510-byte limit')
-          .length >= 1
-        && storage.conversations.listMessages(network.id, 'server', 20)
-          .filter((message) => message.body === 'IRC command exceeds the 510-byte limit')
-          .length >= 1
-    );
-
     assert.equal(received.some((line) => line.includes(`PRIVMSG helper :${'x'.repeat(600)}`)), false);
     assert.equal(received.some((line) => line.includes(`NOTICE helper :${'y'.repeat(600)}`)), false);
+    assert.equal(
+      storage.conversations.listMessages(network.id, 'helper', 20)
+        .some((message) => message.body === 'IRC command exceeds the 510-byte limit'),
+      false
+    );
+    assert.equal(
+      storage.conversations.listMessages(network.id, 'server', 20)
+        .some((message) => message.body === 'IRC command exceeds the 510-byte limit'),
+      false
+    );
   } finally {
     server.closeConnections();
     await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
@@ -55,14 +55,7 @@ test('runtime sendMessage does not persist unsent direct messages while disconne
   runtime.irc.sendMessage(network.id, 'helper', 'hello');
 
   assert.deepEqual(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
-  assert.deepEqual(
-    storage.conversations.listMessages(network.id, 'helper', 10).map((message) => ({
-      target: message.target,
-      kind: message.kind,
-      body: message.body,
-    })),
-    [{ target: 'helper', kind: 'error', body: 'Not connected' }]
-  );
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'helper', 10), []);
   assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10), []);
 });
 
@@ -88,20 +81,17 @@ test('runtime rejects client commands while the network is still connecting', as
         received.includes('NICK tester')
         && received.includes('USER tester 0 * :Tester Example')
     );
-    await waitFor(
-      () =>
-        storage.conversations.listMessages(network.id, 'server', 20)
-          .filter((message) => message.body === 'Still connecting to server')
-          .length >= 2
-        && storage.conversations.listMessages(network.id, 'helper', 20)
-          .some((message) => message.body === 'Still connecting to server')
-    );
-
     assert.equal(received.includes('JOIN #help'), false);
     assert.equal(received.includes('PRIVMSG helper :hello'), false);
     assert.equal(received.includes('WHOIS helper'), false);
     assert.deepEqual(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'channel'), []);
     assert.deepEqual(storage.conversations.listBuffers(network.id).filter((buffer) => buffer.kind === 'query'), []);
+    assert.equal(
+      storage.conversations.listMessages(network.id, 'server', 50)
+        .some((message) => message.body === 'Still connecting to server'),
+      false
+    );
+    assert.deepEqual(storage.conversations.listMessages(network.id, 'helper', 20), []);
   } finally {
     handshake.closeConnections();
     await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));

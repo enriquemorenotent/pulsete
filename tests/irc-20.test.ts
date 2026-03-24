@@ -138,13 +138,20 @@ test('irc connection surfaces private-message delivery errors from the server', 
 
   connection.say('sofia', 'hello there', '#chat');
 
+  const selfMessage = events.find(
+    (event) =>
+      event.type === 'message'
+      && (event.message as { body?: string } | undefined)?.body === 'hello there'
+  ) as { message?: { id?: string } } | undefined;
+
   await waitFor(
     () =>
       events.some(
         (event) =>
-          event.type === 'status' &&
-          event.kind === 'error' &&
-          event.target === '#chat' &&
+          event.type === 'send-failed' &&
+          event.sourceTarget === '#chat' &&
+          event.target === 'sofia' &&
+          event.rollbackMessageId === selfMessage?.message?.id &&
           event.message === '* sofia is in +g mode (server-side ignore)'
       )
   );

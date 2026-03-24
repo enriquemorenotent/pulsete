@@ -24,6 +24,14 @@ export type RuntimeEvent =
       target?: string;
       requireBoundTarget?: boolean;
     }
+  | {
+      type: 'send-failed';
+      networkId: string;
+      sourceTarget: string;
+      target: string;
+      message: string;
+      rollbackMessageId?: string;
+    }
   | { type: 'channel-pending'; networkId: string; channel: string }
   | { type: 'channel-pending-remove'; networkId: string; channel: string }
   | {

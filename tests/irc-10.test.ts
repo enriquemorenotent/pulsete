@@ -56,9 +56,9 @@ test('irc connection clears raw MODE contexts after untargeted mode errors', () 
   assert.ok(
     events.some(
       (event) =>
-        event.type === 'status'
-        && event.target === '#chat'
-        && event.kind === 'error'
+        event.type === 'send-failed'
+        && event.sourceTarget === '#chat'
+        && event.target === 'alice'
         && event.message === '* No such nick/channel: alice'
     )
   );
@@ -116,9 +116,9 @@ test('irc connection clears duplicate raw MODE contexts after untargeted mode er
   assert.ok(
     events.some(
       (event) =>
-        event.type === 'status'
-        && event.target === '#chat-b'
-        && event.kind === 'error'
+        event.type === 'send-failed'
+        && event.sourceTarget === '#chat-b'
+        && event.target === 'bob'
         && event.message === '* No such nick/channel: bob'
     )
   );
@@ -175,20 +175,18 @@ test('irc connection clears duplicate raw MODE contexts after targeted mode erro
   assert.deepEqual(writes, ['MODE bob\r\n', 'MODE bob\r\n', 'PRIVMSG bob :hi\r\n']);
   const bobErrors = events.filter(
     (event) =>
-      event.type === 'status'
-      && event.kind === 'error'
+      event.type === 'send-failed'
       && event.message === '* No such nick/channel: bob'
   );
   assert.deepEqual(
-    bobErrors.map((event) => event.target),
-    ['server', '#chat-b']
+    bobErrors.map((event) => event.sourceTarget),
+    ['#chat-b']
   );
   assert.ok(
     events.some(
       (event) =>
         event.type === 'status'
-        && event.target === '#chat-b'
-        && event.kind === 'error'
+        && event.target === 'server'
         && event.message === '* No such nick/channel: bob'
     )
   );

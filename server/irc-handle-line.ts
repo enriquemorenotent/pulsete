@@ -1,4 +1,4 @@
-import { emitStatus } from './irc-emit.js';
+import { emitSendFailure, emitStatus } from './irc-emit.js';
 import { formatPingReply } from './irc-handle-line-helpers.js';
 import {
   handleJoin,
@@ -96,7 +96,17 @@ const handleNumericReply = (
   }
   const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic-query';
   const allowNamesPayload = replyContext?.kind === 'channel' && replyContext.operation === 'names';
+  const isMessageSendFailure = replyContext?.kind === 'message' && getServerNumericStatusKind(command) === 'error';
   for (const lineText of formatServerNumeric(command, params, { allowTopicPayload, allowNamesPayload })) {
+    if (isMessageSendFailure) {
+      emitSendFailure(connection, {
+        sourceTarget: replyContext.sourceTarget,
+        target: replyContext.target,
+        message: lineText,
+        rollbackMessageId: replyContext.optimisticMessageId,
+      });
+      continue;
+    }
     emitStatus(connection, lineText, getServerNumericStatusKind(command), replyTarget ?? undefined, true);
   }
 };

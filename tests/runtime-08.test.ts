@@ -166,7 +166,7 @@ test('service messages on the server buffer close stale service queries', () => 
   });
 });
 
-test('status events keep their originating buffer target and message kind', () => {
+test('error status events stay ephemeral and do not append to conversation history', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.networks.upsert(createNetworkInput());
@@ -189,11 +189,43 @@ test('status events keep their originating buffer target and message kind', () =
     }
   );
 
+  assert.deepEqual(storage.conversations.listMessages(network.id, '#help', 10), []);
+  assert.equal(storage.conversations.getBuffer(channel.id)?.unread, 0);
+  assert.deepEqual(sent, [{
+    type: 'error',
+    networkId: network.id,
+    message: '* You need to be identified to message that user',
+  }]);
+});
+
+test('system status events keep their originating buffer target and message kind', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const channel = storage.conversations.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: [makeUser('tester')],
+  });
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'status',
+      networkId: network.id,
+      target: '#help',
+      kind: 'system',
+      message: 'tester changed the topic',
+    }
+  );
+
   const appended = storage.conversations.listMessages(network.id, '#help', 10);
   assert.equal(appended.length, 1);
   assert.equal(appended[0]?.target, '#help');
-  assert.equal(appended[0]?.kind, 'error');
-  assert.equal(storage.conversations.getBuffer(channel.id)?.unread, 1);
+  assert.equal(appended[0]?.kind, 'system');
+  assert.equal(storage.conversations.getBuffer(channel.id)?.unread, 0);
   assert.ok(sent.some((message) => message.type === 'message.append'));
   assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
     type: 'buffer.upsert',
@@ -201,7 +233,62 @@ test('status events keep their originating buffer target and message kind', () =
   });
 });
 
-test('late status events fall back to the server buffer after a channel closes', () => {
+test('send failures roll back optimistic private messages and surface only a banner error', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+  const optimisticId = randomUUID();
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: optimisticId,
+        networkId: network.id,
+        target: 'helper',
+        nick: 'tester',
+        body: 'hello there',
+        kind: 'line',
+        self: true,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  sent.length = 0;
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'send-failed',
+      networkId: network.id,
+      sourceTarget: 'helper',
+      target: 'helper',
+      message: '* No such nick/channel: helper',
+      rollbackMessageId: optimisticId,
+    }
+  );
+
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'helper', 10), []);
+  assert.ok(
+    sent.some(
+      (message) =>
+        message.type === 'message.remove'
+        && Array.isArray(message.messageIds)
+        && message.messageIds.includes(optimisticId)
+    )
+  );
+  assert.deepEqual(sent.find((message) => message.type === 'error'), {
+    type: 'error',
+    networkId: network.id,
+    message: '* No such nick/channel: helper',
+  });
+  assert.equal(sent.some((message) => message.type === 'message.append'), false);
+});
+
+test('late error status events do not append to the server buffer after a channel closes', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.networks.upsert(createNetworkInput());
@@ -214,8 +301,10 @@ test('late status events fall back to the server buffer after a channel closes',
 
   storage.conversations.deleteChannelByName(network.id, channel.name);
 
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
   handleRuntimeEvent(
-    { store: storage, publish() {} },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'status',
       networkId: network.id,
@@ -226,10 +315,15 @@ test('late status events fall back to the server buffer after a channel closes',
   );
 
   assert.equal(storage.conversations.getBufferByTarget(network.id, '#help'), null);
-  assert.equal(storage.conversations.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such channel');
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 5), []);
+  assert.deepEqual(sent, [{
+    type: 'error',
+    networkId: network.id,
+    message: 'No such channel',
+  }]);
 });
 
-test('late status events fall back to the server buffer after a query closes', () => {
+test('late error status events do not append to the server buffer after a query closes', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.networks.upsert(createNetworkInput());
@@ -237,8 +331,10 @@ test('late status events fall back to the server buffer after a query closes', (
 
   storage.conversations.removeBuffer(query.id);
 
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
   handleRuntimeEvent(
-    { store: storage, publish() {} },
+    { store: storage, publish(message) { sent.push(message); } },
     {
       type: 'status',
       networkId: network.id,
@@ -250,5 +346,10 @@ test('late status events fall back to the server buffer after a query closes', (
   );
 
   assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper'), null);
-  assert.equal(storage.conversations.listMessages(network.id, 'server', 5).at(-1)?.body, 'No such nick');
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 5), []);
+  assert.deepEqual(sent, [{
+    type: 'error',
+    networkId: network.id,
+    message: 'No such nick',
+  }]);
 });

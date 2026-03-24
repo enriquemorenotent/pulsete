@@ -1,7 +1,7 @@
 export type ChannelReplyOperation = 'join' | 'part' | 'topic-set' | 'topic-query' | 'names';
 
 export type PendingReplyContext =
-  | { kind: 'message'; sourceTarget: string; target: string; expiresAt: number }
+  | { kind: 'message'; sourceTarget: string; target: string; optimisticMessageId?: string; expiresAt: number }
   | { kind: 'whois'; sourceTarget: string; nick: string; expiresAt: number }
   | { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string; expiresAt: number }
   | { kind: 'raw-list'; sourceTarget: string; expiresAt: number }

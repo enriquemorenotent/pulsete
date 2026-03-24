@@ -3,7 +3,10 @@ import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
 import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
 
-type RuntimeEventConversations = Pick<RuntimeConversationService, 'handleChannelEvent' | 'handleMessageEvent' | 'handleStatusEvent'>;
+type RuntimeEventConversations = Pick<
+  RuntimeConversationService,
+  'handleChannelEvent' | 'handleMessageEvent' | 'handleSendFailure' | 'handleStatusEvent'
+>;
 type RuntimeEventStore = {
   conversations: RuntimeConversationStore;
   networks: Pick<RuntimeNetworkStore, 'get'>;
@@ -28,6 +31,9 @@ export function translateRuntimeEvent(
   }
   if (event.type === 'status') {
     return conversations.handleStatusEvent(event);
+  }
+  if (event.type === 'send-failed') {
+    return conversations.handleSendFailure(event);
   }
   if (event.type === 'channel-pending') {
     return [{

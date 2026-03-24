@@ -24,6 +24,25 @@ export const emitStatus = (
   });
 };
 
+export const emitSendFailure = (
+  connection: IrcEventContext,
+  input: {
+    sourceTarget: string;
+    target: string;
+    message: string;
+    rollbackMessageId?: string;
+  }
+) => {
+  emitEvent(connection, {
+    type: 'send-failed',
+    networkId: connection.profile.id,
+    sourceTarget: input.sourceTarget,
+    target: input.target,
+    message: input.message,
+    rollbackMessageId: input.rollbackMessageId,
+  });
+};
+
 export const emitState = (connection: IrcStateContext) => {
   const { lifecycle } = connection;
   emitEvent(connection, {

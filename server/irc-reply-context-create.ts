@@ -1,10 +1,15 @@
 import { isChannelTarget } from './irc-parser.js';
 import { type ChannelReplyOperation, type PendingReplyContext, replyContextTtlMs } from './irc-reply-context-types.js';
 
-export const createMessageReplyContext = (sourceTarget: string, target: string): PendingReplyContext => ({
+export const createMessageReplyContext = (
+  sourceTarget: string,
+  target: string,
+  optimisticMessageId?: string
+): PendingReplyContext => ({
   kind: 'message',
   sourceTarget,
   target,
+  optimisticMessageId,
   expiresAt: Date.now() + replyContextTtlMs,
 });
 

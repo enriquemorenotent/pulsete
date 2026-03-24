@@ -55,14 +55,15 @@ test('irc connection keeps WHOIS 401 replies out of stale private-message contex
   assert.ok(
     !events.some(
       (event) =>
-        event.type === 'status'
-        && event.target === '#chat'
+        event.type === 'send-failed'
+        && event.sourceTarget === '#chat'
+        && event.target === 'alice'
         && event.message === '* No such nick/channel: alice'
     )
   );
 });
 
-test('irc connection keeps private-message 401 replies on the source buffer', () => {
+test('irc connection emits private-message 401 replies as send failures', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
   const connection = new IrcConnection(
@@ -99,21 +100,28 @@ test('irc connection keeps private-message 401 replies on the source buffer', ()
   connection.say('alice', 'hi', '#chat');
   connection.consume(':irc.example 401 tester alice :No such nick/channel\r\n');
 
+  const selfMessage = events.find(
+    (event) =>
+      event.type === 'message'
+      && (event.message as { body?: string } | undefined)?.body === 'hi'
+  ) as { message?: { id?: string } } | undefined;
+
   assert.deepEqual(writes, ['PRIVMSG alice :hi\r\n']);
   assert.ok(
     events.some(
       (event) =>
-        event.type === 'status'
-        && event.target === '#chat'
-        && event.kind === 'error'
+        event.type === 'send-failed'
+        && event.sourceTarget === '#chat'
+        && event.target === 'alice'
         && event.message === '* No such nick/channel: alice'
+        && event.rollbackMessageId === selfMessage?.message?.id
     )
   );
   assert.ok(
     !events.some(
       (event) =>
         event.type === 'status'
-        && event.target === 'server'
+        && (event.target === '#chat' || event.target === 'server')
         && event.message === '* No such nick/channel: alice'
     )
   );

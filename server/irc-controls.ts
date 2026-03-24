@@ -126,20 +126,29 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
       return sendTrackedRaw(connection, `PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
     },
     say: (target: string, text: string, sourceTarget = target) => {
-      if (sendTrackedRaw(connection, `PRIVMSG ${target} :${text}`, sourceTarget, createMessageReplyContext(sourceTarget, target))) {
-        emitMessage(connection, createSelfMessage(connection, target, text));
+      const selfMessage = createSelfMessage(connection, target, text);
+      if (
+        sendTrackedRaw(
+          connection,
+          `PRIVMSG ${target} :${text}`,
+          sourceTarget,
+          createMessageReplyContext(sourceTarget, target, selfMessage.id)
+        )
+      ) {
+        emitMessage(connection, selfMessage);
       }
     },
     action: (target: string, text: string, sourceTarget = target) => {
+      const selfMessage = createSelfActionMessage(connection, target, text);
       if (
         sendTrackedRaw(
           connection,
           `PRIVMSG ${target} :\u0001ACTION ${text}\u0001`,
           sourceTarget,
-          createMessageReplyContext(sourceTarget, target)
+          createMessageReplyContext(sourceTarget, target, selfMessage.id)
         )
       ) {
-        emitMessage(connection, createSelfActionMessage(connection, target, text));
+        emitMessage(connection, selfMessage);
       }
     },
   },
