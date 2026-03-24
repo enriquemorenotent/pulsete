@@ -1,19 +1,22 @@
-import { Copy, Heart, PencilLine, Plus, Power, Trash2 } from 'lucide-react';
-import type { NetworkProfile } from '../../shared/protocol.js';
-import { Badge } from '@/components/ui/badge.js';
+import { Plus, Power, Server } from 'lucide-react';
+import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
-import { Separator } from '@/components/ui/separator.js';
-import { cn } from '@/lib/utils.js';
-import type { NetworkRuntimeState } from './workspace.js';
+import { getNetworkManagerConnectButtonState } from './network-manager-dialog-model.js';
+import {
+  EmptySelectionPane,
+  NetworkManagerListRow,
+  SelectedNetworkPane,
+} from './network-manager-dialog-sections.js';
 
 type NetworkManagerDialogProps = {
   networks: NetworkProfile[];
@@ -32,22 +35,6 @@ type NetworkManagerDialogProps = {
   onFavorite: () => void;
 };
 
-export const getNetworkManagerRowStatus = (runtime: NetworkRuntimeState | null) =>
-  runtime?.phase === 'connected' ? 'online' : runtime?.phase === 'connecting' ? 'connecting' : null;
-
-export const getNetworkManagerConnectButtonState = (
-  selected: NetworkProfile | null,
-  runtime: NetworkRuntimeState | null,
-) => ({
-  label:
-    runtime?.phase === 'connected'
-      ? 'Connected'
-      : runtime?.phase === 'connecting'
-        ? 'Connecting'
-        : 'Connect',
-  disabled: !selected || runtime?.phase === 'connected' || runtime?.phase === 'connecting',
-});
-
 export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
   const connectButton = getNetworkManagerConnectButtonState(props.selected, props.runtime);
 
@@ -55,105 +42,67 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
       <DialogContent
         aria-describedby={undefined}
-        className="h-[min(90dvh,44rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),68rem)]"
+        className="h-[min(90dvh,42rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),66rem)]"
       >
-        <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="grid h-full min-h-0 gap-0 bg-card lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="flex min-h-0 flex-col">
-            <div className="shrink-0 space-y-3 px-4 py-3">
+            <div className="shrink-0 border-b border-border px-4 py-4">
               <DialogHeader className="space-y-1">
-                <div className="flex items-center justify-between gap-3">
-                  <DialogTitle>Network Manager</DialogTitle>
-                </div>
+                <DialogTitle>Network Manager</DialogTitle>
+                <DialogDescription>Saved networks and live connection state.</DialogDescription>
               </DialogHeader>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Button variant="secondary" size="sm" onClick={props.onAdd}>
-                  <Plus />
-                  Add
-                </Button>
-                <Button variant="outline" size="sm" onClick={props.onEdit} disabled={!props.selected}>
-                  <PencilLine />
-                  Edit
-                </Button>
-                <Button variant="outline" size="sm" onClick={props.onDuplicate} disabled={!props.selected}>
-                  <Copy />
-                  Duplicate
-                </Button>
-                <Button variant="ghost" size="sm" onClick={props.onFavorite} disabled={!props.selected}>
-                  <Heart />
-                  {props.selected?.favorite ? 'Unfavorite' : 'Favorite'}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={props.onRemove} disabled={!props.selected}>
-                  <Trash2 />
-                  Remove
-                </Button>
-                <label className="ml-auto inline-flex items-center gap-2 text-[13px] text-muted-foreground">
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground">
                   <Checkbox checked={props.showFavoritesOnly} onCheckedChange={props.onToggleFavorites} />
-                  <span>Show favorites only</span>
+                  <span>Favorites only</span>
                 </label>
+                <Button variant="secondary" size="sm" onClick={props.onAdd} className="ml-auto">
+                  <Plus />
+                  Add Network
+                </Button>
               </div>
             </div>
 
-            <Separator />
-
             <ScrollArea className="min-h-0 h-full flex-1">
-              <div className="space-y-1 p-2">
+              <div className="space-y-2 px-3 py-3">
                 {props.networks.length === 0 ? (
-                  <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
-                    No networks configured.
+                  <div className="px-2 py-12 text-center">
+                    <div className="mx-auto flex size-12 items-center justify-center rounded-full border border-border bg-secondary/40 text-muted-foreground">
+                      <Server className="size-4" />
+                    </div>
+                    <p className="mt-4 text-sm font-medium text-foreground">No networks configured.</p>
                   </div>
                 ) : null}
 
-                {props.networks.map((network) => {
-                  const selected = props.selected?.id === network.id;
-                  const rowStatus = getNetworkManagerRowStatus(props.runtimes[network.id] ?? null);
-
-                  return (
-                    <button
-                      key={network.id}
-                      className={cn(
-                        'block w-full border px-3 py-2 text-left text-[13px] transition-colors',
-                        selected ? 'border-primary/40 bg-accent' : 'border-border bg-card hover:bg-accent'
-                      )}
-                      onClick={() => props.onSelect(network.id)}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="truncate font-medium text-foreground">{network.name}</span>
-                            {rowStatus === 'online' ? <Badge variant="success">Online</Badge> : null}
-                            {rowStatus === 'connecting' ? <Badge variant="outline">Connecting</Badge> : null}
-                          </div>
-                          <p className="truncate font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-                            {network.host}:{network.port} {network.tls ? 'SSL' : 'TCP'}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                {props.networks.map((network) => (
+                  <NetworkManagerListRow
+                    key={network.id}
+                    network={network}
+                    selected={props.selected?.id === network.id}
+                    runtime={props.runtimes[network.id] ?? null}
+                    onSelect={props.onSelect}
+                  />
+                ))}
               </div>
             </ScrollArea>
           </div>
 
-          <div className="flex min-h-0 flex-col overflow-hidden border-t border-border bg-secondary/35 lg:border-l lg:border-t-0">
-            <div className="min-h-0 flex-1 space-y-3 overflow-auto px-4 py-3">
-              <div>
-                <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                  {props.selected?.name ?? 'Nothing selected'}
-                </h3>
-                <p className="text-[13px] text-muted-foreground">
-                  {props.selected
-                    ? [
-                        `${props.selected.host}:${props.selected.port}`,
-                        props.selected.tls ? 'SSL/TLS' : 'TCP',
-                        props.runtime?.phase === 'connected' ? 'Connected' : props.runtime?.phase === 'connecting' ? 'Connecting' : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')
-                    : 'Pick a network from the list.'}
-                </p>
-              </div>
-            </div>
+          <div className="flex min-h-0 flex-col overflow-hidden border-t border-border bg-secondary/25 lg:border-l lg:border-t-0">
+            <ScrollArea className="min-h-0 h-full flex-1">
+              {props.selected ? (
+                <SelectedNetworkPane
+                  network={props.selected}
+                  runtime={props.runtime}
+                  onEdit={props.onEdit}
+                  onDuplicate={props.onDuplicate}
+                  onFavorite={props.onFavorite}
+                  onRemove={props.onRemove}
+                />
+              ) : (
+                <EmptySelectionPane />
+              )}
+            </ScrollArea>
 
             <div className="shrink-0 border-t border-border px-4 py-3">
               <DialogFooter className="gap-2 sm:flex-row sm:justify-between">

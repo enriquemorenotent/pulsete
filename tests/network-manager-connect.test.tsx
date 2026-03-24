@@ -6,7 +6,13 @@ import { createNetworkActions, resolveManagedNetworkConnectPlan } from '../web/s
 import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
-import { getNetworkManagerConnectButtonState, getNetworkManagerRowStatus } from '../web/src/NetworkManagerDialog.js';
+import {
+  getNetworkManagerAuthLabel,
+  getNetworkManagerAutoJoinLabel,
+  getNetworkManagerConnectButtonState,
+  getNetworkManagerRowStatus,
+  getNetworkManagerStatusLabel,
+} from '../web/src/network-manager-dialog-model.js';
 import { buildManagedRuntimeMap } from '../web/src/network-manager-runtime.js';
 import { createConnectionInstancePayload } from '../web/src/network-form.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
@@ -24,6 +30,9 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   username: overrides.username ?? 'sofia',
   realName: overrides.realName ?? 'Sofia',
   hasPassword: overrides.hasPassword ?? false,
+  authMethod: overrides.authMethod,
+  authTarget: overrides.authTarget,
+  authAccount: overrides.authAccount,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
 });
@@ -339,4 +348,19 @@ test('getNetworkManagerRowStatus keeps Online and Connecting visible independent
   assert.equal(getNetworkManagerRowStatus({ phase: 'connecting', serverName: null, nick: 'sofia' }), 'connecting');
   assert.equal(getNetworkManagerRowStatus({ phase: 'offline', serverName: null, nick: 'sofia' }), null);
   assert.equal(getNetworkManagerRowStatus(null), null);
+});
+
+test('network manager detail helpers produce scan-friendly UI copy', () => {
+  const network = makeNetwork({
+    name: 'Libera.Chat',
+    authMethod: 'nickserv',
+    authAccount: 'sofia',
+    autoJoin: ['#pulsete', '#ops'],
+  });
+
+  assert.equal(getNetworkManagerAuthLabel(network), 'NickServ');
+  assert.equal(getNetworkManagerAutoJoinLabel(network), '2 channels');
+  assert.equal(getNetworkManagerStatusLabel({ phase: 'connected', serverName: null, nick: network.nick }), 'Online');
+  assert.equal(getNetworkManagerStatusLabel({ phase: 'connecting', serverName: null, nick: network.nick }), 'Connecting');
+  assert.equal(getNetworkManagerStatusLabel({ phase: 'offline', serverName: null, nick: network.nick }), 'Offline');
 });
