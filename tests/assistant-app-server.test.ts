@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AssistantAppServer } from '../server/assistant-app-server.js';
+import { AssistantAppServer, buildAssistantAppServerSpawnArgs } from '../server/assistant-app-server.js';
+
+test('assistant app-server spawn args override unsupported global reasoning defaults', () => {
+  assert.deepEqual(buildAssistantAppServerSpawnArgs(), [
+    '-c',
+    'model_reasoning_effort="high"',
+    '-c',
+    'plan_mode_reasoning_effort="high"',
+    'app-server',
+    '--listen',
+    'stdio://',
+  ]);
+});
 
 test('assistant app-server child shutdown clears startup state and schedules a retry after spawn failure', () => {
   const appServer = new AssistantAppServer('0.1.0', false);

@@ -247,10 +247,11 @@ export const createAssistantActions = ({
     }
     for (const threadId of threadIds) {
       try {
-        await api.deleteAssistantThread(threadId);
+        const result = await api.deleteAssistantThread(threadId);
+        applyServerMessages(result.messages);
         dispatch({ type: 'assistant-thread-removed', threadId });
       } catch (error) {
-        updateBanner('error', error instanceof Error ? error.message : 'Failed to clear assistant chat history');
+        updateBanner('error', error instanceof Error ? error.message : 'Failed to clear assistant history');
         return false;
       }
     }

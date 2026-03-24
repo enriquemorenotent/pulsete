@@ -1,30 +1,59 @@
-import { useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { PanelsTopLeft, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { ChatPane } from './ChatPane.js';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
+import {
+  getDefaultCompactWorkspacePane,
+  resolveCompactWorkspacePane,
+  type CompactWorkspacePane,
+} from './desktop-shell-layout.js';
 import { MessageDisplayModeToggle } from './MessageDisplayModeToggle.js';
 import { NetworkEditorDialog } from './NetworkEditorDialog.js';
 import { NetworkManagerDialog } from './NetworkManagerDialog.js';
 import { PreferencesDialog } from './PreferencesDialog.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
+import { useMediaQuery } from './useMediaQuery.js';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import { useSidebarResize } from './useSidebarResize.js';
+
+const compactDesktopShellQuery = '(max-width: 1023px)';
 
 export function DesktopShell(props: DesktopShellModel) {
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const sidebarResize = useSidebarResize(layoutRef);
   const showRightSidebar = props.workspace.selectedBuffer?.kind === 'channel' || props.workspace.selectedBuffer?.kind === 'query';
+  const selectedBufferId = props.workspace.selectedBuffer?.id ?? null;
+  const compactLayout = useMediaQuery(compactDesktopShellQuery);
+  const previousSelectedBufferIdRef = useRef(selectedBufferId);
+  const [compactPane, setCompactPane] = useState<CompactWorkspacePane>(() =>
+    getDefaultCompactWorkspacePane(selectedBufferId),
+  );
   const layoutStyle = {
     '--sidebar-width': `${sidebarResize.sidebarWidth}px`,
   } as CSSProperties;
 
+  useEffect(() => {
+    const previousSelectedBufferId = previousSelectedBufferIdRef.current;
+    const nextPane = resolveCompactWorkspacePane({
+      current: compactPane,
+      selectedBufferId,
+      previousSelectedBufferId,
+      showAssistantPane: showRightSidebar,
+    });
+    previousSelectedBufferIdRef.current = selectedBufferId;
+    if (nextPane !== compactPane) {
+      setCompactPane(nextPane);
+    }
+  }, [compactPane, selectedBufferId, showRightSidebar]);
+
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 py-2">
-        <span className="font-semibold tracking-tight">Pulsete</span>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
+        <span className="mr-auto font-semibold tracking-tight">Pulsete</span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           {props.header.showMessageDisplayModeToggle ? (
             <MessageDisplayModeToggle
               value={props.header.messageDisplayMode}
@@ -43,34 +72,68 @@ export function DesktopShell(props: DesktopShellModel) {
       </header>
 
       <main className="flex min-h-0 flex-1 overflow-hidden p-2">
-        <div
-          ref={layoutRef}
-          style={layoutStyle}
-          className="flex h-full min-h-0 flex-1 flex-col gap-2 overflow-hidden xl:flex-row xl:gap-0"
-        >
-          <div className="min-h-0 xl:w-[var(--sidebar-width)] xl:shrink-0">
-            <ConnectionSidebar {...props.sidebar} />
-          </div>
-          <SidebarResizeHandle
-            sidebarWidth={sidebarResize.sidebarWidth}
-            isResizing={sidebarResize.isResizing}
-            onPointerDown={sidebarResize.startDragging}
-            onNudge={sidebarResize.nudgeWidth}
-            onReset={sidebarResize.resetWidth}
-          />
-          <div className="min-h-0 min-w-0 flex-1">
-            <ChatPane {...props.chat} />
-          </div>
-          {showRightSidebar ? (
-            <div className="h-[28rem] min-h-[24rem] xl:ml-2 xl:h-full xl:min-h-0 xl:w-[22rem] xl:shrink-0">
-              <WorkspaceRightSidebar
-                workspace={props.workspace}
-                nicklist={props.nicklist}
-                assistant={props.assistant}
-              />
+        {compactLayout ? (
+          <Tabs
+            value={compactPane}
+            onValueChange={(value) => setCompactPane(value as CompactWorkspacePane)}
+            className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden"
+          >
+            <TabsList className={`grid w-full shrink-0 ${showRightSidebar ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <TabsTrigger value="browse" className="min-w-0">Browse</TabsTrigger>
+              <TabsTrigger value="chat" className="min-w-0" disabled={!selectedBufferId}>
+                Chat
+              </TabsTrigger>
+              {showRightSidebar ? (
+                <TabsTrigger value="assistant" className="min-w-0">Assistant</TabsTrigger>
+              ) : null}
+            </TabsList>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {compactPane === 'browse' ? (
+                <ConnectionSidebar {...props.sidebar} />
+              ) : null}
+              {compactPane === 'chat' ? (
+                <ChatPane {...props.chat} />
+              ) : null}
+              {compactPane === 'assistant' && showRightSidebar ? (
+                <WorkspaceRightSidebar
+                  workspace={props.workspace}
+                  nicklist={props.nicklist}
+                  assistant={props.assistant}
+                  initialTab="assistant"
+                />
+              ) : null}
             </div>
-          ) : null}
-        </div>
+          </Tabs>
+        ) : (
+          <div
+            ref={layoutRef}
+            style={layoutStyle}
+            className="flex h-full min-h-0 flex-1 overflow-hidden lg:flex-row"
+          >
+            <div className="min-h-0 lg:w-[var(--sidebar-width)] lg:shrink-0">
+              <ConnectionSidebar {...props.sidebar} />
+            </div>
+            <SidebarResizeHandle
+              sidebarWidth={sidebarResize.sidebarWidth}
+              isResizing={sidebarResize.isResizing}
+              onPointerDown={sidebarResize.startDragging}
+              onNudge={sidebarResize.nudgeWidth}
+              onReset={sidebarResize.resetWidth}
+            />
+            <div className="min-h-0 min-w-0 flex-1">
+              <ChatPane {...props.chat} />
+            </div>
+            {showRightSidebar ? (
+              <div className="min-h-0 lg:ml-2 lg:w-[clamp(22rem,30vw,30rem)] lg:shrink-0">
+                <WorkspaceRightSidebar
+                  workspace={props.workspace}
+                  nicklist={props.nicklist}
+                  assistant={props.assistant}
+                />
+              </div>
+            ) : null}
+          </div>
+        )}
       </main>
 
       {props.networkManager.open ? (

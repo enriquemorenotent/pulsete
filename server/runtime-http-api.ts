@@ -42,6 +42,7 @@ export const createRuntimeHttpApi = ({
     close: (bufferId) => conversations.closeBuffer(bufferId),
     markRead: (bufferId) => conversations.markBufferRead(bufferId),
     history: (bufferId, limit) => conversations.history(bufferId, limit),
+    clearHistory: (bufferId) => conversations.clearHistory(bufferId),
   },
   friends: {
     add: (nick) => friends.upsertFriend(nick),

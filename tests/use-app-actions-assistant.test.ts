@@ -363,7 +363,26 @@ test('clearAssistantThreads deletes the current assistant threads and clears loc
       method: String(init?.method ?? 'GET'),
     });
     if (String(input) === '/api/assistant/threads/thread-1') {
-      return okJson({ ok: true });
+      return okJson({
+        ok: true,
+        messages: [
+          {
+            type: 'message.remove',
+            networkId: network.id,
+            target: selectedBuffer.target,
+            messageIds: ['import:turn-1:0'],
+          },
+          {
+            type: 'assistant.snapshot',
+            assistant: {
+              ...initialState.domain.assistant,
+              serviceStatus: 'ready',
+              activeThreadId: null,
+              threads: [],
+            },
+          },
+        ],
+      });
     }
     throw new Error(`Unexpected fetch: ${String(input)}`);
   }) as typeof fetch;
@@ -377,7 +396,11 @@ test('clearAssistantThreads deletes the current assistant threads and clears loc
       url: '/api/assistant/threads/thread-1',
       method: 'DELETE',
     }]);
-    assert.deepEqual(dispatched.map((action) => action.type), ['assistant-thread-removed']);
+    assert.deepEqual(dispatched.map((action) => action.type), [
+      'remove-messages',
+      'assistant-snapshot',
+      'assistant-thread-removed',
+    ]);
     assert.deepEqual(banners, []);
   } finally {
     globalThis.fetch = originalFetch;

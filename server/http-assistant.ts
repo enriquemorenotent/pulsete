@@ -41,8 +41,10 @@ export const handleAssistantRoutes = async ({ req, res, pathname, context }: Rou
   }
   const threadMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)$/);
   if (threadMatch && req.method === 'DELETE') {
-    await context.assistant.deleteThread(decodeRouteParam(threadMatch[1]));
-    writeJson(res, 200, { ok: true });
+    writeJson(res, 200, {
+      ok: true,
+      ...await context.assistant.deleteThread(decodeRouteParam(threadMatch[1])),
+    });
     return true;
   }
   if (threadMatch && req.method === 'GET') {

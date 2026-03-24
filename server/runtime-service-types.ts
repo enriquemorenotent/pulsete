@@ -32,6 +32,7 @@ export type RuntimeConversationMutations = {
   closeBuffer(bufferId: string): ReturnType<RuntimeConversationService['closeQueryBuffer']>;
   markBufferRead: RuntimeConversationService['markBufferRead'];
   history: RuntimeConversationService['listBufferHistory'];
+  clearHistory(bufferId: string): ReturnType<RuntimeConversationService['clearBufferHistory']>;
 };
 
 export type RuntimeFriendMutations = {
@@ -54,7 +55,7 @@ export type RuntimeAssistantApi = {
     task: AssistantTaskKind;
     model?: string;
   }): Promise<AssistantThreadSummary>;
-  deleteThread(threadId: string): Promise<void>;
+  deleteThread(threadId: string): Promise<{ messages: readonly ServerMessage[] }>;
   readThread(threadId: string): Promise<AssistantThread>;
   startTurn(input: {
     threadId: string;
@@ -89,6 +90,7 @@ export type RuntimeHttpApi = {
     close: RuntimeConversationMutations['closeBuffer'];
     markRead: RuntimeConversationMutations['markBufferRead'];
     history: RuntimeConversationMutations['history'];
+    clearHistory: RuntimeConversationMutations['clearHistory'];
   };
   friends: {
     add: RuntimeFriendMutations['upsertFriend'];

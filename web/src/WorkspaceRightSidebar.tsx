@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AssistantPanel, type AssistantPanelProps } from './AssistantPanel.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
@@ -9,6 +9,7 @@ type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
   nicklist: DesktopShellNicklistModel;
   assistant: AssistantPanelProps;
+  initialTab?: SidebarTab;
 };
 
 type SidebarTab = 'users' | 'assistant';
@@ -16,18 +17,20 @@ type SidebarTab = 'users' | 'assistant';
 const isAssistantWorkspace = (workspace: WorkspaceView) =>
   workspace.selectedBuffer?.kind === 'channel' || workspace.selectedBuffer?.kind === 'query';
 
+export const getDefaultSidebarTab = (
+  showNicklistTabs: boolean,
+  initialTab: SidebarTab = 'users',
+): SidebarTab => (showNicklistTabs ? initialTab : 'assistant');
+
+export const resolveSidebarTab = (current: SidebarTab, showNicklistTabs: boolean): SidebarTab =>
+  showNicklistTabs ? current : 'assistant';
+
 export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
-  const [tab, setTab] = useState<SidebarTab>('users');
-  const hadNicklistTabsRef = useRef(false);
   const showNicklistTabs = props.workspace.showNicklist && !!props.workspace.selectedChannel;
+  const [tab, setTab] = useState<SidebarTab>(() => getDefaultSidebarTab(showNicklistTabs, props.initialTab));
 
   useEffect(() => {
-    if (!showNicklistTabs) {
-      setTab('assistant');
-    } else if (!hadNicklistTabsRef.current) {
-      setTab('users');
-    }
-    hadNicklistTabsRef.current = showNicklistTabs;
+    setTab((current) => resolveSidebarTab(current, showNicklistTabs));
   }, [showNicklistTabs]);
 
   if (!isAssistantWorkspace(props.workspace)) {

@@ -25,6 +25,8 @@ export type ChatPaneProps = {
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   onToggleChannelAutoJoin: () => Promise<boolean>;
+  canClearHistory?: boolean;
+  onClearHistory?: () => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   channelList: ChannelListState;
@@ -52,6 +54,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           showChannelAutoJoin={props.showChannelAutoJoin}
           channelAutoJoinActive={props.channelAutoJoinActive}
           onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}
+          canClearHistory={props.canClearHistory}
+          onClearHistory={props.onClearHistory}
           onCloseChannel={props.onCloseChannel}
           onCloseBuffer={props.onCloseBuffer}
           onOpenChannelList={props.onOpenChannelList}

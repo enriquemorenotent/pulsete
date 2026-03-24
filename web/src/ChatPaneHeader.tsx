@@ -15,6 +15,8 @@ type ChatPaneHeaderProps = {
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   onToggleChannelAutoJoin: () => Promise<boolean>;
+  canClearHistory?: boolean;
+  onClearHistory?: () => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -69,6 +71,11 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
                   : props.onAddFriend(selectedBuffer.target))
               }
             />
+          ) : null}
+          {props.canClearHistory && props.onClearHistory ? (
+            <Button variant="outline" size="sm" onClick={() => void props.onClearHistory?.()}>
+              Clear history
+            </Button>
           ) : null}
           {selectedChannel ? (
             <Button variant="outline" size="sm" onClick={() => props.onCloseChannel(selectedChannel.networkId, selectedChannel.name)}>

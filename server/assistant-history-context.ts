@@ -302,7 +302,7 @@ const renderFullTranscriptWithinBudget = (messages: ChatMessage[], budget: numbe
 
 const formatMessage = (message: ChatMessage) => {
   const time = formatTimestamp(message.ts);
-  if (message.kind === 'join' || message.kind === 'part' || message.kind === 'system') {
+  if (message.kind === 'join' || message.kind === 'part' || message.kind === 'quit' || message.kind === 'system') {
     return `[${time}] (${message.kind}) ${message.body}`;
   }
   const author = message.nick ?? (message.self ? 'you' : 'server');

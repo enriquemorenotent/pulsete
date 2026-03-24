@@ -93,6 +93,19 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     autoStart: assistantAutoStart,
     publish: (messages) => publisher.publish(messages),
   });
+  const assistantApi: RuntimeServices['assistant'] = {
+    startChatgptLogin: () => assistant.startChatgptLogin(),
+    cancelLogin: (loginId) => assistant.cancelLogin(loginId),
+    logout: () => assistant.logout(),
+    createThread: (input) => assistant.createThread(input),
+    deleteThread: async (threadId) => publishMutation(await assistant.deleteThread(threadId)),
+    readThread: (threadId) => assistant.readThread(threadId),
+    startTurn: (input) => assistant.startTurn(input),
+    importHistory: (input) => assistant.importHistory(input),
+    interruptThread: (threadId) => assistant.interruptThread(threadId),
+    interruptTurn: (threadId, turnId) => assistant.interruptTurn(threadId, turnId),
+    updatePreferences: (input) => assistant.updatePreferences(input),
+  };
   const closeGateway = () => {
     closing = true;
     socketHub.closeAll();
@@ -111,6 +124,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     closeBuffer: (bufferId) => publishMutation(conversationsService.closeQueryBuffer(bufferId)),
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
     history: (bufferId, limit) => conversationsService.listBufferHistory(bufferId, limit),
+    clearHistory: (bufferId) => publishMutation(conversationsService.clearBufferHistory(bufferId)),
   };
   const friends: RuntimeFriendMutations = {
     upsertFriend: (nick) => publishMutation(friendMutations.upsertFriend(nick)),
@@ -122,7 +136,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
   };
   const http = createRuntimeHttpApi({
-    assistant,
+    assistant: assistantApi,
     catalog: store.networks,
     conversations,
     friends,
@@ -147,7 +161,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     friends,
     irc,
     networks,
-    assistant,
+    assistant: assistantApi,
     http,
     ws,
   };

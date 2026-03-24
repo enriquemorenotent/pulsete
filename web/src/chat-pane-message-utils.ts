@@ -1,7 +1,7 @@
 import type { ChatMessage } from '../../shared/protocol.js';
 
 export type MessageRenderBlock =
-  | { kind: 'group'; messages: ChatMessage[] }
+  | { kind: 'group'; messages: ChatMessage[]; sourceLabel: string }
   | { kind: 'single'; message: ChatMessage };
 
 export const formatMessageTime = (value: number) =>
@@ -13,12 +13,19 @@ export const formatMessageTime = (value: number) =>
   });
 
 export const buildRenderBlocks = (messages: ChatMessage[], mode: 'chat' | 'server') => {
+  if (mode === 'chat') {
+    return messages.map((message) => ({ kind: 'single', message } satisfies MessageRenderBlock));
+  }
   const blocks: MessageRenderBlock[] = [];
   let currentGroup: ChatMessage[] = [];
 
   const flushGroup = () => {
     if (currentGroup.length > 0) {
-      blocks.push({ kind: 'group', messages: currentGroup });
+      blocks.push({
+        kind: 'group',
+        messages: currentGroup,
+        sourceLabel: getServerGroupSourceLabel(currentGroup[0]),
+      });
       currentGroup = [];
     }
   };
@@ -42,10 +49,7 @@ export const buildRenderBlocks = (messages: ChatMessage[], mode: 'chat' | 'serve
   return blocks;
 };
 
-export const getGroupSourceLabel = (message: ChatMessage, mode: 'chat' | 'server') => {
-  if (mode === 'chat') {
-    return message.nick ?? '';
-  }
+const getServerGroupSourceLabel = (message: ChatMessage) => {
   if (message.nick) {
     return message.nick;
   }
@@ -62,7 +66,11 @@ export const getGroupSourceLabel = (message: ChatMessage, mode: 'chat' | 'server
 };
 
 export const isCompactMessage = (message: ChatMessage) =>
-  message.kind === 'line' || message.kind === 'action' || message.kind === 'join' || message.kind === 'part';
+  message.kind === 'line'
+  || message.kind === 'action'
+  || message.kind === 'join'
+  || message.kind === 'part'
+  || message.kind === 'quit';
 
 export const isActionMessage = (message: ChatMessage) => message.kind === 'action';
 
@@ -82,6 +90,9 @@ export const messageTone = (message: ChatMessage) => {
   if (message.kind === 'part') {
     return 'border-amber-400/30 bg-amber-400/10';
   }
+  if (message.kind === 'quit') {
+    return 'border-amber-400/30 bg-amber-400/10';
+  }
   if (message.kind === 'system') {
     return 'border-border bg-secondary';
   }
@@ -89,9 +100,7 @@ export const messageTone = (message: ChatMessage) => {
 };
 
 const canGroupMessage = (message: ChatMessage, mode: 'chat' | 'server') =>
-  mode === 'server'
-    ? getGroupSourceLabel(message, mode).length > 0 && !isActionMessage(message)
-    : message.kind === 'line' && message.nick !== null;
+  mode === 'server' && getServerGroupSourceLabel(message).length > 0 && !isActionMessage(message);
 
 const canContinueGroup = (previous: ChatMessage, next: ChatMessage, mode: 'chat' | 'server') =>
   getGroupSourceKey(previous, mode) === getGroupSourceKey(next, mode) &&
@@ -99,4 +108,4 @@ const canContinueGroup = (previous: ChatMessage, next: ChatMessage, mode: 'chat'
   previous.self === next.self;
 
 const getGroupSourceKey = (message: ChatMessage, mode: 'chat' | 'server') =>
-  `${message.kind}:${getGroupSourceLabel(message, mode)}`;
+  `${message.kind}:${mode === 'server' ? getServerGroupSourceLabel(message) : ''}`;

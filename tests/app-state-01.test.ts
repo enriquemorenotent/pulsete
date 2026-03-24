@@ -345,6 +345,33 @@ test('append-messages merges batched updates in timestamp order per conversation
   );
 });
 
+test('remove-messages deletes only the requested conversation entries', () => {
+  const keep = makeMessage({ id: 'message-1', target: '#Help', ts: 1 });
+  const remove = makeMessage({ id: 'import:turn-1:0', target: '#help', ts: 2 });
+  const otherConversation = makeMessage({ id: 'message-2', target: '#random', ts: 3 });
+  const state = makeState({
+    domain: {
+      messages: indexConversationMessages([keep, remove, otherConversation]),
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'remove-messages',
+    networkId: keep.networkId,
+    target: '#HELP',
+    messageIds: [remove.id],
+  });
+
+  assert.deepEqual(
+    nextState.domain.messages[toConversationMessageKey(keep.networkId, keep.target)],
+    [keep]
+  );
+  assert.deepEqual(
+    nextState.domain.messages[toConversationMessageKey(otherConversation.networkId, otherConversation.target)],
+    [otherConversation]
+  );
+});
+
 test('removing a buffer also removes its indexed messages', () => {
   const buffer = makeBuffer({ id: 'channel-1', kind: 'channel', target: '#Help' });
   const state = makeState({

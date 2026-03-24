@@ -186,3 +186,61 @@ test('history clamps invalid and oversized limits to the default window', async 
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
+
+test('buffer history clear removes channel transcript rows and broadcasts the mutation', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const buffer = storage.conversations.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help', unread: 2 });
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: '#help',
+    nick: 'alice',
+    body: 'hello',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.appendMessage({
+    id: 'message-2',
+    networkId: network.id,
+    target: '#HELP',
+    nick: 'tester',
+    body: 'hi',
+    kind: 'line',
+    self: true,
+    ts: 2,
+  });
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
+  const port = await listen(server);
+  const { socket } = await connectWebSocket(port);
+
+  try {
+    const removedPromise = waitForWebSocketMessageType(socket, 'message.remove');
+    const bufferPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
+    const response = await requestJson(port, 'DELETE', `/api/buffers/${buffer.id}/history`, {});
+
+    assert.equal(response.status, 200);
+    assert.equal(response.json.ok, true);
+    assert.deepEqual((response.json.messages as Array<{ type: string }>).map((message) => message.type), [
+      'message.remove',
+      'buffer.upsert',
+    ]);
+
+    const removed = await removedPromise as { networkId: string; target: string; messageIds: string[] };
+    const updatedBuffer = await bufferPromise as { buffer: { id: string; unread: number } };
+
+    assert.equal(removed.networkId, network.id);
+    assert.equal(removed.target, '#help');
+    assert.deepEqual(removed.messageIds, ['message-1', 'message-2']);
+    assert.equal(updatedBuffer.buffer.id, buffer.id);
+    assert.equal(updatedBuffer.buffer.unread, 0);
+    assert.deepEqual(storage.conversations.listMessages(network.id, '#help', 10), []);
+  } finally {
+    await closeWebSocket(socket);
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});

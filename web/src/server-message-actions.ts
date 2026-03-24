@@ -70,6 +70,13 @@ const toActions = (message: ServerMessage): Action[] => {
       }];
     case 'message.append':
       return [{ type: 'append-message', message: message.message }];
+    case 'message.remove':
+      return [{
+        type: 'remove-messages',
+        networkId: message.networkId,
+        target: message.target,
+        messageIds: message.messageIds,
+      }];
     case 'assistant.snapshot':
       return [{ type: 'assistant-snapshot', assistant: message.assistant }];
     case 'assistant.thread.loaded':

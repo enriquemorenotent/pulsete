@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const historyWindowLimit = 250;
 
-export const messageKindSchema = z.enum(['line', 'action', 'join', 'part', 'notice', 'error', 'system']);
+export const messageKindSchema = z.enum(['line', 'action', 'join', 'part', 'quit', 'notice', 'error', 'system']);
 export type MessageKind = z.infer<typeof messageKindSchema>;
 
 export const chatMessageSchema = z.object({

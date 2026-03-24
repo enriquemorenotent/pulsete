@@ -1,7 +1,11 @@
 import type { AppDomainState, Action } from './app-types.js';
 import type { BufferState, FriendState, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
-import { appendConversationMessages, removeBufferMessages } from './conversation-message-state.js';
+import {
+  appendConversationMessages,
+  removeBufferMessages,
+  removeConversationMessages,
+} from './conversation-message-state.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -91,6 +95,11 @@ export const reduceConversationDomain = (
       return {
         ...domain,
         messages: appendConversationMessages(domain.messages, action.messages),
+      };
+    case 'remove-messages':
+      return {
+        ...domain,
+        messages: removeConversationMessages(domain.messages, action.networkId, action.target, action.messageIds),
       };
     case 'upsert-channel': {
       const channels = domain.channels.filter((channel) => channel.id !== action.channel.id);

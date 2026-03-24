@@ -54,7 +54,7 @@ export const shouldImportAssistantPrompt = (
     && assistantImportIntentTargetPattern.test(text);
 };
 
-const askThreadsForWorkspace = (
+export const getAskThreadsForWorkspace = (
   bufferId: string | null,
   threads: State['domain']['assistant']['threads']
 ) => {
@@ -63,6 +63,12 @@ const askThreadsForWorkspace = (
     : threads.filter((thread) => thread.task === 'ask');
   return [...visibleThreads].sort((left, right) => right.updatedAt - left.updatedAt);
 };
+
+const getAssistantContextTitle = (workspace: WorkspaceView) =>
+  workspace.selectedBuffer ? workspace.headerTitle : 'this buffer';
+
+const getAssistantContextSubtitle = (workspace: WorkspaceView) =>
+  workspace.selectedBuffer ? workspace.headerSubtitle : '';
 
 export function useAssistantController({
   actions,
@@ -74,7 +80,7 @@ export function useAssistantController({
   const selectedBufferId = workspace.selectedBuffer?.id ?? null;
   const contextKey = selectedBufferId ?? 'no-buffer';
   const threads = useMemo(
-    () => askThreadsForWorkspace(selectedBufferId, assistant.threads),
+    () => getAskThreadsForWorkspace(selectedBufferId, assistant.threads),
     [assistant.threads, selectedBufferId]
   );
   const preferredThreadId = assistantUi.selectedThreadId ?? assistant.activeThreadId ?? null;
@@ -105,13 +111,13 @@ export function useAssistantController({
   return useMemo(() => ({
     assistant,
     canImportHistory,
-    canClearHistory: threads.length > 0,
+    contextTitle: getAssistantContextTitle(workspace),
+    contextSubtitle: getAssistantContextSubtitle(workspace),
     contextKey,
     contextEmpty: selectedBufferId === null,
     loading,
     busy,
     thread: selectedThread,
-    onClearHistory: async () => actions.clearAssistantThreads(threads.map((thread) => thread.id)),
     onStop: async () => selectedThreadId ? actions.interruptAssistantThread(selectedThreadId) : false,
     onSubmitPrompt: async (prompt, attachments: AssistantTurnAttachmentInput[]) => {
       const text = prompt.trim();
@@ -130,12 +136,13 @@ export function useAssistantController({
       const threadId = selectedThreadId ?? (await actions.createAssistantThread('ask'))?.id ?? null;
       return threadId ? actions.importAssistantHistory(threadId, prompt.trim(), attachments) : false;
     },
+    onOpenChannel: actions.openMentionedChannel,
   }), [
     actions.createAssistantThread,
-    actions.clearAssistantThreads,
     actions.importAssistantHistory,
     actions.interruptAssistantThread,
     actions.startAssistantTurn,
+    actions.openMentionedChannel,
     assistant,
     busy,
     canImportHistory,
@@ -145,5 +152,6 @@ export function useAssistantController({
     selectedThreadId,
     selectedBufferId,
     threads,
+    workspace,
   ]);
 }

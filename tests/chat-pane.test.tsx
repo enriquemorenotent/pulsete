@@ -91,6 +91,7 @@ const renderChatPane = (
   overrides: Partial<{
     showChannelAutoJoin: boolean;
     channelAutoJoinActive: boolean;
+    canClearHistory: boolean;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -110,6 +111,8 @@ const renderChatPane = (
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
+      canClearHistory={overrides.canClearHistory}
+      onClearHistory={async () => true}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -121,23 +124,26 @@ const renderChatPane = (
     />
   );
 
-test('grouped sender messages render one avatar with the first two nickname letters', () => {
+test('consecutive sender messages repeat the same inline nick label in chat mode', () => {
   const markup = renderChatPane([
     makeMessage({ id: 'message-1', nick: 'Joby', body: 'first', ts: 1 }),
     makeMessage({ id: 'message-2', nick: 'Joby', body: 'second', ts: 2 }),
   ]);
 
-  const avatars = markup.match(/data-message-avatar="JO"/g) ?? [];
-  assert.equal(avatars.length, 1);
-  assert.match(markup, /Joby/);
+  const nickLabels = markup.match(/>Joby</g) ?? [];
+  assert.equal(nickLabels.length, 2);
+  assert.match(markup, /first/);
+  assert.match(markup, /second/);
+  assert.doesNotMatch(markup, /data-message-avatar=/);
 });
 
-test('compact sender rows keep a one-letter avatar when the nickname is only one character', () => {
+test('compact sender rows keep a one-character nick label without avatar markup', () => {
   const markup = renderChatPane([
     makeMessage({ id: 'message-1', nick: 'Q', body: 'waves', kind: 'action', ts: 1 }),
   ]);
 
-  assert.match(markup, /data-message-avatar="Q"/);
+  assert.match(markup, />Q</);
+  assert.doesNotMatch(markup, /data-message-avatar=/);
 });
 
 test('action rows keep the sender label and hide the duplicated nick in the body', () => {
@@ -150,14 +156,14 @@ test('action rows keep the sender label and hide the duplicated nick in the body
   assert.ok(!markup.includes('* cubanita'));
 });
 
-test('standalone notice rows with a sender render the same avatar fallback', () => {
+test('standalone notice rows with a sender render sender text without avatar markup', () => {
   const markup = renderChatPane([
     makeMessage({ id: 'message-1', nick: 'Nova', body: 'Heads up', kind: 'notice', ts: 1 }),
   ]);
 
-  assert.match(markup, /data-message-avatar="NO"/);
   assert.match(markup, /Nova/);
   assert.match(markup, />notice</i);
+  assert.doesNotMatch(markup, /data-message-avatar=/);
 });
 
 test('channel headers can render an active autojoin toggle', () => {
@@ -178,4 +184,18 @@ test('channel headers render an inactive autojoin toggle state', () => {
 
   assert.match(markup, /Autojoin Off/);
   assert.match(markup, /aria-pressed="false"/);
+});
+
+test('channel headers expose clear history for normal chat buffers', () => {
+  const markup = renderChatPane([], {
+    canClearHistory: true,
+  });
+
+  assert.match(markup, /Clear history/);
+});
+
+test('channel headers hide clear history when the action is not available', () => {
+  const markup = renderChatPane([]);
+
+  assert.doesNotMatch(markup, /Clear history/);
 });

@@ -46,6 +46,12 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   }
 
   const historyMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history$/);
+  if (historyMatch && req.method === 'DELETE') {
+    const bufferId = decodeRouteParam(historyMatch[1]);
+    writeJson(res, 200, { ok: true, ...context.buffers.clearHistory(bufferId) });
+    return true;
+  }
+
   if (historyMatch && req.method === 'GET') {
     const bufferId = decodeRouteParam(historyMatch[1]);
     const limit = normalizeHistoryLimit(url.searchParams.get('limit'));

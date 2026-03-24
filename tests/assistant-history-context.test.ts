@@ -82,3 +82,25 @@ test('assistant history context formats action messages as transcript actions', 
   assert.match(context, /\* alice waves/);
   assert.doesNotMatch(context, /alice: waves/);
 });
+
+test('assistant history context formats quit messages as channel events', () => {
+  const messages: ChatMessage[] = [{
+    id: 'message-1',
+    networkId: 'network-1',
+    target: '#general',
+    nick: 'alice',
+    body: 'alice quit (bye)',
+    kind: 'quit',
+    self: false,
+    ts: Date.parse('2026-03-23T18:00:00Z'),
+  }];
+
+  const context = buildAssistantHistoryContext({
+    messages,
+    prompt: 'Who left?',
+    task: 'ask',
+  });
+
+  assert.match(context, /\(quit\) alice quit \(bye\)/);
+  assert.doesNotMatch(context, /alice: alice quit/);
+});

@@ -6,6 +6,7 @@ import type { RuntimeEvent } from './irc-types.js';
 import { requireStoredNetwork } from './runtime-network-guard.js';
 import {
   appendConversationMessage,
+  clearConversationBufferHistory,
   closeConversationQueryBuffer,
   listConversationBufferHistory,
   markConversationBufferRead,
@@ -48,6 +49,26 @@ export class RuntimeConversationService {
 
   listBufferHistory(bufferId: string, limit: number) {
     return listConversationBufferHistory(this.options.conversations, bufferId, limit);
+  }
+
+  clearBufferHistory(bufferId: string) {
+    const { buffer, bufferUpdate, deletedMessages } = clearConversationBufferHistory(this.options.conversations, bufferId);
+    const messages: ServerMessage[] = [];
+    if (deletedMessages.length > 0) {
+      messages.push({
+        type: 'message.remove',
+        networkId: buffer.networkId,
+        target: buffer.target,
+        messageIds: deletedMessages.map((message) => message.id),
+      });
+    }
+    if (bufferUpdate) {
+      messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
+    }
+    return {
+      buffer: bufferUpdate ?? buffer,
+      messages,
+    };
   }
 
   handleStatusEvent(event: Extract<RuntimeEvent, { type: 'status' }>) {

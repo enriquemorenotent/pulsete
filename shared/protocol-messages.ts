@@ -109,6 +109,12 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     message: z.string(),
   }),
   baseServerSchema.extend({ type: z.literal('message.append'), message: chatMessageSchema }),
+  baseServerSchema.extend({
+    type: z.literal('message.remove'),
+    networkId: z.string(),
+    target: z.string(),
+    messageIds: z.array(z.string()),
+  }),
   baseServerSchema.extend({ type: z.literal('assistant.snapshot'), assistant: assistantSnapshotSchema }),
   baseServerSchema.extend({ type: z.literal('assistant.thread.loaded'), thread: assistantThreadSchema }),
   baseServerSchema.extend({

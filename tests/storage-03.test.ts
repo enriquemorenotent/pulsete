@@ -124,6 +124,90 @@ test('message history preserves insertion order when timestamps match', () => {
   );
 });
 
+test('deleteMessagesByIdPrefixes removes imported logs without touching normal messages', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  const preserved = storage.conversations.appendMessage({
+    id: 'message-keep',
+    networkId: network.id,
+    target: '#help',
+    nick: 'alice',
+    body: 'keep me',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  const imported = storage.conversations.appendMessage({
+    id: 'import:turn-1:0',
+    networkId: network.id,
+    target: '#help',
+    nick: 'bob',
+    body: 'delete me',
+    kind: 'line',
+    self: false,
+    ts: 2,
+  });
+  storage.conversations.appendMessage({
+    id: 'import:turn-2:0',
+    networkId: network.id,
+    target: '#help',
+    nick: 'charlie',
+    body: 'delete me too',
+    kind: 'line',
+    self: false,
+    ts: 3,
+  });
+
+  const deleted = storage.conversations.deleteMessagesByIdPrefixes(['import:turn-1:', 'import:turn-2:']);
+
+  assert.deepEqual(deleted.map((message) => message.id), ['import:turn-1:0', 'import:turn-2:0']);
+  assert.deepEqual(storage.conversations.listMessages(network.id, '#help', 10), [preserved]);
+  assert.equal(storage.conversations.getMessageById(imported.id), null);
+});
+
+test('deleteMessages removes all transcript rows for a matched buffer target', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  storage.conversations.appendMessage({
+    id: 'keep-server',
+    networkId: network.id,
+    target: 'server',
+    nick: null,
+    body: 'server line',
+    kind: 'system',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.appendMessage({
+    id: 'delete-1',
+    networkId: network.id,
+    target: 'Alice',
+    nick: 'alice',
+    body: 'hello',
+    kind: 'line',
+    self: false,
+    ts: 2,
+  });
+  storage.conversations.appendMessage({
+    id: 'delete-2',
+    networkId: network.id,
+    target: 'alice',
+    nick: 'alice',
+    body: 'world',
+    kind: 'line',
+    self: false,
+    ts: 3,
+  });
+
+  const deleted = storage.conversations.deleteMessages(network.id, 'ALICE');
+
+  assert.deepEqual(deleted.map((message) => message.id), ['delete-1', 'delete-2']);
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'alice', 10), []);
+  assert.equal(storage.conversations.getMessageById('keep-server')?.body, 'server line');
+});
+
 test('legacy stored action rows are normalized when read back', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

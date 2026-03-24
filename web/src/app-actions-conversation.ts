@@ -1,5 +1,6 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
+import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import {
   type AppActionContext,
@@ -22,6 +23,8 @@ export const createConversationActions = ({
   getGatewaySocket,
   sendGatewayMessage,
 }: ConversationActionParams): ConversationActions => {
+  const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
+
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
     const { conversation, state } = getSession();
     const existingBuffer = conversation.findChannelBuffer(networkId, channel);
@@ -82,5 +85,14 @@ export const createConversationActions = ({
     dispatch({ type: 'open-channel-list', networkId });
   };
 
-  return { joinChannel, openOrSelectQueryBuffer, openChannelListForNetwork };
+  const clearBufferHistory = async (bufferId: string) =>
+    executeMutation({
+      request: () => api.clearBufferHistory(bufferId),
+      mapResult: () => true,
+      successMessage: null,
+      errorMessage: 'Failed to clear chat history',
+      failureValue: false,
+    });
+
+  return { clearBufferHistory, joinChannel, openOrSelectQueryBuffer, openChannelListForNetwork };
 };

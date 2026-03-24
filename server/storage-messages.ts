@@ -43,10 +43,49 @@ export const listAllMessages = (db: DatabaseSync, networkId: string, target: str
   return selectMessages(db, networkId, matchingTargets);
 };
 
+export const deleteMessages = (db: DatabaseSync, networkId: string, target: string) => {
+  const matchingTargets = listMatchingTargets(db, networkId, target);
+  if (matchingTargets.length === 0) {
+    return [];
+  }
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const sql = `
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})
+    ORDER BY ts ASC, rowid ASC
+  `;
+  const rows = db.prepare(sql).all(networkId, ...matchingTargets) as MessageRow[];
+  if (rows.length === 0) {
+    return [];
+  }
+  db.prepare(`DELETE FROM messages WHERE networkId = ? AND target IN (${placeholders})`).run(networkId, ...matchingTargets);
+  return rows.map(toMessage);
+};
+
 export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
   const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages ORDER BY ts DESC, rowid DESC LIMIT ?';
   const rows = db.prepare(sql).all(limit) as MessageRow[];
   return rows.reverse().map(toMessage);
+};
+
+export const deleteMessagesByIdPrefixes = (db: DatabaseSync, prefixes: string[]) => {
+  const clauses = buildIdPrefixWhereClause(prefixes);
+  if (!clauses) {
+    return [];
+  }
+  const sql = `
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE ${clauses.where}
+    ORDER BY ts ASC, rowid ASC
+  `;
+  const rows = db.prepare(sql).all(...clauses.args) as MessageRow[];
+  if (rows.length === 0) {
+    return [];
+  }
+  db.prepare(`DELETE FROM messages WHERE ${clauses.where}`).run(...clauses.args);
+  return rows.map(toMessage);
 };
 
 type MessageLookup = (messageId: string) => MessageInput | null;
@@ -77,4 +116,15 @@ const selectMessages = (
     : [networkId, ...matchingTargets];
   const rows = db.prepare(sql).all(...args) as MessageRow[];
   return rows.reverse().map(toMessage);
+};
+
+const buildIdPrefixWhereClause = (prefixes: string[]) => {
+  const normalized = [...new Set(prefixes.filter(Boolean))];
+  if (normalized.length === 0) {
+    return null;
+  }
+  return {
+    where: normalized.map(() => 'substr(id, 1, ?) = ?').join(' OR '),
+    args: normalized.flatMap((prefix) => [prefix.length, prefix]),
+  };
 };

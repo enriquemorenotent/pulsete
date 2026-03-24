@@ -31,6 +31,18 @@ type AppServerEvents = {
 };
 
 const restartDelayMs = 1_000;
+const assistantAppServerConfigOverrides = [
+  // Pulsete should not inherit unsupported reasoning defaults from the user's global Codex config.
+  'model_reasoning_effort="high"',
+  'plan_mode_reasoning_effort="high"',
+] as const;
+
+export const buildAssistantAppServerSpawnArgs = () => ([
+  ...assistantAppServerConfigOverrides.flatMap((override) => ['-c', override]),
+  'app-server',
+  '--listen',
+  'stdio://',
+]);
 
 export class AssistantAppServer extends EventEmitter<AppServerEvents> {
   private child: ChildProcessWithoutNullStreams | null = null;
@@ -98,7 +110,7 @@ export class AssistantAppServer extends EventEmitter<AppServerEvents> {
   private async spawnAndInitialize() {
     this.ready = false;
     this.rejectPending(new Error('Assistant app-server restarted'));
-    const child = spawn('codex', ['app-server', '--listen', 'stdio://'], {
+    const child = spawn('codex', buildAssistantAppServerSpawnArgs(), {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.child = child;

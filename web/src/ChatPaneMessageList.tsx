@@ -3,14 +3,12 @@ import { Plug2 } from 'lucide-react';
 import type { ChatMessage } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
-import { MessageAvatar } from './MessageAvatar.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
-import { ChatPaneMessageGroup } from './ChatPaneMessageGroup.js';
+import { ServerMessageGroup } from './ServerMessageGroup.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import {
   buildRenderBlocks,
   formatMessageTime,
-  getGroupSourceLabel,
   isActionMessage,
   isCompactMessage,
   messageTone,
@@ -47,11 +45,11 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
         <div className="space-y-0.5 font-mono text-[12px]">
           {renderBlocks.map((block) =>
             block.kind === 'group' ? (
-              <ChatPaneMessageGroup
+              <ServerMessageGroup
                 key={block.messages[0].id}
                 messages={block.messages}
                 mode={props.mode}
-                sourceLabel={getGroupSourceLabel(block.messages[0], props.listKind)}
+                sourceLabel={block.sourceLabel}
                 onOpenChannel={props.onOpenChannel}
               />
             ) : isCompactMessage(block.message) ? (
@@ -63,32 +61,20 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
               />
             ) : (
               <article key={block.message.id} className={cn('border px-2 py-1.5', messageTone(block.message))}>
-                <div
-                  className={cn(
-                    'grid gap-x-3',
-                    block.message.nick ? 'grid-cols-[2.75rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]'
-                  )}
-                >
-                  {block.message.nick ? (
-                    <div className="pt-0.5">
-                      <MessageAvatar nick={block.message.nick} />
-                    </div>
-                  ) : null}
-                  <div className="min-w-0">
-                    <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                      <span>{formatMessageTime(block.message.ts)}</span>
-                      {block.message.nick ? <span className="font-medium text-foreground">{block.message.nick}</span> : null}
-                      {showKindLabel(block.message) ? <span>{block.message.kind}</span> : null}
-                    </div>
-                    <p
-                      className={cn(
-                        'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground',
-                        isActionMessage(block.message) && 'italic'
-                      )}
-                    >
-                      <FormattedMessageText text={block.message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
-                    </p>
+                <div className="min-w-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                    <span>{formatMessageTime(block.message.ts)}</span>
+                    {block.message.nick ? <span className="font-medium text-foreground">{block.message.nick}</span> : null}
+                    {showKindLabel(block.message) ? <span>{block.message.kind}</span> : null}
                   </div>
+                  <p
+                    className={cn(
+                      'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-foreground',
+                      isActionMessage(block.message) && 'italic'
+                    )}
+                  >
+                    <FormattedMessageText text={block.message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
+                  </p>
                 </div>
               </article>
             )

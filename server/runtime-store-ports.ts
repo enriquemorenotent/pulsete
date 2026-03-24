@@ -49,6 +49,8 @@ export type RuntimeConversationStore = {
   updateChannelTopic(networkId: string, channelName: string, topic: string): void;
   listMessages(networkId: string, target: string, limit?: number): AppSnapshot['messages'];
   listAllMessages(networkId: string, target: string): AppSnapshot['messages'];
+  deleteMessages(networkId: string, target: string): AppSnapshot['messages'];
+  deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];
   upsertChannel(input: ChannelInput): ChannelState;
   upsertBuffer(input: BufferInput): BufferState;
   upsertQuery(networkId: string, target: string): BufferState;

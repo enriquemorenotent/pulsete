@@ -30,6 +30,27 @@ export const listConversationBufferHistory = (store: RuntimeConversationStore, b
   return store.listMessages(buffer.networkId, buffer.target, limit);
 };
 
+export const clearConversationBufferHistory = (store: RuntimeConversationStore, bufferId: string) => {
+  const buffer = getRequiredBuffer(store, bufferId);
+  if (buffer.kind === 'server') {
+    throw badRequest('Only channels and private messages can be cleared');
+  }
+  const deletedMessages = store.deleteMessages(buffer.networkId, buffer.target);
+  if (buffer.unread === 0) {
+    return {
+      buffer,
+      bufferUpdate: null,
+      deletedMessages,
+    };
+  }
+  store.markBufferRead(bufferId);
+  return {
+    buffer,
+    bufferUpdate: getRequiredBuffer(store, bufferId),
+    deletedMessages,
+  };
+};
+
 export const appendConversationMessage = (store: RuntimeConversationStore, message: MessageInput) => {
   const bufferUpdate = resolveMessageBuffer(store, message);
   return {

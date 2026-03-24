@@ -101,15 +101,16 @@ const assistantSnapshot: AssistantSnapshot = {
 
 const assistantProps: AssistantPanelProps = {
   assistant: assistantSnapshot,
-  canClearHistory: true,
   canImportHistory: true,
+  contextSubtitle: 'Use this thread to ask about #general.',
   contextKey: 'buffer-channel',
   contextEmpty: false,
+  contextTitle: '#general',
   loading: false,
   busy: false,
   thread: assistantThread,
-  onClearHistory: async () => true,
   onImportHistory: async () => true,
+  onOpenChannel: () => {},
   onStop: async () => true,
   onSubmitPrompt: async () => true,
 };
@@ -151,7 +152,23 @@ test('channel workspace renders user and assistant tabs', () => {
   assert.match(markup, /Users/);
   assert.match(markup, /Assistant/);
   assert.match(markup, /alice/);
-  assert.match(markup, /Clear/);
+  assert.doesNotMatch(markup, /Summary goes here/);
+});
+
+test('channel workspace can open the assistant tab by default', () => {
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={createWorkspace({})}
+      nicklist={nicklist}
+      assistant={assistantProps}
+      initialTab="assistant"
+    />
+  );
+
+  assert.match(markup, /Users/);
+  assert.match(markup, /Assistant/);
+  assert.match(markup, /Summary goes here/);
+  assert.doesNotMatch(markup, /Owners/);
 });
 
 test('query workspace renders the assistant panel without sidebar tabs', () => {
@@ -168,8 +185,9 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
       nicklist={nicklist}
       assistant={{
         ...assistantProps,
-        canClearHistory: false,
+        contextSubtitle: 'Use this thread to ask about alice.',
         contextKey: 'buffer-query',
+        contextTitle: 'alice',
         thread: null,
       }}
     />
@@ -177,11 +195,12 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
 
   assert.doesNotMatch(markup, /Assistant/);
   assert.doesNotMatch(markup, /Users/);
-  assert.match(markup, /Ask a question\./);
-  assert.match(markup, /Add files/);
-  assert.match(markup, /Import logs/);
-  assert.match(markup, /Send/);
-  assert.doesNotMatch(markup, /Clear/);
+  assert.match(markup, /No assistant history yet/);
+  assert.match(markup, /Scoped to alice/);
+  assert.match(markup, /Ask about alice/);
+  assert.match(markup, />Add files<\/button>/);
+  assert.match(markup, />Import logs<\/button>/);
+  assert.match(markup, />Send<\/button>/);
   assert.doesNotMatch(markup, /Stop/);
   assert.doesNotMatch(markup, /Drop files to attach/);
   assert.doesNotMatch(markup, /Threads/);
@@ -206,16 +225,16 @@ test('busy assistant state shows Stop instead of Send and hides import controls'
       assistant={{
         ...assistantProps,
         busy: true,
-        canClearHistory: false,
         contextKey: 'buffer-query',
+        contextTitle: 'alice',
         thread: assistantThread,
       }}
     />
   );
 
   assert.match(markup, /Thinking…/);
-  assert.match(markup, /Stop/);
-  assert.doesNotMatch(markup, /Send/);
-  assert.doesNotMatch(markup, /Import logs/);
-  assert.doesNotMatch(markup, /Add files/);
+  assert.match(markup, />Stop<\/button>/);
+  assert.doesNotMatch(markup, />Send<\/button>/);
+  assert.doesNotMatch(markup, />Import logs<\/button>/);
+  assert.doesNotMatch(markup, />Add files<\/button>/);
 });

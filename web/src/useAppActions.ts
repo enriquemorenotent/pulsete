@@ -94,6 +94,7 @@ export type ChatActionSet = Pick<
   AppActions,
   | 'addFriend'
   | 'closeBuffer'
+  | 'clearBufferHistory'
   | 'closeChannel'
   | 'closeChannelList'
   | 'joinChannelFromList'
@@ -128,6 +129,7 @@ export type AssistantActionSet = Pick<
   | 'importAssistantHistory'
   | 'loadAssistantThread'
   | 'logoutAssistant'
+  | 'openMentionedChannel'
   | 'setAssistantActiveThread'
   | 'startAssistantChatgptLogin'
   | 'startAssistantTurn'

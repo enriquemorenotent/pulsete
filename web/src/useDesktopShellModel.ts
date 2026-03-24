@@ -102,6 +102,10 @@ export function useDesktopChatModel({
   ui,
 }: DesktopChatModelParams): DesktopShellModel['chat'] {
   const channelAutoJoin = resolveCurrentChannelAutoJoinState(networks, workspace);
+  const canClearHistory =
+    workspace.selectedBuffer?.kind === 'channel'
+    || workspace.selectedBuffer?.kind === 'query';
+  const clearHistoryBufferId = canClearHistory ? workspace.selectedBuffer?.id ?? null : null;
   return useMemo(() => ({
     workspace,
     friends,
@@ -118,6 +122,10 @@ export function useDesktopChatModel({
     showChannelAutoJoin: channelAutoJoin.available,
     channelAutoJoinActive: channelAutoJoin.active,
     onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
+    canClearHistory,
+    onClearHistory: clearHistoryBufferId
+      ? () => actions.clearBufferHistory(clearHistoryBufferId)
+      : undefined,
     channelList,
     channelListNetwork,
     onCloseChannelList: actions.closeChannelList,
@@ -129,6 +137,7 @@ export function useDesktopChatModel({
   }), [
     actions.addFriend,
     actions.closeBuffer,
+    actions.clearBufferHistory,
     actions.closeChannel,
     actions.closeChannelList,
     actions.joinChannelFromList,
@@ -141,6 +150,8 @@ export function useDesktopChatModel({
     channelAutoJoin.active,
     channelAutoJoin.available,
     channelListNetwork,
+    canClearHistory,
+    clearHistoryBufferId,
     composer.draft,
     composer.recallNewerDraft,
     composer.recallOlderDraft,

@@ -38,7 +38,7 @@ export function SidebarResizeHandle(props: SidebarResizeHandleProps) {
   };
 
   return (
-    <div className="group hidden w-4 shrink-0 items-stretch xl:flex">
+    <div className="group hidden w-4 shrink-0 items-stretch lg:flex">
       <div
         role="separator"
         tabIndex={0}

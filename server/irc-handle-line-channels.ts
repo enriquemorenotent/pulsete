@@ -99,13 +99,21 @@ export const handleKick = (connection: IrcChannelEventContext, params: string[],
 };
 
 export const handleQuit = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
-  emitStatus(connection, `${nick ?? 'Someone'} quit (${params[0] ?? 'quit'})`);
+  const reason = params[0] ?? 'quit';
+  emitStatus(connection, `${nick ?? 'Someone'} quit (${reason})`);
   if (!nick) {
     return;
   }
   for (const [channel, users] of connection.getTrackedChannelUserEntries()) {
     const nextUsers = connection.updateChannelUsers(channel, nick, false);
     if (nextUsers.length !== users.length) {
+      emitMessage(connection, createMessage(connection, {
+        target: channel,
+        nick,
+        body: `${nick} quit (${reason})`,
+        kind: 'quit',
+        self: isSelfNick(connection, nick),
+      }));
       emitChannel(connection, channel, { users: nextUsers });
     }
   }

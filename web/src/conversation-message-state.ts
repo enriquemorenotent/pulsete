@@ -45,6 +45,36 @@ export const removeNetworkMessages = (messages: ConversationMessages, networkId:
   return Object.keys(next).length === Object.keys(messages).length ? messages : next;
 };
 
+export const removeConversationMessages = (
+  messages: ConversationMessages,
+  networkId: string,
+  target: string,
+  messageIds: string[],
+) => {
+  if (messageIds.length === 0) {
+    return messages;
+  }
+  const key = toConversationMessageKey(networkId, target);
+  const bucket = messages[key];
+  if (!bucket || bucket.length === 0) {
+    return messages;
+  }
+  const deletedIds = new Set(messageIds);
+  const nextBucket = bucket.filter((message) => !deletedIds.has(message.id));
+  if (nextBucket.length === bucket.length) {
+    return messages;
+  }
+  if (nextBucket.length === 0) {
+    const next = { ...messages };
+    delete next[key];
+    return next;
+  }
+  return {
+    ...messages,
+    [key]: nextBucket,
+  };
+};
+
 const mergeMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => {
   const merged = new Map<string, ChatMessage>();
   for (const message of current) {

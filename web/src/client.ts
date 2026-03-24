@@ -64,6 +64,11 @@ export const api = {
     }),
   loadHistory: (bufferId: string, limit = historyWindowLimit) =>
     apiRequest<{ messages: ChatMessage[] }>(`/api/buffers/${bufferId}/history?limit=${limit}`),
+  clearBufferHistory: (bufferId: string) =>
+    apiRequest<{ ok: boolean; buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/history`, {
+      method: 'DELETE',
+      body: '{}',
+    }),
   markBufferRead: (bufferId: string) =>
     apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',
@@ -115,7 +120,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   deleteAssistantThread: (threadId: string) =>
-    apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}`, {
+    apiRequest<{ ok: boolean; messages: ServerMessage[] }>(`/api/assistant/threads/${encodeURIComponent(threadId)}`, {
       method: 'DELETE',
       body: '{}',
     }),

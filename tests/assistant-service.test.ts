@@ -93,6 +93,8 @@ const conversationStore: RuntimeConversationStore = {
   updateChannelTopic: () => {},
   listMessages: () => [],
   listAllMessages: () => [],
+  deleteMessages: () => [],
+  deleteMessagesByIdPrefixes: () => [],
   upsertChannel: () => {
     throw new Error('Not implemented in assistant-service test');
   },
@@ -241,14 +243,84 @@ test('assistant service deletes idle threads and clears the active thread refere
     autoStart: false,
   });
 
-  await service.deleteThread('thread-1');
+  const result = await service.deleteThread('thread-1');
 
   assert.equal(assistantStore.getThread('thread-1'), null);
   assert.equal(service.snapshot().activeThreadId, null);
-  assert.equal(published.length, 1);
-  const snapshotMessage = published[0];
-  assert.ok(snapshotMessage && !Array.isArray(snapshotMessage));
-  assert.equal((snapshotMessage as ServerMessage).type, 'assistant.snapshot');
+  assert.deepEqual(result.messages.map((message) => message.type), ['assistant.snapshot']);
+  assert.equal(published.length, 0);
+});
+
+test('assistant service clears imported conversation messages when deleting a thread', async () => {
+  const assistantStore = createAssistantStore([
+    makeThread({ id: 'thread-1', turnStatus: null, target: '#ops' }),
+  ]);
+  assistantStore.saveThreadTurns('thread-1', [
+    {
+      id: 'turn-import',
+      status: 'completed',
+      error: null,
+      items: [],
+    },
+    {
+      id: 'turn-ask',
+      status: 'completed',
+      error: null,
+      items: [],
+    },
+  ]);
+  const deletedMessages: ChatMessage[] = [
+    {
+      id: 'import:turn-import:0',
+      networkId: 'network-1',
+      target: '#ops',
+      nick: 'alice',
+      body: 'hello',
+      kind: 'line',
+      self: false,
+      ts: 10,
+    },
+    {
+      id: 'import:turn-import:1',
+      networkId: 'network-1',
+      target: '#ops',
+      nick: 'bob',
+      body: 'hi',
+      kind: 'line',
+      self: false,
+      ts: 11,
+    },
+  ];
+  let receivedPrefixes: string[] = [];
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: {
+      ...conversationStore,
+      deleteMessagesByIdPrefixes: (prefixes) => {
+        receivedPrefixes = prefixes;
+        return deletedMessages;
+      },
+    },
+    networks: networkStore,
+    publish: () => {},
+    autoStart: false,
+  });
+
+  const result = await service.deleteThread('thread-1');
+
+  assert.deepEqual(receivedPrefixes, ['import:turn-import:', 'import:turn-ask:']);
+  assert.deepEqual(result.messages, [
+    {
+      type: 'message.remove',
+      networkId: 'network-1',
+      target: '#ops',
+      messageIds: ['import:turn-import:0', 'import:turn-import:1'],
+    },
+    {
+      type: 'assistant.snapshot',
+      assistant: service.snapshot(),
+    },
+  ]);
 });
 
 test('assistant service clears a running thread and discards late completion events', async () => {
@@ -271,7 +343,7 @@ test('assistant service clears a running thread and discards late completion eve
       call: (method: string, params?: unknown) => Promise<unknown>;
     };
     handleTurnStarted: (params: { threadId: string; turn: { id: string; status: string; error: unknown; items: [] } }) => void;
-    handleTurnCompleted: (params: { threadId: string; turn: { id: string; status: string; error: unknown; items: [] } }) => void;
+    handleTurnCompleted: (params: { threadId: string; turn: { id: string; status: string; error: unknown; items: [] } }) => Promise<void>;
   };
   privateService.appServer = {
     call: async (method: string, params?: unknown) => {
@@ -295,7 +367,7 @@ test('assistant service clears a running thread and discards late completion eve
   });
   published.length = 0;
 
-  await service.deleteThread('thread-1');
+  const result = await service.deleteThread('thread-1');
 
   assert.equal(assistantStore.getThread('thread-1'), null);
   assert.deepEqual(calls.at(-1), {
@@ -305,11 +377,11 @@ test('assistant service clears a running thread and discards late completion eve
       turnId: 'turn-1',
     },
   });
-  assert.equal(published.length, 1);
-  assert.equal((published[0] as ServerMessage).type, 'assistant.snapshot');
+  assert.deepEqual(result.messages.map((message) => message.type), ['assistant.snapshot']);
+  assert.equal(published.length, 0);
 
   published.length = 0;
-  privateService.handleTurnCompleted({
+  await privateService.handleTurnCompleted({
     threadId: 'execution-1',
     turn: {
       id: 'turn-1',
@@ -356,8 +428,9 @@ test('assistant service clears a pending thread and interrupts it once the turn 
   await service.startTurn({ threadId: 'thread-1', prompt: 'Hello' });
   published.length = 0;
 
-  await service.deleteThread('thread-1');
+  const result = await service.deleteThread('thread-1');
   assert.equal(assistantStore.getThread('thread-1'), null);
+  assert.deepEqual(result.messages.map((message) => message.type), ['assistant.snapshot']);
 
   privateService.handleTurnStarted({
     threadId: 'execution-1',
@@ -375,8 +448,7 @@ test('assistant service clears a pending thread and interrupts it once the turn 
     'turn/start',
     'turn/interrupt',
   ]);
-  assert.equal(published.length, 1);
-  assert.equal((published[0] as ServerMessage).type, 'assistant.snapshot');
+  assert.equal(published.length, 0);
 });
 
 test('assistant service rejects starting a new turn while the current one is still running', async () => {
@@ -744,7 +816,7 @@ test('assistant service persists attachment metadata locally and excludes prior 
     handleTurnCompleted: (params: {
       threadId: string;
       turn: { id: string; status: string; error: unknown; items: [] };
-    }) => void;
+    }) => Promise<void>;
   };
   privateService.appServer = {
     call: async (method: string, params?: unknown) => {
@@ -802,7 +874,7 @@ test('assistant service persists attachment metadata locally and excludes prior 
       phase: null,
     },
   });
-  privateService.handleTurnCompleted({
+  await privateService.handleTurnCompleted({
     threadId: 'execution-1',
     turn: {
       id: 'turn-1',
@@ -923,7 +995,7 @@ test('assistant service imports parsed log messages into conversation history', 
         error: unknown;
         items: Array<{ type: 'agentMessage'; id: string; text: string; phase: null }>;
       };
-    }) => void;
+    }) => Promise<void>;
   };
   privateService.appServer = {
     call: async (method: string, params?: unknown) => {
@@ -974,7 +1046,7 @@ test('assistant service imports parsed log messages into conversation history', 
       items: [],
     },
   });
-  privateService.handleTurnCompleted({
+  await privateService.handleTurnCompleted({
     threadId: 'execution-1',
     turn: {
       id: 'turn-import-1',
@@ -1058,6 +1130,373 @@ test('assistant service imports parsed log messages into conversation history', 
     'assistant.turn.completed',
     'assistant.snapshot',
   ]);
+});
+
+test('assistant service hydrates import completions from thread/read when completion notifications omit items', async () => {
+  const assistantStore = createAssistantStore([
+    makeThread({
+      id: 'thread-1',
+      bufferId: 'buffer-1',
+      networkId: 'network-1',
+      target: 'alice',
+      title: 'Ask · alice',
+      turnStatus: null,
+    }),
+  ]);
+  const buffer: BufferState = {
+    id: 'buffer-1',
+    networkId: 'network-1',
+    kind: 'query',
+    target: 'alice',
+    unread: 0,
+  };
+  const network: StoredNetworkProfile = {
+    id: 'network-1',
+    templateId: null,
+    managerHidden: false,
+    name: 'ExampleNet',
+    host: 'irc.example.test',
+    port: 6697,
+    tls: true,
+    nick: 'coco',
+    altNicks: [],
+    username: 'coco',
+    realName: 'Coco',
+    hasPassword: false,
+    favorite: false,
+    autoJoin: [],
+  };
+  const appended: ChatMessage[] = [];
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: {
+      ...conversationStore,
+      getBuffer: (bufferId) => bufferId === buffer.id ? buffer : null,
+      upsertQuery: () => buffer,
+      appendMessage: (input) => {
+        appended.push(input);
+        return input;
+      },
+    },
+    networks: {
+      ...networkStore,
+      get: (networkId) => networkId === network.id ? network : null,
+    },
+    publish: () => {},
+    autoStart: false,
+  });
+  const privateService = service as unknown as {
+    appServer: {
+      call: (method: string, params?: unknown) => Promise<unknown>;
+    };
+    handleTurnStarted: (params: { threadId: string; turn: { id: string; status: string; error: unknown; items: [] } }) => void;
+    handleTurnCompleted: (params: {
+      threadId: string;
+      turn: {
+        id: string;
+        status: string;
+        error: unknown;
+        items: [];
+      };
+    }) => Promise<void>;
+  };
+  privateService.appServer = {
+    call: async (method: string) => {
+      if (method === 'thread/start') {
+        return { thread: { id: 'execution-import-hydrate' } };
+      }
+      if (method === 'turn/start') {
+        return {};
+      }
+      if (method === 'thread/read') {
+        return {
+          thread: {
+            id: 'execution-import-hydrate',
+            turns: [{
+              id: 'turn-import-hydrate',
+              status: 'completed',
+              error: null,
+              items: [{
+                type: 'agentMessage',
+                id: 'agent-1',
+                text: JSON.stringify({
+                  messages: [{
+                    ts: Date.parse('2026-03-01T12:00:00Z'),
+                    nick: 'alice',
+                    body: 'hello',
+                    self: false,
+                  }],
+                  notes: [],
+                }),
+                phase: null,
+              }],
+            }],
+          },
+        };
+      }
+      throw new Error(`Unexpected app-server method: ${method}`);
+    },
+  };
+
+  await service.importHistory({
+    threadId: 'thread-1',
+    prompt: 'Import this private log.',
+    attachments: [{
+      id: 'attachment-1',
+      kind: 'text',
+      name: 'alice.log',
+      mimeType: 'text/plain',
+      size: 64,
+      text: '[12:00] <alice> hello',
+    }],
+  });
+
+  privateService.handleTurnStarted({
+    threadId: 'execution-import-hydrate',
+    turn: {
+      id: 'turn-import-hydrate',
+      status: 'inProgress',
+      error: null,
+      items: [],
+    },
+  });
+  await privateService.handleTurnCompleted({
+    threadId: 'execution-import-hydrate',
+    turn: {
+      id: 'turn-import-hydrate',
+      status: 'completed',
+      error: null,
+      items: [],
+    },
+  });
+
+  assert.deepEqual(
+    appended.map((message) => ({
+      target: message.target,
+      nick: message.nick,
+      body: message.body,
+      self: message.self,
+    })),
+    [{
+      target: 'alice',
+      nick: 'alice',
+      body: 'hello',
+      self: false,
+    }],
+  );
+
+  const storedThread = await service.readThread('thread-1');
+  const storedAssistantItem = storedThread.turns[0]?.items[1];
+  assert.equal(storedAssistantItem?.type, 'agentMessage');
+  assert.match(
+    storedAssistantItem?.type === 'agentMessage' ? storedAssistantItem.text : '',
+    /Imported 1 messages from alice\.log into alice\./,
+  );
+});
+
+test('assistant service reports import parse failures with actionable diagnostics', async () => {
+  const assistantStore = createAssistantStore([
+    makeThread({
+      id: 'thread-1',
+      bufferId: 'buffer-1',
+      networkId: 'network-1',
+      target: 'RichJake',
+      title: 'Ask · RichJake',
+      turnStatus: null,
+    }),
+  ]);
+  const buffer: BufferState = {
+    id: 'buffer-1',
+    networkId: 'network-1',
+    kind: 'query',
+    target: 'RichJake',
+    unread: 0,
+  };
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: {
+      ...conversationStore,
+      getBuffer: (bufferId) => bufferId === buffer.id ? buffer : null,
+      upsertQuery: () => buffer,
+      appendMessage: (input) => input,
+    },
+    networks: networkStore,
+    publish: () => {},
+    autoStart: false,
+  });
+  const privateService = service as unknown as {
+    appServer: {
+      call: (method: string, params?: unknown) => Promise<unknown>;
+    };
+    handleTurnStarted: (params: { threadId: string; turn: { id: string; status: string; error: unknown; items: [] } }) => void;
+    handleTurnCompleted: (params: {
+      threadId: string;
+      turn: {
+        id: string;
+        status: string;
+        error: unknown;
+        items: [];
+      };
+    }) => Promise<void>;
+  };
+  privateService.appServer = {
+    call: async (method: string) => {
+      if (method === 'thread/start') {
+        return { thread: { id: 'execution-import-fail' } };
+      }
+      if (method === 'turn/start') {
+        return {};
+      }
+      throw new Error(`Unexpected app-server method: ${method}`);
+    },
+  };
+
+  await service.importHistory({
+    threadId: 'thread-1',
+    prompt: 'Import this tiny log.',
+    attachments: [{
+      id: 'attachment-1',
+      kind: 'text',
+      name: 'richjake.log',
+      mimeType: 'text/plain',
+      size: 20,
+      text: '<RichJake> hi',
+    }],
+  });
+
+  privateService.handleTurnStarted({
+    threadId: 'execution-import-fail',
+    turn: {
+      id: 'turn-import-fail',
+      status: 'inProgress',
+      error: null,
+      items: [],
+    },
+  });
+  await privateService.handleTurnCompleted({
+    threadId: 'execution-import-fail',
+    turn: {
+      id: 'turn-import-fail',
+      status: 'completed',
+      error: null,
+      items: [],
+    },
+  });
+
+  const storedThread = await service.readThread('thread-1');
+  const failedTurn = storedThread.turns[0];
+  assert.equal(failedTurn?.status, 'failed');
+  assert.match(failedTurn?.error ?? '', /Import failed: Assistant did not return import data/);
+  assert.match(failedTurn?.error ?? '', /did not return any assistant response text to parse/);
+  assert.match(failedTurn?.error ?? '', /\(no assistant response text was returned\)/);
+  assert.match(failedTurn?.error ?? '', /\[assistant import\]/);
+});
+
+test('assistant service simplifies structured turn errors from the app-server', async () => {
+  const assistantStore = createAssistantStore([
+    makeThread({
+      id: 'thread-1',
+      bufferId: 'buffer-1',
+      networkId: 'network-1',
+      target: 'RichJake',
+      title: 'Ask · RichJake',
+      turnStatus: null,
+    }),
+  ]);
+  const buffer: BufferState = {
+    id: 'buffer-1',
+    networkId: 'network-1',
+    kind: 'query',
+    target: 'RichJake',
+    unread: 0,
+  };
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: {
+      ...conversationStore,
+      getBuffer: (bufferId) => bufferId === buffer.id ? buffer : null,
+      upsertQuery: () => buffer,
+      appendMessage: (input) => input,
+    },
+    networks: networkStore,
+    publish: () => {},
+    autoStart: false,
+  });
+  const privateService = service as unknown as {
+    appServer: {
+      call: (method: string, params?: unknown) => Promise<unknown>;
+    };
+    handleTurnStarted: (params: { threadId: string; turn: { id: string; status: string; error: unknown; items: [] } }) => void;
+    handleTurnCompleted: (params: {
+      threadId: string;
+      turn: {
+        id: string;
+        status: string;
+        error: unknown;
+        items: [];
+      };
+    }) => Promise<void>;
+  };
+  privateService.appServer = {
+    call: async (method: string) => {
+      if (method === 'thread/start') {
+        return { thread: { id: 'execution-import-error' } };
+      }
+      if (method === 'turn/start') {
+        return {};
+      }
+      throw new Error(`Unexpected app-server method: ${method}`);
+    },
+  };
+
+  await service.importHistory({
+    threadId: 'thread-1',
+    prompt: 'Import this tiny log.',
+    attachments: [{
+      id: 'attachment-1',
+      kind: 'text',
+      name: 'richjake.log',
+      mimeType: 'text/plain',
+      size: 20,
+      text: '<RichJake> hi',
+    }],
+  });
+
+  privateService.handleTurnStarted({
+    threadId: 'execution-import-error',
+    turn: {
+      id: 'turn-import-error',
+      status: 'inProgress',
+      error: null,
+      items: [],
+    },
+  });
+  await privateService.handleTurnCompleted({
+    threadId: 'execution-import-error',
+    turn: {
+      id: 'turn-import-error',
+      status: 'failed',
+      error: {
+        message: JSON.stringify({
+          error: {
+            type: 'invalid_request_error',
+            message: "Unsupported value: 'xhigh' is not supported with the active model.",
+            param: 'reasoning.effort',
+          },
+          status: 400,
+        }),
+      },
+      items: [],
+    },
+  });
+
+  const storedThread = await service.readThread('thread-1');
+  const failedTurn = storedThread.turns[0];
+  assert.equal(failedTurn?.status, 'failed');
+  assert.equal(
+    failedTurn?.error,
+    "Unsupported value: 'xhigh' is not supported with the active model.",
+  );
 });
 
 test('assistant service ignores stale login completions from superseded auth flows', async () => {

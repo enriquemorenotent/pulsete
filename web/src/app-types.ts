@@ -91,6 +91,7 @@ export type Action =
   | { type: 'select'; selection: SelectedBuffer | null }
   | { type: 'append-message'; message: ChatMessage }
   | { type: 'append-messages'; messages: ChatMessage[] }
+  | { type: 'remove-messages'; networkId: string; target: string; messageIds: string[] }
   | { type: 'upsert-channel'; channel: ChannelState }
   | { type: 'remove-channel'; channelId: string; networkId: string }
   | { type: 'add-pending-channel'; pendingChannel: PendingChannelState }

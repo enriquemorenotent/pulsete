@@ -36,6 +36,7 @@ export type GatewayActions = {
 
 export type ConversationActions = {
   joinChannel: (networkId: string, channel: string, sourceBufferId?: string) => boolean;
+  clearBufferHistory: (bufferId: string) => Promise<boolean>;
   openOrSelectQueryBuffer: (network: NetworkProfile, nick: string) => Promise<BufferState>;
   openChannelListForNetwork: (networkId: string) => Promise<void>;
 };
