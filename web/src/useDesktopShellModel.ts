@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
+import { resolveCurrentChannelAutoJoinState } from './channel-autojoin.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { ComposerController } from './composer-history.js';
 import type { AppUiState } from './useAppUiState.js';
@@ -24,6 +25,7 @@ type DesktopChatModelParams = {
   actions: ChatActionSet;
   composer: ComposerController;
   friends: State['domain']['friends'];
+  networks: State['domain']['networks'];
   channelList: State['transient']['channelList'];
   channelListNetwork: ChatPaneProps['channelListNetwork'];
   selectedMessages: ChatPaneProps['selectedMessages'];
@@ -92,12 +94,14 @@ export function useDesktopChatModel({
   actions,
   composer,
   friends,
+  networks,
   channelList,
   channelListNetwork,
   selectedMessages,
   workspace,
   ui,
 }: DesktopChatModelParams): DesktopShellModel['chat'] {
+  const channelAutoJoin = resolveCurrentChannelAutoJoinState(networks, workspace);
   return useMemo(() => ({
     workspace,
     friends,
@@ -111,6 +115,9 @@ export function useDesktopChatModel({
     onSend: actions.sendComposer,
     onAddFriend: actions.addFriend,
     onRemoveFriend: actions.removeFriend,
+    showChannelAutoJoin: channelAutoJoin.available,
+    channelAutoJoinActive: channelAutoJoin.active,
+    onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
     channelList,
     channelListNetwork,
     onCloseChannelList: actions.closeChannelList,
@@ -129,13 +136,17 @@ export function useDesktopChatModel({
     actions.openMentionedChannel,
     actions.removeFriend,
     actions.sendComposer,
+    actions.toggleCurrentChannelAutoJoin,
     channelList,
+    channelAutoJoin.active,
+    channelAutoJoin.available,
     channelListNetwork,
     composer.draft,
     composer.recallNewerDraft,
     composer.recallOlderDraft,
     composer.setDraft,
     friends,
+    networks,
     selectedMessages,
     ui.messageDisplayMode,
     ui.scrollRef,

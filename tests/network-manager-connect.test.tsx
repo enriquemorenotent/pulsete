@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
 import { createNetworkActions, resolveManagedNetworkConnectPlan } from '../web/src/app-actions-networks.js';
 import type { Action, State } from '../web/src/app-types.js';
@@ -75,10 +75,12 @@ const makeSession = ({
   networks,
   buffers = [],
   networkStates = {},
+  workspace = emptyWorkspace,
 }: {
   networks: NetworkProfile[];
   buffers?: BufferState[];
   networkStates?: State['domain']['networkStates'];
+  workspace?: WorkspaceView;
 }): AppSessionSnapshot => {
   const state: State = {
     ...initialState,
@@ -103,7 +105,7 @@ const makeSession = ({
     }),
     draft: '',
     state,
-    workspace: emptyWorkspace,
+    workspace,
   };
 };
 
@@ -264,6 +266,137 @@ test('connectNetwork reconnects an existing offline peer instead of creating a d
     }]);
     assert.deepEqual(banners, [{ kind: 'notice', message: 'Reconnect requested' }]);
     assert.deepEqual(dispatched, [{ type: 'select', selection: { kind: 'buffer', bufferId: serverBuffer.id } }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('toggleCurrentChannelAutoJoin updates the saved network behind the selected connection instance', async () => {
+  const saved = makeNetwork({ id: 'saved-1', managerHidden: false, templateId: null, autoJoin: ['#ops'] });
+  const peer = makePeer(saved, { id: 'instance-1' });
+  const channelBuffer = makeBuffer({ id: 'buffer-1', networkId: peer.id, kind: 'channel', target: '#help' });
+  const selectedChannel: ChannelState = {
+    id: channelBuffer.id,
+    networkId: peer.id,
+    name: '#help',
+    topic: '',
+    users: [],
+  };
+  const workspace: WorkspaceView = {
+    mode: 'channel-connected',
+    selection: { kind: 'buffer', bufferId: channelBuffer.id },
+    connectionInstances: [peer],
+    selectedNetwork: peer,
+    selectedRuntime: { phase: 'connected', serverName: null, nick: peer.nick },
+    selectedBuffer: channelBuffer,
+    selectedChannel,
+    selectedPendingChannel: null,
+    headerTitle: selectedChannel.name,
+    headerSubtitle: '',
+    composerMode: 'normal',
+    composerPlaceholder: 'Type a message or /command',
+    emptyBody: '',
+    showNicklist: true,
+  };
+  const session = makeSession({
+    networks: [saved, peer],
+    buffers: [channelBuffer],
+    workspace,
+  });
+  const { actions, banners } = createHarness(session);
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: Array<{ url: string; method: string; autoJoin: string[] }> = [];
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+      autoJoin: JSON.parse(String(init?.body ?? '{}')).autoJoin,
+    });
+    return okJson({
+      messages: [],
+      network: { ...saved, autoJoin: ['#ops', '#help'] },
+      serverBuffer: null,
+    });
+  }) as typeof fetch;
+
+  try {
+    const enabled = await actions.toggleCurrentChannelAutoJoin();
+
+    assert.equal(enabled, true);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/networks/saved-1',
+      method: 'PUT',
+      autoJoin: ['#ops', '#help'],
+    }]);
+    assert.deepEqual(banners, [{ kind: 'notice', message: 'Added #help to autojoin' }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insensitively', async () => {
+  const saved = makeNetwork({
+    id: 'saved-1',
+    managerHidden: false,
+    templateId: null,
+    autoJoin: ['#Help', '#help', '#ops'],
+  });
+  const peer = makePeer(saved, { id: 'instance-1' });
+  const channelBuffer = makeBuffer({ id: 'buffer-1', networkId: peer.id, kind: 'channel', target: '#help' });
+  const selectedChannel: ChannelState = {
+    id: channelBuffer.id,
+    networkId: peer.id,
+    name: '#help',
+    topic: '',
+    users: [],
+  };
+  const workspace: WorkspaceView = {
+    mode: 'channel-connected',
+    selection: { kind: 'buffer', bufferId: channelBuffer.id },
+    connectionInstances: [peer],
+    selectedNetwork: peer,
+    selectedRuntime: { phase: 'connected', serverName: null, nick: peer.nick },
+    selectedBuffer: channelBuffer,
+    selectedChannel,
+    selectedPendingChannel: null,
+    headerTitle: selectedChannel.name,
+    headerSubtitle: '',
+    composerMode: 'normal',
+    composerPlaceholder: 'Type a message or /command',
+    emptyBody: '',
+    showNicklist: true,
+  };
+  const session = makeSession({
+    networks: [saved, peer],
+    buffers: [channelBuffer],
+    workspace,
+  });
+  const { actions, banners } = createHarness(session);
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: Array<{ url: string; method: string; autoJoin: string[] }> = [];
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+      autoJoin: JSON.parse(String(init?.body ?? '{}')).autoJoin,
+    });
+    return okJson({
+      messages: [],
+      network: { ...saved, autoJoin: ['#ops'] },
+      serverBuffer: null,
+    });
+  }) as typeof fetch;
+
+  try {
+    const enabled = await actions.toggleCurrentChannelAutoJoin();
+
+    assert.equal(enabled, false);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/networks/saved-1',
+      method: 'PUT',
+      autoJoin: ['#ops'],
+    }]);
+    assert.deepEqual(banners, [{ kind: 'notice', message: 'Removed #help from autojoin' }]);
   } finally {
     globalThis.fetch = originalFetch;
   }

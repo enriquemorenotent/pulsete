@@ -22,6 +22,9 @@ export type ChatPaneProps = {
   onSend: () => Promise<void>;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  showChannelAutoJoin: boolean;
+  channelAutoJoinActive: boolean;
+  onToggleChannelAutoJoin: () => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   channelList: ChannelListState;
@@ -46,6 +49,9 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           friends={props.friends}
           onAddFriend={props.onAddFriend}
           onRemoveFriend={props.onRemoveFriend}
+          showChannelAutoJoin={props.showChannelAutoJoin}
+          channelAutoJoinActive={props.channelAutoJoinActive}
+          onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}
           onCloseChannel={props.onCloseChannel}
           onCloseBuffer={props.onCloseBuffer}
           onOpenChannelList={props.onOpenChannelList}

@@ -101,6 +101,7 @@ export type ChatActionSet = Pick<
   | 'openMentionedChannel'
   | 'removeFriend'
   | 'sendComposer'
+  | 'toggleCurrentChannelAutoJoin'
 >;
 export type SidebarActionSet = Pick<
   AppActions,

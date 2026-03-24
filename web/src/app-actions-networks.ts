@@ -7,6 +7,7 @@ import { selectBuffer } from './app-actions-types.js';
 import type { State } from './app-types.js';
 import { api } from './client.js';
 import { createAppMutationExecutor } from './app-mutation.js';
+import { resolveCurrentChannelAutoJoinState, toggleChannelAutoJoin } from './channel-autojoin.js';
 import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
 
 type NetworkActionParams = Pick<
@@ -183,6 +184,25 @@ export const createNetworkActions = ({
     }
   };
 
+  const toggleCurrentChannelAutoJoin = async () => {
+    const { state, workspace } = getSession();
+    const autoJoin = resolveCurrentChannelAutoJoinState(state.domain.networks, workspace);
+    if (!autoJoin.network || !autoJoin.channel) {
+      return false;
+    }
+    const nextAutoJoin = toggleChannelAutoJoin(autoJoin.network, autoJoin.channel);
+    const nextActive = nextAutoJoin.length > autoJoin.network.autoJoin.length;
+    return executeMutation({
+      request: () => api.saveNetwork({ ...autoJoin.network, autoJoin: nextAutoJoin }),
+      mapResult: () => nextActive,
+      successMessage: nextActive
+        ? `Added ${autoJoin.channel} to autojoin`
+        : `Removed ${autoJoin.channel} from autojoin`,
+      errorMessage: 'Failed to update autojoin',
+      failureValue: false,
+    });
+  };
+
   return {
     closeConnection,
     connectNetwork,
@@ -193,5 +213,6 @@ export const createNetworkActions = ({
     saveFavorite,
     selectNetworkBuffer,
     submitNetwork,
+    toggleCurrentChannelAutoJoin,
   };
 };

@@ -86,7 +86,13 @@ const makeWorkspace = (): WorkspaceView => {
   };
 };
 
-const renderChatPane = (selectedMessages: ChatMessage[]) =>
+const renderChatPane = (
+  selectedMessages: ChatMessage[],
+  overrides: Partial<{
+    showChannelAutoJoin: boolean;
+    channelAutoJoinActive: boolean;
+  }> = {},
+) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeWorkspace()}
@@ -101,6 +107,9 @@ const renderChatPane = (selectedMessages: ChatMessage[]) =>
       onSend={async () => undefined}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
+      channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
+      onToggleChannelAutoJoin={async () => true}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -149,4 +158,24 @@ test('standalone notice rows with a sender render the same avatar fallback', () 
   assert.match(markup, /data-message-avatar="NO"/);
   assert.match(markup, /Nova/);
   assert.match(markup, />notice</i);
+});
+
+test('channel headers can render an active autojoin toggle', () => {
+  const markup = renderChatPane([], {
+    showChannelAutoJoin: true,
+    channelAutoJoinActive: true,
+  });
+
+  assert.match(markup, /Autojoin On/);
+  assert.match(markup, /aria-pressed="true"/);
+});
+
+test('channel headers render an inactive autojoin toggle state', () => {
+  const markup = renderChatPane([], {
+    showChannelAutoJoin: true,
+    channelAutoJoinActive: false,
+  });
+
+  assert.match(markup, /Autojoin Off/);
+  assert.match(markup, /aria-pressed="false"/);
 });

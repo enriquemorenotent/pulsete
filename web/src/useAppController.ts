@@ -89,6 +89,7 @@ export function useAppController(): AppController {
     actions,
     composer,
     friends: state.domain.friends,
+    networks: state.domain.networks,
     channelList: state.transient.channelList,
     channelListNetwork,
     selectedMessages,

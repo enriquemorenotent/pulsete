@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type { BufferState, FriendState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
@@ -12,6 +12,9 @@ type ChatPaneHeaderProps = {
   friends: FriendState[];
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  showChannelAutoJoin: boolean;
+  channelAutoJoinActive: boolean;
+  onToggleChannelAutoJoin: () => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -21,6 +24,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const { selectedBuffer, selectedChannel } = props.workspace;
   const selectedFriend =
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
+  const autoJoinLabel = props.channelAutoJoinActive ? 'Autojoin On' : 'Autojoin Off';
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -43,6 +47,19 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       subtitle={props.workspace.headerSubtitle}
       actions={
         <>
+          {props.showChannelAutoJoin ? (
+            <Button
+              variant={props.channelAutoJoinActive ? 'secondary' : 'outline'}
+              size="sm"
+              aria-pressed={props.channelAutoJoinActive}
+              aria-label={autoJoinLabel}
+              title={autoJoinLabel}
+              onClick={() => void props.onToggleChannelAutoJoin()}
+            >
+              {props.channelAutoJoinActive ? <Check /> : null}
+              {autoJoinLabel}
+            </Button>
+          ) : null}
           {selectedBuffer?.kind === 'query' ? (
             <FriendToggleButton
               active={Boolean(selectedFriend)}
