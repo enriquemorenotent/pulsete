@@ -21,7 +21,6 @@ type NetworkManagerDialogProps = {
   runtime: NetworkRuntimeState | null;
   runtimes: Record<string, NetworkRuntimeState | null>;
   showFavoritesOnly: boolean;
-  hiddenManagedNetworkName: string | null;
   onSelect: (networkId: string) => void;
   onToggleFavorites: () => void;
   onClose: () => void;
@@ -92,11 +91,6 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                   <span>Show favorites only</span>
                 </label>
               </div>
-              {props.hiddenManagedNetworkName ? (
-                <div className="border border-primary/35 bg-primary/10 px-3 py-2 text-[13px] text-muted-foreground">
-                  {props.hiddenManagedNetworkName} is hidden by the favorites filter. Clear the filter to restore that selection.
-                </div>
-              ) : null}
             </div>
 
             <Separator />

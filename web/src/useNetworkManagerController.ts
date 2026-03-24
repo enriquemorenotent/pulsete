@@ -9,7 +9,6 @@ import type { NetworkManagerActionSet } from './useAppActions.js';
 type NetworkManagerControllerParams = {
   actions: NetworkManagerActionSet;
   dispatch: (action: Action) => void;
-  hiddenManagedNetworkName: string | null;
   managedRuntime: ReturnType<typeof buildManagedRuntime>;
   managedRuntimes: Record<string, NetworkRuntimeState | null>;
   networkManager: State['transient']['networkManager'];
@@ -23,7 +22,6 @@ const createOpenNewNetworkEditorDialog = (dispatch: (action: Action) => void) =>
 export function useNetworkManagerController({
   actions,
   dispatch,
-  hiddenManagedNetworkName,
   managedRuntime,
   managedRuntimes,
   networkManager,
@@ -57,7 +55,6 @@ export function useNetworkManagerController({
     runtime: managedRuntime,
     runtimes: managedRuntimes,
     showFavoritesOnly: networkManager.showFavoritesOnly,
-    hiddenManagedNetworkName,
     onSelect: (networkId) => dispatch({ type: 'set-managed-network', networkId }),
     onToggleFavorites: () =>
       dispatch({
@@ -79,7 +76,6 @@ export function useNetworkManagerController({
     connectNetwork,
     dispatch,
     duplicateNetwork,
-    hiddenManagedNetworkName,
     managedRuntime,
     managedRuntimes,
     networkManager.mode,

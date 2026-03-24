@@ -65,7 +65,6 @@ type ManagedNetworkModelParams = {
   connectionInstances: State['domain']['networks'];
   networkManager: State['transient']['networkManager'];
   networkStates: State['domain']['networkStates'];
-  savedNetworks: State['domain']['networks'];
   visibleNetworks: State['domain']['networks'];
 };
 
@@ -73,30 +72,15 @@ export function useManagedNetworkModel({
   connectionInstances,
   networkManager,
   networkStates,
-  savedNetworks,
   visibleNetworks,
 }: ManagedNetworkModelParams) {
-  const { hiddenManagedNetworkName, visibleManagedNetwork } = useMemo(() => {
-    const managedNetwork = savedNetworks.find(
+  const visibleManagedNetwork = useMemo(
+    () =>
+      visibleNetworks.find(
       (network) => network.id === networkManager.managedNetworkId
-    ) ?? null;
-    const visibleManaged = visibleNetworks.find(
-      (network) => network.id === networkManager.managedNetworkId
-    ) ?? null;
-
-    return {
-      hiddenManagedNetworkName:
-        managedNetwork && !visibleManaged && networkManager.showFavoritesOnly
-          ? managedNetwork.name
-          : null,
-      visibleManagedNetwork: visibleManaged,
-    };
-  }, [
-    networkManager.managedNetworkId,
-    networkManager.showFavoritesOnly,
-    savedNetworks,
-    visibleNetworks,
-  ]);
+    ) ?? null,
+    [networkManager.managedNetworkId, visibleNetworks]
+  );
 
   const managedRuntime = useMemo(
     () => buildManagedRuntime(visibleManagedNetwork, connectionInstances, networkStates),
@@ -108,7 +92,6 @@ export function useManagedNetworkModel({
   );
 
   return {
-    hiddenManagedNetworkName,
     managedRuntime,
     managedRuntimes,
     visibleManagedNetwork,
