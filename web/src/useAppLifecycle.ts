@@ -9,6 +9,7 @@ import { useSelectedBufferEffects } from './useSelectedBufferEffects.js';
 import { useStickyScroll } from './useStickyScroll.js';
 import type { WorkspaceView } from './workspace.js';
 import type { SocketHandle } from './client.js';
+import type { ChatPaneProps } from './ChatPane.js';
 
 type MutableRef<T> = { current: T };
 
@@ -17,9 +18,13 @@ type LifecycleParams = {
   applySocketMessage: (message: ServerMessage) => void;
   banner: Banner;
   gatewayStatus: GatewayStatus;
+  historyHasOlderByBufferId: AppTransientState['historyHasOlderByBufferId'];
+  historyLoadedByBufferId: AppTransientState['historyLoadedByBufferId'];
+  historyLoadingOlder: AppTransientState['historyLoadingOlder'];
   networks: AppDomainState['networks'];
   phase: AppDomainState['phase'];
   networkManager: AppTransientState['networkManager'];
+  selectedMessages: ChatPaneProps['selectedMessages'];
   workspace: WorkspaceView;
   visibleNetworks: NetworkProfile[];
   dispatch: (action: Action) => void;
@@ -51,11 +56,15 @@ export function useAppLifecycle(params: LifecycleParams) {
     socketRef: params.socketRef,
   });
 
-  useSelectedBufferEffects({
+  const selectedBufferHistory = useSelectedBufferEffects({
     applyServerMessages: params.applyServerMessages,
     dispatch: params.dispatch,
     gatewayStatus: params.gatewayStatus,
+    historyHasOlderByBufferId: params.historyHasOlderByBufferId,
+    historyLoadedByBufferId: params.historyLoadedByBufferId,
+    historyLoadingOlder: params.historyLoadingOlder,
     selectedBuffer: params.workspace.selectedBuffer,
+    selectedMessages: params.selectedMessages,
   });
 
   useStickyScroll({
@@ -70,4 +79,6 @@ export function useAppLifecycle(params: LifecycleParams) {
     managedNetworkId: params.networkManager.managedNetworkId,
     dispatch: params.dispatch,
   });
+
+  return selectedBufferHistory;
 }

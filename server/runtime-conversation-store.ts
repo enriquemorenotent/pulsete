@@ -25,9 +25,14 @@ export const markConversationBufferRead = (store: RuntimeConversationStore, buff
   return getRequiredBuffer(store, bufferId);
 };
 
-export const listConversationBufferHistory = (store: RuntimeConversationStore, bufferId: string, limit: number) => {
+export const listConversationBufferHistory = (
+  store: RuntimeConversationStore,
+  bufferId: string,
+  limit: number,
+  beforeMessageId?: string,
+) => {
   const buffer = getRequiredBuffer(store, bufferId);
-  return store.listMessages(buffer.networkId, buffer.target, limit);
+  return store.listMessagePage(buffer.networkId, buffer.target, limit, beforeMessageId);
 };
 
 export const clearConversationBufferHistory = (store: RuntimeConversationStore, bufferId: string) => {

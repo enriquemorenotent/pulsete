@@ -36,6 +36,9 @@ export type ChatPaneProps = {
   onClearHistory?: () => Promise<boolean>;
   canImportHistory?: boolean;
   onImportHistory?: (input: BufferHistoryImportRequest) => Promise<boolean>;
+  canLoadOlderHistory?: boolean;
+  loadingOlderHistory?: boolean;
+  onLoadOlderHistory?: () => Promise<void>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   channelList: ChannelListState;
@@ -79,7 +82,10 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           emptyBody={props.workspace.emptyBody}
           mode={props.messageDisplayMode}
           listKind={isServerBuffer ? 'server' : 'chat'}
+          canLoadOlderHistory={props.canLoadOlderHistory}
+          loadingOlderHistory={props.loadingOlderHistory}
           onOpenChannel={props.onOpenMentionedChannel}
+          onLoadOlderHistory={props.onLoadOlderHistory}
         />
         {props.workspace.composerMode !== 'hidden' ? (
           <ChatPaneComposer

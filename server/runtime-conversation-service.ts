@@ -53,8 +53,8 @@ export class RuntimeConversationService {
     return { buffer: updatedBuffer, messages };
   }
 
-  listBufferHistory(bufferId: string, limit: number) {
-    return listConversationBufferHistory(this.options.conversations, bufferId, limit);
+  listBufferHistory(bufferId: string, limit: number, beforeMessageId?: string) {
+    return listConversationBufferHistory(this.options.conversations, bufferId, limit, beforeMessageId);
   }
 
   clearBufferHistory(bufferId: string) {

@@ -92,6 +92,7 @@ const conversationStore: RuntimeConversationStore = {
   updateChannelUsers: () => {},
   updateChannelTopic: () => {},
   listMessages: () => [],
+  listMessagePage: () => ({ messages: [], hasMore: false }),
   listAllMessages: () => [],
   deleteMessages: () => [],
   deleteMessagesByIdPrefixes: () => [],

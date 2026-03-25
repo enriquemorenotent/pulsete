@@ -93,6 +93,9 @@ export const createConversationActions = ({
   const clearBufferHistory = async (bufferId: string) =>
     executeMutation({
       request: () => api.clearBufferHistory(bufferId),
+      onSuccess: () => {
+        dispatch({ type: 'history-buffer-loaded', bufferId, hasOlder: false });
+      },
       mapResult: () => true,
       successMessage: null,
       errorMessage: 'Failed to clear chat history',

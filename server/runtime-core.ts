@@ -122,7 +122,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     openQuery: (networkId, target) => publishMutation(conversationsService.openQuery(networkId, target)),
     closeBuffer: (bufferId) => publishMutation(conversationsService.closeQueryBuffer(bufferId)),
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
-    history: (bufferId, limit) => conversationsService.listBufferHistory(bufferId, limit),
+    history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     clearHistory: (bufferId) => publishMutation(conversationsService.clearBufferHistory(bufferId)),
     importHistory: (bufferId, input) => publishMutation(conversationsService.importHistory(bufferId, input)),
   };

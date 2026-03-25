@@ -6,6 +6,7 @@ import {
   deleteMessagesByIdPrefixes,
   getMessageById,
   listAllMessages,
+  listMessagePage,
   listMessages,
   listRecentMessages,
 } from './storage-messages.js';
@@ -90,6 +91,10 @@ export class StorageConversationsRepository {
 
   listMessages(networkId: string, target: string, limit?: number) {
     return listMessages(this.db, networkId, target, limit);
+  }
+
+  listMessagePage(networkId: string, target: string, limit: number, beforeMessageId?: string) {
+    return listMessagePage(this.db, networkId, target, limit, beforeMessageId);
   }
 
   listAllMessages(networkId: string, target: string) {

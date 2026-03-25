@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
-import type { MessageInput, MessageRow } from './storage-types.js';
+import type { MessageInput, MessagePage, MessageRow } from './storage-types.js';
 import { toMessage } from './storage-utils.js';
 
 export const appendMessage = (db: DatabaseSync, input: MessageInput, lookup: MessageLookup) => {
@@ -33,6 +33,24 @@ export const listMessages = (db: DatabaseSync, networkId: string, target: string
     return [];
   }
   return selectMessages(db, networkId, matchingTargets, limit);
+};
+
+export const listMessagePage = (
+  db: DatabaseSync,
+  networkId: string,
+  target: string,
+  limit = 200,
+  beforeMessageId?: string,
+): MessagePage => {
+  const matchingTargets = listMatchingTargets(db, networkId, target);
+  if (matchingTargets.length === 0) {
+    return emptyMessagePage;
+  }
+  const cursor = beforeMessageId ? (getMessageCursor(db, beforeMessageId) ?? null) : null;
+  if (beforeMessageId && (!cursor || cursor.networkId !== networkId || !matchingTargets.includes(cursor.target))) {
+    return emptyMessagePage;
+  }
+  return selectMessagePage(db, networkId, matchingTargets, limit, cursor);
 };
 
 export const listAllMessages = (db: DatabaseSync, networkId: string, target: string) => {
@@ -89,12 +107,20 @@ export const deleteMessagesByIdPrefixes = (db: DatabaseSync, prefixes: string[])
 };
 
 type MessageLookup = (messageId: string) => MessageInput | null;
+type MessageCursor = { networkId: string; rowid: number; target: string; ts: number };
+
+const emptyMessagePage: MessagePage = { messages: [], hasMore: false };
 
 const listMatchingTargets = (db: DatabaseSync, networkId: string, target: string) => {
   const rows = db.prepare('SELECT DISTINCT target FROM messages WHERE networkId = ?').all(networkId) as Array<{ target: string }>;
   return rows
     .map((row) => row.target)
     .filter((candidate) => isSameIrcIdentifier(candidate, target));
+};
+
+const getMessageCursor = (db: DatabaseSync, messageId: string) => {
+  const sql = 'SELECT networkId, rowid, target, ts FROM messages WHERE id = ?';
+  return db.prepare(sql).get(messageId) as MessageCursor | undefined;
 };
 
 const selectMessages = (
@@ -116,6 +142,34 @@ const selectMessages = (
     : [networkId, ...matchingTargets];
   const rows = db.prepare(sql).all(...args) as MessageRow[];
   return rows.reverse().map(toMessage);
+};
+
+const selectMessagePage = (
+  db: DatabaseSync,
+  networkId: string,
+  matchingTargets: string[],
+  limit: number,
+  before: MessageCursor | null,
+): MessagePage => {
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const beforeClause = before ? '\n    AND (ts < ? OR (ts = ? AND rowid < ?))' : '';
+  const sql = `
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})${beforeClause}
+    ORDER BY ts DESC, rowid DESC
+    LIMIT ?
+  `;
+  const args = before
+    ? [networkId, ...matchingTargets, before.ts, before.ts, before.rowid, limit + 1]
+    : [networkId, ...matchingTargets, limit + 1];
+  const rows = db.prepare(sql).all(...args) as MessageRow[];
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  return {
+    messages: pageRows.reverse().map(toMessage),
+    hasMore,
+  };
 };
 
 const buildIdPrefixWhereClause = (prefixes: string[]) => {

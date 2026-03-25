@@ -1,6 +1,7 @@
 import { memo, useMemo, type RefObject } from 'react';
 import { Plug2 } from 'lucide-react';
 import type { BufferState, ChatMessage } from '../../shared/protocol.js';
+import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
@@ -23,7 +24,10 @@ type ChatPaneMessageListProps = {
   emptyBody: string;
   mode: MessageDisplayMode;
   listKind: 'chat' | 'server';
+  canLoadOlderHistory?: boolean;
+  loadingOlderHistory?: boolean;
   onOpenChannel: (channel: string) => void;
+  onLoadOlderHistory?: () => Promise<void>;
 };
 
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: ChatPaneMessageListProps) {
@@ -32,9 +36,29 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
     () => buildRenderBlocks(props.messages),
     [props.messages]
   );
+  const showLoadOlder = props.canLoadOlderHistory && props.onLoadOlderHistory;
+  const handleLoadOlder = async () => {
+    const scrollContainer = props.scrollRef.current;
+    const previousHeight = scrollContainer?.scrollHeight ?? 0;
+    const previousTop = scrollContainer?.scrollTop ?? 0;
+    await props.onLoadOlderHistory?.();
+    await waitForNextAnimationFrame();
+    const nextScrollContainer = props.scrollRef.current;
+    if (!nextScrollContainer) {
+      return;
+    }
+    nextScrollContainer.scrollTop = previousTop + (nextScrollContainer.scrollHeight - previousHeight);
+  };
 
   return (
     <div ref={props.scrollRef} className="min-h-0 flex-1 overflow-y-auto bg-background/45 px-3 py-2">
+      {showLoadOlder ? (
+        <div className="mb-2 flex justify-center">
+          <Button variant="outline" size="sm" disabled={props.loadingOlderHistory} onClick={() => void handleLoadOlder()}>
+            {props.loadingOlderHistory ? 'Loading older...' : 'Load older'}
+          </Button>
+        </div>
+      ) : null}
       {props.messages.length === 0 ? (
         <div className="flex h-full items-center justify-center">
           <div className="w-full max-w-md border border-border bg-card px-4 py-5 text-center">
@@ -92,3 +116,8 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
     </div>
   );
 });
+
+const waitForNextAnimationFrame = () =>
+  new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });

@@ -21,6 +21,9 @@ test('snapshot enters the ready phase and clears any banner', () => {
   assert.equal(nextState.domain.phase, 'ready');
   assert.equal(nextState.transient.banner, null);
   assert.equal(nextState.transient.historyLoading, false);
+  assert.equal(nextState.transient.historyLoadingOlder, false);
+  assert.deepEqual(nextState.transient.historyLoadedByBufferId, {});
+  assert.deepEqual(nextState.transient.historyHasOlderByBufferId, {});
   assert.equal(nextState.transient.selection, null);
 });
 
@@ -166,10 +169,48 @@ test('gateway transitions reset transport state and clear the reconnect banner o
     nick: network.nick,
   });
   assert.equal(disconnected.transient.historyLoading, false);
+  assert.equal(disconnected.transient.historyLoadingOlder, false);
+  assert.deepEqual(disconnected.transient.historyLoadedByBufferId, {});
+  assert.deepEqual(disconnected.transient.historyHasOlderByBufferId, {});
   assert.equal(reconnecting.domain.gatewayStatus, 'connecting');
   assert.deepEqual(reconnecting.transient.channelList, initialChannelListState);
   assert.equal(connected.domain.gatewayStatus, 'connected');
   assert.equal(connected.transient.banner, null);
+});
+
+test('history-buffer-loaded tracks pagination state per buffer', () => {
+  const nextState = reducer(initialState, {
+    type: 'history-buffer-loaded',
+    bufferId: 'buffer-1',
+    hasOlder: true,
+  });
+
+  assert.deepEqual(nextState.transient.historyLoadedByBufferId, { 'buffer-1': true });
+  assert.deepEqual(nextState.transient.historyHasOlderByBufferId, { 'buffer-1': true });
+});
+
+test('append-messages keeps prepended pages ahead of equal-timestamp rows', () => {
+  const state = makeState({
+    domain: {
+      messages: indexConversationMessages([
+        makeMessage({ id: 'newer-1', target: '#help', body: 'newer 1', ts: 5 }),
+        makeMessage({ id: 'newer-2', target: '#help', body: 'newer 2', ts: 5 }),
+      ]),
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'prepend-messages',
+    messages: [
+      makeMessage({ id: 'older-1', target: '#help', body: 'older 1', ts: 5 }),
+      makeMessage({ id: 'older-2', target: '#help', body: 'older 2', ts: 5 }),
+    ],
+  });
+
+  assert.deepEqual(
+    nextState.domain.messages[toConversationMessageKey('network-1', '#help')]?.map((entry) => entry.id),
+    ['older-1', 'older-2', 'newer-1', 'newer-2']
+  );
 });
 
 test('assistant thread load attempts reset on assistant snapshots', () => {

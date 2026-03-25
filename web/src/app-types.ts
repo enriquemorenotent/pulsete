@@ -68,6 +68,9 @@ export type AppTransientState = {
   banner: Banner;
   channelList: ChannelListState;
   historyLoading: boolean;
+  historyLoadingOlder: boolean;
+  historyLoadedByBufferId: Record<string, true>;
+  historyHasOlderByBufferId: Record<string, boolean>;
   assistant: AssistantState;
   networkManager: NetworkManagerState;
 };
@@ -91,6 +94,7 @@ export type Action =
   | { type: 'select'; selection: SelectedBuffer | null }
   | { type: 'append-message'; message: ChatMessage }
   | { type: 'append-messages'; messages: ChatMessage[] }
+  | { type: 'prepend-messages'; messages: ChatMessage[] }
   | { type: 'remove-messages'; networkId: string; target: string; messageIds: string[] }
   | { type: 'upsert-channel'; channel: ChannelState }
   | { type: 'remove-channel'; channelId: string; networkId: string }
@@ -125,4 +129,6 @@ export type Action =
   | { type: 'set-network-editor-tab'; tab: EditorTab }
   | { type: 'update-network-editor-form'; form: Partial<NetworkForm> }
   | { type: 'set-history-loading'; value: boolean }
+  | { type: 'set-history-loading-older'; value: boolean }
+  | { type: 'history-buffer-loaded'; bufferId: string; hasOlder: boolean }
   | { type: 'remove-network'; networkId: string };

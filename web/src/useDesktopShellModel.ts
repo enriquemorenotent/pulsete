@@ -7,6 +7,7 @@ import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { ComposerController } from './composer-history.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { ChatActionSet, NicklistActionSet, SidebarActionSet } from './useAppActions.js';
+import type { SelectedBufferHistoryControls } from './useSelectedBufferEffects.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 type DesktopHeaderModelParams = {
@@ -28,6 +29,7 @@ type DesktopChatModelParams = {
   networks: State['domain']['networks'];
   channelList: State['transient']['channelList'];
   channelListNetwork: ChatPaneProps['channelListNetwork'];
+  selectedBufferHistory: SelectedBufferHistoryControls;
   selectedMessages: ChatPaneProps['selectedMessages'];
   workspace: WorkspaceView;
   ui: Pick<AppUiState, 'messageDisplayMode' | 'scrollRef'>;
@@ -97,6 +99,7 @@ export function useDesktopChatModel({
   networks,
   channelList,
   channelListNetwork,
+  selectedBufferHistory,
   selectedMessages,
   workspace,
   ui,
@@ -132,6 +135,9 @@ export function useDesktopChatModel({
     onImportHistory: importHistoryBufferId
       ? (input) => actions.importBufferHistory(importHistoryBufferId, input)
       : undefined,
+    canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
+    loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
+    onLoadOlderHistory: selectedBufferHistory.loadOlderHistory,
     channelList,
     channelListNetwork,
     onCloseChannelList: actions.closeChannelList,
@@ -159,6 +165,7 @@ export function useDesktopChatModel({
     channelListNetwork,
     canClearHistory,
     canImportHistory,
+    selectedBufferHistory,
     clearHistoryBufferId,
     importHistoryBufferId,
     composer.draft,

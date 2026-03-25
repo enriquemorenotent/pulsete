@@ -170,18 +170,82 @@ test('history clamps invalid and oversized limits to the default window', async 
 
   try {
     const invalidLimit = await fetch(`http://127.0.0.1:${port}/api/buffers/${buffer.id}/history?limit=-1`);
-    const invalidBody = await invalidLimit.json() as { messages: Array<{ body: string }> };
+    const invalidBody = await invalidLimit.json() as { hasMore: boolean; messages: Array<{ body: string }> };
     assert.equal(invalidLimit.status, 200);
     assert.equal(invalidBody.messages.length, historyWindowLimit);
+    assert.equal(invalidBody.hasMore, false);
     assert.equal(invalidBody.messages[0]?.body, 'message 0');
     assert.equal(invalidBody.messages.at(-1)?.body, 'message 249');
 
     const oversizedLimit = await fetch(`http://127.0.0.1:${port}/api/buffers/${buffer.id}/history?limit=1000000`);
-    const oversizedBody = await oversizedLimit.json() as { messages: Array<{ body: string }> };
+    const oversizedBody = await oversizedLimit.json() as { hasMore: boolean; messages: Array<{ body: string }> };
     assert.equal(oversizedLimit.status, 200);
     assert.equal(oversizedBody.messages.length, historyWindowLimit);
+    assert.equal(oversizedBody.hasMore, false);
     assert.equal(oversizedBody.messages[0]?.body, 'message 0');
     assert.equal(oversizedBody.messages.at(-1)?.body, 'message 249');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('history can load older pages before the oldest visible message', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const buffer = storage.conversations.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help' });
+  for (let index = 0; index < 300; index += 1) {
+    storage.conversations.appendMessage({
+      id: `m${index}`,
+      networkId: network.id,
+      target: '#help',
+      nick: 'alice',
+      body: `message ${index}`,
+      kind: 'line',
+      self: true,
+      ts: Date.now() + index,
+    });
+  }
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const port = await listen(server);
+
+  try {
+    const latestResponse = await fetch(`http://127.0.0.1:${port}/api/buffers/${buffer.id}/history?limit=120`);
+    const latestBody = await latestResponse.json() as {
+      hasMore: boolean;
+      messages: Array<{ body: string; id: string }>;
+    };
+    assert.equal(latestResponse.status, 200);
+    assert.equal(latestBody.hasMore, true);
+    assert.equal(latestBody.messages.length, 120);
+    assert.equal(latestBody.messages[0]?.body, 'message 180');
+    assert.equal(latestBody.messages.at(-1)?.body, 'message 299');
+
+    const olderResponse = await fetch(
+      `http://127.0.0.1:${port}/api/buffers/${buffer.id}/history?limit=120&before=${encodeURIComponent(latestBody.messages[0]!.id)}`
+    );
+    const olderBody = await olderResponse.json() as {
+      hasMore: boolean;
+      messages: Array<{ body: string; id: string }>;
+    };
+    assert.equal(olderResponse.status, 200);
+    assert.equal(olderBody.hasMore, true);
+    assert.equal(olderBody.messages.length, 120);
+    assert.equal(olderBody.messages[0]?.body, 'message 60');
+    assert.equal(olderBody.messages.at(-1)?.body, 'message 179');
+
+    const oldestResponse = await fetch(
+      `http://127.0.0.1:${port}/api/buffers/${buffer.id}/history?limit=120&before=${encodeURIComponent(olderBody.messages[0]!.id)}`
+    );
+    const oldestBody = await oldestResponse.json() as {
+      hasMore: boolean;
+      messages: Array<{ body: string }>;
+    };
+    assert.equal(oldestResponse.status, 200);
+    assert.equal(oldestBody.hasMore, false);
+    assert.equal(oldestBody.messages.length, 60);
+    assert.equal(oldestBody.messages[0]?.body, 'message 0');
+    assert.equal(oldestBody.messages.at(-1)?.body, 'message 59');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

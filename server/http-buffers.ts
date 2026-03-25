@@ -67,9 +67,8 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   if (historyMatch && req.method === 'GET') {
     const bufferId = decodeRouteParam(historyMatch[1]);
     const limit = normalizeHistoryLimit(url.searchParams.get('limit'));
-    writeJson(res, 200, {
-      messages: context.buffers.history(bufferId, limit),
-    });
+    const beforeMessageId = normalizeHistoryBefore(url.searchParams.get('before'));
+    writeJson(res, 200, context.buffers.history(bufferId, limit, beforeMessageId));
     return true;
   }
 
@@ -79,6 +78,11 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
 const normalizeHistoryLimit = (value: string | null) => {
   const limit = Number(value ?? historyWindowLimit);
   return Number.isInteger(limit) && limit > 0 ? Math.min(limit, historyWindowLimit) : historyWindowLimit;
+};
+
+const normalizeHistoryBefore = (value: string | null) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 };
 
 const readChannelTarget = (body: unknown) => {

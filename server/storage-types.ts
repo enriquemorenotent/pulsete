@@ -139,6 +139,11 @@ export type MessageInput = {
   ts: number;
 };
 
+export type MessagePage = {
+  messages: AppSnapshot['messages'];
+  hasMore: boolean;
+};
+
 export type AssistantThreadInput = Omit<AssistantThreadSummary, 'createdAt' | 'updatedAt'> & {
   createdAt?: number;
   updatedAt?: number;

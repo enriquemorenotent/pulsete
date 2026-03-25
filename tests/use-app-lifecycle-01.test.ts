@@ -6,7 +6,10 @@ import type { SocketHandle } from '../web/src/client.js';
 import {
   createGatewaySocketCallbacks,
 } from '../web/src/useGatewayConnection.js';
-import { loadSelectedBufferHistory } from '../web/src/useSelectedBufferEffects.js';
+import {
+  loadOlderBufferHistory,
+  loadSelectedBufferHistory,
+} from '../web/src/useSelectedBufferEffects.js';
 
 const createSocket = (): SocketHandle => ({
   send() {},
@@ -36,7 +39,7 @@ const message: ChatMessage = {
   ts: 1,
 };
 
-type HistoryPayload = { messages: ChatMessage[] };
+type HistoryPayload = { messages: ChatMessage[]; hasMore: boolean };
 
 test('createGatewaySocketCallbacks ignores stale socket events', () => {
   const currentSocket = createSocket();
@@ -139,18 +142,37 @@ test('loadSelectedBufferHistory appends messages for the current request', async
   await loadSelectedBufferHistory({
     bufferId: 'buffer-1',
     gatewayStatus: 'connected',
+    hasLoadedHistory: false,
     dispatch: (action) => {
       dispatched.push(action);
     },
-    loadHistory: async () => ({ messages: [message] }),
+    loadHistory: async () => ({ messages: [message], hasMore: true }),
     isCurrentRequest: () => true,
   });
 
   assert.deepEqual(dispatched, [
     { type: 'set-history-loading', value: true },
     { type: 'append-messages', messages: [message] },
+    { type: 'history-buffer-loaded', bufferId: 'buffer-1', hasOlder: true },
     { type: 'set-history-loading', value: false },
   ]);
+});
+
+test('loadSelectedBufferHistory skips buffers that already loaded history', async () => {
+  const dispatched: Array<{ type: string; [key: string]: unknown }> = [];
+
+  await loadSelectedBufferHistory({
+    bufferId: 'buffer-1',
+    gatewayStatus: 'connected',
+    hasLoadedHistory: true,
+    dispatch: (action) => {
+      dispatched.push(action);
+    },
+    loadHistory: async () => ({ messages: [message], hasMore: false }),
+    isCurrentRequest: () => true,
+  });
+
+  assert.deepEqual(dispatched, [{ type: 'set-history-loading', value: false }]);
 });
 
 test('loadSelectedBufferHistory ignores stale completions', async () => {
@@ -164,6 +186,7 @@ test('loadSelectedBufferHistory ignores stale completions', async () => {
   const loading = loadSelectedBufferHistory({
     bufferId: 'buffer-1',
     gatewayStatus: 'connected',
+    hasLoadedHistory: false,
     dispatch: (action) => {
       dispatched.push(action);
     },
@@ -172,7 +195,7 @@ test('loadSelectedBufferHistory ignores stale completions', async () => {
   });
 
   current = false;
-  resolveHistory({ messages: [message] });
+  resolveHistory({ messages: [message], hasMore: false });
   await loading;
 
   assert.deepEqual(dispatched, [{ type: 'set-history-loading', value: true }]);
@@ -184,6 +207,7 @@ test('loadSelectedBufferHistory reports failures only for the current request', 
   await loadSelectedBufferHistory({
     bufferId: 'buffer-1',
     gatewayStatus: 'connected',
+    hasLoadedHistory: false,
     dispatch: (action) => {
       dispatched.push(action);
     },
@@ -197,5 +221,27 @@ test('loadSelectedBufferHistory reports failures only for the current request', 
     { type: 'set-history-loading', value: true },
     { type: 'set-history-loading', value: false },
     { type: 'set-banner', banner: { kind: 'error', message: 'Failed to load history' } },
+  ]);
+});
+
+test('loadOlderBufferHistory prepends older messages and updates hasOlder state', async () => {
+  const olderMessage = { ...message, id: 'message-0', ts: 0 };
+  const dispatched: Array<{ type: string; [key: string]: unknown }> = [];
+
+  await loadOlderBufferHistory({
+    beforeMessageId: message.id,
+    bufferId: 'buffer-1',
+    gatewayStatus: 'connected',
+    dispatch: (action) => {
+      dispatched.push(action);
+    },
+    loadHistory: async () => ({ messages: [olderMessage], hasMore: false }),
+  });
+
+  assert.deepEqual(dispatched, [
+    { type: 'set-history-loading-older', value: true },
+    { type: 'prepend-messages', messages: [olderMessage] },
+    { type: 'history-buffer-loaded', bufferId: 'buffer-1', hasOlder: false },
+    { type: 'set-history-loading-older', value: false },
   ]);
 });

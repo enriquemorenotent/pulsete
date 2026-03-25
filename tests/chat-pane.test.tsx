@@ -143,6 +143,8 @@ const renderChatPane = (
     channelAutoJoinActive: boolean;
     canClearHistory: boolean;
     canImportHistory: boolean;
+    canLoadOlderHistory: boolean;
+    loadingOlderHistory: boolean;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -166,6 +168,9 @@ const renderChatPane = (
       onClearHistory={async () => true}
       canImportHistory={overrides.canImportHistory}
       onImportHistory={async () => true}
+      canLoadOlderHistory={overrides.canLoadOlderHistory}
+      loadingOlderHistory={overrides.loadingOlderHistory}
+      onLoadOlderHistory={async () => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -177,7 +182,13 @@ const renderChatPane = (
     />
   );
 
-const renderQueryPane = (selectedMessages: ChatMessage[]) =>
+const renderQueryPane = (
+  selectedMessages: ChatMessage[],
+  overrides: Partial<{
+    canLoadOlderHistory: boolean;
+    loadingOlderHistory: boolean;
+  }> = {},
+) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeQueryWorkspace()}
@@ -195,6 +206,9 @@ const renderQueryPane = (selectedMessages: ChatMessage[]) =>
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
+      canLoadOlderHistory={overrides.canLoadOlderHistory}
+      loadingOlderHistory={overrides.loadingOlderHistory}
+      onLoadOlderHistory={async () => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -358,6 +372,36 @@ test('server tab rows keep inline source labels instead of grouped headers', () 
   assert.doesNotMatch(markup, /text-\[15px\] font-semibold/);
   assert.doesNotMatch(markup, /flex min-w-0 flex-wrap items-baseline/);
   assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
+});
+
+test('query transcripts show a load older control when earlier history is available', () => {
+  const markup = renderQueryPane([
+    makeMessage({ id: 'message-1', nick: 'MissD', target: 'MissD', body: 'latest', ts: 2 }),
+  ], {
+    canLoadOlderHistory: true,
+  });
+
+  assert.match(markup, /Load older/);
+});
+
+test('query transcripts show a loading state while older history is being fetched', () => {
+  const markup = renderQueryPane([
+    makeMessage({ id: 'message-1', nick: 'MissD', target: 'MissD', body: 'latest', ts: 2 }),
+  ], {
+    canLoadOlderHistory: true,
+    loadingOlderHistory: true,
+  });
+
+  assert.match(markup, /Loading older\.\.\./);
+  assert.match(markup, /disabled=""/);
+});
+
+test('server transcripts do not render the load older control', () => {
+  const markup = renderServerPane([
+    makeMessage({ id: 'message-1', nick: null, body: 'Connected', kind: 'system', ts: 1 }),
+  ]);
+
+  assert.doesNotMatch(markup, /Load older/);
 });
 
 test('channel headers can render an active autojoin toggle', () => {

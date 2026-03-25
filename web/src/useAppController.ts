@@ -59,14 +59,18 @@ export function useAppController(): AppController {
     workspace.selection,
   );
 
-  useAppLifecycle({
+  const selectedBufferHistory = useAppLifecycle({
     applyServerMessages: serverMessages.applyMutationMessages,
     applySocketMessage: serverMessages.applySocketMessage,
     banner: state.transient.banner,
     gatewayStatus: state.domain.gatewayStatus,
+    historyHasOlderByBufferId: state.transient.historyHasOlderByBufferId,
+    historyLoadedByBufferId: state.transient.historyLoadedByBufferId,
+    historyLoadingOlder: state.transient.historyLoadingOlder,
     networks: state.domain.networks,
     phase: state.domain.phase,
     networkManager: state.transient.networkManager,
+    selectedMessages,
     workspace,
     visibleNetworks,
     dispatch,
@@ -92,6 +96,7 @@ export function useAppController(): AppController {
     networks: state.domain.networks,
     channelList: state.transient.channelList,
     channelListNetwork,
+    selectedBufferHistory,
     selectedMessages,
     workspace,
     ui,

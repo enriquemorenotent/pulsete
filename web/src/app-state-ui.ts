@@ -21,13 +21,18 @@ export const reduceTransientAction = (
 
   switch (action.type) {
     case 'select':
-      return withChannelList({ banner: null });
+      return withChannelList({ banner: null, historyLoading: false, historyLoadingOlder: false });
     case 'set-banner':
       return withChannelList({ banner: action.banner });
     case 'gateway-connected':
       return withChannelList({ banner: clearReconnectBanner(transient.banner) });
     case 'gateway-disconnected':
-      return withChannelList({ historyLoading: false });
+      return withChannelList({
+        historyLoading: false,
+        historyLoadingOlder: false,
+        historyLoadedByBufferId: {},
+        historyHasOlderByBufferId: {},
+      });
     case 'set-assistant-loading-thread':
       return {
         ...transient,
@@ -151,11 +156,45 @@ export const reduceTransientAction = (
         ...transient,
         historyLoading: action.value,
       };
+    case 'set-history-loading-older':
+      return {
+        ...transient,
+        historyLoadingOlder: action.value,
+      };
+    case 'history-buffer-loaded':
+      return {
+        ...transient,
+        historyLoadedByBufferId: {
+          ...transient.historyLoadedByBufferId,
+          [action.bufferId]: true,
+        },
+        historyHasOlderByBufferId: {
+          ...transient.historyHasOlderByBufferId,
+          [action.bufferId]: action.hasOlder,
+        },
+      };
+    case 'remove-buffer':
+      return {
+        ...withChannelList(),
+        historyLoadedByBufferId: omitHistoryBuffer(transient.historyLoadedByBufferId, action.bufferId),
+        historyHasOlderByBufferId: omitHistoryBuffer(transient.historyHasOlderByBufferId, action.bufferId),
+      };
     case 'remove-network':
       if (channelList === transient.channelList) {
-        return transient;
+        return {
+          ...transient,
+          historyLoading: false,
+          historyLoadingOlder: false,
+          historyLoadedByBufferId: {},
+          historyHasOlderByBufferId: {},
+        };
       }
-      return withChannelList({ historyLoading: false });
+      return withChannelList({
+        historyLoading: false,
+        historyLoadingOlder: false,
+        historyLoadedByBufferId: {},
+        historyHasOlderByBufferId: {},
+      });
     default:
       return channelList === transient.channelList ? null : withChannelList();
   }
@@ -163,3 +202,12 @@ export const reduceTransientAction = (
 
 const clearReconnectBanner = (banner: Banner) =>
   banner?.message === gatewayReconnectMessage ? null : banner;
+
+const omitHistoryBuffer = <T extends Record<string, unknown>>(map: T, bufferId: string) => {
+  if (!(bufferId in map)) {
+    return map;
+  }
+  const next = { ...map };
+  delete next[bufferId];
+  return next;
+};

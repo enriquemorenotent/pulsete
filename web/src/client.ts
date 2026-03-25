@@ -19,6 +19,11 @@ import {
 } from '../../shared/protocol.js';
 import { gatewaySocketClosedMessage } from './gateway.js';
 
+export type BufferHistoryPayload = {
+  messages: ChatMessage[];
+  hasMore: boolean;
+};
+
 const apiRequest = async <T>(path: string, init?: RequestInit) => {
   const response = await fetch(path, {
     ...init,
@@ -64,8 +69,13 @@ export const api = {
       method: 'POST',
       body: '{}',
     }),
-  loadHistory: (bufferId: string, limit = historyWindowLimit) =>
-    apiRequest<{ messages: ChatMessage[] }>(`/api/buffers/${bufferId}/history?limit=${limit}`),
+  loadHistory: (bufferId: string, limit = historyWindowLimit, beforeMessageId?: string) => {
+    const searchParams = new URLSearchParams({ limit: String(limit) });
+    if (beforeMessageId) {
+      searchParams.set('before', beforeMessageId);
+    }
+    return apiRequest<BufferHistoryPayload>(`/api/buffers/${bufferId}/history?${searchParams.toString()}`);
+  },
   clearBufferHistory: (bufferId: string) =>
     apiRequest<{ ok: boolean; buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/history`, {
       method: 'DELETE',

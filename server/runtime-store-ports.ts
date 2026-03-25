@@ -15,6 +15,7 @@ import type {
   BufferInput,
   ChannelInput,
   FriendInput,
+  MessagePage,
   MessageInput,
   NetworkInput,
   NetworkSaveResult,
@@ -48,6 +49,7 @@ export type RuntimeConversationStore = {
   updateChannelUsers(networkId: string, channelName: string, users: ChannelUserState[]): void;
   updateChannelTopic(networkId: string, channelName: string, topic: string): void;
   listMessages(networkId: string, target: string, limit?: number): AppSnapshot['messages'];
+  listMessagePage(networkId: string, target: string, limit: number, beforeMessageId?: string): MessagePage;
   listAllMessages(networkId: string, target: string): AppSnapshot['messages'];
   deleteMessages(networkId: string, target: string): AppSnapshot['messages'];
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];

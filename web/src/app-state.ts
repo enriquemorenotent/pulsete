@@ -37,6 +37,9 @@ const initialTransientState: AppTransientState = {
   banner: null,
   channelList: initialChannelListState,
   historyLoading: false,
+  historyLoadingOlder: false,
+  historyLoadedByBufferId: {},
+  historyHasOlderByBufferId: {},
   assistant: {
     attemptedThreadId: null,
     loadingThreadId: null,
@@ -80,6 +83,9 @@ export const reducer = (state: State, action: Action): State => {
         banner: null,
         channelList: initialChannelListState,
         historyLoading: false,
+        historyLoadingOlder: false,
+        historyLoadedByBufferId: {},
+        historyHasOlderByBufferId: {},
         assistant: {
           ...state.transient.assistant,
           attemptedThreadId: null,

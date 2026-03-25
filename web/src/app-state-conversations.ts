@@ -3,6 +3,7 @@ import type { BufferState, FriendState, PendingChannelState } from '../../shared
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
   appendConversationMessages,
+  prependConversationMessages,
   removeBufferMessages,
   removeConversationMessages,
 } from './conversation-message-state.js';
@@ -95,6 +96,11 @@ export const reduceConversationDomain = (
       return {
         ...domain,
         messages: appendConversationMessages(domain.messages, action.messages),
+      };
+    case 'prepend-messages':
+      return {
+        ...domain,
+        messages: prependConversationMessages(domain.messages, action.messages),
       };
     case 'remove-messages':
       return {

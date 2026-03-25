@@ -28,6 +28,20 @@ export const appendConversationMessages = (
   return next;
 };
 
+export const prependConversationMessages = (
+  current: ConversationMessages,
+  incoming: ChatMessage[],
+): ConversationMessages => {
+  if (incoming.length === 0) {
+    return current;
+  }
+  const next = { ...current };
+  for (const [key, bucket] of groupMessagesByConversation(incoming)) {
+    next[key] = prependMessageBucket(next[key] ?? [], bucket);
+  }
+  return next;
+};
+
 export const removeBufferMessages = (messages: ConversationMessages, buffer: BufferState) => {
   const key = toConversationMessageKey(buffer.networkId, buffer.target);
   if (!(key in messages)) {
@@ -114,6 +128,20 @@ const appendMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) =>
   return mergeMessageBucket(current, normalizedIncoming);
 };
 
+const prependMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => {
+  const normalizedIncoming = normalizeMessageBucket(incoming);
+  if (normalizedIncoming.length === 0) {
+    return current;
+  }
+  if (current.length === 0) {
+    return normalizedIncoming;
+  }
+  if (canPrependWithoutResort(current, normalizedIncoming)) {
+    return [...normalizedIncoming, ...current];
+  }
+  return mergeMessageBucket(normalizedIncoming, current);
+};
+
 const normalizeMessageBucket = (messages: ChatMessage[]) => {
   if (messages.length < 2) {
     return messages;
@@ -137,11 +165,22 @@ const canAppendWithoutResort = (current: ChatMessage[], incoming: ChatMessage[])
   if (current[current.length - 1]?.ts > incoming[0]?.ts) {
     return false;
   }
+  return !hasDuplicateMessageIds(current, incoming);
+};
+
+const canPrependWithoutResort = (current: ChatMessage[], incoming: ChatMessage[]) => {
+  if (incoming[incoming.length - 1]?.ts > current[0]?.ts) {
+    return false;
+  }
+  return !hasDuplicateMessageIds(current, incoming);
+};
+
+const hasDuplicateMessageIds = (current: ChatMessage[], incoming: ChatMessage[]) => {
   const currentIds = new Set(current.map((message) => message.id));
   for (const message of incoming) {
     if (currentIds.has(message.id)) {
-      return false;
+      return true;
     }
   }
-  return true;
+  return false;
 };
