@@ -37,23 +37,6 @@ export const isAssistantBusy = (
 ) => selectedThreadSummary?.turnStatus === 'inProgress'
   || !!selectedThread?.turns.some((turn) => turn.status === 'inProgress');
 
-const assistantImportIntentVerbPattern = /\b(import|merge|add|append|insert|load|ingest|update|edit)\b/i;
-const assistantImportIntentTargetPattern = /\b(history|messages|transcript|log|logs|buffer)\b/i;
-
-export const shouldImportAssistantPrompt = (
-  prompt: string,
-  attachments: AssistantTurnAttachmentInput[],
-  canImportHistory: boolean,
-) => {
-  const text = prompt.trim();
-  return canImportHistory
-    && text.length > 0
-    && attachments.length > 0
-    && attachments.every((attachment) => attachment.kind === 'text')
-    && assistantImportIntentVerbPattern.test(text)
-    && assistantImportIntentTargetPattern.test(text);
-};
-
 export const getAskThreadsForWorkspace = (
   bufferId: string | null,
   threads: State['domain']['assistant']['threads']
@@ -99,7 +82,6 @@ export function useAssistantController({
     selectedThread,
   );
   const busy = isAssistantBusy(selectedThreadSummary, selectedThread);
-  const canImportHistory = workspace.selectedBuffer?.kind === 'channel' || workspace.selectedBuffer?.kind === 'query';
 
   useEffect(() => {
     if (!shouldLoadThread || !selectedThreadId) {
@@ -110,7 +92,6 @@ export function useAssistantController({
 
   return useMemo(() => ({
     assistant,
-    canImportHistory,
     contextTitle: getAssistantContextTitle(workspace),
     contextSubtitle: getAssistantContextSubtitle(workspace),
     contextKey,
@@ -128,24 +109,16 @@ export function useAssistantController({
       if (!threadId) {
         return false;
       }
-      return shouldImportAssistantPrompt(text, attachments, canImportHistory)
-        ? actions.importAssistantHistory(threadId, text, attachments)
-        : actions.startAssistantTurn(threadId, text, attachments);
-    },
-    onImportHistory: async (prompt, attachments: AssistantTurnAttachmentInput[]) => {
-      const threadId = selectedThreadId ?? (await actions.createAssistantThread('ask'))?.id ?? null;
-      return threadId ? actions.importAssistantHistory(threadId, prompt.trim(), attachments) : false;
+      return actions.startAssistantTurn(threadId, text, attachments);
     },
     onOpenChannel: actions.openMentionedChannel,
   }), [
     actions.createAssistantThread,
-    actions.importAssistantHistory,
     actions.interruptAssistantThread,
     actions.startAssistantTurn,
     actions.openMentionedChannel,
     assistant,
     busy,
-    canImportHistory,
     contextKey,
     loading,
     selectedThread,

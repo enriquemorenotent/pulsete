@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { tokenizeFormattedMessage } from '../web/src/formatted-message.js';
-import { FormattedMessageText } from '../web/src/FormattedMessageText.js';
+import { FormattedMessageText, parseFormattedMessageContent } from '../web/src/FormattedMessageText.js';
 
 test('keeps links clickable across IRC style changes', () => {
   const tokens = tokenizeFormattedMessage('Docs: https://exa\u0002mple.com now');
@@ -144,6 +144,21 @@ test('does not render inline previews for non-image links or raw mode', () => {
 
   assert.doesNotMatch(normalHtml, /<img/);
   assert.doesNotMatch(rawHtml, /<img/);
+});
+
+test('can suppress inline previews when a parent renderer places them separately', () => {
+  const parsedContent = parseFormattedMessageContent('Look https://cdn.example.com/cat.PNG?size=full', 'colors');
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Look https://cdn.example.com/cat.PNG?size=full',
+      parsedContent,
+      renderInlinePreviews: false,
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /Look/);
+  assert.doesNotMatch(html, /<img/);
 });
 
 test('renders raw mode with visible escape sequences instead of hidden control characters', () => {

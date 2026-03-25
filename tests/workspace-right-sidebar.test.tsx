@@ -101,7 +101,6 @@ const assistantSnapshot: AssistantSnapshot = {
 
 const assistantProps: AssistantPanelProps = {
   assistant: assistantSnapshot,
-  canImportHistory: true,
   contextSubtitle: 'Use this thread to ask about #general.',
   contextKey: 'buffer-channel',
   contextEmpty: false,
@@ -109,7 +108,6 @@ const assistantProps: AssistantPanelProps = {
   loading: false,
   busy: false,
   thread: assistantThread,
-  onImportHistory: async () => true,
   onOpenChannel: () => {},
   onStop: async () => true,
   onSubmitPrompt: async () => true,
@@ -199,7 +197,6 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
   assert.match(markup, /Scoped to alice/);
   assert.match(markup, /Ask about alice/);
   assert.match(markup, />Add files<\/button>/);
-  assert.match(markup, />Import logs<\/button>/);
   assert.match(markup, />Send<\/button>/);
   assert.doesNotMatch(markup, /Stop/);
   assert.doesNotMatch(markup, /Drop files to attach/);

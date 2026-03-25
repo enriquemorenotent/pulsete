@@ -1,4 +1,9 @@
-import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
+import type {
+  BufferHistoryImportRequest,
+  BufferHistoryImportSummary,
+  BufferState,
+  NetworkProfile,
+} from '../../shared/protocol.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
@@ -94,5 +99,32 @@ export const createConversationActions = ({
       failureValue: false,
     });
 
-  return { clearBufferHistory, joinChannel, openOrSelectQueryBuffer, openChannelListForNetwork };
+  const importBufferHistory = async (bufferId: string, input: BufferHistoryImportRequest) =>
+    executeMutation({
+      request: () => api.importBufferHistory(bufferId, input),
+      mapResult: () => true,
+      successMessage: ({ summary }) => formatHistoryImportNotice(summary),
+      errorMessage: 'Failed to import chat history',
+      failureValue: false,
+    });
+
+  return {
+    clearBufferHistory,
+    importBufferHistory,
+    joinChannel,
+    openOrSelectQueryBuffer,
+    openChannelListForNetwork,
+  };
+};
+
+const formatHistoryImportNotice = (summary: BufferHistoryImportSummary) => {
+  const details = [];
+  if (summary.duplicateCount > 0) {
+    details.push(`${summary.duplicateCount} duplicates skipped`);
+  }
+  if (summary.skippedCount > 0) {
+    details.push(`${summary.skippedCount} non-matching lines skipped`);
+  }
+  const suffix = details.length > 0 ? ` (${details.join(', ')})` : '';
+  return `Imported ${summary.importedCount} ${summary.importedCount === 1 ? 'message' : 'messages'} from ${summary.format} logs${suffix}.`;
 };

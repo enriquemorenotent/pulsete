@@ -43,6 +43,7 @@ export const createRuntimeHttpApi = ({
     markRead: (bufferId) => conversations.markBufferRead(bufferId),
     history: (bufferId, limit) => conversations.history(bufferId, limit),
     clearHistory: (bufferId) => conversations.clearHistory(bufferId),
+    importHistory: (bufferId, input) => conversations.importHistory(bufferId, input),
   },
   friends: {
     add: (nick) => friends.upsertFriend(nick),
@@ -56,7 +57,6 @@ export const createRuntimeHttpApi = ({
     deleteThread: (threadId) => assistant.deleteThread(threadId),
     readThread: (threadId) => assistant.readThread(threadId),
     startTurn: (input) => assistant.startTurn(input),
-    importHistory: (input) => assistant.importHistory(input),
     interruptThread: (threadId) => assistant.interruptThread(threadId),
     interruptTurn: (threadId, turnId) => assistant.interruptTurn(threadId, turnId),
     updatePreferences: (input) => assistant.updatePreferences(input),

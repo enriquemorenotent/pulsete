@@ -1,11 +1,18 @@
-import { memo, type RefObject } from 'react';
-import type { BufferState, ChatMessage, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import { memo, useState, type RefObject } from 'react';
+import type {
+  BufferHistoryImportRequest,
+  BufferState,
+  ChatMessage,
+  FriendState,
+  NetworkProfile,
+} from '../../shared/protocol.js';
 import { Card } from '@/components/ui/card.js';
 import type { ChannelListState } from './app-types.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
+import { HistoryImportDialog } from './HistoryImportDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -27,6 +34,8 @@ export type ChatPaneProps = {
   onToggleChannelAutoJoin: () => Promise<boolean>;
   canClearHistory?: boolean;
   onClearHistory?: () => Promise<boolean>;
+  canImportHistory?: boolean;
+  onImportHistory?: (input: BufferHistoryImportRequest) => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   channelList: ChannelListState;
@@ -38,6 +47,7 @@ export type ChatPaneProps = {
 };
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
+  const [historyImportOpen, setHistoryImportOpen] = useState(false);
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -56,11 +66,14 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}
           canClearHistory={props.canClearHistory}
           onClearHistory={props.onClearHistory}
+          canImportHistory={props.canImportHistory}
+          onOpenHistoryImport={props.onImportHistory ? () => setHistoryImportOpen(true) : undefined}
           onCloseChannel={props.onCloseChannel}
           onCloseBuffer={props.onCloseBuffer}
           onOpenChannelList={props.onOpenChannelList}
         />
         <ChatPaneMessageList
+          bufferKind={props.workspace.selectedBuffer?.kind ?? null}
           messages={props.selectedMessages}
           scrollRef={props.scrollRef}
           emptyBody={props.workspace.emptyBody}
@@ -85,6 +98,14 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onClose={props.onCloseChannelList}
         onJoin={props.onJoinChannelFromList}
       />
+      {props.onImportHistory ? (
+        <HistoryImportDialog
+          open={historyImportOpen}
+          targetLabel={props.workspace.headerTitle}
+          onClose={() => setHistoryImportOpen(false)}
+          onImport={props.onImportHistory}
+        />
+      ) : null}
     </section>
   );
 });

@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState,ChannelState,ClientMessage,NetworkProfile } from '../shared/protocol.js';
+import type {
+  BufferState,
+  BufferHistoryImportSummary,
+  ChannelState,
+  ClientMessage,
+  NetworkProfile,
+} from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action,State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
@@ -269,6 +275,84 @@ test('clearBufferHistory applies server mutations for the selected transcript', 
       { type: 'upsert-buffer', buffer: { ...selectedBuffer, unread: 0 } },
     ]);
     assert.deepEqual(banners, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('importBufferHistory applies server mutations and shows the import summary notice', async () => {
+  const { params, actions: dispatched, banners } = createParams();
+  const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
+  const summary: BufferHistoryImportSummary = {
+    format: 'hexchat',
+    importedCount: 2,
+    duplicateCount: 1,
+    skippedCount: 3,
+  };
+  const files = [{
+    name: 'pm.log',
+    mimeType: 'text/plain',
+    size: 128,
+    text: 'Mär 11 02:57:36 <sofia>\tHere I am',
+  }];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+      body: String(init?.body ?? ''),
+    });
+    if (String(input) === '/api/buffers/buffer-1/history/import') {
+      return Response.json({
+        ok: true,
+        summary,
+        messages: [
+          {
+            type: 'message.append',
+            message: {
+              id: 'message-2',
+              networkId: network.id,
+              target: '#general',
+              nick: 'tester',
+              body: 'hello again',
+              kind: 'line',
+              self: true,
+              ts: 2,
+            },
+          },
+        ],
+      });
+    }
+    throw new Error(`Unexpected fetch: ${String(input)}`);
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const imported = await actions.importBufferHistory(selectedBuffer.id, { files, selfNicks: [] });
+
+    assert.equal(imported, true);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/buffers/buffer-1/history/import',
+      method: 'POST',
+      body: JSON.stringify({ files, selfNicks: [] }),
+    }]);
+    assert.deepEqual(dispatched, [{
+      type: 'append-message',
+      message: {
+        id: 'message-2',
+        networkId: network.id,
+        target: '#general',
+        nick: 'tester',
+        body: 'hello again',
+        kind: 'line',
+        self: true,
+        ts: 2,
+      },
+    }]);
+    assert.deepEqual(banners, [{
+      kind: 'notice',
+      message: 'Imported 2 messages from hexchat logs (1 duplicates skipped, 3 non-matching lines skipped).',
+    }]);
   } finally {
     globalThis.fetch = originalFetch;
   }

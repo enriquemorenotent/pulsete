@@ -1,10 +1,12 @@
 import type WebSocket from 'ws';
 import type {
+  BufferHistoryImportSummary,
   AssistantPreferences,
   AssistantTaskKind,
   AssistantThread,
   AssistantThreadSummary,
   AssistantTurnAttachmentInput,
+  BufferHistoryImportRequest,
   ClientMessage,
   ServerMessage,
 } from '../shared/protocol.js';
@@ -33,6 +35,10 @@ export type RuntimeConversationMutations = {
   markBufferRead: RuntimeConversationService['markBufferRead'];
   history: RuntimeConversationService['listBufferHistory'];
   clearHistory(bufferId: string): ReturnType<RuntimeConversationService['clearBufferHistory']>;
+  importHistory(
+    bufferId: string,
+    input: BufferHistoryImportRequest,
+  ): { messages: readonly ServerMessage[]; summary: BufferHistoryImportSummary };
 };
 
 export type RuntimeFriendMutations = {
@@ -62,11 +68,6 @@ export type RuntimeAssistantApi = {
     prompt: string;
     attachments?: AssistantTurnAttachmentInput[];
   }): Promise<void>;
-  importHistory(input: {
-    threadId: string;
-    prompt?: string;
-    attachments: AssistantTurnAttachmentInput[];
-  }): Promise<void>;
   interruptThread(threadId: string): Promise<void>;
   interruptTurn(threadId: string, turnId: string): Promise<void>;
   updatePreferences(input: {
@@ -91,6 +92,7 @@ export type RuntimeHttpApi = {
     markRead: RuntimeConversationMutations['markBufferRead'];
     history: RuntimeConversationMutations['history'];
     clearHistory: RuntimeConversationMutations['clearHistory'];
+    importHistory: RuntimeConversationMutations['importHistory'];
   };
   friends: {
     add: RuntimeFriendMutations['upsertFriend'];

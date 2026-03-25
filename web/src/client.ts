@@ -1,4 +1,6 @@
 import {
+  type BufferHistoryImportSummary,
+  type BufferHistoryImportRequest,
   type AssistantTurnAttachmentInput,
   type AssistantPreferences,
   type AssistantTaskKind,
@@ -69,6 +71,14 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
+  importBufferHistory: (bufferId: string, payload: BufferHistoryImportRequest) =>
+    apiRequest<{ ok: boolean; messages: ServerMessage[]; summary: BufferHistoryImportSummary }>(
+      `/api/buffers/${bufferId}/history/import`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    ),
   markBufferRead: (bufferId: string) =>
     apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',
@@ -128,14 +138,6 @@ export const api = {
     apiRequest<{ thread: AssistantThread }>(`/api/assistant/threads/${encodeURIComponent(threadId)}`),
   startAssistantTurn: (threadId: string, payload: { prompt: string; attachments?: AssistantTurnAttachmentInput[] }) =>
     apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}/turns`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  importAssistantHistory: (
-    threadId: string,
-    payload: { prompt?: string; attachments: AssistantTurnAttachmentInput[] },
-  ) =>
-    apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}/import-history`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),

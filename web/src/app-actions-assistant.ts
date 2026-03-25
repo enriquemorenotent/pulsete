@@ -271,33 +271,6 @@ export const createAssistantActions = ({
       errorMessage: 'Failed to start assistant turn',
     });
 
-  const importAssistantHistory = async (
-    threadId: string,
-    prompt: string,
-    attachments: AssistantTurnAttachmentInput[],
-  ) => {
-    const session = getSession();
-    if (!session.workspace.selectedBuffer || session.workspace.selectedBuffer.kind === 'server') {
-      updateBanner('error', 'Select a channel or private message before importing history');
-      return false;
-    }
-    if (attachments.length === 0) {
-      updateBanner('error', 'Attach at least one text log file to import');
-      return false;
-    }
-    if (attachments.some((attachment) => attachment.kind !== 'text')) {
-      updateBanner('error', 'Only text log files can be imported into chat history');
-      return false;
-    }
-    return executeMutation({
-      request: () => api.importAssistantHistory(threadId, { prompt, attachments }),
-      failureValue: false,
-      mapResult: () => true,
-      successMessage: null,
-      errorMessage: 'Failed to import chat history',
-    });
-  };
-
   const interruptAssistantTurn = async (threadId: string, turnId: string) =>
     executeMutation({
       request: () => api.interruptAssistantTurn(threadId, turnId),
@@ -332,7 +305,6 @@ export const createAssistantActions = ({
     createAssistantThread,
     interruptAssistantThread,
     interruptAssistantTurn,
-    importAssistantHistory,
     loadAssistantThread,
     logoutAssistant,
     setAssistantActiveThread,

@@ -3,7 +3,6 @@ import test from 'node:test';
 import {
   isAssistantBusy,
   isAssistantThreadLoading,
-  shouldImportAssistantPrompt,
   shouldAutoLoadAssistantThread,
 } from '../web/src/useAssistantController.js';
 
@@ -76,41 +75,5 @@ test('assistant stays busy while the loaded thread summary is still in progress'
       },
     ),
     true,
-  );
-});
-
-test('assistant send auto-switches to import when the prompt clearly asks to update history from text attachments', () => {
-  assert.equal(
-    shouldImportAssistantPrompt(
-      'Edit the conversation history for this contact and add the contents of this attachment.',
-      [{
-        id: 'attachment-1',
-        kind: 'text',
-        name: 'rust.log',
-        mimeType: 'text/plain',
-        size: 128,
-        text: 'hello',
-      }],
-      true,
-    ),
-    true,
-  );
-});
-
-test('assistant send stays in ask mode when the prompt is just a question about an attachment', () => {
-  assert.equal(
-    shouldImportAssistantPrompt(
-      'What does this attachment say about Rust?',
-      [{
-        id: 'attachment-1',
-        kind: 'text',
-        name: 'rust.log',
-        mimeType: 'text/plain',
-        size: 128,
-        text: 'hello',
-      }],
-      true,
-    ),
-    false,
   );
 });

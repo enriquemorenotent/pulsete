@@ -1,6 +1,6 @@
 import { memo, useMemo, type RefObject } from 'react';
 import { Plug2 } from 'lucide-react';
-import type { ChatMessage } from '../../shared/protocol.js';
+import type { BufferState, ChatMessage } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
@@ -8,14 +8,16 @@ import { ServerMessageGroup } from './ServerMessageGroup.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import {
   buildRenderBlocks,
-  formatMessageTime,
+  formatMessageTimestamp,
   isActionMessage,
   isCompactMessage,
   messageTone,
+  participantNickTone,
   showKindLabel,
 } from './chat-pane-message-utils.js';
 
 type ChatPaneMessageListProps = {
+  bufferKind: BufferState['kind'] | null;
   messages: ChatMessage[];
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyBody: string;
@@ -25,6 +27,7 @@ type ChatPaneMessageListProps = {
 };
 
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: ChatPaneMessageListProps) {
+  const highlightParticipantNicks = props.bufferKind === 'query';
   const renderBlocks = useMemo(
     () => buildRenderBlocks(props.messages, props.listKind),
     [props.listKind, props.messages]
@@ -55,6 +58,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
             ) : isCompactMessage(block.message) ? (
               <ChatPaneCompactMessageRow
                 key={block.message.id}
+                highlightParticipantNicks={highlightParticipantNicks}
                 message={block.message}
                 mode={props.mode}
                 onOpenChannel={props.onOpenChannel}
@@ -63,8 +67,12 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
               <article key={block.message.id} className={cn('px-1 py-0.5 text-foreground', messageTone(block.message))}>
                 <div className="min-w-0">
                   <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                    <span>{formatMessageTime(block.message.ts)}</span>
-                    {block.message.nick ? <span className="font-medium text-inherit">{block.message.nick}</span> : null}
+                    <span className="tabular-nums normal-case tracking-normal">{formatMessageTimestamp(block.message.ts)}</span>
+                    {block.message.nick ? (
+                      <span className={cn('font-medium', participantNickTone(block.message, highlightParticipantNicks))}>
+                        {block.message.nick}
+                      </span>
+                    ) : null}
                     {showKindLabel(block.message) ? <span>{block.message.kind}</span> : null}
                   </div>
                   <p

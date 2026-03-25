@@ -13,22 +13,15 @@ import { Card, CardContent } from '@/components/ui/card.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { AssistantMessageContent } from './AssistantMessageContent.js';
 import {
-  formatAssistantElapsed,
-  getPendingImportStatusCopy,
-  type PendingImportStage,
-} from './assistant-import-status.js';
-import {
   assistantAttachmentLimit,
   assistantFileInputAccept,
   hasAssistantDroppedFiles,
   listAssistantDroppedFiles,
   prepareAssistantAttachments,
-  toAttachmentMetadata,
 } from './assistant-attachments.js';
 
 export type AssistantPanelProps = {
   assistant: AssistantSnapshot;
-  canImportHistory: boolean;
   contextSubtitle: string;
   contextKey: string;
   contextEmpty: boolean;
@@ -36,17 +29,9 @@ export type AssistantPanelProps = {
   loading: boolean;
   busy: boolean;
   thread: AssistantThread | null;
-  onImportHistory: (prompt: string, attachments: AssistantTurnAttachmentInput[]) => Promise<boolean>;
   onOpenChannel: (channel: string) => void;
   onStop: () => Promise<boolean>;
   onSubmitPrompt: (prompt: string, attachments: AssistantTurnAttachmentInput[]) => Promise<boolean>;
-};
-
-type PendingImportState = {
-  attachments: AssistantAttachmentMetadata[];
-  baseConversationLength: number;
-  stage: PendingImportStage;
-  startedAt: number;
 };
 
 export function AssistantPanel(props: AssistantPanelProps) {
@@ -54,21 +39,17 @@ export function AssistantPanel(props: AssistantPanelProps) {
   const [attachments, setAttachments] = useState<AssistantTurnAttachmentInput[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dropActive, setDropActive] = useState(false);
-  const [pendingImport, setPendingImport] = useState<PendingImportState | null>(null);
-  const [now, setNow] = useState(() => Date.now());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dropDepthRef = useRef(0);
   const conversation = useMemo(() => buildConversation(props.thread), [props.thread]);
   const assistantReady = props.assistant.serviceStatus === 'ready' && !!props.assistant.auth.account;
-  const localBusy = props.busy || pendingImport !== null;
-  const canAttachFiles = assistantReady && !localBusy;
+  const canAttachFiles = assistantReady && !props.busy;
 
   useEffect(() => {
     setPrompt('');
     setAttachments([]);
     setAttachmentError(null);
     setDropActive(false);
-    setPendingImport(null);
     dropDepthRef.current = 0;
   }, [props.contextKey]);
 
@@ -80,61 +61,18 @@ export function AssistantPanel(props: AssistantPanelProps) {
     dropDepthRef.current = 0;
   }, [canAttachFiles]);
 
-  useEffect(() => {
-    if (!pendingImport) {
-      return;
-    }
-    setNow(Date.now());
-    const timer = window.setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [pendingImport]);
-
-  useEffect(() => {
-    if (!pendingImport) {
-      return;
-    }
-    if (props.busy && pendingImport.stage === 'starting') {
-      setPendingImport((current) => current ? { ...current, stage: 'running' } : current);
-      return;
-    }
-    if (!props.busy && (
-      pendingImport.stage === 'running'
-      || conversation.length > pendingImport.baseConversationLength
-    )) {
-      setPendingImport(null);
-    }
-  }, [conversation.length, pendingImport, props.busy]);
-
-  const sendDisabled = !assistantReady || localBusy || !prompt.trim();
-  const importDisabled = !assistantReady || localBusy || attachments.length === 0 || !props.canImportHistory;
-  const importRequiresTextOnly = attachments.some((attachment) => attachment.kind !== 'text');
+  const sendDisabled = !assistantReady || props.busy || !prompt.trim();
   const composerPlaceholder = assistantReady
     ? `Ask about ${props.contextTitle}`
     : 'Open Preferences to sign in first.';
   const attachmentHelpText = `Attach up to ${assistantAttachmentLimit} files per question.`;
-  const importHelpText = !props.canImportHistory
-    ? 'Select a channel or private conversation to import text logs.'
-    : importRequiresTextOnly
-      ? 'Import logs only works with text attachments.'
-      : `Import logs appends text attachments to ${props.contextTitle}.`;
   const composerHelpText = assistantReady
-    ? `${attachmentHelpText} ${importHelpText}`
+    ? `${attachmentHelpText} Text and image attachments stay in the assistant thread only.`
     : 'Open Preferences to sign in and enable the assistant.';
   const showStatus = props.contextEmpty
     || !assistantReady
     || !!props.assistant.auth.lastError
     || (props.assistant.serviceStatus === 'error' && !!props.assistant.serviceError);
-  const showPendingImportStatus = pendingImport !== null;
-  const pendingImportCopy = pendingImport
-    ? getPendingImportStatusCopy(pendingImport.stage, now - pendingImport.startedAt)
-    : null;
-  const pendingImportElapsed = pendingImport
-    ? formatAssistantElapsed(now - pendingImport.startedAt)
-    : null;
 
   const attachFiles = async (files: File[]) => {
     if (files.length === 0) {
@@ -228,7 +166,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
               Loading conversation…
             </div>
           ) : null}
-          {!props.loading && conversation.length === 0 && !showPendingImportStatus ? (
+          {!props.loading && conversation.length === 0 ? (
             <Card className="border-dashed bg-card/80">
               <CardContent className="space-y-3 p-4">
                 <div className="flex flex-wrap items-center gap-2">
@@ -242,9 +180,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
                   </p>
                 </div>
                 <p className="text-[12px] text-muted-foreground">
-                  {props.canImportHistory
-                    ? `Ask questions, attach screenshots or logs, or import text files into ${props.contextTitle}.`
-                    : 'Ask questions or attach supporting files to give the assistant more context.'}
+                  Ask questions or attach supporting files to give the assistant more context.
                 </p>
               </CardContent>
             </Card>
@@ -280,33 +216,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
               </div>
             </div>
           ))}
-          {showPendingImportStatus && pendingImportCopy && pendingImportElapsed ? (
-            <Card className="border-primary/25 bg-card/90">
-              <CardContent className="space-y-3 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">{pendingImportCopy.title}</h3>
-                  <Badge variant="secondary">{pendingImportElapsed}</Badge>
-                </div>
-                <p className="text-[13px] text-muted-foreground">
-                  {pendingImportCopy.detail}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {pendingImport.attachments.map((attachment) => (
-                    <Badge
-                      key={attachment.id}
-                      variant="secondary"
-                      className="normal-case tracking-normal"
-                    >
-                      {attachment.name}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-[12px] leading-5 text-muted-foreground">
-                  {pendingImportCopy.hint}
-                </p>
-              </CardContent>
-            </Card>
-          ) : props.busy ? (
+          {props.busy ? (
             <div className="flex justify-start">
               <div className="rounded-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
                 Thinking…
@@ -362,11 +272,11 @@ export function AssistantPanel(props: AssistantPanelProps) {
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder={composerPlaceholder}
-          disabled={!assistantReady || localBusy}
+          disabled={!assistantReady || props.busy}
           className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-60"
         />
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {localBusy ? (
+          {props.busy ? (
             <div />
           ) : (
             <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -385,40 +295,11 @@ export function AssistantPanel(props: AssistantPanelProps) {
             </div>
           )}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {!props.busy ? (
-              <Button
-                variant="outline"
-                disabled={importDisabled}
-                title={importHelpText}
-                onClick={async () => {
-                  if (attachments.some((attachment) => attachment.kind !== 'text')) {
-                    setAttachmentError('Only text log files can be imported into chat history.');
-                    return;
-                  }
-                  setPendingImport({
-                    attachments: attachments.map(toAttachmentMetadata),
-                    baseConversationLength: conversation.length,
-                    stage: 'starting',
-                    startedAt: Date.now(),
-                  });
-                  const started = await props.onImportHistory(prompt, attachments);
-                  if (started) {
-                    setPrompt('');
-                    setAttachments([]);
-                    setAttachmentError(null);
-                    return;
-                  }
-                  setPendingImport(null);
-                }}
-              >
-                Import logs
-              </Button>
-            ) : null}
             <Button
-              variant={localBusy ? 'destructive' : 'default'}
-              disabled={localBusy ? false : sendDisabled}
+              variant={props.busy ? 'destructive' : 'default'}
+              disabled={props.busy ? false : sendDisabled}
               onClick={async () => {
-                if (localBusy) {
+                if (props.busy) {
                   await props.onStop();
                   return;
                 }
@@ -429,7 +310,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
                 }
               }}
             >
-              {localBusy ? (showPendingImportStatus ? 'Stop import' : 'Stop') : 'Send'}
+              {props.busy ? 'Stop' : 'Send'}
             </Button>
           </div>
         </div>

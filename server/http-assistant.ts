@@ -1,6 +1,5 @@
 import {
   assistantRequestBodyLimitBytes,
-  parseAssistantImportInput,
   parseAssistantPreferencesInput,
   parseAssistantTurnInput,
   parseCreateAssistantThreadInput,
@@ -58,16 +57,6 @@ export const handleAssistantRoutes = async ({ req, res, pathname, context }: Rou
     await context.assistant.startTurn({
       threadId,
       ...parseAssistantTurnInput(await readJson(req, assistantRequestBodyLimitBytes)),
-    });
-    writeJson(res, 200, { ok: true });
-    return true;
-  }
-  const threadImportMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)\/import-history$/);
-  if (threadImportMatch && req.method === 'POST') {
-    const threadId = decodeRouteParam(threadImportMatch[1]);
-    await context.assistant.importHistory({
-      threadId,
-      ...parseAssistantImportInput(await readJson(req, assistantRequestBodyLimitBytes)),
     });
     writeJson(res, 200, { ok: true });
     return true;

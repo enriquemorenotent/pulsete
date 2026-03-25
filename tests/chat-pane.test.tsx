@@ -86,12 +86,38 @@ const makeWorkspace = (): WorkspaceView => {
   };
 };
 
+const makeQueryWorkspace = (): WorkspaceView => {
+  const network = makeNetwork();
+  const selectedBuffer = makeBuffer({ kind: 'query', target: 'MissD' });
+  return {
+    mode: 'query-connected',
+    selection: { kind: 'buffer', bufferId: selectedBuffer.id },
+    connectionInstances: [network],
+    selectedNetwork: network,
+    selectedRuntime: {
+      phase: 'connected',
+      serverName: 'irc.example.test',
+      nick: network.nick,
+    },
+    selectedBuffer,
+    selectedChannel: null,
+    selectedPendingChannel: null,
+    headerTitle: selectedBuffer.target,
+    headerSubtitle: `${network.nick} @ irc.example.test`,
+    composerMode: 'normal',
+    composerPlaceholder: `Message ${selectedBuffer.target}`,
+    emptyBody: 'No history yet.',
+    showNicklist: false,
+  };
+};
+
 const renderChatPane = (
   selectedMessages: ChatMessage[],
   overrides: Partial<{
     showChannelAutoJoin: boolean;
     channelAutoJoinActive: boolean;
     canClearHistory: boolean;
+    canImportHistory: boolean;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -113,6 +139,37 @@ const renderChatPane = (
       onToggleChannelAutoJoin={async () => true}
       canClearHistory={overrides.canClearHistory}
       onClearHistory={async () => true}
+      canImportHistory={overrides.canImportHistory}
+      onImportHistory={async () => true}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+      channelList={closedChannelList}
+      channelListNetwork={null}
+      onCloseChannelList={() => undefined}
+      onJoinChannelFromList={async () => undefined}
+      onOpenMentionedChannel={() => undefined}
+      onOpenChannelList={() => undefined}
+    />
+  );
+
+const renderQueryPane = (selectedMessages: ChatMessage[]) =>
+  renderToStaticMarkup(
+    <ChatPane
+      workspace={makeQueryWorkspace()}
+      friends={[] satisfies FriendState[]}
+      selectedMessages={selectedMessages}
+      draft=""
+      messageDisplayMode="colors"
+      scrollRef={createRef<HTMLDivElement>()}
+      onDraftChange={() => undefined}
+      onRecallOlderDraft={() => undefined}
+      onRecallNewerDraft={() => undefined}
+      onSend={async () => undefined}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      showChannelAutoJoin={false}
+      channelAutoJoinActive={false}
+      onToggleChannelAutoJoin={async () => true}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -165,14 +222,51 @@ test('part and quit rows render with distinct tones', () => {
   assert.match(markup, /text-red-500/);
 });
 
-test('inline image previews move compact chat bodies onto a second line', () => {
-  const markup = renderChatPane([
-    makeMessage({ id: 'message-1', nick: 'Joby', body: 'https://example.test/cat.png', ts: 1 }),
+test('compact chat rows use one grid skeleton for plain text and inline previews', () => {
+  const plainMarkup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: 'Joby', body: 'plain line', ts: 1 }),
+  ]);
+  const previewMarkup = renderChatPane([
+    makeMessage({ id: 'message-2', nick: 'Joby', body: 'Look https://example.test/cat.png', ts: 1 }),
   ]);
 
-  assert.match(markup, /grid grid-cols-\[3\.5rem_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
-  assert.match(markup, /Inline image preview: cat\.png/);
-  assert.match(markup, /<div class="col-start-2 min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
+  assert.match(plainMarkup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(previewMarkup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(previewMarkup, /Inline image preview: cat\.png/);
+  assert.match(previewMarkup, /Look /);
+  assert.doesNotMatch(previewMarkup, /col-start-2/);
+});
+
+test('message rows render a full date and time timestamp', () => {
+  const markup = renderChatPane([
+    makeMessage({
+      id: 'message-1',
+      nick: 'Joby',
+      body: 'timestamped',
+      ts: new Date(2026, 2, 11, 2, 57, 36, 0).getTime(),
+    }),
+  ]);
+
+  assert.match(markup, /2026-03-11 02:57:36/);
+  assert.match(markup, /font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground/);
+});
+
+test('private-message rows color self and peer nick labels differently', () => {
+  const markup = renderQueryPane([
+    makeMessage({ id: 'message-1', nick: 'sofia', self: true, target: 'MissD', body: 'hey', ts: 1 }),
+    makeMessage({ id: 'message-2', nick: 'MissD', self: false, target: 'MissD', body: 'hi', ts: 2 }),
+  ]);
+
+  assert.match(markup, /class="font-sans font-semibold text-primary">sofia</);
+  assert.match(markup, /class="font-sans font-semibold text-success">MissD</);
+});
+
+test('channel rows keep neutral nick label coloring', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: 'Joby', body: 'plain line', ts: 1 }),
+  ]);
+
+  assert.match(markup, /class="font-sans font-semibold text-inherit">Joby</);
 });
 
 test('action rows keep the sender label and hide the duplicated nick in the body', () => {
@@ -221,6 +315,14 @@ test('channel headers expose clear history for normal chat buffers', () => {
   });
 
   assert.match(markup, /Clear history/);
+});
+
+test('channel headers expose log import for normal chat buffers', () => {
+  const markup = renderChatPane([], {
+    canImportHistory: true,
+  });
+
+  assert.match(markup, /Import logs/);
 });
 
 test('channel headers hide clear history when the action is not available', () => {

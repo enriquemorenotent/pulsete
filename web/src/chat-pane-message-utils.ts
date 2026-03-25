@@ -4,13 +4,19 @@ export type MessageRenderBlock =
   | { kind: 'group'; messages: ChatMessage[]; sourceLabel: string }
   | { kind: 'single'; message: ChatMessage };
 
-export const formatMessageTime = (value: number) =>
-  new Date(value).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+export const formatMessageTimestamp = (value: number) => {
+  const date = new Date(value);
+  return [
+    date.getFullYear(),
+    padDatePart(date.getMonth() + 1),
+    padDatePart(date.getDate()),
+  ].join('-')
+    + ` ${[
+      padDatePart(date.getHours()),
+      padDatePart(date.getMinutes()),
+      padDatePart(date.getSeconds()),
+    ].join(':')}`;
+};
 
 export const buildRenderBlocks = (messages: ChatMessage[], mode: 'chat' | 'server') => {
   if (mode === 'chat') {
@@ -77,6 +83,16 @@ export const isActionMessage = (message: ChatMessage) => message.kind === 'actio
 export const showKindLabel = (message: ChatMessage) =>
   message.kind === 'notice' || message.kind === 'error';
 
+export const participantNickTone = (
+  message: ChatMessage,
+  highlightParticipants: boolean,
+) => {
+  if (!highlightParticipants || !message.nick) {
+    return 'text-inherit';
+  }
+  return message.self ? 'text-primary' : 'text-success';
+};
+
 export const messageTone = (message: ChatMessage) => {
   if (message.kind === 'error') {
     return 'text-destructive';
@@ -109,3 +125,5 @@ const canContinueGroup = (previous: ChatMessage, next: ChatMessage, mode: 'chat'
 
 const getGroupSourceKey = (message: ChatMessage, mode: 'chat' | 'server') =>
   `${message.kind}:${mode === 'server' ? getServerGroupSourceLabel(message) : ''}`;
+
+const padDatePart = (value: number) => String(value).padStart(2, '0');

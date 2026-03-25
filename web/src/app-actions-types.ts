@@ -1,4 +1,10 @@
-import type { BufferState, ClientMessage, NetworkProfile, ServerMessage } from '../../shared/protocol.js';
+import type {
+  BufferHistoryImportRequest,
+  BufferState,
+  ClientMessage,
+  NetworkProfile,
+  ServerMessage,
+} from '../../shared/protocol.js';
 import type { Action } from './app-types.js';
 import type { AppSessionSnapshot } from './app-session.js';
 import type { SocketHandle } from './client.js';
@@ -37,6 +43,7 @@ export type GatewayActions = {
 export type ConversationActions = {
   joinChannel: (networkId: string, channel: string, sourceBufferId?: string) => boolean;
   clearBufferHistory: (bufferId: string) => Promise<boolean>;
+  importBufferHistory: (bufferId: string, input: BufferHistoryImportRequest) => Promise<boolean>;
   openOrSelectQueryBuffer: (network: NetworkProfile, nick: string) => Promise<BufferState>;
   openChannelListForNetwork: (networkId: string) => Promise<void>;
 };

@@ -3,48 +3,101 @@ import { tokenizeFormattedMessage, tokenizeStrippedMessage, type MessageTextPart
 import { escapeIrcTextForDebug } from './irc-format.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
+export type ParsedFormattedMessageContent = {
+  inlineImageHrefs: string[];
+  rawMode: boolean;
+  rawText: string;
+  tokens: ReturnType<typeof tokenizeFormattedMessage>;
+};
+
 type FormattedMessageTextProps = {
+  parsedContent?: ParsedFormattedMessageContent;
+  renderInlinePreviews?: boolean;
   text: string;
   onOpenChannel: (channel: string) => void;
   mode?: MessageDisplayMode;
 };
 
-export const hasInlineImagePreview = (text: string, mode: MessageDisplayMode | undefined) => {
+export const parseFormattedMessageContent = (
+  text: string,
+  mode: MessageDisplayMode | undefined,
+): ParsedFormattedMessageContent => {
   if (mode === 'raw') {
-    return false;
+    return {
+      inlineImageHrefs: [],
+      rawMode: true,
+      rawText: escapeIrcTextForDebug(text),
+      tokens: [],
+    };
   }
   const tokens = mode === 'stripped'
     ? tokenizeStrippedMessage(text)
     : tokenizeFormattedMessage(text);
-  return collectInlineImageHrefs(tokens).length > 0;
+  return {
+    inlineImageHrefs: collectInlineImageHrefs(tokens),
+    rawMode: false,
+    rawText: '',
+    tokens,
+  };
 };
 
+export const hasVisibleFormattedMessageText = (content: ParsedFormattedMessageContent) => {
+  if (content.rawMode) {
+    return content.rawText.trim().length > 0;
+  }
+  return content.tokens.some((token) => {
+    if (token.type === 'text' || token.type === 'channel') {
+      return token.parts.some((part) => part.text.trim().length > 0);
+    }
+    return !isInlineImageHref(token.href) && token.parts.some((part) => part.text.trim().length > 0);
+  });
+};
+
+export const FormattedMessageInlinePreviews = memo(function FormattedMessageInlinePreviews(
+  props: { hrefs: string[] },
+) {
+  if (props.hrefs.length === 0) {
+    return null;
+  }
+
+  return (
+    <span className="mt-2 flex flex-wrap gap-2">
+      {props.hrefs.map((href) => (
+        <a
+          key={href}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="block max-w-full overflow-hidden rounded-sm border border-border/80 bg-card/70 p-1"
+        >
+          <img
+            src={href}
+            alt={buildImageAltText(href)}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            className="block max-h-80 max-w-full rounded-sm object-contain"
+          />
+        </a>
+      ))}
+    </span>
+  );
+});
+
 export const FormattedMessageText = memo(function FormattedMessageText(props: FormattedMessageTextProps) {
-  const rawMode = props.mode === 'raw';
-
-  const tokens = useMemo(
-    () => {
-      if (rawMode) {
-        return [];
-      }
-      return props.mode === 'stripped'
-        ? tokenizeStrippedMessage(props.text)
-        : tokenizeFormattedMessage(props.text);
-    },
-    [rawMode, props.mode, props.text]
+  const memoizedContent = useMemo(
+    () => parseFormattedMessageContent(props.text, props.mode),
+    [props.mode, props.text]
   );
-  const inlineImageHrefs = useMemo(
-    () => rawMode ? [] : collectInlineImageHrefs(tokens),
-    [rawMode, tokens]
-  );
+  const content = props.parsedContent ?? memoizedContent;
 
-  if (rawMode) {
-    return <span className="font-mono">{escapeIrcTextForDebug(props.text)}</span>;
+  if (content.rawMode) {
+    return <span className="font-mono">{content.rawText}</span>;
   }
 
   return (
     <>
-      {tokens.map((token, tokenIndex) => {
+      {content.tokens.map((token, tokenIndex) => {
         const content = renderParts(token.parts, token.type !== 'text', tokenIndex);
         if (token.type === 'text') {
           return <Fragment key={`text-${tokenIndex}`}>{content}</Fragment>;
@@ -76,28 +129,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
           </a>
         );
       })}
-      {inlineImageHrefs.length > 0 ? (
-        <span className="mt-2 flex flex-wrap gap-2">
-          {inlineImageHrefs.map((href) => (
-            <a
-              key={href}
-              href={href}
-              target="_blank"
-              rel="noreferrer"
-              className="block max-w-full overflow-hidden rounded-sm border border-border/80 bg-card/70 p-1"
-            >
-              <img
-                src={href}
-                alt={buildImageAltText(href)}
-                loading="lazy"
-                decoding="async"
-                referrerPolicy="no-referrer"
-                className="block max-h-80 max-w-full rounded-sm object-contain"
-              />
-            </a>
-          ))}
-        </span>
-      ) : null}
+      {props.renderInlinePreviews === false ? null : <FormattedMessageInlinePreviews hrefs={content.inlineImageHrefs} />}
     </>
   );
 });

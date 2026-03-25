@@ -439,52 +439,6 @@ test('interruptAssistantThread sends the thread-level interrupt request', async 
   }
 });
 
-test('importAssistantHistory sends text attachments to the import endpoint', async () => {
-  const state = createState();
-  const { params, banners } = createParams(state);
-  const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
-  const attachments: AssistantTurnAttachmentInput[] = [
-    {
-      id: 'attachment-1',
-      kind: 'text',
-      name: 'pm.log',
-      mimeType: 'text/plain',
-      size: 42,
-      text: '[12:00] <alice> hello',
-    },
-  ];
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input, init) => {
-    fetchCalls.push({
-      url: String(input),
-      method: String(init?.method ?? 'GET'),
-      body: String(init?.body ?? ''),
-    });
-    if (String(input) === '/api/assistant/threads/thread-1/import-history') {
-      return okJson({ ok: true });
-    }
-    throw new Error(`Unexpected fetch: ${String(input)}`);
-  }) as typeof fetch;
-
-  try {
-    const actions = createAppActions(params);
-    const started = await actions.importAssistantHistory('thread-1', 'Import this PM log.', attachments);
-
-    assert.equal(started, true);
-    assert.deepEqual(fetchCalls, [{
-      url: '/api/assistant/threads/thread-1/import-history',
-      method: 'POST',
-      body: JSON.stringify({
-        prompt: 'Import this PM log.',
-        attachments,
-      }),
-    }]);
-    assert.deepEqual(banners, []);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
 const okJson = (body: unknown) => ({
   ok: true,
   status: 200,

@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { MessageKind, ServerMessage } from '../shared/protocol.js';
+import type {
+  BufferHistoryImportRequest,
+  MessageKind,
+  ServerMessage,
+} from '../shared/protocol.js';
 import { normalizeQueryTarget } from './irc-validate.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
@@ -13,8 +17,10 @@ import {
   openConversationQuery,
   upsertConversationChannel,
 } from './runtime-conversation-store.js';
+import { importLogFiles } from './history-import.js';
 import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
 import type { MessageInput } from './storage-types.js';
+import { badRequest, notFound } from './app-error.js';
 
 type RuntimeConversationServiceOptions = {
   conversations: RuntimeConversationStore;
@@ -68,6 +74,31 @@ export class RuntimeConversationService {
     return {
       buffer: bufferUpdate ?? buffer,
       messages,
+    };
+  }
+
+  importHistory(bufferId: string, input: BufferHistoryImportRequest) {
+    const buffer = this.options.conversations.getBuffer(bufferId);
+    if (!buffer) {
+      throw notFound('Buffer not found');
+    }
+    if (buffer.kind === 'server') {
+      throw badRequest('Only channels and private messages can import history');
+    }
+    const network = requireStoredNetwork(this.options.networks, buffer.networkId);
+    const existingMessages = this.options.conversations.listAllMessages(buffer.networkId, buffer.target);
+    const result = importLogFiles({
+      buffer,
+      existingMessages,
+      files: input.files,
+      selfNicks: [network.nick, ...network.altNicks, ...input.selfNicks],
+    });
+    return {
+      summary: result.summary,
+      messages: result.messages.map((message) => ({
+        type: 'message.append' as const,
+        message: this.options.conversations.appendMessage(message),
+      })),
     };
   }
 

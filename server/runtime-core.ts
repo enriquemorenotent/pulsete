@@ -101,7 +101,6 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     deleteThread: async (threadId) => publishMutation(await assistant.deleteThread(threadId)),
     readThread: (threadId) => assistant.readThread(threadId),
     startTurn: (input) => assistant.startTurn(input),
-    importHistory: (input) => assistant.importHistory(input),
     interruptThread: (threadId) => assistant.interruptThread(threadId),
     interruptTurn: (threadId, turnId) => assistant.interruptTurn(threadId, turnId),
     updatePreferences: (input) => assistant.updatePreferences(input),
@@ -125,6 +124,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
     history: (bufferId, limit) => conversationsService.listBufferHistory(bufferId, limit),
     clearHistory: (bufferId) => publishMutation(conversationsService.clearBufferHistory(bufferId)),
+    importHistory: (bufferId, input) => publishMutation(conversationsService.importHistory(bufferId, input)),
   };
   const friends: RuntimeFriendMutations = {
     upsertFriend: (nick) => publishMutation(friendMutations.upsertFriend(nick)),
