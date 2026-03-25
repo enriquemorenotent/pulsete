@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   bufferHistoryImportRequestSchema,
+  bufferSelfNickAliasesRequestSchema,
   historyImportRequestBodyLimitBytes,
 } from '../shared/protocol.js';
 import { badRequest } from './app-error.js';
@@ -73,6 +74,14 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
     return true;
   }
 
+  const selfNickAliasesMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/self-nick-aliases$/);
+  if (selfNickAliasesMatch && req.method === 'PUT') {
+    const bufferId = decodeRouteParam(selfNickAliasesMatch[1]);
+    const input = readBufferSelfNickAliasesInput(await readJson(req));
+    writeJson(res, 200, { ok: true, ...context.buffers.updateQuerySelfNickAliases(bufferId, input) });
+    return true;
+  }
+
   if (historyMatch && req.method === 'GET') {
     const bufferId = decodeRouteParam(historyMatch[1]);
     const limit = normalizeHistoryLimit(url.searchParams.get('limit'));
@@ -117,6 +126,14 @@ const readHistoryImportInput = (body: unknown) => {
   const result = bufferHistoryImportRequestSchema.safeParse(body);
   if (!result.success) {
     throw badRequest(result.error.issues[0]?.message ?? 'Invalid history import payload');
+  }
+  return result.data;
+};
+
+const readBufferSelfNickAliasesInput = (body: unknown) => {
+  const result = bufferSelfNickAliasesRequestSchema.safeParse(body);
+  if (!result.success) {
+    throw badRequest(result.error.issues[0]?.message ?? 'Invalid self alias payload');
   }
   return result.data;
 };

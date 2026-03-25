@@ -5,6 +5,10 @@ export const historyImportMaxFileBytes = 4 * 1024 * 1024;
 export const historyImportRequestBodyLimitBytes = 20 * 1024 * 1024;
 export const historyImportSelfNickLimit = 12;
 
+export const selfNickAliasesSchema = z.array(z.string().trim().min(1, 'Nick names cannot be empty'))
+  .max(historyImportSelfNickLimit, `Add at most ${historyImportSelfNickLimit} self nick aliases`)
+  .default([]);
+
 export const historyImportFormatSchema = z.enum(['hexchat']);
 export type HistoryImportFormat = z.infer<typeof historyImportFormatSchema>;
 
@@ -20,11 +24,14 @@ export const bufferHistoryImportRequestSchema = z.object({
   files: z.array(historyImportTextFileSchema)
     .min(1, 'Attach at least one text log file to import')
     .max(historyImportFileLimit),
-  selfNicks: z.array(z.string().trim().min(1, 'Nick names cannot be empty'))
-    .max(historyImportSelfNickLimit, `Add at most ${historyImportSelfNickLimit} self nick aliases`)
-    .default([]),
+  selfNicks: selfNickAliasesSchema,
 });
 export type BufferHistoryImportRequest = z.infer<typeof bufferHistoryImportRequestSchema>;
+
+export const bufferSelfNickAliasesRequestSchema = z.object({
+  selfNickAliases: selfNickAliasesSchema,
+});
+export type BufferSelfNickAliasesRequest = z.infer<typeof bufferSelfNickAliasesRequestSchema>;
 
 export const bufferHistoryImportSummarySchema = z.object({
   format: historyImportFormatSchema,

@@ -60,16 +60,18 @@ test('importLogFiles parses HexChat private logs and skips non-chat noise', () =
   assert.ok(result.summary.importedCount > 0);
   assert.ok(result.summary.duplicateCount >= 0);
   assert.ok(result.summary.skippedCount >= 0);
-  assert.deepEqual(result.messages[0], {
-    id: result.messages[0]?.id,
-    networkId: 'network-1',
-    target: 'MissD',
-    nick: 'sofia',
-    body: 'Here I am',
-    kind: 'line',
-    self: true,
-    ts: new Date(2026, 2, 11, 2, 57, 36, 0).getTime(),
-  });
+  assert.match(result.messages[0]?.id ?? '', /.+/);
+  assert.equal(result.messages[0]?.networkId, 'network-1');
+  assert.equal(result.messages[0]?.target, 'MissD');
+  assert.equal(result.messages[0]?.nick, 'sofia');
+  assert.equal(result.messages[0]?.speakerRole, 'self');
+  assert.equal(result.messages[0]?.speakerNick, 'sofia');
+  assert.equal(result.messages[0]?.attributionSource, 'query-alias');
+  assert.equal(result.messages[0]?.attributionConfidence, 'high');
+  assert.equal(result.messages[0]?.body, 'Here I am');
+  assert.equal(result.messages[0]?.kind, 'line');
+  assert.equal(result.messages[0]?.self, true);
+  assert.equal(result.messages[0]?.ts, new Date(2026, 2, 11, 2, 57, 36, 0).getTime());
   assert.ok(result.messages.some((message) =>
     message.kind === 'action'
     && message.nick === 'MissD'
@@ -97,10 +99,16 @@ test('importLogFiles keeps only self and peer lines for query buffers', () => {
   assert.equal(result.summary.duplicateCount, 0);
   assert.equal(result.summary.skippedCount, 2);
   assert.deepEqual(
-    result.messages.map((message) => ({ nick: message.nick, kind: message.kind, self: message.self })),
+    result.messages.map((message) => ({
+      nick: message.nick,
+      kind: message.kind,
+      self: message.self,
+      speakerRole: message.speakerRole,
+      attributionSource: message.attributionSource,
+    })),
     [
-      { nick: 'sofia', kind: 'line', self: true },
-      { nick: 'MissD', kind: 'line', self: false },
+      { nick: 'sofia', kind: 'line', self: true, speakerRole: 'self', attributionSource: 'query-alias' },
+      { nick: 'MissD', kind: 'line', self: false, speakerRole: 'peer', attributionSource: 'query-target' },
     ],
   );
 });
@@ -122,10 +130,15 @@ test('importLogFiles keeps old self nick lines in query buffers when aliases are
   assert.equal(result.summary.duplicateCount, 0);
   assert.equal(result.summary.skippedCount, 1);
   assert.deepEqual(
-    result.messages.map((message) => ({ nick: message.nick, self: message.self, body: message.body })),
+    result.messages.map((message) => ({
+      nick: message.nick,
+      self: message.self,
+      body: message.body,
+      speakerRole: message.speakerRole,
+    })),
     [
-      { nick: 'oldsofia', self: true, body: 'hi from the old nick' },
-      { nick: 'MissD', self: false, body: 'hello' },
+      { nick: 'oldsofia', self: true, body: 'hi from the old nick', speakerRole: 'self' },
+      { nick: 'MissD', self: false, body: 'hello', speakerRole: 'peer' },
     ],
   );
 });

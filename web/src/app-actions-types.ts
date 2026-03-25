@@ -1,5 +1,6 @@
 import type {
   BufferHistoryImportRequest,
+  BufferSelfNickAliasesRequest,
   BufferState,
   ClientMessage,
   NetworkProfile,
@@ -45,6 +46,7 @@ export type ConversationActions = {
   clearBufferHistory: (bufferId: string) => Promise<boolean>;
   downloadBufferHistory: (bufferId: string) => Promise<boolean>;
   importBufferHistory: (bufferId: string, input: BufferHistoryImportRequest) => Promise<boolean>;
+  updateBufferSelfNickAliases: (bufferId: string, input: BufferSelfNickAliasesRequest) => Promise<boolean>;
   openOrSelectQueryBuffer: (network: NetworkProfile, nick: string) => Promise<BufferState>;
   openChannelListForNetwork: (networkId: string) => Promise<void>;
 };

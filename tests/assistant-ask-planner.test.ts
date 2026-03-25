@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { AssistantActiveBuffer, ChatMessage } from '../shared/protocol.js';
 import {
   planAssistantAskTurn,
+  resolveAssistantAskRetrieval,
   resolveAssistantAskRetrievedContext,
 } from '../server/assistant-ask-planner.js';
 
@@ -273,7 +274,7 @@ test('recent-history retrieval renders bounded transcript context', () => {
     nick: index % 2 === 0 ? 'MissD' : 'sofia',
     body: `message ${index + 1}`,
     kind: 'line' as const,
-    self: false,
+    self: index % 2 === 1,
     ts: Date.parse('2026-03-25T12:00:00Z') + index * 60_000,
   }));
 
@@ -288,6 +289,10 @@ test('recent-history retrieval renders bounded transcript context', () => {
 
   assert.match(context, /Operation: load_recent_buffer_messages/);
   assert.match(context, /Messages returned: 2/);
+  assert.match(context, /Excerpt:/);
+  assert.match(context, /2026-03-25/);
+  assert.match(context, /sofia: message 2/);
+  assert.match(context, /MissD: message 3/);
   assert.match(context, /message 2/);
   assert.match(context, /message 3/);
 });
@@ -300,7 +305,7 @@ test('opening-history retrieval renders the first messages in the buffer', () =>
     nick: index % 2 === 0 ? 'MissD' : 'sofia',
     body: `opening ${index + 1}`,
     kind: 'line' as const,
-    self: false,
+    self: index % 2 === 1,
     ts: Date.parse('2026-03-25T12:00:00Z') + index * 60_000,
   }));
 
@@ -315,6 +320,78 @@ test('opening-history retrieval renders the first messages in the buffer', () =>
 
   assert.match(context, /Operation: load_opening_buffer_messages/);
   assert.match(context, /Messages returned: 2/);
+  assert.match(context, /Excerpt:/);
+  assert.match(context, /2026-03-25/);
+  assert.match(context, /MissD: opening 1/);
+  assert.match(context, /sofia: opening 2/);
   assert.match(context, /opening 1/);
   assert.match(context, /opening 2/);
+});
+
+test('fts retrieval stores deterministic evidence groups with exact speaker labels', () => {
+  const messages: ChatMessage[] = [
+    {
+      id: 'msg-1',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'MissD',
+      body: 'that would be our bed, only for us 2',
+      kind: 'line',
+      self: false,
+      ts: Date.parse('2026-03-23T06:11:00Z'),
+    },
+    {
+      id: 'msg-2',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'sofia',
+      body: 'My other marital bed.',
+      kind: 'line',
+      self: true,
+      ts: Date.parse('2026-03-23T06:12:00Z'),
+    },
+    {
+      id: 'msg-3',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'MissD',
+      body: 'unrelated line',
+      kind: 'line',
+      self: false,
+      ts: Date.parse('2026-03-24T01:00:00Z'),
+    },
+  ];
+
+  const retrieval = resolveAssistantAskRetrieval({
+    subject: missD,
+    messages,
+    request: {
+      operation: 'fts_search',
+      limit: 5,
+      query: 'bed',
+      searchTerms: ['bed'],
+    },
+  });
+
+  assert.deepEqual(retrieval.evidenceGroups, [{
+    heading: '2026-03-23',
+    lines: [
+      {
+        messageId: 'msg-1',
+        speakerRole: undefined,
+        speakerNick: 'MissD',
+        attributionConfidence: undefined,
+        body: 'that would be our bed, only for us 2',
+        kind: 'line',
+      },
+      {
+        messageId: 'msg-2',
+        speakerRole: undefined,
+        speakerNick: 'sofia',
+        attributionConfidence: undefined,
+        body: 'My other marital bed.',
+        kind: 'line',
+      },
+    ],
+  }]);
 });

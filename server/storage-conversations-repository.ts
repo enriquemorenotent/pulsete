@@ -2,8 +2,10 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { BufferState, ChannelUserState } from '../shared/protocol.js';
 import {
   appendMessage,
+  createHistoryImportBatch,
   deleteMessages,
   deleteMessagesByIdPrefixes,
+  getHistoryImportBatch,
   getMessageWindow,
   getMessageById,
   listAllMessages,
@@ -12,6 +14,7 @@ import {
   listMessages,
   listRecentMessagesForBuffer,
   listRecentMessages,
+  repairQueryMessageAttributions,
   searchMessages,
 } from './storage-messages.js';
 import {
@@ -32,7 +35,7 @@ import {
   upsertChannel,
 } from './storage-buffers.js';
 import { runInTransaction } from './storage-db.js';
-import type { BufferInput, ChannelInput, MessageInput } from './storage-types.js';
+import type { BufferInput, ChannelInput, HistoryImportBatchInput, MessageInput } from './storage-types.js';
 
 export class StorageConversationsRepository {
   constructor(private readonly db: DatabaseSync) {}
@@ -147,5 +150,24 @@ export class StorageConversationsRepository {
 
   appendMessage(input: MessageInput) {
     return appendMessage(this.db, input, (messageId) => this.getMessageById(messageId));
+  }
+
+  repairQueryMessageAttributions(input: {
+    bufferId: string;
+    networkId: string;
+    target: string;
+    nick: string;
+    altNicks: string[];
+    selfNickAliases: string[];
+  }) {
+    return runInTransaction(this.db, () => repairQueryMessageAttributions(this.db, input));
+  }
+
+  createHistoryImportBatch(input: HistoryImportBatchInput) {
+    return runInTransaction(this.db, () => createHistoryImportBatch(this.db, input));
+  }
+
+  getHistoryImportBatch(batchId: string) {
+    return getHistoryImportBatch(this.db, batchId);
   }
 }

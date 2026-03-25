@@ -1,4 +1,5 @@
 import type { AssistantTaskKind, ChatMessage } from '../shared/protocol.js';
+import { getTranscriptSpeakerLabel } from '../shared/message-speaker.js';
 
 const fullContextCharBudget = 48_000;
 const recentContextCharBudget = 18_000;
@@ -352,11 +353,12 @@ const buildTimestampSearchText = (ts: number) => {
 };
 
 const formatTranscriptAuthor = (message: ChatMessage, annotateSelf: boolean) => {
-  if (message.self) {
+  const speaker = getTranscriptSpeakerLabel(message);
+  if (speaker === 'you') {
     if (annotateSelf && message.nick) {
       return `you (${message.nick})`;
     }
     return message.nick ?? 'you';
   }
-  return message.nick ?? 'server';
+  return speaker;
 };

@@ -8,6 +8,8 @@ import type {
   AssistantThreadSummary,
   AssistantTurnAttachmentInput,
   BufferHistoryImportRequest,
+  BufferSelfNickAliasesRequest,
+  BufferState,
   ClientMessage,
   ServerMessage,
 } from '../shared/protocol.js';
@@ -41,6 +43,10 @@ export type RuntimeConversationMutations = {
     bufferId: string,
     input: BufferHistoryImportRequest,
   ): { messages: readonly ServerMessage[]; summary: BufferHistoryImportSummary };
+  updateQuerySelfNickAliases(
+    bufferId: string,
+    input: BufferSelfNickAliasesRequest,
+  ): { buffer: BufferState; repairedCount: number; messages: readonly ServerMessage[] };
 };
 
 export type RuntimeFriendMutations = {
@@ -99,6 +105,7 @@ export type RuntimeHttpApi = {
     exportHistory: RuntimeConversationMutations['exportHistory'];
     clearHistory: RuntimeConversationMutations['clearHistory'];
     importHistory: RuntimeConversationMutations['importHistory'];
+    updateQuerySelfNickAliases: RuntimeConversationMutations['updateQuerySelfNickAliases'];
   };
   friends: {
     add: RuntimeFriendMutations['upsertFriend'];

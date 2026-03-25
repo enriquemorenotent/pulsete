@@ -424,3 +424,101 @@ test('importBufferHistory applies server mutations and shows the import summary 
     globalThis.fetch = originalFetch;
   }
 });
+
+test('updateBufferSelfNickAliases applies repair mutations and shows the repair notice', async () => {
+  const { params, actions: dispatched, banners } = createParams();
+  const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      url: String(input),
+      method: String(init?.method ?? 'GET'),
+      body: String(init?.body ?? ''),
+    });
+    if (String(input) === '/api/buffers/query-1/self-nick-aliases') {
+      return Response.json({
+        ok: true,
+        repairedCount: 1,
+        messages: [
+          {
+            type: 'buffer.upsert',
+            buffer: {
+              id: 'query-1',
+              networkId: network.id,
+              kind: 'query',
+              target: 'MissD',
+              unread: 0,
+              selfNickAliases: ['sofiaIsBack'],
+            },
+          },
+          {
+            type: 'message.upsert',
+            message: {
+              id: 'message-1',
+              networkId: network.id,
+              target: 'MissD',
+              nick: 'sofiaIsBack',
+              speakerRole: 'self',
+              speakerNick: 'sofiaIsBack',
+              attributionSource: 'query-alias',
+              attributionConfidence: 'high',
+              body: 'old imported self line',
+              kind: 'line',
+              self: true,
+              ts: 1,
+            },
+          },
+        ],
+      });
+    }
+    throw new Error(`Unexpected fetch: ${String(input)}`);
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const updated = await actions.updateBufferSelfNickAliases('query-1', { selfNickAliases: ['sofiaIsBack'] });
+
+    assert.equal(updated, true);
+    assert.deepEqual(fetchCalls, [{
+      url: '/api/buffers/query-1/self-nick-aliases',
+      method: 'PUT',
+      body: JSON.stringify({ selfNickAliases: ['sofiaIsBack'] }),
+    }]);
+    assert.deepEqual(dispatched, [
+      {
+        type: 'upsert-buffer',
+        buffer: {
+          id: 'query-1',
+          networkId: network.id,
+          kind: 'query',
+          target: 'MissD',
+          unread: 0,
+          selfNickAliases: ['sofiaIsBack'],
+        },
+      },
+      {
+        type: 'upsert-message',
+        message: {
+          id: 'message-1',
+          networkId: network.id,
+          target: 'MissD',
+          nick: 'sofiaIsBack',
+          speakerRole: 'self',
+          speakerNick: 'sofiaIsBack',
+          attributionSource: 'query-alias',
+          attributionConfidence: 'high',
+          body: 'old imported self line',
+          kind: 'line',
+          self: true,
+          ts: 1,
+        },
+      },
+    ]);
+    assert.deepEqual(banners, [{
+      kind: 'notice',
+      message: 'Updated self aliases and repaired 1 message.',
+    }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -5,6 +5,7 @@ import { handleIrcLine } from './irc-handle-line.js';
 import { maxBufferedIrcBytes, maxIrcCommandBytes } from './irc-limits.js';
 import { createReplyContextFromRaw, type PendingReplyContext } from './irc-reply-context.js';
 import type { IrcConnectionState } from './irc-types.js';
+import { resolveRuntimeMessageAttribution } from './message-attribution.js';
 import type { MessageInput } from './storage-types.js';
 import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
@@ -89,32 +90,44 @@ export const createSelfMessage = (
   target: string,
   body: string,
   id = randomUUID()
-): MessageInput => ({
-  id,
-  networkId: connection.profile.id,
-  target,
-  nick: connection.lifecycle.currentNick,
-  body,
-  kind: 'line',
-  self: true,
-  ts: Date.now(),
-});
+): MessageInput => {
+  const message: MessageInput = {
+    id,
+    networkId: connection.profile.id,
+    target,
+    nick: connection.lifecycle.currentNick,
+    body,
+    kind: 'line',
+    self: true,
+    ts: Date.now(),
+  };
+  return {
+    ...message,
+    ...resolveRuntimeMessageAttribution(message),
+  };
+};
 
 export const createSelfActionMessage = (
   connection: IrcRawIoContext,
   target: string,
   body: string,
   id = randomUUID()
-): MessageInput => ({
-  id,
-  networkId: connection.profile.id,
-  target,
-  nick: connection.lifecycle.currentNick,
-  body,
-  kind: 'action',
-  self: true,
-  ts: Date.now(),
-});
+): MessageInput => {
+  const message: MessageInput = {
+    id,
+    networkId: connection.profile.id,
+    target,
+    nick: connection.lifecycle.currentNick,
+    body,
+    kind: 'action',
+    self: true,
+    ts: Date.now(),
+  };
+  return {
+    ...message,
+    ...resolveRuntimeMessageAttribution(message),
+  };
+};
 
 export const sendTrackedRaw = (
   connection: IrcClientIoContext,

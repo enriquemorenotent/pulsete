@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type {
+  BufferSelfNickAliasesRequest,
   BufferHistoryImportRequest,
   BufferState,
   ChatMessage,
@@ -7,6 +8,7 @@ import type {
   ServerMessage,
 } from '../shared/protocol.js';
 import { formatMessage, formatTimestamp } from './assistant-history-context.js';
+import { mergeNickAliases } from './message-attribution.js';
 import { normalizeQueryTarget } from './irc-validate.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
@@ -28,6 +30,15 @@ import { badRequest, notFound } from './app-error.js';
 type RuntimeConversationServiceOptions = {
   conversations: RuntimeConversationStore;
   networks: Pick<RuntimeNetworkStore, 'get'>;
+};
+
+type ImportBatchStore = RuntimeConversationStore & {
+  createHistoryImportBatch?: (input: {
+    networkId: string;
+    bufferId: string;
+    target: string;
+    selfNickSnapshot: string[];
+  }) => { id: string } | null;
 };
 
 export class RuntimeConversationService {
@@ -111,18 +122,101 @@ export class RuntimeConversationService {
     }
     const network = requireStoredNetwork(this.options.networks, buffer.networkId);
     const existingMessages = this.options.conversations.listAllMessages(buffer.networkId, buffer.target);
+    const persistentSelfNickAliases = buffer.kind === 'query'
+      ? mergeNickAliases([
+        ...(buffer.selfNickAliases ?? []),
+        ...input.selfNicks,
+      ], [
+        network.nick,
+        ...network.altNicks,
+      ])
+      : (buffer.selfNickAliases ?? []);
+    const importSelfNickAliases = buffer.kind === 'query'
+      ? persistentSelfNickAliases
+      : mergeNickAliases(input.selfNicks, [
+      network.nick,
+      ...network.altNicks,
+    ]);
+    const updatedBuffer = buffer.kind !== 'query' || haveSameNickAliases(buffer.selfNickAliases ?? [], persistentSelfNickAliases)
+      ? buffer
+      : this.options.conversations.upsertBuffer({
+        ...buffer,
+        unread: buffer.unread,
+        selfNickAliases: persistentSelfNickAliases,
+      });
+    const selfNickSnapshot = mergeNickAliases([
+      network.nick,
+      ...network.altNicks,
+      ...importSelfNickAliases,
+    ]);
+    const importBatchId = (this.options.conversations as ImportBatchStore)
+      .createHistoryImportBatch?.({
+        networkId: buffer.networkId,
+        bufferId: buffer.id,
+        target: buffer.target,
+        selfNickSnapshot,
+      })?.id ?? null;
     const result = importLogFiles({
-      buffer,
+      buffer: updatedBuffer,
       existingMessages,
       files: input.files,
-      selfNicks: [network.nick, ...network.altNicks, ...input.selfNicks],
+      selfNicks: selfNickSnapshot,
+      importBatchId,
     });
+    const messages: ServerMessage[] = [];
+    if (updatedBuffer !== buffer) {
+      messages.push({ type: 'buffer.upsert', buffer: updatedBuffer });
+    }
+    messages.push(...result.messages.map((message) => ({
+      type: 'message.append' as const,
+      message: this.options.conversations.appendMessage(message),
+    })));
     return {
       summary: result.summary,
-      messages: result.messages.map((message) => ({
-        type: 'message.append' as const,
-        message: this.options.conversations.appendMessage(message),
-      })),
+      messages,
+    };
+  }
+
+  updateQuerySelfNickAliases(bufferId: string, input: BufferSelfNickAliasesRequest) {
+    const buffer = this.options.conversations.getBuffer(bufferId);
+    if (!buffer) {
+      throw notFound('Buffer not found');
+    }
+    if (buffer.kind !== 'query') {
+      throw badRequest('Only private messages can repair self aliases');
+    }
+    const network = requireStoredNetwork(this.options.networks, buffer.networkId);
+    const selfNickAliases = mergeNickAliases(input.selfNickAliases, [
+      network.nick,
+      ...network.altNicks,
+    ]);
+    const updatedBuffer = haveSameNickAliases(buffer.selfNickAliases ?? [], selfNickAliases)
+      ? buffer
+      : this.options.conversations.upsertBuffer({
+        ...buffer,
+        unread: buffer.unread,
+        selfNickAliases,
+      });
+    const repairedMessages = this.options.conversations.repairQueryMessageAttributions({
+      bufferId: updatedBuffer.id,
+      networkId: updatedBuffer.networkId,
+      target: updatedBuffer.target,
+      nick: network.nick,
+      altNicks: network.altNicks,
+      selfNickAliases,
+    });
+    const messages: ServerMessage[] = [];
+    if (updatedBuffer !== buffer) {
+      messages.push({ type: 'buffer.upsert', buffer: updatedBuffer });
+    }
+    messages.push(...repairedMessages.map((message) => ({
+      type: 'message.upsert' as const,
+      message,
+    })));
+    return {
+      buffer: updatedBuffer,
+      repairedCount: repairedMessages.length,
+      messages,
     };
   }
 
@@ -235,6 +329,10 @@ export class RuntimeConversationService {
 }
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
+
+const haveSameNickAliases = (left: string[], right: string[]) =>
+  left.length === right.length
+  && left.every((entry, index) => entry === right[index]);
 
 const renderBufferHistoryDownload = ({
   buffer,

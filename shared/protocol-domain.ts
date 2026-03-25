@@ -5,11 +5,32 @@ export const historyWindowLimit = 250;
 export const messageKindSchema = z.enum(['line', 'action', 'join', 'part', 'quit', 'notice', 'error', 'system']);
 export type MessageKind = z.infer<typeof messageKindSchema>;
 
+export const speakerRoleSchema = z.enum(['self', 'peer', 'other', 'unknown']);
+export type SpeakerRole = z.infer<typeof speakerRoleSchema>;
+
+export const speakerAttributionSourceSchema = z.enum([
+  'runtime',
+  'query-alias',
+  'query-target',
+  'import-alias',
+  'legacy-backfill',
+  'unknown',
+]);
+export type SpeakerAttributionSource = z.infer<typeof speakerAttributionSourceSchema>;
+
+export const speakerAttributionConfidenceSchema = z.enum(['high', 'low']);
+export type SpeakerAttributionConfidence = z.infer<typeof speakerAttributionConfidenceSchema>;
+
 export const chatMessageSchema = z.object({
   id: z.string(),
   networkId: z.string(),
   target: z.string(),
   nick: z.string().nullable(),
+  speakerRole: speakerRoleSchema.optional(),
+  speakerNick: z.string().nullable().optional(),
+  attributionSource: speakerAttributionSourceSchema.optional(),
+  attributionConfidence: speakerAttributionConfidenceSchema.optional(),
+  importBatchId: z.string().nullable().optional(),
   body: z.string(),
   kind: messageKindSchema,
   self: z.boolean(),
@@ -30,6 +51,7 @@ export const networkSchema = z.object({
   tls: z.boolean(),
   nick: z.string(),
   altNicks: z.array(z.string()).default([]),
+  historicalSelfNicks: z.array(z.string()).default([]).optional(),
   username: z.string(),
   realName: z.string().default(''),
   hasPassword: z.boolean().default(false),
@@ -63,6 +85,7 @@ export const bufferSchema = z.object({
   kind: bufferKindSchema,
   target: z.string(),
   unread: z.number().int().nonnegative().default(0),
+  selfNickAliases: z.array(z.string()).default([]).optional(),
 });
 export type BufferState = z.infer<typeof bufferSchema>;
 
@@ -320,6 +343,26 @@ export const assistantAskRetrievalRequestSchema = z.discriminatedUnion('operatio
 ]);
 export type AssistantAskRetrievalRequest = z.infer<typeof assistantAskRetrievalRequestSchema>;
 
+export const assistantAskEvidenceLineSchema = z.object({
+  messageId: z.string(),
+  speakerRole: speakerRoleSchema.optional(),
+  speakerNick: z.string().nullable().optional(),
+  attributionConfidence: speakerAttributionConfidenceSchema.optional(),
+  body: z.string(),
+  kind: messageKindSchema,
+});
+export type AssistantAskEvidenceLine = z.infer<typeof assistantAskEvidenceLineSchema>;
+
+export const assistantAskEvidenceGroupSchema = z.object({
+  heading: z.string(),
+  lines: z.array(z.union([assistantAskEvidenceLineSchema, z.string()]))
+    .transform((lines) => lines.map((line, index) => typeof line === 'string'
+      ? parseLegacyEvidenceLine(line, index)
+      : line))
+    .default([]),
+});
+export type AssistantAskEvidenceGroup = z.infer<typeof assistantAskEvidenceGroupSchema>;
+
 export const assistantAskRetrievalMemorySchema = z.object({
   subject: assistantActiveBufferSchema,
   request: assistantAskRetrievalRequestSchema,
@@ -332,6 +375,7 @@ export const assistantAskRetrievalMemorySchema = z.object({
   matchedMessageIds: z.array(z.string()).default([]),
   windowMessageIds: z.array(z.array(z.string())).default([]),
   evidenceMessageIds: z.array(z.string()).default([]),
+  evidenceGroups: z.array(assistantAskEvidenceGroupSchema).default([]).optional(),
 });
 export type AssistantAskRetrievalMemory = z.infer<typeof assistantAskRetrievalMemorySchema>;
 
@@ -404,3 +448,50 @@ export const appSnapshotSchema = z.object({
   assistant: assistantSnapshotSchema,
 });
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;
+
+const parseLegacyEvidenceLine = (line: string, index: number): AssistantAskEvidenceLine => {
+  const trimmed = line.trim();
+  const actionMatch = /^\*\s+([^ ]+)\s+([\s\S]+)$/.exec(trimmed);
+  if (actionMatch) {
+    const speaker = actionMatch[1]!;
+    return {
+      messageId: `legacy-${index}-${speaker}-${actionMatch[2]!.slice(0, 24)}`,
+      speakerRole: speaker.toLowerCase() === 'you' ? 'self' : 'unknown',
+      speakerNick: speaker,
+      attributionConfidence: speaker.toLowerCase() === 'you' ? 'low' : 'low',
+      body: actionMatch[2]!,
+      kind: 'action',
+    };
+  }
+  const speechMatch = /^([^:]+):\s*([\s\S]+)$/.exec(trimmed);
+  if (speechMatch) {
+    const speaker = speechMatch[1]!.trim();
+    return {
+      messageId: `legacy-${index}-${speaker}-${speechMatch[2]!.slice(0, 24)}`,
+      speakerRole: speaker.toLowerCase() === 'you' ? 'self' : 'unknown',
+      speakerNick: speaker,
+      attributionConfidence: 'low',
+      body: speechMatch[2]!,
+      kind: 'line',
+    };
+  }
+  const kindMatch = /^\[([a-z]+)\]\s+([\s\S]+)$/.exec(trimmed);
+  if (kindMatch && messageKindSchema.safeParse(kindMatch[1]).success) {
+    return {
+      messageId: `legacy-${index}-${kindMatch[1]}-${kindMatch[2]!.slice(0, 24)}`,
+      speakerRole: 'unknown',
+      speakerNick: null,
+      attributionConfidence: 'low',
+      body: kindMatch[2]!,
+      kind: kindMatch[1] as MessageKind,
+    };
+  }
+  return {
+    messageId: `legacy-${index}-${trimmed.slice(0, 24)}`,
+    speakerRole: 'unknown',
+    speakerNick: null,
+    attributionConfidence: 'low',
+    body: trimmed,
+    kind: 'line',
+  };
+};

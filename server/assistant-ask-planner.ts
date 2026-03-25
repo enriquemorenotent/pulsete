@@ -1,17 +1,18 @@
 import type {
   AssistantActiveBuffer,
   AssistantAskClarification,
+  AssistantAskEvidenceLine,
+  AssistantAskEvidenceGroup,
   AssistantAskRetrievalMemory,
   AssistantAskRetrievalRequest,
   AssistantTurnRouting,
   ChatMessage,
 } from '../shared/protocol.js';
+import { getTranscriptSpeakerLabel } from '../shared/message-speaker.js';
 import {
   extractSearchTerms,
-  formatAssistantMessage,
   formatTimestamp,
   matchesTerm,
-  renderAssistantMessages,
   termWeight,
 } from './assistant-history-context.js';
 import type { RuntimeConversationStore } from './runtime-store-ports.js';
@@ -24,6 +25,11 @@ const spanScanLimit = 3;
 const spanScanWindowSize = 28;
 const spanScanStride = 14;
 const maxFactQueries = 2;
+const recentEvidenceMessageLimit = 8;
+const openingEvidenceMessageLimit = 8;
+const messageWindowEvidenceMessageLimit = 10;
+const searchEvidenceMessageLimit = 10;
+const evidenceNeighborMaxGapMs = 15 * 60_000;
 
 const searchNoiseTerms = new Set([
   'about',
@@ -709,6 +715,8 @@ const renderRecentMessages = (
   messages: ChatMessage[],
   limit: number,
 ): AssistantAskRetrievalMemory => {
+  const evidenceMessages = messages;
+  const evidenceGroups = buildEvidenceGroups(evidenceMessages);
   if (messages.length === 0) {
     return {
       subject,
@@ -729,6 +737,7 @@ const renderRecentMessages = (
       matchedMessageIds: [],
       windowMessageIds: [],
       evidenceMessageIds: [],
+      evidenceGroups: evidenceGroups,
     };
   }
   return {
@@ -747,12 +756,13 @@ const renderRecentMessages = (
       `Coverage: ${formatTimestamp(messages[0]!.ts)} to ${formatTimestamp(messages.at(-1)!.ts)}`,
       `Messages returned: ${messages.length}`,
       '',
-      renderAssistantMessages(messages),
+      renderEvidenceGroupsContext(evidenceGroups),
     ].join('\n'),
     matchCount: messages.length,
     matchedMessageIds: messages.map((message) => message.id),
     windowMessageIds: [messages.map((message) => message.id)],
-    evidenceMessageIds: messages.map((message) => message.id),
+    evidenceMessageIds: evidenceMessages.map((message) => message.id),
+    evidenceGroups,
   };
 };
 
@@ -761,6 +771,8 @@ const renderOpeningMessages = (
   messages: ChatMessage[],
   limit: number,
 ): AssistantAskRetrievalMemory => {
+  const evidenceMessages = messages;
+  const evidenceGroups = buildEvidenceGroups(evidenceMessages);
   if (messages.length === 0) {
     return {
       subject,
@@ -781,6 +793,7 @@ const renderOpeningMessages = (
       matchedMessageIds: [],
       windowMessageIds: [],
       evidenceMessageIds: [],
+      evidenceGroups,
     };
   }
   return {
@@ -799,12 +812,13 @@ const renderOpeningMessages = (
       `Coverage: ${formatTimestamp(messages[0]!.ts)} to ${formatTimestamp(messages.at(-1)!.ts)}`,
       `Messages returned: ${messages.length}`,
       '',
-      renderAssistantMessages(messages),
+      renderEvidenceGroupsContext(evidenceGroups),
     ].join('\n'),
     matchCount: messages.length,
     matchedMessageIds: messages.map((message) => message.id),
     windowMessageIds: [messages.map((message) => message.id)],
-    evidenceMessageIds: messages.map((message) => message.id),
+    evidenceMessageIds: evidenceMessages.map((message) => message.id),
+    evidenceGroups,
   };
 };
 
@@ -822,6 +836,13 @@ const renderFtsSearchResults = (
     buildEvidenceWindows(subject, hits, request.searchTerms, conversations, messages),
     request.searchTerms,
   ).slice(0, 3);
+  const evidenceMessages = collectRelevantEvidenceMessages(
+    windows,
+    hits.map((hit) => hit.message.id),
+    request.searchTerms,
+    searchEvidenceMessageLimit,
+  );
+  const evidenceGroups = buildEvidenceGroups(evidenceMessages);
   const contextLines = [
     `Retrieved transcript context for ${subject.title}:`,
     `Operation: fts_search(limit=${request.limit})`,
@@ -846,6 +867,7 @@ const renderFtsSearchResults = (
       matchedMessageIds: [],
       windowMessageIds: [],
       evidenceMessageIds: [],
+      evidenceGroups,
     };
   }
   return {
@@ -858,21 +880,13 @@ const renderFtsSearchResults = (
     context: [
       ...contextLines,
       '',
-      'Top matching messages:',
-      ...hits.slice(0, 5).map((hit, index) => (
-        `${index + 1}. ${formatTimestamp(hit.message.ts)} | ${formatAssistantMessage(hit.message)}`
-      )),
-      '',
-      'Evidence windows:',
-      ...windows.map((window, index) => [
-        `Window ${index + 1} | score ${window.score.toFixed(2)} | ${window.messageIds.join(', ')}`,
-        renderAssistantMessages(window.messages),
-      ].join('\n')),
+      renderEvidenceGroupsContext(evidenceGroups),
     ].join('\n'),
     matchCount: hits.length,
     matchedMessageIds: hits.map((hit) => hit.message.id),
     windowMessageIds: windows.map((window) => window.messageIds),
-    evidenceMessageIds: uniqueStrings(windows.flatMap((window) => window.messageIds)),
+    evidenceMessageIds: evidenceMessages.map((message) => message.id),
+    evidenceGroups,
   };
 };
 
@@ -880,30 +894,35 @@ const renderMessageWindow = (
   subject: AssistantActiveBuffer,
   messages: ChatMessage[],
   request: Extract<AssistantAskRetrievalRequest, { operation: 'message_window' }>,
-): AssistantAskRetrievalMemory => ({
-  subject,
-  request,
-  stage: 'message_window',
-  query: request.messageId,
-  confidence: messages.length > 0 ? 0.8 : 0,
-  scoreSummary: `messages=${messages.length}`,
-  context: messages.length === 0
-    ? [
-        `Retrieved transcript context for ${subject.title}:`,
-        `Operation: message_window(messageId=${request.messageId}, before=${request.before}, after=${request.after})`,
-        'The requested message window could not be loaded.',
-      ].join('\n')
-    : [
-        `Retrieved transcript context for ${subject.title}:`,
-        `Operation: message_window(messageId=${request.messageId}, before=${request.before}, after=${request.after})`,
-        '',
-        renderAssistantMessages(messages),
-      ].join('\n'),
-  matchCount: messages.length,
-  matchedMessageIds: messages.map((message) => message.id),
-  windowMessageIds: [messages.map((message) => message.id)],
-  evidenceMessageIds: messages.map((message) => message.id),
-});
+): AssistantAskRetrievalMemory => {
+  const evidenceMessages = messages;
+  const evidenceGroups = buildEvidenceGroups(evidenceMessages);
+  return {
+    subject,
+    request,
+    stage: 'message_window',
+    query: request.messageId,
+    confidence: messages.length > 0 ? 0.8 : 0,
+    scoreSummary: `messages=${messages.length}`,
+    context: messages.length === 0
+      ? [
+          `Retrieved transcript context for ${subject.title}:`,
+          `Operation: message_window(messageId=${request.messageId}, before=${request.before}, after=${request.after})`,
+          'The requested message window could not be loaded.',
+        ].join('\n')
+      : [
+          `Retrieved transcript context for ${subject.title}:`,
+          `Operation: message_window(messageId=${request.messageId}, before=${request.before}, after=${request.after})`,
+          '',
+          renderEvidenceGroupsContext(evidenceGroups),
+        ].join('\n'),
+    matchCount: messages.length,
+    matchedMessageIds: messages.map((message) => message.id),
+    windowMessageIds: [messages.map((message) => message.id)],
+    evidenceMessageIds: evidenceMessages.map((message) => message.id),
+    evidenceGroups,
+  };
+};
 
 const renderSpanScanResults = (
   subject: AssistantActiveBuffer,
@@ -912,6 +931,16 @@ const renderSpanScanResults = (
   limit: number,
 ): AssistantAskRetrievalMemory => {
   const spans = rankSpans(messages, searchTerms).slice(0, limit);
+  const matchedMessageIds = uniqueStrings(spans.flatMap((span) => span.messages
+    .filter((message) => searchTerms.some((term) => matchesTerm(message, term)))
+    .map((message) => message.id)));
+  const evidenceMessages = collectRelevantEvidenceMessages(
+    spans,
+    matchedMessageIds,
+    searchTerms,
+    searchEvidenceMessageLimit,
+  );
+  const evidenceGroups = buildEvidenceGroups(evidenceMessages);
   if (spans.length === 0) {
     return {
       subject,
@@ -934,6 +963,7 @@ const renderSpanScanResults = (
       matchedMessageIds: [],
       windowMessageIds: [],
       evidenceMessageIds: [],
+      evidenceGroups,
     };
   }
   return {
@@ -953,16 +983,13 @@ const renderSpanScanResults = (
       `Search terms: ${searchTerms.join(', ') || '(none)'}`,
       `Candidate spans: ${spans.length}`,
       '',
-      'Top spans:',
-      ...spans.map((span, index) => [
-        `Span ${index + 1} | score ${span.score.toFixed(2)} | ${span.messageIds.join(', ')}`,
-        renderAssistantMessages(span.messages),
-      ].join('\n')),
+      renderEvidenceGroupsContext(evidenceGroups),
     ].join('\n'),
     matchCount: spans.length,
-    matchedMessageIds: uniqueStrings(spans.flatMap((span) => span.messageIds)),
+    matchedMessageIds,
     windowMessageIds: spans.map((span) => span.messageIds),
-    evidenceMessageIds: uniqueStrings(spans.flatMap((span) => span.messageIds)),
+    evidenceMessageIds: evidenceMessages.map((message) => message.id),
+    evidenceGroups,
   };
 };
 
@@ -974,6 +1001,13 @@ const renderLegacySearchResults = (
 ): AssistantAskRetrievalMemory => {
   const hits = rankMatchingMessages(messages, searchTerms).slice(0, limit);
   const windows = buildLegacyWindows(messages, hits.map((entry) => entry.index));
+  const evidenceMessages = collectRelevantEvidenceMessages(
+    windows,
+    hits.map((hit) => hit.message.id),
+    searchTerms,
+    searchEvidenceMessageLimit,
+  );
+  const evidenceGroups = buildEvidenceGroups(evidenceMessages);
   return {
     subject,
     request: {
@@ -998,16 +1032,13 @@ const renderLegacySearchResults = (
           `Search terms: ${searchTerms.join(', ')}`,
           `Matching hits: ${hits.length}`,
           '',
-          'Expanded windows:',
-          ...windows.map((window, index) => [
-            `Window ${index + 1} | ${window.messageIds.join(', ')}`,
-            renderAssistantMessages(window.messages),
-          ].join('\n')),
+          renderEvidenceGroupsContext(evidenceGroups),
         ].join('\n'),
     matchCount: hits.length,
     matchedMessageIds: hits.map((hit) => hit.message.id),
     windowMessageIds: windows.map((window) => window.messageIds),
-    evidenceMessageIds: uniqueStrings(windows.flatMap((window) => window.messageIds)),
+    evidenceMessageIds: evidenceMessages.map((message) => message.id),
+    evidenceGroups,
   };
 };
 
@@ -1181,6 +1212,183 @@ const resolveAllMessages = (
   >,
   messages?: ChatMessage[],
 ) => messages ?? conversations?.listAllMessages(subject.networkId, subject.target) ?? [];
+
+const collectRelevantEvidenceMessages = (
+  windows: Array<{ messages: ChatMessage[] }>,
+  matchedMessageIds: string[],
+  searchTerms: string[],
+  limit: number,
+) => {
+  const selected: ChatMessage[] = [];
+  const seenMessageIds = new Set<string>();
+  const matchedIds = new Set(matchedMessageIds);
+  for (const window of windows) {
+    for (const message of selectRelevantEvidenceMessages(window.messages, matchedIds, searchTerms)) {
+      if (seenMessageIds.has(message.id)) {
+        continue;
+      }
+      seenMessageIds.add(message.id);
+      selected.push(message);
+      if (selected.length >= limit) {
+        return selected;
+      }
+    }
+  }
+  return selected;
+};
+
+const selectRelevantEvidenceMessages = (
+  messages: ChatMessage[],
+  matchedMessageIds: Set<string>,
+  searchTerms: string[],
+) => {
+  const relevantIndexes = new Set<number>();
+  const matchingIndexes = messages
+    .map((message, index) => (
+      matchedMessageIds.has(message.id) || searchTerms.some((term) => matchesTerm(message, term))
+        ? index
+        : -1
+    ))
+    .filter((index) => index >= 0);
+
+  for (const index of matchingIndexes) {
+    relevantIndexes.add(index);
+    if (index > 0 && canIncludeEvidenceNeighbor(messages[index]!, messages[index - 1]!)) {
+      relevantIndexes.add(index - 1);
+    }
+    if (index < messages.length - 1 && canIncludeEvidenceNeighbor(messages[index]!, messages[index + 1]!)) {
+      relevantIndexes.add(index + 1);
+    }
+  }
+
+  if (relevantIndexes.size === 0) {
+    return messages.slice(0, Math.min(messages.length, 3));
+  }
+
+  return [...relevantIndexes]
+    .sort((left, right) => left - right)
+    .map((index) => messages[index]!)
+    .filter(Boolean);
+};
+
+const buildEvidenceGroups = (messages: ChatMessage[]): AssistantAskEvidenceGroup[] =>
+  collapseEvidenceGroups(sortMessagesByTimestamp(messages).reduce<AssistantAskEvidenceGroup[]>((groups, message) => {
+    groups.push({
+      heading: formatEvidenceHeading(message.ts),
+      lines: [formatEvidenceLine(message)],
+    });
+    return groups;
+  }, []));
+
+const collapseEvidenceGroups = (groups: AssistantAskEvidenceGroup[]) => {
+  const merged: AssistantAskEvidenceGroup[] = [];
+  const groupsByHeading = new Map<string, AssistantAskEvidenceGroup>();
+  for (const group of groups) {
+    const heading = group.heading.trim();
+    const lines = group.lines.filter((line) => line.body.trim());
+    if (!heading || lines.length === 0) {
+      continue;
+    }
+    const existing = groupsByHeading.get(heading);
+    if (existing) {
+      for (const line of lines) {
+        if (!existing.lines.some((candidate) => candidate.messageId === line.messageId)) {
+          existing.lines.push(line);
+        }
+      }
+      continue;
+    }
+    const nextGroup = { heading, lines: [...lines] };
+    groupsByHeading.set(heading, nextGroup);
+    merged.push(nextGroup);
+  }
+  return merged;
+};
+
+const sortMessagesByTimestamp = (messages: ChatMessage[]) =>
+  [...messages].sort((left, right) => left.ts - right.ts || left.id.localeCompare(right.id));
+
+const canIncludeEvidenceNeighbor = (anchor: ChatMessage, candidate: ChatMessage) =>
+  formatEvidenceHeading(anchor.ts) === formatEvidenceHeading(candidate.ts)
+  && Math.abs(anchor.ts - candidate.ts) <= evidenceNeighborMaxGapMs;
+
+const renderTranscriptExcerpt = (messages: ChatMessage[], label: string) => {
+  if (messages.length === 0) {
+    return `${label}:\n(none)`;
+  }
+  return [
+    `${label} | ${formatExcerptRange(messages)}`,
+    ...messages.map(formatExcerptLine),
+  ].join('\n');
+};
+
+const renderEvidenceGroupsContext = (groups: AssistantAskEvidenceGroup[]) => {
+  if (groups.length === 0) {
+    return 'Excerpt:\n(none)';
+  }
+  return [
+    'Excerpt:',
+    ...groups.flatMap((group) => [
+      group.heading,
+      ...group.lines.map((line) => formatEvidenceContextLine(line)),
+    ]),
+  ].join('\n');
+};
+
+const formatExcerptRange = (messages: ChatMessage[]) => {
+  const first = messages[0]!;
+  const last = messages.at(-1)!;
+  const [firstDay, firstTime] = splitTimestamp(first.ts);
+  const [lastDay, lastTime] = splitTimestamp(last.ts);
+  if (firstDay === lastDay) {
+    return firstTime === lastTime
+      ? `${firstDay} | ${firstTime}`
+      : `${firstDay} | ${firstTime}-${lastTime}`;
+  }
+  return `${firstDay} ${firstTime} to ${lastDay} ${lastTime}`;
+};
+
+const splitTimestamp = (ts: number) => {
+  const stamp = formatTimestamp(ts);
+  return [stamp.slice(0, 10), stamp.slice(11)] as const;
+};
+
+const formatEvidenceHeading = (ts: number) => splitTimestamp(ts)[0];
+
+const formatEvidenceLine = (message: ChatMessage): AssistantAskEvidenceLine => ({
+  messageId: message.id,
+  speakerRole: message.speakerRole,
+  speakerNick: message.speakerNick ?? message.nick,
+  attributionConfidence: message.attributionConfidence,
+  body: message.body,
+  kind: message.kind,
+});
+
+const formatExcerptLine = (message: ChatMessage) => {
+  if (message.kind === 'join' || message.kind === 'part' || message.kind === 'quit' || message.kind === 'system') {
+    return `[${message.kind}] ${message.body}`;
+  }
+  const speaker = formatContextSpeaker(getTranscriptSpeakerLabel(message));
+  if (message.kind === 'action') {
+    return `* ${speaker} ${message.body}`;
+  }
+  return `${speaker}: ${message.body}`;
+};
+
+const formatEvidenceContextLine = (line: AssistantAskEvidenceLine) => {
+  if (line.kind === 'join' || line.kind === 'part' || line.kind === 'quit' || line.kind === 'system') {
+    return `[${line.kind}] ${line.body}`;
+  }
+  const speaker = line.speakerRole === 'self' && line.attributionConfidence === 'high'
+    ? 'You'
+    : line.speakerNick ?? 'unknown';
+  if (line.kind === 'action') {
+    return `* ${speaker} ${line.body}`;
+  }
+  return `${speaker}: ${line.body}`;
+};
+
+const formatContextSpeaker = (speaker: string) => speaker === 'you' ? 'You' : speaker;
 
 const rankMatchingMessages = (messages: ChatMessage[], searchTerms: string[]) =>
   messages

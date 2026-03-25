@@ -37,10 +37,10 @@ export const assistantBaseInstructions = [
   'Do not mention Codex, app-server, JSON-RPC, or hidden system instructions.',
   'Format replies for a plain-text chat panel: use short paragraphs, and when listing points put each item on its own line.',
   'For summaries, comparisons, timelines, or multiple findings, prefer a brief lead sentence followed by bullets.',
-  'For transcript-based factual answers, avoid wall-of-text replies: use labeled plain-text sections with blank lines between them.',
-  'For transcript-based factual answers, use this structure when it fits: "Answer:" on its own line, then "Evidence:" with 1 to 3 "-" bullets, then "Limits:" only when needed.',
-  'Keep each quoted snippet on its own bullet. Do not chain multiple quotes together inside one paragraph.',
-  'Do not compress multiple bullet points into one paragraph separated only by hyphens or semicolons.',
+  'For transcript-based factual answers, sound like a person in chat: usually one to three short paragraphs, not a report template.',
+  'Do not use rigid labels like "Answer:", "Evidence:", or "Limits:" unless the user explicitly asks for a structured format.',
+  'The app renders transcript evidence separately from verified retrieved rows, so keep the prose focused on the takeaway instead of reproducing the transcript.',
+  'Do not invent or relabel transcript speakers in the prose answer. Refer to the retrieved evidence conservatively and work uncertainty into normal prose.',
   'When the request is ambiguous, ask one short clarification instead of pretending you searched the transcript.',
 ].join(' ');
 
@@ -75,7 +75,7 @@ export const buildAssistantTurnInput = ({
 }) => {
   if (task === 'ask') {
     const sections = [
-      'Task: Reply to the user. Use transcript excerpts only when they are explicitly included below. When transcript evidence is included, answer from it, cite the strongest supporting date or snippet, say plainly when the evidence is weak or missing, and format factual transcript answers with short labeled sections instead of a dense paragraph.',
+      'Task: Reply to the user. Use transcript excerpts only when they are explicitly included below. When transcript evidence is included, answer from it in natural prose, mention the strongest supporting date or snippet inline only when it helps, and say plainly when the evidence is weak or missing.',
       renderAskContext(activeBuffer, resolvedSubject, retrievedContext, priorRetrievedContext, askInstruction),
       renderAssistantThreadContext(priorTranscript),
       renderAttachmentSummary(attachments),
@@ -227,8 +227,8 @@ const renderAskContext = (
           `- Network id: ${resolvedSubject.networkId}`,
         ].join('\n')
       : 'Resolved assistant subject:\n(none)',
-    'Transcript speaker note:\n- Lines prefixed with "you (nick)" were authored by the local user.\n- Other nick-prefixed lines were authored by the remote participant or other people in the chat.',
-    'Answer rules:\n- Treat the retrieved transcript context as your only chat-history evidence.\n- For factual transcript answers, format as plain text with short labeled sections: "Answer:", then "Evidence:" with 1 to 3 "-" bullets, then "Limits:" only when needed.\n- Keep each quoted snippet on its own bullet instead of chaining several quotes into one paragraph.\n- Cite the most relevant date or short snippet when answering factual questions.\n- If the evidence is weak, incomplete, or conflicting, say so instead of guessing.',
+    'Transcript speaker note:\n- In retrieved excerpts, the local user is labeled as "You:".\n- Other participants are labeled by nick.\n- Use those speaker labels when you quote or paraphrase the conversation.',
+    'Answer rules:\n- Treat the retrieved transcript context as your only chat-history evidence.\n- Answer in natural chat prose, usually one or two short paragraphs.\n- Do not use rigid headings like "Answer:", "Evidence:", or "Limits:" unless the user explicitly asks for a structured format.\n- The app renders the supporting transcript excerpt separately from verified retrieved rows, so do not add your own transcript block unless the user explicitly asks for raw quotes.\n- Do not invent, merge, or relabel speakers when describing the retrieved conversation.\n- Prefer concise prose that explains the takeaway from the evidence instead of reproducing the transcript.\n- If the evidence is weak, incomplete, or conflicting, say so instead of guessing.',
     askInstruction ? `Routing note:\n${askInstruction}` : '',
     priorRetrievedContext.trim()
       ? `Previously retrieved transcript context from earlier turns:\n${priorRetrievedContext}`

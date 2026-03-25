@@ -10,6 +10,7 @@ import type {
 } from '../shared/protocol.js';
 import type { BufferState, ChatMessage } from '../shared/protocol.js';
 import { badRequest } from './app-error.js';
+import { matchesNickAlias, normalizeNickAliases, resolveImportedSpeakerAttribution } from './message-attribution.js';
 import type { MessageInput } from './storage-types.js';
 
 type ParsedLogMessage = {
@@ -31,6 +32,7 @@ type ImportLogFilesParams = {
   existingMessages: ChatMessage[];
   files: HistoryImportTextFile[];
   selfNicks: string[];
+  importBatchId?: string | null;
 };
 
 type ImportedMessage = MessageInput & {
@@ -73,6 +75,7 @@ export const importLogFiles = ({
   existingMessages,
   files,
   selfNicks,
+  importBatchId = null,
 }: ImportLogFilesParams): {
   messages: MessageInput[];
   summary: BufferHistoryImportSummary;
@@ -102,7 +105,7 @@ export const importLogFiles = ({
   let duplicateCount = 0;
 
   for (const parsed of parsedMessages.sort(compareImportedMessages)) {
-    const normalized = normalizeParsedMessage(buffer, normalizedSelfNicks, parsed);
+    const normalized = normalizeParsedMessage(buffer, normalizedSelfNicks, parsed, importBatchId);
     if (!normalized) {
       skippedCount += 1;
       continue;
@@ -260,37 +263,41 @@ const normalizeParsedMessage = (
   buffer: BufferState,
   selfNickKeys: Set<string>,
   message: ParsedLogMessage,
+  importBatchId: string | null,
 ): ImportedMessage | null => {
   if (buffer.kind === 'query' && !isQueryParticipant(message.nick, buffer.target, selfNickKeys)) {
     return null;
   }
-  const self = matchesNickAlias(message.nick, selfNickKeys);
+  const attribution = buffer.kind === 'query'
+    ? resolveImportedSpeakerAttribution({
+        nick: message.nick,
+        target: buffer.target,
+        selfNickKeys,
+      })
+    : {
+        speakerRole: matchesNickAlias(message.nick, selfNickKeys) ? 'self' as const : 'other' as const,
+        speakerNick: message.nick,
+        attributionSource: matchesNickAlias(message.nick, selfNickKeys) ? 'import-alias' as const : 'unknown' as const,
+        attributionConfidence: matchesNickAlias(message.nick, selfNickKeys) ? 'high' as const : 'low' as const,
+        self: matchesNickAlias(message.nick, selfNickKeys),
+      };
   return {
     id: randomUUID(),
     networkId: buffer.networkId,
     target: buffer.target,
     nick: message.nick,
+    speakerRole: attribution.speakerRole,
+    speakerNick: attribution.speakerNick,
+    attributionSource: attribution.attributionSource,
+    attributionConfidence: attribution.attributionConfidence,
+    importBatchId,
     body: message.body.trim(),
     kind: message.kind,
-    self,
+    self: attribution.self,
     ts: message.ts,
     order: message.order,
   };
 };
-
-const normalizeNickAliases = (nicks: string[]) => {
-  const keys = new Set<string>();
-  for (const nick of nicks) {
-    const trimmed = nick.trim();
-    if (!trimmed) {
-      continue;
-    }
-    keys.add(normalizeIrcIdentifier(trimmed));
-  }
-  return keys;
-};
-
-const matchesNickAlias = (nick: string, keys: Set<string>) => keys.has(normalizeIrcIdentifier(nick));
 
 const isQueryParticipant = (nick: string, target: string, selfNickKeys: Set<string>) =>
   isSameIrcIdentifier(nick, target) || matchesNickAlias(nick, selfNickKeys);

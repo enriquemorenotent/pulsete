@@ -1,6 +1,7 @@
 import type {
   BufferHistoryImportRequest,
   BufferHistoryImportSummary,
+  BufferSelfNickAliasesRequest,
   BufferState,
   NetworkProfile,
 } from '../../shared/protocol.js';
@@ -121,10 +122,23 @@ export const createConversationActions = ({
       failureValue: false,
     });
 
+  const updateBufferSelfNickAliases = async (bufferId: string, input: BufferSelfNickAliasesRequest) =>
+    executeMutation({
+      request: () => api.updateBufferSelfNickAliases(bufferId, input),
+      mapResult: () => true,
+      successMessage: ({ repairedCount }) =>
+        repairedCount > 0
+          ? `Updated self aliases and repaired ${repairedCount} ${repairedCount === 1 ? 'message' : 'messages'}.`
+          : 'Updated self aliases.',
+      errorMessage: 'Failed to update self aliases',
+      failureValue: false,
+    });
+
   return {
     clearBufferHistory,
     downloadBufferHistory,
     importBufferHistory,
+    updateBufferSelfNickAliases,
     joinChannel,
     openOrSelectQueryBuffer,
     openChannelListForNetwork,

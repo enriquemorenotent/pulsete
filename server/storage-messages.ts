@@ -1,30 +1,84 @@
+import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
-import type { MessageInput, MessagePage, MessageRow } from './storage-types.js';
-import { toMessage } from './storage-utils.js';
+import { isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import {
+  buildSelfNickKeys,
+  normalizeStoredAttribution,
+  resolveLegacyBackfillAttribution,
+  resolveRuntimeMessageAttribution,
+} from './message-attribution.js';
+import type {
+  HistoryImportBatchInput,
+  HistoryImportBatchRow,
+  MessageAttributionUpdate,
+  MessageInput,
+  MessagePage,
+  MessageRow,
+} from './storage-types.js';
+import { parseJson, toMessage } from './storage-utils.js';
+
+const emptyMessagePage: MessagePage = { messages: [], hasMore: false };
+const messageColumns = [
+  'id',
+  'networkId',
+  'target',
+  'nick',
+  'speakerRole',
+  'speakerNick',
+  'attributionSource',
+  'attributionConfidence',
+  'importBatchId',
+  'body',
+  'kind',
+  'self',
+  'ts',
+].join(', ');
+
+type MessageLookup = (messageId: string) => MessageInput | null;
+type MessageCursor = { networkId: string; rowid: number; target: string; ts: number };
+type NetworkAliasRow = {
+  nick: string;
+  altNicks: string;
+};
+type BufferAliasRow = {
+  selfNickAliases: string;
+};
+
+type AttributionContext = {
+  networkAliases: Map<string, NetworkAliasRow | null>;
+  bufferAliases: Map<string, BufferAliasRow | null>;
+};
 
 export const appendMessage = (db: DatabaseSync, input: MessageInput, lookup: MessageLookup) => {
+  const attribution = shouldRespectInputAttribution(input)
+    ? normalizeStoredAttribution(input)
+    : resolveRuntimeMessageAttribution(input);
   db.prepare(
     `INSERT INTO messages
-       (id, networkId, target, nick, body, kind, self, ts)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, networkId, target, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     input.id,
     input.networkId,
     input.target,
     input.nick,
+    attribution.speakerRole,
+    attribution.speakerNick ?? input.nick,
+    attribution.attributionSource,
+    attribution.attributionConfidence,
+    input.importBatchId ?? null,
     input.body,
     input.kind,
-    input.self ? 1 : 0,
-    input.ts
+    attribution.self ? 1 : 0,
+    input.ts,
   );
   return lookup(input.id)!;
 };
 
 export const getMessageById = (db: DatabaseSync, messageId: string) => {
-  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages WHERE id = ?';
+  const sql = `SELECT ${messageColumns} FROM messages WHERE id = ?`;
   const row = db.prepare(sql).get(messageId) as MessageRow | undefined;
-  return row ? toMessage(row) : null;
+  return row ? hydrateMessages(db, [row])[0] ?? null : null;
 };
 
 export const listMessages = (db: DatabaseSync, networkId: string, target: string, limit = 200) => {
@@ -68,14 +122,14 @@ export const listOpeningMessages = (db: DatabaseSync, networkId: string, target:
   }
   const placeholders = matchingTargets.map(() => '?').join(', ');
   const sql = `
-    SELECT id, networkId, target, nick, body, kind, self, ts
+    SELECT ${messageColumns}
     FROM messages
     WHERE networkId = ? AND target IN (${placeholders})
     ORDER BY ts ASC, rowid ASC
     LIMIT ?
   `;
   const rows = db.prepare(sql).all(networkId, ...matchingTargets, limit) as MessageRow[];
-  return rows.map(toMessage);
+  return hydrateMessages(db, rows);
 };
 
 export const listRecentMessagesForBuffer = (db: DatabaseSync, networkId: string, target: string, limit = 200) =>
@@ -92,7 +146,7 @@ export const getMessageWindow = (db: DatabaseSync, messageId: string, before: nu
   }
   const placeholders = matchingTargets.map(() => '?').join(', ');
   const beforeRows = db.prepare(`
-    SELECT id, networkId, target, nick, body, kind, self, ts
+    SELECT ${messageColumns}
     FROM messages
     WHERE networkId = ? AND target IN (${placeholders})
       AND (ts < ? OR (ts = ? AND rowid <= ?))
@@ -107,7 +161,7 @@ export const getMessageWindow = (db: DatabaseSync, messageId: string, before: nu
     before + 1,
   ) as MessageRow[];
   const afterRows = db.prepare(`
-    SELECT id, networkId, target, nick, body, kind, self, ts
+    SELECT ${messageColumns}
     FROM messages
     WHERE networkId = ? AND target IN (${placeholders})
       AND (ts > ? OR (ts = ? AND rowid > ?))
@@ -121,7 +175,7 @@ export const getMessageWindow = (db: DatabaseSync, messageId: string, before: nu
     cursor.rowid,
     after,
   ) as MessageRow[];
-  return [...beforeRows.reverse(), ...afterRows].map(toMessage);
+  return hydrateMessages(db, [...beforeRows.reverse(), ...afterRows]);
 };
 
 export const searchMessages = (db: DatabaseSync, networkId: string, target: string, query: string, limit = 10) => {
@@ -136,6 +190,11 @@ export const searchMessages = (db: DatabaseSync, networkId: string, target: stri
       m.networkId,
       m.target,
       m.nick,
+      m.speakerRole,
+      m.speakerNick,
+      m.attributionSource,
+      m.attributionConfidence,
+      m.importBatchId,
       m.body,
       m.kind,
       m.self,
@@ -149,9 +208,10 @@ export const searchMessages = (db: DatabaseSync, networkId: string, target: stri
     ORDER BY score ASC, m.ts ASC, m.rowid ASC
     LIMIT ?
   `).all(query, networkId, ...matchingTargets, limit) as Array<MessageRow & { score: number }>;
-  return rows.map((row) => ({
-    message: toMessage(row),
-    score: row.score,
+  const messages = hydrateMessages(db, rows);
+  return messages.map((message, index) => ({
+    message,
+    score: rows[index]!.score,
   }));
 };
 
@@ -162,7 +222,7 @@ export const deleteMessages = (db: DatabaseSync, networkId: string, target: stri
   }
   const placeholders = matchingTargets.map(() => '?').join(', ');
   const sql = `
-    SELECT id, networkId, target, nick, body, kind, self, ts
+    SELECT ${messageColumns}
     FROM messages
     WHERE networkId = ? AND target IN (${placeholders})
     ORDER BY ts ASC, rowid ASC
@@ -172,13 +232,13 @@ export const deleteMessages = (db: DatabaseSync, networkId: string, target: stri
     return [];
   }
   db.prepare(`DELETE FROM messages WHERE networkId = ? AND target IN (${placeholders})`).run(networkId, ...matchingTargets);
-  return rows.map(toMessage);
+  return hydrateMessages(db, rows);
 };
 
 export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
-  const sql = 'SELECT id, networkId, target, nick, body, kind, self, ts FROM messages ORDER BY ts DESC, rowid DESC LIMIT ?';
+  const sql = `SELECT ${messageColumns} FROM messages ORDER BY ts DESC, rowid DESC LIMIT ?`;
   const rows = db.prepare(sql).all(limit) as MessageRow[];
-  return rows.reverse().map(toMessage);
+  return hydrateMessages(db, rows).reverse();
 };
 
 export const deleteMessagesByIdPrefixes = (db: DatabaseSync, prefixes: string[]) => {
@@ -187,7 +247,7 @@ export const deleteMessagesByIdPrefixes = (db: DatabaseSync, prefixes: string[])
     return [];
   }
   const sql = `
-    SELECT id, networkId, target, nick, body, kind, self, ts
+    SELECT ${messageColumns}
     FROM messages
     WHERE ${clauses.where}
     ORDER BY ts ASC, rowid ASC
@@ -197,13 +257,116 @@ export const deleteMessagesByIdPrefixes = (db: DatabaseSync, prefixes: string[])
     return [];
   }
   db.prepare(`DELETE FROM messages WHERE ${clauses.where}`).run(...clauses.args);
-  return rows.map(toMessage);
+  return hydrateMessages(db, rows);
 };
 
-type MessageLookup = (messageId: string) => MessageInput | null;
-type MessageCursor = { networkId: string; rowid: number; target: string; ts: number };
+export const updateMessageAttribution = (db: DatabaseSync, input: MessageAttributionUpdate) => {
+  db.prepare(`
+    UPDATE messages
+    SET speakerRole = ?,
+        speakerNick = ?,
+        attributionSource = ?,
+        attributionConfidence = ?,
+        self = ?
+    WHERE id = ?
+  `).run(
+    input.speakerRole,
+    input.speakerNick,
+    input.attributionSource,
+    input.attributionConfidence,
+    input.self ? 1 : 0,
+    input.id,
+  );
+};
 
-const emptyMessagePage: MessagePage = { messages: [], hasMore: false };
+export const repairQueryMessageAttributions = (
+  db: DatabaseSync,
+  input: {
+    bufferId: string;
+    networkId: string;
+    target: string;
+    nick: string;
+    altNicks: string[];
+    selfNickAliases: string[];
+  },
+) => {
+  const matchingTargets = listMatchingTargets(db, input.networkId, input.target);
+  if (matchingTargets.length === 0) {
+    return [];
+  }
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const rows = db.prepare(`
+    SELECT ${messageColumns}
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})
+      AND coalesce(attributionSource, 'unknown') != 'runtime'
+    ORDER BY ts ASC, rowid ASC
+  `).all(input.networkId, ...matchingTargets) as MessageRow[];
+  if (rows.length === 0) {
+    return [];
+  }
+  const selfNickKeys = buildSelfNickKeys({
+    nick: input.nick,
+    altNicks: input.altNicks,
+  }, input.selfNickAliases);
+  const repairedRows: MessageRow[] = [];
+  for (const row of rows) {
+    const next = resolveLegacyBackfillAttribution({
+      nick: row.nick,
+      target: input.target,
+      selfNickKeys,
+    });
+    if (!messageAttributionChanged(row, next)) {
+      continue;
+    }
+    updateMessageAttribution(db, {
+      id: row.id,
+      ...next,
+    });
+    repairedRows.push({
+      ...row,
+      speakerRole: next.speakerRole,
+      speakerNick: next.speakerNick,
+      attributionSource: next.attributionSource,
+      attributionConfidence: next.attributionConfidence,
+      self: next.self ? 1 : 0,
+    });
+  }
+  return hydrateMessages(db, repairedRows);
+};
+
+export const createHistoryImportBatch = (db: DatabaseSync, input: HistoryImportBatchInput) => {
+  const id = input.id ?? randomUUID();
+  const createdAt = input.createdAt ?? Date.now();
+  db.prepare(`
+    INSERT INTO history_import_batches
+      (id, networkId, bufferId, target, selfNickSnapshot, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.networkId,
+    input.bufferId,
+    input.target,
+    JSON.stringify(input.selfNickSnapshot),
+    createdAt,
+  );
+  return getHistoryImportBatch(db, id);
+};
+
+export const getHistoryImportBatch = (db: DatabaseSync, batchId: string) => {
+  const row = db.prepare(`
+    SELECT id, networkId, bufferId, target, selfNickSnapshot, createdAt
+    FROM history_import_batches
+    WHERE id = ?
+  `).get(batchId) as HistoryImportBatchRow | undefined;
+  if (!row) {
+    return null;
+  }
+  return {
+    ...row,
+    selfNickSnapshot: parseJson<string[]>(row.selfNickSnapshot, []),
+  };
+};
 
 const listMatchingTargets = (db: DatabaseSync, networkId: string, target: string) => {
   const rows = db.prepare('SELECT DISTINCT target FROM messages WHERE networkId = ?').all(networkId) as Array<{ target: string }>;
@@ -226,7 +389,7 @@ const selectMessages = (
   const placeholders = matchingTargets.map(() => '?').join(', ');
   const limitClause = typeof limit === 'number' ? '\n    LIMIT ?' : '';
   const sql = `
-    SELECT id, networkId, target, nick, body, kind, self, ts
+    SELECT ${messageColumns}
     FROM messages
     WHERE networkId = ? AND target IN (${placeholders})
     ORDER BY ts DESC, rowid DESC${limitClause}
@@ -235,7 +398,7 @@ const selectMessages = (
     ? [networkId, ...matchingTargets, limit]
     : [networkId, ...matchingTargets];
   const rows = db.prepare(sql).all(...args) as MessageRow[];
-  return rows.reverse().map(toMessage);
+  return hydrateMessages(db, rows).reverse();
 };
 
 const selectMessagePage = (
@@ -248,7 +411,7 @@ const selectMessagePage = (
   const placeholders = matchingTargets.map(() => '?').join(', ');
   const beforeClause = before ? '\n    AND (ts < ? OR (ts = ? AND rowid < ?))' : '';
   const sql = `
-    SELECT id, networkId, target, nick, body, kind, self, ts
+    SELECT ${messageColumns}
     FROM messages
     WHERE networkId = ? AND target IN (${placeholders})${beforeClause}
     ORDER BY ts DESC, rowid DESC
@@ -261,7 +424,7 @@ const selectMessagePage = (
   const hasMore = rows.length > limit;
   const pageRows = hasMore ? rows.slice(0, limit) : rows;
   return {
-    messages: pageRows.reverse().map(toMessage),
+    messages: hydrateMessages(db, pageRows).reverse(),
     hasMore,
   };
 };
@@ -276,3 +439,109 @@ const buildIdPrefixWhereClause = (prefixes: string[]) => {
     args: normalized.flatMap((prefix) => [prefix.length, prefix]),
   };
 };
+
+const hydrateMessages = (db: DatabaseSync, rows: MessageRow[]) => {
+  const context: AttributionContext = {
+    networkAliases: new Map(),
+    bufferAliases: new Map(),
+  };
+  return rows.map((row) => hydrateMessage(db, row, context));
+};
+
+const hydrateMessage = (
+  db: DatabaseSync,
+  row: MessageRow,
+  context: AttributionContext,
+) => {
+  if (needsLegacyBackfill(row)) {
+    const updated = backfillMessageAttribution(db, row, context);
+    if (updated) {
+      row = {
+        ...row,
+        speakerRole: updated.speakerRole,
+        speakerNick: updated.speakerNick,
+        attributionSource: updated.attributionSource,
+        attributionConfidence: updated.attributionConfidence,
+        self: updated.self ? 1 : 0,
+      };
+    }
+  }
+  return toMessage(row);
+};
+
+const needsLegacyBackfill = (row: MessageRow) =>
+  isPrivateQueryTarget(row.target)
+  && (!row.attributionSource || row.attributionSource === 'unknown');
+
+const backfillMessageAttribution = (
+  db: DatabaseSync,
+  row: MessageRow,
+  context: AttributionContext,
+) => {
+  const network = getNetworkAliases(db, context, row.networkId);
+  const bufferAliases = getBufferAliases(db, context, row.networkId, row.target);
+  if (!network) {
+    return null;
+  }
+  const attribution = resolveLegacyBackfillAttribution({
+    nick: row.nick,
+    target: row.target,
+    selfNickKeys: buildSelfNickKeys({
+      nick: network.nick,
+      altNicks: parseJson<string[]>(network.altNicks, []),
+    }, parseJson<string[]>(bufferAliases?.selfNickAliases ?? '[]', [])),
+  });
+  updateMessageAttribution(db, {
+    id: row.id,
+    ...attribution,
+  });
+  return attribution;
+};
+
+const getNetworkAliases = (db: DatabaseSync, context: AttributionContext, networkId: string) => {
+  if (context.networkAliases.has(networkId)) {
+    return context.networkAliases.get(networkId) ?? null;
+  }
+  const row = db.prepare(`
+    SELECT nick, altNicks
+    FROM networks
+    WHERE id = ?
+  `).get(networkId) as NetworkAliasRow | undefined;
+  context.networkAliases.set(networkId, row ?? null);
+  return row ?? null;
+};
+
+const getBufferAliases = (
+  db: DatabaseSync,
+  context: AttributionContext,
+  networkId: string,
+  target: string,
+) => {
+  const key = `${networkId}:${normalizeIrcIdentifier(target)}`;
+  if (context.bufferAliases.has(key)) {
+    return context.bufferAliases.get(key) ?? null;
+  }
+  const rows = db.prepare(`
+    SELECT target, selfNickAliases
+    FROM buffers
+    WHERE networkId = ?
+  `).all(networkId) as Array<BufferAliasRow & { target: string }>;
+  const row = rows.find((candidate) => isSameIrcIdentifier(candidate.target, target));
+  context.bufferAliases.set(key, row ?? null);
+  return row ?? null;
+};
+
+const isPrivateQueryTarget = (target: string) => target !== 'server' && !/^[#&+!]/.test(target);
+
+const shouldRespectInputAttribution = (input: MessageInput) =>
+  input.speakerRole !== undefined
+  || input.speakerNick !== undefined
+  || input.attributionSource !== undefined
+  || input.attributionConfidence !== undefined;
+
+const messageAttributionChanged = (row: MessageRow, next: Omit<MessageAttributionUpdate, 'id' | 'importBatchId'>) =>
+  row.speakerRole !== next.speakerRole
+  || row.speakerNick !== next.speakerNick
+  || row.attributionSource !== next.attributionSource
+  || row.attributionConfidence !== next.attributionConfidence
+  || Boolean(row.self) !== next.self;

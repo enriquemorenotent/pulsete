@@ -109,6 +109,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     message: z.string(),
   }),
   baseServerSchema.extend({ type: z.literal('message.append'), message: chatMessageSchema }),
+  baseServerSchema.extend({ type: z.literal('message.upsert'), message: chatMessageSchema }),
   baseServerSchema.extend({
     type: z.literal('message.remove'),
     networkId: z.string(),

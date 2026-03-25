@@ -99,6 +99,7 @@ export type ChatActionSet = Pick<
   | 'closeChannelList'
   | 'downloadBufferHistory'
   | 'importBufferHistory'
+  | 'updateBufferSelfNickAliases'
   | 'joinChannelFromList'
   | 'openChannelList'
   | 'openMentionedChannel'

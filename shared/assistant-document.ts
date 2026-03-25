@@ -122,7 +122,8 @@ const canonicalizePlainTextBlock = (text: string) => {
   const normalizedCore = splitLabeledSections(
     core
       .replace(/[ \t]+\n/g, '\n')
-      .replace(/([.!?])([A-Z“"'])/g, '$1 $2')
+      .replace(/([.!?])([A-Z])/g, '$1 $2')
+      .replace(/([.!?])([“"'])([A-Z])/g, '$1 $2$3')
       .replace(/([”’])([A-Z])/g, '$1 $2')
       .replace(/\n{3,}/g, '\n\n')
   ).map(canonicalizeSection).join('\n\n');
@@ -169,18 +170,48 @@ const splitLabeledSections = (text: string): RawSection[] => {
 const canonicalizeSection = (section: RawSection) => {
   const body = normalizeInlineBulletBoundaries(section.body).trim();
   if (section.label === 'Evidence') {
-    const items = body
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .flatMap((line) =>
-        (line.startsWith('- ') ? line.slice(2) : line)
+    const items: string[][] = [];
+    for (const rawLine of body.split('\n')) {
+      const line = rawLine.trim();
+      if (!line) {
+        continue;
+      }
+      if (line.startsWith('- ')) {
+        const bulletParts = line
+          .slice(2)
           .split(/\s+-\s+/)
           .map((part) => part.trim())
-          .filter(Boolean)
-          .map((part) => `- ${part}`)
-      );
-    return items.length > 0 ? `Evidence:\n${items.join('\n')}` : 'Evidence:';
+          .filter(Boolean);
+        if (bulletParts.length === 0) {
+          continue;
+        }
+        for (const part of bulletParts) {
+          items.push([part]);
+        }
+        continue;
+      }
+      if (items.length === 0) {
+        items.push([line]);
+        continue;
+      }
+      items[items.length - 1]!.push(line);
+    }
+    const mergedItems: string[][] = [];
+    for (const item of items) {
+      const previous = mergedItems.at(-1);
+      if (
+        previous
+        && item[0] === previous[0]
+        && isEvidenceDateHeading(item[0] ?? '')
+      ) {
+        previous.push(...item.slice(1));
+        continue;
+      }
+      mergedItems.push([...item]);
+    }
+    return mergedItems.length > 0
+      ? `Evidence:\n${mergedItems.map(([firstLine, ...rest]) => [`- ${firstLine}`, ...rest].join('\n')).join('\n')}`
+      : 'Evidence:';
   }
 
   if (section.label) {
@@ -193,6 +224,9 @@ const normalizeInlineBulletBoundaries = (text: string) =>
   text
     .replace(/([^\n])\s+-\s+(?=(?:\d{4}-\d{2}-\d{2}|["“'A-Z]))/g, '$1\n- ')
     .replace(/\n{3,}/g, '\n\n');
+
+const isEvidenceDateHeading = (line: string) =>
+  /^\d{4}-\d{2}-\d{2}(?:\s*(?:\||$).*)?$/.test(line.trim());
 
 const collapseBlankLineRuns = (text: string) =>
   text

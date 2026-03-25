@@ -1,5 +1,6 @@
 import { pbkdf2Sync } from 'node:crypto';
 import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
+import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { BufferState, ChannelState, ChannelUserState, FriendState } from '../shared/protocol.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
@@ -44,6 +45,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       tls: true,
       nick: identity.nick,
       altNicks: [...identity.altNicks],
+      historicalSelfNicks: [],
       username: identity.username,
       realName: identity.realName,
       favorite: true,
@@ -58,6 +60,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       tls: true,
       nick: identity.nick,
       altNicks: [...identity.altNicks],
+      historicalSelfNicks: [],
       username: identity.username,
       realName: identity.realName,
       favorite: true,
@@ -72,6 +75,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       tls: true,
       nick: identity.nick,
       altNicks: [...identity.altNicks],
+      historicalSelfNicks: [],
       username: identity.username,
       realName: identity.realName,
       favorite: false,
@@ -86,6 +90,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       tls: false,
       nick: identity.nick,
       altNicks: [...identity.altNicks],
+      historicalSelfNicks: [],
       username: identity.username,
       realName: identity.realName,
       favorite: false,
@@ -105,6 +110,7 @@ export const toNetworkProfile = (row: NetworkRow): StoredNetworkProfile => {
     tls: Boolean(row.tls),
     nick: row.nick,
     altNicks: parseJson<string[]>(row.altNicks, []),
+    historicalSelfNicks: parseJson<string[]>(row.historicalSelfNicks, []),
     username: row.username,
     realName: row.realName,
     hasPassword: Boolean(row.password),
@@ -136,6 +142,7 @@ export const toBufferState = (row: BufferRow): BufferState => ({
   unread: row.unread,
   kind: row.kind,
   target: row.target,
+  selfNickAliases: parseJson<string[]>(row.selfNickAliases, []),
 });
 
 export const toFriendState = (row: FriendRow): FriendState => ({
@@ -161,6 +168,11 @@ export const toMessage = (row: MessageRow): MessageInput => ({
   networkId: row.networkId,
   target: row.target,
   nick: row.nick,
+  speakerRole: normalizeSpeakerRole(row.speakerRole, row.self),
+  speakerNick: row.speakerNick ?? row.nick,
+  attributionSource: normalizeAttributionSource(row.attributionSource),
+  attributionConfidence: normalizeAttributionConfidence(row.attributionConfidence),
+  importBatchId: row.importBatchId,
   body: normalizeMessageBody(row),
   kind: normalizeMessageKind(row),
   self: Boolean(row.self),
@@ -188,3 +200,23 @@ const getLegacyActionMatch = (row: MessageRow) => {
   }
   return isSameIrcIdentifier(match[1], row.nick) ? match : null;
 };
+
+const normalizeSpeakerRole = (value: string | null, self: number): SpeakerRole =>
+  value === 'self' || value === 'peer' || value === 'other' || value === 'unknown'
+    ? value
+    : self
+      ? 'self'
+      : 'unknown';
+
+const normalizeAttributionSource = (value: string | null): SpeakerAttributionSource =>
+  value === 'runtime'
+    || value === 'query-target'
+    || value === 'query-alias'
+    || value === 'import-alias'
+    || value === 'legacy-backfill'
+    || value === 'unknown'
+    ? value
+    : 'unknown';
+
+const normalizeAttributionConfidence = (value: string | null): SpeakerAttributionConfidence =>
+  value === 'high' || value === 'low' ? value : 'low';

@@ -1,7 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { defaultAssistantModel } from '../shared/assistant-defaults.js';
+import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 
-export const currentStorageSchemaVersion = 8;
+export const currentStorageSchemaVersion = 10;
 
 const schemaSql = `
   PRAGMA journal_mode = WAL;
@@ -18,6 +19,7 @@ const schemaSql = `
     tls INTEGER NOT NULL,
     nick TEXT NOT NULL,
     altNicks TEXT NOT NULL DEFAULT '[]',
+    historicalSelfNicks TEXT NOT NULL DEFAULT '[]',
     username TEXT NOT NULL,
     realName TEXT NOT NULL DEFAULT '',
     password TEXT,
@@ -36,6 +38,7 @@ const schemaSql = `
     kind TEXT NOT NULL,
     target TEXT NOT NULL,
     unread INTEGER NOT NULL DEFAULT 0,
+    selfNickAliases TEXT NOT NULL DEFAULT '[]',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
     UNIQUE(networkId, target)
@@ -54,10 +57,24 @@ const schemaSql = `
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     target TEXT NOT NULL,
     nick TEXT,
+    speakerRole TEXT NOT NULL DEFAULT 'unknown',
+    speakerNick TEXT,
+    attributionSource TEXT NOT NULL DEFAULT 'unknown',
+    attributionConfidence TEXT NOT NULL DEFAULT 'low',
+    importBatchId TEXT,
     body TEXT NOT NULL,
     kind TEXT NOT NULL,
     self INTEGER NOT NULL,
     ts INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS history_import_batches (
+    id TEXT PRIMARY KEY,
+    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+    bufferId TEXT NOT NULL,
+    target TEXT NOT NULL,
+    selfNickSnapshot TEXT NOT NULL DEFAULT '[]',
+    createdAt INTEGER NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS friends (
@@ -203,6 +220,25 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureMessagesSearchIndex(db, true);
     },
   },
+  {
+    version: 9,
+    apply: (db) => {
+      ensureColumn(db, 'networks', 'historicalSelfNicks', "TEXT NOT NULL DEFAULT '[]'");
+      ensureColumn(db, 'messages', 'speakerRole', "TEXT NOT NULL DEFAULT 'unknown'");
+      ensureColumn(db, 'messages', 'speakerNick', 'TEXT');
+      ensureColumn(db, 'messages', 'attributionSource', "TEXT NOT NULL DEFAULT 'unknown'");
+      ensureColumn(db, 'messages', 'attributionConfidence', "TEXT NOT NULL DEFAULT 'low'");
+      ensureColumn(db, 'messages', 'importBatchId', 'TEXT');
+      ensureHistoryImportBatchesTable(db);
+    },
+  },
+  {
+    version: 10,
+    apply: (db) => {
+      ensureColumn(db, 'buffers', 'selfNickAliases', "TEXT NOT NULL DEFAULT '[]'");
+      backfillQueryBufferSelfNickAliases(db);
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: DatabaseSync) => {
@@ -245,6 +281,7 @@ const repairStorageSchemaDrift = (db: DatabaseSync) => {
   migrateLegacyBufferSchema(db);
   ensureColumn(db, 'networks', 'autoJoin', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'networks', 'altNicks', "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(db, 'networks', 'historicalSelfNicks', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'networks', 'realName', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'networks', 'favorite', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'networks', 'templateId', 'TEXT');
@@ -254,6 +291,13 @@ const repairStorageSchemaDrift = (db: DatabaseSync) => {
   ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
   ensureAssistantTables(db);
   ensureMessagesSearchIndex(db, false);
+  ensureColumn(db, 'messages', 'speakerRole', "TEXT NOT NULL DEFAULT 'unknown'");
+  ensureColumn(db, 'messages', 'speakerNick', 'TEXT');
+  ensureColumn(db, 'messages', 'attributionSource', "TEXT NOT NULL DEFAULT 'unknown'");
+  ensureColumn(db, 'messages', 'attributionConfidence', "TEXT NOT NULL DEFAULT 'low'");
+  ensureColumn(db, 'messages', 'importBatchId', 'TEXT');
+  ensureColumn(db, 'buffers', 'selfNickAliases', "TEXT NOT NULL DEFAULT '[]'");
+  ensureHistoryImportBatchesTable(db);
   if (addedAuthMethod) {
     db.exec("UPDATE networks SET authMethod = 'server-pass' WHERE password IS NOT NULL AND authMethod = 'none'");
   }
@@ -350,6 +394,78 @@ const ensureAssistantThreadScope = (db: DatabaseSync) => {
     END
     WHERE scope IS NULL OR scope = '' OR (bufferId IS NULL AND scope = 'buffer')
   `);
+};
+
+const ensureHistoryImportBatchesTable = (db: DatabaseSync) => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS history_import_batches (
+      id TEXT PRIMARY KEY,
+      networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+      bufferId TEXT NOT NULL,
+      target TEXT NOT NULL,
+      selfNickSnapshot TEXT NOT NULL DEFAULT '[]',
+      createdAt INTEGER NOT NULL
+    )
+  `);
+};
+
+const backfillQueryBufferSelfNickAliases = (db: DatabaseSync) => {
+  const queryBuffers = db.prepare(`
+    SELECT buffers.id, networks.nick, networks.altNicks
+    FROM buffers
+    JOIN networks ON networks.id = buffers.networkId
+    WHERE buffers.kind = 'query'
+  `).all() as Array<{ id: string; nick: string; altNicks: string }>;
+  const readSnapshots = db.prepare(`
+    SELECT selfNickSnapshot
+    FROM history_import_batches
+    WHERE bufferId = ?
+    ORDER BY createdAt ASC
+  `);
+  const updateBuffer = db.prepare(`
+    UPDATE buffers
+    SET selfNickAliases = ?
+    WHERE id = ?
+  `);
+  for (const buffer of queryBuffers) {
+    const currentAliases = parseJson<string[]>(
+      (db.prepare('SELECT selfNickAliases FROM buffers WHERE id = ?').get(buffer.id) as { selfNickAliases?: string } | undefined)?.selfNickAliases ?? '[]',
+      [],
+    );
+    if (currentAliases.length > 0) {
+      continue;
+    }
+    const excluded = new Set([
+      normalizeIrcIdentifier(buffer.nick),
+      ...parseJson<string[]>(buffer.altNicks, []).map((nick) => normalizeIrcIdentifier(nick)),
+    ]);
+    const aliases: string[] = [];
+    const seen = new Set<string>();
+    const snapshots = readSnapshots.all(buffer.id) as Array<{ selfNickSnapshot: string }>;
+    for (const snapshot of snapshots) {
+      for (const nick of parseJson<string[]>(snapshot.selfNickSnapshot, [])) {
+        const trimmed = nick.trim();
+        if (!trimmed) {
+          continue;
+        }
+        const key = normalizeIrcIdentifier(trimmed);
+        if (excluded.has(key) || seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        aliases.push(trimmed);
+      }
+    }
+    updateBuffer.run(JSON.stringify(aliases), buffer.id);
+  }
+};
+
+const parseJson = <T>(value: string, fallback: T): T => {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
 };
 
 const ensureMessagesSearchIndex = (db: DatabaseSync, forceRebuild: boolean) => {

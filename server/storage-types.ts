@@ -3,6 +3,9 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type {
+  SpeakerAttributionConfidence,
+  SpeakerAttributionSource,
+  SpeakerRole,
   AssistantThreadScope,
   AssistantTurn,
   AssistantPreferences,
@@ -27,6 +30,7 @@ export type NetworkRow = {
   tls: number;
   nick: string;
   altNicks: string;
+  historicalSelfNicks: string;
   username: string;
   realName: string;
   password: string | null;
@@ -45,6 +49,7 @@ export type BufferRow = {
   kind: BufferState['kind'];
   target: string;
   unread: number;
+  selfNickAliases: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -62,10 +67,24 @@ export type MessageRow = {
   networkId: string;
   target: string;
   nick: string | null;
+  speakerRole: SpeakerRole | null;
+  speakerNick: string | null;
+  attributionSource: SpeakerAttributionSource | null;
+  attributionConfidence: SpeakerAttributionConfidence | null;
+  importBatchId: string | null;
   body: string;
   kind: string;
   self: number;
   ts: number;
+};
+
+export type HistoryImportBatchRow = {
+  id: string;
+  networkId: string;
+  bufferId: string;
+  target: string;
+  selfNickSnapshot: string;
+  createdAt: number;
 };
 
 export type FriendRow = {
@@ -135,10 +154,34 @@ export type MessageInput = {
   networkId: string;
   target: string;
   nick: string | null;
+  speakerRole?: SpeakerRole;
+  speakerNick?: string | null;
+  attributionSource?: SpeakerAttributionSource;
+  attributionConfidence?: SpeakerAttributionConfidence;
+  importBatchId?: string | null;
   body: string;
   kind: AppSnapshot['messages'][number]['kind'];
   self: boolean;
   ts: number;
+};
+
+export type MessageAttributionUpdate = {
+  id: string;
+  speakerRole: SpeakerRole;
+  speakerNick: string | null;
+  attributionSource: SpeakerAttributionSource;
+  attributionConfidence: SpeakerAttributionConfidence;
+  importBatchId?: string | null;
+  self: boolean;
+};
+
+export type HistoryImportBatchInput = {
+  id?: string;
+  networkId: string;
+  bufferId: string;
+  target: string;
+  selfNickSnapshot: string[];
+  createdAt?: number;
 };
 
 export type MessagePage = {

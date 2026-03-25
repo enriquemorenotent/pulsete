@@ -21,6 +21,7 @@ type ChatPaneHeaderProps = {
   onDownloadHistory?: () => Promise<boolean>;
   canImportHistory?: boolean;
   onOpenHistoryImport?: () => void;
+  onOpenSelfNickAliases?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -89,6 +90,11 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           {props.canImportHistory && props.onOpenHistoryImport ? (
             <Button variant="outline" size="sm" onClick={props.onOpenHistoryImport}>
               Import logs
+            </Button>
+          ) : null}
+          {selectedBuffer?.kind === 'query' && props.onOpenSelfNickAliases ? (
+            <Button variant="outline" size="sm" onClick={props.onOpenSelfNickAliases}>
+              Self aliases
             </Button>
           ) : null}
           {selectedChannel ? (

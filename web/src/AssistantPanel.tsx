@@ -2,9 +2,11 @@ import { Paperclip, X } from 'lucide-react';
 import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AssistantAttachmentMetadata,
+  AssistantAskEvidenceGroup,
   AssistantItem,
   AssistantSnapshot,
   AssistantThread,
+  AssistantTurn,
   AssistantTurnAttachmentInput,
 } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
@@ -267,6 +269,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
               >
                 <AssistantMessageContent
                   text={entry.text}
+                  evidenceGroups={entry.evidenceGroups}
                   normalizeText={entry.role === 'assistant'}
                   onOpenChannel={props.onOpenChannel}
                 />
@@ -410,6 +413,7 @@ export const shouldSubmitAssistantPrompt = (
 
 type ConversationEntry = {
   attachments: AssistantAttachmentMetadata[];
+  evidenceGroups: AssistantAskEvidenceGroup[];
   id: string;
   role: 'user' | 'assistant' | 'error';
   text: string;
@@ -420,25 +424,89 @@ const buildConversation = (thread: AssistantThread | null): ConversationEntry[] 
     return [];
   }
   return thread.turns.flatMap((turn) => {
-    const items = turn.items.flatMap((item) => mapItemToConversationEntry(item));
+    const evidenceGroups = thread.task === 'ask' ? collectTurnEvidenceGroups(turn) : [];
+    const lastAssistantItemId = findLastAssistantItemId(turn.items);
+    const items = turn.items.flatMap((item) => mapItemToConversationEntry(item, {
+      evidenceGroups: item.id === lastAssistantItemId ? evidenceGroups : [],
+    }));
     if (turn.status === 'failed' && turn.error) {
       return [...items, {
         id: `${turn.id}-error`,
         role: 'error' as const,
         text: turn.error,
         attachments: [],
+        evidenceGroups: [],
       }];
     }
     return items;
   });
 };
 
-const mapItemToConversationEntry = (item: AssistantItem): ConversationEntry[] => {
+const mapItemToConversationEntry = (
+  item: AssistantItem,
+  options: { evidenceGroups: AssistantAskEvidenceGroup[] },
+): ConversationEntry[] => {
   if (item.type === 'userMessage') {
-    return [{ id: item.id, role: 'user', text: item.text, attachments: item.attachments }];
+    return [{
+      id: item.id,
+      role: 'user',
+      text: item.text,
+      attachments: item.attachments,
+      evidenceGroups: [],
+    }];
   }
   if (item.type === 'agentMessage' && item.text.trim()) {
-    return [{ id: item.id, role: 'assistant', text: item.text, attachments: [] }];
+    return [{
+      id: item.id,
+      role: 'assistant',
+      text: item.text,
+      attachments: [],
+      evidenceGroups: options.evidenceGroups,
+    }];
   }
   return [];
+};
+
+const findLastAssistantItemId = (items: AssistantItem[]) => {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (item?.type === 'agentMessage' && item.text.trim()) {
+      return item.id;
+    }
+  }
+  return null;
+};
+
+const collectTurnEvidenceGroups = (turn: AssistantTurn) => {
+  const retrievals = turn.routing?.retrievals?.length
+    ? turn.routing.retrievals
+    : turn.routing?.retrieval
+      ? [turn.routing.retrieval]
+      : [];
+  const merged: AssistantAskEvidenceGroup[] = [];
+  const groupsByHeading = new Map<string, AssistantAskEvidenceGroup>();
+
+  for (const retrieval of retrievals) {
+    for (const group of retrieval.evidenceGroups ?? []) {
+      const heading = group.heading.trim();
+      const lines = group.lines.filter((line) => line.body.trim());
+      if (!heading || lines.length === 0) {
+        continue;
+      }
+      const existing = groupsByHeading.get(heading);
+      if (existing) {
+        for (const line of lines) {
+          if (!existing.lines.some((candidate) => candidate.messageId === line.messageId)) {
+            existing.lines.push(line);
+          }
+        }
+        continue;
+      }
+      const nextGroup = { heading, lines: [...lines] };
+      groupsByHeading.set(heading, nextGroup);
+      merged.push(nextGroup);
+    }
+  }
+
+  return merged;
 };

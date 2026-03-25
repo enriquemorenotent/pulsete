@@ -78,16 +78,17 @@ test('ask prompt envelopes include selected-buffer metadata without implying tra
   assert.match(input, /Conversation mode: assistant chat with optional transcript lookup/);
   assert.match(input, /Selected buffer metadata:/);
   assert.match(input, /Transcript speaker note:/);
-  assert.match(input, /Lines prefixed with "you \(nick\)" were authored by the local user/);
+  assert.match(input, /the local user is labeled as "You:"/);
   assert.match(input, /Retrieved transcript context:\n\(none loaded for this turn\)/);
 });
 
 test('assistant base instructions require readable list formatting in chat replies', () => {
   assert.match(assistantBaseInstructions, /plain-text chat panel/);
   assert.match(assistantBaseInstructions, /brief lead sentence followed by bullets/);
-  assert.match(assistantBaseInstructions, /avoid wall-of-text replies/);
-  assert.match(assistantBaseInstructions, /"Answer:" on its own line/);
-  assert.match(assistantBaseInstructions, /Do not compress multiple bullet points/);
+  assert.match(assistantBaseInstructions, /sound like a person in chat/);
+  assert.match(assistantBaseInstructions, /Do not use rigid labels like "Answer:", "Evidence:", or "Limits:"/);
+  assert.match(assistantBaseInstructions, /renders transcript evidence separately/);
+  assert.match(assistantBaseInstructions, /Do not invent or relabel transcript speakers/);
 });
 
 test('ask prompt envelopes require sectioned transcript answers when evidence is loaded', () => {
@@ -103,7 +104,9 @@ test('ask prompt envelopes require sectioned transcript answers when evidence is
     task: 'ask',
   });
 
-  assert.match(input, /format factual transcript answers with short labeled sections/);
-  assert.match(input, /"Answer:", then "Evidence:" with 1 to 3 "-" bullets/);
-  assert.match(input, /instead of chaining several quotes into one paragraph/);
+  assert.match(input, /answer from it in natural prose/);
+  assert.match(input, /Answer in natural chat prose/);
+  assert.match(input, /Do not use rigid headings like "Answer:", "Evidence:", or "Limits:"/);
+  assert.match(input, /renders the supporting transcript excerpt separately/);
+  assert.match(input, /Do not invent, merge, or relabel speakers/);
 });

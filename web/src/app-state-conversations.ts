@@ -88,6 +88,7 @@ export const reduceConversationDomain = (
       };
     }
     case 'append-message':
+    case 'upsert-message':
       return {
         ...domain,
         messages: appendConversationMessages(domain.messages, [action.message]),

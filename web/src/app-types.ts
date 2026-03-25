@@ -93,6 +93,7 @@ export type Action =
   | { type: 'remove-buffer'; bufferId: string; networkId: string }
   | { type: 'select'; selection: SelectedBuffer | null }
   | { type: 'append-message'; message: ChatMessage }
+  | { type: 'upsert-message'; message: ChatMessage }
   | { type: 'append-messages'; messages: ChatMessage[] }
   | { type: 'prepend-messages'; messages: ChatMessage[] }
   | { type: 'remove-messages'; networkId: string; target: string; messageIds: string[] }

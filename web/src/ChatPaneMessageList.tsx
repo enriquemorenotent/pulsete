@@ -1,4 +1,4 @@
-import { memo, useMemo, type RefObject } from 'react';
+import { memo, useCallback, useMemo, useRef, type RefObject, type UIEvent } from 'react';
 import { Plug2 } from 'lucide-react';
 import type { BufferState, ChatMessage } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
@@ -32,26 +32,51 @@ type ChatPaneMessageListProps = {
 
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: ChatPaneMessageListProps) {
   const highlightParticipantNicks = props.bufferKind === 'query';
+  const loadingOlderRef = useRef(false);
   const renderBlocks = useMemo(
     () => buildRenderBlocks(props.messages),
     [props.messages]
   );
   const showLoadOlder = props.canLoadOlderHistory && props.onLoadOlderHistory;
-  const handleLoadOlder = async () => {
+  const handleLoadOlder = useCallback(async () => {
+    if (!props.onLoadOlderHistory || loadingOlderRef.current || props.loadingOlderHistory) {
+      return;
+    }
+    loadingOlderRef.current = true;
     const scrollContainer = props.scrollRef.current;
     const previousHeight = scrollContainer?.scrollHeight ?? 0;
     const previousTop = scrollContainer?.scrollTop ?? 0;
-    await props.onLoadOlderHistory?.();
-    await waitForNextAnimationFrame();
-    const nextScrollContainer = props.scrollRef.current;
-    if (!nextScrollContainer) {
+    try {
+      await props.onLoadOlderHistory();
+      await waitForNextAnimationFrame();
+      const nextScrollContainer = props.scrollRef.current;
+      if (!nextScrollContainer) {
+        return;
+      }
+      restoreScrollOffsetAfterPrepend(nextScrollContainer, previousHeight, previousTop);
+    } finally {
+      loadingOlderRef.current = false;
+    }
+  }, [props.loadingOlderHistory, props.onLoadOlderHistory, props.scrollRef]);
+
+  const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    if (!shouldAutoLoadOlderHistory({
+      canLoadOlderHistory: !!showLoadOlder,
+      loadingOlderHistory: props.loadingOlderHistory ?? false,
+      loadingOlderInFlight: loadingOlderRef.current,
+      scrollTop: event.currentTarget.scrollTop,
+    })) {
       return;
     }
-    nextScrollContainer.scrollTop = previousTop + (nextScrollContainer.scrollHeight - previousHeight);
-  };
+    void handleLoadOlder();
+  }, [handleLoadOlder, props.loadingOlderHistory, showLoadOlder]);
 
   return (
-    <div ref={props.scrollRef} className="min-h-0 flex-1 overflow-y-auto bg-background/45 px-3 py-2">
+    <div
+      ref={props.scrollRef}
+      className="min-h-0 flex-1 overflow-y-auto bg-background/45 px-3 py-2"
+      onScroll={handleScroll}
+    >
       {showLoadOlder ? (
         <div className="mb-2 flex justify-center">
           <Button variant="outline" size="sm" disabled={props.loadingOlderHistory} onClick={() => void handleLoadOlder()}>
@@ -121,3 +146,24 @@ const waitForNextAnimationFrame = () =>
   new Promise<void>((resolve) => {
     window.requestAnimationFrame(() => resolve());
   });
+
+const olderHistoryAutoLoadThresholdPx = 24;
+
+export const shouldAutoLoadOlderHistory = (input: {
+  canLoadOlderHistory: boolean;
+  loadingOlderHistory: boolean;
+  loadingOlderInFlight: boolean;
+  scrollTop: number;
+}) =>
+  input.canLoadOlderHistory
+  && !input.loadingOlderHistory
+  && !input.loadingOlderInFlight
+  && input.scrollTop <= olderHistoryAutoLoadThresholdPx;
+
+export const restoreScrollOffsetAfterPrepend = (
+  node: Pick<HTMLDivElement, 'scrollHeight' | 'scrollTop'>,
+  previousHeight: number,
+  previousTop: number,
+) => {
+  node.scrollTop = previousTop + (node.scrollHeight - previousHeight);
+};

@@ -110,9 +110,11 @@ export function useDesktopChatModel({
     || workspace.selectedBuffer?.kind === 'query';
   const canDownloadHistory = canClearHistory;
   const canImportHistory = canClearHistory;
+  const canRepairSelfNickAliases = workspace.selectedBuffer?.kind === 'query';
   const clearHistoryBufferId = canClearHistory ? workspace.selectedBuffer?.id ?? null : null;
   const downloadHistoryBufferId = canDownloadHistory ? workspace.selectedBuffer?.id ?? null : null;
   const importHistoryBufferId = canImportHistory ? workspace.selectedBuffer?.id ?? null : null;
+  const repairSelfNickAliasesBufferId = canRepairSelfNickAliases ? workspace.selectedBuffer?.id ?? null : null;
   return useMemo(() => ({
     workspace,
     friends,
@@ -141,6 +143,9 @@ export function useDesktopChatModel({
     onImportHistory: importHistoryBufferId
       ? (input) => actions.importBufferHistory(importHistoryBufferId, input)
       : undefined,
+    onUpdateSelfNickAliases: repairSelfNickAliasesBufferId
+      ? (input) => actions.updateBufferSelfNickAliases(repairSelfNickAliasesBufferId, input)
+      : undefined,
     canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
     loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
     onLoadOlderHistory: selectedBufferHistory.loadOlderHistory,
@@ -160,6 +165,7 @@ export function useDesktopChatModel({
     actions.closeChannelList,
     actions.downloadBufferHistory,
     actions.importBufferHistory,
+    actions.updateBufferSelfNickAliases,
     actions.joinChannelFromList,
     actions.openChannelList,
     actions.openMentionedChannel,
@@ -177,6 +183,7 @@ export function useDesktopChatModel({
     clearHistoryBufferId,
     downloadHistoryBufferId,
     importHistoryBufferId,
+    repairSelfNickAliasesBufferId,
     composer.draft,
     composer.recallNewerDraft,
     composer.recallOlderDraft,

@@ -69,6 +69,7 @@ test('snapshot seeds fixed local networks and no open buffers', () => {
   );
   assert.equal(snapshot.networks[0]?.nick, 'pulsete');
   assert.deepEqual(snapshot.networks[0]?.altNicks, ['pulsete_', 'pulsete__']);
+  assert.deepEqual(snapshot.networks[0]?.historicalSelfNicks, []);
   assert.equal(snapshot.networks[0]?.username, 'pulsete');
   assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
   assert.deepEqual(snapshot.buffers, []);
@@ -194,6 +195,6 @@ test('legacy auth databases are backed up and replaced with a fresh local databa
     .filter((name) => !name.startsWith('messages_fts_'));
   assert.deepEqual(
     publicTables,
-    ['assistant_preferences', 'assistant_threads', 'buffers', 'channel_details', 'friends', 'messages', 'messages_fts', 'networks']
+    ['assistant_preferences', 'assistant_threads', 'buffers', 'channel_details', 'friends', 'history_import_batches', 'messages', 'messages_fts', 'networks']
   );
 });

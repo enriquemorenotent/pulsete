@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { Storage,type NetworkInput } from '../server/storage.js';
 import type { ChannelUserState } from '../shared/protocol.js';
@@ -69,6 +70,122 @@ test('query buffers and history match IRC nick casing insensitively', () => {
 
   assert.equal(storage.conversations.getBufferByTarget(network.id, 'ALICE')?.id, query.id);
   assert.deepEqual(storage.conversations.listMessages(network.id, 'ALICE', 10), [message]);
+});
+
+test('query history lazily backfills legacy speaker attribution on read', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const network = createConnectionInstance(storage, {
+    historicalSelfNicks: ['oldtester'],
+  });
+  storage.conversations.upsertQuery(network.id, 'MissD');
+
+  const legacy = new DatabaseSync(file);
+  legacy.prepare(`
+    INSERT INTO messages
+      (id, networkId, target, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    'legacy-1',
+    network.id,
+    'MissD',
+    'MissD',
+    'unknown',
+    null,
+    'unknown',
+    'low',
+    null,
+    'That was my hotel fantasy.',
+    'line',
+    1,
+    1,
+  );
+  legacy.close();
+
+  const [repaired] = storage.conversations.listMessages(network.id, 'missd', 10);
+  const verifyDb = new DatabaseSync(file);
+  const persisted = verifyDb.prepare(`
+    SELECT speakerRole, speakerNick, attributionSource, attributionConfidence, self
+    FROM messages
+    WHERE id = 'legacy-1'
+  `).get() as {
+    speakerRole: string;
+    speakerNick: string | null;
+    attributionSource: string;
+    attributionConfidence: string;
+    self: number;
+  };
+  verifyDb.close();
+
+  assert.equal(repaired?.speakerRole, 'peer');
+  assert.equal(repaired?.speakerNick, 'MissD');
+  assert.equal(repaired?.attributionSource, 'query-target');
+  assert.equal(repaired?.attributionConfidence, 'high');
+  assert.equal(repaired?.self, false);
+  assert.equal(persisted.speakerRole, 'peer');
+  assert.equal(persisted.speakerNick, 'MissD');
+  assert.equal(persisted.attributionSource, 'query-target');
+  assert.equal(persisted.attributionConfidence, 'high');
+  assert.equal(persisted.self, 0);
+});
+
+test('query alias repairs stay scoped to the selected private chat', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage, {
+    nick: 'sofia',
+    altNicks: ['sofia_', 'sofia__'],
+  });
+  const missdBuffer = storage.conversations.upsertQuery(network.id, 'MissD');
+  storage.conversations.upsertQuery(network.id, 'sofiaIsBack');
+
+  storage.conversations.appendMessage({
+    id: 'missd-imported',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'sofiaIsBack',
+    speakerRole: 'unknown',
+    speakerNick: 'sofiaIsBack',
+    attributionSource: 'unknown',
+    attributionConfidence: 'low',
+    body: 'old imported self line',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.appendMessage({
+    id: 'other-query-imported',
+    networkId: network.id,
+    target: 'sofiaIsBack',
+    nick: 'sofiaIsBack',
+    speakerRole: 'unknown',
+    speakerNick: 'sofiaIsBack',
+    attributionSource: 'unknown',
+    attributionConfidence: 'low',
+    body: 'future peer line with the same nick',
+    kind: 'line',
+    self: false,
+    ts: 2,
+  });
+
+  const repaired = storage.conversations.repairQueryMessageAttributions({
+    bufferId: missdBuffer.id,
+    networkId: network.id,
+    target: 'MissD',
+    nick: network.nick,
+    altNicks: network.altNicks,
+    selfNickAliases: ['sofiaIsBack'],
+  });
+
+  assert.deepEqual(repaired.map((message) => message.id), ['missd-imported']);
+  assert.equal(storage.conversations.getMessageById('missd-imported')?.speakerRole, 'self');
+  assert.equal(storage.conversations.getMessageById('missd-imported')?.attributionSource, 'query-alias');
+  assert.equal(storage.conversations.getMessageById('missd-imported')?.self, true);
+  assert.equal(storage.conversations.getMessageById('other-query-imported')?.speakerRole, 'peer');
+  assert.equal(storage.conversations.getMessageById('other-query-imported')?.speakerNick, 'sofiaIsBack');
+  assert.equal(storage.conversations.getMessageById('other-query-imported')?.attributionSource, 'query-target');
+  assert.equal(storage.conversations.getMessageById('other-query-imported')?.self, false);
 });
 
 test('unknown network filters do not fall back to global buffers or channels', () => {

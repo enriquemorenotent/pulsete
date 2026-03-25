@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import type { IrcConnectionData } from './irc-types.js';
+import { resolveRuntimeMessageAttribution } from './message-attribution.js';
 import type { MessageInput } from './storage-types.js';
 
 type IrcNickIdentityContext = Pick<IrcConnectionData, 'lifecycle' | 'profile' | 'replyTracker'>;
@@ -13,12 +14,18 @@ export const isSelfNick = (connection: IrcNickIdentityContext, nick: string | nu
 export const createMessage = (
   connection: IrcMessageContext,
   input: Omit<MessageInput, 'id' | 'networkId' | 'ts'>
-): MessageInput => ({
-  id: randomUUID(),
-  networkId: connection.profile.id,
-  ts: Date.now(),
-  ...input,
-});
+): MessageInput => {
+  const message: MessageInput = {
+    id: randomUUID(),
+    networkId: connection.profile.id,
+    ts: Date.now(),
+    ...input,
+  };
+  return {
+    ...message,
+    ...resolveRuntimeMessageAttribution(message),
+  };
+};
 
 export const formatPingReply = (line: string, params: string[]) => {
   if (/^PING\b/i.test(line)) {

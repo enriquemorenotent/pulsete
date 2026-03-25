@@ -13,6 +13,7 @@ import { ChatPaneComposer } from './ChatPaneComposer.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { HistoryImportDialog } from './HistoryImportDialog.js';
+import { QuerySelfNickAliasesDialog } from './QuerySelfNickAliasesDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -38,6 +39,7 @@ export type ChatPaneProps = {
   onDownloadHistory?: () => Promise<boolean>;
   canImportHistory?: boolean;
   onImportHistory?: (input: BufferHistoryImportRequest) => Promise<boolean>;
+  onUpdateSelfNickAliases?: (input: { selfNickAliases: string[] }) => Promise<boolean>;
   canLoadOlderHistory?: boolean;
   loadingOlderHistory?: boolean;
   onLoadOlderHistory?: () => Promise<void>;
@@ -53,6 +55,7 @@ export type ChatPaneProps = {
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
   const [historyImportOpen, setHistoryImportOpen] = useState(false);
+  const [selfNickAliasesOpen, setSelfNickAliasesOpen] = useState(false);
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -75,6 +78,11 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           onDownloadHistory={props.onDownloadHistory}
           canImportHistory={props.canImportHistory}
           onOpenHistoryImport={props.onImportHistory ? () => setHistoryImportOpen(true) : undefined}
+          onOpenSelfNickAliases={
+            props.workspace.selectedBuffer?.kind === 'query' && props.onUpdateSelfNickAliases
+              ? () => setSelfNickAliasesOpen(true)
+              : undefined
+          }
           onCloseChannel={props.onCloseChannel}
           onCloseBuffer={props.onCloseBuffer}
           onOpenChannelList={props.onOpenChannelList}
@@ -114,6 +122,15 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           targetLabel={props.workspace.headerTitle}
           onClose={() => setHistoryImportOpen(false)}
           onImport={props.onImportHistory}
+        />
+      ) : null}
+      {props.workspace.selectedBuffer?.kind === 'query' && props.onUpdateSelfNickAliases ? (
+        <QuerySelfNickAliasesDialog
+          open={selfNickAliasesOpen}
+          targetLabel={props.workspace.headerTitle}
+          currentAliases={props.workspace.selectedBuffer.selfNickAliases ?? []}
+          onClose={() => setSelfNickAliasesOpen(false)}
+          onSave={props.onUpdateSelfNickAliases}
         />
       ) : null}
     </section>

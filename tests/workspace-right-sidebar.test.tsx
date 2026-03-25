@@ -212,6 +212,88 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
   assert.doesNotMatch(markup, /Default model/);
 });
 
+test('assistant tab renders deterministic evidence from retrieval metadata instead of model labels', () => {
+  const evidenceThread: AssistantThread = {
+    ...assistantThread,
+    turns: [{
+      id: 'turn-evidence',
+      status: 'completed',
+      error: null,
+      routing: {
+        retrievals: [{
+          subject: {
+            bufferId: 'buffer-query',
+            networkId: network.id,
+            target: 'alice',
+            title: 'alice',
+          },
+          request: {
+            operation: 'fts_search',
+            limit: 5,
+            query: 'hotel',
+            searchTerms: ['hotel'],
+          },
+          stage: 'fts_search',
+          query: 'hotel',
+          confidence: 0.8,
+          scoreSummary: 'hits=1',
+          context: 'Retrieved transcript context for alice',
+          matchCount: 1,
+          matchedMessageIds: ['msg-1'],
+          windowMessageIds: [['msg-1', 'msg-2']],
+          evidenceMessageIds: ['msg-1', 'msg-2'],
+          evidenceGroups: [{
+            heading: '2026-03-23',
+            lines: [
+              {
+                messageId: 'msg-1',
+                speakerRole: 'peer',
+                speakerNick: 'alice',
+                attributionConfidence: 'high',
+                body: '"That would be our bed, only for us 2."',
+                kind: 'line',
+              },
+              {
+                messageId: 'msg-2',
+                speakerRole: 'self',
+                speakerNick: 'tester',
+                attributionConfidence: 'high',
+                body: '"My other marital bed."',
+                kind: 'line',
+              },
+            ],
+          }],
+        }],
+      },
+      items: [{
+        type: 'agentMessage',
+        id: 'item-evidence',
+        text: 'Answer:\nThe hotel fantasy is on March 23, 2026.\n\nEvidence:\n- 2026-03-23\nYou: "wrong attribution"',
+        phase: null,
+        artifact: null,
+      }],
+    }],
+  };
+
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={createWorkspace({})}
+      nicklist={nicklist}
+      assistant={{
+        ...assistantProps,
+        thread: evidenceThread,
+      }}
+      initialTab="assistant"
+    />
+  );
+
+  assert.match(markup, /The hotel fantasy is on March 23, 2026\./);
+  assert.match(markup, /2026-03-23/);
+  assert.match(markup, /alice: <\/span>&quot;That would be our bed, only for us 2\.&quot;/);
+  assert.match(markup, /You: <\/span>&quot;My other marital bed\.&quot;/);
+  assert.doesNotMatch(markup, /wrong attribution/);
+});
+
 test('busy assistant state shows Stop instead of Send and hides import controls', () => {
   const markup = renderToStaticMarkup(
     <WorkspaceRightSidebar

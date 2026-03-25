@@ -24,3 +24,21 @@ test('canonicalizeAssistantText expands labeled sections and evidence bullets', 
     'Answer:\nThe clearest hotel fantasy mention is from 2026-03-23. It looks direct.\n\nEvidence:\n- 2026-03-23 06:11 — you: "our bed, only for us 2"\n- 2026-03-23 03:06 — MissD: "i always want to drive and control"\n\nLimits:\nThe evidence is still partial.',
   );
 });
+
+test('canonicalizeAssistantText preserves continuation lines inside evidence bullets', () => {
+  assert.equal(
+    canonicalizeAssistantText(
+      'Evidence:\n- 2026-03-23 | 06:02-06:11\nMissD: "That would be our bed."\nYou: "My other marital bed."',
+    ),
+    'Evidence:\n- 2026-03-23 | 06:02-06:11\nMissD: "That would be our bed."\nYou: "My other marital bed."',
+  );
+});
+
+test('canonicalizeAssistantText merges repeated same-day evidence bullets', () => {
+  assert.equal(
+    canonicalizeAssistantText(
+      'Evidence:\n- 2026-03-23\nYou: "line one"\n- 2026-03-23\nMissD: "line two"',
+    ),
+    'Evidence:\n- 2026-03-23\nYou: "line one"\nMissD: "line two"',
+  );
+});

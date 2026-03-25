@@ -6,7 +6,6 @@ import {
   type HistoryImportTextFile,
 } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
-import { Input } from '@/components/ui/input.js';
 import { cn } from '@/lib/utils.js';
 import {
   Dialog,
@@ -17,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { historyImportFileInputAccept, prepareHistoryImportFiles } from './history-import-files.js';
+import { parseCommaSeparatedNicks, SelfNickAliasesField } from './self-nick-aliases.js';
 import { hasDroppedFiles, listDroppedFiles } from './text-file-attachments.js';
 
 type HistoryImportDialogProps = {
@@ -207,22 +207,15 @@ export function HistoryImportDialog(props: HistoryImportDialogProps) {
           {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-[12px] font-medium text-foreground" htmlFor="history-import-self-nicks">
-            Old self nicks
-            <span className="ml-1 text-muted-foreground">(optional)</span>
-          </label>
-          <Input
-            id="history-import-self-nicks"
-            value={selfNickText}
-            disabled={submitting}
-            placeholder="comma-separated, e.g. oldnick, oldnick_"
-            onChange={(event) => setSelfNickText(event.target.value)}
-          />
-          <p className="text-[12px] text-muted-foreground">
-            Useful for old logs from before a nick change. Configured alt nicks are included automatically.
-          </p>
-        </div>
+        <SelfNickAliasesField
+          id="history-import-self-nicks"
+          label="Old self nicks"
+          value={selfNickText}
+          disabled={submitting}
+          placeholder="comma-separated, e.g. oldnick, oldnick_"
+          hint="Useful for old logs from before a nick change. These aliases apply only to this private chat."
+          onChange={setSelfNickText}
+        />
 
         <DialogFooter>
           <Button variant="outline" type="button" disabled={submitting} onClick={props.onClose}>
@@ -236,9 +229,3 @@ export function HistoryImportDialog(props: HistoryImportDialogProps) {
     </Dialog>
   );
 }
-
-const parseCommaSeparatedNicks = (value: string) =>
-  value
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean);

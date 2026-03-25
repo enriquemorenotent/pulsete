@@ -18,6 +18,7 @@ import type {
   RuntimeNetworkStore,
 } from '../server/runtime-store-ports.js';
 import type { ChatMessage } from '../shared/protocol.js';
+import { resolveRuntimeMessageAttribution } from '../server/message-attribution.js';
 
 const makeThread = (overrides: Partial<AssistantThreadSummary> = {}): AssistantThreadSummary => ({
   id: overrides.id ?? 'thread-1',
@@ -93,7 +94,14 @@ const scoreMessageForTerms = (message: ChatMessage, terms: string[]) => {
 const createConversationStore = (
   allMessages: ChatMessage[] = [],
   activeBuffer: BufferState | null = null,
-): RuntimeConversationStore => ({
+): RuntimeConversationStore => {
+  const messages = allMessages.map((message) => message.speakerRole
+    ? message
+    : ({
+        ...message,
+        ...resolveRuntimeMessageAttribution(message),
+      }));
+  return ({
   listBuffers: () => activeBuffer ? [activeBuffer] : [],
   listChannels: () => [],
   getBuffer: (bufferId) => activeBuffer && activeBuffer.id === bufferId ? activeBuffer : null,
@@ -106,21 +114,21 @@ const createConversationStore = (
   setBufferUnread: () => {},
   updateChannelUsers: () => {},
   updateChannelTopic: () => {},
-  listMessages: (_networkId, _target, limit = 200) => allMessages.slice(-limit),
-  listMessagePage: (_networkId, _target, limit) => ({ messages: allMessages.slice(-limit), hasMore: allMessages.length > limit }),
-  listAllMessages: () => allMessages,
-  listOpeningMessages: (_networkId, _target, limit) => allMessages.slice(0, limit),
-  listRecentMessagesForBuffer: (_networkId, _target, limit) => allMessages.slice(-limit),
+  listMessages: (_networkId, _target, limit = 200) => messages.slice(-limit),
+  listMessagePage: (_networkId, _target, limit) => ({ messages: messages.slice(-limit), hasMore: messages.length > limit }),
+  listAllMessages: () => messages,
+  listOpeningMessages: (_networkId, _target, limit) => messages.slice(0, limit),
+  listRecentMessagesForBuffer: (_networkId, _target, limit) => messages.slice(-limit),
   getMessageWindow: (messageId, before, after) => {
-    const index = allMessages.findIndex((message) => message.id === messageId);
+    const index = messages.findIndex((message) => message.id === messageId);
     if (index === -1) {
       return [];
     }
-    return allMessages.slice(Math.max(0, index - before), Math.min(allMessages.length, index + after + 1));
+    return messages.slice(Math.max(0, index - before), Math.min(messages.length, index + after + 1));
   },
   searchMessages: (_networkId, _target, query, limit) => {
     const terms = parseSearchQueryTerms(query);
-    return allMessages
+    return messages
       .map((message) => ({
         message,
         score: scoreMessageForTerms(message, terms),
@@ -143,7 +151,9 @@ const createConversationStore = (
   appendMessage: () => {
     throw new Error('Not implemented in assistant-service test');
   },
-});
+  repairQueryMessageAttributions: () => [],
+  });
+};
 
 const conversationStore = createConversationStore();
 
@@ -1310,7 +1320,9 @@ test('assistant service retrieves matching transcript excerpts only for explicit
   assert.match(text, /Retrieved transcript context:/);
   assert.match(text, /Operation: fts_search/);
   assert.match(text, /Search terms: .*postgres/);
-  assert.match(text, /Top matching messages:/);
+  assert.match(text, /Excerpt:/);
+  assert.match(text, /2026-01-10/);
+  assert.match(text, /alice: We should use postgres for analytics storage\./);
   assert.match(text, /use postgres for analytics storage/);
 });
 
@@ -1395,7 +1407,8 @@ test('assistant service retrieves transcript excerpts for first-turn recollectio
   assert.match(text, /Search terms: .*fantasy/);
   assert.match(text, /first time we meet in person/);
   assert.match(text, /red coat/);
-  assert.match(text, /you \(sofia\): I still remember that fantasy\./);
+  assert.match(text, /MissD: My fantasy is that the first time we meet in person you arrive in a red coat\./);
+  assert.match(text, /You: I still remember that fantasy\./);
 });
 
 test('assistant service resolves yes against the prior ask clarification and loads opening transcript context', async () => {
@@ -1514,6 +1527,10 @@ test('assistant service resolves yes against the prior ask clarification and loa
   const text = turnStartParams.input[0]?.text ?? '';
   assert.match(text, /Operation: load_opening_buffer_messages/);
   assert.match(text, /Messages returned: 2/);
+  assert.match(text, /Excerpt:/);
+  assert.match(text, /2026-01-10/);
+  assert.match(text, /MissD: hello there/);
+  assert.match(text, /(?:sofia|You): hi Miss/);
   assert.match(text, /hello there/);
   assert.match(text, /hi Miss/);
 });
@@ -1835,6 +1852,7 @@ test('assistant service treats plain-language follow-up hints as refinement sear
   assert.match(text, /Search terms: fantasy, meet/);
   assert.match(text, /Operation: fts_search/);
   assert.match(text, /Search terms: fantasy, hotel/);
+  assert.match(text, /Excerpt:/);
   assert.match(text, /hotel bar before going upstairs/);
 });
 

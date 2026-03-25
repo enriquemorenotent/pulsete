@@ -1,6 +1,7 @@
 import {
   type BufferHistoryImportSummary,
   type BufferHistoryImportRequest,
+  type BufferSelfNickAliasesRequest,
   type AssistantTurnAttachmentInput,
   type AssistantPreferences,
   type AssistantTaskKind,
@@ -86,6 +87,14 @@ export const api = {
       `/api/buffers/${bufferId}/history/import`,
       {
         method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    ),
+  updateBufferSelfNickAliases: (bufferId: string, payload: BufferSelfNickAliasesRequest) =>
+    apiRequest<{ ok: boolean; buffer: BufferState; repairedCount: number; messages: ServerMessage[] }>(
+      `/api/buffers/${bufferId}/self-nick-aliases`,
+      {
+        method: 'PUT',
         body: JSON.stringify(payload),
       }
     ),

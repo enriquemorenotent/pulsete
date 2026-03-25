@@ -17,7 +17,7 @@ import {
 } from './storage-utils.js';
 
 const networkColumns =
-  'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin';
+  'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin';
 
 export const listNetworks = (db: DatabaseSync): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
@@ -64,8 +64,8 @@ export const upsertNetwork = (
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
   db.prepare(
     `INSERT INTO networks
-       (id, templateId, managerHidden, name, host, port, tls, nick, altNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        templateId = excluded.templateId,
        managerHidden = excluded.managerHidden,
@@ -75,6 +75,7 @@ export const upsertNetwork = (
        tls = excluded.tls,
        nick = excluded.nick,
        altNicks = excluded.altNicks,
+       historicalSelfNicks = excluded.historicalSelfNicks,
        username = excluded.username,
        realName = excluded.realName,
        password = excluded.password,
@@ -94,6 +95,7 @@ export const upsertNetwork = (
     input.tls ? 1 : 0,
     input.nick,
     JSON.stringify(input.altNicks ?? []),
+    JSON.stringify(input.historicalSelfNicks ?? []),
     input.username,
     input.realName,
     storedPassword,

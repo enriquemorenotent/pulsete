@@ -70,6 +70,8 @@ const toActions = (message: ServerMessage): Action[] => {
       }];
     case 'message.append':
       return [{ type: 'append-message', message: message.message }];
+    case 'message.upsert':
+      return [{ type: 'upsert-message', message: message.message }];
     case 'message.remove':
       return [{
         type: 'remove-messages',
