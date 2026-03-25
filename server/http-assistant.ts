@@ -54,11 +54,13 @@ export const handleAssistantRoutes = async ({ req, res, pathname, context }: Rou
   const threadTurnsMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)\/turns$/);
   if (threadTurnsMatch && req.method === 'POST') {
     const threadId = decodeRouteParam(threadTurnsMatch[1]);
-    await context.assistant.startTurn({
+    writeJson(res, 200, {
+      ok: true,
+      ...await context.assistant.startTurn({
       threadId,
       ...parseAssistantTurnInput(await readJson(req, assistantRequestBodyLimitBytes)),
+      }),
     });
-    writeJson(res, 200, { ok: true });
     return true;
   }
   const threadInterruptMatch = pathname.match(/^\/api\/assistant\/threads\/([^/]+)\/interrupt$/);

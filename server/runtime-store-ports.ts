@@ -51,6 +51,15 @@ export type RuntimeConversationStore = {
   listMessages(networkId: string, target: string, limit?: number): AppSnapshot['messages'];
   listMessagePage(networkId: string, target: string, limit: number, beforeMessageId?: string): MessagePage;
   listAllMessages(networkId: string, target: string): AppSnapshot['messages'];
+  listOpeningMessages(networkId: string, target: string, limit: number): AppSnapshot['messages'];
+  listRecentMessagesForBuffer(networkId: string, target: string, limit: number): AppSnapshot['messages'];
+  getMessageWindow(messageId: string, before: number, after: number): AppSnapshot['messages'];
+  searchMessages(
+    networkId: string,
+    target: string,
+    query: string,
+    limit: number,
+  ): Array<{ message: AppSnapshot['messages'][number]; score: number }>;
   deleteMessages(networkId: string, target: string): AppSnapshot['messages'];
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];
   upsertChannel(input: ChannelInput): ChannelState;

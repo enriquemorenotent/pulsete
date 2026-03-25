@@ -19,16 +19,20 @@ import {
   listAssistantDroppedFiles,
   prepareAssistantAttachments,
 } from './assistant-attachments.js';
+import { useStickyScroll } from './useStickyScroll.js';
 
 export type AssistantPanelProps = {
+  activeBufferLabel: string | null;
   assistant: AssistantSnapshot;
   contextSubtitle: string;
   contextKey: string;
-  contextEmpty: boolean;
   contextTitle: string;
   loading: boolean;
   busy: boolean;
+  resolvedSubjectLabel: string | null;
+  subjectPending: boolean;
   thread: AssistantThread | null;
+  onNewChat: () => Promise<boolean>;
   onOpenChannel: (channel: string) => void;
   onStop: () => Promise<boolean>;
   onSubmitPrompt: (prompt: string, attachments: AssistantTurnAttachmentInput[]) => Promise<boolean>;
@@ -40,10 +44,16 @@ export function AssistantPanel(props: AssistantPanelProps) {
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dropActive, setDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const dropDepthRef = useRef(0);
   const conversation = useMemo(() => buildConversation(props.thread), [props.thread]);
   const assistantReady = props.assistant.serviceStatus === 'ready' && !!props.assistant.auth.account;
   const canAttachFiles = assistantReady && !props.busy;
+
+  useStickyScroll({
+    scrollRef,
+    selectedBufferId: props.contextKey,
+  });
 
   useEffect(() => {
     setPrompt('');
@@ -63,16 +73,16 @@ export function AssistantPanel(props: AssistantPanelProps) {
 
   const sendDisabled = !assistantReady || props.busy || !prompt.trim();
   const composerPlaceholder = assistantReady
-    ? `Ask about ${props.contextTitle}`
+    ? 'Message the assistant'
     : 'Open Preferences to sign in first.';
   const attachmentHelpText = `Attach up to ${assistantAttachmentLimit} files per question.`;
   const composerHelpText = assistantReady
-    ? `${attachmentHelpText} Text and image attachments stay in the assistant thread only.`
+    ? `${attachmentHelpText} Press Enter to send and Shift+Enter for a new line. Text and image attachments stay in the assistant thread only.`
     : 'Open Preferences to sign in and enable the assistant.';
-  const showStatus = props.contextEmpty
-    || !assistantReady
+  const showStatus = !assistantReady
     || !!props.assistant.auth.lastError
     || (props.assistant.serviceStatus === 'error' && !!props.assistant.serviceError);
+  const showNewChat = !!props.thread && !props.busy;
 
   const attachFiles = async (files: File[]) => {
     if (files.length === 0) {
@@ -129,6 +139,18 @@ export function AssistantPanel(props: AssistantPanelProps) {
     void attachFiles(listAssistantDroppedFiles(event.dataTransfer));
   };
 
+  const submitPrompt = async () => {
+    if (props.busy) {
+      await props.onStop();
+      return;
+    }
+    if (await props.onSubmitPrompt(prompt, attachments)) {
+      setPrompt('');
+      setAttachments([]);
+      setAttachmentError(null);
+    }
+  };
+
   return (
     <aside
       className="relative flex h-full min-h-0 flex-col overflow-hidden border border-border bg-card"
@@ -150,16 +172,51 @@ export function AssistantPanel(props: AssistantPanelProps) {
           {props.assistant.serviceStatus === 'error' && props.assistant.serviceError ? (
             <p className="text-destructive">{props.assistant.serviceError}</p>
           ) : null}
-          {props.contextEmpty ? (
-            <p className="text-muted-foreground">No history is available for this buffer yet.</p>
-          ) : null}
           {!assistantReady ? (
             <p className="text-muted-foreground">Open Preferences to sign in and enable the assistant.</p>
           ) : null}
         </div>
       ) : null}
+      <div className="space-y-3 border-b border-border bg-card px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Assistant</p>
+            <p className="truncate text-sm font-medium text-foreground">{props.contextTitle}</p>
+          </div>
+          {showNewChat ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!assistantReady}
+              onClick={async () => {
+                if (!await props.onNewChat()) {
+                  return;
+                }
+                setPrompt('');
+                setAttachments([]);
+                setAttachmentError(null);
+              }}
+            >
+              New chat
+            </Button>
+          ) : null}
+        </div>
+        <p className="text-[12px] leading-5 text-muted-foreground">{props.contextSubtitle}</p>
+        {props.resolvedSubjectLabel || props.subjectPending ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {props.activeBufferLabel ? (
+              <Badge variant="secondary">Current buffer: {props.activeBufferLabel}</Badge>
+            ) : null}
+            <Badge variant={props.subjectPending ? 'outline' : 'default'}>
+              {props.subjectPending
+                ? 'Assistant subject: awaiting confirmation'
+                : `Assistant subject: ${props.resolvedSubjectLabel}`}
+            </Badge>
+          </div>
+        ) : null}
+      </div>
 
-      <ScrollArea className="min-h-0 flex-1 bg-background">
+      <ScrollArea viewportRef={scrollRef} className="min-h-0 flex-1 bg-background">
         <div className="space-y-3 px-3 py-3">
           {props.loading ? (
             <div className="rounded-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
@@ -170,17 +227,26 @@ export function AssistantPanel(props: AssistantPanelProps) {
             <Card className="border-dashed bg-card/80">
               <CardContent className="space-y-3 p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="default">Scoped to {props.contextTitle}</Badge>
+                  <Badge variant="default">Assistant chat</Badge>
                   <Badge variant="secondary">Up to {assistantAttachmentLimit} files</Badge>
+                  {props.activeBufferLabel ? (
+                    <Badge variant="secondary">Current buffer: {props.activeBufferLabel}</Badge>
+                  ) : null}
+                  {props.resolvedSubjectLabel ? (
+                    <Badge variant="default">Assistant subject: {props.resolvedSubjectLabel}</Badge>
+                  ) : null}
+                  {!props.resolvedSubjectLabel && props.subjectPending ? (
+                    <Badge variant="outline">Assistant subject: awaiting confirmation</Badge>
+                  ) : null}
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold text-foreground">No assistant history yet</h3>
                   <p className="text-[13px] text-muted-foreground">
-                    {props.contextSubtitle || `Use this thread to ask about ${props.contextTitle}.`}
+                    {props.contextSubtitle}
                   </p>
                 </div>
                 <p className="text-[12px] text-muted-foreground">
-                  Ask questions or attach supporting files to give the assistant more context.
+                  Chat directly with the assistant. It only reads transcript excerpts when it decides they are needed for the current turn.
                 </p>
               </CardContent>
             </Card>
@@ -195,11 +261,15 @@ export function AssistantPanel(props: AssistantPanelProps) {
                   entry.role === 'user'
                     ? 'max-w-[92%] rounded-md bg-accent px-3 py-2 text-[13px] text-foreground'
                     : entry.role === 'assistant'
-                      ? 'w-full rounded-md border border-border bg-card px-3 py-2 text-[13px] text-foreground'
-                      : 'w-full rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive'
+                      ? 'max-w-[92%] rounded-md border border-border bg-card px-3 py-2 text-[13px] text-foreground'
+                      : 'max-w-[92%] rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive'
                 }
               >
-                <AssistantMessageContent text={entry.text} onOpenChannel={props.onOpenChannel} />
+                <AssistantMessageContent
+                  text={entry.text}
+                  normalizeText={entry.role === 'assistant'}
+                  onOpenChannel={props.onOpenChannel}
+                />
                 {entry.attachments.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {entry.attachments.map((attachment) => (
@@ -271,6 +341,13 @@ export function AssistantPanel(props: AssistantPanelProps) {
         <textarea
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
+          onKeyDown={(event) => {
+            if (!shouldSubmitAssistantPrompt(event)) {
+              return;
+            }
+            event.preventDefault();
+            void submitPrompt();
+          }}
           placeholder={composerPlaceholder}
           disabled={!assistantReady || props.busy}
           className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-60"
@@ -298,17 +375,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
             <Button
               variant={props.busy ? 'destructive' : 'default'}
               disabled={props.busy ? false : sendDisabled}
-              onClick={async () => {
-                if (props.busy) {
-                  await props.onStop();
-                  return;
-                }
-                if (await props.onSubmitPrompt(prompt, attachments)) {
-                  setPrompt('');
-                  setAttachments([]);
-                  setAttachmentError(null);
-                }
-              }}
+              onClick={() => void submitPrompt()}
             >
               {props.busy ? 'Stop' : 'Send'}
             </Button>
@@ -319,6 +386,27 @@ export function AssistantPanel(props: AssistantPanelProps) {
     </aside>
   );
 }
+
+type AssistantPromptKeyEvent = {
+  key: string;
+  shiftKey: boolean;
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  nativeEvent: {
+    isComposing?: boolean;
+  };
+};
+
+export const shouldSubmitAssistantPrompt = (
+  event: AssistantPromptKeyEvent,
+) =>
+  event.key === 'Enter'
+  && !event.shiftKey
+  && !event.altKey
+  && !event.ctrlKey
+  && !event.metaKey
+  && !event.nativeEvent.isComposing;
 
 type ConversationEntry = {
   attachments: AssistantAttachmentMetadata[];

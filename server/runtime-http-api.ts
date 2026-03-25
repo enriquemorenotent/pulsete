@@ -42,6 +42,7 @@ export const createRuntimeHttpApi = ({
     close: (bufferId) => conversations.closeBuffer(bufferId),
     markRead: (bufferId) => conversations.markBufferRead(bufferId),
     history: (bufferId, limit, beforeMessageId) => conversations.history(bufferId, limit, beforeMessageId),
+    exportHistory: (bufferId) => conversations.exportHistory(bufferId),
     clearHistory: (bufferId) => conversations.clearHistory(bufferId),
     importHistory: (bufferId, input) => conversations.importHistory(bufferId, input),
   },

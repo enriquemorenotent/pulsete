@@ -8,6 +8,7 @@ import { historyWindowLimit } from '../shared/protocol.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import { normalizeChannelTarget } from './irc-validate.js';
 import type { RouteArgs } from './http-types.js';
+import type { ServerResponse } from 'node:http';
 
 const queryInputSchema = z.object({
   target: z.string(),
@@ -50,9 +51,17 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   }
 
   const historyMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history$/);
+  const downloadMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/download$/);
   if (historyMatch && req.method === 'DELETE') {
     const bufferId = decodeRouteParam(historyMatch[1]);
     writeJson(res, 200, { ok: true, ...context.buffers.clearHistory(bufferId) });
+    return true;
+  }
+
+  if (downloadMatch && req.method === 'GET') {
+    const bufferId = decodeRouteParam(downloadMatch[1]);
+    const download = context.buffers.exportHistory(bufferId);
+    writeTextDownload(res, download.fileName, download.content);
     return true;
   }
 
@@ -111,3 +120,12 @@ const readHistoryImportInput = (body: unknown) => {
   }
   return result.data;
 };
+
+const writeTextDownload = (res: ServerResponse, fileName: string, content: string) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${escapeContentDisposition(fileName)}"`);
+  res.end(content);
+};
+
+const escapeContentDisposition = (value: string) => value.replace(/["\\]/g, '');

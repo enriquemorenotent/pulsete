@@ -124,6 +124,58 @@ test('message history preserves insertion order when timestamps match', () => {
   );
 });
 
+test('search helpers stay scoped to the selected transcript and expose stable evidence windows', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  const first = storage.conversations.appendMessage({
+    id: 'missd-1',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'MissD',
+    body: 'Maybe I wait in the hotel bar first.',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  const second = storage.conversations.appendMessage({
+    id: 'missd-2',
+    networkId: network.id,
+    target: 'missd',
+    nick: 'tester',
+    body: 'Then you find me in the hotel room on all 4s.',
+    kind: 'line',
+    self: true,
+    ts: 2,
+  });
+  const third = storage.conversations.appendMessage({
+    id: 'missd-3',
+    networkId: network.id,
+    target: 'MISSD',
+    nick: 'MissD',
+    body: 'That hotel fantasy is vivid.',
+    kind: 'line',
+    self: false,
+    ts: 3,
+  });
+  storage.conversations.appendMessage({
+    id: 'other-1',
+    networkId: network.id,
+    target: 'MissProxima',
+    nick: 'MissProxima',
+    body: 'Unrelated hotel idea in another query.',
+    kind: 'line',
+    self: false,
+    ts: 4,
+  });
+
+  const matches = storage.conversations.searchMessages(network.id, 'missd', 'hotel', 10);
+
+  assert.deepEqual(matches.map((match) => match.message.id).sort(), ['missd-1', 'missd-2', 'missd-3']);
+  assert.deepEqual(storage.conversations.listOpeningMessages(network.id, 'MISSD', 2), [first, second]);
+  assert.deepEqual(storage.conversations.getMessageWindow(second.id, 1, 1), [first, second, third]);
+});
+
 test('deleteMessagesByIdPrefixes removes imported logs without touching normal messages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -164,6 +216,60 @@ test('deleteMessagesByIdPrefixes removes imported logs without touching normal m
   assert.deepEqual(deleted.map((message) => message.id), ['import:turn-1:0', 'import:turn-2:0']);
   assert.deepEqual(storage.conversations.listMessages(network.id, '#help', 10), [preserved]);
   assert.equal(storage.conversations.getMessageById(imported.id), null);
+});
+
+test('searchMessages stays in sync when transcript rows are deleted', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  storage.conversations.appendMessage({
+    id: 'import:turn-1:0',
+    networkId: network.id,
+    target: 'Alice',
+    nick: 'alice',
+    body: 'The hotel fantasy starts here.',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.appendMessage({
+    id: 'message-keep',
+    networkId: network.id,
+    target: 'Alice',
+    nick: 'tester',
+    body: 'ordinary follow-up',
+    kind: 'line',
+    self: true,
+    ts: 2,
+  });
+
+  assert.deepEqual(
+    storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10).map((match) => match.message.id),
+    ['import:turn-1:0'],
+  );
+
+  storage.conversations.deleteMessagesByIdPrefixes(['import:turn-1:']);
+
+  assert.deepEqual(storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10), []);
+
+  storage.conversations.appendMessage({
+    id: 'message-2',
+    networkId: network.id,
+    target: 'alice',
+    nick: 'alice',
+    body: 'Another hotel clue appears later.',
+    kind: 'line',
+    self: false,
+    ts: 3,
+  });
+  assert.deepEqual(
+    storage.conversations.searchMessages(network.id, 'ALICE', 'hotel', 10).map((match) => match.message.id),
+    ['message-2'],
+  );
+
+  storage.conversations.deleteMessages(network.id, 'Alice');
+
+  assert.deepEqual(storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10), []);
 });
 
 test('deleteMessages removes all transcript rows for a matched buffer target', () => {

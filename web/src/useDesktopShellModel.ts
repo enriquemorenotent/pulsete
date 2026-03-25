@@ -108,8 +108,10 @@ export function useDesktopChatModel({
   const canClearHistory =
     workspace.selectedBuffer?.kind === 'channel'
     || workspace.selectedBuffer?.kind === 'query';
+  const canDownloadHistory = canClearHistory;
   const canImportHistory = canClearHistory;
   const clearHistoryBufferId = canClearHistory ? workspace.selectedBuffer?.id ?? null : null;
+  const downloadHistoryBufferId = canDownloadHistory ? workspace.selectedBuffer?.id ?? null : null;
   const importHistoryBufferId = canImportHistory ? workspace.selectedBuffer?.id ?? null : null;
   return useMemo(() => ({
     workspace,
@@ -130,6 +132,10 @@ export function useDesktopChatModel({
     canClearHistory,
     onClearHistory: clearHistoryBufferId
       ? () => actions.clearBufferHistory(clearHistoryBufferId)
+      : undefined,
+    canDownloadHistory,
+    onDownloadHistory: downloadHistoryBufferId
+      ? () => actions.downloadBufferHistory(downloadHistoryBufferId)
       : undefined,
     canImportHistory,
     onImportHistory: importHistoryBufferId
@@ -152,6 +158,7 @@ export function useDesktopChatModel({
     actions.clearBufferHistory,
     actions.closeChannel,
     actions.closeChannelList,
+    actions.downloadBufferHistory,
     actions.importBufferHistory,
     actions.joinChannelFromList,
     actions.openChannelList,
@@ -164,9 +171,11 @@ export function useDesktopChatModel({
     channelAutoJoin.available,
     channelListNetwork,
     canClearHistory,
+    canDownloadHistory,
     canImportHistory,
     selectedBufferHistory,
     clearHistoryBufferId,
+    downloadHistoryBufferId,
     importHistoryBufferId,
     composer.draft,
     composer.recallNewerDraft,

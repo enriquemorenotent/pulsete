@@ -62,6 +62,7 @@ export const reduceTransientAction = (
       return {
         ...transient,
         assistant: {
+          ...transient.assistant,
           attemptedThreadId: transient.assistant.attemptedThreadId === action.threadId ? null : transient.assistant.attemptedThreadId,
           loadingThreadId: transient.assistant.loadingThreadId === action.threadId ? null : transient.assistant.loadingThreadId,
           selectedThreadId: transient.assistant.selectedThreadId === action.threadId ? null : transient.assistant.selectedThreadId,

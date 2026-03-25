@@ -50,10 +50,11 @@ const selectedChannel: ChannelState = {
 
 const askSummary: AssistantThreadSummary = {
   id: 'thread-1',
-  bufferId: selectedBuffer.id,
-  networkId: network.id,
-  target: selectedBuffer.target,
-  title: 'Ask · #general',
+  bufferId: null,
+  networkId: null,
+  target: null,
+  scope: 'free',
+  title: 'Chat',
   task: 'ask',
   model: 'gpt-5.4',
   turnStatus: null,
@@ -289,10 +290,11 @@ test('startAssistantChatgptLogin opens a placeholder window before the login req
   }
 });
 
-test('startAssistantTurn sends structured attachment payloads', async () => {
+test('startAssistantTurn renders an optimistic user turn before the request resolves', async () => {
   const state = createState();
-  const { params, banners } = createParams(state);
+  const { params, banners, dispatched } = createParams(state);
   const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
+  let resolveFetch: ((value: Response) => void) | null = null;
   const attachments: AssistantTurnAttachmentInput[] = [
     {
       id: 'attachment-1',
@@ -304,32 +306,100 @@ test('startAssistantTurn sends structured attachment payloads', async () => {
     },
   ];
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input, init) => {
+  globalThis.fetch = ((input, init) => {
     fetchCalls.push({
       url: String(input),
       method: String(init?.method ?? 'GET'),
       body: String(init?.body ?? ''),
     });
     if (String(input) === '/api/assistant/threads/thread-1/turns') {
-      return okJson({ ok: true });
+      return new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      });
     }
     throw new Error(`Unexpected fetch: ${String(input)}`);
   }) as typeof fetch;
 
   try {
     const actions = createAppActions(params);
-    const started = await actions.startAssistantTurn('thread-1', 'Can you summarize this?', attachments);
+    const started = await actions.startAssistantTurn('thread-1', 'Can you summarize this?', attachments, selectedBuffer.id);
+    const optimisticTurn = dispatched[0];
 
     assert.equal(started, true);
-    assert.deepEqual(fetchCalls, [{
-      url: '/api/assistant/threads/thread-1/turns',
-      method: 'POST',
-      body: JSON.stringify({
-        prompt: 'Can you summarize this?',
-        attachments,
-      }),
-    }]);
+    assert.equal(fetchCalls.length, 1);
+    assert.equal(fetchCalls[0]?.url, '/api/assistant/threads/thread-1/turns');
+    assert.equal(fetchCalls[0]?.method, 'POST');
+    assert.equal(optimisticTurn?.type, 'assistant-turn-started');
+    assert.equal(
+      optimisticTurn?.type === 'assistant-turn-started' && optimisticTurn.turn.items[0]?.type === 'userMessage'
+        ? optimisticTurn.turn.items[0].text
+        : null,
+      'Can you summarize this?',
+    );
+    const requestBody = JSON.parse(fetchCalls[0]!.body) as {
+      activeBufferId: string | null;
+      clientTurnId: string;
+      prompt: string;
+      attachments: AssistantTurnAttachmentInput[];
+    };
+    assert.equal(requestBody.activeBufferId, selectedBuffer.id);
+    assert.equal(requestBody.prompt, 'Can you summarize this?');
+    assert.deepEqual(requestBody.attachments, attachments);
+    assert.equal(
+      optimisticTurn?.type === 'assistant-turn-started' ? optimisticTurn.turn.id : null,
+      requestBody.clientTurnId,
+    );
+    assert.match(requestBody.clientTurnId, /^assistant-turn:/);
     assert.deepEqual(banners, []);
+
+    assert.equal(optimisticTurn?.type, 'assistant-turn-started');
+    if (resolveFetch === null) {
+      assert.fail('Expected assistant turn request to remain pending');
+    }
+    const completeFetch = resolveFetch as (value: Response) => void;
+    completeFetch(okJson({
+      ok: true,
+      messages: [{
+        type: 'assistant.turn.started',
+        threadId: 'thread-1',
+        turn: optimisticTurn?.turn,
+      }],
+    }) as Response);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.deepEqual(dispatched.map((action) => action.type), [
+      'assistant-turn-started',
+      'assistant-turn-started',
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('startAssistantTurn marks the optimistic turn failed when the request rejects', async () => {
+  const state = createState();
+  const { params, banners, dispatched } = createParams(state);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    throw new Error('Assistant request failed');
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const started = await actions.startAssistantTurn('thread-1', 'Hello', [], selectedBuffer.id);
+
+    assert.equal(started, true);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.deepEqual(dispatched.map((action) => action.type), [
+      'assistant-turn-started',
+      'assistant-turn-completed',
+    ]);
+    const failed = dispatched[1];
+    assert.equal(failed?.type, 'assistant-turn-completed');
+    assert.equal(failed?.type === 'assistant-turn-completed' && failed.turn.status, 'failed');
+    assert.equal(failed?.type === 'assistant-turn-completed' && failed.turn.error, 'Assistant request failed');
+    assert.deepEqual(banners, [{ kind: 'error', message: 'Assistant request failed' }]);
   } finally {
     globalThis.fetch = originalFetch;
   }

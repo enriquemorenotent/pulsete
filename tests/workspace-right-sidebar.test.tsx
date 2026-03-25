@@ -57,6 +57,7 @@ const assistantThread: AssistantThread = {
   bufferId: channelBuffer.id,
   networkId: network.id,
   target: '#general',
+  scope: 'buffer',
   title: 'Ask · #general',
   task: 'ask',
   model: 'gpt-5.4',
@@ -100,14 +101,15 @@ const assistantSnapshot: AssistantSnapshot = {
 };
 
 const assistantProps: AssistantPanelProps = {
+  activeBufferLabel: '#general',
   assistant: assistantSnapshot,
   contextSubtitle: 'Use this thread to ask about #general.',
   contextKey: 'buffer-channel',
-  contextEmpty: false,
-  contextTitle: '#general',
+  contextTitle: 'Chat',
   loading: false,
   busy: false,
   thread: assistantThread,
+  onNewChat: async () => true,
   onOpenChannel: () => {},
   onStop: async () => true,
   onSubmitPrompt: async () => true,
@@ -166,6 +168,7 @@ test('channel workspace can open the assistant tab by default', () => {
   assert.match(markup, /Users/);
   assert.match(markup, /Assistant/);
   assert.match(markup, /Summary goes here/);
+  assert.match(markup, />New chat<\/button>/);
   assert.doesNotMatch(markup, /Owners/);
 });
 
@@ -183,19 +186,21 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
       nicklist={nicklist}
       assistant={{
         ...assistantProps,
-        contextSubtitle: 'Use this thread to ask about alice.',
+        activeBufferLabel: 'alice',
+        contextSubtitle: 'Current buffer: alice. The assistant can look it up if needed.',
         contextKey: 'buffer-query',
-        contextTitle: 'alice',
+        contextTitle: 'Chat',
         thread: null,
       }}
     />
   );
 
-  assert.doesNotMatch(markup, /Assistant/);
   assert.doesNotMatch(markup, /Users/);
+  assert.match(markup, /<p class="text-\[11px\] uppercase tracking-\[0\.14em\] text-muted-foreground">Assistant<\/p>/);
   assert.match(markup, /No assistant history yet/);
-  assert.match(markup, /Scoped to alice/);
-  assert.match(markup, /Ask about alice/);
+  assert.match(markup, /Assistant chat/);
+  assert.match(markup, /Current buffer: alice/);
+  assert.match(markup, /Message the assistant/);
   assert.match(markup, />Add files<\/button>/);
   assert.match(markup, />Send<\/button>/);
   assert.doesNotMatch(markup, /Stop/);
@@ -231,6 +236,7 @@ test('busy assistant state shows Stop instead of Send and hides import controls'
 
   assert.match(markup, /Thinking…/);
   assert.match(markup, />Stop<\/button>/);
+  assert.doesNotMatch(markup, />New chat<\/button>/);
   assert.doesNotMatch(markup, />Send<\/button>/);
   assert.doesNotMatch(markup, />Import logs<\/button>/);
   assert.doesNotMatch(markup, />Add files<\/button>/);

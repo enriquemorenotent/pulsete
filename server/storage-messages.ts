@@ -61,6 +61,100 @@ export const listAllMessages = (db: DatabaseSync, networkId: string, target: str
   return selectMessages(db, networkId, matchingTargets);
 };
 
+export const listOpeningMessages = (db: DatabaseSync, networkId: string, target: string, limit = 200) => {
+  const matchingTargets = listMatchingTargets(db, networkId, target);
+  if (matchingTargets.length === 0) {
+    return [];
+  }
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const sql = `
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})
+    ORDER BY ts ASC, rowid ASC
+    LIMIT ?
+  `;
+  const rows = db.prepare(sql).all(networkId, ...matchingTargets, limit) as MessageRow[];
+  return rows.map(toMessage);
+};
+
+export const listRecentMessagesForBuffer = (db: DatabaseSync, networkId: string, target: string, limit = 200) =>
+  listMessages(db, networkId, target, limit);
+
+export const getMessageWindow = (db: DatabaseSync, messageId: string, before: number, after: number) => {
+  const cursor = getMessageCursor(db, messageId);
+  if (!cursor) {
+    return [];
+  }
+  const matchingTargets = listMatchingTargets(db, cursor.networkId, cursor.target);
+  if (matchingTargets.length === 0) {
+    return [];
+  }
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const beforeRows = db.prepare(`
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})
+      AND (ts < ? OR (ts = ? AND rowid <= ?))
+    ORDER BY ts DESC, rowid DESC
+    LIMIT ?
+  `).all(
+    cursor.networkId,
+    ...matchingTargets,
+    cursor.ts,
+    cursor.ts,
+    cursor.rowid,
+    before + 1,
+  ) as MessageRow[];
+  const afterRows = db.prepare(`
+    SELECT id, networkId, target, nick, body, kind, self, ts
+    FROM messages
+    WHERE networkId = ? AND target IN (${placeholders})
+      AND (ts > ? OR (ts = ? AND rowid > ?))
+    ORDER BY ts ASC, rowid ASC
+    LIMIT ?
+  `).all(
+    cursor.networkId,
+    ...matchingTargets,
+    cursor.ts,
+    cursor.ts,
+    cursor.rowid,
+    after,
+  ) as MessageRow[];
+  return [...beforeRows.reverse(), ...afterRows].map(toMessage);
+};
+
+export const searchMessages = (db: DatabaseSync, networkId: string, target: string, query: string, limit = 10) => {
+  const matchingTargets = listMatchingTargets(db, networkId, target);
+  if (matchingTargets.length === 0 || query.trim().length === 0) {
+    return [];
+  }
+  const placeholders = matchingTargets.map(() => '?').join(', ');
+  const rows = db.prepare(`
+    SELECT
+      m.id,
+      m.networkId,
+      m.target,
+      m.nick,
+      m.body,
+      m.kind,
+      m.self,
+      m.ts,
+      bm25(messages_fts, 1.2, 1.0) AS score
+    FROM messages_fts
+    JOIN messages AS m ON m.rowid = messages_fts.rowid
+    WHERE messages_fts MATCH ?
+      AND m.networkId = ?
+      AND m.target IN (${placeholders})
+    ORDER BY score ASC, m.ts ASC, m.rowid ASC
+    LIMIT ?
+  `).all(query, networkId, ...matchingTargets, limit) as Array<MessageRow & { score: number }>;
+  return rows.map((row) => ({
+    message: toMessage(row),
+    score: row.score,
+  }));
+};
+
 export const deleteMessages = (db: DatabaseSync, networkId: string, target: string) => {
   const matchingTargets = listMatchingTargets(db, networkId, target);
   if (matchingTargets.length === 0) {

@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { assistantTaskKindSchema, assistantTurnAttachmentInputSchema } from '../shared/protocol.js';
+import {
+  assistantTaskKindSchema,
+  assistantThreadScopeSchema,
+  assistantTurnAttachmentInputSchema,
+} from '../shared/protocol.js';
 import { badRequest } from './app-error.js';
 
 export const assistantRequestBodyLimitBytes = 20 * 1024 * 1024;
@@ -8,11 +12,14 @@ const nullableThreadId = z.string().trim().min(1).nullable();
 
 const createThreadSchema = z.object({
   bufferId: z.string().trim().min(1).nullable().optional().default(null),
+  scope: assistantThreadScopeSchema.optional(),
   task: assistantTaskKindSchema,
   model: z.string().trim().min(1).optional(),
 });
 
 const turnSchema = z.object({
+  activeBufferId: nullableThreadId.optional().default(null),
+  clientTurnId: z.string().trim().min(1).optional(),
   prompt: z.string(),
   attachments: z.array(assistantTurnAttachmentInputSchema).max(3).optional().default([]),
 });

@@ -100,7 +100,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     createThread: (input) => assistant.createThread(input),
     deleteThread: async (threadId) => publishMutation(await assistant.deleteThread(threadId)),
     readThread: (threadId) => assistant.readThread(threadId),
-    startTurn: (input) => assistant.startTurn(input),
+    startTurn: async (input) => publishMutation(await assistant.startTurn(input)),
     interruptThread: (threadId) => assistant.interruptThread(threadId),
     interruptTurn: (threadId, turnId) => assistant.interruptTurn(threadId, turnId),
     updatePreferences: (input) => assistant.updatePreferences(input),
@@ -123,6 +123,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     closeBuffer: (bufferId) => publishMutation(conversationsService.closeQueryBuffer(bufferId)),
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
+    exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),
     clearHistory: (bufferId) => publishMutation(conversationsService.clearBufferHistory(bufferId)),
     importHistory: (bufferId, input) => publishMutation(conversationsService.importHistory(bufferId, input)),
   };

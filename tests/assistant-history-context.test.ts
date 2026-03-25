@@ -22,8 +22,31 @@ test('assistant history context includes the full transcript when it fits', () =
   });
 
   assert.match(context, /History coverage: full buffer history/);
+  assert.match(context, /Speaker note: lines prefixed with "you \(nick\)"/);
   assert.match(context, /Full transcript:/);
   assert.match(context, /hello there/);
+});
+
+test('assistant history context labels self-authored transcript lines explicitly', () => {
+  const messages: ChatMessage[] = [{
+    id: 'message-1',
+    networkId: 'network-1',
+    target: 'MissD',
+    nick: 'sofia',
+    body: 'I am waiting in the hotel.',
+    kind: 'line',
+    self: true,
+    ts: Date.parse('2026-03-23T18:00:00Z'),
+  }];
+
+  const context = buildAssistantHistoryContext({
+    messages,
+    prompt: 'Who is waiting?',
+    task: 'ask',
+  });
+
+  assert.match(context, /you \(sofia\): I am waiting in the hotel\./);
+  assert.doesNotMatch(context, /\] sofia: I am waiting in the hotel\./);
 });
 
 test('assistant history context packs older matching windows when the transcript is large', () => {

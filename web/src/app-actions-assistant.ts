@@ -1,5 +1,7 @@
 import type {
+  AssistantAttachmentMetadata,
   AssistantSnapshot,
+  AssistantTurn,
   AssistantTaskKind,
   AssistantThreadSummary,
   AssistantTurnAttachmentInput,
@@ -84,6 +86,36 @@ const markAssistantThreadStopped = (
 ) => {
   dispatch({ type: 'assistant-thread-stop-requested', threadId });
 };
+
+const createAssistantTurnId = () => {
+  const suffix = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `assistant-turn:${suffix}`;
+};
+
+const toAttachmentMetadata = (attachments: AssistantTurnAttachmentInput[]): AssistantAttachmentMetadata[] =>
+  attachments.map(({ id, kind, mimeType, name, size }) => ({
+    id,
+    kind,
+    mimeType,
+    name,
+    size,
+  }));
+
+const buildOptimisticAssistantTurn = (
+  turnId: string,
+  prompt: string,
+  attachments: AssistantTurnAttachmentInput[],
+): AssistantTurn => ({
+  id: turnId,
+  status: 'inProgress',
+  error: null,
+  items: [{
+    type: 'userMessage',
+    id: `${turnId}:user`,
+    text: prompt.trim(),
+    attachments: toAttachmentMetadata(attachments),
+  }],
+});
 
 export const createAssistantActions = ({
   applyServerMessages,
@@ -210,7 +242,10 @@ export const createAssistantActions = ({
       errorMessage: 'Failed to update assistant model',
     });
 
-  const createAssistantThread = async (task: AssistantTaskKind, model?: string) => {
+  const createAssistantThread = async (
+    task: AssistantTaskKind,
+    model?: string,
+  ) => {
     const session = getSession();
     if (task === 'draft' && !isDraftTargetAvailable(session)) {
       updateBanner('error', 'Select a channel or private message before creating a draft thread');
@@ -262,14 +297,29 @@ export const createAssistantActions = ({
     threadId: string,
     prompt: string,
     attachments: AssistantTurnAttachmentInput[] = [],
-  ) =>
-    executeMutation({
-      request: () => api.startAssistantTurn(threadId, { prompt, attachments }),
-      failureValue: false,
-      mapResult: () => true,
-      successMessage: null,
-      errorMessage: 'Failed to start assistant turn',
-    });
+    activeBufferId: string | null = null,
+  ) => {
+    const clientTurnId = createAssistantTurnId();
+    const optimisticTurn = buildOptimisticAssistantTurn(clientTurnId, prompt, attachments);
+    dispatch({ type: 'assistant-turn-started', threadId, turn: optimisticTurn });
+    void api.startAssistantTurn(threadId, { activeBufferId, clientTurnId, prompt, attachments })
+      .then((result) => {
+        applyServerMessages(result.messages ?? []);
+      })
+      .catch((error) => {
+        dispatch({
+          type: 'assistant-turn-completed',
+          threadId,
+          turn: {
+            ...optimisticTurn,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Failed to start assistant turn',
+          },
+        });
+        updateBanner('error', error instanceof Error ? error.message : 'Failed to start assistant turn');
+      });
+    return true;
+  };
 
   const interruptAssistantTurn = async (threadId: string, turnId: string) =>
     executeMutation({

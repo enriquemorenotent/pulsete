@@ -4,11 +4,15 @@ import {
   appendMessage,
   deleteMessages,
   deleteMessagesByIdPrefixes,
+  getMessageWindow,
   getMessageById,
   listAllMessages,
+  listOpeningMessages,
   listMessagePage,
   listMessages,
+  listRecentMessagesForBuffer,
   listRecentMessages,
+  searchMessages,
 } from './storage-messages.js';
 import {
   deleteChannelByName,
@@ -99,6 +103,22 @@ export class StorageConversationsRepository {
 
   listAllMessages(networkId: string, target: string) {
     return listAllMessages(this.db, networkId, target);
+  }
+
+  listOpeningMessages(networkId: string, target: string, limit: number) {
+    return listOpeningMessages(this.db, networkId, target, limit);
+  }
+
+  listRecentMessagesForBuffer(networkId: string, target: string, limit: number) {
+    return listRecentMessagesForBuffer(this.db, networkId, target, limit);
+  }
+
+  getMessageWindow(messageId: string, before: number, after: number) {
+    return getMessageWindow(this.db, messageId, before, after);
+  }
+
+  searchMessages(networkId: string, target: string, query: string, limit: number) {
+    return searchMessages(this.db, networkId, target, query, limit);
   }
 
   listRecentMessages(limit = 200) {

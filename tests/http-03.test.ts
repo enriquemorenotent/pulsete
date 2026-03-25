@@ -251,6 +251,52 @@ test('history can load older pages before the oldest visible message', async () 
   }
 });
 
+test('buffer history download returns a human-readable transcript attachment', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput({ name: 'DownloadNet' }));
+  const buffer = storage.conversations.upsertBuffer({ networkId: network.id, kind: 'query', target: 'MissD' });
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'MissD',
+    body: 'hello there',
+    kind: 'line',
+    self: false,
+    ts: Date.UTC(2026, 2, 24, 18, 0, 0),
+  });
+  storage.conversations.appendMessage({
+    id: 'message-2',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'sofia',
+    body: 'waves',
+    kind: 'action',
+    self: true,
+    ts: Date.UTC(2026, 2, 24, 18, 1, 0),
+  });
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const port = await listen(server);
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/buffers/${buffer.id}/history/download`);
+    const body = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'text/plain; charset=utf-8');
+    assert.match(response.headers.get('content-disposition') ?? '', /attachment; filename="history-downloadnet-missd\.txt"/);
+    assert.match(body, /Buffer: MissD/);
+    assert.match(body, /Type: query/);
+    assert.match(body, /Network: DownloadNet/);
+    assert.match(body, /Total messages: 2/);
+    assert.match(body, /\[2026-03-24 18:00\] MissD: hello there/);
+    assert.match(body, /\[2026-03-24 18:01\] \* sofia waves/);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('buffer history clear removes channel transcript rows and broadcasts the mutation', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

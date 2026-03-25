@@ -89,6 +89,17 @@ export const api = {
         body: JSON.stringify(payload),
       }
     ),
+  downloadBufferHistory: async (bufferId: string) => {
+    const response = await fetch(`/api/buffers/${bufferId}/history/download`);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.message ?? `Request failed (${response.status})`);
+    }
+    const blob = await response.blob();
+    const fileName = parseDownloadFileName(response.headers.get('Content-Disposition'))
+      ?? `history-${bufferId}.txt`;
+    triggerFileDownload(blob, fileName);
+  },
   markBufferRead: (bufferId: string) =>
     apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',
@@ -134,7 +145,9 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
-  createAssistantThread: (payload: { bufferId: string | null; task: AssistantTaskKind; model?: string }) =>
+  createAssistantThread: (
+    payload: { bufferId: string | null; scope?: AssistantThreadSummary['scope']; task: AssistantTaskKind; model?: string }
+  ) =>
     apiRequest<{ thread: AssistantThreadSummary }>('/api/assistant/threads', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -146,8 +159,16 @@ export const api = {
     }),
   loadAssistantThread: (threadId: string) =>
     apiRequest<{ thread: AssistantThread }>(`/api/assistant/threads/${encodeURIComponent(threadId)}`),
-  startAssistantTurn: (threadId: string, payload: { prompt: string; attachments?: AssistantTurnAttachmentInput[] }) =>
-    apiRequest<{ ok: boolean }>(`/api/assistant/threads/${encodeURIComponent(threadId)}/turns`, {
+  startAssistantTurn: (
+    threadId: string,
+    payload: {
+      activeBufferId?: string | null;
+      clientTurnId?: string;
+      prompt: string;
+      attachments?: AssistantTurnAttachmentInput[];
+    },
+  ) =>
+    apiRequest<{ ok: boolean; messages?: ServerMessage[] }>(`/api/assistant/threads/${encodeURIComponent(threadId)}/turns`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
@@ -238,4 +259,24 @@ export const connectSocket = ({ onMessage, onOpen, onClose }: SocketCallbacks): 
       closeSocket(socket);
     },
   };
+};
+
+const parseDownloadFileName = (contentDisposition: string | null) => {
+  const match = contentDisposition?.match(/filename="([^"]+)"/i) ?? contentDisposition?.match(/filename=([^;]+)/i);
+  return match?.[1]?.trim() || null;
+};
+
+const triggerFileDownload = (blob: Blob, fileName: string) => {
+  if (typeof document === 'undefined') {
+    throw new Error('Downloads require a browser context');
+  }
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body?.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 };

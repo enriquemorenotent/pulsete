@@ -23,6 +23,7 @@ type ChatActionParams = Pick<
 
 export const createChatActions = ({
   clearBufferHistory,
+  downloadBufferHistory,
   importBufferHistory,
   applyServerMessages,
   dispatch,
@@ -148,6 +149,7 @@ export const createChatActions = ({
     closeBuffer,
     closeChannel,
     closeChannelList,
+    downloadBufferHistory,
     importBufferHistory,
     joinChannelFromList,
     openChannelList,

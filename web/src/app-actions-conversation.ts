@@ -102,6 +102,16 @@ export const createConversationActions = ({
       failureValue: false,
     });
 
+  const downloadBufferHistory = async (bufferId: string) => {
+    try {
+      await api.downloadBufferHistory(bufferId);
+      return true;
+    } catch (error) {
+      updateBanner('error', error instanceof Error ? error.message : 'Failed to download chat history');
+      return false;
+    }
+  };
+
   const importBufferHistory = async (bufferId: string, input: BufferHistoryImportRequest) =>
     executeMutation({
       request: () => api.importBufferHistory(bufferId, input),
@@ -113,6 +123,7 @@ export const createConversationActions = ({
 
   return {
     clearBufferHistory,
+    downloadBufferHistory,
     importBufferHistory,
     joinChannel,
     openOrSelectQueryBuffer,

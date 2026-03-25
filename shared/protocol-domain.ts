@@ -101,6 +101,9 @@ export type NetworkRuntimeState = z.infer<typeof networkRuntimeStateSchema>;
 export const assistantTaskKindSchema = z.enum(['ask', 'summarize', 'draft']);
 export type AssistantTaskKind = z.infer<typeof assistantTaskKindSchema>;
 
+export const assistantThreadScopeSchema = z.enum(['buffer', 'free']);
+export type AssistantThreadScope = z.infer<typeof assistantThreadScopeSchema>;
+
 export const assistantServiceStatusSchema = z.enum(['starting', 'ready', 'error']);
 export type AssistantServiceStatus = z.infer<typeof assistantServiceStatusSchema>;
 
@@ -261,11 +264,92 @@ export const assistantItemSchema = z.discriminatedUnion('type', [
 ]);
 export type AssistantItem = z.infer<typeof assistantItemSchema>;
 
+export const assistantActiveBufferSchema = z.object({
+  bufferId: z.string(),
+  networkId: z.string(),
+  target: z.string(),
+  title: z.string(),
+});
+export type AssistantActiveBuffer = z.infer<typeof assistantActiveBufferSchema>;
+
+export const assistantAskClarificationSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('confirmSelectedBufferSubject'),
+    originalPrompt: z.string(),
+  }),
+  z.object({
+    kind: z.literal('confirmResolvedSubject'),
+    originalPrompt: z.string(),
+    candidate: assistantActiveBufferSchema,
+    selectedBuffer: assistantActiveBufferSchema.nullable().optional(),
+  }),
+]);
+export type AssistantAskClarification = z.infer<typeof assistantAskClarificationSchema>;
+
+export const assistantAskRetrievalRequestSchema = z.discriminatedUnion('operation', [
+  z.object({
+    operation: z.literal('load_recent_buffer_messages'),
+    limit: z.number().int().positive(),
+  }),
+  z.object({
+    operation: z.literal('load_opening_buffer_messages'),
+    limit: z.number().int().positive(),
+  }),
+  z.object({
+    operation: z.literal('fts_search'),
+    limit: z.number().int().positive(),
+    query: z.string(),
+    searchTerms: z.array(z.string()),
+  }),
+  z.object({
+    operation: z.literal('message_window'),
+    messageId: z.string(),
+    before: z.number().int().nonnegative(),
+    after: z.number().int().nonnegative(),
+  }),
+  z.object({
+    operation: z.literal('span_scan'),
+    limit: z.number().int().positive(),
+    searchTerms: z.array(z.string()),
+  }),
+  z.object({
+    operation: z.literal('search_buffer'),
+    limit: z.number().int().positive(),
+    searchTerms: z.array(z.string()),
+  }),
+]);
+export type AssistantAskRetrievalRequest = z.infer<typeof assistantAskRetrievalRequestSchema>;
+
+export const assistantAskRetrievalMemorySchema = z.object({
+  subject: assistantActiveBufferSchema,
+  request: assistantAskRetrievalRequestSchema,
+  context: z.string(),
+  stage: z.string().default(''),
+  query: z.string().default(''),
+  confidence: z.number().min(0).max(1).default(0),
+  scoreSummary: z.string().default(''),
+  matchCount: z.number().int().nonnegative().default(0),
+  matchedMessageIds: z.array(z.string()).default([]),
+  windowMessageIds: z.array(z.array(z.string())).default([]),
+  evidenceMessageIds: z.array(z.string()).default([]),
+});
+export type AssistantAskRetrievalMemory = z.infer<typeof assistantAskRetrievalMemorySchema>;
+
+export const assistantTurnRoutingSchema = z.object({
+  pendingClarification: assistantAskClarificationSchema.nullable().optional(),
+  retrieval: assistantAskRetrievalMemorySchema.nullable().optional(),
+  retrievals: z.array(assistantAskRetrievalMemorySchema).default([]),
+});
+export type AssistantTurnRouting = z.infer<typeof assistantTurnRoutingSchema>;
+
 export const assistantTurnSchema = z.object({
   id: z.string(),
   status: assistantTurnStatusSchema,
   error: z.string().nullable(),
   items: z.array(assistantItemSchema),
+  activeBuffer: assistantActiveBufferSchema.nullable().optional(),
+  resolvedSubject: assistantActiveBufferSchema.nullable().optional(),
+  routing: assistantTurnRoutingSchema.nullable().optional(),
 });
 export type AssistantTurn = z.infer<typeof assistantTurnSchema>;
 
@@ -274,6 +358,7 @@ export const assistantThreadSummarySchema = z.object({
   bufferId: z.string().nullable(),
   networkId: z.string().nullable(),
   target: z.string().nullable(),
+  scope: assistantThreadScopeSchema,
   title: z.string(),
   task: assistantTaskKindSchema,
   model: z.string(),

@@ -16,7 +16,7 @@ export class StorageAssistantRepository {
 
   listThreads() {
     return (this.db.prepare(`
-      SELECT id, bufferId, networkId, target, title, task, model, turnStatus, createdAt, updatedAt
+      SELECT id, bufferId, networkId, target, scope, title, task, model, turnStatus, createdAt, updatedAt
       FROM assistant_threads
       ORDER BY updatedAt DESC, createdAt DESC
     `).all() as AssistantThreadRow[]).map(mapThreadRow);
@@ -47,12 +47,13 @@ export class StorageAssistantRepository {
     const createdAt = input.createdAt ?? existing?.createdAt ?? now;
     this.db.prepare(`
       INSERT INTO assistant_threads (
-        id, bufferId, networkId, target, title, task, model, turnStatus, turnsJson, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, bufferId, networkId, target, scope, title, task, model, turnStatus, turnsJson, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         bufferId = excluded.bufferId,
         networkId = excluded.networkId,
         target = excluded.target,
+        scope = excluded.scope,
         title = excluded.title,
         task = excluded.task,
         model = excluded.model,
@@ -63,6 +64,7 @@ export class StorageAssistantRepository {
       input.bufferId,
       input.networkId,
       input.target,
+      input.scope,
       input.title,
       input.task,
       input.model,
@@ -130,7 +132,7 @@ export class StorageAssistantRepository {
 
   private getThreadRow(threadId: string) {
     return this.db.prepare(`
-      SELECT id, bufferId, networkId, target, title, task, model, turnStatus, turnsJson, createdAt, updatedAt
+      SELECT id, bufferId, networkId, target, scope, title, task, model, turnStatus, turnsJson, createdAt, updatedAt
       FROM assistant_threads
       WHERE id = ?
     `).get(threadId) as AssistantThreadRow | undefined;
@@ -142,6 +144,7 @@ const mapThreadRow = (row: AssistantThreadRow) => ({
   bufferId: row.bufferId,
   networkId: row.networkId,
   target: row.target,
+  scope: row.scope,
   title: row.title,
   task: row.task,
   model: row.model,

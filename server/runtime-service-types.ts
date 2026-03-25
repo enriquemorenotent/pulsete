@@ -3,6 +3,7 @@ import type {
   BufferHistoryImportSummary,
   AssistantPreferences,
   AssistantTaskKind,
+  AssistantThreadScope,
   AssistantThread,
   AssistantThreadSummary,
   AssistantTurnAttachmentInput,
@@ -34,6 +35,7 @@ export type RuntimeConversationMutations = {
   closeBuffer(bufferId: string): ReturnType<RuntimeConversationService['closeQueryBuffer']>;
   markBufferRead: RuntimeConversationService['markBufferRead'];
   history: RuntimeConversationService['listBufferHistory'];
+  exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
   clearHistory(bufferId: string): ReturnType<RuntimeConversationService['clearBufferHistory']>;
   importHistory(
     bufferId: string,
@@ -58,6 +60,7 @@ export type RuntimeAssistantApi = {
   logout(): Promise<void>;
   createThread(input: {
     bufferId: string | null;
+    scope?: AssistantThreadScope;
     task: AssistantTaskKind;
     model?: string;
   }): Promise<AssistantThreadSummary>;
@@ -65,9 +68,11 @@ export type RuntimeAssistantApi = {
   readThread(threadId: string): Promise<AssistantThread>;
   startTurn(input: {
     threadId: string;
+    activeBufferId?: string | null;
+    clientTurnId?: string;
     prompt: string;
     attachments?: AssistantTurnAttachmentInput[];
-  }): Promise<void>;
+  }): Promise<{ messages: readonly ServerMessage[] }>;
   interruptThread(threadId: string): Promise<void>;
   interruptTurn(threadId: string, turnId: string): Promise<void>;
   updatePreferences(input: {
@@ -91,6 +96,7 @@ export type RuntimeHttpApi = {
     close: RuntimeConversationMutations['closeBuffer'];
     markRead: RuntimeConversationMutations['markBufferRead'];
     history: RuntimeConversationMutations['history'];
+    exportHistory: RuntimeConversationMutations['exportHistory'];
     clearHistory: RuntimeConversationMutations['clearHistory'];
     importHistory: RuntimeConversationMutations['importHistory'];
   };

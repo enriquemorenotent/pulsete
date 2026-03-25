@@ -1,4 +1,5 @@
 import { defaultAssistantModel } from '../../shared/assistant-defaults.js';
+import { canonicalizeAssistantText } from '../../shared/assistant-document.js';
 import type { AssistantItem, AssistantSnapshot, AssistantThread, AssistantTurn } from '../../shared/protocol.js';
 import type { Action, AppDomainState } from './app-types.js';
 
@@ -124,19 +125,43 @@ const interruptAssistantThread = (domain: AppDomainState, threadId: string) => {
 };
 
 const updateAssistantTurn = (domain: AppDomainState, threadId: string, turn: AssistantTurn) => {
+  const updatedAt = Date.now();
+  let summaryChanged = false;
+  const threads = domain.assistant.threads.map((thread) => {
+    if (thread.id !== threadId) {
+      return thread;
+    }
+    summaryChanged = true;
+    return {
+      ...thread,
+      turnStatus: turn.status,
+      updatedAt,
+    };
+  }).sort((left, right) => right.updatedAt - left.updatedAt);
   const thread = domain.assistantThreads[threadId];
-  if (!thread) {
+  const nextThread = !thread ? null : {
+    ...thread,
+    turnStatus: turn.status,
+    updatedAt,
+    turns: upsertTurn(thread.turns, turn),
+  };
+  if (!summaryChanged && !nextThread) {
     return null;
   }
   return {
     ...domain,
-    assistantThreads: {
-      ...domain.assistantThreads,
-      [threadId]: {
-        ...thread,
-        turns: upsertTurn(thread.turns, turn),
-      },
-    },
+    assistant: summaryChanged
+      ? {
+          ...domain.assistant,
+          threads,
+        }
+      : domain.assistant,
+    assistantThreads: nextThread
+      ? {
+          ...domain.assistantThreads,
+          [threadId]: nextThread,
+        }
+      : domain.assistantThreads,
   };
 };
 
@@ -193,7 +218,12 @@ const updateAssistantItemDelta = (
                 ...turn,
                 items: turn.items.map((item) =>
                   item.id === itemId && item.type === 'agentMessage'
-                    ? { ...item, text: item.text + delta }
+                    ? {
+                        ...item,
+                        text: thread.task === 'ask'
+                          ? canonicalizeAssistantText(item.text + delta)
+                          : item.text + delta,
+                      }
                     : item
                 ),
               }

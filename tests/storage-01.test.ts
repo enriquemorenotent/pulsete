@@ -189,8 +189,11 @@ test('legacy auth databases are backed up and replaced with a fresh local databa
   const tables = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
     .all() as Array<{ name: string }>;
   fresh.close();
+  const publicTables = tables
+    .map((entry) => entry.name)
+    .filter((name) => !name.startsWith('messages_fts_'));
   assert.deepEqual(
-    tables.map((entry) => entry.name),
-    ['assistant_preferences', 'assistant_threads', 'buffers', 'channel_details', 'friends', 'messages', 'networks']
+    publicTables,
+    ['assistant_preferences', 'assistant_threads', 'buffers', 'channel_details', 'friends', 'messages', 'messages_fts', 'networks']
   );
 });

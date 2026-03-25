@@ -3,6 +3,7 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type {
+  AssistantThreadScope,
   AssistantTurn,
   AssistantPreferences,
   AssistantTaskKind,
@@ -79,6 +80,7 @@ export type AssistantThreadRow = {
   bufferId: string | null;
   networkId: string | null;
   target: string | null;
+  scope: AssistantThreadScope;
   title: string;
   task: AssistantTaskKind;
   model: string;

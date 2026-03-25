@@ -273,10 +273,77 @@ test('clearBufferHistory applies server mutations for the selected transcript', 
     assert.deepEqual(dispatched, [
       { type: 'remove-messages', networkId: network.id, target: '#general', messageIds: ['message-1'] },
       { type: 'upsert-buffer', buffer: { ...selectedBuffer, unread: 0 } },
+      { type: 'history-buffer-loaded', bufferId: selectedBuffer.id, hasOlder: false },
     ]);
     assert.deepEqual(banners, []);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test('downloadBufferHistory fetches the transcript attachment and triggers a browser download', async () => {
+  const { params, banners } = createParams();
+  const fetchCalls: Array<{ url: string; method: string }> = [];
+  const originalFetch = globalThis.fetch;
+  const originalDocument = globalThis.document;
+  const originalCreateObjectURL = globalThis.URL.createObjectURL;
+  const originalRevokeObjectURL = globalThis.URL.revokeObjectURL;
+  const clicked: Array<{ download: string; href: string }> = [];
+  const appended: unknown[] = [];
+  const removed: unknown[] = [];
+  const link = {
+    download: '',
+    href: '',
+    style: { display: '' },
+    click() {
+      clicked.push({ download: this.download, href: this.href });
+    },
+    remove() {
+      removed.push(this);
+    },
+  };
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({ url: String(input), method: String(init?.method ?? 'GET') });
+    if (String(input) === '/api/buffers/buffer-1/history/download') {
+      return new Response('history body', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="history-testnet-general.txt"',
+        },
+      });
+    }
+    throw new Error(`Unexpected fetch: ${String(input)}`);
+  }) as typeof fetch;
+  globalThis.document = {
+    createElement(tagName: string) {
+      assert.equal(tagName, 'a');
+      return link;
+    },
+    body: {
+      append(element: unknown) {
+        appended.push(element);
+      },
+    },
+  } as unknown as Document;
+  globalThis.URL.createObjectURL = () => 'blob:test-history';
+  globalThis.URL.revokeObjectURL = () => {};
+
+  try {
+    const actions = createAppActions(params);
+    const downloaded = await actions.downloadBufferHistory(selectedBuffer.id);
+
+    assert.equal(downloaded, true);
+    assert.deepEqual(fetchCalls, [{ url: '/api/buffers/buffer-1/history/download', method: 'GET' }]);
+    assert.deepEqual(appended, [link]);
+    assert.deepEqual(clicked, [{ download: 'history-testnet-general.txt', href: 'blob:test-history' }]);
+    assert.deepEqual(removed, [link]);
+    assert.deepEqual(banners, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.document = originalDocument;
+    globalThis.URL.createObjectURL = originalCreateObjectURL;
+    globalThis.URL.revokeObjectURL = originalRevokeObjectURL;
   }
 });
 

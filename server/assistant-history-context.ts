@@ -93,6 +93,7 @@ export const buildAssistantHistoryContext = ({ messages, prompt, task }: Assista
 
   const metadata = [
     'History coverage: full buffer history',
+    'Speaker note: lines prefixed with "you (nick)" were sent by the local user.',
     `Total messages: ${messages.length}`,
     `Time range: ${formatTimestamp(messages[0]!.ts)} to ${formatTimestamp(messages.at(-1)!.ts)}`,
   ];
@@ -139,7 +140,7 @@ const renderHistoricalWindows = (messages: ChatMessage[], windows: HistoryWindow
       `${formatTimestamp(messages[window.start]!.ts)} to ${formatTimestamp(messages[window.end]!.ts)}`,
       window.matchedTerms.length > 0 ? `matched: ${window.matchedTerms.join(', ')}` : 'sampled older context',
     ].join(' | ');
-    return `${header}\n${renderMessages(messages.slice(window.start, window.end + 1))}`;
+    return `${header}\n${renderAssistantMessages(messages.slice(window.start, window.end + 1))}`;
   });
   return `Historical windows:\n${blocks.join('\n\n')}`;
 };
@@ -148,7 +149,7 @@ const selectRecentTail = (messages: ChatMessage[]) => {
   const selected: SelectedLine[] = [];
   let used = 0;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const line = formatMessage(messages[index]!);
+    const line = formatAssistantMessage(messages[index]!);
     const nextCost = used + line.length + 1;
     if (
       selected.length >= minimumRecentMessages
@@ -242,7 +243,7 @@ const estimateWindowChars = (window: HistoryWindow) =>
 const overlaps = (left: Pick<HistoryWindow, 'start' | 'end'>, right: Pick<HistoryWindow, 'start' | 'end'>) =>
   left.start <= right.end && right.start <= left.end;
 
-const extractSearchTerms = (prompt: string) => {
+export const extractSearchTerms = (prompt: string) => {
   const terms = prompt.toLowerCase().match(/[a-z0-9#@._-]+/g) ?? [];
   const unique = new Set<string>();
   for (const term of terms) {
@@ -261,16 +262,17 @@ const isSearchTerm = (term: string) =>
   !stopWords.has(term)
   && (term.length >= 3 || /[#@]/.test(term) || /\d/.test(term));
 
-const matchesTerm = (message: ChatMessage, term: string) => {
+export const matchesTerm = (message: ChatMessage, term: string) => {
   const haystacks = [
     message.nick?.toLowerCase() ?? '',
     message.body.toLowerCase(),
     message.kind.toLowerCase(),
+    buildTimestampSearchText(message.ts),
   ];
   return haystacks.some((haystack) => haystack.includes(term));
 };
 
-const termWeight = (term: string) => {
+export const termWeight = (term: string) => {
   if (/[#@]/.test(term) || /\d/.test(term)) {
     return 6;
   }
@@ -283,14 +285,17 @@ const termWeight = (term: string) => {
   return 3;
 };
 
-const renderMessages = (messages: ChatMessage[]) =>
+export const renderMessages = (messages: ChatMessage[]) =>
   messages.map(formatMessage).join('\n');
+
+export const renderAssistantMessages = (messages: ChatMessage[]) =>
+  messages.map(formatAssistantMessage).join('\n');
 
 const renderFullTranscriptWithinBudget = (messages: ChatMessage[], budget: number) => {
   const lines: string[] = [];
   let used = 0;
   for (const message of messages) {
-    const line = formatMessage(message);
+    const line = formatAssistantMessage(message);
     used += line.length + (lines.length > 0 ? 1 : 0);
     if (used > budget) {
       return null;
@@ -300,17 +305,58 @@ const renderFullTranscriptWithinBudget = (messages: ChatMessage[], budget: numbe
   return lines.join('\n');
 };
 
-const formatMessage = (message: ChatMessage) => {
+export const formatMessage = (message: ChatMessage) => {
   const time = formatTimestamp(message.ts);
   if (message.kind === 'join' || message.kind === 'part' || message.kind === 'quit' || message.kind === 'system') {
     return `[${time}] (${message.kind}) ${message.body}`;
   }
-  const author = message.nick ?? (message.self ? 'you' : 'server');
+  const author = formatTranscriptAuthor(message, false);
   if (message.kind === 'action') {
     return `[${time}] * ${author} ${message.body}`;
   }
   return `[${time}] ${author}: ${message.body}`;
 };
 
-const formatTimestamp = (ts: number) =>
+export const formatAssistantMessage = (message: ChatMessage) => {
+  const time = formatTimestamp(message.ts);
+  if (message.kind === 'join' || message.kind === 'part' || message.kind === 'quit' || message.kind === 'system') {
+    return `[${time}] (${message.kind}) ${message.body}`;
+  }
+  const author = formatTranscriptAuthor(message, true);
+  if (message.kind === 'action') {
+    return `[${time}] * ${author} ${message.body}`;
+  }
+  return `[${time}] ${author}: ${message.body}`;
+};
+
+export const formatTimestamp = (ts: number) =>
   new Date(ts).toISOString().replace('T', ' ').slice(0, 16);
+
+const buildTimestampSearchText = (ts: number) => {
+  const date = new Date(ts);
+  const year = String(date.getUTCFullYear());
+  const monthIndex = date.getUTCMonth();
+  const monthNumber = String(monthIndex + 1).padStart(2, '0');
+  const monthShort = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }).toLowerCase();
+  const monthLong = date.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }).toLowerCase();
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return [
+    formatTimestamp(ts).toLowerCase(),
+    `${year}-${monthNumber}-${day}`,
+    year,
+    monthShort,
+    monthLong,
+    `${monthShort} ${year}`,
+    `${monthLong} ${year}`,
+  ].join(' ');
+};
+
+const formatTranscriptAuthor = (message: ChatMessage, annotateSelf: boolean) => {
+  if (message.self) {
+    if (annotateSelf && message.nick) {
+      return `you (${message.nick})`;
+    }
+    return message.nick ?? 'you';
+  }
+  return message.nick ?? 'server';
+};

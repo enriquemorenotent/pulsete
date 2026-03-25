@@ -243,6 +243,7 @@ test('assistant thread removal clears loaded history and assistant selection sta
           bufferId: 'buffer-1',
           networkId: 'network-1',
           target: '#help',
+          scope: 'buffer',
           title: 'Ask · #help',
           task: 'ask',
           model: 'gpt-5.4',
@@ -257,6 +258,7 @@ test('assistant thread removal clears loaded history and assistant selection sta
           bufferId: 'buffer-1',
           networkId: 'network-1',
           target: '#help',
+          scope: 'buffer',
           title: 'Ask · #help',
           task: 'ask',
           model: 'gpt-5.4',
@@ -299,6 +301,7 @@ test('assistant stop requests clear local busy state for the current thread imme
           bufferId: 'buffer-1',
           networkId: 'network-1',
           target: '#help',
+          scope: 'buffer',
           title: 'Ask · #help',
           task: 'ask',
           model: 'gpt-5.4',
@@ -313,6 +316,7 @@ test('assistant stop requests clear local busy state for the current thread imme
           bufferId: 'buffer-1',
           networkId: 'network-1',
           target: '#help',
+          scope: 'buffer',
           title: 'Ask · #help',
           task: 'ask',
           model: 'gpt-5.4',
@@ -339,6 +343,109 @@ test('assistant stop requests clear local busy state for the current thread imme
   assert.equal(nextState.domain.assistantThreads['thread-1']?.turnStatus, 'interrupted');
   assert.equal(nextState.domain.assistantThreads['thread-1']?.turns[0]?.status, 'interrupted');
   assert.equal(nextState.domain.assistantThreads['thread-1']?.turns[0]?.error, null);
+});
+
+test('assistant turn updates keep the thread summary and loaded thread in sync', () => {
+  const state = makeState({
+    domain: {
+      assistant: {
+        ...initialState.domain.assistant,
+        threads: [{
+          id: 'thread-1',
+          bufferId: 'buffer-1',
+          networkId: 'network-1',
+          target: '#help',
+          scope: 'buffer',
+          title: 'Ask · #help',
+          task: 'ask',
+          model: 'gpt-5.4',
+          turnStatus: null,
+          createdAt: 1,
+          updatedAt: 1,
+        }],
+      },
+      assistantThreads: {
+        'thread-1': {
+          id: 'thread-1',
+          bufferId: 'buffer-1',
+          networkId: 'network-1',
+          target: '#help',
+          scope: 'buffer',
+          title: 'Ask · #help',
+          task: 'ask',
+          model: 'gpt-5.4',
+          turnStatus: null,
+          createdAt: 1,
+          updatedAt: 1,
+          turns: [],
+        },
+      },
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'assistant-turn-started',
+    threadId: 'thread-1',
+    turn: {
+      id: 'turn-1',
+      status: 'inProgress',
+      error: null,
+      items: [],
+    },
+  });
+
+  assert.equal(nextState.domain.assistant.threads[0]?.turnStatus, 'inProgress');
+  assert.equal(nextState.domain.assistantThreads['thread-1']?.turnStatus, 'inProgress');
+  assert.equal(nextState.domain.assistantThreads['thread-1']?.turns[0]?.id, 'turn-1');
+});
+
+test('assistant item deltas normalize ask-thread reply spacing in the visible thread', () => {
+  const state = makeState({
+    domain: {
+      assistantThreads: {
+        'thread-1': {
+          id: 'thread-1',
+          bufferId: 'buffer-1',
+          networkId: 'network-1',
+          target: '#help',
+          scope: 'buffer',
+          title: 'Ask · #help',
+          task: 'ask',
+          model: 'gpt-5.4',
+          turnStatus: 'inProgress',
+          createdAt: 1,
+          updatedAt: 1,
+          turns: [{
+            id: 'turn-1',
+            status: 'inProgress',
+            error: null,
+            items: [{
+              type: 'agentMessage',
+              id: 'item-1',
+              text: '',
+              phase: null,
+              artifact: null,
+            }],
+          }],
+        },
+      },
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'assistant-item-delta',
+    threadId: 'thread-1',
+    turnId: 'turn-1',
+    itemId: 'item-1',
+    delta: 'Answer:The strongest hotel mention is on 2026-03-23.It looks direct.',
+  });
+
+  const item = nextState.domain.assistantThreads['thread-1']?.turns[0]?.items[0];
+  assert.equal(item?.type, 'agentMessage');
+  assert.equal(
+    item?.type === 'agentMessage' && item.text,
+    'Answer:\nThe strongest hotel mention is on 2026-03-23. It looks direct.',
+  );
 });
 
 test('pending selections promote to the confirmed channel buffer', () => {

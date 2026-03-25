@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type {
   BufferHistoryImportRequest,
+  BufferState,
+  ChatMessage,
   MessageKind,
   ServerMessage,
 } from '../shared/protocol.js';
+import { formatMessage, formatTimestamp } from './assistant-history-context.js';
 import { normalizeQueryTarget } from './irc-validate.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
@@ -55,6 +58,27 @@ export class RuntimeConversationService {
 
   listBufferHistory(bufferId: string, limit: number, beforeMessageId?: string) {
     return listConversationBufferHistory(this.options.conversations, bufferId, limit, beforeMessageId);
+  }
+
+  exportBufferHistory(bufferId: string) {
+    const buffer = this.options.conversations.getBuffer(bufferId);
+    if (!buffer) {
+      throw notFound('Buffer not found');
+    }
+    if (buffer.kind === 'server') {
+      throw badRequest('Only channels and private messages can export history');
+    }
+    const network = requireStoredNetwork(this.options.networks, buffer.networkId);
+    const messages = this.options.conversations.listAllMessages(buffer.networkId, buffer.target);
+    return {
+      buffer,
+      fileName: buildHistoryDownloadName(network.name, buffer.target),
+      content: renderBufferHistoryDownload({
+        buffer,
+        messages,
+        networkName: network.name,
+      }),
+    };
   }
 
   clearBufferHistory(bufferId: string) {
@@ -211,3 +235,42 @@ export class RuntimeConversationService {
 }
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
+
+const renderBufferHistoryDownload = ({
+  buffer,
+  messages,
+  networkName,
+}: {
+  buffer: BufferState;
+  messages: ChatMessage[];
+  networkName: string;
+}) => {
+  const lines = [
+    `Buffer: ${buffer.target}`,
+    `Type: ${buffer.kind}`,
+    `Network: ${networkName}`,
+    `Exported at: ${formatTimestamp(Date.now())} UTC`,
+    `Total messages: ${messages.length}`,
+  ];
+  if (messages.length > 0) {
+    lines.push(
+      `History range: ${formatTimestamp(messages[0]!.ts)} UTC to ${formatTimestamp(messages.at(-1)!.ts)} UTC`,
+    );
+  }
+  lines.push('', messages.length > 0 ? messages.map(formatMessage).join('\n') : '(no messages available)');
+  return `${lines.join('\n')}\n`;
+};
+
+const buildHistoryDownloadName = (networkName: string, target: string) => {
+  const networkSlug = sanitizeFileNameSegment(networkName);
+  const targetSlug = sanitizeFileNameSegment(target);
+  return `history-${networkSlug}-${targetSlug}.txt`;
+};
+
+const sanitizeFileNameSegment = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'buffer';

@@ -17,6 +17,8 @@ type ChatPaneHeaderProps = {
   onToggleChannelAutoJoin: () => Promise<boolean>;
   canClearHistory?: boolean;
   onClearHistory?: () => Promise<boolean>;
+  canDownloadHistory?: boolean;
+  onDownloadHistory?: () => Promise<boolean>;
   canImportHistory?: boolean;
   onOpenHistoryImport?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
@@ -77,6 +79,11 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           {props.canClearHistory && props.onClearHistory ? (
             <Button variant="outline" size="sm" onClick={() => void props.onClearHistory?.()}>
               Clear history
+            </Button>
+          ) : null}
+          {props.canDownloadHistory && props.onDownloadHistory ? (
+            <Button variant="outline" size="sm" onClick={() => void props.onDownloadHistory?.()}>
+              Download history
             </Button>
           ) : null}
           {props.canImportHistory && props.onOpenHistoryImport ? (
