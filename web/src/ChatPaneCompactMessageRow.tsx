@@ -19,6 +19,8 @@ import {
 type ChatPaneCompactMessageRowProps = {
   message: ChatMessage;
   highlightParticipantNicks: boolean;
+  senderLabel?: string | null;
+  showKindBadge?: boolean;
   mode: MessageDisplayMode;
   onOpenChannel: (channel: string) => void;
 };
@@ -31,8 +33,10 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
     [message.body, props.mode]
   );
   const hasVisibleText = hasVisibleFormattedMessageText(parsedContent);
-  const showNick = message.nick && (message.kind === 'line' || message.kind === 'action' || showKindLabel(message));
-  const bodyClassName = cn('min-w-0 break-words font-sans text-[13px] leading-5 text-inherit', isAction && 'italic');
+  const showMessageNick = message.nick && (message.kind === 'line' || message.kind === 'action' || showKindLabel(message));
+  const senderLabel = props.senderLabel ?? (showMessageNick ? message.nick : null);
+  const showKindBadge = props.showKindBadge ?? showKindLabel(message);
+  const bodyClassName = cn(isAction && 'italic');
   const timeLabel = (
     <span className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground">
       {formatMessageTimestamp(message.ts)}
@@ -40,12 +44,12 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
   );
   const metadata = (
     <>
-      {showNick ? (
-        <span className={cn('font-sans font-semibold', participantNickTone(message, props.highlightParticipantNicks))}>
-          {message.nick}
+      {senderLabel ? (
+        <span className={cn('mr-2 font-sans font-semibold', participantNickTone(message, props.highlightParticipantNicks))}>
+          {senderLabel}
         </span>
       ) : null}
-      {showKindLabel(message) ? <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
+      {showKindBadge ? <span className="mr-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
     </>
   );
 
@@ -54,7 +58,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
       <div className="grid items-baseline grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 font-sans">
         {timeLabel}
         <div className="min-w-0">
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] leading-5">
+          <p className="min-w-0 break-words font-sans text-[13px] leading-5 text-inherit">
             {metadata}
             {hasVisibleText ? (
               <span className={bodyClassName}>
@@ -67,7 +71,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
                 />
               </span>
             ) : null}
-          </div>
+          </p>
           <FormattedMessageInlinePreviews hrefs={parsedContent.inlineImageHrefs} />
         </div>
       </div>

@@ -44,7 +44,7 @@ const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: overrides.id ?? 'message-1',
   networkId: overrides.networkId ?? 'network-1',
   target: overrides.target ?? '#help',
-  nick: overrides.nick ?? 'Joby',
+  nick: overrides.nick === undefined ? 'Joby' : overrides.nick,
   body: overrides.body ?? 'hello there',
   kind: overrides.kind ?? 'line',
   self: overrides.self ?? false,
@@ -111,6 +111,31 @@ const makeQueryWorkspace = (): WorkspaceView => {
   };
 };
 
+const makeServerWorkspace = (): WorkspaceView => {
+  const network = makeNetwork();
+  const selectedBuffer = makeBuffer({ kind: 'server', target: 'server' });
+  return {
+    mode: 'server-connected',
+    selection: { kind: 'buffer', bufferId: selectedBuffer.id },
+    connectionInstances: [network],
+    selectedNetwork: network,
+    selectedRuntime: {
+      phase: 'connected',
+      serverName: 'irc.example.test',
+      nick: network.nick,
+    },
+    selectedBuffer,
+    selectedChannel: null,
+    selectedPendingChannel: null,
+    headerTitle: 'Server',
+    headerSubtitle: `${network.nick} @ irc.example.test`,
+    composerMode: 'commands',
+    composerPlaceholder: 'Send an IRC command',
+    emptyBody: 'No server messages yet.',
+    showNicklist: false,
+  };
+};
+
 const renderChatPane = (
   selectedMessages: ChatMessage[],
   overrides: Partial<{
@@ -156,6 +181,35 @@ const renderQueryPane = (selectedMessages: ChatMessage[]) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeQueryWorkspace()}
+      friends={[] satisfies FriendState[]}
+      selectedMessages={selectedMessages}
+      draft=""
+      messageDisplayMode="colors"
+      scrollRef={createRef<HTMLDivElement>()}
+      onDraftChange={() => undefined}
+      onRecallOlderDraft={() => undefined}
+      onRecallNewerDraft={() => undefined}
+      onSend={async () => undefined}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      showChannelAutoJoin={false}
+      channelAutoJoinActive={false}
+      onToggleChannelAutoJoin={async () => true}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+      channelList={closedChannelList}
+      channelListNetwork={null}
+      onCloseChannelList={() => undefined}
+      onJoinChannelFromList={async () => undefined}
+      onOpenMentionedChannel={() => undefined}
+      onOpenChannelList={() => undefined}
+    />
+  );
+
+const renderServerPane = (selectedMessages: ChatMessage[]) =>
+  renderToStaticMarkup(
+    <ChatPane
+      workspace={makeServerWorkspace()}
       friends={[] satisfies FriendState[]}
       selectedMessages={selectedMessages}
       draft=""
@@ -257,8 +311,8 @@ test('private-message rows color self and peer nick labels differently', () => {
     makeMessage({ id: 'message-2', nick: 'MissD', self: false, target: 'MissD', body: 'hi', ts: 2 }),
   ]);
 
-  assert.match(markup, /class="font-sans font-semibold text-primary">sofia</);
-  assert.match(markup, /class="font-sans font-semibold text-success">MissD</);
+  assert.match(markup, /class="mr-2 font-sans font-semibold text-primary">sofia</);
+  assert.match(markup, /class="mr-2 font-sans font-semibold text-success">MissD</);
 });
 
 test('channel rows keep neutral nick label coloring', () => {
@@ -266,7 +320,7 @@ test('channel rows keep neutral nick label coloring', () => {
     makeMessage({ id: 'message-1', nick: 'Joby', body: 'plain line', ts: 1 }),
   ]);
 
-  assert.match(markup, /class="font-sans font-semibold text-inherit">Joby</);
+  assert.match(markup, /class="mr-2 font-sans font-semibold text-inherit">Joby</);
 });
 
 test('action rows keep the sender label and hide the duplicated nick in the body', () => {
@@ -287,6 +341,23 @@ test('standalone notice rows with a sender render sender text without avatar mar
   assert.match(markup, /Nova/);
   assert.match(markup, />notice</i);
   assert.doesNotMatch(markup, /data-message-avatar=/);
+});
+
+test('server tab rows keep inline source labels instead of grouped headers', () => {
+  const markup = renderServerPane([
+    makeMessage({ id: 'message-1', nick: null, body: 'Connected', kind: 'system', ts: 1 }),
+    makeMessage({ id: 'message-2', nick: null, body: 'Welcome', kind: 'system', ts: 2 }),
+    makeMessage({ id: 'message-3', nick: null, body: 'Maintenance soon', kind: 'notice', ts: 3 }),
+  ]);
+
+  const serverLabels = markup.match(/>Server</g) ?? [];
+  assert.equal(serverLabels.length, 2);
+  assert.match(markup, />Notice</);
+  assert.match(markup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
+  assert.doesNotMatch(markup, /opacity-0 transition-opacity/);
+  assert.doesNotMatch(markup, /text-\[15px\] font-semibold/);
+  assert.doesNotMatch(markup, /flex min-w-0 flex-wrap items-baseline/);
+  assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
 });
 
 test('channel headers can render an active autojoin toggle', () => {

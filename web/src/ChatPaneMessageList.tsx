@@ -4,11 +4,11 @@ import type { BufferState, ChatMessage } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
-import { ServerMessageGroup } from './ServerMessageGroup.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import {
   buildRenderBlocks,
   formatMessageTimestamp,
+  getServerMessageSourceLabel,
   isActionMessage,
   isCompactMessage,
   messageTone,
@@ -29,8 +29,8 @@ type ChatPaneMessageListProps = {
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: ChatPaneMessageListProps) {
   const highlightParticipantNicks = props.bufferKind === 'query';
   const renderBlocks = useMemo(
-    () => buildRenderBlocks(props.messages, props.listKind),
-    [props.listKind, props.messages]
+    () => buildRenderBlocks(props.messages),
+    [props.messages]
   );
 
   return (
@@ -46,20 +46,20 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
         </div>
       ) : (
         <div className="space-y-1 font-mono text-[12px]">
-          {renderBlocks.map((block) =>
-            block.kind === 'group' ? (
-              <ServerMessageGroup
-                key={block.messages[0].id}
-                messages={block.messages}
-                mode={props.mode}
-                sourceLabel={block.sourceLabel}
-                onOpenChannel={props.onOpenChannel}
-              />
-            ) : isCompactMessage(block.message) ? (
+          {renderBlocks.map((block) => {
+            const serverSourceLabel =
+              props.listKind === 'server'
+                ? getServerMessageSourceLabel(block.message)
+                : null;
+            const shouldUseCompactRow = props.listKind === 'server' || isCompactMessage(block.message);
+
+            return shouldUseCompactRow ? (
               <ChatPaneCompactMessageRow
                 key={block.message.id}
                 highlightParticipantNicks={highlightParticipantNicks}
                 message={block.message}
+                senderLabel={serverSourceLabel}
+                showKindBadge={props.listKind === 'server' ? !!(block.message.nick && showKindLabel(block.message)) : undefined}
                 mode={props.mode}
                 onOpenChannel={props.onOpenChannel}
               />
@@ -85,8 +85,8 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
                   </p>
                 </div>
               </article>
-            )
-          )}
+            );
+          })}
         </div>
       )}
     </div>
