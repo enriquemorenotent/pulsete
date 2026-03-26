@@ -3,6 +3,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import { NicklistPanel } from '../web/src/NicklistPanel.js';
+import { buildNicklistGroups } from '../web/src/nicklist-groups.js';
 
 const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
   nick,
@@ -67,8 +68,41 @@ test('nicklist groups users by privilege level', () => {
   assert.ok(markup.includes('alice'));
   assert.ok(markup.includes('bob'));
   assert.ok(markup.includes('zoe'));
+  assert.match(markup, /placeholder="Filter users"/);
   assert.match(markup, /class="truncate text-rose-300">owner</);
   assert.match(markup, /class="truncate text-amber-300">alice</);
   assert.match(markup, /class="truncate text-emerald-300">bob</);
   assert.match(markup, /class="truncate text-inherit">zoe</);
+});
+
+test('nicklist filtering promotes exact matches and friends before broader matches', () => {
+  const groups = buildNicklistGroups(
+    [
+      makeUser('ann'),
+      makeUser('anna'),
+      makeUser('annette'),
+      makeUser('joann'),
+    ],
+    [{ id: 'friend-1', nick: 'anna' }] satisfies FriendState[],
+    'ANN',
+  );
+
+  assert.deepEqual(groups.map((group) => group.label), ['Users']);
+  assert.deepEqual(groups[0]?.users.map((user) => user.nick), ['ann', 'anna', 'annette', 'joann']);
+});
+
+test('nicklist filtering keeps privilege groups intact while narrowing results', () => {
+  const groups = buildNicklistGroups(
+    [
+      makeUser('ann', 'op'),
+      makeUser('anna'),
+      makeUser('zoe', 'voice'),
+    ],
+    [] satisfies FriendState[],
+    'ann',
+  );
+
+  assert.deepEqual(groups.map((group) => group.label), ['Operators', 'Users']);
+  assert.deepEqual(groups[0]?.users.map((user) => user.nick), ['ann']);
+  assert.deepEqual(groups[1]?.users.map((user) => user.nick), ['anna']);
 });
