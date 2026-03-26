@@ -80,7 +80,7 @@ test('offline connections keep channel and query rows visible and selectable', (
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
 });
 
-test('friend rows expose online and offline cues', () => {
+test('friend rows expose online and offline cues when the rail defaults open', () => {
   const friend: FriendState = { id: 'friend-1', nick: 'Alice' };
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
@@ -111,9 +111,60 @@ test('friend rows expose online and offline cues', () => {
     />
   );
 
-  assert.match(markup, /Friends \(1\)/);
+  assert.match(markup, /aria-label="Collapse friends"/);
+  assert.match(markup, /aria-expanded="true"/);
+  assert.match(markup, />1 online</);
   assert.match(markup, /aria-label="Open Alice \(online\)"/);
   assert.match(markup, /bg-emerald-400/);
+});
+
+test('friends sort online contacts above offline ones and keep names alphabetical within each group', () => {
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [] satisfies NetworkProfile[],
+        conversation: buildConversationIndex({
+          buffers: [] satisfies BufferState[],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: {},
+        selection: null,
+      })}
+      friends={[
+        { id: 'friend-2', nick: 'Mira' },
+        { id: 'friend-1', nick: 'Alice' },
+        { id: 'friend-3', nick: 'Bea' },
+      ]}
+      friendPresence={{
+        'friend-1': false,
+        'friend-2': true,
+        'friend-3': true,
+      }}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />
+  );
+
+  const miraIndex = markup.indexOf('aria-label="Open Mira (online)"');
+  const beaIndex = markup.indexOf('aria-label="Open Bea (online)"');
+  const aliceIndex = markup.indexOf('aria-label="Open Alice (offline)"');
+
+  assert.notEqual(miraIndex, -1);
+  assert.notEqual(beaIndex, -1);
+  assert.notEqual(aliceIndex, -1);
+  assert.ok(beaIndex < miraIndex);
+  assert.ok(miraIndex < aliceIndex);
 });
 
 test('friends header shows the total registered friends count', () => {
@@ -149,7 +200,47 @@ test('friends header shows the total registered friends count', () => {
     />
   );
 
-  assert.match(markup, /Friends \(2\)/);
+  assert.match(markup, /Friends<\/h2><span[^>]*>2<\/span>/);
+});
+
+test('friends collapse by default when live connections are present', () => {
+  const network = makeNetwork();
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' })],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[
+        { id: 'friend-1', nick: 'Alice' },
+        { id: 'friend-2', nick: 'Bob' },
+      ]}
+      friendPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />
+  );
+
+  assert.match(markup, /aria-label="Expand friends"/);
+  assert.match(markup, /aria-expanded="false"/);
+  assert.match(markup, />0 online</);
+  assert.doesNotMatch(markup, /aria-label="Open Alice \(offline\)"/);
 });
 
 test('pending channel selection ignores IRC casing in the sidebar', () => {
@@ -183,7 +274,7 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
     />
   );
 
-  const selectedRows = markup.match(/rounded-sm bg-accent/g) ?? [];
+  const selectedRows = markup.match(/bg-white\/\[0\.05\] ring-1 ring-inset ring-white\/\[0\.08\]/g) ?? [];
   assert.equal(selectedRows.length, 1);
   assert.match(markup, /aria-label="Open pending #Help"/);
 });
@@ -226,6 +317,6 @@ test('priority unread buffers render the stronger activity badge styling', () =>
     />
   );
 
-  assert.match(markup, /bg-primary\/10 text-primary/);
+  assert.match(markup, /bg-primary\/14 text-primary/);
   assert.match(markup, />3</);
 });
