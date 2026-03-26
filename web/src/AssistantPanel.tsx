@@ -11,11 +11,10 @@ import type {
 } from '../../shared/protocol.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import { Card, CardContent } from '@/components/ui/card.js';
+import { cn } from '@/lib/utils.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { AssistantMessageContent } from './AssistantMessageContent.js';
 import {
-  assistantAttachmentLimit,
   assistantFileInputAccept,
   hasAssistantDroppedFiles,
   listAssistantDroppedFiles,
@@ -51,6 +50,19 @@ export function AssistantPanel(props: AssistantPanelProps) {
   const conversation = useMemo(() => buildConversation(props.thread), [props.thread]);
   const assistantReady = props.assistant.serviceStatus === 'ready' && !!props.assistant.auth.account;
   const canAttachFiles = assistantReady && !props.busy;
+  const panelTitle = props.activeBufferLabel ?? props.contextTitle;
+  const promptTarget = props.activeBufferLabel ?? null;
+  const statusState = resolveAssistantPanelStatusState({
+    assistantReady,
+    authLastError: props.assistant.auth.lastError,
+    serviceError: props.assistant.serviceError,
+    serviceStatus: props.assistant.serviceStatus,
+  });
+  const metaSegments = resolveAssistantPanelMetaSegments({
+    activeBufferLabel: props.activeBufferLabel,
+    resolvedSubjectLabel: props.resolvedSubjectLabel,
+    subjectPending: props.subjectPending,
+  });
 
   useStickyScroll({
     scrollRef,
@@ -75,15 +87,8 @@ export function AssistantPanel(props: AssistantPanelProps) {
 
   const sendDisabled = !assistantReady || props.busy || !prompt.trim();
   const composerPlaceholder = assistantReady
-    ? 'Message the assistant'
-    : 'Open Preferences to sign in first.';
-  const attachmentHelpText = `Attach up to ${assistantAttachmentLimit} files per question.`;
-  const composerHelpText = assistantReady
-    ? `${attachmentHelpText} Press Enter to send and Shift+Enter for a new line. Text and image attachments stay in the assistant thread only.`
-    : 'Open Preferences to sign in and enable the assistant.';
-  const showStatus = !assistantReady
-    || !!props.assistant.auth.lastError
-    || (props.assistant.serviceStatus === 'error' && !!props.assistant.serviceError);
+    ? promptTarget ? `Ask about ${promptTarget}` : 'Message the assistant'
+    : 'Sign in from Preferences';
   const showNewChat = !!props.thread && !props.busy;
 
   const attachFiles = async (files: File[]) => {
@@ -163,27 +168,39 @@ export function AssistantPanel(props: AssistantPanelProps) {
     >
       {dropActive ? (
         <div className="pointer-events-none absolute inset-3 z-20 flex items-center justify-center rounded-[1rem] border-2 border-dashed border-primary/60 bg-background/90 text-[13px] text-muted-foreground">
-          Drop files to attach
+          Drop files
         </div>
       ) : null}
-      {showStatus ? (
-        <div className="space-y-2 border-b border-white/[0.06] bg-white/[0.03] px-3 py-3 text-[13px]">
-          {props.assistant.auth.lastError ? (
-            <p className="text-destructive">{props.assistant.auth.lastError}</p>
-          ) : null}
-          {props.assistant.serviceStatus === 'error' && props.assistant.serviceError ? (
-            <p className="text-destructive">{props.assistant.serviceError}</p>
-          ) : null}
-          {!assistantReady ? (
-            <p className="text-muted-foreground">Open Preferences to sign in and enable the assistant.</p>
-          ) : null}
+      {statusState ? (
+        <div className="border-b border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]',
+                statusState.tone === 'danger'
+                  ? 'bg-rose-400/10 text-rose-300'
+                  : 'bg-white/[0.06] text-muted-foreground'
+              )}
+            >
+              {statusState.label}
+            </span>
+            {statusState.detail ? (
+              <p className={cn(
+                'min-w-0 flex-1 text-[12px]',
+                statusState.tone === 'danger' ? 'text-rose-200' : 'text-muted-foreground'
+              )}
+              >
+                {statusState.detail}
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : null}
-      <div className="space-y-3 border-b border-white/[0.06] bg-transparent px-3 py-3">
+      <div className="space-y-2.5 border-b border-white/[0.06] bg-transparent px-3 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Assistant</p>
-            <p className="truncate text-sm font-medium text-foreground">{props.contextTitle}</p>
+            <p className="truncate text-sm font-medium text-foreground">{panelTitle}</p>
           </div>
           {showNewChat ? (
             <Button
@@ -203,17 +220,20 @@ export function AssistantPanel(props: AssistantPanelProps) {
             </Button>
           ) : null}
         </div>
-        <p className="text-[12px] leading-5 text-muted-foreground">{props.contextSubtitle}</p>
-        {props.resolvedSubjectLabel || props.subjectPending ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {props.activeBufferLabel ? (
-              <Badge variant="secondary">Current buffer: {props.activeBufferLabel}</Badge>
-            ) : null}
-            <Badge variant={props.subjectPending ? 'outline' : 'default'}>
-              {props.subjectPending
-                ? 'Assistant subject: awaiting confirmation'
-                : `Assistant subject: ${props.resolvedSubjectLabel}`}
-            </Badge>
+        {metaSegments.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            {metaSegments.map((segment) => (
+              <div key={segment.label} className="flex min-w-0 items-baseline gap-1.5">
+                <span>{segment.label}</span>
+                <span className={cn(
+                  'truncate normal-case tracking-normal',
+                  segment.tone === 'warning' ? 'text-amber-300' : 'text-foreground/88'
+                )}
+                >
+                  {segment.value}
+                </span>
+              </div>
+            ))}
           </div>
         ) : null}
       </div>
@@ -221,37 +241,12 @@ export function AssistantPanel(props: AssistantPanelProps) {
       <ScrollArea viewportRef={scrollRef} className="min-h-0 flex-1 bg-transparent">
         <div className="space-y-3 px-3 py-3">
           {props.loading ? (
-            <div className="rounded-xl bg-white/[0.04] px-3 py-2 text-[13px] text-muted-foreground ring-1 ring-white/[0.05]">
-              Loading conversation…
-            </div>
+            <p className="px-1 py-1 text-[12px] text-muted-foreground">Loading…</p>
           ) : null}
-          {!props.loading && conversation.length === 0 ? (
-            <Card className="border-dashed bg-card/80">
-              <CardContent className="space-y-3 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="default">Assistant chat</Badge>
-                  <Badge variant="secondary">Up to {assistantAttachmentLimit} files</Badge>
-                  {props.activeBufferLabel ? (
-                    <Badge variant="secondary">Current buffer: {props.activeBufferLabel}</Badge>
-                  ) : null}
-                  {props.resolvedSubjectLabel ? (
-                    <Badge variant="default">Assistant subject: {props.resolvedSubjectLabel}</Badge>
-                  ) : null}
-                  {!props.resolvedSubjectLabel && props.subjectPending ? (
-                    <Badge variant="outline">Assistant subject: awaiting confirmation</Badge>
-                  ) : null}
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">No assistant history yet</h3>
-                  <p className="text-[13px] text-muted-foreground">
-                    {props.contextSubtitle}
-                  </p>
-                </div>
-                <p className="text-[12px] text-muted-foreground">
-                  Chat directly with the assistant. It only reads transcript excerpts when it decides they are needed for the current turn.
-                </p>
-              </CardContent>
-            </Card>
+          {!props.loading && conversation.length === 0 && assistantReady ? (
+            <p className="px-1 py-1 text-[12px] text-muted-foreground">
+              {promptTarget ? `No messages yet for ${promptTarget}.` : 'No assistant messages yet.'}
+            </p>
           ) : null}
           {conversation.map((entry) => (
             <div
@@ -384,11 +379,75 @@ export function AssistantPanel(props: AssistantPanelProps) {
             </Button>
           </div>
         </div>
-        <p className="text-[12px] leading-5 text-muted-foreground">{composerHelpText}</p>
       </div>
     </aside>
   );
 }
+
+type AssistantPanelStatusState = {
+  detail: string | null;
+  label: string;
+  tone: 'danger' | 'neutral';
+};
+
+const resolveAssistantPanelStatusState = (params: {
+  assistantReady: boolean;
+  authLastError: string | null;
+  serviceError: string | null;
+  serviceStatus: AssistantSnapshot['serviceStatus'];
+}): AssistantPanelStatusState | null => {
+  if (params.authLastError) {
+    return {
+      label: 'Sign-in issue',
+      detail: params.authLastError,
+      tone: 'danger',
+    };
+  }
+  if (params.serviceStatus === 'error' && params.serviceError) {
+    return {
+      label: 'Service error',
+      detail: params.serviceError,
+      tone: 'danger',
+    };
+  }
+  if (!params.assistantReady) {
+    return {
+      label: 'Unavailable',
+      detail: 'Sign in from Preferences.',
+      tone: 'neutral',
+    };
+  }
+  return null;
+};
+
+type AssistantPanelMetaSegment = {
+  label: 'Subject';
+  tone?: 'warning';
+  value: string;
+};
+
+const resolveAssistantPanelMetaSegments = (params: {
+  activeBufferLabel: string | null;
+  resolvedSubjectLabel: string | null;
+  subjectPending: boolean;
+}): AssistantPanelMetaSegment[] => {
+  const segments: AssistantPanelMetaSegment[] = [];
+  if (params.subjectPending) {
+    segments.push({
+      label: 'Subject',
+      value: 'awaiting confirmation',
+      tone: 'warning',
+    });
+    return segments;
+  }
+  if (params.resolvedSubjectLabel && params.resolvedSubjectLabel !== params.activeBufferLabel) {
+    segments.push({
+      label: 'Subject',
+      value: params.resolvedSubjectLabel,
+    });
+  }
+  return segments;
+};
 
 type AssistantPromptKeyEvent = {
   key: string;

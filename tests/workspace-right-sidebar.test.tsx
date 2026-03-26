@@ -168,6 +168,7 @@ test('channel workspace can open the assistant tab by default', () => {
   assert.match(markup, /Users/);
   assert.match(markup, /Assistant/);
   assert.match(markup, /Summary goes here/);
+  assert.match(markup, /#general/);
   assert.match(markup, />New chat<\/button>/);
   assert.doesNotMatch(markup, /Owners/);
 });
@@ -197,14 +198,15 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
 
   assert.doesNotMatch(markup, /Users/);
   assert.match(markup, /<p class="text-\[11px\] uppercase tracking-\[0\.14em\] text-muted-foreground">Assistant<\/p>/);
-  assert.match(markup, /No assistant history yet/);
-  assert.match(markup, /Assistant chat/);
-  assert.match(markup, /Current buffer: alice/);
-  assert.match(markup, /Message the assistant/);
+  assert.match(markup, /<p class="truncate text-sm font-medium text-foreground">alice<\/p>/);
+  assert.match(markup, /No messages yet for alice\./);
+  assert.match(markup, /placeholder="Ask about alice"/);
   assert.match(markup, />Add files<\/button>/);
   assert.match(markup, />Send<\/button>/);
   assert.doesNotMatch(markup, /Stop/);
   assert.doesNotMatch(markup, /Drop files to attach/);
+  assert.doesNotMatch(markup, /Current buffer: alice\. The assistant can look it up if needed\./);
+  assert.doesNotMatch(markup, /Assistant chat/);
   assert.doesNotMatch(markup, /Threads/);
   assert.doesNotMatch(markup, /Summarize/);
   assert.doesNotMatch(markup, /Draft/);
