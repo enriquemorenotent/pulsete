@@ -14,6 +14,7 @@ const createScrollNode = (overrides: Partial<{
   scrollHeight: number;
   scrollTop: number;
   firstElementChild: Element | null;
+  lastElementChild: Element | null;
 }> = {}) => {
   let scrollListener: ScrollListener | null = null;
   return {
@@ -22,6 +23,7 @@ const createScrollNode = (overrides: Partial<{
       scrollHeight: overrides.scrollHeight ?? 420,
       scrollTop: overrides.scrollTop ?? 0,
       firstElementChild: overrides.firstElementChild ?? ({} as Element),
+      lastElementChild: overrides.lastElementChild ?? overrides.firstElementChild ?? ({} as Element),
       addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
         if (type === 'scroll' && typeof listener === 'function') {
           scrollListener = listener as ScrollListener;
@@ -78,6 +80,45 @@ test('sticky scroll tracking keeps the view pinned when content grows at the bot
 
   cleanup();
   assert.equal(disconnected, true);
+});
+
+test('sticky scroll tracking observes the transcript content instead of leading chrome', () => {
+  const toolbar = {} as Element;
+  const transcript = {} as Element;
+  const { node } = createScrollNode({
+    clientHeight: 100,
+    scrollHeight: 400,
+    scrollTop: 400,
+    firstElementChild: toolbar,
+    lastElementChild: transcript,
+  });
+  const stickToBottomRef = { current: true };
+  let observedTarget: Element | null = null;
+  let resizeCallback: (() => void) | null = null;
+
+  const cleanup = bindStickyScrollTracking({
+    node,
+    stickToBottomRef,
+    createResizeObserver: (callback) => {
+      resizeCallback = callback;
+      return {
+        observe(target) {
+          observedTarget = target;
+        },
+        disconnect() {},
+      };
+    },
+  });
+
+  assert.equal(observedTarget, transcript);
+  node.scrollHeight = 560;
+  const runResize = resizeCallback ?? (() => {
+    throw new Error('Missing resize callback');
+  });
+  runResize();
+  assert.equal(node.scrollTop, 560);
+
+  cleanup();
 });
 
 test('sticky scroll tracking stops forcing the bottom after the user scrolls up', () => {

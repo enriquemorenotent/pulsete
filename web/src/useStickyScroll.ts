@@ -4,7 +4,7 @@ type MutableRef<T> = { current: T };
 type ScrollMetrics = Pick<HTMLDivElement, 'clientHeight' | 'scrollHeight' | 'scrollTop'>;
 type ScrollContainer = Pick<
   HTMLDivElement,
-  'addEventListener' | 'clientHeight' | 'firstElementChild' | 'removeEventListener' | 'scrollHeight' | 'scrollTop'
+  'addEventListener' | 'clientHeight' | 'firstElementChild' | 'lastElementChild' | 'removeEventListener' | 'scrollHeight' | 'scrollTop'
 >;
 type ResizeObserverLike = {
   observe: (target: Element) => void;
@@ -93,7 +93,7 @@ export function bindStickyScrollTracking(params: {
   updateStickiness();
   params.node.addEventListener('scroll', updateStickiness, { passive: true });
 
-  const content = params.node.firstElementChild;
+  const content = resolveStickyScrollContent(params.node);
   const resizeObserver =
     content && params.createResizeObserver
       ? params.createResizeObserver(() => {
@@ -113,3 +113,6 @@ export function bindStickyScrollTracking(params: {
     resizeObserver?.disconnect();
   };
 }
+
+const resolveStickyScrollContent = (node: Pick<ScrollContainer, 'firstElementChild' | 'lastElementChild'>) =>
+  node.lastElementChild ?? node.firstElementChild;
