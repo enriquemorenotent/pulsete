@@ -74,7 +74,10 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  background: #141518;
+  background:
+    radial-gradient(circle at top left, rgba(96, 137, 215, 0.14), transparent 22rem),
+    radial-gradient(circle at top right, rgba(24, 180, 133, 0.08), transparent 18rem),
+    #141518;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 14px;

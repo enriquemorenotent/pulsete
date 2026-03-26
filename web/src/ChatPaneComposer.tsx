@@ -123,12 +123,12 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   };
 
   return (
-    <footer className="shrink-0 border-t border-border bg-card px-3 py-2">
-      <div className="flex gap-2">
+    <footer className="shrink-0 border-t border-white/6 bg-background/32 px-4 py-3 backdrop-blur-sm">
+      <div className="flex gap-2 rounded-[1rem] bg-black/12 p-2 ring-1 ring-white/[0.05]">
         <Input
           ref={inputRef}
           value={props.draft}
-          className="flex-1"
+          className="flex-1 border-transparent bg-transparent focus-visible:border-ring/40"
           onBlur={() => {
             completionSessionRef.current = null;
             pendingSelectionRef.current = null;
@@ -174,7 +174,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
           }}
           placeholder={props.placeholder}
         />
-        <Button onClick={() => void props.onSend()}>
+        <Button size="sm" onClick={() => void props.onSend()}>
           <SendHorizonal />
           Send
         </Button>

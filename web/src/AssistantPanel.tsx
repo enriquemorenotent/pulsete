@@ -155,19 +155,19 @@ export function AssistantPanel(props: AssistantPanelProps) {
 
   return (
     <aside
-      className="relative flex h-full min-h-0 flex-col overflow-hidden border border-border bg-card"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1rem] bg-black/10 ring-1 ring-white/[0.05]"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {dropActive ? (
-        <div className="pointer-events-none absolute inset-3 z-20 flex items-center justify-center rounded-md border-2 border-dashed border-primary/60 bg-background/90 text-[13px] text-muted-foreground">
+        <div className="pointer-events-none absolute inset-3 z-20 flex items-center justify-center rounded-[1rem] border-2 border-dashed border-primary/60 bg-background/90 text-[13px] text-muted-foreground">
           Drop files to attach
         </div>
       ) : null}
       {showStatus ? (
-        <div className="space-y-2 border-b border-border bg-secondary/20 px-3 py-3 text-[13px]">
+        <div className="space-y-2 border-b border-white/[0.06] bg-white/[0.03] px-3 py-3 text-[13px]">
           {props.assistant.auth.lastError ? (
             <p className="text-destructive">{props.assistant.auth.lastError}</p>
           ) : null}
@@ -179,7 +179,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
           ) : null}
         </div>
       ) : null}
-      <div className="space-y-3 border-b border-border bg-card px-3 py-2.5">
+      <div className="space-y-3 border-b border-white/[0.06] bg-transparent px-3 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Assistant</p>
@@ -218,10 +218,10 @@ export function AssistantPanel(props: AssistantPanelProps) {
         ) : null}
       </div>
 
-      <ScrollArea viewportRef={scrollRef} className="min-h-0 flex-1 bg-background">
+      <ScrollArea viewportRef={scrollRef} className="min-h-0 flex-1 bg-transparent">
         <div className="space-y-3 px-3 py-3">
           {props.loading ? (
-            <div className="rounded-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
+            <div className="rounded-xl bg-white/[0.04] px-3 py-2 text-[13px] text-muted-foreground ring-1 ring-white/[0.05]">
               Loading conversation…
             </div>
           ) : null}

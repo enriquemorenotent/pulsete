@@ -44,6 +44,10 @@ export function DesktopShell(props: DesktopShellModel) {
   const [compactPane, setCompactPane] = useState<CompactWorkspacePane>(() =>
     getDefaultCompactWorkspacePane(selectedBufferId),
   );
+  const shellContextLabel =
+    props.workspace.headerTitle
+    || props.workspace.selectedNetwork?.name
+    || 'No active connection';
   const layoutStyle = {
     '--sidebar-width': `${leftSidebarResize.sidebarWidth}px`,
     '--right-sidebar-width': `${rightSidebarResize.sidebarWidth}px`,
@@ -81,9 +85,19 @@ export function DesktopShell(props: DesktopShellModel) {
   }, [props.commandPalette.onOpen, props.commandPalette.open]);
 
   return (
-    <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <span className="mr-auto font-semibold tracking-tight">Pulsete</span>
+    <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(87,128,208,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] text-foreground">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/6 bg-background/80 px-4 py-3 backdrop-blur-xl">
+        <div className="mr-auto min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold tracking-tight text-foreground">Pulsete</span>
+            <span className="rounded-md border border-white/8 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              IRC
+            </span>
+          </div>
+          <p className="truncate pt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            {shellContextLabel}
+          </p>
+        </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           {props.header.showMessageDisplayModeToggle ? (
             <MessageDisplayModeToggle
@@ -91,12 +105,12 @@ export function DesktopShell(props: DesktopShellModel) {
               onChange={props.header.onMessageDisplayModeChange}
             />
           ) : null}
-          <Button variant="outline" size="sm" onClick={props.commandPalette.onOpen}>
+          <Button variant="secondary" size="sm" onClick={props.commandPalette.onOpen}>
             <Search />
             Go to…
             <span className="text-[11px] font-normal text-muted-foreground">Ctrl/Cmd+K</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={props.header.onOpenPreferences}>
+          <Button variant="ghost" size="sm" onClick={props.header.onOpenPreferences}>
             <Settings2 />
             Preferences
           </Button>
@@ -107,12 +121,12 @@ export function DesktopShell(props: DesktopShellModel) {
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 overflow-hidden p-2">
+      <main className="flex min-h-0 flex-1 overflow-hidden px-3 pb-3 pt-2">
         {compactLayout ? (
           <Tabs
             value={compactPane}
             onValueChange={(value) => setCompactPane(value as CompactWorkspacePane)}
-            className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden"
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-[1.25rem] border border-white/6 bg-black/20 p-3 shadow-[0_20px_70px_rgba(0,0,0,0.42)]"
           >
             <TabsList className={`grid w-full shrink-0 ${showRightSidebar ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="browse" className="min-w-0">Browse</TabsTrigger>
@@ -144,9 +158,9 @@ export function DesktopShell(props: DesktopShellModel) {
           <div
             ref={layoutRef}
             style={layoutStyle}
-            className="flex h-full min-h-0 flex-1 overflow-hidden lg:flex-row"
+            className="flex h-full min-h-0 flex-1 overflow-hidden rounded-[1.25rem] border border-white/6 bg-black/20 shadow-[0_20px_70px_rgba(0,0,0,0.42)] lg:flex-row"
           >
-            <div className="min-h-0 lg:w-[var(--sidebar-width)] lg:shrink-0">
+            <div className="min-h-0 bg-card/50 backdrop-blur-xl lg:w-[var(--sidebar-width)] lg:shrink-0">
               <ConnectionSidebar {...props.sidebar} />
             </div>
             <SidebarResizeHandle
@@ -157,7 +171,7 @@ export function DesktopShell(props: DesktopShellModel) {
               onNudge={leftSidebarResize.nudgeWidth}
               onReset={leftSidebarResize.resetWidth}
             />
-            <div className="min-h-0 min-w-0 flex-1">
+            <div className="min-h-0 min-w-0 flex-1 bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_14rem)]">
               <ChatPane {...props.chat} />
             </div>
             {showRightSidebar ? (
@@ -170,7 +184,7 @@ export function DesktopShell(props: DesktopShellModel) {
                   onNudge={rightSidebarResize.nudgeWidth}
                   onReset={rightSidebarResize.resetWidth}
                 />
-                <div className="min-h-0 lg:w-[var(--right-sidebar-width)] lg:shrink-0">
+                <div className="min-h-0 bg-card/36 backdrop-blur-xl lg:w-[var(--right-sidebar-width)] lg:shrink-0">
                   <WorkspaceRightSidebar
                     workspace={props.workspace}
                     nicklist={props.nicklist}

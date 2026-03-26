@@ -117,18 +117,18 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
 
 function PaneHeader(props: { title: string; subtitle: string; actions: ReactNode }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-3 py-2">
+    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/6 bg-background/32 px-4 py-4 backdrop-blur-sm">
       <div className="min-w-0">
         {props.title ? (
-          <h2 className={cn('truncate text-base font-semibold tracking-tight text-foreground', props.subtitle && 'mb-1')}>
+          <h2 className={cn('truncate text-lg font-semibold tracking-tight text-foreground', props.subtitle && 'mb-1')}>
             {props.title}
           </h2>
         ) : null}
         {props.subtitle ? (
-          <p className="truncate text-[13px] text-muted-foreground">{props.subtitle}</p>
+          <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">{props.subtitle}</p>
         ) : null}
       </div>
-      <div className="flex shrink-0 flex-wrap gap-1">{props.actions}</div>
+      <div className="flex shrink-0 flex-wrap gap-1.5">{props.actions}</div>
     </div>
   );
 }

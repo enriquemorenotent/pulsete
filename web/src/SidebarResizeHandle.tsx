@@ -37,7 +37,7 @@ export function SidebarResizeHandle(props: SidebarResizeHandleProps) {
   };
 
   return (
-    <div className="group hidden w-4 shrink-0 items-stretch lg:flex">
+    <div className="group hidden w-3 shrink-0 items-stretch lg:flex">
       <div
         role="separator"
         tabIndex={0}
@@ -52,13 +52,13 @@ export function SidebarResizeHandle(props: SidebarResizeHandleProps) {
         onKeyDown={handleKeyDown}
         className={cn(
           'flex w-full cursor-col-resize touch-none items-center justify-center outline-none',
-          'focus-visible:bg-accent/60',
-          props.isResizing && 'bg-accent/60'
+          'focus-visible:bg-white/[0.05]',
+          props.isResizing && 'bg-white/[0.05]'
         )}
       >
         <div
           className={cn(
-            'h-full w-px bg-border transition-colors group-hover:bg-muted-foreground/50',
+            'h-full w-px bg-white/[0.07] transition-colors group-hover:bg-white/[0.16]',
             props.isResizing && 'bg-primary'
           )}
         />

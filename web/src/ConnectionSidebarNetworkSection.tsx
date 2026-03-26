@@ -26,26 +26,39 @@ export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkS
   const serverActivity = resolveBufferActivityState(connection.serverBuffer);
 
   return (
-    <section className={cn(props.index > 0 && 'mt-2 border-t border-border/70 pt-2')}>
-      <div className={cn('flex items-stretch rounded-sm', connection.selectedServer && 'bg-accent')}>
+    <section className={cn('space-y-2', props.index > 0 && 'border-t border-white/[0.06] pt-4')}>
+      <div
+        className={cn(
+          'group flex items-stretch rounded-[1rem] transition-colors',
+          connection.selectedServer
+            ? 'bg-white/[0.06] ring-1 ring-inset ring-primary/24 shadow-[0_10px_30px_rgba(0,0,0,0.18)]'
+            : 'hover:bg-white/[0.03]'
+        )}
+      >
         <button
-          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left hover:bg-accent/70"
+          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
           onClick={() => props.onSelectNetwork(connection.network)}
         >
-            <span className={cn('size-2 shrink-0 rounded-full', dotTone(connection.runtime))} />
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-baseline gap-1.5">
-                <span
-                  className={cn(
-                    'truncate text-[13px] text-foreground',
-                    serverActivity.hasUnread ? 'font-semibold' : 'font-medium'
-                  )}
-                >
-                  {connection.labelParts.name}
-                </span>
-                <span className="shrink-0 font-mono text-[11px] font-normal text-muted-foreground">
-                  as {connection.labelParts.nick}
-                </span>
+          <span className={cn('size-2.5 shrink-0 rounded-full shadow-[0_0_0_4px_rgba(255,255,255,0.03)]', dotTone(connection.runtime))} />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  'truncate text-[13px] text-foreground',
+                  serverActivity.hasUnread ? 'font-semibold' : 'font-medium'
+                )}
+              >
+                {connection.labelParts.name}
+              </span>
+              {serverActivity.hasUnread ? (
+                <ConnectionSidebarActivityBadge count={serverActivity.count} priority={serverActivity.priority} />
+              ) : null}
+            </div>
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              <span>{runtimeLabel(connection.runtime)}</span>
+              <span className="font-mono normal-case tracking-normal text-muted-foreground/80">
+                as {connection.labelParts.nick}
+              </span>
               {connection.labelParts.instanceIndex === null ? null : (
                 <span className="shrink-0 text-[11px] text-muted-foreground">
                   · {connection.labelParts.instanceIndex}
@@ -53,33 +66,32 @@ export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkS
               )}
             </div>
           </div>
-              {serverActivity.hasUnread ? (
-            <ConnectionSidebarActivityBadge count={serverActivity.count} priority={serverActivity.priority} />
-          ) : null}
         </button>
-        <button
-          className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-          onClick={() =>
-            connection.runtime?.phase === 'connected'
-              ? props.onDisconnectNetwork(connection.network.id)
-              : props.onReconnectNetwork(connection.network)
-          }
-          aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${connection.label}`}
-          disabled={connection.runtime?.phase === 'connecting'}
-        >
-          {connection.runtime?.phase === 'connected' ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
-        </button>
-        <button
-          className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"
-          onClick={() => props.onCloseConnection(connection.network)}
-          aria-label={`Close ${connection.label}`}
-        >
-          <X className="size-3.5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1 px-1.5 opacity-70 transition-opacity group-hover:opacity-100">
+          <button
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            onClick={() =>
+              connection.runtime?.phase === 'connected'
+                ? props.onDisconnectNetwork(connection.network.id)
+                : props.onReconnectNetwork(connection.network)
+            }
+            aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${connection.label}`}
+            disabled={connection.runtime?.phase === 'connecting'}
+          >
+            {connection.runtime?.phase === 'connected' ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
+          </button>
+          <button
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            onClick={() => props.onCloseConnection(connection.network)}
+            aria-label={`Close ${connection.label}`}
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
       </div>
 
       {connection.childBuffers.length > 0 || connection.pendingChannels.length > 0 ? (
-        <div className="mt-1 space-y-0.5 pl-4">
+        <div className="space-y-1 border-l border-white/[0.06] pl-3">
           {connection.childBuffers.map(({ buffer, selected }) =>
             buffer.kind === 'channel' ? (
               <ConnectionSidebarBufferRow
@@ -125,4 +137,14 @@ const dotTone = (runtime: NetworkRuntimeState | null) => {
     return 'bg-amber-300';
   }
   return 'bg-zinc-500';
+};
+
+const runtimeLabel = (runtime: NetworkRuntimeState | null) => {
+  if (runtime?.phase === 'connected') {
+    return 'Connected';
+  }
+  if (runtime?.phase === 'connecting') {
+    return 'Connecting';
+  }
+  return 'Offline';
 };

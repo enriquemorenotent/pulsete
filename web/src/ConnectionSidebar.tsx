@@ -10,7 +10,7 @@ export const ConnectionSidebar = memo(function ConnectionSidebar(props: Connecti
   const [friendDraft, setFriendDraft] = useState('');
 
   return (
-    <aside className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+    <aside className="flex h-full min-h-0 flex-col gap-5 overflow-hidden px-3 py-4">
       <ConnectionSidebarConnections
         connections={props.connections}
         onSelectNetwork={props.onSelectNetwork}

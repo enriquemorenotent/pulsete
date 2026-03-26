@@ -42,18 +42,23 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
       <DialogContent
         aria-describedby={undefined}
-        className="h-[min(90dvh,42rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),66rem)]"
+        className="h-[min(90dvh,44rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),70rem)]"
       >
-        <div className="grid h-full min-h-0 gap-0 bg-card lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="grid h-full min-h-0 gap-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="flex min-h-0 flex-col">
-            <div className="shrink-0 border-b border-border px-4 py-4">
-              <DialogHeader className="space-y-1">
-                <DialogTitle>Network Manager</DialogTitle>
-                <DialogDescription>Saved networks and live connection state.</DialogDescription>
-              </DialogHeader>
+            <div className="shrink-0 border-b border-white/6 px-5 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <DialogHeader className="space-y-1">
+                  <DialogTitle>Network Manager</DialogTitle>
+                  <DialogDescription>Saved networks and live connection state.</DialogDescription>
+                </DialogHeader>
+                <span className="rounded-full bg-white/[0.05] px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
+                  {props.networks.length} saved
+                </span>
+              </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <label className="inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground">
+                <label className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
                   <Checkbox checked={props.showFavoritesOnly} onCheckedChange={props.onToggleFavorites} />
                   <span>Favorites only</span>
                 </label>
@@ -65,10 +70,10 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
             </div>
 
             <ScrollArea className="min-h-0 h-full flex-1">
-              <div className="space-y-2 px-3 py-3">
+              <div className="space-y-1 px-3 py-3">
                 {props.networks.length === 0 ? (
                   <div className="px-2 py-12 text-center">
-                    <div className="mx-auto flex size-12 items-center justify-center rounded-full border border-border bg-secondary/40 text-muted-foreground">
+                    <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-white/[0.05] text-muted-foreground">
                       <Server className="size-4" />
                     </div>
                     <p className="mt-4 text-sm font-medium text-foreground">No networks configured.</p>
@@ -88,7 +93,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
             </ScrollArea>
           </div>
 
-          <div className="flex min-h-0 flex-col overflow-hidden border-t border-border bg-secondary/25 lg:border-l lg:border-t-0">
+          <div className="flex min-h-0 flex-col overflow-hidden border-t border-white/6 bg-black/18 lg:border-l lg:border-t-0">
             <ScrollArea className="min-h-0 h-full flex-1">
               {props.selected ? (
                 <SelectedNetworkPane
@@ -104,12 +109,12 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
               )}
             </ScrollArea>
 
-            <div className="shrink-0 border-t border-border px-4 py-3">
+            <div className="shrink-0 border-t border-white/6 px-4 py-3">
               <DialogFooter className="gap-2 sm:flex-row sm:justify-between">
                 <Button variant="outline" onClick={props.onClose}>
                   Close
                 </Button>
-                <Button variant="secondary" onClick={props.onConnect} disabled={connectButton.disabled}>
+                <Button onClick={props.onConnect} disabled={connectButton.disabled}>
                   <Power />
                   {connectButton.label}
                 </Button>

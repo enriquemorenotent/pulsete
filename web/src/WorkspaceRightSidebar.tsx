@@ -38,11 +38,15 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   }
 
   if (!showNicklistTabs || !props.workspace.selectedChannel) {
-    return <AssistantPanel {...props.assistant} />;
+    return (
+      <div className="h-full px-3 py-4">
+        <AssistantPanel {...props.assistant} />
+      </div>
+    );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
+    <div className="flex h-full min-h-0 flex-col gap-3 px-3 py-4">
       <Tabs value={tab} onValueChange={(value) => setTab(value as SidebarTab)}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="users" className="min-w-0">Users</TabsTrigger>

@@ -21,22 +21,24 @@ export function NetworkManagerListRow(props: {
   return (
     <button
       className={cn(
-        'group block w-full rounded-lg border px-3 py-3 text-left transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring/50',
+        'group block w-full rounded-[1rem] px-4 py-3.5 text-left transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring/50',
         props.selected
-          ? 'border-primary/35 bg-accent'
-          : 'border-border/80 bg-card/70 hover:border-primary/20 hover:bg-accent/55',
+          ? 'bg-white/[0.06] ring-1 ring-inset ring-primary/30 shadow-[0_10px_28px_rgba(0,0,0,0.18)]'
+          : 'hover:bg-white/[0.03]',
       )}
       onClick={() => props.onSelect(props.network.id)}
     >
       <div className="flex items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-muted-foreground">
           <Server className="size-3.5" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="truncate text-[14px] font-medium text-foreground">{props.network.name}</span>
-            {rowStatus === 'online' ? <Badge variant="success">Online</Badge> : null}
-            {rowStatus === 'connecting' ? <Badge variant="outline">Connecting</Badge> : null}
+            <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.14em]', statusPillClassName(rowStatus))}>
+              <span className={cn('size-1.5 rounded-full', statusDotClassName(rowStatus))} />
+              {statusPillLabel(rowStatus)}
+            </span>
           </div>
           <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
             {props.network.host}:{props.network.port}
@@ -59,8 +61,9 @@ export function SelectedNetworkPane(props: {
   const status = getNetworkManagerRowStatus(props.runtime);
 
   return (
-    <div className="space-y-5 px-4 py-4">
-      <div className="space-y-2">
+    <div className="space-y-6 px-5 py-5">
+      <div className="space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Selected network</p>
         <div className="flex items-center gap-2">
           <h3 className="truncate text-lg font-semibold tracking-tight text-foreground">
             {props.network.name}
@@ -98,7 +101,7 @@ export function SelectedNetworkPane(props: {
         </Button>
       </div>
 
-      <dl className="space-y-3 border-t border-border pt-4 text-[13px]">
+      <dl className="space-y-3 rounded-[1rem] bg-white/[0.03] p-4 text-[13px] ring-1 ring-white/[0.05]">
         <DetailRow label="Status" value={getNetworkManagerStatusLabel(props.runtime)} />
         <DetailRow label="Nick" value={props.network.nick} />
         <DetailRow label="Authentication" value={getNetworkManagerAuthLabel(props.network)} />
@@ -111,7 +114,7 @@ export function SelectedNetworkPane(props: {
 export function EmptySelectionPane() {
   return (
     <div className="flex h-full min-h-[16rem] flex-col items-center justify-center px-6 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground">
+      <div className="flex size-12 items-center justify-center rounded-full bg-white/[0.05] text-muted-foreground">
         <Server className="size-4" />
       </div>
       <p className="mt-4 text-sm font-medium text-foreground">Select a network</p>
@@ -122,9 +125,39 @@ export function EmptySelectionPane() {
 
 function DetailRow(props: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <dt className="text-muted-foreground">{props.label}</dt>
-      <dd className="text-right font-medium text-foreground">{props.value}</dd>
+    <div className="space-y-1">
+      <dt className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{props.label}</dt>
+      <dd className="font-medium text-foreground">{props.value}</dd>
     </div>
   );
 }
+
+const statusPillLabel = (status: ReturnType<typeof getNetworkManagerRowStatus>) => {
+  if (status === 'online') {
+    return 'Online';
+  }
+  if (status === 'connecting') {
+    return 'Connecting';
+  }
+  return 'Offline';
+};
+
+const statusPillClassName = (status: ReturnType<typeof getNetworkManagerRowStatus>) => {
+  if (status === 'online') {
+    return 'bg-emerald-500/10 text-emerald-300';
+  }
+  if (status === 'connecting') {
+    return 'bg-amber-400/10 text-amber-200';
+  }
+  return 'bg-white/[0.05] text-muted-foreground';
+};
+
+const statusDotClassName = (status: ReturnType<typeof getNetworkManagerRowStatus>) => {
+  if (status === 'online') {
+    return 'bg-emerald-400';
+  }
+  if (status === 'connecting') {
+    return 'bg-amber-300';
+  }
+  return 'bg-zinc-500';
+};

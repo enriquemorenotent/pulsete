@@ -19,16 +19,23 @@ export function ConnectionSidebarBufferRow(props: ConnectionSidebarBufferRowProp
   const activity = resolveBufferActivityState(props.buffer);
 
   return (
-    <div className={cn('flex items-stretch rounded-sm', props.selected && 'bg-accent')}>
+    <div
+      className={cn(
+        'group flex items-stretch rounded-lg transition-colors',
+        props.selected
+          ? 'bg-white/[0.05] ring-1 ring-inset ring-white/[0.08]'
+          : 'hover:bg-white/[0.03]'
+      )}
+    >
       <button
         className={cn(
-          'flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/70',
+          'flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left',
           props.dimmed && 'opacity-70'
         )}
         onClick={props.onSelect}
         aria-label={`Open ${props.buffer.target}`}
         >
-        <Icon className="size-3 shrink-0 text-muted-foreground" />
+        <Icon className={cn('size-3.5 shrink-0 text-muted-foreground', props.selected && 'text-primary/80')} />
         <span
           className={cn(
             'truncate text-[13px]',
@@ -44,7 +51,7 @@ export function ConnectionSidebarBufferRow(props: ConnectionSidebarBufferRowProp
         ) : null}
       </button>
       <button
-        className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"
+        className="px-3 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
         onClick={props.onClose}
         aria-label={`Close ${props.buffer.target}`}
       >

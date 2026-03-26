@@ -25,7 +25,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
         actions={
           <button
             type="button"
-            className="text-muted-foreground transition-colors hover:text-foreground"
+            className="rounded-lg border border-white/8 bg-white/[0.03] p-1.5 text-muted-foreground transition-colors hover:border-white/14 hover:bg-white/[0.08] hover:text-foreground"
             aria-label="Add friend"
             onClick={() => props.onOpenChange(true)}
           >
@@ -39,12 +39,12 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
           </div>
         ) : (
           <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-0.5 px-2 pb-2">
+            <div className="space-y-1 px-2 pb-2 pt-1">
               {props.friends.map((friend) => (
-                <div key={friend.id} className="flex items-stretch rounded-sm">
+                <div key={friend.id} className="group flex items-stretch rounded-lg transition-colors hover:bg-white/[0.03]">
                   <button
                     type="button"
-                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
+                    className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-[13px] text-foreground"
                     onClick={() => void props.onSelectFriend(friend)}
                     aria-label={`Open ${friend.nick} (${props.friendPresence[friend.id] ? 'online' : 'offline'})`}
                   >
@@ -59,7 +59,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
                   </button>
                   <button
                     type="button"
-                    className="px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="px-3 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
                     aria-label={`Remove ${friend.nick}`}
                     onClick={() => void props.onRemoveFriend(friend.id)}
                   >
