@@ -65,6 +65,7 @@ export function useAppController(): AppController {
     applyServerMessages: serverMessages.applyMutationMessages,
     applySocketMessage: serverMessages.applySocketMessage,
     banner: state.transient.banner,
+    forceScrollToBottomRef: ui.forceScrollToBottomRef,
     gatewayStatus: state.domain.gatewayStatus,
     historyHasOlderByBufferId: state.transient.historyHasOlderByBufferId,
     historyLoadedByBufferId: state.transient.historyLoadedByBufferId,

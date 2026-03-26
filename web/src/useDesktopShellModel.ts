@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { ChatPaneProps } from './ChatPane.js';
+import { sendComposerAndFollowBottom } from './chat-pane-send.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
 import { resolveCurrentChannelAutoJoinState } from './channel-autojoin.js';
@@ -37,6 +38,7 @@ type DesktopChatModelParams = {
     AppUiState,
     | 'bufferToolDialog'
     | 'closeBufferToolDialog'
+    | 'forceScrollToBottomRef'
     | 'messageDisplayMode'
     | 'openBufferToolDialog'
     | 'scrollRef'
@@ -151,7 +153,10 @@ export function useDesktopChatModel({
     onDraftChange: composer.setDraft,
     onRecallOlderDraft: composer.recallOlderDraft,
     onRecallNewerDraft: composer.recallNewerDraft,
-    onSend: actions.sendComposer,
+    onSend: () => sendComposerAndFollowBottom({
+      sendComposer: actions.sendComposer,
+      forceScrollToBottomRef: ui.forceScrollToBottomRef,
+    }),
     onAddFriend: actions.addFriend,
     onRemoveFriend: actions.removeFriend,
     showChannelAutoJoin: channelAutoJoin.available,
@@ -240,6 +245,7 @@ export function useDesktopChatModel({
     ui.messageDisplayMode,
     ui.openBufferToolDialog,
     ui.closeBufferToolDialog,
+    ui.forceScrollToBottomRef,
     ui.scrollRef,
     workspace,
   ]);

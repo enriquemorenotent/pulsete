@@ -127,6 +127,19 @@ test('renders inline previews for direct image links', () => {
   assert.doesNotMatch(html, />https:\/\/cdn\.example\.com\/cat\.PNG\?size=full</);
 });
 
+test('renders inline previews when the image format is carried in query params', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Look https://pbs.twimg.com/media/HEWTgcrbIAAQ4Ta?format=jpg&name=large',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /href="https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large"/);
+  assert.match(html, /<img[^>]*src="https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large"/);
+  assert.doesNotMatch(html, />https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large</);
+});
+
 test('does not render inline previews for non-image links or raw mode', () => {
   const normalHtml = renderToStaticMarkup(
     createElement(FormattedMessageText, {

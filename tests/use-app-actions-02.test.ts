@@ -177,9 +177,38 @@ test('sendComposer blocks websocket-backed sends while the gateway is reconnecti
   });
   const actions = createAppActions(params);
 
-  await actions.sendComposer();
+  assert.equal(await actions.sendComposer(), false);
 
   assert.deepEqual(sent, []);
   assert.deepEqual(composerEntries, []);
   assert.deepEqual(banners, [{ kind: 'error', message: gatewayReconnectMessage }]);
+});
+
+test('sendComposer reports success for a sent message and records it in history', async () => {
+  const sent: ClientMessage[] = [];
+  const { params, composerEntries, banners } = createParams({
+    draft: 'hello',
+    socket: {
+      send(message) {
+        sent.push(message);
+      },
+      close() {},
+    },
+  });
+  const actions = createAppActions(params);
+
+  assert.equal(await actions.sendComposer(), true);
+
+  assert.deepEqual(sent, [
+    {
+      type: 'message.send',
+      networkId: network.id,
+      target: selectedBuffer.target,
+      body: 'hello',
+      kind: 'message',
+      sourceBufferId: selectedBuffer.id,
+    },
+  ]);
+  assert.deepEqual(composerEntries, ['hello']);
+  assert.deepEqual(banners, []);
 });

@@ -138,6 +138,21 @@ test('captureUnreadDividerAnchor preserves the unread boundary after the buffer 
   );
 });
 
+test('captureUnreadDividerAnchor keeps the original boundary while the same buffer stays active', () => {
+  const anchor = captureUnreadDividerAnchor(makeBuffer({
+    unread: 2,
+    lastReadMessageId: 'message-1',
+  }), null);
+
+  assert.deepEqual(
+    captureUnreadDividerAnchor(makeBuffer({
+      unread: 1,
+      lastReadMessageId: 'message-3',
+    }), anchor),
+    anchor
+  );
+});
+
 test('resolveVisibleUnreadDividerIndex keeps showing the divider for the current open buffer after read clear', () => {
   const messages = [
     makeMessage({ id: 'message-1', ts: 1 }),
@@ -155,6 +170,27 @@ test('resolveVisibleUnreadDividerIndex keeps showing the divider for the current
       unread: 0,
       lastReadTs: null,
       lastReadMessageId: null,
+    }), anchor),
+    1
+  );
+});
+
+test('resolveVisibleUnreadDividerIndex keeps the original unread boundary when new traffic arrives in the same open buffer', () => {
+  const messages = [
+    makeMessage({ id: 'message-1', ts: 1 }),
+    makeMessage({ id: 'message-2', ts: 2 }),
+    makeMessage({ id: 'message-3', ts: 3 }),
+    makeMessage({ id: 'message-4', ts: 4 }),
+  ];
+  const anchor = captureUnreadDividerAnchor(makeBuffer({
+    unread: 2,
+    lastReadMessageId: 'message-1',
+  }), null);
+
+  assert.equal(
+    resolveVisibleUnreadDividerIndex(messages, makeBuffer({
+      unread: 1,
+      lastReadMessageId: 'message-3',
     }), anchor),
     1
   );

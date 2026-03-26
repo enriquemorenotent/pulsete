@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   bindStickyScrollTracking,
+  forceStickyScrollToBottom,
   isScrollNearBottom,
   scrollNodeToBottom,
 } from '../web/src/useStickyScroll.js';
@@ -108,4 +109,14 @@ test('sticky scroll tracking stops forcing the bottom after the user scrolls up'
   assert.equal(node.scrollTop, 180);
 
   cleanup();
+});
+
+test('forceStickyScrollToBottom snaps to the end and restores stickiness', () => {
+  const { node } = createScrollNode({ clientHeight: 100, scrollHeight: 560, scrollTop: 180 });
+  const stickToBottomRef = { current: false };
+
+  forceStickyScrollToBottom(node, stickToBottomRef);
+
+  assert.equal(node.scrollTop, 560);
+  assert.equal(stickToBottomRef.current, true);
 });

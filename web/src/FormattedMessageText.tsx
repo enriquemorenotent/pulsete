@@ -188,6 +188,8 @@ const hasResolvedStyle = (style: CSSProperties) =>
   style.textDecorationLine !== undefined;
 
 const inlineImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp'];
+const inlineImageFormats = new Set(inlineImageExtensions.map((extension) => extension.slice(1)));
+const inlineImageFormatQueryKeys = new Set(['ext', 'fm', 'format']);
 
 const collectInlineImageHrefs = (tokens: ReturnType<typeof tokenizeFormattedMessage>) => {
   const hrefs: string[] = [];
@@ -209,10 +211,30 @@ const isInlineImageHref = (href: string) => {
       return false;
     }
     const pathname = url.pathname.toLowerCase();
-    return inlineImageExtensions.some((extension) => pathname.endsWith(extension));
+    if (inlineImageExtensions.some((extension) => pathname.endsWith(extension))) {
+      return true;
+    }
+    return hasInlineImageFormatQuery(url);
   } catch {
     return false;
   }
+};
+
+const hasInlineImageFormatQuery = (url: URL) => {
+  for (const [key, value] of url.searchParams) {
+    if (!inlineImageFormatQueryKeys.has(key.toLowerCase())) {
+      continue;
+    }
+    if (inlineImageFormats.has(normalizeInlineImageFormat(value))) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const normalizeInlineImageFormat = (value: string) => {
+  const normalized = value.trim().toLowerCase().replace(/^image\//, '');
+  return normalized.startsWith('.') ? normalized.slice(1) : normalized;
 };
 
 const buildImageAltText = (href: string) => {

@@ -16,6 +16,7 @@ export type AppUiState = {
   closePreferences: () => void;
   commandPaletteOpen: boolean;
   didAutoOpenManagerRef: { current: boolean };
+  forceScrollToBottomRef: { current: (() => void) | null };
   messageDisplayMode: MessageDisplayMode;
   openBufferToolDialog: (kind: BufferToolDialogKind, bufferId: string) => void;
   openCommandPalette: () => void;
@@ -31,6 +32,7 @@ export function useAppUiState(): AppUiState {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [messageDisplayMode, setMessageDisplayMode] = useState<MessageDisplayMode>('colors');
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const forceScrollToBottomRef = useRef<(() => void) | null>(null);
   const socketRef = useRef<SocketHandle | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const didAutoOpenManagerRef = useRef(false);
@@ -50,6 +52,7 @@ export function useAppUiState(): AppUiState {
     closePreferences,
     commandPaletteOpen,
     didAutoOpenManagerRef,
+    forceScrollToBottomRef,
     messageDisplayMode,
     openBufferToolDialog,
     openCommandPalette,

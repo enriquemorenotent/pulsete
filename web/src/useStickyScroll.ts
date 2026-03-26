@@ -15,6 +15,7 @@ type ResizeObserverFactory = ((callback: () => void) => ResizeObserverLike) | nu
 const stickyScrollThresholdPx = 24;
 
 type UseStickyScrollParams = {
+  forceScrollToBottomRef?: MutableRef<(() => void) | null>;
   scrollRef: MutableRef<HTMLDivElement | null>;
   selectedBufferId: string | undefined;
 };
@@ -27,8 +28,7 @@ export function useStickyScroll(params: UseStickyScrollParams) {
     if (!node) {
       return;
     }
-    stickToBottomRef.current = true;
-    scrollNodeToBottom(node);
+    forceStickyScrollToBottom(node, stickToBottomRef);
   }, [params.scrollRef, params.selectedBufferId]);
 
   useEffect(() => {
@@ -39,10 +39,35 @@ export function useStickyScroll(params: UseStickyScrollParams) {
     stickToBottomRef.current = true;
     return bindStickyScrollTracking({ node, stickToBottomRef, createResizeObserver: createResizeObserverFactory() });
   }, [params.scrollRef, params.selectedBufferId]);
+
+  useEffect(() => {
+    const forceScrollToBottomRef = params.forceScrollToBottomRef;
+    if (!forceScrollToBottomRef) {
+      return;
+    }
+    const node = params.scrollRef.current;
+    forceScrollToBottomRef.current =
+      node
+        ? () => {
+            forceStickyScrollToBottom(node, stickToBottomRef);
+          }
+        : null;
+    return () => {
+      forceScrollToBottomRef.current = null;
+    };
+  }, [params.forceScrollToBottomRef, params.scrollRef, params.selectedBufferId]);
 }
 
 export const scrollNodeToBottom = (node: Pick<ScrollContainer, 'scrollHeight' | 'scrollTop'>) => {
   node.scrollTop = node.scrollHeight;
+};
+
+export const forceStickyScrollToBottom = (
+  node: Pick<ScrollContainer, 'scrollHeight' | 'scrollTop'>,
+  stickToBottomRef: MutableRef<boolean>,
+) => {
+  scrollNodeToBottom(node);
+  stickToBottomRef.current = true;
 };
 
 export const isScrollNearBottom = (node: ScrollMetrics) =>
@@ -75,8 +100,7 @@ export function bindStickyScrollTracking(params: {
           if (!params.stickToBottomRef.current) {
             return;
           }
-          scrollNodeToBottom(params.node);
-          params.stickToBottomRef.current = true;
+          forceStickyScrollToBottom(params.node, params.stickToBottomRef);
         })
       : null;
 

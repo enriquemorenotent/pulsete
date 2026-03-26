@@ -17,6 +17,7 @@ type LifecycleParams = {
   applyServerMessages: ApplyServerMessages;
   applySocketMessage: (message: ServerMessage) => void;
   banner: Banner;
+  forceScrollToBottomRef: MutableRef<(() => void) | null>;
   gatewayStatus: GatewayStatus;
   historyHasOlderByBufferId: AppTransientState['historyHasOlderByBufferId'];
   historyLoadedByBufferId: AppTransientState['historyLoadedByBufferId'];
@@ -94,6 +95,7 @@ export function useAppLifecycle(params: LifecycleParams) {
   });
 
   useStickyScroll({
+    forceScrollToBottomRef: params.forceScrollToBottomRef,
     scrollRef: params.scrollRef,
     selectedBufferId: params.workspace.selectedBuffer?.id,
   });

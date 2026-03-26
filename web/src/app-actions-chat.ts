@@ -111,9 +111,9 @@ export const createChatActions = ({
   const sendComposer = async () => {
     const { draft, workspace } = getSession();
     if (draft.trim() && !getGatewaySocket()) {
-      return;
+      return false;
     }
-    await executeMutation({
+    return executeMutation({
       request: () => sendComposerMessage({
         draft,
         setDraft,
@@ -134,14 +134,15 @@ export const createChatActions = ({
           await openOrSelectQueryBuffer(network, nick);
         },
       }),
-      onSuccess: (submitted) => {
+      mapResult: (submitted) => {
         if (submitted) {
           recordComposerEntry(submitted);
         }
+        return Boolean(submitted);
       },
       errorMessage: 'Failed to send message',
       formatError: toGatewayErrorMessage,
-      failureValue: undefined,
+      failureValue: false,
     });
   };
 

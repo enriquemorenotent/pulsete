@@ -35,6 +35,9 @@ export const captureUnreadDividerAnchor = (
     return null;
   }
   if (hasUnreadBufferActivity(buffer)) {
+    if (previousAnchor?.bufferId === buffer.id) {
+      return previousAnchor;
+    }
     return {
       bufferId: buffer.id,
       lastReadTs: buffer.lastReadTs,
@@ -94,6 +97,13 @@ export const resolveVisibleUnreadDividerIndex = (
   if (!buffer) {
     return null;
   }
+  if (anchor?.bufferId === buffer.id) {
+    return resolveFirstUnreadDividerIndex(messages, {
+      unread: 1,
+      lastReadTs: anchor.lastReadTs,
+      lastReadMessageId: anchor.lastReadMessageId,
+    });
+  }
   if (hasUnreadBufferActivity(buffer)) {
     return resolveFirstUnreadDividerIndex(messages, {
       unread: buffer.unread,
@@ -101,12 +111,5 @@ export const resolveVisibleUnreadDividerIndex = (
       lastReadMessageId: buffer.lastReadMessageId,
     });
   }
-  if (anchor?.bufferId !== buffer.id) {
-    return null;
-  }
-  return resolveFirstUnreadDividerIndex(messages, {
-    unread: 1,
-    lastReadTs: anchor.lastReadTs,
-    lastReadMessageId: anchor.lastReadMessageId,
-  });
+  return null;
 };
