@@ -167,6 +167,14 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
         && event.message.body === 'HELPER quit (bye)'
     )
   );
+  assert.equal(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.message === 'HELPER quit (bye)'
+    ),
+    false
+  );
 });
 
 test('channel mode changes update nick privileges in the user list', () => {

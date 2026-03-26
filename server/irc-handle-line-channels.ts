@@ -100,7 +100,6 @@ export const handleKick = (connection: IrcChannelEventContext, params: string[],
 
 export const handleQuit = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {
   const reason = params[0] ?? 'quit';
-  emitStatus(connection, `${nick ?? 'Someone'} quit (${reason})`);
   if (!nick) {
     return;
   }

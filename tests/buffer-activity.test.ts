@@ -73,6 +73,37 @@ test('resolveFirstUnreadDividerIndex uses the stored read message cursor when av
   );
 });
 
+test('resolveFirstUnreadDividerIndex skips self-authored messages at the unread boundary', () => {
+  const messages = [
+    makeMessage({ id: 'message-1', ts: 1 }),
+    makeMessage({ id: 'message-2', ts: 2, self: true }),
+    makeMessage({ id: 'message-3', ts: 3 }),
+  ];
+
+  assert.equal(
+    resolveFirstUnreadDividerIndex(messages, makeBuffer({
+      unread: 1,
+      lastReadMessageId: 'message-1',
+    })),
+    2
+  );
+});
+
+test('resolveFirstUnreadDividerIndex hides the divider when only self-authored messages remain unread', () => {
+  const messages = [
+    makeMessage({ id: 'message-1', ts: 1 }),
+    makeMessage({ id: 'message-2', ts: 2, self: true }),
+  ];
+
+  assert.equal(
+    resolveFirstUnreadDividerIndex(messages, makeBuffer({
+      unread: 1,
+      lastReadMessageId: 'message-1',
+    })),
+    null
+  );
+});
+
 test('resolveFirstUnreadDividerIndex falls back to the top when the cursor is outside the loaded window', () => {
   const messages = [
     makeMessage({ id: 'message-2', ts: 2 }),

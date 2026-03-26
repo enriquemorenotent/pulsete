@@ -47,6 +47,18 @@ export const captureUnreadDividerAnchor = (
   return null;
 };
 
+const skipSelfAuthoredUnreadMessages = (
+  messages: readonly ChatMessage[],
+  startIndex: number,
+) => {
+  for (let index = startIndex; index < messages.length; index += 1) {
+    if (!messages[index]!.self) {
+      return index;
+    }
+  }
+  return null;
+};
+
 export const resolveFirstUnreadDividerIndex = (
   messages: readonly ChatMessage[],
   buffer: BufferReadCursorFields | null | undefined,
@@ -57,11 +69,11 @@ export const resolveFirstUnreadDividerIndex = (
   if (buffer.lastReadMessageId) {
     const cursorIndex = messages.findIndex((message) => message.id === buffer.lastReadMessageId);
     if (cursorIndex >= 0) {
-      return cursorIndex < messages.length - 1 ? cursorIndex + 1 : 0;
+      return skipSelfAuthoredUnreadMessages(messages, cursorIndex < messages.length - 1 ? cursorIndex + 1 : 0);
     }
   }
   if (buffer.lastReadTs == null) {
-    return 0;
+    return skipSelfAuthoredUnreadMessages(messages, 0);
   }
   let dividerIndex = 0;
   for (let index = 0; index < messages.length; index += 1) {
@@ -69,9 +81,9 @@ export const resolveFirstUnreadDividerIndex = (
       dividerIndex = index + 1;
       continue;
     }
-    return dividerIndex;
+    return skipSelfAuthoredUnreadMessages(messages, dividerIndex);
   }
-  return dividerIndex < messages.length ? dividerIndex : 0;
+  return skipSelfAuthoredUnreadMessages(messages, dividerIndex < messages.length ? dividerIndex : 0);
 };
 
 export const resolveVisibleUnreadDividerIndex = (
