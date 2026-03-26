@@ -3,6 +3,7 @@ import { Check, X } from 'lucide-react';
 import type { BufferState, FriendState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
+import { ChatPaneModeLine, shouldShowChatPaneHeaderSubtitle } from './ChatPaneModeLine.js';
 import { FriendToggleButton } from './FriendToggleButton.js';
 import { findFriendByNick } from './friend-utils.js';
 import type { WorkspaceView } from './workspace.js';
@@ -32,6 +33,9 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const selectedFriend =
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
   const autoJoinLabel = props.channelAutoJoinActive ? 'Autojoin On' : 'Autojoin Off';
+  const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
+    ? props.workspace.headerSubtitle
+    : '';
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -40,7 +44,8 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     return (
       <PaneHeader
         title={props.workspace.selectedNetwork?.name ?? 'Server'}
-        subtitle={props.workspace.headerSubtitle}
+        subtitle={subtitle}
+        modeLine={<ChatPaneModeLine workspace={props.workspace} />}
         actions={<Button variant="outline" size="sm" onClick={props.onOpenChannelList}>List Channels</Button>}
       />
     );
@@ -51,7 +56,8 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   return (
     <PaneHeader
       title={props.workspace.headerTitle}
-      subtitle={props.workspace.headerSubtitle}
+      subtitle={subtitle}
+      modeLine={<ChatPaneModeLine workspace={props.workspace} />}
       actions={
         <>
           {props.showChannelAutoJoin ? (
@@ -115,20 +121,23 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   );
 }
 
-function PaneHeader(props: { title: string; subtitle: string; actions: ReactNode }) {
+function PaneHeader(props: { title: string; subtitle: string; actions: ReactNode; modeLine?: ReactNode }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/6 bg-background/32 px-4 py-4 backdrop-blur-sm">
-      <div className="min-w-0">
-        {props.title ? (
-          <h2 className={cn('truncate text-lg font-semibold tracking-tight text-foreground', props.subtitle && 'mb-1')}>
-            {props.title}
-          </h2>
-        ) : null}
-        {props.subtitle ? (
-          <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">{props.subtitle}</p>
-        ) : null}
+    <div className="shrink-0 border-b border-white/6 bg-background/32 backdrop-blur-sm">
+      <div className="flex items-start justify-between gap-4 px-4 py-4">
+        <div className="min-w-0">
+          {props.title ? (
+            <h2 className={cn('truncate text-lg font-semibold tracking-tight text-foreground', props.subtitle && 'mb-1')}>
+              {props.title}
+            </h2>
+          ) : null}
+          {props.subtitle ? (
+            <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">{props.subtitle}</p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-1.5">{props.actions}</div>
       </div>
-      <div className="flex shrink-0 flex-wrap gap-1.5">{props.actions}</div>
+      {props.modeLine ? props.modeLine : null}
     </div>
   );
 }

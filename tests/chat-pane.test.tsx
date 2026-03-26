@@ -568,3 +568,103 @@ test('channel headers hide clear history when the action is not available', () =
 
   assert.doesNotMatch(markup, /Clear history/);
 });
+
+test('connected channel headers keep only non-duplicate context in the mode line', () => {
+  const markup = renderChatPane([], {
+    channelUsers: [
+      { nick: 'Alice', mode: 'op' },
+      { nick: 'Bob', mode: 'normal' },
+    ],
+  });
+
+  assert.match(markup, />Topic</);
+  assert.match(markup, />Help channel</);
+  assert.doesNotMatch(markup, />State</);
+  assert.doesNotMatch(markup, />Nick</);
+  assert.doesNotMatch(markup, />Unread</);
+  assert.doesNotMatch(markup, />Mentions</);
+  assert.doesNotMatch(markup, /<p class="max-w-xl truncate text-\[12px\] uppercase tracking-\[0\.12em\] text-muted-foreground">sofia @ irc\.example\.test<\/p>/);
+});
+
+test('server headers show the active host in the mode line', () => {
+  const markup = renderServerPane([]);
+
+  assert.match(markup, />Host</);
+  assert.match(markup, />irc\.example\.test</);
+  assert.doesNotMatch(markup, />State</);
+});
+
+test('reconnecting channel headers keep the explanatory subtitle alongside the mode line', () => {
+  const network = makeNetwork();
+  const selectedBuffer = makeBuffer();
+  const selectedChannel = makeChannel({
+    id: selectedBuffer.id,
+    networkId: selectedBuffer.networkId,
+    name: selectedBuffer.target,
+  });
+  const markup = renderToStaticMarkup(
+    <ChatPane
+      workspace={{
+        mode: 'channel-connecting',
+        selection: { kind: 'buffer', bufferId: selectedBuffer.id },
+        connectionInstances: [network],
+        selectedNetwork: network,
+        selectedRuntime: {
+          phase: 'connecting',
+          serverName: 'irc.example.test',
+          nick: network.nick,
+        },
+        selectedBuffer,
+        selectedChannel,
+        selectedPendingChannel: null,
+        headerTitle: selectedChannel.name,
+        headerSubtitle: 'Reconnecting. History stays available until the connection returns.',
+        composerMode: 'hidden',
+        composerPlaceholder: '',
+        emptyBody: 'No history yet.',
+        showNicklist: false,
+      }}
+      friends={[] satisfies FriendState[]}
+      selectedMessages={[]}
+      draft=""
+      messageDisplayMode="colors"
+      scrollRef={createRef<HTMLDivElement>()}
+      onDraftChange={() => undefined}
+      onRecallOlderDraft={() => undefined}
+      onRecallNewerDraft={() => undefined}
+      onSend={async () => undefined}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      showChannelAutoJoin={false}
+      channelAutoJoinActive={false}
+      onToggleChannelAutoJoin={async () => true}
+      historyImportOpen={false}
+      onCloseHistoryImport={() => undefined}
+      selfNickAliasesOpen={false}
+      onCloseSelfNickAliases={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+      channelList={closedChannelList}
+      channelListNetwork={null}
+      onCloseChannelList={() => undefined}
+      onJoinChannelFromList={async () => undefined}
+      onOpenMentionedChannel={() => undefined}
+      onOpenParticipantQuery={() => undefined}
+      onOpenChannelList={() => undefined}
+    />
+  );
+
+  assert.match(markup, /Reconnecting\. History stays available until the connection returns\./);
+  assert.match(markup, /text-amber-300">Connecting</);
+});
+
+test('connected query headers skip the mode line when nothing contextual needs to be shown', () => {
+  const markup = renderQueryPane([]);
+
+  assert.doesNotMatch(markup, />State</);
+  assert.doesNotMatch(markup, />Host</);
+  assert.doesNotMatch(markup, />Nick</);
+  assert.doesNotMatch(markup, />Unread</);
+  assert.doesNotMatch(markup, />Mentions</);
+  assert.doesNotMatch(markup, />Topic</);
+});
