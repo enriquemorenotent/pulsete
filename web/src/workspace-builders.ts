@@ -152,7 +152,7 @@ const buildConnectedWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => 
       headerTitle: resolved.selectedChannel.name,
       headerSubtitle: resolved.connectedSubtitle,
       composerMode: 'normal',
-      composerPlaceholder: 'Type a message or /command',
+      composerPlaceholder: `Message ${resolved.selectedChannel.name} or /command`,
       emptyBody: 'Wait for activity or send a message.',
       showNicklist: true,
     });
@@ -163,7 +163,7 @@ const buildConnectedWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => 
       headerTitle: resolved.activeBuffer.target,
       headerSubtitle: resolved.connectedSubtitle,
       composerMode: 'normal',
-      composerPlaceholder: 'Type a message or /command',
+      composerPlaceholder: `Message ${resolved.activeBuffer.target} or /command`,
       emptyBody: 'Wait for a reply or send a message.',
     });
   }

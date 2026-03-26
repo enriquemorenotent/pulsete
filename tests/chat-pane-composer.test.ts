@@ -4,6 +4,7 @@ import {
   getChatPaneComposerKeyAction,
   shouldAutoFocusChatPaneComposer,
 } from '../web/src/ChatPaneComposer.js';
+import { resolveChatPaneComposerPrompt } from '../web/src/chat-pane-composer-prompt.js';
 
 const makeEvent = (
   overrides: Partial<Parameters<typeof getChatPaneComposerKeyAction>[0]> = {},
@@ -42,4 +43,30 @@ test('chat composer auto-focuses when the buffer context changes', () => {
 test('chat composer does not auto-focus when the buffer context is unchanged or missing', () => {
   assert.equal(shouldAutoFocusChatPaneComposer('buffer-1', 'buffer-1'), false);
   assert.equal(shouldAutoFocusChatPaneComposer('buffer-1', null), false);
+});
+
+test('prompt resolution favors command mode for server buffers', () => {
+  assert.deepEqual(
+    resolveChatPaneComposerPrompt({
+      mode: 'commands',
+    }),
+    {
+      actionLabel: 'Run',
+      prefixSymbol: '/',
+      variant: 'commands',
+    },
+  );
+});
+
+test('prompt resolution keeps normal chatting minimal', () => {
+  assert.deepEqual(
+    resolveChatPaneComposerPrompt({
+      mode: 'normal',
+    }),
+    {
+      actionLabel: 'Send',
+      prefixSymbol: null,
+      variant: 'normal',
+    },
+  );
 });

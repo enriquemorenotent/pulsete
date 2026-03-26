@@ -112,6 +112,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       {props.workspace.composerMode !== 'hidden' ? (
         <ChatPaneComposer
           draft={props.draft}
+          mode={props.workspace.composerMode}
           placeholder={props.workspace.composerPlaceholder}
           focusContextKey={props.focusContextKey}
           completionEnabled={props.completionEnabled}

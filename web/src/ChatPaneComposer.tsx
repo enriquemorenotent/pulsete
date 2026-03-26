@@ -1,12 +1,15 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { SendHorizonal } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
+import { cn } from '@/lib/utils.js';
 import {
   getComposerCompletionResult,
   type ComposerCompletionDirection,
   type ComposerCompletionSession,
 } from './composer-completion.js';
+import { resolveChatPaneComposerPrompt } from './chat-pane-composer-prompt.js';
+import type { ComposerMode } from './workspace-types.js';
 
 type ChatPaneComposerKeyEvent = {
   key: string;
@@ -45,6 +48,7 @@ export const shouldAutoFocusChatPaneComposer = (
 
 type ChatPaneComposerProps = {
   draft: string;
+  mode: ComposerMode;
   placeholder: string;
   focusContextKey?: string | null;
   completionEnabled?: boolean;
@@ -61,6 +65,10 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   const completionSessionRef = useRef<ComposerCompletionSession | null>(null);
   const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const previousFocusContextKeyRef = useRef<string | null>(props.focusContextKey ?? null);
+  const prompt = useMemo(
+    () => resolveChatPaneComposerPrompt({ mode: props.mode }),
+    [props.mode]
+  );
 
   useEffect(() => {
     completionSessionRef.current = null;
@@ -125,6 +133,17 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   return (
     <footer className="shrink-0 border-t border-white/6 bg-background/32 px-4 py-3 backdrop-blur-sm">
       <div className="flex gap-2 rounded-[1rem] bg-black/12 p-2 ring-1 ring-white/[0.05]">
+        {prompt.prefixSymbol ? (
+          <div
+            className={cn(
+              'flex min-w-9 shrink-0 items-center justify-center rounded-[0.8rem] px-2 font-mono text-[12px] font-semibold',
+              'bg-amber-300/12 text-amber-300 ring-1 ring-inset ring-amber-300/20'
+            )}
+            aria-hidden="true"
+          >
+            {prompt.prefixSymbol}
+          </div>
+        ) : null}
         <Input
           ref={inputRef}
           value={props.draft}
@@ -174,9 +193,9 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
           }}
           placeholder={props.placeholder}
         />
-        <Button size="sm" onClick={() => void props.onSend()}>
+        <Button size="sm" variant={prompt.variant === 'commands' ? 'secondary' : 'default'} onClick={() => void props.onSend()}>
           <SendHorizonal />
-          Send
+          {prompt.actionLabel}
         </Button>
       </div>
     </footer>

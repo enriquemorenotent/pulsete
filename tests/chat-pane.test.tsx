@@ -547,6 +547,15 @@ test('channel headers expose clear history for normal chat buffers', () => {
   assert.match(markup, /Clear history/);
 });
 
+test('channel composers render the active target as a prompt cue', () => {
+  const markup = renderChatPane([]);
+
+  assert.match(markup, />Send</);
+  assert.match(markup, /placeholder="Message #help"/);
+  assert.doesNotMatch(markup, />Message</);
+  assert.doesNotMatch(markup, />Enter sends to #help</);
+});
+
 test('channel headers expose log import for normal chat buffers', () => {
   const markup = renderChatPane([], {
     canImportHistory: true,
@@ -592,6 +601,15 @@ test('server headers show the active host in the mode line', () => {
   assert.match(markup, />Host</);
   assert.match(markup, />irc\.example\.test</);
   assert.doesNotMatch(markup, />State</);
+});
+
+test('server composers render command mode cues instead of a generic send box', () => {
+  const markup = renderServerPane([]);
+
+  assert.match(markup, />\/</);
+  assert.match(markup, />Run</);
+  assert.doesNotMatch(markup, />Command</);
+  assert.doesNotMatch(markup, />Enter runs on Cuff-Link</);
 });
 
 test('reconnecting channel headers keep the explanatory subtitle alongside the mode line', () => {
