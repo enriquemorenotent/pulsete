@@ -24,6 +24,7 @@ export type CommandPaletteEntrySpec = {
   subtitle: string | null;
   keywords: string[];
   badge: string | null;
+  ranking: CommandPaletteEntryRanking;
   action: CommandPaletteAction;
 };
 
@@ -55,6 +56,7 @@ type BuildCommandPaletteEntrySpecsInput = {
   };
   selectedNetwork: {
     available: boolean;
+    id: string | null;
     label: string | null;
   };
   actions: {
@@ -65,6 +67,13 @@ type BuildCommandPaletteEntrySpecsInput = {
     canImportHistory: boolean;
     canOpenSelfAliases: boolean;
   };
+};
+
+type CommandPaletteEntryRanking = {
+  currentNetwork: boolean;
+  priorityUnread: number;
+  selected: boolean;
+  unread: number;
 };
 
 type CommandPaletteHotkeyEvent = {
@@ -80,7 +89,7 @@ type CommandPaletteHotkeyEvent = {
 export const buildCommandPaletteEntrySpecs = (
   input: BuildCommandPaletteEntrySpecsInput,
 ): CommandPaletteEntrySpec[] => [
-  ...buildBufferEntries(input.connections),
+  ...buildBufferEntries(input.connections, input.selectedNetwork.id),
   ...buildFriendEntries(input.friends),
   ...buildActionEntries(input),
 ];
@@ -93,7 +102,14 @@ export const filterCommandPaletteEntries = <T extends Pick<CommandPaletteEntrySp
   if (!normalizedQuery) {
     return [...entries];
   }
-  return entries.filter((entry) => getCommandPaletteSearchText(entry).includes(normalizedQuery));
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => getCommandPaletteSearchText(entry).includes(normalizedQuery))
+    .sort((left, right) =>
+      compareCommandPaletteMatches(left.entry as T & Pick<CommandPaletteEntrySpec, 'ranking'>, right.entry as T & Pick<CommandPaletteEntrySpec, 'ranking'>, normalizedQuery)
+      || left.index - right.index,
+    )
+    .map(({ entry }) => entry);
 };
 
 export const moveCommandPaletteActiveIndex = (
@@ -158,9 +174,13 @@ export const runCommandPaletteAction = (
   }
 };
 
-const buildBufferEntries = (connections: SidebarConnectionView[]): CommandPaletteEntrySpec[] => {
+const buildBufferEntries = (
+  connections: SidebarConnectionView[],
+  selectedNetworkId: string | null,
+): CommandPaletteEntrySpec[] => {
   const entries: CommandPaletteEntrySpec[] = [];
   for (const connection of connections) {
+    const currentNetwork = connection.network.id === selectedNetworkId;
     if (connection.serverBuffer) {
       entries.push({
         id: `network:${connection.network.id}`,
@@ -175,6 +195,12 @@ const buildBufferEntries = (connections: SidebarConnectionView[]): CommandPalett
           'network',
         ],
         badge: 'server',
+        ranking: {
+          currentNetwork,
+          priorityUnread: connection.serverBuffer.priorityUnread,
+          selected: connection.selectedServer,
+          unread: connection.serverBuffer.unread,
+        },
         action: {
           kind: 'select-network',
           networkId: connection.network.id,
@@ -197,6 +223,12 @@ const buildBufferEntries = (connections: SidebarConnectionView[]): CommandPalett
           child.buffer.kind === 'query' ? 'private message' : 'channel',
         ],
         badge,
+        ranking: {
+          currentNetwork,
+          priorityUnread: child.buffer.priorityUnread,
+          selected: child.selected,
+          unread: child.buffer.unread,
+        },
         action: {
           kind: 'select-buffer',
           bufferId: child.buffer.id,
@@ -219,6 +251,12 @@ const buildBufferEntries = (connections: SidebarConnectionView[]): CommandPalett
           'channel',
         ],
         badge: 'pending',
+        ranking: {
+          currentNetwork,
+          priorityUnread: 0,
+          selected: pending.selected,
+          unread: 0,
+        },
         action: {
           kind: 'select-pending-channel',
           networkId: pending.pendingChannel.networkId,
@@ -238,6 +276,12 @@ const buildFriendEntries = (friends: FriendState[]): CommandPaletteEntrySpec[] =
     subtitle: 'Saved friend',
     keywords: ['friend', 'private message', 'pm'],
     badge: 'friend',
+    ranking: {
+      currentNetwork: false,
+      priorityUnread: 0,
+      selected: false,
+      unread: 0,
+    },
     action: {
       kind: 'select-friend',
       friendId: friend.id,
@@ -253,6 +297,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: 'App settings and assistant account',
       keywords: ['settings', 'preferences', 'assistant'],
       badge: 'action',
+      ranking: {
+        currentNetwork: false,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: { kind: 'open-preferences' },
     },
     {
@@ -262,6 +312,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: 'Saved networks and live connection state',
       keywords: ['networks', 'connections', 'server'],
       badge: 'action',
+      ranking: {
+        currentNetwork: false,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: { kind: 'open-network-manager' },
     },
   ];
@@ -274,6 +330,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: input.selectedNetwork.label ? `Browse channels on ${input.selectedNetwork.label}` : 'Browse channels',
       keywords: ['channels', 'list', 'join'],
       badge: 'action',
+      ranking: {
+        currentNetwork: true,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: { kind: 'open-channel-list' },
     });
   }
@@ -286,6 +348,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: input.selectedBuffer.label ? `For ${input.selectedBuffer.label}` : 'For current channel',
       keywords: ['autojoin', 'channel'],
       badge: 'action',
+      ranking: {
+        currentNetwork: true,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: { kind: 'toggle-current-channel-autojoin' },
     });
   }
@@ -298,6 +366,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: input.selectedBuffer.label ? `For ${input.selectedBuffer.label}` : 'For current buffer',
       keywords: ['clear', 'history', 'messages'],
       badge: 'action',
+      ranking: {
+        currentNetwork: true,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: {
         kind: 'clear-buffer-history',
         bufferId: input.selectedBuffer.id,
@@ -313,6 +387,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: input.selectedBuffer.label ? `For ${input.selectedBuffer.label}` : 'For current buffer',
       keywords: ['download', 'history', 'export'],
       badge: 'action',
+      ranking: {
+        currentNetwork: true,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: {
         kind: 'download-buffer-history',
         bufferId: input.selectedBuffer.id,
@@ -328,6 +408,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: input.selectedBuffer.label ? `Into ${input.selectedBuffer.label}` : 'Into current buffer',
       keywords: ['import', 'logs', 'history', 'hexchat'],
       badge: 'action',
+      ranking: {
+        currentNetwork: true,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: {
         kind: 'open-history-import',
         bufferId: input.selectedBuffer.id,
@@ -343,6 +429,12 @@ const buildActionEntries = (input: BuildCommandPaletteEntrySpecsInput): CommandP
       subtitle: input.selectedBuffer.label ? `Repair self history in ${input.selectedBuffer.label}` : 'Repair self history',
       keywords: ['aliases', 'self', 'repair', 'history'],
       badge: 'action',
+      ranking: {
+        currentNetwork: true,
+        priorityUnread: 0,
+        selected: false,
+        unread: 0,
+      },
       action: {
         kind: 'open-self-aliases',
         bufferId: input.selectedBuffer.id,
@@ -360,3 +452,53 @@ const getCommandPaletteSearchText = (
   entry: Pick<CommandPaletteEntrySpec, 'label' | 'subtitle' | 'keywords'>,
 ) =>
   normalizeCommandPaletteQuery([entry.label, entry.subtitle, ...entry.keywords].filter(Boolean).join(' '));
+
+const compareCommandPaletteMatches = (
+  left: Pick<CommandPaletteEntrySpec, 'label' | 'ranking'>,
+  right: Pick<CommandPaletteEntrySpec, 'label' | 'ranking'>,
+  query: string,
+) =>
+  compareMatchTuples(getCommandPaletteMatchTuple(left, query), getCommandPaletteMatchTuple(right, query));
+
+const getCommandPaletteMatchTuple = (
+  entry: Pick<CommandPaletteEntrySpec, 'label' | 'ranking'>,
+  query: string,
+) => {
+  const normalizedLabel = normalizeCommandPaletteQuery(entry.label);
+  const normalizedBareLabel = stripCommandPaletteLabelPrefix(normalizedLabel);
+  const exact = normalizedLabel === query || normalizedBareLabel === query ? 0 : 1;
+  const prefix = normalizedLabel.startsWith(query) || normalizedBareLabel.startsWith(query) ? 0 : 1;
+  const labelContains = normalizedLabel.includes(query) || normalizedBareLabel.includes(query) ? 0 : 1;
+  const selected = entry.ranking.selected ? 0 : 1;
+  const currentNetwork = entry.ranking.currentNetwork ? 0 : 1;
+  const priorityUnread = entry.ranking.priorityUnread > 0 ? 0 : 1;
+  const unread = entry.ranking.unread > 0 ? 0 : 1;
+
+  return [
+    exact,
+    prefix,
+    labelContains,
+    selected,
+    currentNetwork,
+    priorityUnread,
+    unread,
+    -entry.ranking.priorityUnread,
+    -entry.ranking.unread,
+  ] as const;
+};
+
+const compareMatchTuples = (
+  left: readonly [number, number, number, number, number, number, number, number, number],
+  right: readonly [number, number, number, number, number, number, number, number, number],
+) => {
+  for (let index = 0; index < left.length; index += 1) {
+    const difference = left[index]! - right[index]!;
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+  return 0;
+};
+
+const stripCommandPaletteLabelPrefix = (value: string) =>
+  value.replace(/^[#&+!]+/, '');

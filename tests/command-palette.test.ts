@@ -98,6 +98,14 @@ const friend: FriendState = {
   nick: 'Joby',
 };
 
+const otherNetwork: NetworkProfile = {
+  ...network,
+  id: 'network-2',
+  name: 'OtherNet',
+  host: 'irc.othernet.test',
+  nick: 'lyra',
+};
+
 test('command palette builds buffers, friends, and current-buffer actions in order', () => {
   const entries = buildCommandPaletteEntrySpecs({
     connections: [connection],
@@ -108,6 +116,7 @@ test('command palette builds buffers, friends, and current-buffer actions in ord
     },
     selectedNetwork: {
       available: true,
+      id: network.id,
       label: network.name,
     },
     actions: {
@@ -150,6 +159,7 @@ test('command palette filtering matches labels, subtitles, and keywords case-ins
     },
     selectedNetwork: {
       available: true,
+      id: network.id,
       label: network.name,
     },
     actions: {
@@ -165,6 +175,94 @@ test('command palette filtering matches labels, subtitles, and keywords case-ins
   assert.deepEqual(filterCommandPaletteEntries(entries, 'saved friend').map((entry) => entry.label), ['Joby']);
   assert.deepEqual(filterCommandPaletteEntries(entries, 'hexchat').map((entry) => entry.label), ['Import Logs']);
   assert.deepEqual(filterCommandPaletteEntries(entries, 'SOFIA').map((entry) => entry.label), ['Cuff-Link', '#help', 'Nathe', '#pending']);
+});
+
+test('command palette scoring promotes exact matches, then current-network unread buffers', () => {
+  const currentHelpDesk: BufferState = {
+    ...channelBuffer,
+    id: 'buffer-helpdesk',
+    target: '#helpdesk',
+    unread: 4,
+  };
+  const currentHelper: BufferState = {
+    ...channelBuffer,
+    id: 'buffer-helper',
+    target: '#helper',
+    unread: 0,
+  };
+  const otherExact: BufferState = {
+    ...channelBuffer,
+    id: 'buffer-other-help',
+    networkId: otherNetwork.id,
+    target: '#help',
+    unread: 1,
+  };
+  const otherHelpDesk: BufferState = {
+    ...channelBuffer,
+    id: 'buffer-other-helpdesk',
+    networkId: otherNetwork.id,
+    target: '#helpdesk',
+    unread: 8,
+  };
+  const otherConnection: SidebarConnectionView = {
+    ...connection,
+    network: otherNetwork,
+    runtime: {
+      phase: 'connected',
+      serverName: otherNetwork.host,
+      nick: otherNetwork.nick,
+    },
+    serverBuffer: {
+      ...serverBuffer,
+      id: 'buffer-server-2',
+      networkId: otherNetwork.id,
+    },
+    childBuffers: [
+      { buffer: otherExact, selected: false },
+      { buffer: otherHelpDesk, selected: false },
+    ],
+    pendingChannels: [],
+    selectedServer: false,
+    label: 'OtherNet (lyra)',
+    labelParts: {
+      name: 'OtherNet',
+      nick: 'lyra',
+      instanceIndex: null,
+    },
+  };
+
+  const entries = buildCommandPaletteEntrySpecs({
+    connections: [{
+      ...connection,
+      childBuffers: [
+        { buffer: currentHelpDesk, selected: false },
+        { buffer: currentHelper, selected: false },
+      ],
+    }, otherConnection],
+    friends: [friend],
+    selectedBuffer: {
+      id: currentHelpDesk.id,
+      label: currentHelpDesk.target,
+    },
+    selectedNetwork: {
+      available: true,
+      id: network.id,
+      label: network.name,
+    },
+    actions: {
+      canToggleChannelAutoJoin: false,
+      channelAutoJoinActive: false,
+      canClearHistory: false,
+      canDownloadHistory: false,
+      canImportHistory: false,
+      canOpenSelfAliases: false,
+    },
+  });
+
+  assert.deepEqual(
+    filterCommandPaletteEntries(entries, 'help').map((entry) => entry.label),
+    ['#help', '#helpdesk', '#helper', '#helpdesk'],
+  );
 });
 
 test('command palette active index navigation wraps and handles empty result sets', () => {

@@ -92,6 +92,7 @@ export function useDesktopCommandPaletteModel({
       },
       selectedNetwork: {
         available: workspace.selectedNetwork !== null,
+        id: workspace.selectedNetwork?.id ?? null,
         label: workspace.selectedNetwork?.name ?? null,
       },
       actions: {
