@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import {
   buildSelfNickKeys,
+  resolveImportedChannelAttribution,
   normalizeStoredAttribution,
   resolveLegacyBackfillAttribution,
   resolveRuntimeMessageAttribution,
@@ -279,10 +280,10 @@ export const updateMessageAttribution = (db: DatabaseSync, input: MessageAttribu
   );
 };
 
-export const repairQueryMessageAttributions = (
+export const repairBufferMessageAttributions = (
   db: DatabaseSync,
   input: {
-    bufferId: string;
+    bufferKind: 'channel' | 'query';
     networkId: string;
     target: string;
     nick: string;
@@ -311,11 +312,16 @@ export const repairQueryMessageAttributions = (
   }, input.selfNickAliases);
   const repairedRows: MessageRow[] = [];
   for (const row of rows) {
-    const next = resolveLegacyBackfillAttribution({
-      nick: row.nick,
-      target: input.target,
-      selfNickKeys,
-    });
+    const next = input.bufferKind === 'query'
+      ? resolveLegacyBackfillAttribution({
+          nick: row.nick,
+          target: input.target,
+          selfNickKeys,
+        })
+      : resolveImportedChannelAttribution({
+          nick: row.nick,
+          selfNickKeys,
+        });
     if (!messageAttributionChanged(row, next)) {
       continue;
     }

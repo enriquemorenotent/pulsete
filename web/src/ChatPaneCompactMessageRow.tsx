@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { ChatMessage } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
+import type { MessageParticipantPresentation } from './message-participant-presentation.js';
+import { ParticipantNickLabel } from './ParticipantNickLabel.js';
 import {
   FormattedMessageInlinePreviews,
   FormattedMessageText,
@@ -12,17 +14,14 @@ import {
   formatMessageTimestamp,
   isActionMessage,
   messageTone,
-  participantNickTone,
-  showKindLabel,
 } from './chat-pane-message-utils.js';
 
 type ChatPaneCompactMessageRowProps = {
   message: ChatMessage;
-  highlightParticipantNicks: boolean;
-  senderLabel?: string | null;
-  showKindBadge?: boolean;
+  participant: MessageParticipantPresentation;
   mode: MessageDisplayMode;
   onOpenChannel: (channel: string) => void;
+  onOpenParticipantQuery?: (nick: string) => void;
 };
 
 export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps) {
@@ -33,9 +32,6 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
     [message.body, props.mode]
   );
   const hasVisibleText = hasVisibleFormattedMessageText(parsedContent);
-  const showMessageNick = message.nick && (message.kind === 'line' || message.kind === 'action' || showKindLabel(message));
-  const senderLabel = props.senderLabel ?? (showMessageNick ? message.nick : null);
-  const showKindBadge = props.showKindBadge ?? showKindLabel(message);
   const bodyClassName = cn(isAction && 'italic');
   const timeLabel = (
     <span className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground">
@@ -44,12 +40,19 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
   );
   const metadata = (
     <>
-      {senderLabel ? (
-        <span className={cn('mr-2 font-sans font-semibold', participantNickTone(message, props.highlightParticipantNicks))}>
-          {senderLabel}
+      {props.participant.label ? (
+        <ParticipantNickLabel
+          nick={props.participant.label}
+          clickable={props.participant.clickable}
+          onOpenParticipantQuery={props.onOpenParticipantQuery}
+          className={cn('mr-2 font-sans font-semibold', props.participant.toneClassName)}
+        />
+      ) : null}
+      {props.participant.kindBadgeLabel ? (
+        <span className="mr-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          {props.participant.kindBadgeLabel}
         </span>
       ) : null}
-      {showKindBadge ? <span className="mr-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{message.kind}</span> : null}
     </>
   );
 

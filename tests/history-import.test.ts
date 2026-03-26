@@ -181,6 +181,32 @@ test('importLogFiles keeps all channel participants and dedupes against uploads 
   );
 });
 
+test('importLogFiles marks old self nick lines as self in channel buffers when aliases are provided', () => {
+  const result = importLogFiles({
+    buffer: channelBuffer,
+    existingMessages: [],
+    files: [makeLogFile([
+      '**** BEGIN LOGGING AT Tue Mar 10 00:00:00 2026',
+      'Mar 10 00:00:01 <oldsofia>\tchannel self line',
+      'Mar 10 00:00:02 <MissD>\thello',
+    ].join('\n'))],
+    selfNicks: ['sofia', 'oldsofia'],
+  });
+
+  assert.deepEqual(
+    result.messages.map((message) => ({
+      nick: message.nick,
+      self: message.self,
+      speakerRole: message.speakerRole,
+      attributionSource: message.attributionSource,
+    })),
+    [
+      { nick: 'oldsofia', self: true, speakerRole: 'self', attributionSource: 'import-alias' },
+      { nick: 'MissD', self: false, speakerRole: 'other', attributionSource: 'unknown' },
+    ],
+  );
+});
+
 test('importLogFiles dedupes existing messages even when self aliases change', () => {
   const existingMessages: ChatMessage[] = [{
     id: 'existing-1',

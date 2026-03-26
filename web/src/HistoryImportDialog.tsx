@@ -22,6 +22,7 @@ import { hasDroppedFiles, listDroppedFiles } from './text-file-attachments.js';
 type HistoryImportDialogProps = {
   open: boolean;
   targetLabel: string;
+  targetKind: 'channel' | 'query';
   onClose: () => void;
   onImport: (input: BufferHistoryImportRequest) => Promise<boolean>;
 };
@@ -46,6 +47,8 @@ export function HistoryImportDialog(props: HistoryImportDialogProps) {
     setDropActive(false);
     dropDepthRef.current = 0;
   }, [props.open]);
+
+  const aliasScopeLabel = props.targetKind === 'channel' ? 'this channel' : 'this private chat';
 
   const addFiles = async (incoming: File[]) => {
     if (incoming.length === 0) {
@@ -213,7 +216,7 @@ export function HistoryImportDialog(props: HistoryImportDialogProps) {
           value={selfNickText}
           disabled={submitting}
           placeholder="comma-separated, e.g. oldnick, oldnick_"
-          hint="Useful for old logs from before a nick change. These aliases apply only to this private chat."
+          hint={`Useful for old logs from before a nick change. These aliases apply only to imported history in ${aliasScopeLabel}.`}
           onChange={setSelfNickText}
         />
 

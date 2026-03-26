@@ -8,12 +8,12 @@ import type {
 } from '../../shared/protocol.js';
 import { Card } from '@/components/ui/card.js';
 import type { ChannelListState } from './app-types.js';
+import { BufferSelfNickAliasesDialog } from './BufferSelfNickAliasesDialog.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { HistoryImportDialog } from './HistoryImportDialog.js';
-import { QuerySelfNickAliasesDialog } from './QuerySelfNickAliasesDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -53,12 +53,18 @@ export type ChatPaneProps = {
   onCloseChannelList: () => void;
   onJoinChannelFromList: (channel: string) => Promise<void>;
   onOpenMentionedChannel: (channel: string) => void;
+  onOpenParticipantQuery?: (nick: string) => void;
   onOpenChannelList: () => void;
 };
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
   const [historyImportOpen, setHistoryImportOpen] = useState(false);
   const [selfNickAliasesOpen, setSelfNickAliasesOpen] = useState(false);
+  const selectedBuffer = props.workspace.selectedBuffer;
+  const selectedChatBuffer: (BufferState & { kind: 'channel' | 'query' }) | null =
+    selectedBuffer && (selectedBuffer.kind === 'channel' || selectedBuffer.kind === 'query')
+      ? selectedBuffer as BufferState & { kind: 'channel' | 'query' }
+    : null;
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -82,7 +88,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           canImportHistory={props.canImportHistory}
           onOpenHistoryImport={props.onImportHistory ? () => setHistoryImportOpen(true) : undefined}
           onOpenSelfNickAliases={
-            props.workspace.selectedBuffer?.kind === 'query' && props.onUpdateSelfNickAliases
+            selectedChatBuffer && props.onUpdateSelfNickAliases
               ? () => setSelfNickAliasesOpen(true)
               : undefined
           }
@@ -92,6 +98,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         />
         <ChatPaneMessageList
           bufferKind={props.workspace.selectedBuffer?.kind ?? null}
+          channelUsers={props.workspace.selectedChannel?.users ?? []}
           messages={props.selectedMessages}
           scrollRef={props.scrollRef}
           emptyBody={props.workspace.emptyBody}
@@ -100,6 +107,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           canLoadOlderHistory={props.canLoadOlderHistory}
           loadingOlderHistory={props.loadingOlderHistory}
           onOpenChannel={props.onOpenMentionedChannel}
+          onOpenParticipantQuery={props.onOpenParticipantQuery}
           onLoadOlderHistory={props.onLoadOlderHistory}
         />
         {props.workspace.composerMode !== 'hidden' ? (
@@ -126,15 +134,17 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         <HistoryImportDialog
           open={historyImportOpen}
           targetLabel={props.workspace.headerTitle}
+          targetKind={selectedChatBuffer?.kind ?? 'query'}
           onClose={() => setHistoryImportOpen(false)}
           onImport={props.onImportHistory}
         />
       ) : null}
-      {props.workspace.selectedBuffer?.kind === 'query' && props.onUpdateSelfNickAliases ? (
-        <QuerySelfNickAliasesDialog
+      {selectedChatBuffer && props.onUpdateSelfNickAliases ? (
+        <BufferSelfNickAliasesDialog
           open={selfNickAliasesOpen}
           targetLabel={props.workspace.headerTitle}
-          currentAliases={props.workspace.selectedBuffer.selfNickAliases ?? []}
+          bufferKind={selectedChatBuffer.kind}
+          currentAliases={selectedChatBuffer.selfNickAliases ?? []}
           onClose={() => setSelfNickAliasesOpen(false)}
           onSave={props.onUpdateSelfNickAliases}
         />

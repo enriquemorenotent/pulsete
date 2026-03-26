@@ -66,8 +66,8 @@ export type RuntimeConversationStore = {
   upsertBuffer(input: BufferInput): BufferState;
   upsertQuery(networkId: string, target: string): BufferState;
   appendMessage(input: MessageInput): AppSnapshot['messages'][number];
-  repairQueryMessageAttributions(input: {
-    bufferId: string;
+  repairBufferMessageAttributions(input: {
+    bufferKind: 'channel' | 'query';
     networkId: string;
     target: string;
     nick: string;

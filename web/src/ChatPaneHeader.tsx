@@ -92,7 +92,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
               Import logs
             </Button>
           ) : null}
-          {selectedBuffer?.kind === 'query' && props.onOpenSelfNickAliases ? (
+          {(selectedBuffer?.kind === 'channel' || selectedBuffer?.kind === 'query') && props.onOpenSelfNickAliases ? (
             <Button variant="outline" size="sm" onClick={props.onOpenSelfNickAliases}>
               Self aliases
             </Button>

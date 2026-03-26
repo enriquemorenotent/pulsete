@@ -67,4 +67,8 @@ test('nicklist groups users by privilege level', () => {
   assert.ok(markup.includes('alice'));
   assert.ok(markup.includes('bob'));
   assert.ok(markup.includes('zoe'));
+  assert.match(markup, /class="truncate text-rose-300">owner</);
+  assert.match(markup, /class="truncate text-amber-300">alice</);
+  assert.match(markup, /class="truncate text-emerald-300">bob</);
+  assert.match(markup, /class="truncate text-inherit">zoe</);
 });

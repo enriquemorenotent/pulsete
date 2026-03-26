@@ -1,5 +1,7 @@
 import type { ChannelState, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import { cn } from '@/lib/utils.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
+import { channelUserModeTone } from './channel-user-tone.js';
 import { findFriendByNick } from './friend-utils.js';
 import { FriendToggleButton } from './FriendToggleButton.js';
 import { groupChannelUsers } from './channel-user-groups.js';
@@ -41,7 +43,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                           className="flex min-w-0 flex-1 items-center px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
                           onClick={() => props.network && props.onSelectNick(props.network, user.nick)}
                         >
-                          <span className="truncate">{user.nick}</span>
+                          <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
                         </button>
                         <FriendToggleButton
                           active={Boolean(friend)}

@@ -115,7 +115,11 @@ export function useDesktopChatModel({
     || workspace.selectedBuffer?.kind === 'query';
   const canDownloadHistory = canClearHistory;
   const canImportHistory = canClearHistory;
-  const canRepairSelfNickAliases = workspace.selectedBuffer?.kind === 'query';
+  const canRepairSelfNickAliases = canClearHistory;
+  const participantQueryNetwork =
+    workspace.selectedBuffer?.kind === 'channel'
+      ? workspace.selectedNetwork
+      : null;
   const clearHistoryBufferId = canClearHistory ? workspace.selectedBuffer?.id ?? null : null;
   const downloadHistoryBufferId = canDownloadHistory ? workspace.selectedBuffer?.id ?? null : null;
   const importHistoryBufferId = canImportHistory ? workspace.selectedBuffer?.id ?? null : null;
@@ -162,6 +166,9 @@ export function useDesktopChatModel({
     onCloseChannelList: actions.closeChannelList,
     onJoinChannelFromList: actions.joinChannelFromList,
     onOpenMentionedChannel: actions.openMentionedChannel,
+    onOpenParticipantQuery: participantQueryNetwork
+      ? (nick) => { void actions.selectPrivateBuffer(participantQueryNetwork, nick); }
+      : undefined,
     onOpenChannelList: actions.openChannelList,
     onCloseChannel: actions.closeChannel,
     onCloseBuffer: actions.closeBuffer,
@@ -178,6 +185,7 @@ export function useDesktopChatModel({
     actions.openChannelList,
     actions.openMentionedChannel,
     actions.removeFriend,
+    actions.selectPrivateBuffer,
     actions.sendComposer,
     actions.toggleCurrentChannelAutoJoin,
     channelList,
@@ -195,6 +203,7 @@ export function useDesktopChatModel({
     downloadHistoryBufferId,
     importHistoryBufferId,
     repairSelfNickAliasesBufferId,
+    participantQueryNetwork,
     composer.draft,
     composer.recallNewerDraft,
     composer.recallOlderDraft,

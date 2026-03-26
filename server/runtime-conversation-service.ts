@@ -177,28 +177,28 @@ export class RuntimeConversationService {
     };
   }
 
-  updateQuerySelfNickAliases(bufferId: string, input: BufferSelfNickAliasesRequest) {
+  updateBufferSelfNickAliases(bufferId: string, input: BufferSelfNickAliasesRequest) {
     const buffer = this.options.conversations.getBuffer(bufferId);
     if (!buffer) {
       throw notFound('Buffer not found');
     }
-    if (buffer.kind !== 'query') {
-      throw badRequest('Only private messages can repair self aliases');
+    if (buffer.kind !== 'channel' && buffer.kind !== 'query') {
+      throw badRequest('Only channels and private messages can repair self aliases');
     }
     const network = requireStoredNetwork(this.options.networks, buffer.networkId);
     const selfNickAliases = mergeNickAliases(input.selfNickAliases, [
       network.nick,
       ...network.altNicks,
     ]);
-    const updatedBuffer = haveSameNickAliases(buffer.selfNickAliases ?? [], selfNickAliases)
+    const updatedBuffer = (haveSameNickAliases(buffer.selfNickAliases ?? [], selfNickAliases)
       ? buffer
       : this.options.conversations.upsertBuffer({
         ...buffer,
         unread: buffer.unread,
         selfNickAliases,
-      });
-    const repairedMessages = this.options.conversations.repairQueryMessageAttributions({
-      bufferId: updatedBuffer.id,
+      })) as BufferState & { kind: 'channel' | 'query' };
+    const repairedMessages = this.options.conversations.repairBufferMessageAttributions({
+      bufferKind: updatedBuffer.kind,
       networkId: updatedBuffer.networkId,
       target: updatedBuffer.target,
       nick: network.nick,

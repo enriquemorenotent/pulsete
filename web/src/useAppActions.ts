@@ -104,6 +104,7 @@ export type ChatActionSet = Pick<
   | 'openChannelList'
   | 'openMentionedChannel'
   | 'removeFriend'
+  | 'selectPrivateBuffer'
   | 'sendComposer'
   | 'toggleCurrentChannelAutoJoin'
 >;

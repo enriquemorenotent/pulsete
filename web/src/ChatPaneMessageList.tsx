@@ -1,11 +1,18 @@
 import { memo, useCallback, useMemo, useRef, type RefObject, type UIEvent } from 'react';
 import { Plug2 } from 'lucide-react';
-import type { BufferState, ChatMessage } from '../../shared/protocol.js';
+import type { BufferState, ChannelUserState, ChatMessage } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
+import type { MessageParticipantPresentation } from './message-participant-presentation.js';
+import {
+  buildChannelUserModesByNick,
+  resolveMessageParticipantPresentation,
+  resolveParticipantHighlightMode,
+} from './message-participant-presentation.js';
+import { ParticipantNickLabel } from './ParticipantNickLabel.js';
 import {
   buildRenderBlocks,
   formatMessageTimestamp,
@@ -13,12 +20,11 @@ import {
   isActionMessage,
   isCompactMessage,
   messageTone,
-  participantNickTone,
-  showKindLabel,
 } from './chat-pane-message-utils.js';
 
 type ChatPaneMessageListProps = {
   bufferKind: BufferState['kind'] | null;
+  channelUsers?: ChannelUserState[];
   messages: ChatMessage[];
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyBody: string;
@@ -27,11 +33,16 @@ type ChatPaneMessageListProps = {
   canLoadOlderHistory?: boolean;
   loadingOlderHistory?: boolean;
   onOpenChannel: (channel: string) => void;
+  onOpenParticipantQuery?: (nick: string) => void;
   onLoadOlderHistory?: () => Promise<void>;
 };
 
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: ChatPaneMessageListProps) {
-  const highlightParticipantNicks = props.bufferKind === 'query';
+  const participantHighlightMode = resolveParticipantHighlightMode(props.bufferKind);
+  const channelUserModesByNick = useMemo(
+    () => buildChannelUserModesByNick(props.channelUsers),
+    [props.channelUsers]
+  );
   const loadingOlderRef = useRef(false);
   const renderBlocks = useMemo(
     () => buildRenderBlocks(props.messages),
@@ -101,28 +112,39 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
                 ? getServerMessageSourceLabel(block.message)
                 : null;
             const shouldUseCompactRow = props.listKind === 'server' || isCompactMessage(block.message);
+            const participant = resolveMessageParticipantPresentation({
+              message: block.message,
+              listKind: props.listKind,
+              rowVariant: shouldUseCompactRow ? 'compact' : 'full',
+              senderLabel: serverSourceLabel,
+              highlightMode: participantHighlightMode,
+              channelUserModesByNick,
+              allowParticipantQuery: !!props.onOpenParticipantQuery,
+            });
 
             return shouldUseCompactRow ? (
               <ChatPaneCompactMessageRow
                 key={block.message.id}
-                highlightParticipantNicks={highlightParticipantNicks}
                 message={block.message}
-                senderLabel={serverSourceLabel}
-                showKindBadge={props.listKind === 'server' ? !!(block.message.nick && showKindLabel(block.message)) : undefined}
+                participant={participant}
                 mode={props.mode}
                 onOpenChannel={props.onOpenChannel}
+                onOpenParticipantQuery={props.onOpenParticipantQuery}
               />
             ) : (
               <article key={block.message.id} className={cn('px-1 py-0.5 text-foreground', messageTone(block.message))}>
                 <div className="min-w-0">
                   <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                     <span className="tabular-nums normal-case tracking-normal">{formatMessageTimestamp(block.message.ts)}</span>
-                    {block.message.nick ? (
-                      <span className={cn('font-medium', participantNickTone(block.message, highlightParticipantNicks))}>
-                        {block.message.nick}
-                      </span>
+                    {participant.label ? (
+                      <ParticipantNickLabel
+                        nick={participant.label}
+                        clickable={participant.clickable}
+                        onOpenParticipantQuery={props.onOpenParticipantQuery}
+                        className={cn('font-medium', participant.toneClassName)}
+                      />
                     ) : null}
-                    {showKindLabel(block.message) ? <span>{block.message.kind}</span> : null}
+                    {renderKindBadge(participant)}
                   </div>
                   <p
                     className={cn(
@@ -167,3 +189,6 @@ export const restoreScrollOffsetAfterPrepend = (
 ) => {
   node.scrollTop = previousTop + (node.scrollHeight - previousHeight);
 };
+
+const renderKindBadge = (participant: MessageParticipantPresentation) =>
+  participant.kindBadgeLabel ? <span>{participant.kindBadgeLabel}</span> : null;

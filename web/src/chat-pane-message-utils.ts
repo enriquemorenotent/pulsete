@@ -47,16 +47,6 @@ export const isActionMessage = (message: ChatMessage) => message.kind === 'actio
 export const showKindLabel = (message: ChatMessage) =>
   message.kind === 'notice' || message.kind === 'error';
 
-export const participantNickTone = (
-  message: ChatMessage,
-  highlightParticipants: boolean,
-) => {
-  if (!highlightParticipants || !message.nick) {
-    return 'text-inherit';
-  }
-  return message.self ? 'text-primary' : 'text-success';
-};
-
 export const messageTone = (message: ChatMessage) => {
   if (message.kind === 'error') {
     return 'text-destructive';

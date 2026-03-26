@@ -65,6 +65,30 @@ export const resolveImportedSpeakerAttribution = (
   input: Omit<QuerySpeakerAttributionInput, 'selfSource'>,
 ): SpeakerAttribution => resolveQuerySpeakerAttribution({ ...input, selfSource: 'query-alias' });
 
+export const resolveImportedChannelAttribution = (
+  input: Pick<QuerySpeakerAttributionInput, 'nick' | 'selfNickKeys'>,
+): SpeakerAttribution => {
+  if (!input.nick) {
+    return createUnknownAttribution(null, 'unknown', 'low');
+  }
+  if (matchesNickAlias(input.nick, input.selfNickKeys)) {
+    return {
+      speakerRole: 'self',
+      speakerNick: input.nick,
+      attributionSource: 'import-alias',
+      attributionConfidence: 'high',
+      self: true,
+    };
+  }
+  return {
+    speakerRole: 'other',
+    speakerNick: input.nick,
+    attributionSource: 'unknown',
+    attributionConfidence: 'low',
+    self: false,
+  };
+};
+
 export const resolveLegacyBackfillAttribution = (
   input: Omit<QuerySpeakerAttributionInput, 'selfSource'>,
 ): SpeakerAttribution => {

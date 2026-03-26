@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { BufferState, ChannelState, ChatMessage, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState, ChatMessage, FriendState, NetworkProfile } from '../shared/protocol.js';
 import type { ChannelListState } from '../web/src/app-types.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import type { WorkspaceView } from '../web/src/workspace.js';
@@ -60,10 +60,15 @@ const closedChannelList: ChannelListState = {
   error: null,
 };
 
-const makeWorkspace = (): WorkspaceView => {
+const makeWorkspace = (overrides: Partial<{ channelUsers: ChannelUserState[] }> = {}): WorkspaceView => {
   const network = makeNetwork();
   const selectedBuffer = makeBuffer();
-  const selectedChannel = makeChannel({ id: selectedBuffer.id, networkId: selectedBuffer.networkId, name: selectedBuffer.target });
+  const selectedChannel = makeChannel({
+    id: selectedBuffer.id,
+    networkId: selectedBuffer.networkId,
+    name: selectedBuffer.target,
+    users: overrides.channelUsers ?? [],
+  });
   return {
     mode: 'channel-connected',
     selection: { kind: 'buffer', bufferId: selectedBuffer.id },
@@ -143,13 +148,15 @@ const renderChatPane = (
     channelAutoJoinActive: boolean;
     canClearHistory: boolean;
     canImportHistory: boolean;
+    canRepairSelfNickAliases: boolean;
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
+    channelUsers: ChannelUserState[];
   }> = {},
 ) =>
   renderToStaticMarkup(
     <ChatPane
-      workspace={makeWorkspace()}
+      workspace={makeWorkspace({ channelUsers: overrides.channelUsers })}
       friends={[] satisfies FriendState[]}
       selectedMessages={selectedMessages}
       draft=""
@@ -168,6 +175,7 @@ const renderChatPane = (
       onClearHistory={async () => true}
       canImportHistory={overrides.canImportHistory}
       onImportHistory={async () => true}
+      onUpdateSelfNickAliases={overrides.canRepairSelfNickAliases ? async () => true : undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
       onLoadOlderHistory={async () => undefined}
@@ -178,6 +186,7 @@ const renderChatPane = (
       onCloseChannelList={() => undefined}
       onJoinChannelFromList={async () => undefined}
       onOpenMentionedChannel={() => undefined}
+      onOpenParticipantQuery={() => undefined}
       onOpenChannelList={() => undefined}
     />
   );
@@ -216,6 +225,7 @@ const renderQueryPane = (
       onCloseChannelList={() => undefined}
       onJoinChannelFromList={async () => undefined}
       onOpenMentionedChannel={() => undefined}
+      onOpenParticipantQuery={() => undefined}
       onOpenChannelList={() => undefined}
     />
   );
@@ -245,6 +255,7 @@ const renderServerPane = (selectedMessages: ChatMessage[]) =>
       onCloseChannelList={() => undefined}
       onJoinChannelFromList={async () => undefined}
       onOpenMentionedChannel={() => undefined}
+      onOpenParticipantQuery={() => undefined}
       onOpenChannelList={() => undefined}
     />
   );
@@ -329,12 +340,50 @@ test('private-message rows color self and peer nick labels differently', () => {
   assert.match(markup, /class="mr-2 font-sans font-semibold text-success">MissD</);
 });
 
-test('channel rows keep neutral nick label coloring', () => {
+test('channel rows highlight self nick labels without tinting normal participants', () => {
   const markup = renderChatPane([
-    makeMessage({ id: 'message-1', nick: 'Joby', body: 'plain line', ts: 1 }),
+    makeMessage({ id: 'message-1', nick: 'sofia', self: true, body: 'my line', ts: 1 }),
+    makeMessage({ id: 'message-2', nick: 'Joby', body: 'plain line', ts: 2 }),
   ]);
 
-  assert.match(markup, /class="mr-2 font-sans font-semibold text-inherit">Joby</);
+  assert.match(markup, /class="mr-2 font-sans font-semibold text-primary">sofia</);
+  assert.match(markup, /aria-label="Open private message with Joby"/);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-inherit[^"]*">Joby</);
+  assert.doesNotMatch(markup, /aria-label="Open private message with sofia"/);
+});
+
+test('channel rows tint peer nick labels by their channel mode', () => {
+  const markup = renderChatPane(
+    [
+      makeMessage({ id: 'message-1', nick: 'Opal', body: 'operator line', ts: 1 }),
+      makeMessage({ id: 'message-2', nick: 'Vox', body: 'voiced line', ts: 2 }),
+      makeMessage({ id: 'message-3', nick: 'Guest', body: 'plain line', ts: 3 }),
+    ],
+    {
+      channelUsers: [
+        { nick: 'Opal', mode: 'op' },
+        { nick: 'Vox', mode: 'voice' },
+        { nick: 'Guest', mode: 'normal' },
+      ],
+    },
+  );
+
+  assert.match(markup, /aria-label="Open private message with Opal"/);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-amber-300[^"]*">Opal</);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-emerald-300[^"]*">Vox</);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-inherit[^"]*">Guest</);
+});
+
+test('query and server transcripts keep participant labels non-clickable', () => {
+  const queryMarkup = renderQueryPane([
+    makeMessage({ id: 'message-1', nick: 'MissD', target: 'MissD', body: 'hi', ts: 1 }),
+  ]);
+  const serverMarkup = renderServerPane([
+    makeMessage({ id: 'message-1', nick: 'OperServ', kind: 'notice', body: 'maintenance', ts: 1 }),
+  ]);
+
+  assert.doesNotMatch(queryMarkup, /aria-label="Open private message with MissD"/);
+  assert.doesNotMatch(serverMarkup, /aria-label="Open private message with OperServ"/);
 });
 
 test('action rows keep the sender label and hide the duplicated nick in the body', () => {
@@ -438,6 +487,14 @@ test('channel headers expose log import for normal chat buffers', () => {
   });
 
   assert.match(markup, /Import logs/);
+});
+
+test('channel headers expose self aliases repair for imported history', () => {
+  const markup = renderChatPane([], {
+    canRepairSelfNickAliases: true,
+  });
+
+  assert.match(markup, /Self aliases/);
 });
 
 test('channel headers hide clear history when the action is not available', () => {

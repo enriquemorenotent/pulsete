@@ -135,6 +135,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     onCloseChannelList: () => undefined,
     onJoinChannelFromList: async () => undefined,
     onOpenMentionedChannel: () => undefined,
+    onOpenParticipantQuery: () => undefined,
     onOpenChannelList: () => undefined,
   },
   nicklist: {

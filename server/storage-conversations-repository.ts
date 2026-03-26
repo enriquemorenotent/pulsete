@@ -14,7 +14,7 @@ import {
   listMessages,
   listRecentMessagesForBuffer,
   listRecentMessages,
-  repairQueryMessageAttributions,
+  repairBufferMessageAttributions,
   searchMessages,
 } from './storage-messages.js';
 import {
@@ -152,15 +152,15 @@ export class StorageConversationsRepository {
     return appendMessage(this.db, input, (messageId) => this.getMessageById(messageId));
   }
 
-  repairQueryMessageAttributions(input: {
-    bufferId: string;
+  repairBufferMessageAttributions(input: {
+    bufferKind: 'channel' | 'query';
     networkId: string;
     target: string;
     nick: string;
     altNicks: string[];
     selfNickAliases: string[];
   }) {
-    return runInTransaction(this.db, () => repairQueryMessageAttributions(this.db, input));
+    return runInTransaction(this.db, () => repairBufferMessageAttributions(this.db, input));
   }
 
   createHistoryImportBatch(input: HistoryImportBatchInput) {

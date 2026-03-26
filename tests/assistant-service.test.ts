@@ -151,7 +151,7 @@ const createConversationStore = (
   appendMessage: () => {
     throw new Error('Not implemented in assistant-service test');
   },
-  repairQueryMessageAttributions: () => [],
+  repairBufferMessageAttributions: () => [],
   });
 };
 

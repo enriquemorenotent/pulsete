@@ -10,7 +10,12 @@ import type {
 } from '../shared/protocol.js';
 import type { BufferState, ChatMessage } from '../shared/protocol.js';
 import { badRequest } from './app-error.js';
-import { matchesNickAlias, normalizeNickAliases, resolveImportedSpeakerAttribution } from './message-attribution.js';
+import {
+  matchesNickAlias,
+  normalizeNickAliases,
+  resolveImportedChannelAttribution,
+  resolveImportedSpeakerAttribution,
+} from './message-attribution.js';
 import type { MessageInput } from './storage-types.js';
 
 type ParsedLogMessage = {
@@ -274,13 +279,10 @@ const normalizeParsedMessage = (
         target: buffer.target,
         selfNickKeys,
       })
-    : {
-        speakerRole: matchesNickAlias(message.nick, selfNickKeys) ? 'self' as const : 'other' as const,
-        speakerNick: message.nick,
-        attributionSource: matchesNickAlias(message.nick, selfNickKeys) ? 'import-alias' as const : 'unknown' as const,
-        attributionConfidence: matchesNickAlias(message.nick, selfNickKeys) ? 'high' as const : 'low' as const,
-        self: matchesNickAlias(message.nick, selfNickKeys),
-      };
+    : resolveImportedChannelAttribution({
+        nick: message.nick,
+        selfNickKeys,
+      });
   return {
     id: randomUUID(),
     networkId: buffer.networkId,

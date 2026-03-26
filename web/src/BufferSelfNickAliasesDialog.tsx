@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { BufferSelfNickAliasesRequest } from '../../shared/protocol.js';
+import type { BufferSelfNickAliasesRequest, BufferState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -15,15 +15,16 @@ import {
   SelfNickAliasesField,
 } from './self-nick-aliases.js';
 
-type QuerySelfNickAliasesDialogProps = {
+type BufferSelfNickAliasesDialogProps = {
   open: boolean;
   targetLabel: string;
+  bufferKind: Extract<BufferState['kind'], 'channel' | 'query'>;
   currentAliases: string[];
   onClose: () => void;
   onSave: (input: BufferSelfNickAliasesRequest) => Promise<boolean>;
 };
 
-export function QuerySelfNickAliasesDialog(props: QuerySelfNickAliasesDialogProps) {
+export function BufferSelfNickAliasesDialog(props: BufferSelfNickAliasesDialogProps) {
   const [value, setValue] = useState(() => formatCommaSeparatedNicks(props.currentAliases));
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,6 +49,8 @@ export function QuerySelfNickAliasesDialog(props: QuerySelfNickAliasesDialogProp
     }
   };
 
+  const scopeLabel = props.bufferKind === 'channel' ? 'this channel' : 'this private chat';
+
   return (
     <Dialog open={props.open} onOpenChange={(open) => !open && !submitting && props.onClose()}>
       <DialogContent className="w-[min(calc(100vw-1rem),28rem)]">
@@ -59,12 +62,12 @@ export function QuerySelfNickAliasesDialog(props: QuerySelfNickAliasesDialogProp
         </DialogHeader>
 
         <SelfNickAliasesField
-          id="query-self-nick-aliases"
+          id="buffer-self-nick-aliases"
           label="Old self nicks"
           value={value}
           disabled={submitting}
           placeholder="comma-separated, e.g. sofiaIsBack, oldsofia"
-          hint="These aliases apply only to this private chat and only to imported or repaired history."
+          hint={`These aliases apply only to imported or repaired history in ${scopeLabel}.`}
           onChange={setValue}
         />
 

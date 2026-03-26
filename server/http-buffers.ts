@@ -78,7 +78,7 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   if (selfNickAliasesMatch && req.method === 'PUT') {
     const bufferId = decodeRouteParam(selfNickAliasesMatch[1]);
     const input = readBufferSelfNickAliasesInput(await readJson(req));
-    writeJson(res, 200, { ok: true, ...context.buffers.updateQuerySelfNickAliases(bufferId, input) });
+    writeJson(res, 200, { ok: true, ...context.buffers.updateBufferSelfNickAliases(bufferId, input) });
     return true;
   }
 

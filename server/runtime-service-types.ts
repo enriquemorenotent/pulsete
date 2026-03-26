@@ -43,7 +43,7 @@ export type RuntimeConversationMutations = {
     bufferId: string,
     input: BufferHistoryImportRequest,
   ): { messages: readonly ServerMessage[]; summary: BufferHistoryImportSummary };
-  updateQuerySelfNickAliases(
+  updateBufferSelfNickAliases(
     bufferId: string,
     input: BufferSelfNickAliasesRequest,
   ): { buffer: BufferState; repairedCount: number; messages: readonly ServerMessage[] };
@@ -105,7 +105,7 @@ export type RuntimeHttpApi = {
     exportHistory: RuntimeConversationMutations['exportHistory'];
     clearHistory: RuntimeConversationMutations['clearHistory'];
     importHistory: RuntimeConversationMutations['importHistory'];
-    updateQuerySelfNickAliases: RuntimeConversationMutations['updateQuerySelfNickAliases'];
+    updateBufferSelfNickAliases: RuntimeConversationMutations['updateBufferSelfNickAliases'];
   };
   friends: {
     add: RuntimeFriendMutations['upsertFriend'];

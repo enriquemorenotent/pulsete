@@ -169,8 +169,8 @@ test('query alias repairs stay scoped to the selected private chat', () => {
     ts: 2,
   });
 
-  const repaired = storage.conversations.repairQueryMessageAttributions({
-    bufferId: missdBuffer.id,
+  const repaired = storage.conversations.repairBufferMessageAttributions({
+    bufferKind: 'query',
     networkId: network.id,
     target: 'MissD',
     nick: network.nick,
@@ -186,6 +186,73 @@ test('query alias repairs stay scoped to the selected private chat', () => {
   assert.equal(storage.conversations.getMessageById('other-query-imported')?.speakerNick, 'sofiaIsBack');
   assert.equal(storage.conversations.getMessageById('other-query-imported')?.attributionSource, 'query-target');
   assert.equal(storage.conversations.getMessageById('other-query-imported')?.self, false);
+});
+
+test('channel alias repairs update only the selected channel history', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage, {
+    nick: 'sofia',
+    altNicks: ['sofia_', 'sofia__'],
+  });
+  storage.conversations.upsertChannel({
+    networkId: network.id,
+    name: '#lesdomme',
+    topic: '',
+    users: [],
+  });
+  storage.conversations.upsertChannel({
+    networkId: network.id,
+    name: '#other',
+    topic: '',
+    users: [],
+  });
+
+  storage.conversations.appendMessage({
+    id: 'channel-imported',
+    networkId: network.id,
+    target: '#lesdomme',
+    nick: 'oldsofia',
+    speakerRole: 'other',
+    speakerNick: 'oldsofia',
+    attributionSource: 'unknown',
+    attributionConfidence: 'low',
+    body: 'old imported self line',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.appendMessage({
+    id: 'other-channel-imported',
+    networkId: network.id,
+    target: '#other',
+    nick: 'oldsofia',
+    speakerRole: 'other',
+    speakerNick: 'oldsofia',
+    attributionSource: 'unknown',
+    attributionConfidence: 'low',
+    body: 'same nick in another channel',
+    kind: 'line',
+    self: false,
+    ts: 2,
+  });
+
+  const repaired = storage.conversations.repairBufferMessageAttributions({
+    bufferKind: 'channel',
+    networkId: network.id,
+    target: '#lesdomme',
+    nick: network.nick,
+    altNicks: network.altNicks,
+    selfNickAliases: ['oldsofia'],
+  });
+
+  assert.deepEqual(repaired.map((message) => message.id), ['channel-imported']);
+  assert.equal(storage.conversations.getMessageById('channel-imported')?.speakerRole, 'self');
+  assert.equal(storage.conversations.getMessageById('channel-imported')?.attributionSource, 'import-alias');
+  assert.equal(storage.conversations.getMessageById('channel-imported')?.self, true);
+  assert.equal(storage.conversations.getMessageById('other-channel-imported')?.speakerRole, 'other');
+  assert.equal(storage.conversations.getMessageById('other-channel-imported')?.attributionSource, 'unknown');
+  assert.equal(storage.conversations.getMessageById('other-channel-imported')?.self, false);
 });
 
 test('unknown network filters do not fall back to global buffers or channels', () => {

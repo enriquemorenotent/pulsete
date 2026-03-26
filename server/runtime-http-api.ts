@@ -45,7 +45,7 @@ export const createRuntimeHttpApi = ({
     exportHistory: (bufferId) => conversations.exportHistory(bufferId),
     clearHistory: (bufferId) => conversations.clearHistory(bufferId),
     importHistory: (bufferId, input) => conversations.importHistory(bufferId, input),
-    updateQuerySelfNickAliases: (bufferId, input) => conversations.updateQuerySelfNickAliases(bufferId, input),
+    updateBufferSelfNickAliases: (bufferId, input) => conversations.updateBufferSelfNickAliases(bufferId, input),
   },
   friends: {
     add: (nick) => friends.upsertFriend(nick),
