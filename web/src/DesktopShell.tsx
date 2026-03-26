@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { PanelsTopLeft, Settings2 } from 'lucide-react';
+import { PanelsTopLeft, Search, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { ChatPane } from './ChatPane.js';
+import { CommandPaletteDialog } from './CommandPaletteDialog.js';
+import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import {
   getDefaultCompactWorkspacePane,
@@ -61,6 +63,23 @@ export function DesktopShell(props: DesktopShellModel) {
     }
   }, [compactPane, selectedBufferId, showRightSidebar]);
 
+  useEffect(() => {
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      const blockingDialogOpen =
+        !props.commandPalette.open && document.querySelector('[role="dialog"]') !== null;
+      if (!shouldOpenCommandPaletteFromKeydown(event, {
+        blockingDialogOpen,
+        paletteOpen: props.commandPalette.open,
+      })) {
+        return;
+      }
+      event.preventDefault();
+      props.commandPalette.onOpen();
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [props.commandPalette.onOpen, props.commandPalette.open]);
+
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
@@ -72,6 +91,11 @@ export function DesktopShell(props: DesktopShellModel) {
               onChange={props.header.onMessageDisplayModeChange}
             />
           ) : null}
+          <Button variant="outline" size="sm" onClick={props.commandPalette.onOpen}>
+            <Search />
+            Go to…
+            <span className="text-[11px] font-normal text-muted-foreground">Ctrl/Cmd+K</span>
+          </Button>
           <Button variant="outline" size="sm" onClick={props.header.onOpenPreferences}>
             <Settings2 />
             Preferences
@@ -177,6 +201,11 @@ export function DesktopShell(props: DesktopShellModel) {
           onFavorite={props.networkManager.onFavorite}
         />
       ) : null}
+      <CommandPaletteDialog
+        open={props.commandPalette.open}
+        entries={props.commandPalette.entries}
+        onClose={props.commandPalette.onClose}
+      />
       <PreferencesDialog {...props.preferences} />
       {props.networkEditor.open ? (
         <NetworkEditorDialog

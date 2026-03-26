@@ -1,4 +1,4 @@
-import { memo, useState, type RefObject } from 'react';
+import { memo, type RefObject } from 'react';
 import type {
   BufferHistoryImportRequest,
   BufferState,
@@ -22,6 +22,7 @@ export type ChatPaneProps = {
   friends: FriendState[];
   selectedMessages: ChatMessage[];
   draft: string;
+  focusContextKey?: string | null;
   completionEnabled?: boolean;
   completionContextKey?: string | null;
   completionCandidates?: string[];
@@ -41,7 +42,13 @@ export type ChatPaneProps = {
   canDownloadHistory?: boolean;
   onDownloadHistory?: () => Promise<boolean>;
   canImportHistory?: boolean;
+  historyImportOpen?: boolean;
+  onOpenHistoryImport?: () => void;
+  onCloseHistoryImport?: () => void;
   onImportHistory?: (input: BufferHistoryImportRequest) => Promise<boolean>;
+  selfNickAliasesOpen?: boolean;
+  onOpenSelfNickAliases?: () => void;
+  onCloseSelfNickAliases?: () => void;
   onUpdateSelfNickAliases?: (input: { selfNickAliases: string[] }) => Promise<boolean>;
   canLoadOlderHistory?: boolean;
   loadingOlderHistory?: boolean;
@@ -58,8 +65,6 @@ export type ChatPaneProps = {
 };
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
-  const [historyImportOpen, setHistoryImportOpen] = useState(false);
-  const [selfNickAliasesOpen, setSelfNickAliasesOpen] = useState(false);
   const selectedBuffer = props.workspace.selectedBuffer;
   const selectedChatBuffer: (BufferState & { kind: 'channel' | 'query' }) | null =
     selectedBuffer && (selectedBuffer.kind === 'channel' || selectedBuffer.kind === 'query')
@@ -86,12 +91,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           canDownloadHistory={props.canDownloadHistory}
           onDownloadHistory={props.onDownloadHistory}
           canImportHistory={props.canImportHistory}
-          onOpenHistoryImport={props.onImportHistory ? () => setHistoryImportOpen(true) : undefined}
-          onOpenSelfNickAliases={
-            selectedChatBuffer && props.onUpdateSelfNickAliases
-              ? () => setSelfNickAliasesOpen(true)
-              : undefined
-          }
+          onOpenHistoryImport={props.onOpenHistoryImport}
+          onOpenSelfNickAliases={props.onOpenSelfNickAliases}
           onCloseChannel={props.onCloseChannel}
           onCloseBuffer={props.onCloseBuffer}
           onOpenChannelList={props.onOpenChannelList}
@@ -114,6 +115,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           <ChatPaneComposer
             draft={props.draft}
             placeholder={props.workspace.composerPlaceholder}
+            focusContextKey={props.focusContextKey}
             completionEnabled={props.completionEnabled}
             completionContextKey={props.completionContextKey}
             completionCandidates={props.completionCandidates}
@@ -132,20 +134,20 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       />
       {props.onImportHistory ? (
         <HistoryImportDialog
-          open={historyImportOpen}
+          open={props.historyImportOpen ?? false}
           targetLabel={props.workspace.headerTitle}
           targetKind={selectedChatBuffer?.kind ?? 'query'}
-          onClose={() => setHistoryImportOpen(false)}
+          onClose={() => props.onCloseHistoryImport?.()}
           onImport={props.onImportHistory}
         />
       ) : null}
       {selectedChatBuffer && props.onUpdateSelfNickAliases ? (
         <BufferSelfNickAliasesDialog
-          open={selfNickAliasesOpen}
+          open={props.selfNickAliasesOpen ?? false}
           targetLabel={props.workspace.headerTitle}
           bufferKind={selectedChatBuffer.kind}
           currentAliases={selectedChatBuffer.selfNickAliases ?? []}
-          onClose={() => setSelfNickAliasesOpen(false)}
+          onClose={() => props.onCloseSelfNickAliases?.()}
           onSave={props.onUpdateSelfNickAliases}
         />
       ) : null}

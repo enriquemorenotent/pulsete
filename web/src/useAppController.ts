@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { State } from './app-types.js';
 import { useAppLifecycle } from './useAppLifecycle.js';
 import {
@@ -20,6 +21,7 @@ import { useAppSession } from './useAppSession.js';
 import { useAppUiState } from './useAppUiState.js';
 import { useComposerHistory } from './composer-history.js';
 import { useNetworkEditorController } from './useNetworkEditorController.js';
+import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.js';
 import { useNetworkManagerController } from './useNetworkManagerController.js';
 import { usePreferencesController } from './usePreferencesController.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
@@ -83,6 +85,15 @@ export function useAppController(): AppController {
     dispatch,
     ui,
   });
+  const commandPalette = useDesktopCommandPaletteModel({
+    actions,
+    dispatch,
+    friends: state.domain.friends,
+    networks: state.domain.networks,
+    sidebarConnections,
+    ui,
+    workspace,
+  });
   const sidebar = useDesktopSidebarModel({
     actions,
     friends: state.domain.friends,
@@ -132,9 +143,21 @@ export function useAppController(): AppController {
     editor: state.transient.networkManager.editor,
     mode: state.transient.networkManager.mode,
   });
+
+  useEffect(() => {
+    if (!ui.bufferToolDialog) {
+      return;
+    }
+    if (workspace.selectedBuffer?.id === ui.bufferToolDialog.bufferId) {
+      return;
+    }
+    ui.closeBufferToolDialog();
+  }, [ui.bufferToolDialog, ui.closeBufferToolDialog, workspace.selectedBuffer?.id]);
+
   const shell = {
     workspace,
     header,
+    commandPalette,
     sidebar,
     chat,
     nicklist,

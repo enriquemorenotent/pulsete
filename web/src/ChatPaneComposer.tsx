@@ -38,9 +38,15 @@ export const getChatPaneComposerKeyAction = (
   return null;
 };
 
+export const shouldAutoFocusChatPaneComposer = (
+  previousContextKey: string | null,
+  nextContextKey: string | null,
+) => !!nextContextKey && previousContextKey !== nextContextKey;
+
 type ChatPaneComposerProps = {
   draft: string;
   placeholder: string;
+  focusContextKey?: string | null;
   completionEnabled?: boolean;
   completionContextKey?: string | null;
   completionCandidates?: string[];
@@ -54,10 +60,27 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const completionSessionRef = useRef<ComposerCompletionSession | null>(null);
   const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
+  const previousFocusContextKeyRef = useRef<string | null>(props.focusContextKey ?? null);
 
   useEffect(() => {
     completionSessionRef.current = null;
   }, [props.completionCandidates, props.completionContextKey]);
+
+  useEffect(() => {
+    const nextFocusContextKey = props.focusContextKey ?? null;
+    const previousFocusContextKey = previousFocusContextKeyRef.current;
+    previousFocusContextKeyRef.current = nextFocusContextKey;
+    if (!shouldAutoFocusChatPaneComposer(previousFocusContextKey, nextFocusContextKey)) {
+      return;
+    }
+    const input = inputRef.current;
+    if (!input) {
+      return;
+    }
+    input.focus({ preventScroll: true });
+    const caret = input.value.length;
+    input.setSelectionRange(caret, caret);
+  }, [props.focusContextKey]);
 
   useLayoutEffect(() => {
     const pendingSelection = pendingSelectionRef.current;

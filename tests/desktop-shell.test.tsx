@@ -80,6 +80,12 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     onOpenNetworkManager: () => undefined,
     onOpenPreferences: () => undefined,
   },
+  commandPalette: {
+    open: false,
+    entries: [],
+    onOpen: () => undefined,
+    onClose: () => undefined,
+  },
   sidebar: {
     connections: [],
     friends: [],
@@ -222,4 +228,13 @@ test('desktop shell keeps only the left resize handle when no right sidebar is a
 
   assert.match(markup, /aria-label="Resize left sidebar"/);
   assert.doesNotMatch(markup, /aria-label="Resize right sidebar"/);
+});
+
+test('desktop shell renders a visible command palette trigger in the header', () => {
+  const markup = renderToStaticMarkup(
+    <DesktopShell {...createModel(createWorkspace({}))} />
+  );
+
+  assert.match(markup, /Go to…/);
+  assert.match(markup, /Ctrl\/Cmd\+K/);
 });

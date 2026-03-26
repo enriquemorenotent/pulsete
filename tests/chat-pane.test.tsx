@@ -174,7 +174,13 @@ const renderChatPane = (
       canClearHistory={overrides.canClearHistory}
       onClearHistory={async () => true}
       canImportHistory={overrides.canImportHistory}
+      historyImportOpen={false}
+      onOpenHistoryImport={overrides.canImportHistory ? () => undefined : undefined}
+      onCloseHistoryImport={() => undefined}
       onImportHistory={async () => true}
+      selfNickAliasesOpen={false}
+      onOpenSelfNickAliases={overrides.canRepairSelfNickAliases ? () => undefined : undefined}
+      onCloseSelfNickAliases={() => undefined}
       onUpdateSelfNickAliases={overrides.canRepairSelfNickAliases ? async () => true : undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
@@ -215,6 +221,10 @@ const renderQueryPane = (
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
+      historyImportOpen={false}
+      onCloseHistoryImport={() => undefined}
+      selfNickAliasesOpen={false}
+      onCloseSelfNickAliases={() => undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
       onLoadOlderHistory={async () => undefined}
@@ -248,6 +258,10 @@ const renderServerPane = (selectedMessages: ChatMessage[]) =>
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
+      historyImportOpen={false}
+      onCloseHistoryImport={() => undefined}
+      selfNickAliasesOpen={false}
+      onCloseSelfNickAliases={() => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}

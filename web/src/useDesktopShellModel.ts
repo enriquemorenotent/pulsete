@@ -33,7 +33,14 @@ type DesktopChatModelParams = {
   selectedBufferHistory: SelectedBufferHistoryControls;
   selectedMessages: ChatPaneProps['selectedMessages'];
   workspace: WorkspaceView;
-  ui: Pick<AppUiState, 'messageDisplayMode' | 'scrollRef'>;
+  ui: Pick<
+    AppUiState,
+    | 'bufferToolDialog'
+    | 'closeBufferToolDialog'
+    | 'messageDisplayMode'
+    | 'openBufferToolDialog'
+    | 'scrollRef'
+  >;
 };
 
 type DesktopNicklistModelParams = {
@@ -124,11 +131,18 @@ export function useDesktopChatModel({
   const downloadHistoryBufferId = canDownloadHistory ? workspace.selectedBuffer?.id ?? null : null;
   const importHistoryBufferId = canImportHistory ? workspace.selectedBuffer?.id ?? null : null;
   const repairSelfNickAliasesBufferId = canRepairSelfNickAliases ? workspace.selectedBuffer?.id ?? null : null;
+  const historyImportOpen =
+    ui.bufferToolDialog?.kind === 'history-import'
+    && ui.bufferToolDialog.bufferId === importHistoryBufferId;
+  const selfNickAliasesOpen =
+    ui.bufferToolDialog?.kind === 'self-aliases'
+    && ui.bufferToolDialog.bufferId === repairSelfNickAliasesBufferId;
   return useMemo(() => ({
     workspace,
     friends,
     selectedMessages,
     draft: composer.draft,
+    focusContextKey: workspace.selectedBuffer?.id ?? null,
     completionEnabled: composerCompletion.enabled,
     completionContextKey: composerCompletion.contextKey,
     completionCandidates: composerCompletion.candidates,
@@ -152,9 +166,19 @@ export function useDesktopChatModel({
       ? () => actions.downloadBufferHistory(downloadHistoryBufferId)
       : undefined,
     canImportHistory,
+    historyImportOpen,
+    onOpenHistoryImport: importHistoryBufferId
+      ? () => ui.openBufferToolDialog('history-import', importHistoryBufferId)
+      : undefined,
+    onCloseHistoryImport: ui.closeBufferToolDialog,
     onImportHistory: importHistoryBufferId
       ? (input) => actions.importBufferHistory(importHistoryBufferId, input)
       : undefined,
+    selfNickAliasesOpen,
+    onOpenSelfNickAliases: repairSelfNickAliasesBufferId
+      ? () => ui.openBufferToolDialog('self-aliases', repairSelfNickAliasesBufferId)
+      : undefined,
+    onCloseSelfNickAliases: ui.closeBufferToolDialog,
     onUpdateSelfNickAliases: repairSelfNickAliasesBufferId
       ? (input) => actions.updateBufferSelfNickAliases(repairSelfNickAliasesBufferId, input)
       : undefined,
@@ -198,10 +222,12 @@ export function useDesktopChatModel({
     canClearHistory,
     canDownloadHistory,
     canImportHistory,
+    historyImportOpen,
     selectedBufferHistory,
     clearHistoryBufferId,
     downloadHistoryBufferId,
     importHistoryBufferId,
+    selfNickAliasesOpen,
     repairSelfNickAliasesBufferId,
     participantQueryNetwork,
     composer.draft,
@@ -212,6 +238,8 @@ export function useDesktopChatModel({
     networks,
     selectedMessages,
     ui.messageDisplayMode,
+    ui.openBufferToolDialog,
+    ui.closeBufferToolDialog,
     ui.scrollRef,
     workspace,
   ]);

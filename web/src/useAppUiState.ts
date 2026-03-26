@@ -1,11 +1,24 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { SocketHandle } from './client.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
+export type BufferToolDialogKind = 'history-import' | 'self-aliases';
+
+export type BufferToolDialogState = {
+  kind: BufferToolDialogKind;
+  bufferId: string;
+} | null;
+
 export type AppUiState = {
+  bufferToolDialog: BufferToolDialogState;
+  closeBufferToolDialog: () => void;
+  closeCommandPalette: () => void;
   closePreferences: () => void;
+  commandPaletteOpen: boolean;
   didAutoOpenManagerRef: { current: boolean };
   messageDisplayMode: MessageDisplayMode;
+  openBufferToolDialog: (kind: BufferToolDialogKind, bufferId: string) => void;
+  openCommandPalette: () => void;
   openPreferences: () => void;
   preferencesOpen: boolean;
   scrollRef: { current: HTMLDivElement | null };
@@ -14,17 +27,33 @@ export type AppUiState = {
 };
 
 export function useAppUiState(): AppUiState {
+  const [bufferToolDialog, setBufferToolDialog] = useState<BufferToolDialogState>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [messageDisplayMode, setMessageDisplayMode] = useState<MessageDisplayMode>('colors');
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const socketRef = useRef<SocketHandle | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const didAutoOpenManagerRef = useRef(false);
+  const closeBufferToolDialog = useCallback(() => setBufferToolDialog(null), []);
+  const closeCommandPalette = useCallback(() => setCommandPaletteOpen(false), []);
+  const closePreferences = useCallback(() => setPreferencesOpen(false), []);
+  const openBufferToolDialog = useCallback((kind: BufferToolDialogKind, bufferId: string) => {
+    setBufferToolDialog({ kind, bufferId });
+  }, []);
+  const openCommandPalette = useCallback(() => setCommandPaletteOpen(true), []);
+  const openPreferences = useCallback(() => setPreferencesOpen(true), []);
 
   return {
-    closePreferences: () => setPreferencesOpen(false),
+    bufferToolDialog,
+    closeBufferToolDialog,
+    closeCommandPalette,
+    closePreferences,
+    commandPaletteOpen,
     didAutoOpenManagerRef,
     messageDisplayMode,
-    openPreferences: () => setPreferencesOpen(true),
+    openBufferToolDialog,
+    openCommandPalette,
+    openPreferences,
     preferencesOpen,
     scrollRef,
     setMessageDisplayMode,

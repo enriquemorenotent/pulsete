@@ -1,4 +1,5 @@
 import type { AssistantPanelProps } from './AssistantPanel.js';
+import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
 import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
 import type { ChatPaneProps } from './ChatPane.js';
@@ -13,6 +14,13 @@ export type DesktopShellHeaderModel = {
   onMessageDisplayModeChange: (mode: MessageDisplayMode) => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
+};
+
+export type DesktopShellCommandPaletteModel = {
+  open: boolean;
+  entries: CommandPaletteEntry[];
+  onOpen: () => void;
+  onClose: () => void;
 };
 
 export type DesktopShellNicklistModel = {
@@ -53,6 +61,7 @@ export type DesktopShellNetworkEditorModel = {
 export type DesktopShellModel = {
   workspace: WorkspaceView;
   header: DesktopShellHeaderModel;
+  commandPalette: DesktopShellCommandPaletteModel;
   sidebar: ConnectionSidebarProps;
   chat: ChatPaneProps;
   nicklist: DesktopShellNicklistModel;

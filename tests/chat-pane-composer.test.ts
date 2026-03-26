@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getChatPaneComposerKeyAction } from '../web/src/ChatPaneComposer.js';
+import {
+  getChatPaneComposerKeyAction,
+  shouldAutoFocusChatPaneComposer,
+} from '../web/src/ChatPaneComposer.js';
 
 const makeEvent = (
   overrides: Partial<Parameters<typeof getChatPaneComposerKeyAction>[0]> = {},
@@ -30,4 +33,13 @@ test('chat composer does not submit while composing IME text', () => {
     getChatPaneComposerKeyAction(makeEvent({ nativeEvent: { isComposing: true } }), 'hello'),
     null,
   );
+});
+
+test('chat composer auto-focuses when the buffer context changes', () => {
+  assert.equal(shouldAutoFocusChatPaneComposer('buffer-1', 'buffer-2'), true);
+});
+
+test('chat composer does not auto-focus when the buffer context is unchanged or missing', () => {
+  assert.equal(shouldAutoFocusChatPaneComposer('buffer-1', 'buffer-1'), false);
+  assert.equal(shouldAutoFocusChatPaneComposer('buffer-1', null), false);
 });
