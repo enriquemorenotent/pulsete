@@ -1,4 +1,4 @@
-import type { AssistantTaskKind, ChatMessage } from '../shared/protocol.js';
+import type { AssistantProfileFactIntent, AssistantTaskKind, ChatMessage } from '../shared/protocol.js';
 import { getTranscriptSpeakerLabel } from '../shared/message-speaker.js';
 
 const fullContextCharBudget = 48_000;
@@ -68,6 +68,56 @@ const stopWords = new Set([
   'you',
   'your',
 ]);
+
+const profileFactNoiseTerms = new Set([
+  'a',
+  'about',
+  'am',
+  'an',
+  'assistant',
+  'buffer',
+  'chat',
+  'conversation',
+  'does',
+  'give',
+  'history',
+  'is',
+  'me',
+  'messages',
+  'please',
+  'question',
+  'she',
+  'tell',
+  'the',
+  'transcript',
+  'what',
+]);
+
+const originLocationCueTerms = new Set([
+  'where',
+  'from',
+  'live',
+  'lives',
+  'city',
+  'state',
+  'country',
+  'coast',
+  'hometown',
+  'location',
+]);
+
+const originLocationCuePhrases = [
+  'west coast',
+  'east coast',
+  'where are you from',
+  'where is she from',
+  'where is he from',
+  'where does she live',
+  'where does he live',
+  'what city',
+  'what state',
+  'what country',
+] as const;
 
 type AssistantHistoryContextInput = {
   messages: ChatMessage[];
@@ -257,6 +307,41 @@ export const extractSearchTerms = (prompt: string) => {
     unique.add(term);
   }
   return [...unique];
+};
+
+export const extractProfileFactTerms = (
+  prompt: string,
+  intent: AssistantProfileFactIntent,
+) => {
+  if (intent !== 'origin_location') {
+    return [];
+  }
+  const normalizedPrompt = prompt.toLowerCase();
+  const terms: string[] = [];
+  const seen = new Set<string>();
+  for (const phrase of originLocationCuePhrases) {
+    if (!normalizedPrompt.includes(phrase) || seen.has(phrase)) {
+      continue;
+    }
+    seen.add(phrase);
+    terms.push(phrase);
+  }
+  const tokens = normalizedPrompt.match(/[a-z0-9#@._-]+/g) ?? [];
+  for (const token of tokens) {
+    if (terms.length >= 8) {
+      break;
+    }
+    if (
+      seen.has(token)
+      || profileFactNoiseTerms.has(token)
+      || (!originLocationCueTerms.has(token) && token.length < 3)
+    ) {
+      continue;
+    }
+    seen.add(token);
+    terms.push(token);
+  }
+  return terms;
 };
 
 const isSearchTerm = (term: string) =>

@@ -3,6 +3,7 @@ import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
 import { resolveCurrentChannelAutoJoinState } from './channel-autojoin.js';
+import { buildComposerCompletionModel } from './composer-completion.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { ComposerController } from './composer-history.js';
 import type { AppUiState } from './useAppUiState.js';
@@ -105,6 +106,10 @@ export function useDesktopChatModel({
   ui,
 }: DesktopChatModelParams): DesktopShellModel['chat'] {
   const channelAutoJoin = resolveCurrentChannelAutoJoinState(networks, workspace);
+  const composerCompletion = useMemo(
+    () => buildComposerCompletionModel(workspace),
+    [workspace]
+  );
   const canClearHistory =
     workspace.selectedBuffer?.kind === 'channel'
     || workspace.selectedBuffer?.kind === 'query';
@@ -120,6 +125,9 @@ export function useDesktopChatModel({
     friends,
     selectedMessages,
     draft: composer.draft,
+    completionEnabled: composerCompletion.enabled,
+    completionContextKey: composerCompletion.contextKey,
+    completionCandidates: composerCompletion.candidates,
     messageDisplayMode: ui.messageDisplayMode,
     scrollRef: ui.scrollRef,
     onDraftChange: composer.setDraft,
@@ -176,6 +184,9 @@ export function useDesktopChatModel({
     channelAutoJoin.active,
     channelAutoJoin.available,
     channelListNetwork,
+    composerCompletion.candidates,
+    composerCompletion.contextKey,
+    composerCompletion.enabled,
     canClearHistory,
     canDownloadHistory,
     canImportHistory,

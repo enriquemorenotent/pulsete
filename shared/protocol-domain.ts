@@ -309,6 +309,11 @@ export const assistantAskClarificationSchema = z.discriminatedUnion('kind', [
 ]);
 export type AssistantAskClarification = z.infer<typeof assistantAskClarificationSchema>;
 
+export const assistantProfileFactIntentSchema = z.enum([
+  'origin_location',
+]);
+export type AssistantProfileFactIntent = z.infer<typeof assistantProfileFactIntentSchema>;
+
 export const assistantAskRetrievalRequestSchema = z.discriminatedUnion('operation', [
   z.object({
     operation: z.literal('load_recent_buffer_messages'),
@@ -317,6 +322,13 @@ export const assistantAskRetrievalRequestSchema = z.discriminatedUnion('operatio
   z.object({
     operation: z.literal('load_opening_buffer_messages'),
     limit: z.number().int().positive(),
+  }),
+  z.object({
+    operation: z.literal('profile_fact_search'),
+    intent: assistantProfileFactIntentSchema,
+    limit: z.number().int().positive(),
+    query: z.string(),
+    searchTerms: z.array(z.string()),
   }),
   z.object({
     operation: z.literal('fts_search'),

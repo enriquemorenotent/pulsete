@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { AssistantPanel, type AssistantPanelProps } from './AssistantPanel.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
@@ -25,7 +25,7 @@ export const getDefaultSidebarTab = (
 export const resolveSidebarTab = (current: SidebarTab, showNicklistTabs: boolean): SidebarTab =>
   showNicklistTabs ? current : 'assistant';
 
-export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
+export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   const showNicklistTabs = props.workspace.showNicklist && !!props.workspace.selectedChannel;
   const [tab, setTab] = useState<SidebarTab>(() => getDefaultSidebarTab(showNicklistTabs, props.initialTab));
 
@@ -65,4 +65,4 @@ export function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
       </div>
     </div>
   );
-}
+});

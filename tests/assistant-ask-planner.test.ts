@@ -227,6 +227,47 @@ test('follow-up recall without new terms reuses prior retrieval evidence instead
   assert.equal(plan.requests[0]?.operation, 'fts_search');
 });
 
+test('origin questions pivot away from stale prior retrieval topics', () => {
+  const plan = planAssistantAskTurn({
+    prompt: 'Where is MissD from?',
+    queryBuffers,
+    rememberedSubject: missD,
+    selectedBuffer: missD,
+    previousRetrievals: [{
+      subject: missD,
+      request: {
+        operation: 'search_buffer',
+        limit: 5,
+        searchTerms: ['fantasy', 'hotel'],
+      },
+      stage: 'legacy_search',
+      query: 'fantasy, hotel',
+      confidence: 0.5,
+      scoreSummary: 'hits=1',
+      context: 'Retrieved transcript context for MissD:\nOperation: search_buffer(limit=5)',
+      matchCount: 1,
+      matchedMessageIds: ['message-1'],
+      windowMessageIds: [['message-1']],
+      evidenceMessageIds: ['message-1'],
+    }],
+  });
+
+  assert.equal(plan.outcome, 'retrieve');
+  assert.equal(plan.resolvedSubject, missD);
+  assert.equal(plan.reusePreviousRetrievals, false);
+  if (plan.outcome !== 'retrieve') {
+    assert.fail('Expected a retrieval plan');
+  }
+  assert.equal(plan.requests[0]?.operation, 'profile_fact_search');
+  assert.equal(plan.requests[1]?.operation, 'load_opening_buffer_messages');
+  if (plan.requests[0]?.operation !== 'profile_fact_search') {
+    assert.fail('Expected a profile fact retrieval request');
+  }
+  assert.deepEqual(plan.requests[0].intent, 'origin_location');
+  assert.ok(plan.requests[0].searchTerms.includes('where'));
+  assert.ok(plan.requests[0].searchTerms.includes('from'));
+});
+
 test('implicit recollection prompts trigger transcript retrieval on the first turn', () => {
   const plan = planAssistantAskTurn({
     prompt: 'MissD and I have talked about a fantasy, the first time that we would meet in person. Can you remind me what it is?',
@@ -326,6 +367,97 @@ test('opening-history retrieval renders the first messages in the buffer', () =>
   assert.match(context, /sofia: opening 2/);
   assert.match(context, /opening 1/);
   assert.match(context, /opening 2/);
+});
+
+test('profile-fact retrieval prefers direct origin question and answer windows', () => {
+  const messages: ChatMessage[] = [
+    {
+      id: 'msg-1',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'sofia',
+      body: 'Where are you from?',
+      kind: 'line',
+      self: true,
+      ts: Date.parse('2025-10-31T01:31:00Z'),
+    },
+    {
+      id: 'msg-2',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'sofia',
+      body: 'West coast is USA?',
+      kind: 'line',
+      self: true,
+      ts: Date.parse('2025-10-31T01:31:30Z'),
+    },
+    {
+      id: 'msg-3',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'MissD',
+      body: 'yes.. california',
+      kind: 'line',
+      self: false,
+      ts: Date.parse('2025-10-31T01:32:00Z'),
+    },
+    {
+      id: 'msg-4',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'MissD',
+      body: 'What brings you here?',
+      kind: 'line',
+      self: false,
+      ts: Date.parse('2025-10-31T01:32:30Z'),
+    },
+  ];
+
+  const retrieval = resolveAssistantAskRetrieval({
+    subject: missD,
+    messages,
+    request: {
+      operation: 'profile_fact_search',
+      intent: 'origin_location',
+      limit: 5,
+      query: 'where, from, west coast',
+      searchTerms: ['where', 'from', 'west coast'],
+    },
+  });
+
+  assert.equal(retrieval.stage, 'profile_fact_search');
+  assert.match(retrieval.context, /Operation: profile_fact_search\(intent=origin_location, limit=5\)/);
+  assert.match(retrieval.context, /Strategy: question-answer windows/);
+  assert.deepEqual(retrieval.matchedMessageIds, ['msg-1', 'msg-2', 'msg-3']);
+  assert.deepEqual(retrieval.evidenceGroups, [{
+    heading: '2025-10-31',
+    lines: [
+      {
+        messageId: 'msg-1',
+        speakerRole: undefined,
+        speakerNick: 'sofia',
+        attributionConfidence: undefined,
+        body: 'Where are you from?',
+        kind: 'line',
+      },
+      {
+        messageId: 'msg-2',
+        speakerRole: undefined,
+        speakerNick: 'sofia',
+        attributionConfidence: undefined,
+        body: 'West coast is USA?',
+        kind: 'line',
+      },
+      {
+        messageId: 'msg-3',
+        speakerRole: undefined,
+        speakerNick: 'MissD',
+        attributionConfidence: undefined,
+        body: 'yes.. california',
+        kind: 'line',
+      },
+    ],
+  }]);
 });
 
 test('fts retrieval stores deterministic evidence groups with exact speaker labels', () => {

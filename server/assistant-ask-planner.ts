@@ -5,11 +5,13 @@ import type {
   AssistantAskEvidenceGroup,
   AssistantAskRetrievalMemory,
   AssistantAskRetrievalRequest,
+  AssistantProfileFactIntent,
   AssistantTurnRouting,
   ChatMessage,
 } from '../shared/protocol.js';
 import { getTranscriptSpeakerLabel } from '../shared/message-speaker.js';
 import {
+  extractProfileFactTerms,
   extractSearchTerms,
   formatTimestamp,
   matchesTerm,
@@ -25,11 +27,13 @@ const spanScanLimit = 3;
 const spanScanWindowSize = 28;
 const spanScanStride = 14;
 const maxFactQueries = 2;
+const profileFactHitLimit = 6;
 const recentEvidenceMessageLimit = 8;
 const openingEvidenceMessageLimit = 8;
 const messageWindowEvidenceMessageLimit = 10;
 const searchEvidenceMessageLimit = 10;
 const evidenceNeighborMaxGapMs = 15 * 60_000;
+const profileFactAnswerWindow = 3;
 
 const searchNoiseTerms = new Set([
   'about',
@@ -156,6 +160,7 @@ type PlanPromptInput = {
 type AskPromptAnalysis = {
   generalSubjectChat: boolean;
   retrievalMode: 'none' | 'opening' | 'recent' | 'fact';
+  factIntent: AssistantProfileFactIntent | null;
   reusePreviousRetrievals: boolean;
   requests: AssistantAskRetrievalRequest[];
   wantsTranscriptFacts: boolean;
@@ -170,6 +175,11 @@ type RetrievalWindow = {
 type SearchHit = {
   message: ChatMessage;
   score: number;
+};
+
+type ProfileFactCandidateWindow = RetrievalWindow & {
+  matchedMessageIds: string[];
+  strategy: 'qa_pair' | 'lexical_fallback';
 };
 
 export const planAssistantAskTurn = ({
@@ -225,6 +235,9 @@ export const resolveAssistantAskRetrieval = ({
   }
   if (request.operation === 'load_opening_buffer_messages') {
     return renderOpeningMessages(subject, resolveOpeningMessages(subject, request.limit, conversations, messages), request.limit);
+  }
+  if (request.operation === 'profile_fact_search') {
+    return renderProfileFactSearchResults(subject, request, conversations, messages);
   }
   if (request.operation === 'message_window') {
     return renderMessageWindow(subject, resolveMessageWindow(subject, request.messageId, request.before, request.after, conversations, messages), request);
@@ -368,9 +381,11 @@ const planPrompt = ({
     }
     return {
       outcome: 'retrieve',
-      instruction: previousRetrievals.length > 0
-        ? 'Use the new transcript evidence together with earlier evidence that still matters. Cite the strongest supporting date or snippet.'
-        : 'Use the retrieved transcript evidence if it helps answer. Keep the answer grounded in that evidence, cite the strongest supporting date or snippet, and say plainly when the evidence is weak.',
+      instruction: promptAnalysis.factIntent === 'origin_location'
+        ? 'Use the retrieved transcript evidence if it helps answer. Prefer direct stated origin or location answers over thematic inference, and if the opening exchange contains a direct answer, say it plainly.'
+        : previousRetrievals.length > 0
+          ? 'Use the new transcript evidence together with earlier evidence that still matters. Cite the strongest supporting date or snippet.'
+          : 'Use the retrieved transcript evidence if it helps answer. Keep the answer grounded in that evidence, cite the strongest supporting date or snippet, and say plainly when the evidence is weak.',
       resolvedSubject: transcriptSubject,
       requests: promptAnalysis.requests,
       routing: null,
@@ -414,6 +429,7 @@ const analyzeAskPrompt = ({
     return {
       generalSubjectChat: false,
       retrievalMode: 'opening',
+      factIntent: null,
       reusePreviousRetrievals: false,
       requests: [],
       wantsTranscriptFacts: true,
@@ -423,12 +439,14 @@ const analyzeAskPrompt = ({
     return {
       generalSubjectChat: false,
       retrievalMode: 'recent',
+      factIntent: null,
       reusePreviousRetrievals: false,
       requests: [],
       wantsTranscriptFacts: true,
     };
   }
 
+  const factIntent = classifyAskFactIntent(prompt, normalizedPrompt);
   const hasPreviousRetrievals = previousRetrievals.length > 0;
   const hasQuotedSearchTerm = hasQuotedSearch(prompt);
   const hasFirstPersonReference = /\b(?:i|me|my|mine|we|us|our|ours)\b/.test(normalizedPrompt);
@@ -436,6 +454,7 @@ const analyzeAskPrompt = ({
   const hasTemporalOrEventReference = /\b(?:when|once|before|earlier|first|last|start|beginning|then|back then|after|during)\b/.test(normalizedPrompt);
   const hasRecallOrLookupReference = /\b(?:remember|remind|find|search|show|quote|quotes|confirm|identify|which one|what was|what is|tell me which|tell me what|look more carefully|look carefully)\b/.test(normalizedPrompt);
   const hasFollowUpCue = /\b(?:it|that|this|those|these|related to|the one|that one|more carefully|again|still|closer|look)\b/.test(normalizedPrompt);
+  const explicitContinuation = hasPreviousRetrievals && isExplicitEvidenceContinuationPrompt(normalizedPrompt);
   const generalSubjectChat = isGeneralSubjectChat(normalizedPrompt)
     && !hasPreviousRetrievals
     && !hasFirstPersonReference
@@ -443,12 +462,23 @@ const analyzeAskPrompt = ({
     && !hasTemporalOrEventReference
     && !hasQuotedSearchTerm;
 
+  if (factIntent) {
+    return {
+      generalSubjectChat: false,
+      retrievalMode: 'fact',
+      factIntent,
+      reusePreviousRetrievals: false,
+      requests: buildProfileFactRetrievalRequests(prompt, transcriptSubject, factIntent),
+      wantsTranscriptFacts: true,
+    };
+  }
+
   const wantsTranscriptFacts = !generalSubjectChat && (
     hasConversationReference
     || hasRecallOrLookupReference
     || hasQuotedSearchTerm
     || (hasFirstPersonReference && hasTemporalOrEventReference)
-    || (hasPreviousRetrievals && !isChattyPrompt(normalizedPrompt))
+    || explicitContinuation
     || (!!transcriptSubject && (hasFirstPersonReference || hasFollowUpCue))
   );
 
@@ -456,27 +486,35 @@ const analyzeAskPrompt = ({
     return {
       generalSubjectChat,
       retrievalMode: 'none',
+      factIntent: null,
       reusePreviousRetrievals: false,
       requests: [],
       wantsTranscriptFacts: false,
     };
   }
 
-  const requests = buildFactRetrievalRequests(prompt, transcriptSubject, previousRetrievals);
+  const requests = buildFactRetrievalRequests(
+    prompt,
+    transcriptSubject,
+    previousRetrievals,
+    explicitContinuation,
+  );
   if (requests.length > 0) {
     return {
       generalSubjectChat: false,
       retrievalMode: 'fact',
-      reusePreviousRetrievals: hasPreviousRetrievals,
+      factIntent: null,
+      reusePreviousRetrievals: explicitContinuation,
       requests,
       wantsTranscriptFacts: true,
     };
   }
 
-  if (hasPreviousRetrievals) {
+  if (explicitContinuation) {
     return {
       generalSubjectChat: false,
       retrievalMode: 'none',
+      factIntent: null,
       reusePreviousRetrievals: true,
       requests: [],
       wantsTranscriptFacts: true,
@@ -486,6 +524,7 @@ const analyzeAskPrompt = ({
   return {
     generalSubjectChat: false,
     retrievalMode: 'none',
+    factIntent: null,
     reusePreviousRetrievals: false,
     requests: [],
     wantsTranscriptFacts: true,
@@ -650,11 +689,16 @@ const buildFactRetrievalRequests = (
   prompt: string,
   subject: AssistantActiveBuffer | null,
   previousRetrievals: AssistantAskRetrievalMemory[],
+  reusePreviousSearchTerms: boolean,
 ) => {
   if (!subject) {
     return [] satisfies AssistantAskRetrievalRequest[];
   }
-  const queryAgenda = buildFactQueryAgenda(prompt, subject, previousRetrievals);
+  const queryAgenda = buildFactQueryAgenda(
+    prompt,
+    subject,
+    reusePreviousSearchTerms ? previousRetrievals : [],
+  );
   const requests: AssistantAskRetrievalRequest[] = queryAgenda
     .slice(0, maxFactQueries)
     .map((entry) => ({
@@ -670,6 +714,30 @@ const buildFactRetrievalRequests = (
     searchTerms: spanTerms,
   });
   return requests;
+};
+
+const buildProfileFactRetrievalRequests = (
+  prompt: string,
+  subject: AssistantActiveBuffer | null,
+  intent: AssistantProfileFactIntent,
+) => {
+  if (!subject) {
+    return [] satisfies AssistantAskRetrievalRequest[];
+  }
+  const searchTerms = collectProfileFactTerms(prompt, subject, intent);
+  return [
+    {
+      operation: 'profile_fact_search',
+      intent,
+      limit: profileFactHitLimit,
+      query: searchTerms.join(', '),
+      searchTerms,
+    },
+    {
+      operation: 'load_opening_buffer_messages',
+      limit: openingMessageLimit,
+    },
+  ] satisfies AssistantAskRetrievalRequest[];
 };
 
 const buildFactQueryAgenda = (
@@ -890,6 +958,91 @@ const renderFtsSearchResults = (
   };
 };
 
+const renderProfileFactSearchResults = (
+  subject: AssistantActiveBuffer,
+  request: Extract<AssistantAskRetrievalRequest, { operation: 'profile_fact_search' }>,
+  conversations?: Pick<
+    RuntimeConversationStore,
+    'getMessageWindow' | 'listAllMessages' | 'listOpeningMessages' | 'listRecentMessagesForBuffer' | 'searchMessages'
+  >,
+  messages?: ChatMessage[],
+): AssistantAskRetrievalMemory => {
+  const allMessages = sortMessagesByTimestamp(resolveAllMessages(subject, conversations, messages));
+  const windows = resolveProfileFactWindows(allMessages, request).slice(0, Math.max(1, request.limit));
+  const matchedMessageIds = uniqueStrings(windows.flatMap((window) => window.matchedMessageIds));
+  const evidenceMessages = collectExactMatchedEvidenceMessages(windows, matchedMessageIds, searchEvidenceMessageLimit);
+  const evidenceGroups = buildEvidenceGroups(evidenceMessages);
+  const topStrategy = windows[0]?.strategy ?? 'qa_pair';
+  const contextLines = [
+    `Retrieved transcript context for ${subject.title}:`,
+    `Operation: profile_fact_search(intent=${request.intent}, limit=${request.limit})`,
+    `Query: ${request.query || '(none)'}`,
+    `Search terms: ${request.searchTerms.join(', ') || '(none)'}`,
+    `Strategy: ${topStrategy === 'qa_pair' ? 'question-answer windows' : 'lexical fallback windows'}`,
+    `Matching windows: ${windows.length}`,
+  ];
+  if (windows.length === 0) {
+    return {
+      subject,
+      request,
+      stage: 'profile_fact_search',
+      query: request.query,
+      confidence: 0,
+      scoreSummary: 'no matches',
+      context: [
+        ...contextLines,
+        'No strong profile-fact transcript evidence matched this query in the resolved chat.',
+      ].join('\n'),
+      matchCount: 0,
+      matchedMessageIds: [],
+      windowMessageIds: [],
+      evidenceMessageIds: [],
+      evidenceGroups,
+    };
+  }
+  return {
+    subject,
+    request,
+    stage: 'profile_fact_search',
+    query: request.query,
+    confidence: scoreToConfidence(windows[0]!.score),
+    scoreSummary: `windows=${windows.length}, topWindow=${windows[0]!.score.toFixed(2)}, strategy=${topStrategy}`,
+    context: [
+      ...contextLines,
+      '',
+      renderEvidenceGroupsContext(evidenceGroups),
+    ].join('\n'),
+    matchCount: windows.length,
+    matchedMessageIds,
+    windowMessageIds: windows.map((window) => window.messageIds),
+    evidenceMessageIds: evidenceMessages.map((message) => message.id),
+    evidenceGroups,
+  };
+};
+
+const collectExactMatchedEvidenceMessages = (
+  windows: Array<{ messages: ChatMessage[] }>,
+  matchedMessageIds: string[],
+  limit: number,
+) => {
+  const matchedIds = new Set(matchedMessageIds);
+  const selected: ChatMessage[] = [];
+  const seen = new Set<string>();
+  for (const window of windows) {
+    for (const message of window.messages) {
+      if (!matchedIds.has(message.id) || seen.has(message.id)) {
+        continue;
+      }
+      seen.add(message.id);
+      selected.push(message);
+      if (selected.length >= limit) {
+        return selected;
+      }
+    }
+  }
+  return selected;
+};
+
 const renderMessageWindow = (
   subject: AssistantActiveBuffer,
   messages: ChatMessage[],
@@ -1067,6 +1220,92 @@ const searchTranscript = (
       message: entry.message,
       score: entry.score,
     }));
+};
+
+const resolveProfileFactWindows = (
+  messages: ChatMessage[],
+  request: Extract<AssistantAskRetrievalRequest, { operation: 'profile_fact_search' }>,
+) => {
+  if (request.intent === 'origin_location') {
+    const qaWindows = findOriginLocationQaWindows(messages, request.searchTerms);
+    if (qaWindows.length > 0) {
+      return qaWindows;
+    }
+  }
+  return buildProfileLexicalFallbackWindows(messages, request.searchTerms, request.limit);
+};
+
+const findOriginLocationQaWindows = (messages: ChatMessage[], searchTerms: string[]) => {
+  const windows: ProfileFactCandidateWindow[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < messages.length; index += 1) {
+    const question = messages[index]!;
+    if (!isOriginLocationQuestionMessage(question)) {
+      continue;
+    }
+    const questionEnd = extendSameSpeakerQuestionRun(messages, index);
+    const answerStart = questionEnd + 1;
+    const maxAnswerIndex = Math.min(messages.length - 1, questionEnd + profileFactAnswerWindow);
+    if (answerStart > maxAnswerIndex) {
+      continue;
+    }
+    const answerIndex = findAnswerIndex(messages, answerStart, maxAnswerIndex, question);
+    if (answerIndex === -1) {
+      continue;
+    }
+    const answerEnd = extendSameSpeakerAnswerRun(messages, answerIndex, maxAnswerIndex);
+    const windowMessages = messages.slice(index, answerEnd + 1);
+    const key = windowMessages.map((message) => message.id).join('|');
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    windows.push({
+      messageIds: windowMessages.map((message) => message.id),
+      matchedMessageIds: windowMessages.map((message) => message.id),
+      messages: windowMessages,
+      score: scoreOriginLocationWindow(
+        windowMessages,
+        questionEnd - index + 1,
+        answerEnd - answerIndex + 1,
+        searchTerms,
+      ),
+      strategy: 'qa_pair',
+    });
+  }
+  return windows.sort((left, right) => (
+    right.score - left.score
+    || left.messages[0]!.ts - right.messages[0]!.ts
+    || left.messageIds[0]!.localeCompare(right.messageIds[0]!)
+  ));
+};
+
+const buildProfileLexicalFallbackWindows = (
+  messages: ChatMessage[],
+  searchTerms: string[],
+  limit: number,
+) => {
+  const hits = rankMatchingMessages(messages, searchTerms).slice(0, Math.max(1, limit));
+  return buildLegacyWindows(messages, hits.map((entry) => entry.index))
+    .map((window) => ({
+      messageIds: window.messageIds,
+      matchedMessageIds: window.messages
+        .filter((message) => searchTerms.some((term) => matchesTerm(message, term)))
+        .map((message) => message.id),
+      messages: window.messages,
+      score: scoreWindow(
+        window.messages,
+        searchTerms,
+        hits.find((hit) => hit.index >= window.start && hit.index <= window.end)?.message.id ?? '',
+      ),
+      strategy: 'lexical_fallback' as const,
+    }))
+    .filter((window) => window.matchedMessageIds.length > 0)
+    .sort((left, right) => (
+      right.score - left.score
+      || left.messages[0]!.ts - right.messages[0]!.ts
+      || left.messageIds[0]!.localeCompare(right.messageIds[0]!)
+    ));
 };
 
 const buildEvidenceWindows = (
@@ -1423,6 +1662,138 @@ const buildLegacyWindows = (messages: ChatMessage[], hitIndexes: number[]) => {
   return windows;
 };
 
+const getMessageSpeakerKey = (message: ChatMessage) => {
+  if (message.speakerRole === 'self' || message.self) {
+    return 'self';
+  }
+  const nick = (message.speakerNick ?? message.nick ?? '').trim().toLowerCase();
+  if (nick) {
+    return `nick:${nick}`;
+  }
+  return `role:${message.speakerRole ?? 'unknown'}`;
+};
+
+const isLineLikeMessage = (message: ChatMessage) =>
+  message.kind === 'line' || message.kind === 'action';
+
+const isOriginLocationQuestionMessage = (message: ChatMessage) => {
+  if (!isLineLikeMessage(message)) {
+    return false;
+  }
+  const body = message.body.toLowerCase();
+  return /\bwhere\s+(?:are|r)\s+you\s+from\b/.test(body)
+    || /\bwhere\s+(?:is|was)\s+(?:she|he|they|[a-z0-9_.-]+)\s+from\b/.test(body)
+    || /\bwhere\s+do(?:es)?\s+(?:you|she|he|they|[a-z0-9_.-]+)\s+live\b/.test(body)
+    || /\bwhat\s+(?:city|state|country|part of (?:the )?(?:usa|us|europe))\b/.test(body)
+    || (/\b(?:west coast|east coast|california|usa|europe)\b/.test(body) && body.includes('?'));
+};
+
+const extendSameSpeakerQuestionRun = (messages: ChatMessage[], startIndex: number) => {
+  const speakerKey = getMessageSpeakerKey(messages[startIndex]!);
+  let endIndex = startIndex;
+  const maxIndex = Math.min(messages.length - 1, startIndex + profileFactAnswerWindow - 1);
+  for (let index = startIndex + 1; index <= maxIndex; index += 1) {
+    const message = messages[index]!;
+    if (!isLineLikeMessage(message) || getMessageSpeakerKey(message) !== speakerKey) {
+      break;
+    }
+    endIndex = index;
+    if (!message.body.includes('?') && !isOriginLocationQuestionMessage(message)) {
+      break;
+    }
+  }
+  return endIndex;
+};
+
+const findAnswerIndex = (
+  messages: ChatMessage[],
+  startIndex: number,
+  maxIndex: number,
+  questionMessage: ChatMessage,
+) => {
+  const questionSpeakerKey = getMessageSpeakerKey(questionMessage);
+  for (let index = startIndex; index <= maxIndex; index += 1) {
+    const message = messages[index]!;
+    if (!isLineLikeMessage(message)) {
+      continue;
+    }
+    if (getMessageSpeakerKey(message) === questionSpeakerKey) {
+      continue;
+    }
+    return index;
+  }
+  return -1;
+};
+
+const extendSameSpeakerAnswerRun = (messages: ChatMessage[], startIndex: number, maxIndex: number) => {
+  const speakerKey = getMessageSpeakerKey(messages[startIndex]!);
+  let endIndex = startIndex;
+  for (let index = startIndex + 1; index <= maxIndex; index += 1) {
+    const message = messages[index]!;
+    if (!isLineLikeMessage(message) || getMessageSpeakerKey(message) !== speakerKey) {
+      break;
+    }
+    if (message.body.includes('?')) {
+      break;
+    }
+    endIndex = index;
+  }
+  return endIndex;
+};
+
+const scoreOriginLocationWindow = (
+  messages: ChatMessage[],
+  questionCount: number,
+  answerCount: number,
+  searchTerms: string[],
+) => {
+  const questionMessages = messages.slice(0, questionCount);
+  const answerMessages = messages.slice(questionCount, questionCount + answerCount);
+  const directQuestionBonus = questionMessages.reduce((total, message) => total + scoreOriginLocationPromptLine(message), 0);
+  const answerBonus = answerMessages.reduce((total, message) => total + scoreOriginLocationAnswerLine(message), 0);
+  const lexicalScore = scoreWindow(messages, searchTerms, answerMessages[0]?.id ?? questionMessages[0]?.id ?? '');
+  const answerDistancePenalty = Math.max(0, questionCount + answerCount - 2) * 0.4;
+  return 10 + directQuestionBonus + answerBonus + lexicalScore - answerDistancePenalty;
+};
+
+const scoreOriginLocationPromptLine = (message: ChatMessage) => {
+  const body = message.body.toLowerCase();
+  if (/\bwhere\s+(?:are|r)\s+you\s+from\b/.test(body)) {
+    return 8;
+  }
+  if (/\bwhere\s+(?:is|was)\s+(?:she|he|they|[a-z0-9_.-]+)\s+from\b/.test(body)) {
+    return 7;
+  }
+  if (/\bwhere\s+do(?:es)?\s+(?:you|she|he|they|[a-z0-9_.-]+)\s+live\b/.test(body)) {
+    return 7;
+  }
+  if (/\bwhat\s+(?:city|state|country)\b/.test(body)) {
+    return 6;
+  }
+  if (/\b(?:west coast|east coast)\b/.test(body) && body.includes('?')) {
+    return 5;
+  }
+  return 3;
+};
+
+const scoreOriginLocationAnswerLine = (message: ChatMessage) => {
+  const body = message.body.toLowerCase();
+  let score = 2;
+  if (!body.includes('?')) {
+    score += 1;
+  }
+  if (/\b(?:yes|yeah|yep|nope|nah)\b/.test(body)) {
+    score += 1;
+  }
+  if (/\b(?:from|live|in)\b/.test(body)) {
+    score += 2;
+  }
+  if (body.length <= 32) {
+    score += 1;
+  }
+  return score;
+};
+
 const findPromptSubjectCandidates = (prompt: string, queryBuffers: AssistantActiveBuffer[]) =>
   queryBuffers
     .map((buffer) => ({
@@ -1474,6 +1845,28 @@ const collectPromptTerms = (prompt: string, subject: AssistantActiveBuffer) => {
     .map((term) => term.toLowerCase())
     .filter((term) => term.length >= 3 && !searchNoiseTerms.has(term) && !subjectTerms.has(term))
     .slice(0, 8);
+};
+
+const collectProfileFactTerms = (
+  prompt: string,
+  subject: AssistantActiveBuffer,
+  intent: AssistantProfileFactIntent,
+) => {
+  const subjectTerms = new Set([
+    subject.target.toLowerCase(),
+    subject.title.toLowerCase(),
+    ...tokenize(subject.target),
+    ...tokenize(subject.title),
+  ]);
+  const extracted = uniqueStrings(extractProfileFactTerms(prompt, intent).map((term) => term.toLowerCase()))
+    .filter((term) => !subjectTerms.has(term));
+  if (extracted.length > 0) {
+    return extracted.slice(0, 8);
+  }
+  if (intent === 'origin_location') {
+    return ['where', 'from', 'live', 'city', 'state', 'country'];
+  }
+  return [];
 };
 
 const collectPreviousSearchTerms = (
@@ -1572,6 +1965,30 @@ const isRecentHistoryRequest = (prompt: string) =>
 
 const isOpeningHistoryRequest = (prompt: string) =>
   /\b(?:beginning|at the beginning|at first|first talked|first started talking|first messages?|opening messages?|how (?:we|i) started|how it started|how we started talking|how i started talking|started talking|start of (?:our|the) conversation|start of (?:our|the) chat)\b/.test(prompt);
+
+const classifyAskFactIntent = (prompt: string, normalizedPrompt: string): AssistantProfileFactIntent | null => {
+  if (
+    /\bwhere\s+(?:is|was)\b.*\bfrom\b/.test(normalizedPrompt)
+    || /\bwhere\s+(?:are|r)\s+you\s+from\b/.test(normalizedPrompt)
+    || /\bwhere\s+do(?:es)?\b.*\blive\b/.test(normalizedPrompt)
+    || /\bwhat\s+(?:city|state|country)\b/.test(normalizedPrompt)
+    || /\b(?:hometown|west coast|east coast)\b/.test(normalizedPrompt)
+  ) {
+    return 'origin_location';
+  }
+  const profileTerms = extractProfileFactTerms(prompt, 'origin_location');
+  if (profileTerms.some((term) => ['where', 'from', 'live', 'city', 'state', 'country', 'coast', 'hometown'].includes(term))) {
+    return 'origin_location';
+  }
+  return null;
+};
+
+const isExplicitEvidenceContinuationPrompt = (prompt: string) =>
+  /\b(?:what was it|what was that|what was the one|show me more|quote it|quote that|look closer|look more carefully|more carefully|again|that one|the one|that part|that exchange|that fantasy)\b/.test(prompt)
+  || /\bit (?:was|is) related to\b/.test(prompt)
+  || /\bit involved\b/.test(prompt)
+  || /\bi(?:'ll| will)? give you a hint\b/.test(prompt)
+  || /\bhere(?:'s| is) a hint\b/.test(prompt);
 
 const mentionsBuffer = (prompt: string, buffer: AssistantActiveBuffer) =>
   scoreBufferMention(prompt, buffer) > 0;

@@ -9,6 +9,16 @@ import {
 } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
 
+type AddFriendDialogKeyEvent = {
+  key: string;
+  nativeEvent: {
+    isComposing?: boolean;
+  };
+};
+
+export const shouldSubmitAddFriendDialog = (event: AddFriendDialogKeyEvent) =>
+  event.key === 'Enter' && !event.nativeEvent.isComposing;
+
 type AddFriendDialogProps = {
   open: boolean;
   draft: string;
@@ -31,10 +41,11 @@ export function AddFriendDialog(props: AddFriendDialogProps) {
           placeholder="Nick"
           onChange={(event) => props.onDraftChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              void props.onSubmit();
+            if (!shouldSubmitAddFriendDialog(event)) {
+              return;
             }
+            event.preventDefault();
+            void props.onSubmit();
           }}
         />
         <DialogFooter>

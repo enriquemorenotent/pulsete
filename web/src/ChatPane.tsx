@@ -22,6 +22,9 @@ export type ChatPaneProps = {
   friends: FriendState[];
   selectedMessages: ChatMessage[];
   draft: string;
+  completionEnabled?: boolean;
+  completionContextKey?: string | null;
+  completionCandidates?: string[];
   messageDisplayMode: MessageDisplayMode;
   scrollRef: RefObject<HTMLDivElement | null>;
   onDraftChange: (value: string) => void;
@@ -103,6 +106,9 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           <ChatPaneComposer
             draft={props.draft}
             placeholder={props.workspace.composerPlaceholder}
+            completionEnabled={props.completionEnabled}
+            completionContextKey={props.completionContextKey}
+            completionCandidates={props.completionCandidates}
             onDraftChange={props.onDraftChange}
             onRecallOlderDraft={props.onRecallOlderDraft}
             onRecallNewerDraft={props.onRecallNewerDraft}

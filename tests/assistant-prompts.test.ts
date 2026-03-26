@@ -109,4 +109,5 @@ test('ask prompt envelopes require sectioned transcript answers when evidence is
   assert.match(input, /Do not use rigid headings like "Answer:", "Evidence:", or "Limits:"/);
   assert.match(input, /renders the supporting transcript excerpt separately/);
   assert.match(input, /Do not invent, merge, or relabel speakers/);
+  assert.match(input, /prefer direct stated answer lines over thematic inference/);
 });

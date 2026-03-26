@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 export type ComposerHistoryState = {
   entries: string[];
@@ -92,30 +92,43 @@ export const stepComposerHistory = (
 };
 
 export const useComposerHistory = (): ComposerController => {
-  const [draft, setDraft] = useState('');
-  const [historyState, setHistoryState] = useState(initialComposerHistoryState);
+  const [draft, setDraftState] = useState('');
+  const [, setHistoryState] = useState(initialComposerHistoryState);
+  const draftRef = useRef(draft);
+  const historyStateRef = useRef(initialComposerHistoryState);
 
-  const recordComposerEntry = (entry: string) => {
-    setHistoryState((current) => pushComposerHistoryEntry(current, entry));
-  };
+  const setDraft = useCallback((value: string) => {
+    draftRef.current = value;
+    setDraftState(value);
+  }, []);
 
-  const recallOlderDraft = () => {
-    const result = stepComposerHistory(historyState, 'older', draft);
+  const recordComposerEntry = useCallback((entry: string) => {
+    setHistoryState((current) => {
+      const nextState = pushComposerHistoryEntry(current, entry);
+      historyStateRef.current = nextState;
+      return nextState;
+    });
+  }, []);
+
+  const recallOlderDraft = useCallback(() => {
+    const result = stepComposerHistory(historyStateRef.current, 'older', draftRef.current);
     if (!result) {
       return;
     }
+    historyStateRef.current = result.state;
     setHistoryState(result.state);
     setDraft(result.draft);
-  };
+  }, [setDraft]);
 
-  const recallNewerDraft = () => {
-    const result = stepComposerHistory(historyState, 'newer', draft);
+  const recallNewerDraft = useCallback(() => {
+    const result = stepComposerHistory(historyStateRef.current, 'newer', draftRef.current);
     if (!result) {
       return;
     }
+    historyStateRef.current = result.state;
     setHistoryState(result.state);
     setDraft(result.draft);
-  };
+  }, [setDraft]);
 
   return {
     draft,

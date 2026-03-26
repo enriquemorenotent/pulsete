@@ -1688,9 +1688,8 @@ test('assistant service reuses prior retrieval evidence for transcript follow-up
     input: Array<{ type: string; text: string }>;
   };
   const text = turnStartParams.input[0]?.text ?? '';
-  assert.match(text, /Previously retrieved transcript context from earlier turns:/);
-  assert.match(text, /Search terms: meet/);
-  assert.match(text, /Operation: search_buffer/);
+  assert.doesNotMatch(text, /Previously retrieved transcript context from earlier turns:/);
+  assert.match(text, /Operation: fts_search/);
   assert.match(text, /fantasy/);
   assert.match(text, /first time we met/);
 });
@@ -1854,6 +1853,196 @@ test('assistant service treats plain-language follow-up hints as refinement sear
   assert.match(text, /Search terms: fantasy, hotel/);
   assert.match(text, /Excerpt:/);
   assert.match(text, /hotel bar before going upstairs/);
+});
+
+test('assistant service resets stale follow-up retrievals for origin questions and loads opening context', async () => {
+  const assistantStore = createAssistantStore([
+    makeThread({
+      id: 'thread-1',
+      bufferId: null,
+      networkId: null,
+      target: null,
+      scope: 'free',
+      title: 'Chat',
+      turnStatus: null,
+    }),
+  ]);
+  const selectedBuffer = {
+    bufferId: 'buffer-1',
+    networkId: 'network-1',
+    target: 'MissD',
+    title: 'MissD',
+  };
+  assistantStore.saveThreadTurns('thread-1', [{
+    id: 'turn-1',
+    status: 'completed',
+    error: null,
+    activeBuffer: selectedBuffer,
+    resolvedSubject: selectedBuffer,
+    routing: {
+      retrieval: {
+        subject: selectedBuffer,
+        request: {
+          operation: 'search_buffer',
+          limit: 5,
+          searchTerms: ['fantasy', 'hotel'],
+        },
+        stage: 'legacy_search',
+        query: 'fantasy, hotel',
+        confidence: 0.5,
+        scoreSummary: 'hits=1',
+        context: [
+          'Retrieved transcript context for MissD:',
+          'Operation: search_buffer(limit=5)',
+          'Search terms: fantasy, hotel',
+          'Matching hits: 1',
+        ].join('\n'),
+        matchCount: 1,
+        matchedMessageIds: ['message-1'],
+        windowMessageIds: [['message-1']],
+        evidenceMessageIds: ['message-1'],
+      },
+      retrievals: [{
+        subject: selectedBuffer,
+        request: {
+          operation: 'search_buffer',
+          limit: 5,
+          searchTerms: ['fantasy', 'hotel'],
+        },
+        stage: 'legacy_search',
+        query: 'fantasy, hotel',
+        confidence: 0.5,
+        scoreSummary: 'hits=1',
+        context: [
+          'Retrieved transcript context for MissD:',
+          'Operation: search_buffer(limit=5)',
+          'Search terms: fantasy, hotel',
+          'Matching hits: 1',
+        ].join('\n'),
+        matchCount: 1,
+        matchedMessageIds: ['message-1'],
+        windowMessageIds: [['message-1']],
+        evidenceMessageIds: ['message-1'],
+      }],
+    },
+    items: [
+      {
+        type: 'userMessage',
+        id: 'turn-1:user',
+        text: 'MissD and I talked once of a fantasy when we would meet in real for the first time. Tell me which one it is',
+        attachments: [],
+      },
+      {
+        type: 'agentMessage',
+        id: 'turn-1:assistant',
+        text: 'The closest fantasy in the current excerpts is about being on all four.',
+        phase: null,
+        artifact: null,
+      },
+    ],
+  }]);
+  const allMessages: ChatMessage[] = [
+    {
+      id: 'message-1',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'sofiaIsBack',
+      body: 'Hello, how aer you?',
+      kind: 'line',
+      self: true,
+      ts: Date.parse('2025-10-31T01:29:00Z'),
+    },
+    {
+      id: 'message-2',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'MissD',
+      body: 'im well thanks, how about yu',
+      kind: 'line',
+      self: false,
+      ts: Date.parse('2025-10-31T01:30:00Z'),
+    },
+    {
+      id: 'message-3',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'sofiaIsBack',
+      body: 'Where are you from?',
+      kind: 'line',
+      self: true,
+      ts: Date.parse('2025-10-31T01:31:00Z'),
+    },
+    {
+      id: 'message-4',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'sofiaIsBack',
+      body: 'West coast is USA?',
+      kind: 'line',
+      self: true,
+      ts: Date.parse('2025-10-31T01:31:30Z'),
+    },
+    {
+      id: 'message-5',
+      networkId: 'network-1',
+      target: 'MissD',
+      nick: 'MissD',
+      body: 'yes.. california',
+      kind: 'line',
+      self: false,
+      ts: Date.parse('2025-10-31T01:32:00Z'),
+    },
+  ];
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: {
+      ...createConversationStore(allMessages, {
+        id: 'buffer-1',
+        networkId: 'network-1',
+        kind: 'query',
+        target: 'MissD',
+        unread: 0,
+      }),
+    },
+    networks: networkStore,
+    publish: () => {},
+    autoStart: false,
+  });
+  const calls: Array<{ method: string; params: unknown }> = [];
+  const privateService = service as unknown as {
+    appServer: {
+      call: (method: string, params?: unknown) => Promise<unknown>;
+    };
+  };
+  privateService.appServer = {
+    call: async (method: string, params?: unknown) => {
+      calls.push({ method, params });
+      if (method === 'thread/start') {
+        return { thread: { id: 'execution-4c' } };
+      }
+      if (method === 'turn/start') {
+        return {};
+      }
+      throw new Error(`Unexpected app-server method: ${method}`);
+    },
+  };
+
+  await service.startTurn({
+    threadId: 'thread-1',
+    activeBufferId: selectedBuffer.bufferId,
+    prompt: 'Where is MissD from?',
+  });
+
+  assert.equal(calls[1]?.method, 'turn/start');
+  const turnStartParams = calls[1]?.params as {
+    input: Array<{ type: string; text: string }>;
+  };
+  const text = turnStartParams.input[0]?.text ?? '';
+  assert.doesNotMatch(text, /Previously retrieved transcript context from earlier turns:/);
+  assert.match(text, /Operation: profile_fact_search\(intent=origin_location, limit=6\)/);
+  assert.match(text, /Operation: load_opening_buffer_messages\(limit=40\)/);
+  assert.match(text, /Where are you from\?/);
+  assert.match(text, /yes\.\. california/);
 });
 
 test('assistant service keeps eager history packaging for summarize tasks', async () => {
