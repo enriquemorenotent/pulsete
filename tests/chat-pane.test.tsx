@@ -519,32 +519,21 @@ test('channel transcripts render a new messages divider at the first unread poin
   assert.match(markup, /newer/);
 });
 
-test('channel headers can render an active autojoin toggle', () => {
+test('channel headers collapse maintenance actions behind a compact overflow trigger', () => {
   const markup = renderChatPane([], {
     showChannelAutoJoin: true,
     channelAutoJoinActive: true,
-  });
-
-  assert.match(markup, /Autojoin On/);
-  assert.match(markup, /aria-pressed="true"/);
-});
-
-test('channel headers render an inactive autojoin toggle state', () => {
-  const markup = renderChatPane([], {
-    showChannelAutoJoin: true,
-    channelAutoJoinActive: false,
-  });
-
-  assert.match(markup, /Autojoin Off/);
-  assert.match(markup, /aria-pressed="false"/);
-});
-
-test('channel headers expose clear history for normal chat buffers', () => {
-  const markup = renderChatPane([], {
     canClearHistory: true,
+    canImportHistory: true,
+    canRepairSelfNickAliases: true,
   });
 
-  assert.match(markup, /Clear history/);
+  assert.match(markup, /aria-label="More actions"/);
+  assert.match(markup, />Close</);
+  assert.doesNotMatch(markup, /Autojoin On/);
+  assert.doesNotMatch(markup, /Clear history/);
+  assert.doesNotMatch(markup, /Import logs/);
+  assert.doesNotMatch(markup, /Self aliases/);
 });
 
 test('channel composers render the active target as a prompt cue', () => {
@@ -556,26 +545,10 @@ test('channel composers render the active target as a prompt cue', () => {
   assert.doesNotMatch(markup, />Enter sends to #help</);
 });
 
-test('channel headers expose log import for normal chat buffers', () => {
-  const markup = renderChatPane([], {
-    canImportHistory: true,
-  });
-
-  assert.match(markup, /Import logs/);
-});
-
-test('channel headers expose self aliases repair for imported history', () => {
-  const markup = renderChatPane([], {
-    canRepairSelfNickAliases: true,
-  });
-
-  assert.match(markup, /Self aliases/);
-});
-
-test('channel headers hide clear history when the action is not available', () => {
+test('channel headers hide the overflow trigger when no secondary actions are available', () => {
   const markup = renderChatPane([]);
 
-  assert.doesNotMatch(markup, /Clear history/);
+  assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
 
 test('connected channel headers keep only non-duplicate context in the mode line', () => {

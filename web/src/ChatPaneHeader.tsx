@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { Check, X } from 'lucide-react';
 import type { BufferState, FriendState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneModeLine, shouldShowChatPaneHeaderSubtitle } from './ChatPaneModeLine.js';
-import { FriendToggleButton } from './FriendToggleButton.js';
+import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
+import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
 import { findFriendByNick } from './friend-utils.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -29,10 +29,9 @@ type ChatPaneHeaderProps = {
 };
 
 export function ChatPaneHeader(props: ChatPaneHeaderProps) {
-  const { selectedBuffer, selectedChannel } = props.workspace;
+  const { selectedBuffer } = props.workspace;
   const selectedFriend =
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
-  const autoJoinLabel = props.channelAutoJoinActive ? 'Autojoin On' : 'Autojoin Off';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
     ? props.workspace.headerSubtitle
     : '';
@@ -40,13 +39,33 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
     props.workspace.mode === 'server-offline';
+  const actions = resolveChatPaneHeaderActions({
+    workspace: props.workspace,
+    selectedFriend,
+    showChannelAutoJoin: props.showChannelAutoJoin,
+    channelAutoJoinActive: props.channelAutoJoinActive,
+    canClearHistory: props.canClearHistory,
+    canDownloadHistory: props.canDownloadHistory,
+    canImportHistory: props.canImportHistory,
+    onAddFriend: props.onAddFriend,
+    onRemoveFriend: props.onRemoveFriend,
+    onToggleChannelAutoJoin: props.onToggleChannelAutoJoin,
+    onClearHistory: props.onClearHistory,
+    onDownloadHistory: props.onDownloadHistory,
+    onOpenHistoryImport: props.onOpenHistoryImport,
+    onOpenSelfNickAliases: props.onOpenSelfNickAliases,
+    onCloseChannel: props.onCloseChannel,
+    onCloseBuffer: props.onCloseBuffer,
+    onOpenChannelList: props.onOpenChannelList,
+  });
+
   if (props.workspace.mode === 'server-connected') {
     return (
       <PaneHeader
         title={props.workspace.selectedNetwork?.name ?? 'Server'}
         subtitle={subtitle}
         modeLine={<ChatPaneModeLine workspace={props.workspace} />}
-        actions={<Button variant="outline" size="sm" onClick={props.onOpenChannelList}>List Channels</Button>}
+        actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
       />
     );
   }
@@ -58,66 +77,25 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       title={props.workspace.headerTitle}
       subtitle={subtitle}
       modeLine={<ChatPaneModeLine workspace={props.workspace} />}
-      actions={
-        <>
-          {props.showChannelAutoJoin ? (
-            <Button
-              variant={props.channelAutoJoinActive ? 'secondary' : 'outline'}
-              size="sm"
-              aria-pressed={props.channelAutoJoinActive}
-              aria-label={autoJoinLabel}
-              title={autoJoinLabel}
-              onClick={() => void props.onToggleChannelAutoJoin()}
-            >
-              {props.channelAutoJoinActive ? <Check /> : null}
-              {autoJoinLabel}
-            </Button>
-          ) : null}
-          {selectedBuffer?.kind === 'query' ? (
-            <FriendToggleButton
-              active={Boolean(selectedFriend)}
-              onClick={() =>
-                void (selectedFriend
-                  ? props.onRemoveFriend(selectedFriend.id)
-                  : props.onAddFriend(selectedBuffer.target))
-              }
-            />
-          ) : null}
-          {props.canClearHistory && props.onClearHistory ? (
-            <Button variant="outline" size="sm" onClick={() => void props.onClearHistory?.()}>
-              Clear history
-            </Button>
-          ) : null}
-          {props.canDownloadHistory && props.onDownloadHistory ? (
-            <Button variant="outline" size="sm" onClick={() => void props.onDownloadHistory?.()}>
-              Download history
-            </Button>
-          ) : null}
-          {props.canImportHistory && props.onOpenHistoryImport ? (
-            <Button variant="outline" size="sm" onClick={props.onOpenHistoryImport}>
-              Import logs
-            </Button>
-          ) : null}
-          {(selectedBuffer?.kind === 'channel' || selectedBuffer?.kind === 'query') && props.onOpenSelfNickAliases ? (
-            <Button variant="outline" size="sm" onClick={props.onOpenSelfNickAliases}>
-              Self aliases
-            </Button>
-          ) : null}
-          {selectedChannel ? (
-            <Button variant="outline" size="sm" onClick={() => props.onCloseChannel(selectedChannel.networkId, selectedChannel.name)}>
-              <X />
-              Close
-            </Button>
-          ) : null}
-          {selectedBuffer?.kind === 'query' ? (
-            <Button variant="outline" size="sm" onClick={() => props.onCloseBuffer(selectedBuffer)}>
-              <X />
-              Close
-            </Button>
-          ) : null}
-        </>
-      }
+      actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
     />
+  );
+}
+
+function PaneHeaderActions(props: { primary: ChatPaneHeaderAction[]; overflow: ChatPaneHeaderAction[] }) {
+  if (props.primary.length === 0 && props.overflow.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+      {props.primary.map((action) => (
+        <Button key={action.id} variant="outline" size="sm" onClick={action.onSelect}>
+          {action.label}
+        </Button>
+      ))}
+      <ChatPaneHeaderActionMenu actions={props.overflow} />
+    </div>
   );
 }
 
@@ -135,7 +113,7 @@ function PaneHeader(props: { title: string; subtitle: string; actions: ReactNode
             <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">{props.subtitle}</p>
           ) : null}
         </div>
-        <div className="flex shrink-0 flex-wrap gap-1.5">{props.actions}</div>
+        {props.actions}
       </div>
       {props.modeLine ? props.modeLine : null}
     </div>
