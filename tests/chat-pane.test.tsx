@@ -63,13 +63,16 @@ const closedChannelList: ChannelListState = {
   error: null,
 };
 
-const makeWorkspace = (overrides: Partial<{ channelUsers: ChannelUserState[] }> = {}): WorkspaceView => {
+const makeWorkspace = (
+  overrides: Partial<{ channelUsers: ChannelUserState[]; topic: string }> = {},
+): WorkspaceView => {
   const network = makeNetwork();
   const selectedBuffer = makeBuffer();
   const selectedChannel = makeChannel({
     id: selectedBuffer.id,
     networkId: selectedBuffer.networkId,
     name: selectedBuffer.target,
+    topic: overrides.topic,
     users: overrides.channelUsers ?? [],
   });
   return {
@@ -155,11 +158,15 @@ const renderChatPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     channelUsers: ChannelUserState[];
+    topic: string;
   }> = {},
 ) =>
   renderToStaticMarkup(
     <ChatPane
-      workspace={makeWorkspace({ channelUsers: overrides.channelUsers })}
+      workspace={makeWorkspace({
+        channelUsers: overrides.channelUsers,
+        topic: overrides.topic,
+      })}
       friends={[] satisfies FriendState[]}
       selectedMessages={selectedMessages}
       draft=""
@@ -566,6 +573,16 @@ test('connected channel headers keep only non-duplicate context in the mode line
   assert.doesNotMatch(markup, />Unread</);
   assert.doesNotMatch(markup, />Mentions</);
   assert.doesNotMatch(markup, /<p class="max-w-xl truncate text-\[12px\] uppercase tracking-\[0\.12em\] text-muted-foreground">sofia @ irc\.example\.test<\/p>/);
+  assert.doesNotMatch(markup, />Topic<\/span><span class="truncate normal-case tracking-normal text-foreground\/88">/);
+});
+
+test('channel topics render links in a dedicated wrapped row', () => {
+  const markup = renderChatPane([], {
+    topic: 'Rules at https://example.test/rules and idle in #lounge',
+  });
+
+  assert.match(markup, /href="https:\/\/example\.test\/rules"/);
+  assert.match(markup, />#lounge</);
 });
 
 test('server headers show the active host in the mode line', () => {

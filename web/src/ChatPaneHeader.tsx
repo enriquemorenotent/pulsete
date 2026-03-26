@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneModeLine, shouldShowChatPaneHeaderSubtitle } from './ChatPaneModeLine.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
+import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
 import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
 import { findFriendByNick } from './friend-utils.js';
 import type { WorkspaceView } from './workspace.js';
@@ -11,6 +12,7 @@ import type { WorkspaceView } from './workspace.js';
 type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
   friends: FriendState[];
+  onOpenMentionedChannel: (channel: string) => void;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   showChannelAutoJoin: boolean;
@@ -32,6 +34,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const { selectedBuffer } = props.workspace;
   const selectedFriend =
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
+  const topic = props.workspace.selectedChannel?.topic.trim() ?? '';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
     ? props.workspace.headerSubtitle
     : '';
@@ -64,6 +67,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       <PaneHeader
         title={props.workspace.selectedNetwork?.name ?? 'Server'}
         subtitle={subtitle}
+        topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
         modeLine={<ChatPaneModeLine workspace={props.workspace} />}
         actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
       />
@@ -76,6 +80,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     <PaneHeader
       title={props.workspace.headerTitle}
       subtitle={subtitle}
+      topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
       modeLine={<ChatPaneModeLine workspace={props.workspace} />}
       actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
     />
@@ -99,7 +104,13 @@ function PaneHeaderActions(props: { primary: ChatPaneHeaderAction[]; overflow: C
   );
 }
 
-function PaneHeader(props: { title: string; subtitle: string; actions: ReactNode; modeLine?: ReactNode }) {
+function PaneHeader(props: {
+  title: string;
+  subtitle: string;
+  actions: ReactNode;
+  topicBar?: ReactNode;
+  modeLine?: ReactNode;
+}) {
   return (
     <div className="shrink-0 border-b border-white/6 bg-background/32 backdrop-blur-sm">
       <div className="flex items-start justify-between gap-4 px-4 py-4">
@@ -115,6 +126,7 @@ function PaneHeader(props: { title: string; subtitle: string; actions: ReactNode
         </div>
         {props.actions}
       </div>
+      {props.topicBar ? props.topicBar : null}
       {props.modeLine ? props.modeLine : null}
     </div>
   );

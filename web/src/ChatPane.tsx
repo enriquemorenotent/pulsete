@@ -79,6 +79,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneHeader
         workspace={props.workspace}
         friends={props.friends}
+        onOpenMentionedChannel={props.onOpenMentionedChannel}
         onAddFriend={props.onAddFriend}
         onRemoveFriend={props.onRemoveFriend}
         showChannelAutoJoin={props.showChannelAutoJoin}

@@ -9,7 +9,6 @@ type ModeLineSegment = {
   label: string;
   value: string;
   valueClassName?: string;
-  wide?: boolean;
 };
 
 export function ChatPaneModeLine(props: ChatPaneModeLineProps) {
@@ -22,13 +21,7 @@ export function ChatPaneModeLine(props: ChatPaneModeLineProps) {
     <div className="border-t border-white/6 bg-black/12 px-4 py-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
         {segments.map((segment) => (
-          <div
-            key={segment.label}
-            className={cn(
-              'flex min-w-0 items-baseline gap-1.5',
-              segment.wide && 'min-w-full xl:min-w-0 xl:flex-1',
-            )}
-          >
+          <div key={segment.label} className={cn('flex min-w-0 items-baseline gap-1.5')}>
             <span>{segment.label}</span>
             <span className={cn('truncate normal-case tracking-normal text-foreground/88', segment.valueClassName)}>
               {segment.value}
@@ -106,15 +99,6 @@ export const buildChatPaneModeLineSegments = (workspace: WorkspaceView): ModeLin
         valueClassName: 'text-primary',
       });
     }
-  }
-
-  const topic = workspace.selectedChannel?.topic.trim();
-  if (topic) {
-    segments.push({
-      label: 'Topic',
-      value: topic,
-      wide: true,
-    });
   }
 
   return segments;
