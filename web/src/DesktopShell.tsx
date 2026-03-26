@@ -14,6 +14,10 @@ import { NetworkEditorDialog } from './NetworkEditorDialog.js';
 import { NetworkManagerDialog } from './NetworkManagerDialog.js';
 import { PreferencesDialog } from './PreferencesDialog.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
+import {
+  RIGHT_SIDEBAR_WIDTH_STORAGE_KEY,
+  SIDEBAR_WIDTH_STORAGE_KEY,
+} from './sidebar-width.js';
 import { useMediaQuery } from './useMediaQuery.js';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
@@ -23,7 +27,14 @@ const compactDesktopShellQuery = '(max-width: 1023px)';
 
 export function DesktopShell(props: DesktopShellModel) {
   const layoutRef = useRef<HTMLDivElement | null>(null);
-  const sidebarResize = useSidebarResize(layoutRef);
+  const leftSidebarResize = useSidebarResize(layoutRef, {
+    edge: 'left',
+    storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+  });
+  const rightSidebarResize = useSidebarResize(layoutRef, {
+    edge: 'right',
+    storageKey: RIGHT_SIDEBAR_WIDTH_STORAGE_KEY,
+  });
   const showRightSidebar = props.workspace.selectedBuffer?.kind === 'channel' || props.workspace.selectedBuffer?.kind === 'query';
   const selectedBufferId = props.workspace.selectedBuffer?.id ?? null;
   const compactLayout = useMediaQuery(compactDesktopShellQuery);
@@ -32,7 +43,8 @@ export function DesktopShell(props: DesktopShellModel) {
     getDefaultCompactWorkspacePane(selectedBufferId),
   );
   const layoutStyle = {
-    '--sidebar-width': `${sidebarResize.sidebarWidth}px`,
+    '--sidebar-width': `${leftSidebarResize.sidebarWidth}px`,
+    '--right-sidebar-width': `${rightSidebarResize.sidebarWidth}px`,
   } as CSSProperties;
 
   useEffect(() => {
@@ -114,23 +126,34 @@ export function DesktopShell(props: DesktopShellModel) {
               <ConnectionSidebar {...props.sidebar} />
             </div>
             <SidebarResizeHandle
-              sidebarWidth={sidebarResize.sidebarWidth}
-              isResizing={sidebarResize.isResizing}
-              onPointerDown={sidebarResize.startDragging}
-              onNudge={sidebarResize.nudgeWidth}
-              onReset={sidebarResize.resetWidth}
+              sidebarWidth={leftSidebarResize.sidebarWidth}
+              isResizing={leftSidebarResize.isResizing}
+              edge="left"
+              onPointerDown={leftSidebarResize.startDragging}
+              onNudge={leftSidebarResize.nudgeWidth}
+              onReset={leftSidebarResize.resetWidth}
             />
             <div className="min-h-0 min-w-0 flex-1">
               <ChatPane {...props.chat} />
             </div>
             {showRightSidebar ? (
-              <div className="min-h-0 lg:ml-2 lg:w-[clamp(22rem,30vw,30rem)] lg:shrink-0">
-                <WorkspaceRightSidebar
-                  workspace={props.workspace}
-                  nicklist={props.nicklist}
-                  assistant={props.assistant}
+              <>
+                <SidebarResizeHandle
+                  sidebarWidth={rightSidebarResize.sidebarWidth}
+                  isResizing={rightSidebarResize.isResizing}
+                  edge="right"
+                  onPointerDown={rightSidebarResize.startDragging}
+                  onNudge={rightSidebarResize.nudgeWidth}
+                  onReset={rightSidebarResize.resetWidth}
                 />
-              </div>
+                <div className="min-h-0 lg:w-[var(--right-sidebar-width)] lg:shrink-0">
+                  <WorkspaceRightSidebar
+                    workspace={props.workspace}
+                    nicklist={props.nicklist}
+                    assistant={props.assistant}
+                  />
+                </div>
+              </>
             ) : null}
           </div>
         )}

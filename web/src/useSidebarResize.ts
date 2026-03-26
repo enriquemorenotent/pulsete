@@ -1,17 +1,29 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import {
   DEFAULT_SIDEBAR_WIDTH,
-  SIDEBAR_WIDTH_STORAGE_KEY,
   clampSidebarWidth,
   readSidebarWidth,
+  resolveDraggedSidebarWidth,
+  type SidebarEdge,
+  SIDEBAR_WIDTH_STORAGE_KEY,
 } from './sidebar-width.js';
 
-export function useSidebarResize(layoutRef: RefObject<HTMLElement | null>) {
+type UseSidebarResizeOptions = {
+  edge?: SidebarEdge;
+  storageKey?: string;
+};
+
+export function useSidebarResize(
+  layoutRef: RefObject<HTMLElement | null>,
+  options: UseSidebarResizeOptions = {},
+) {
+  const edge = options.edge ?? 'left';
+  const storageKey = options.storageKey ?? SIDEBAR_WIDTH_STORAGE_KEY;
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window === 'undefined') {
       return DEFAULT_SIDEBAR_WIDTH;
     }
-    return readSidebarWidth(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+    return readSidebarWidth(window.localStorage.getItem(storageKey));
   });
   const [isResizing, setIsResizing] = useState(false);
 
@@ -19,8 +31,8 @@ export function useSidebarResize(layoutRef: RefObject<HTMLElement | null>) {
     if (typeof window === 'undefined') {
       return;
     }
-    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
-  }, [sidebarWidth]);
+    window.localStorage.setItem(storageKey, String(sidebarWidth));
+  }, [sidebarWidth, storageKey]);
 
   useEffect(() => {
     if (!isResizing) {
@@ -42,7 +54,7 @@ export function useSidebarResize(layoutRef: RefObject<HTMLElement | null>) {
         return;
       }
       const bounds = layout.getBoundingClientRect();
-      setSidebarWidth(clampSidebarWidth(event.clientX - bounds.left));
+      setSidebarWidth(resolveDraggedSidebarWidth(edge, event.clientX, bounds));
     };
 
     window.addEventListener('pointermove', handlePointerMove);
@@ -56,7 +68,7 @@ export function useSidebarResize(layoutRef: RefObject<HTMLElement | null>) {
       window.removeEventListener('pointerup', stopDragging);
       window.removeEventListener('pointercancel', stopDragging);
     };
-  }, [isResizing, layoutRef]);
+  }, [edge, isResizing, layoutRef]);
 
   const startDragging = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) {

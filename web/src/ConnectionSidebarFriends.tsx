@@ -19,8 +19,9 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
   return (
     <>
       <SidebarWidget
-        title="Friends"
-        className="shrink-0"
+        title={`Friends (${props.friends.length})`}
+        className="min-h-0 flex-[2_1_0%]"
+        bodyClassName="flex min-h-0 flex-1 flex-col"
         actions={
           <button
             type="button"
@@ -37,7 +38,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
             No friends saved yet.
           </div>
         ) : (
-          <ScrollArea className="max-h-48">
+          <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-0.5 px-2 pb-2">
               {props.friends.map((friend) => (
                 <div key={friend.id} className="flex items-stretch rounded-sm">

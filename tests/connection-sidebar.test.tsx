@@ -108,8 +108,45 @@ test('friend rows expose online and offline cues', () => {
     />
   );
 
+  assert.match(markup, /Friends \(1\)/);
   assert.match(markup, /aria-label="Open Alice \(online\)"/);
   assert.match(markup, /bg-emerald-400/);
+});
+
+test('friends header shows the total registered friends count', () => {
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [] satisfies NetworkProfile[],
+        conversation: buildConversationIndex({
+          buffers: [] satisfies BufferState[],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: {},
+        selection: null,
+      })}
+      friends={[
+        { id: 'friend-1', nick: 'Alice' },
+        { id: 'friend-2', nick: 'Bob' },
+      ]}
+      friendPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />
+  );
+
+  assert.match(markup, /Friends \(2\)/);
 });
 
 test('pending channel selection ignores IRC casing in the sidebar', () => {

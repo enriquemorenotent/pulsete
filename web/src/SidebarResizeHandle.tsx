@@ -1,29 +1,28 @@
 import type { KeyboardEvent, PointerEvent } from 'react';
 import { cn } from '@/lib/utils.js';
 import {
+  getSidebarResizeDeltaForKey,
   MAX_SIDEBAR_WIDTH,
   MIN_SIDEBAR_WIDTH,
-  SIDEBAR_WIDTH_STEP,
+  type SidebarEdge,
 } from './sidebar-width.js';
 
 type SidebarResizeHandleProps = {
   sidebarWidth: number;
   isResizing: boolean;
+  edge?: SidebarEdge;
   onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
   onNudge: (delta: number) => void;
   onReset: () => void;
 };
 
 export function SidebarResizeHandle(props: SidebarResizeHandleProps) {
+  const edge = props.edge ?? 'left';
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'ArrowLeft') {
+    const delta = getSidebarResizeDeltaForKey(edge, event.key);
+    if (delta !== null) {
       event.preventDefault();
-      props.onNudge(-SIDEBAR_WIDTH_STEP);
-      return;
-    }
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      props.onNudge(SIDEBAR_WIDTH_STEP);
+      props.onNudge(delta);
       return;
     }
     if (event.key === 'Home') {
@@ -42,7 +41,7 @@ export function SidebarResizeHandle(props: SidebarResizeHandleProps) {
       <div
         role="separator"
         tabIndex={0}
-        aria-label="Resize sidebar"
+        aria-label={`Resize ${edge} sidebar`}
         aria-orientation="vertical"
         aria-valuemin={MIN_SIDEBAR_WIDTH}
         aria-valuemax={MAX_SIDEBAR_WIDTH}

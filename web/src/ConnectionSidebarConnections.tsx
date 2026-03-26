@@ -17,7 +17,7 @@ type ConnectionSidebarConnectionsProps = Pick<
 
 export function ConnectionSidebarConnections(props: ConnectionSidebarConnectionsProps) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border bg-card">
+    <section className="flex min-h-0 flex-[3_1_0%] flex-col overflow-hidden border border-border bg-card">
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-2">
           {props.connections.length === 0 ? (
