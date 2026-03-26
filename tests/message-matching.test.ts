@@ -9,6 +9,9 @@ const queryBuffer: BufferState = {
   kind: 'query',
   target: 'Alice',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 test('message matching treats IRC nick casing as the same private-message target', () => {

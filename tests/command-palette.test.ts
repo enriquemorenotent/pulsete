@@ -36,6 +36,9 @@ const serverBuffer: BufferState = {
   kind: 'server',
   target: 'server',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const channelBuffer: BufferState = {
@@ -44,6 +47,9 @@ const channelBuffer: BufferState = {
   kind: 'channel',
   target: '#help',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const queryBuffer: BufferState = {
@@ -52,6 +58,9 @@ const queryBuffer: BufferState = {
   kind: 'query',
   target: 'Nathe',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const pendingChannel: PendingChannelState = {

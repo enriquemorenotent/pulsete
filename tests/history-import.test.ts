@@ -9,6 +9,9 @@ const queryBuffer: BufferState = {
   kind: 'query',
   target: 'MissD',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const channelBuffer: BufferState = {
@@ -17,6 +20,9 @@ const channelBuffer: BufferState = {
   kind: 'channel',
   target: '#lesdomme',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const hexChatFixture = [

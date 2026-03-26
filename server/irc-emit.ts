@@ -54,8 +54,13 @@ export const emitState = (connection: IrcStateContext) => {
   });
 };
 
-export const emitMessage = (connection: IrcEventContext, message: MessageInput) => {
-  emitEvent(connection, { type: 'message', message });
+export const emitMessage = (connection: IrcStateContext, message: MessageInput) => {
+  emitEvent(connection, {
+    type: 'message',
+    message,
+    currentNick: connection.lifecycle.currentNick,
+    altNicks: connection.profile.altNicks,
+  });
 };
 
 export const emitChannelListEntry = (

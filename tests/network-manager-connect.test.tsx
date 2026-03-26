@@ -52,6 +52,9 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   kind: overrides.kind ?? 'server',
   target: overrides.target ?? 'server',
   unread: overrides.unread ?? 0,
+  priorityUnread: overrides.priorityUnread ?? 0,
+  lastReadTs: overrides.lastReadTs ?? null,
+  lastReadMessageId: overrides.lastReadMessageId ?? null,
 });
 
 const emptyWorkspace: WorkspaceView = {

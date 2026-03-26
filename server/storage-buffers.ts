@@ -21,20 +21,20 @@ const channelSelect = `
 
 export const listBuffers = (db: DatabaseSync, networkId?: string): BufferState[] => {
   const sql = networkId
-    ? 'SELECT id, networkId, kind, target, unread, selfNickAliases, createdAt, updatedAt FROM buffers WHERE networkId = ? ORDER BY createdAt ASC'
-    : 'SELECT id, networkId, kind, target, unread, selfNickAliases, createdAt, updatedAt FROM buffers ORDER BY createdAt ASC';
+    ? 'SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers WHERE networkId = ? ORDER BY createdAt ASC'
+    : 'SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers ORDER BY createdAt ASC';
   const args = networkId ? [networkId] : [];
   return (db.prepare(sql).all(...args) as BufferRow[]).map(toBufferState);
 };
 
 export const getBuffer = (db: DatabaseSync, bufferId: string): BufferState | null => {
-  const row = db.prepare('SELECT id, networkId, kind, target, unread, selfNickAliases, createdAt, updatedAt FROM buffers WHERE id = ?')
+  const row = db.prepare('SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers WHERE id = ?')
     .get(bufferId) as BufferRow | undefined;
   return row ? toBufferState(row) : null;
 };
 
 export const getBufferByTarget = (db: DatabaseSync, networkId: string, target: string): BufferState | null => {
-  const row = db.prepare('SELECT id, networkId, kind, target, unread, selfNickAliases, createdAt, updatedAt FROM buffers WHERE networkId = ? AND target = ?')
+  const row = db.prepare('SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers WHERE networkId = ? AND target = ?')
     .get(networkId, target) as BufferRow | undefined;
   if (row) {
     return toBufferState(row);
@@ -53,13 +53,16 @@ export const upsertBuffer = (db: DatabaseSync, input: BufferInput) => {
   if (existing) {
     db.prepare(
       `UPDATE buffers
-       SET networkId = ?, kind = ?, target = ?, unread = ?, selfNickAliases = ?, updatedAt = ?
+       SET networkId = ?, kind = ?, target = ?, unread = ?, priorityUnread = ?, lastReadTs = ?, lastReadMessageId = ?, selfNickAliases = ?, updatedAt = ?
        WHERE id = ?`
     ).run(
       input.networkId,
       input.kind,
       input.target,
       input.unread ?? existing.unread ?? 0,
+      input.priorityUnread ?? existing.priorityUnread ?? 0,
+      input.lastReadTs ?? existing.lastReadTs ?? null,
+      input.lastReadMessageId ?? existing.lastReadMessageId ?? null,
       JSON.stringify(input.selfNickAliases ?? existing.selfNickAliases ?? []),
       now,
       existing.id
@@ -70,14 +73,17 @@ export const upsertBuffer = (db: DatabaseSync, input: BufferInput) => {
   const id = input.id ?? randomUUID();
   db.prepare(
     `INSERT INTO buffers
-       (id, networkId, kind, target, unread, selfNickAliases, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.networkId,
     input.kind,
     input.target,
     input.unread ?? 0,
+    input.priorityUnread ?? 0,
+    input.lastReadTs ?? null,
+    input.lastReadMessageId ?? null,
     JSON.stringify(input.selfNickAliases ?? []),
     now,
     now
@@ -94,14 +100,25 @@ export const removeBuffer = (db: DatabaseSync, bufferId: string) => {
   return existing;
 };
 
-export const markBufferRead = (db: DatabaseSync, bufferId: string) => {
-  db.prepare('UPDATE buffers SET unread = 0, updatedAt = ? WHERE id = ?')
-    .run(Date.now(), bufferId);
+export const markBufferRead = (
+  db: DatabaseSync,
+  bufferId: string,
+  input: { lastReadTs: number | null; lastReadMessageId: string | null },
+) => {
+  db.prepare(
+    'UPDATE buffers SET unread = 0, priorityUnread = 0, lastReadTs = ?, lastReadMessageId = ?, updatedAt = ? WHERE id = ?'
+  ).run(input.lastReadTs, input.lastReadMessageId, Date.now(), bufferId);
 };
 
-export const setBufferUnread = (db: DatabaseSync, bufferId: string, unread: number) => {
-  db.prepare('UPDATE buffers SET unread = ?, updatedAt = ? WHERE id = ?')
-    .run(unread, Date.now(), bufferId);
+export const setBufferUnread = (
+  db: DatabaseSync,
+  bufferId: string,
+  unread: number,
+  priorityUnread = 0,
+) => {
+  db.prepare(
+    'UPDATE buffers SET unread = ?, priorityUnread = ?, updatedAt = ? WHERE id = ?'
+  ).run(unread, priorityUnread, Date.now(), bufferId);
 };
 
 export const listChannels = (db: DatabaseSync, networkId?: string): ChannelState[] => {

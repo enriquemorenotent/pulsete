@@ -42,7 +42,7 @@ export type RuntimeEvent =
     }
   | { type: 'channel-list-completed'; networkId: string; requestId: string }
   | { type: 'channel-list-failed'; networkId: string; requestId: string; message: string }
-  | { type: 'message'; message: MessageInput }
+  | { type: 'message'; message: MessageInput; currentNick?: string; altNicks?: string[] }
   | { type: 'friend-presence'; networkId: string; onlineNicks: string[] }
   | { type: 'channel'; networkId: string; channel: string; topic?: string; users?: ChannelUserState[] };
 

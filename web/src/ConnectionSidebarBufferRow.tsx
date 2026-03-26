@@ -2,7 +2,8 @@ import type { ComponentType } from 'react';
 import { X } from 'lucide-react';
 import type { BufferState } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
-import { ConnectionSidebarUnreadBadge } from './ConnectionSidebarUnreadBadge.js';
+import { resolveBufferActivityState } from './buffer-activity.js';
+import { ConnectionSidebarActivityBadge } from './ConnectionSidebarUnreadBadge.js';
 
 type ConnectionSidebarBufferRowProps = {
   buffer: BufferState;
@@ -15,6 +16,7 @@ type ConnectionSidebarBufferRowProps = {
 
 export function ConnectionSidebarBufferRow(props: ConnectionSidebarBufferRowProps) {
   const Icon = props.icon;
+  const activity = resolveBufferActivityState(props.buffer);
 
   return (
     <div className={cn('flex items-stretch rounded-sm', props.selected && 'bg-accent')}>
@@ -25,12 +27,21 @@ export function ConnectionSidebarBufferRow(props: ConnectionSidebarBufferRowProp
         )}
         onClick={props.onSelect}
         aria-label={`Open ${props.buffer.target}`}
-      >
+        >
         <Icon className="size-3 shrink-0 text-muted-foreground" />
-        <span className={cn('truncate text-[13px] text-foreground', props.dimmed && 'text-muted-foreground')}>
+        <span
+          className={cn(
+            'truncate text-[13px]',
+            activity.priority ? 'font-semibold text-foreground' : 'text-foreground',
+            activity.hasUnread && !activity.priority && 'font-medium text-foreground',
+            props.dimmed && !activity.hasUnread && 'text-muted-foreground'
+          )}
+        >
           {props.buffer.target}
         </span>
-        {props.buffer.unread > 0 ? <ConnectionSidebarUnreadBadge unread={props.buffer.unread} /> : null}
+        {activity.hasUnread ? (
+          <ConnectionSidebarActivityBadge count={activity.count} priority={activity.priority} />
+        ) : null}
       </button>
       <button
         className="px-2 text-muted-foreground transition-colors hover:bg-accent/70 hover:text-accent-foreground"

@@ -30,6 +30,9 @@ const buffer: BufferState = {
   kind: 'query',
   target: 'alice',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const activeBuffer: AssistantActiveBuffer = {

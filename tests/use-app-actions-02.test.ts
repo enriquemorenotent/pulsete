@@ -33,6 +33,9 @@ const selectedBuffer: BufferState = {
   kind: 'channel',
   target: '#general',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const selectedChannel: ChannelState = {

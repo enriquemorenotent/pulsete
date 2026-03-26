@@ -1,8 +1,9 @@
 import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
+import { resolveBufferActivityState } from './buffer-activity.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
 import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingChannelRow.js';
-import { ConnectionSidebarUnreadBadge } from './ConnectionSidebarUnreadBadge.js';
+import { ConnectionSidebarActivityBadge } from './ConnectionSidebarUnreadBadge.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import type { NetworkRuntimeState } from './workspace.js';
@@ -22,6 +23,7 @@ type ConnectionSidebarNetworkSectionProps = {
 
 export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkSectionProps) {
   const { connection } = props;
+  const serverActivity = resolveBufferActivityState(connection.serverBuffer);
 
   return (
     <section className={cn(props.index > 0 && 'mt-2 border-t border-border/70 pt-2')}>
@@ -30,13 +32,20 @@ export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkS
           className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left hover:bg-accent/70"
           onClick={() => props.onSelectNetwork(connection.network)}
         >
-          <span className={cn('size-2 shrink-0 rounded-full', dotTone(connection.runtime))} />
-          <div className="min-w-0">
-            <div className="flex min-w-0 items-baseline gap-1.5">
-              <span className="truncate text-[13px] font-medium text-foreground">{connection.labelParts.name}</span>
-              <span className="shrink-0 font-mono text-[11px] font-normal text-muted-foreground">
-                as {connection.labelParts.nick}
-              </span>
+            <span className={cn('size-2 shrink-0 rounded-full', dotTone(connection.runtime))} />
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <span
+                  className={cn(
+                    'truncate text-[13px] text-foreground',
+                    serverActivity.hasUnread ? 'font-semibold' : 'font-medium'
+                  )}
+                >
+                  {connection.labelParts.name}
+                </span>
+                <span className="shrink-0 font-mono text-[11px] font-normal text-muted-foreground">
+                  as {connection.labelParts.nick}
+                </span>
               {connection.labelParts.instanceIndex === null ? null : (
                 <span className="shrink-0 text-[11px] text-muted-foreground">
                   · {connection.labelParts.instanceIndex}
@@ -44,8 +53,8 @@ export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkS
               )}
             </div>
           </div>
-          {connection.serverBuffer && connection.serverBuffer.unread > 0 ? (
-            <ConnectionSidebarUnreadBadge unread={connection.serverBuffer.unread} />
+              {serverActivity.hasUnread ? (
+            <ConnectionSidebarActivityBadge count={serverActivity.count} priority={serverActivity.priority} />
           ) : null}
         </button>
         <button

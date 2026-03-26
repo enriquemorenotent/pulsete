@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { defaultAssistantModel } from '../shared/assistant-defaults.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 
-export const currentStorageSchemaVersion = 10;
+export const currentStorageSchemaVersion = 11;
 
 const schemaSql = `
   PRAGMA journal_mode = WAL;
@@ -38,6 +38,9 @@ const schemaSql = `
     kind TEXT NOT NULL,
     target TEXT NOT NULL,
     unread INTEGER NOT NULL DEFAULT 0,
+    priorityUnread INTEGER NOT NULL DEFAULT 0,
+    lastReadTs INTEGER,
+    lastReadMessageId TEXT,
     selfNickAliases TEXT NOT NULL DEFAULT '[]',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
@@ -239,6 +242,14 @@ const storageMigrations: readonly StorageMigration[] = [
       backfillQueryBufferSelfNickAliases(db);
     },
   },
+  {
+    version: 11,
+    apply: (db) => {
+      ensureColumn(db, 'buffers', 'priorityUnread', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'buffers', 'lastReadTs', 'INTEGER');
+      ensureColumn(db, 'buffers', 'lastReadMessageId', 'TEXT');
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: DatabaseSync) => {
@@ -297,6 +308,9 @@ const repairStorageSchemaDrift = (db: DatabaseSync) => {
   ensureColumn(db, 'messages', 'attributionConfidence', "TEXT NOT NULL DEFAULT 'low'");
   ensureColumn(db, 'messages', 'importBatchId', 'TEXT');
   ensureColumn(db, 'buffers', 'selfNickAliases', "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(db, 'buffers', 'priorityUnread', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'buffers', 'lastReadTs', 'INTEGER');
+  ensureColumn(db, 'buffers', 'lastReadMessageId', 'TEXT');
   ensureHistoryImportBatchesTable(db);
   if (addedAuthMethod) {
     db.exec("UPDATE networks SET authMethod = 'server-pass' WHERE password IS NOT NULL AND authMethod = 'none'");
@@ -337,8 +351,12 @@ const setUserVersion = (db: DatabaseSync, version: number) => {
 };
 
 const resetStoredMessageHistory = (db: DatabaseSync) => {
+  ensureColumn(db, 'buffers', 'priorityUnread', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'buffers', 'lastReadTs', 'INTEGER');
+  ensureColumn(db, 'buffers', 'lastReadMessageId', 'TEXT');
   db.exec('DELETE FROM messages');
-  db.prepare('UPDATE buffers SET unread = 0, updatedAt = ?').run(Date.now());
+  db.prepare('UPDATE buffers SET unread = 0, priorityUnread = 0, lastReadTs = NULL, lastReadMessageId = NULL, updatedAt = ?')
+    .run(Date.now());
 };
 
 const ensureAssistantTables = (db: DatabaseSync) => {

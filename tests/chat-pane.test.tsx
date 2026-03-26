@@ -30,6 +30,9 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   kind: overrides.kind ?? 'channel',
   target: overrides.target ?? '#help',
   unread: overrides.unread ?? 0,
+  priorityUnread: overrides.priorityUnread ?? 0,
+  lastReadTs: overrides.lastReadTs ?? null,
+  lastReadMessageId: overrides.lastReadMessageId ?? null,
 });
 
 const makeChannel = (overrides: Partial<ChannelState> = {}): ChannelState => ({
@@ -465,6 +468,55 @@ test('server transcripts do not render the load older control', () => {
   ]);
 
   assert.doesNotMatch(markup, /Load older/);
+});
+
+test('channel transcripts render a new messages divider at the first unread point', () => {
+  const messages = [
+    makeMessage({ id: 'message-1', body: 'older', ts: 1 }),
+    makeMessage({ id: 'message-2', body: 'newer', ts: 2 }),
+  ];
+  const markup = renderToStaticMarkup(
+    <ChatPane
+      workspace={{
+        ...makeWorkspace(),
+        selectedBuffer: makeBuffer({
+          unread: 1,
+          lastReadMessageId: 'message-1',
+        }),
+      }}
+      friends={[] satisfies FriendState[]}
+      selectedMessages={messages}
+      draft=""
+      messageDisplayMode="colors"
+      scrollRef={createRef<HTMLDivElement>()}
+      onDraftChange={() => undefined}
+      onRecallOlderDraft={() => undefined}
+      onRecallNewerDraft={() => undefined}
+      onSend={async () => undefined}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      showChannelAutoJoin={false}
+      channelAutoJoinActive={false}
+      onToggleChannelAutoJoin={async () => true}
+      historyImportOpen={false}
+      onCloseHistoryImport={() => undefined}
+      selfNickAliasesOpen={false}
+      onCloseSelfNickAliases={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+      channelList={closedChannelList}
+      channelListNetwork={null}
+      onCloseChannelList={() => undefined}
+      onJoinChannelFromList={async () => undefined}
+      onOpenMentionedChannel={() => undefined}
+      onOpenParticipantQuery={() => undefined}
+      onOpenChannelList={() => undefined}
+    />
+  );
+
+  assert.match(markup, /New messages/);
+  assert.match(markup, /older/);
+  assert.match(markup, /newer/);
 });
 
 test('channel headers can render an active autojoin toggle', () => {

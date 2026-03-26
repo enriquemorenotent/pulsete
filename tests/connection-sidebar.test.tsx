@@ -30,6 +30,9 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   kind: overrides.kind ?? 'server',
   target: overrides.target ?? 'server',
   unread: overrides.unread ?? 0,
+  priorityUnread: overrides.priorityUnread ?? 0,
+  lastReadTs: overrides.lastReadTs ?? null,
+  lastReadMessageId: overrides.lastReadMessageId ?? null,
 });
 
 const makeRuntime = (overrides: Partial<NetworkRuntimeState> = {}): NetworkRuntimeState => ({
@@ -183,4 +186,46 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
   const selectedRows = markup.match(/rounded-sm bg-accent/g) ?? [];
   assert.equal(selectedRows.length, 1);
   assert.match(markup, /aria-label="Open pending #Help"/);
+});
+
+test('priority unread buffers render the stronger activity badge styling', () => {
+  const network = makeNetwork();
+  const channel = makeBuffer({
+    id: 'channel-1',
+    kind: 'channel',
+    target: '#help',
+    unread: 3,
+    priorityUnread: 1,
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), channel],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />
+  );
+
+  assert.match(markup, /bg-primary\/10 text-primary/);
+  assert.match(markup, />3</);
 });

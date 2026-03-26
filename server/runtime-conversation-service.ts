@@ -270,7 +270,15 @@ export class RuntimeConversationService {
       return [];
     }
 
-    const messages = this.appendMessage(event.message);
+    const { saved, bufferUpdate } = appendConversationMessage(this.options.conversations, {
+      message: event.message,
+      currentNick: event.currentNick,
+      altNicks: event.altNicks,
+    });
+    const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
+    if (bufferUpdate) {
+      messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
+    }
 
     const closedServiceQuery = !event.message.self
       && event.message.target === 'server'
@@ -304,7 +312,7 @@ export class RuntimeConversationService {
   }
 
   private appendMessage(message: MessageInput) {
-    const { saved, bufferUpdate } = appendConversationMessage(this.options.conversations, message);
+    const { saved, bufferUpdate } = appendConversationMessage(this.options.conversations, { message });
     const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
     if (bufferUpdate) {
       messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });

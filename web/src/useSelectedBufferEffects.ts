@@ -2,17 +2,20 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { BufferState, ChatMessage } from '../../shared/protocol.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
 import type { Action, GatewayStatus } from './app-types.js';
+import { shouldMarkSelectedBufferRead } from './buffer-activity.js';
 import { api, type BufferHistoryPayload } from './client.js';
 
 type UseSelectedBufferEffectsParams = {
   applyServerMessages: ApplyServerMessages;
   dispatch: (action: Action) => void;
+  documentVisible: boolean;
   gatewayStatus: GatewayStatus;
   historyHasOlderByBufferId: Record<string, boolean>;
   historyLoadedByBufferId: Record<string, true>;
   historyLoadingOlder: boolean;
   selectedBuffer: BufferState | null;
   selectedMessages: ChatMessage[];
+  windowFocused: boolean;
 };
 
 type LoadSelectedBufferHistoryParams = {
@@ -40,6 +43,7 @@ export type SelectedBufferHistoryControls = {
 
 export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams): SelectedBufferHistoryControls {
   const historyRequestRef = useRef(0);
+  const readRequestBufferIdRef = useRef<string | null>(null);
   const selectedBufferId = params.selectedBuffer?.id ?? null;
   const hasLoadedHistory = selectedBufferId
     ? params.historyLoadedByBufferId[selectedBufferId] === true
@@ -49,13 +53,48 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
     : false;
 
   useEffect(() => {
-    const unread = params.selectedBuffer?.unread ?? 0;
-    if (params.selectedBuffer && unread > 0) {
-      api.markBufferRead(params.selectedBuffer.id)
-        .then((payload) => params.applyServerMessages(payload.messages))
-        .catch(() => undefined);
+    if (!params.selectedBuffer) {
+      return;
     }
-  }, [params.applyServerMessages, params.selectedBuffer?.id, params.selectedBuffer?.unread]);
+    if (
+      !shouldMarkSelectedBufferRead({
+        selectedBuffer: params.selectedBuffer,
+        documentVisible: params.documentVisible,
+        windowFocused: params.windowFocused,
+      })
+      || readRequestBufferIdRef.current === params.selectedBuffer.id
+    ) {
+      return;
+    }
+    const requestBufferId = params.selectedBuffer.id;
+    readRequestBufferIdRef.current = requestBufferId;
+    api.markBufferRead(requestBufferId)
+      .then((payload) => params.applyServerMessages(payload.messages))
+      .catch(() => undefined)
+      .finally(() => {
+        if (readRequestBufferIdRef.current === requestBufferId) {
+          readRequestBufferIdRef.current = null;
+        }
+      });
+  }, [
+    params.applyServerMessages,
+    params.documentVisible,
+    params.selectedBuffer,
+    params.windowFocused,
+  ]);
+
+  useEffect(() => {
+    if (
+      !params.selectedBuffer
+      || !shouldMarkSelectedBufferRead({
+        selectedBuffer: params.selectedBuffer,
+        documentVisible: params.documentVisible,
+        windowFocused: params.windowFocused,
+      })
+    ) {
+      readRequestBufferIdRef.current = null;
+    }
+  }, [params.documentVisible, params.selectedBuffer, params.windowFocused]);
 
   useEffect(() => {
     historyRequestRef.current += 1;

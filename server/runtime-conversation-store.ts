@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { BufferState, ChannelState } from '../shared/protocol.js';
 import { badRequest, notFound } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
+import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
 import type { RuntimeConversationStore } from './runtime-store-ports.js';
 import type { MessageInput } from './storage-types.js';
 
@@ -18,10 +19,21 @@ export const closeConversationQueryBuffer = (store: RuntimeConversationStore, bu
 
 export const markConversationBufferRead = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
-  if (buffer.unread === 0) {
+  const latestMessage = store.listRecentMessagesForBuffer(buffer.networkId, buffer.target, 1)[0] ?? null;
+  const nextLastReadTs = latestMessage?.ts ?? buffer.lastReadTs ?? null;
+  const nextLastReadMessageId = latestMessage?.id ?? buffer.lastReadMessageId ?? null;
+  if (
+    buffer.unread === 0
+    && buffer.priorityUnread === 0
+    && buffer.lastReadTs === nextLastReadTs
+    && buffer.lastReadMessageId === nextLastReadMessageId
+  ) {
     return buffer;
   }
-  store.markBufferRead(bufferId);
+  store.markBufferRead(bufferId, {
+    lastReadTs: nextLastReadTs,
+    lastReadMessageId: nextLastReadMessageId,
+  });
   return getRequiredBuffer(store, bufferId);
 };
 
@@ -41,14 +53,22 @@ export const clearConversationBufferHistory = (store: RuntimeConversationStore, 
     throw badRequest('Only channels and private messages can be cleared');
   }
   const deletedMessages = store.deleteMessages(buffer.networkId, buffer.target);
-  if (buffer.unread === 0) {
+  if (
+    buffer.unread === 0
+    && buffer.priorityUnread === 0
+    && buffer.lastReadTs == null
+    && buffer.lastReadMessageId == null
+  ) {
     return {
       buffer,
       bufferUpdate: null,
       deletedMessages,
     };
   }
-  store.markBufferRead(bufferId);
+  store.markBufferRead(bufferId, {
+    lastReadTs: null,
+    lastReadMessageId: null,
+  });
   return {
     buffer,
     bufferUpdate: getRequiredBuffer(store, bufferId),
@@ -56,10 +76,17 @@ export const clearConversationBufferHistory = (store: RuntimeConversationStore, 
   };
 };
 
-export const appendConversationMessage = (store: RuntimeConversationStore, message: MessageInput) => {
-  const bufferUpdate = resolveMessageBuffer(store, message);
+export const appendConversationMessage = (
+  store: RuntimeConversationStore,
+  input: {
+    message: MessageInput;
+    currentNick?: string | null;
+    altNicks?: readonly string[];
+  },
+) => {
+  const bufferUpdate = resolveMessageBuffer(store, input);
   return {
-    saved: store.appendMessage(message),
+    saved: store.appendMessage(input.message),
     bufferUpdate,
   };
 };
@@ -81,19 +108,30 @@ export const upsertConversationChannel = (
   };
 };
 
-const resolveMessageBuffer = (store: RuntimeConversationStore, message: MessageInput) => {
-  const existing = store.getBufferByTarget(message.networkId, message.target);
-  const created = existing ?? createMessageBuffer(store, message);
+const resolveMessageBuffer = (
+  store: RuntimeConversationStore,
+  input: {
+    message: MessageInput;
+    currentNick?: string | null;
+    altNicks?: readonly string[];
+  },
+) => {
+  const existing = store.getBufferByTarget(input.message.networkId, input.message.target);
+  const created = existing ?? createMessageBuffer(store, input.message);
   if (!created) {
     return null;
   }
 
-  const unread = shouldIncrementUnread(message) ? created.unread + 1 : created.unread;
-  if (unread === created.unread) {
+  const nextBuffer = resolveNextBufferActivity({
+    buffer: created,
+    message: input.message,
+    currentNick: input.currentNick,
+    altNicks: input.altNicks,
+  });
+  if (nextBuffer === created) {
     return created;
   }
-  store.setBufferUnread(created.id, unread);
-  return store.getBuffer(created.id);
+  return store.upsertBuffer(nextBuffer);
 };
 
 const createMessageBuffer = (store: RuntimeConversationStore, message: MessageInput): BufferState | null => {
@@ -120,8 +158,5 @@ const getRequiredBuffer = (store: RuntimeConversationStore, bufferId: string) =>
   }
   return buffer;
 };
-
-const shouldIncrementUnread = (message: MessageInput) =>
-  !message.self && (message.target === 'server' || message.kind !== 'system');
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

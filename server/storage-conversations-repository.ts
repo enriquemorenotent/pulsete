@@ -68,8 +68,12 @@ export class StorageConversationsRepository {
     return getChannelByName(this.db, networkId, name);
   }
 
-  markBufferRead(bufferId: string) {
-    markBufferRead(this.db, bufferId);
+  markBufferRead(bufferId: string, input: { lastReadTs: number | null; lastReadMessageId: string | null }) {
+    markBufferRead(this.db, bufferId, input);
+  }
+
+  setBufferUnread(bufferId: string, unread: number, priorityUnread = 0) {
+    setBufferUnread(this.db, bufferId, unread, priorityUnread);
   }
 
   removeBuffer(bufferId: string) {
@@ -78,10 +82,6 @@ export class StorageConversationsRepository {
 
   deleteChannelByName(networkId: string, channelName: string) {
     deleteChannelByName(this.db, networkId, channelName);
-  }
-
-  setBufferUnread(bufferId: string, unread: number) {
-    setBufferUnread(this.db, bufferId, unread);
   }
 
   updateChannelUsers(networkId: string, channelName: string, users: ChannelUserState[]) {

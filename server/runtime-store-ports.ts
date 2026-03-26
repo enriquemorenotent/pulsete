@@ -42,10 +42,10 @@ export type RuntimeConversationStore = {
   getBufferByTarget(networkId: string, target: string): BufferState | null;
   getServerBuffer(networkId: string): BufferState | null;
   getChannelByName(networkId: string, name: string): ChannelState | null;
-  markBufferRead(bufferId: string): void;
+  markBufferRead(bufferId: string, input: { lastReadTs: number | null; lastReadMessageId: string | null }): void;
+  setBufferUnread(bufferId: string, unread: number, priorityUnread?: number): void;
   removeBuffer(bufferId: string): BufferState | null;
   deleteChannelByName(networkId: string, channelName: string): void;
-  setBufferUnread(bufferId: string, unread: number): void;
   updateChannelUsers(networkId: string, channelName: string, users: ChannelUserState[]): void;
   updateChannelTopic(networkId: string, channelName: string, topic: string): void;
   listMessages(networkId: string, target: string, limit?: number): AppSnapshot['messages'];

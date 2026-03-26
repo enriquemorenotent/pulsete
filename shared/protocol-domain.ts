@@ -85,6 +85,9 @@ export const bufferSchema = z.object({
   kind: bufferKindSchema,
   target: z.string(),
   unread: z.number().int().nonnegative().default(0),
+  priorityUnread: z.number().int().nonnegative().default(0),
+  lastReadTs: z.number().int().nonnegative().nullable().default(null),
+  lastReadMessageId: z.string().nullable().default(null),
   selfNickAliases: z.array(z.string()).default([]).optional(),
 });
 export type BufferState = z.infer<typeof bufferSchema>;

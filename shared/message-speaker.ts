@@ -34,7 +34,7 @@ export const getEvidenceSpeakerLabel = (line: EvidenceSpeakerLike) => (
 );
 
 export const getTranscriptSpeakerLabel = (message: MessageSpeakerLike) => {
-  if (getSpeakerRole(message) === 'self' && getAttributionConfidence(message) === 'high') {
+  if (message.self || (getSpeakerRole(message) === 'self' && getAttributionConfidence(message) === 'high')) {
     return 'you';
   }
   return getSpeakerNick(message)?.trim() || unknownSpeakerLabel.toLowerCase();

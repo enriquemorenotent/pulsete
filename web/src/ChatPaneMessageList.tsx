@@ -3,6 +3,11 @@ import { Plug2 } from 'lucide-react';
 import type { BufferState, ChannelUserState, ChatMessage } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
+import {
+  captureUnreadDividerAnchor,
+  resolveVisibleUnreadDividerIndex,
+  type UnreadDividerAnchor,
+} from './buffer-activity.js';
 import { FormattedMessageText } from './FormattedMessageText.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -23,7 +28,7 @@ import {
 } from './chat-pane-message-utils.js';
 
 type ChatPaneMessageListProps = {
-  bufferKind: BufferState['kind'] | null;
+  selectedBuffer: BufferState | null;
   channelUsers?: ChannelUserState[];
   messages: ChatMessage[];
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -38,10 +43,17 @@ type ChatPaneMessageListProps = {
 };
 
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: ChatPaneMessageListProps) {
-  const participantHighlightMode = resolveParticipantHighlightMode(props.bufferKind);
+  const participantHighlightMode = resolveParticipantHighlightMode(props.selectedBuffer?.kind ?? null);
+  const unreadDividerAnchorRef = useRef<UnreadDividerAnchor | null>(null);
+  const unreadDividerAnchor = captureUnreadDividerAnchor(props.selectedBuffer, unreadDividerAnchorRef.current);
+  unreadDividerAnchorRef.current = unreadDividerAnchor;
   const channelUserModesByNick = useMemo(
     () => buildChannelUserModesByNick(props.channelUsers),
     [props.channelUsers]
+  );
+  const firstUnreadDividerIndex = useMemo(
+    () => resolveVisibleUnreadDividerIndex(props.messages, props.selectedBuffer, unreadDividerAnchor),
+    [props.messages, props.selectedBuffer, unreadDividerAnchor]
   );
   const loadingOlderRef = useRef(false);
   const renderBlocks = useMemo(
@@ -106,7 +118,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
         </div>
       ) : (
         <div className="space-y-1 font-mono text-[12px]">
-          {renderBlocks.map((block) => {
+          {renderBlocks.map((block, index) => {
             const serverSourceLabel =
               props.listKind === 'server'
                 ? getServerMessageSourceLabel(block.message)
@@ -122,40 +134,44 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
               allowParticipantQuery: !!props.onOpenParticipantQuery,
             });
 
-            return shouldUseCompactRow ? (
-              <ChatPaneCompactMessageRow
-                key={block.message.id}
-                message={block.message}
-                participant={participant}
-                mode={props.mode}
-                onOpenChannel={props.onOpenChannel}
-                onOpenParticipantQuery={props.onOpenParticipantQuery}
-              />
-            ) : (
-              <article key={block.message.id} className={cn('px-1 py-0.5 text-foreground', messageTone(block.message))}>
-                <div className="min-w-0">
-                  <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                    <span className="tabular-nums normal-case tracking-normal">{formatMessageTimestamp(block.message.ts)}</span>
-                    {participant.label ? (
-                      <ParticipantNickLabel
-                        nick={participant.label}
-                        clickable={participant.clickable}
-                        onOpenParticipantQuery={props.onOpenParticipantQuery}
-                        className={cn('font-medium', participant.toneClassName)}
-                      />
-                    ) : null}
-                    {renderKindBadge(participant)}
-                  </div>
-                  <p
-                    className={cn(
-                      'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-inherit',
-                      isActionMessage(block.message) && 'italic'
-                    )}
-                  >
-                    <FormattedMessageText text={block.message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
-                  </p>
-                </div>
-              </article>
+            return (
+              <div key={block.message.id}>
+                {firstUnreadDividerIndex === index ? <UnreadDivider /> : null}
+                {shouldUseCompactRow ? (
+                  <ChatPaneCompactMessageRow
+                    message={block.message}
+                    participant={participant}
+                    mode={props.mode}
+                    onOpenChannel={props.onOpenChannel}
+                    onOpenParticipantQuery={props.onOpenParticipantQuery}
+                  />
+                ) : (
+                  <article className={cn('px-1 py-0.5 text-foreground', messageTone(block.message))}>
+                    <div className="min-w-0">
+                      <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                        <span className="tabular-nums normal-case tracking-normal">{formatMessageTimestamp(block.message.ts)}</span>
+                        {participant.label ? (
+                          <ParticipantNickLabel
+                            nick={participant.label}
+                            clickable={participant.clickable}
+                            onOpenParticipantQuery={props.onOpenParticipantQuery}
+                            className={cn('font-medium', participant.toneClassName)}
+                          />
+                        ) : null}
+                        {renderKindBadge(participant)}
+                      </div>
+                      <p
+                        className={cn(
+                          'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-inherit',
+                          isActionMessage(block.message) && 'italic'
+                        )}
+                      >
+                        <FormattedMessageText text={block.message.body} mode={props.mode} onOpenChannel={props.onOpenChannel} />
+                      </p>
+                    </div>
+                  </article>
+                )}
+              </div>
             );
           })}
         </div>
@@ -192,3 +208,11 @@ export const restoreScrollOffsetAfterPrepend = (
 
 const renderKindBadge = (participant: MessageParticipantPresentation) =>
   participant.kindBadgeLabel ? <span>{participant.kindBadgeLabel}</span> : null;
+
+const UnreadDivider = () => (
+  <div className="my-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-primary">
+    <span className="h-px flex-1 bg-primary/45" />
+    <span>New messages</span>
+    <span className="h-px flex-1 bg-primary/45" />
+  </div>
+);

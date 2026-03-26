@@ -49,6 +49,9 @@ export type BufferRow = {
   kind: BufferState['kind'];
   target: string;
   unread: number;
+  priorityUnread: number;
+  lastReadTs: number | null;
+  lastReadMessageId: string | null;
   selfNickAliases: string;
   createdAt: number;
   updatedAt: number;
@@ -144,8 +147,8 @@ export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'users'> &
     unread?: number;
   };
 
-export type BufferInput = Omit<BufferState, 'id' | 'unread'> &
-  Partial<Pick<BufferState, 'id' | 'unread'>>;
+export type BufferInput = Omit<BufferState, 'id' | 'unread' | 'priorityUnread' | 'lastReadTs' | 'lastReadMessageId'> &
+  Partial<Pick<BufferState, 'id' | 'unread' | 'priorityUnread' | 'lastReadTs' | 'lastReadMessageId'>>;
 
 export type FriendInput = Omit<FriendState, 'id'> & Partial<Pick<FriendState, 'id'>>;
 

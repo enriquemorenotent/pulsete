@@ -98,7 +98,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           onOpenChannelList={props.onOpenChannelList}
         />
         <ChatPaneMessageList
-          bufferKind={props.workspace.selectedBuffer?.kind ?? null}
+          selectedBuffer={props.workspace.selectedBuffer}
           channelUsers={props.workspace.selectedChannel?.users ?? []}
           messages={props.selectedMessages}
           scrollRef={props.scrollRef}

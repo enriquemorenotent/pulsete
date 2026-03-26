@@ -102,7 +102,7 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.equal(network?.authMethod, 'server-pass');
   assert.equal(network?.authTarget, 'NickServ');
   assert.equal(network?.authAccount, '');
-  assert.equal(version.user_version, 10);
+  assert.equal(version.user_version, 11);
   assert.equal(columns.some((column) => column.name === 'templateId'), true);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), true);
   assert.equal(columns.some((column) => column.name === 'historicalSelfNicks'), true);
@@ -110,6 +110,9 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.equal(columns.some((column) => column.name === 'authTarget'), true);
   assert.equal(columns.some((column) => column.name === 'authAccount'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'selfNickAliases'), true);
+  assert.equal(bufferColumns.some((column) => column.name === 'priorityUnread'), true);
+  assert.equal(bufferColumns.some((column) => column.name === 'lastReadTs'), true);
+  assert.equal(bufferColumns.some((column) => column.name === 'lastReadMessageId'), true);
 });
 
 test('startup repairs auth columns even when user_version already claims the latest schema', () => {
@@ -476,7 +479,7 @@ test('versioned storage migrations rebuild the message search index for existing
   const indexCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages_fts').get() as { count: number };
   upgraded.close();
 
-  assert.equal(version.user_version, 10);
+  assert.equal(version.user_version, 11);
   assert.deepEqual(searchResults.map((result) => result.message.id), ['message-1']);
   assert.equal(indexCount.count, 1);
 });

@@ -30,6 +30,9 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   kind: overrides.kind ?? 'channel',
   target: overrides.target ?? '#help',
   unread: overrides.unread ?? 0,
+  priorityUnread: overrides.priorityUnread ?? 0,
+  lastReadTs: overrides.lastReadTs ?? null,
+  lastReadMessageId: overrides.lastReadMessageId ?? null,
 });
 
 const makeChannel = (overrides: Partial<ChannelState> = {}): ChannelState => ({

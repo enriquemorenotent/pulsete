@@ -35,6 +35,9 @@ const serverBuffer: BufferState = {
   kind: 'server',
   target: 'server',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const channelBuffer: BufferState = {
@@ -43,6 +46,9 @@ const channelBuffer: BufferState = {
   kind: 'channel',
   target: '#general',
   unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
 };
 
 const channel: ChannelState = {
