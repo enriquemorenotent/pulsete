@@ -175,11 +175,21 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
   preferences: {
     open: false,
     assistant: emptyAssistantSnapshot,
+    backgroundDmAudio: {
+      enabled: false,
+      sound: 'chirp',
+      contacts: [],
+    },
+    networks: [network],
     onClose: () => undefined,
     onStartLogin: async () => undefined,
     onCancelLogin: async () => undefined,
     onLogout: async () => undefined,
     onChangeModel: async () => undefined,
+    onSetBackgroundDmAudioEnabled: () => undefined,
+    onSetBackgroundDmAudioSound: () => undefined,
+    onPreviewBackgroundDmAudioSound: () => undefined,
+    onRemoveBackgroundDmAudioContact: () => undefined,
   },
   networkManager: {
     open: false,

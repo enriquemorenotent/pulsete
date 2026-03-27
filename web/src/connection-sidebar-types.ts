@@ -7,7 +7,6 @@ import type { SidebarConnectionView } from './connection-sidebar-view.js';
 
 export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
-  draftBufferIds?: ReadonlySet<string>;
   friends: FriendState[];
   friendPresence: Record<string, boolean>;
   onAddFriend: (nick: string) => Promise<boolean>;

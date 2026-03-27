@@ -13,20 +13,25 @@ const stickyScrollThresholdPx = 24;
 
 type UseStickyScrollParams = {
   forceScrollToBottomRef?: MutableRef<(() => void) | null>;
+  snapToBottomOnSelection?: boolean;
   scrollRef: MutableRef<HTMLDivElement | null>;
   selectedBufferId: string | undefined;
 };
 
 export function useStickyScroll(params: UseStickyScrollParams) {
   const stickToBottomRef = useRef(true);
+  const snapToBottomOnSelection = params.snapToBottomOnSelection ?? true;
 
   useEffect(() => {
+    if (!snapToBottomOnSelection) {
+      return;
+    }
     const node = params.scrollRef.current;
     if (!node) {
       return;
     }
     forceStickyScrollToBottom(node, stickToBottomRef);
-  }, [params.scrollRef, params.selectedBufferId]);
+  }, [params.scrollRef, params.selectedBufferId, snapToBottomOnSelection]);
 
   useEffect(() => {
     const node = params.scrollRef.current;
@@ -62,16 +67,22 @@ export const scrollNodeToBottom = (node: Pick<ScrollContainer, 'scrollHeight' | 
 };
 
 export const forceStickyScrollToBottom = (
-  node: Pick<ScrollContainer, 'dataset' | 'scrollHeight' | 'scrollTop'>,
+  node: Pick<ScrollContainer, 'clientHeight' | 'dataset' | 'scrollHeight' | 'scrollTop'>,
   stickToBottomRef: MutableRef<boolean>,
 ) => {
   scrollNodeToBottom(node);
   stickToBottomRef.current = true;
-  syncStickyScrollMode(node, true);
+  refreshStickyScrollMode(node);
 };
 
 export const isScrollNearBottom = (node: ScrollMetrics) =>
   node.scrollHeight - node.scrollTop - node.clientHeight <= stickyScrollThresholdPx;
+
+export const refreshStickyScrollMode = (
+  node: Pick<ScrollContainer, 'clientHeight' | 'dataset' | 'scrollHeight' | 'scrollTop'>,
+) => {
+  syncStickyScrollMode(node, isScrollNearBottom(node));
+};
 
 export function bindStickyScrollTracking(params: {
   node: ScrollContainer;

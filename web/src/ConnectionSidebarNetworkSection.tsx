@@ -2,7 +2,6 @@ import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './buffer-activity.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
-import { ConnectionSidebarDraftMarker } from './ConnectionSidebarDraftMarker.js';
 import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingChannelRow.js';
 import { ConnectionSidebarActivityBadge } from './ConnectionSidebarUnreadBadge.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
@@ -11,7 +10,6 @@ import type { NetworkRuntimeState } from './workspace.js';
 
 type ConnectionSidebarNetworkSectionProps = {
   connection: SidebarConnectionView;
-  draftBufferIds?: ReadonlySet<string>;
   index: number;
   onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
   onSelectBuffer: ConnectionSidebarProps['onSelectBuffer'];
@@ -29,9 +27,6 @@ export function ConnectionSidebarNetworkSection(
   const { connection } = props;
   const serverActivity = resolveBufferActivityState(connection.serverBuffer);
   const secondaryStatusLabel = runtimeLabel(connection.runtime);
-  const serverHasDraft = connection.serverBuffer
-    ? (props.draftBufferIds?.has(connection.serverBuffer.id) ?? false)
-    : false;
 
   return (
     <section
@@ -68,7 +63,6 @@ export function ConnectionSidebarNetworkSection(
               >
                 {connection.labelParts.name}
               </span>
-              {serverHasDraft ? <ConnectionSidebarDraftMarker /> : null}
               {serverActivity.hasUnread ? (
                 <ConnectionSidebarActivityBadge
                   count={serverActivity.count}
@@ -127,7 +121,6 @@ export function ConnectionSidebarNetworkSection(
                 key={buffer.id}
                 buffer={buffer}
                 dimmed={connection.childBuffersDimmed}
-                hasDraft={props.draftBufferIds?.has(buffer.id) ?? false}
                 selected={selected}
                 icon={Hash}
                 onSelect={() => props.onSelectBuffer(buffer)}
@@ -140,7 +133,6 @@ export function ConnectionSidebarNetworkSection(
                 key={buffer.id}
                 buffer={buffer}
                 dimmed={connection.childBuffersDimmed}
-                hasDraft={props.draftBufferIds?.has(buffer.id) ?? false}
                 selected={selected}
                 icon={MessageSquareMore}
                 onSelect={() => props.onSelectBuffer(buffer)}

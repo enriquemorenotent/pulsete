@@ -92,47 +92,6 @@ test('offline connections keep channel and query rows visible and selectable', (
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
 });
 
-test('buffer rows show a minimal marker when unsent drafts exist', () => {
-  const network = makeNetwork();
-  const server = makeBuffer({ id: 'server-1' });
-  const channel = makeBuffer({
-    id: 'channel-1',
-    kind: 'channel',
-    target: '#help',
-  });
-  const markup = renderToStaticMarkup(
-    <ConnectionSidebar
-      connections={buildConnectionSidebarView({
-        networks: [network],
-        conversation: buildConversationIndex({
-          buffers: [server, channel],
-          channels: [],
-          pendingChannels: [],
-          messages: {},
-        }),
-        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
-        selection: { kind: 'buffer', bufferId: server.id },
-      })}
-      draftBufferIds={new Set([server.id, channel.id])}
-      friends={[] satisfies FriendState[]}
-      friendPresence={{}}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
-      onSelectFriend={async () => undefined}
-      onSelectNetwork={() => undefined}
-      onSelectBuffer={() => undefined}
-      onSelectPendingChannel={() => undefined}
-      onReconnectNetwork={() => undefined}
-      onDisconnectNetwork={() => undefined}
-      onCloseConnection={() => undefined}
-      onCloseChannel={() => undefined}
-      onCloseBuffer={() => undefined}
-    />,
-  );
-
-  assert.equal((markup.match(/aria-label="Unsent draft"/g) ?? []).length, 2);
-});
-
 test('connected rows rely on the status dot instead of repeating a connected label', () => {
   const network = makeNetwork();
   const server = makeBuffer({ id: 'server-1' });

@@ -40,7 +40,6 @@ export const ConnectionSidebar = memo(function ConnectionSidebar(
     <aside className="flex h-full min-h-0 flex-col gap-5 overflow-hidden px-3 py-4">
       <ConnectionSidebarConnections
         connections={props.connections}
-        draftBufferIds={props.draftBufferIds}
         onSelectNetwork={props.onSelectNetwork}
         onSelectBuffer={props.onSelectBuffer}
         onSelectPendingChannel={props.onSelectPendingChannel}

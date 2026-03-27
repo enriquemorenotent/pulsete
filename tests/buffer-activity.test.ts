@@ -5,6 +5,7 @@ import {
   captureUnreadDividerAnchor,
   resolveBufferActivityState,
   resolveFirstUnreadDividerIndex,
+  resolveInitialTranscriptScrollTarget,
   resolveVisibleUnreadDividerIndex,
   shouldMarkSelectedBufferRead,
 } from '../web/src/buffer-activity.js';
@@ -193,5 +194,41 @@ test('resolveVisibleUnreadDividerIndex keeps the original unread boundary when n
       lastReadMessageId: 'message-3',
     }), anchor),
     1
+  );
+});
+
+test('resolveInitialTranscriptScrollTarget lands at the first unread divider when available', () => {
+  assert.equal(
+    resolveInitialTranscriptScrollTarget({
+      buffer: makeBuffer({ unread: 3 }),
+      firstUnreadDividerIndex: 5,
+      listKind: 'chat',
+      messagesLength: 12,
+    }),
+    'first-unread'
+  );
+});
+
+test('resolveInitialTranscriptScrollTarget waits for unread history to load before positioning', () => {
+  assert.equal(
+    resolveInitialTranscriptScrollTarget({
+      buffer: makeBuffer({ unread: 2 }),
+      firstUnreadDividerIndex: null,
+      listKind: 'chat',
+      messagesLength: 0,
+    }),
+    'wait'
+  );
+});
+
+test('resolveInitialTranscriptScrollTarget falls back to bottom for server transcripts', () => {
+  assert.equal(
+    resolveInitialTranscriptScrollTarget({
+      buffer: makeBuffer({ unread: 4 }),
+      firstUnreadDividerIndex: 2,
+      listKind: 'server',
+      messagesLength: 9,
+    }),
+    'bottom'
   );
 });

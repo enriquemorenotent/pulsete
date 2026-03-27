@@ -113,3 +113,21 @@ export const resolveVisibleUnreadDividerIndex = (
   }
   return null;
 };
+
+export const resolveInitialTranscriptScrollTarget = (input: {
+  buffer: BufferActivityFields | null | undefined;
+  firstUnreadDividerIndex: number | null;
+  listKind: 'chat' | 'server';
+  messagesLength: number;
+}) => {
+  if (input.listKind === 'server') {
+    return 'bottom' as const;
+  }
+  if (input.firstUnreadDividerIndex !== null) {
+    return 'first-unread' as const;
+  }
+  if (hasUnreadBufferActivity(input.buffer) && input.messagesLength === 0) {
+    return 'wait' as const;
+  }
+  return 'bottom' as const;
+};

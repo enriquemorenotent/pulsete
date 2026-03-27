@@ -96,6 +96,7 @@ export function useAppLifecycle(params: LifecycleParams) {
 
   useStickyScroll({
     forceScrollToBottomRef: params.forceScrollToBottomRef,
+    snapToBottomOnSelection: false,
     scrollRef: params.scrollRef,
     selectedBufferId: params.workspace.selectedBuffer?.id,
   });

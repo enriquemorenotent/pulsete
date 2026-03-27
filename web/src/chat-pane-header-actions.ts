@@ -11,6 +11,7 @@ export type ChatPaneHeaderAction = {
 type ResolveChatPaneHeaderActionsContext = {
   workspace: WorkspaceView;
   selectedFriend: FriendState | null;
+  querySoundNotificationsEnabled?: boolean;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   canClearHistory?: boolean;
@@ -18,6 +19,7 @@ type ResolveChatPaneHeaderActionsContext = {
   canImportHistory?: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onToggleQuerySoundNotifications?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
   onClearHistory?: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
@@ -51,6 +53,7 @@ export const resolveChatPaneHeaderActions = (
       context.onCloseChannel,
       context.onCloseBuffer,
     ),
+    ...resolveQuerySoundPrimaryActions(context),
     ...resolveFriendPrimaryActions(context),
   ];
   const overflow = resolveOverflowActions(context);
@@ -100,6 +103,22 @@ const resolveFriendPrimaryActions = (
           ? context.onRemoveFriend(context.selectedFriend.id)
           : context.onAddFriend(selectedBuffer.target));
       },
+    },
+  ];
+};
+
+const resolveQuerySoundPrimaryActions = (
+  context: ResolveChatPaneHeaderActionsContext,
+): ChatPaneHeaderAction[] => {
+  const { selectedBuffer } = context.workspace;
+  if (selectedBuffer?.kind !== 'query' || !context.onToggleQuerySoundNotifications) {
+    return [];
+  }
+  return [
+    {
+      id: 'query-sound-notifications',
+      label: context.querySoundNotificationsEnabled ? 'Sound On' : 'Sound Off',
+      onSelect: context.onToggleQuerySoundNotifications,
     },
   ];
 };

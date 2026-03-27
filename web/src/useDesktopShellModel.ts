@@ -3,6 +3,11 @@ import type { ChatPaneProps } from './ChatPane.js';
 import { sendComposerAndFollowBottom } from './chat-pane-send.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
+import {
+  isBackgroundDmAudioContactAllowed,
+  type BackgroundDmAudioContact,
+  type BackgroundDmAudioSettings,
+} from './background-dm-audio.js';
 import { resolveCurrentChannelAutoJoinState } from './channel-autojoin.js';
 import { buildComposerCompletionModel } from './composer-completion.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
@@ -26,7 +31,6 @@ type DesktopHeaderModelParams = {
 
 type DesktopSidebarModelParams = {
   actions: SidebarActionSet;
-  composer: ComposerController;
   friends: State['domain']['friends'];
   friendPresence: State['domain']['friendPresence'];
   sidebarConnections: ConnectionSidebarProps['connections'];
@@ -34,9 +38,16 @@ type DesktopSidebarModelParams = {
 
 type DesktopChatModelParams = {
   actions: ChatActionSet;
+  backgroundDmAudio: {
+    settings: BackgroundDmAudioSettings;
+    setEnabled: (enabled: boolean) => void;
+    addContact: (contact: BackgroundDmAudioContact) => void;
+    removeContact: (contact: BackgroundDmAudioContact) => void;
+  };
   composer: ComposerController;
   friends: State['domain']['friends'];
   networks: State['domain']['networks'];
+  primeBackgroundDmAudio: () => void;
   channelList: State['transient']['channelList'];
   channelListNetwork: ChatPaneProps['channelListNetwork'];
   selectedBufferHistory: SelectedBufferHistoryControls;
@@ -81,33 +92,13 @@ export function useDesktopHeaderModel({
 
 export function useDesktopSidebarModel({
   actions,
-  composer,
   friends,
   friendPresence,
   sidebarConnections,
 }: DesktopSidebarModelParams): DesktopShellModel['sidebar'] {
-  const draftBufferIds = useMemo(() => {
-    const next = new Set<string>();
-    for (const connection of sidebarConnections) {
-      if (
-        connection.serverBuffer &&
-        composer.hasDraft(connection.serverBuffer.id)
-      ) {
-        next.add(connection.serverBuffer.id);
-      }
-      for (const { buffer } of connection.childBuffers) {
-        if (composer.hasDraft(buffer.id)) {
-          next.add(buffer.id);
-        }
-      }
-    }
-    return next;
-  }, [composer, sidebarConnections]);
-
   return useMemo(
     () => ({
       connections: sidebarConnections,
-      draftBufferIds,
       friends,
       friendPresence,
       onAddFriend: actions.addFriend,
@@ -134,7 +125,6 @@ export function useDesktopSidebarModel({
       actions.selectNetworkBuffer,
       actions.selectPendingTab,
       actions.selectTabBuffer,
-      draftBufferIds,
       friendPresence,
       friends,
       sidebarConnections,
@@ -144,9 +134,11 @@ export function useDesktopSidebarModel({
 
 export function useDesktopChatModel({
   actions,
+  backgroundDmAudio,
   composer,
   friends,
   networks,
+  primeBackgroundDmAudio,
   channelList,
   channelListNetwork,
   selectedBufferHistory,
@@ -170,6 +162,20 @@ export function useDesktopChatModel({
   const canDownloadHistory = canClearHistory;
   const canImportHistory = canClearHistory;
   const canRepairSelfNickAliases = canClearHistory;
+  const selectedQuerySoundContact =
+    workspace.selectedBuffer?.kind === 'query'
+      ? {
+          networkId: workspace.selectedBuffer.networkId,
+          nick: workspace.selectedBuffer.target,
+        }
+      : null;
+  const querySoundNotificationsEnabled = selectedQuerySoundContact
+    ? isBackgroundDmAudioContactAllowed(backgroundDmAudio.settings, {
+        kind: 'query',
+        networkId: selectedQuerySoundContact.networkId,
+        target: selectedQuerySoundContact.nick,
+      })
+    : false;
   const participantQueryNetwork =
     workspace.selectedBuffer?.kind === 'channel'
       ? workspace.selectedNetwork
@@ -213,8 +219,20 @@ export function useDesktopChatModel({
           sendComposer: actions.sendComposer,
           forceScrollToBottomRef: ui.forceScrollToBottomRef,
         }),
+      querySoundNotificationsEnabled,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
+      onToggleQuerySoundNotifications: selectedQuerySoundContact
+        ? () => {
+            if (querySoundNotificationsEnabled) {
+              backgroundDmAudio.removeContact(selectedQuerySoundContact);
+              return;
+            }
+            backgroundDmAudio.addContact(selectedQuerySoundContact);
+            backgroundDmAudio.setEnabled(true);
+            primeBackgroundDmAudio();
+          }
+        : undefined,
       showChannelAutoJoin: channelAutoJoin.available,
       channelAutoJoinActive: channelAutoJoin.active,
       onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
@@ -273,6 +291,10 @@ export function useDesktopChatModel({
     }),
     [
       actions.addFriend,
+      backgroundDmAudio.addContact,
+      backgroundDmAudio.removeContact,
+      backgroundDmAudio.setEnabled,
+      backgroundDmAudio.settings,
       actions.closeBuffer,
       actions.clearBufferHistory,
       actions.closeChannel,
@@ -288,6 +310,7 @@ export function useDesktopChatModel({
       actions.selectPrivateBuffer,
       actions.sendComposer,
       actions.toggleCurrentChannelAutoJoin,
+      primeBackgroundDmAudio,
       channelList,
       channelAutoJoin.active,
       channelAutoJoin.available,
@@ -308,9 +331,11 @@ export function useDesktopChatModel({
       selfNickAliasesOpen,
       repairSelfNickAliasesBufferId,
       participantQueryNetwork,
+      querySoundNotificationsEnabled,
       draft,
       friends,
       networks,
+      selectedQuerySoundContact,
       selectedMessages,
       selectedNetwork,
       ui.messageDisplayMode,

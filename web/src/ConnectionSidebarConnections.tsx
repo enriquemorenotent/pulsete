@@ -5,7 +5,6 @@ import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 type ConnectionSidebarConnectionsProps = Pick<
   ConnectionSidebarProps,
   | 'connections'
-  | 'draftBufferIds'
   | 'onSelectNetwork'
   | 'onSelectBuffer'
   | 'onSelectPendingChannel'
@@ -45,7 +44,6 @@ export function ConnectionSidebarConnections(
             <ConnectionSidebarNetworkSection
               key={connection.network.id}
               connection={connection}
-              draftBufferIds={props.draftBufferIds}
               index={index}
               onSelectNetwork={props.onSelectNetwork}
               onSelectBuffer={props.onSelectBuffer}

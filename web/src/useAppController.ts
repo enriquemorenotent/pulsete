@@ -25,6 +25,10 @@ import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.j
 import { useNetworkManagerController } from './useNetworkManagerController.js';
 import { usePreferencesController } from './usePreferencesController.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import {
+  useBackgroundDmAudioCue,
+  useBackgroundDmAudioSettings,
+} from './useBackgroundDmAudio.js';
 
 type AppController = {
   banner: State['transient']['banner'];
@@ -36,6 +40,7 @@ type AppController = {
 export function useAppController(): AppController {
   const composer = useComposerHistory();
   const ui = useAppUiState();
+  const backgroundDmAudio = useBackgroundDmAudioSettings();
   const { actions, conversation, dispatch, serverMessages, state, workspace } =
     useAppSession({ composer, ui });
   const connectionInstances = useConnectionInstances(state.domain.networks);
@@ -86,6 +91,14 @@ export function useAppController(): AppController {
     scrollRef: ui.scrollRef,
     didAutoOpenManagerRef: ui.didAutoOpenManagerRef,
   });
+  const {
+    prime: primeBackgroundDmAudio,
+    preview: previewBackgroundDmAudio,
+  } = useBackgroundDmAudioCue({
+    buffers: state.domain.buffers,
+    selectedBufferId: workspace.selectedBuffer?.id ?? null,
+    settings: backgroundDmAudio.settings,
+  });
 
   const header = useDesktopHeaderModel({
     dispatch,
@@ -102,16 +115,17 @@ export function useAppController(): AppController {
   });
   const sidebar = useDesktopSidebarModel({
     actions,
-    composer,
     friends: state.domain.friends,
     friendPresence: state.domain.friendPresence,
     sidebarConnections,
   });
   const chat = useDesktopChatModel({
     actions,
+    backgroundDmAudio,
     composer,
     friends: state.domain.friends,
     networks: state.domain.networks,
+    primeBackgroundDmAudio,
     channelList: state.transient.channelList,
     channelListNetwork,
     selectedBufferHistory,
@@ -133,6 +147,10 @@ export function useAppController(): AppController {
   const preferences = usePreferencesController({
     actions,
     assistant: state.domain.assistant,
+    backgroundDmAudio,
+    networks: state.domain.networks,
+    primeBackgroundDmAudio,
+    previewBackgroundDmAudio,
     ui,
   });
   const networkManager = useNetworkManagerController({

@@ -71,6 +71,7 @@ const resolveActionLabels = (actions: ReturnType<typeof resolveChatPaneHeaderAct
 const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeaderActions>[0]> = {}) => ({
   workspace: makeWorkspace(),
   selectedFriend: null as FriendState | null,
+  querySoundNotificationsEnabled: false,
   showChannelAutoJoin: false,
   channelAutoJoinActive: false,
   canClearHistory: false,
@@ -78,6 +79,7 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   canImportHistory: false,
   onAddFriend: async () => true,
   onRemoveFriend: async () => true,
+  onToggleQuerySoundNotifications: () => undefined,
   onToggleChannelAutoJoin: async () => true,
   onClearHistory: async () => true,
   onDownloadHistory: async () => true,
@@ -129,8 +131,32 @@ test('query header actions keep friend controls visible and leave utilities in o
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close', 'Remove friend'],
+    primary: ['Close', 'Sound Off', 'Remove friend'],
     overflow: ['Download history', 'Self aliases'],
+  });
+});
+
+test('query header sound action reflects enabled state', () => {
+  const queryBuffer = makeBuffer({
+    kind: 'query',
+    target: 'MissD',
+  });
+  const actions = resolveChatPaneHeaderActions(createContext({
+    workspace: makeWorkspace({
+      mode: 'query-connected',
+      selectedBuffer: queryBuffer,
+      selectedChannel: null,
+      headerTitle: 'MissD',
+      composerPlaceholder: 'Message MissD',
+      showNicklist: false,
+    }),
+    querySoundNotificationsEnabled: true,
+    selectedFriend: null,
+  }));
+
+  assert.deepEqual(resolveActionLabels(actions), {
+    primary: ['Close', 'Sound On', 'Add friend'],
+    overflow: [],
   });
 });
 

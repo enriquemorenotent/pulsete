@@ -213,6 +213,7 @@ const renderQueryPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     friends: FriendState[];
+    querySoundNotificationsEnabled: boolean;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -227,8 +228,10 @@ const renderQueryPane = (
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => undefined}
+      querySoundNotificationsEnabled={overrides.querySoundNotificationsEnabled ?? false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      onToggleQuerySoundNotifications={() => undefined}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -607,8 +610,17 @@ test('query headers keep add friend visible instead of hiding it in overflow', (
   const markup = renderQueryPane([]);
 
   assert.match(markup, />Close</);
+  assert.match(markup, />Sound Off</);
   assert.match(markup, />Add friend</);
   assert.doesNotMatch(markup, /aria-label="More actions"/);
+});
+
+test('query headers show when sound notifications are already enabled for the active PM', () => {
+  const markup = renderQueryPane([], {
+    querySoundNotificationsEnabled: true,
+  });
+
+  assert.match(markup, />Sound On</);
 });
 
 test('reconnecting channel headers keep the explanatory subtitle alongside the mode line', () => {

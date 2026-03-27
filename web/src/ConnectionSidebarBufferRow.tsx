@@ -3,13 +3,11 @@ import { X } from 'lucide-react';
 import type { BufferState } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './buffer-activity.js';
-import { ConnectionSidebarDraftMarker } from './ConnectionSidebarDraftMarker.js';
 import { ConnectionSidebarActivityBadge } from './ConnectionSidebarUnreadBadge.js';
 
 type ConnectionSidebarBufferRowProps = {
   buffer: BufferState;
   dimmed: boolean;
-  hasDraft?: boolean;
   selected: boolean;
   icon: ComponentType<{ className?: string }>;
   onSelect: () => void;
@@ -45,7 +43,6 @@ export function ConnectionSidebarBufferRow(
             props.selected && 'text-primary/80',
           )}
         />
-        {props.hasDraft ? <ConnectionSidebarDraftMarker /> : null}
         <span
           className={cn(
             'truncate text-[13px]',

@@ -1,10 +1,11 @@
-import { memo, useCallback, useMemo, useRef, type RefObject, type UIEvent } from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, type RefObject, type UIEvent } from 'react';
 import { Plug2 } from 'lucide-react';
 import type { BufferState, ChannelUserState, ChatMessage } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import {
   captureUnreadDividerAnchor,
+  resolveInitialTranscriptScrollTarget,
   resolveVisibleUnreadDividerIndex,
   type UnreadDividerAnchor,
 } from './buffer-activity.js';
@@ -26,6 +27,7 @@ import {
   isCompactMessage,
   messageTone,
 } from './chat-pane-message-utils.js';
+import { refreshStickyScrollMode, scrollNodeToBottom } from './useStickyScroll.js';
 
 type ChatPaneMessageListProps = {
   selectedBuffer: BufferState | null;
@@ -56,11 +58,19 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
     [props.messages, props.selectedBuffer, unreadDividerAnchor]
   );
   const loadingOlderRef = useRef(false);
+  const positionedBufferIdRef = useRef<string | null>(null);
+  const unreadDividerRef = useRef<HTMLDivElement | null>(null);
   const renderBlocks = useMemo(
     () => buildRenderBlocks(props.messages),
     [props.messages]
   );
   const showLoadOlder = props.canLoadOlderHistory && props.onLoadOlderHistory;
+  const initialScrollTarget = resolveInitialTranscriptScrollTarget({
+    buffer: props.selectedBuffer,
+    firstUnreadDividerIndex,
+    listKind: props.listKind,
+    messagesLength: props.messages.length,
+  });
   const handleLoadOlder = useCallback(async () => {
     if (!props.onLoadOlderHistory || loadingOlderRef.current || props.loadingOlderHistory) {
       return;
@@ -93,6 +103,29 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
     }
     void handleLoadOlder();
   }, [handleLoadOlder, props.loadingOlderHistory, showLoadOlder]);
+
+  useLayoutEffect(() => {
+    const scrollContainer = props.scrollRef.current;
+    const bufferId = props.selectedBuffer?.id ?? null;
+    if (!scrollContainer || !bufferId) {
+      positionedBufferIdRef.current = null;
+      return;
+    }
+    if (positionedBufferIdRef.current === bufferId || initialScrollTarget === 'wait') {
+      return;
+    }
+    if (initialScrollTarget === 'first-unread' && unreadDividerRef.current) {
+      unreadDividerRef.current.scrollIntoView({ block: 'start' });
+    } else {
+      scrollNodeToBottom(scrollContainer);
+    }
+    refreshStickyScrollMode(scrollContainer);
+    positionedBufferIdRef.current = bufferId;
+  }, [
+    initialScrollTarget,
+    props.scrollRef,
+    props.selectedBuffer?.id,
+  ]);
 
   return (
     <div
@@ -136,7 +169,11 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
 
             return (
               <div key={block.message.id}>
-                {firstUnreadDividerIndex === index ? <UnreadDivider /> : null}
+                {firstUnreadDividerIndex === index ? (
+                  <div ref={unreadDividerRef} data-unread-divider>
+                    <UnreadDivider />
+                  </div>
+                ) : null}
                 {shouldUseCompactRow ? (
                   <ChatPaneCompactMessageRow
                     message={block.message}
