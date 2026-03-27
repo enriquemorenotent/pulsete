@@ -18,7 +18,15 @@ test('sidebar can default to assistant when requested in a tabbed sidebar', () =
 });
 
 test('sidebar preserves the chosen tab while nicklist tabs remain available', () => {
-  assert.equal(resolveSidebarTab('assistant', true), 'assistant');
+  assert.equal(resolveSidebarTab('assistant', true, true), 'assistant');
+});
+
+test('sidebar resets to users when nicklist tabs become available after an assistant-only view', () => {
+  assert.equal(resolveSidebarTab('assistant', true, false), 'users');
+});
+
+test('sidebar restores the requested default when nicklist tabs become available', () => {
+  assert.equal(resolveSidebarTab('assistant', true, false, 'assistant'), 'assistant');
 });
 
 test('sidebar forces assistant when the users tab is unavailable', () => {

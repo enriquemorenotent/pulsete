@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { AssistantPanel, type AssistantPanelProps } from './AssistantPanel.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
@@ -22,16 +22,33 @@ export const getDefaultSidebarTab = (
   initialTab: SidebarTab = 'users',
 ): SidebarTab => (showNicklistTabs ? initialTab : 'assistant');
 
-export const resolveSidebarTab = (current: SidebarTab, showNicklistTabs: boolean): SidebarTab =>
-  showNicklistTabs ? current : 'assistant';
+export const resolveSidebarTab = (
+  current: SidebarTab,
+  showNicklistTabs: boolean,
+  previousShowNicklistTabs = showNicklistTabs,
+  initialTab: SidebarTab = 'users',
+): SidebarTab => {
+  if (!showNicklistTabs) {
+    return 'assistant';
+  }
+  if (!previousShowNicklistTabs) {
+    return getDefaultSidebarTab(showNicklistTabs, initialTab);
+  }
+  return current;
+};
 
 export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   const showNicklistTabs = props.workspace.showNicklist && !!props.workspace.selectedChannel;
+  const previousShowNicklistTabsRef = useRef(showNicklistTabs);
   const [tab, setTab] = useState<SidebarTab>(() => getDefaultSidebarTab(showNicklistTabs, props.initialTab));
 
   useEffect(() => {
-    setTab((current) => resolveSidebarTab(current, showNicklistTabs));
-  }, [showNicklistTabs]);
+    const previousShowNicklistTabs = previousShowNicklistTabsRef.current;
+    previousShowNicklistTabsRef.current = showNicklistTabs;
+    setTab((current) =>
+      resolveSidebarTab(current, showNicklistTabs, previousShowNicklistTabs, props.initialTab),
+    );
+  }, [props.initialTab, showNicklistTabs]);
 
   if (!isAssistantWorkspace(props.workspace)) {
     return null;
