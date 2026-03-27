@@ -105,3 +105,19 @@ button {
   background: rgba(109, 144, 219, 0.28);
   color: white;
 }
+
+[data-scroll-anchor-item] {
+  overflow-anchor: auto;
+}
+
+[data-scroll-anchor-end] {
+  overflow-anchor: none;
+}
+
+[data-sticky-scroll="pinned"] [data-scroll-anchor-item] {
+  overflow-anchor: none;
+}
+
+[data-sticky-scroll="pinned"] [data-scroll-anchor-end] {
+  overflow-anchor: auto;
+}

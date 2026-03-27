@@ -239,7 +239,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
       </div>
 
       <ScrollArea viewportRef={scrollRef} className="min-h-0 flex-1 bg-transparent">
-        <div className="space-y-3 px-3 py-3">
+        <div className="space-y-3 px-3 py-3" data-scroll-anchor-item>
           {props.loading ? (
             <p className="px-1 py-1 text-[12px] text-muted-foreground">Loading…</p>
           ) : null}
@@ -292,6 +292,7 @@ export function AssistantPanel(props: AssistantPanelProps) {
             </div>
           ) : null}
         </div>
+        <div aria-hidden className="h-px w-full" data-scroll-anchor-end />
       </ScrollArea>
 
       <div className="space-y-2 border-t border-border bg-card px-3 py-3">

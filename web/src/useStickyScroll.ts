@@ -4,18 +4,10 @@ type MutableRef<T> = { current: T };
 type ScrollMetrics = Pick<HTMLDivElement, 'clientHeight' | 'scrollHeight' | 'scrollTop'>;
 type ScrollContainer = Pick<
   HTMLDivElement,
-  'addEventListener' | 'clientHeight' | 'firstElementChild' | 'lastElementChild' | 'removeEventListener' | 'scrollHeight' | 'scrollTop'
->;
-type ResizeObserverLike = {
-  observe: (target: Element) => void;
-  disconnect: () => void;
+  'addEventListener' | 'clientHeight' | 'removeEventListener' | 'scrollHeight' | 'scrollTop'
+> & {
+  dataset?: DOMStringMap;
 };
-type ResizeObserverFactory = ((callback: () => void) => ResizeObserverLike) | null;
-type MutationObserverLike = {
-  observe: (target: Node, options?: MutationObserverInit) => void;
-  disconnect: () => void;
-};
-type MutationObserverFactory = ((callback: () => void) => MutationObserverLike) | null;
 
 const stickyScrollThresholdPx = 24;
 
@@ -41,12 +33,9 @@ export function useStickyScroll(params: UseStickyScrollParams) {
     if (!node) {
       return;
     }
-    stickToBottomRef.current = true;
     return bindStickyScrollTracking({
       node,
       stickToBottomRef,
-      createResizeObserver: createResizeObserverFactory(),
-      createMutationObserver: createMutationObserverFactory(),
     });
   }, [params.scrollRef, params.selectedBufferId]);
 
@@ -73,87 +62,41 @@ export const scrollNodeToBottom = (node: Pick<ScrollContainer, 'scrollHeight' | 
 };
 
 export const forceStickyScrollToBottom = (
-  node: Pick<ScrollContainer, 'scrollHeight' | 'scrollTop'>,
+  node: Pick<ScrollContainer, 'dataset' | 'scrollHeight' | 'scrollTop'>,
   stickToBottomRef: MutableRef<boolean>,
 ) => {
   scrollNodeToBottom(node);
   stickToBottomRef.current = true;
+  syncStickyScrollMode(node, true);
 };
 
 export const isScrollNearBottom = (node: ScrollMetrics) =>
   node.scrollHeight - node.scrollTop - node.clientHeight <= stickyScrollThresholdPx;
 
-export const createResizeObserverFactory = (): ResizeObserverFactory =>
-  typeof ResizeObserver === 'undefined'
-    ? null
-    : (callback) =>
-        new ResizeObserver(() => {
-          callback();
-        });
-
-export const createMutationObserverFactory = (): MutationObserverFactory =>
-  typeof MutationObserver === 'undefined'
-    ? null
-    : (callback) =>
-        new MutationObserver(() => {
-          callback();
-        });
-
 export function bindStickyScrollTracking(params: {
   node: ScrollContainer;
   stickToBottomRef: MutableRef<boolean>;
-  createResizeObserver: ResizeObserverFactory;
-  createMutationObserver: MutationObserverFactory;
 }) {
   const updateStickiness = () => {
-    params.stickToBottomRef.current = isScrollNearBottom(params.node);
+    const shouldStick = isScrollNearBottom(params.node);
+    params.stickToBottomRef.current = shouldStick;
+    syncStickyScrollMode(params.node, shouldStick);
   };
 
   updateStickiness();
   params.node.addEventListener('scroll', updateStickiness, { passive: true });
 
-  const resizeObserver =
-    params.createResizeObserver
-      ? params.createResizeObserver(() => {
-          if (!params.stickToBottomRef.current) {
-            return;
-          }
-          forceStickyScrollToBottom(params.node, params.stickToBottomRef);
-        })
-      : null;
-  let observedContent: Element | null = null;
-  const syncObservedContent = () => {
-    const nextContent = resolveStickyScrollContent(params.node);
-    if (nextContent === observedContent) {
-      return;
-    }
-    resizeObserver?.disconnect();
-    observedContent = nextContent;
-    if (observedContent && resizeObserver) {
-      resizeObserver.observe(observedContent);
-    }
-  };
-  syncObservedContent();
-
-  const mutationObserver =
-    params.createMutationObserver
-      ? params.createMutationObserver(() => {
-          syncObservedContent();
-          if (!params.stickToBottomRef.current) {
-            return;
-          }
-          forceStickyScrollToBottom(params.node, params.stickToBottomRef);
-        })
-      : null;
-
-  mutationObserver?.observe(params.node as unknown as Node, { childList: true });
-
   return () => {
     params.node.removeEventListener('scroll', updateStickiness);
-    mutationObserver?.disconnect();
-    resizeObserver?.disconnect();
   };
 }
 
-const resolveStickyScrollContent = (node: Pick<ScrollContainer, 'firstElementChild' | 'lastElementChild'>) =>
-  node.lastElementChild ?? node.firstElementChild;
+const syncStickyScrollMode = (
+  node: Pick<ScrollContainer, 'dataset'>,
+  shouldStick: boolean,
+) => {
+  if (!node.dataset) {
+    return;
+  }
+  node.dataset.stickyScroll = shouldStick ? 'pinned' : 'free';
+};

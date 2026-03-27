@@ -101,14 +101,14 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
       onScroll={handleScroll}
     >
       {showLoadOlder ? (
-        <div className="mb-2 flex justify-center">
+        <div className="mb-2 flex justify-center" data-scroll-anchor-item>
           <Button variant="outline" size="sm" disabled={props.loadingOlderHistory} onClick={() => void handleLoadOlder()}>
             {props.loadingOlderHistory ? 'Loading older...' : 'Load older'}
           </Button>
         </div>
       ) : null}
       {props.messages.length === 0 ? (
-        <div className="flex h-full items-center justify-center">
+        <div className="flex h-full items-center justify-center" data-scroll-anchor-item>
           <div className="w-full max-w-md rounded-[1.25rem] bg-white/[0.03] px-5 py-6 text-center ring-1 ring-white/[0.06]">
             <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-white/[0.05] text-muted-foreground">
               <Plug2 className="size-4 text-muted-foreground" />
@@ -117,7 +117,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
           </div>
         </div>
       ) : (
-        <div className="space-y-1.5 font-mono text-[12px]">
+        <div className="space-y-1.5 font-mono text-[12px]" data-scroll-anchor-item>
           {renderBlocks.map((block, index) => {
             const serverSourceLabel =
               props.listKind === 'server'
@@ -176,6 +176,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
           })}
         </div>
       )}
+      <div aria-hidden className="h-px w-full" data-scroll-anchor-end />
     </div>
   );
 });
