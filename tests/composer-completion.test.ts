@@ -75,10 +75,10 @@ test('channel completion follows nicklist order and dedupes IRC-case aliases', (
       id: 'channel-1',
       name: '#pulsete',
       users: [
-        { nick: 'Alice', mode: 'op' },
-        { nick: 'anna', mode: 'voice' },
-        { nick: 'ALICE', mode: 'normal' },
-        { nick: 'avery', mode: 'normal' },
+        { nick: 'Alice', mode: 'op', away: false },
+        { nick: 'anna', mode: 'voice', away: false },
+        { nick: 'ALICE', mode: 'normal', away: false },
+        { nick: 'avery', mode: 'normal', away: false },
       ],
     }),
   });

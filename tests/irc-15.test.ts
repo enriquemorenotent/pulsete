@@ -37,7 +37,7 @@ test('irc connection keeps queued rejoin failures bound after a self part', () =
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal' }]);
+  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.part('#help', 'Leaving', '#part');
   connection.join('#help', '#rejoin');
@@ -97,7 +97,7 @@ test('irc connection clears stale part contexts after a self kick', () => {
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal' }]);
+  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.part('#help', 'Leaving', '#part');
   connection.consume(':op!user@host KICK #help tester :bye\r\n');
@@ -157,7 +157,7 @@ test('irc connection keeps queued rejoin failures bound after a self kick', () =
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal' }]);
+  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.part('#help', 'Leaving', '#part');
   connection.join('#help', '#rejoin');

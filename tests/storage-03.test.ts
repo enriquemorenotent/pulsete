@@ -8,9 +8,14 @@ import test from 'node:test';
 import { Storage,type NetworkInput } from '../server/storage.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 
-const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+const makeUser = (
+  nick: string,
+  mode: ChannelUserState['mode'] = 'normal',
+  away = false,
+): ChannelUserState => ({
   nick,
   mode,
+  away,
 });
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({

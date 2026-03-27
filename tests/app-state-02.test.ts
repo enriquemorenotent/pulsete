@@ -92,11 +92,11 @@ test('presence updates match channel names case-insensitively', () => {
       type: 'update-presence',
       networkId: 'network-1',
       channel: '#help',
-      users: [{ nick: 'Alice', mode: 'voice' }],
+      users: [{ nick: 'Alice', mode: 'voice', away: false }],
     }
   );
 
-  assert.deepEqual(nextState.domain.channels[0]?.users, [{ nick: 'Alice', mode: 'voice' }]);
+  assert.deepEqual(nextState.domain.channels[0]?.users, [{ nick: 'Alice', mode: 'voice', away: false }]);
 });
 
 test('resolveManagedNetworkId keeps a hidden selection while favorites are filtered', () => {

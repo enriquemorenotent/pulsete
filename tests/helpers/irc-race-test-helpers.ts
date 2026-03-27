@@ -8,9 +8,14 @@ import { waitFor } from './async-test-helpers.js';
 
 export { waitFor };
 
-export const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+export const makeUser = (
+  nick: string,
+  mode: ChannelUserState['mode'] = 'normal',
+  away = false,
+): ChannelUserState => ({
   nick,
   mode,
+  away,
 });
 
 export const createMockSocket = (writes: string[]) => {

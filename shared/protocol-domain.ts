@@ -75,6 +75,7 @@ export type ChannelUserMode = z.infer<typeof channelUserModeSchema>;
 export const channelUserSchema = z.object({
   nick: z.string(),
   mode: channelUserModeSchema.default('normal'),
+  away: z.boolean().default(false),
 });
 export type ChannelUserState = z.infer<typeof channelUserSchema>;
 

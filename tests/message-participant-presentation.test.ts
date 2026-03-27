@@ -26,7 +26,7 @@ test('channel peer presentation uses IRC-case nicklist modes and opens PMs', () 
     listKind: 'chat',
     rowVariant: 'full',
     highlightMode: resolveParticipantHighlightMode('channel'),
-    channelUserModesByNick: buildModes([{ nick: 'Opal', mode: 'op' }]),
+    channelUserModesByNick: buildModes([{ nick: 'Opal', mode: 'op', away: false }]),
     allowParticipantQuery: true,
   });
 
@@ -44,7 +44,7 @@ test('channel self presentation stays primary and non-clickable', () => {
     listKind: 'chat',
     rowVariant: 'full',
     highlightMode: resolveParticipantHighlightMode('channel'),
-    channelUserModesByNick: buildModes([{ nick: 'sofia', mode: 'owner' }]),
+    channelUserModesByNick: buildModes([{ nick: 'sofia', mode: 'owner', away: false }]),
     allowParticipantQuery: true,
   });
 

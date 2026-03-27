@@ -14,7 +14,11 @@ export const updateChannelUsers = (
 ) => {
   const channelKey = resolveTrackedChannelKey(connection, channel) ?? channel;
   const current = connection.channels.users.get(channelKey) ?? [];
-  const nextUsers = !nick ? current : joined ? upsertChannelUser(current, { nick, mode: 'normal' }) : removeChannelUser(current, nick);
+  const nextUsers = !nick
+    ? current
+    : joined
+      ? upsertChannelUser(current, { nick, mode: 'normal', away: false })
+      : removeChannelUser(current, nick);
   connection.channels.users.set(channelKey, nextUsers);
   return nextUsers;
 };

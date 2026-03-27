@@ -4,6 +4,7 @@ import {
   handleJoin,
   handleKick,
   handleNamesNumeric,
+  handleWhoNumeric,
   handleNick,
   handlePart,
   handleQuit,
@@ -69,10 +70,17 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     handleTopic(connection, params, nick);
   } else if (command === 'MODE') {
     handleMode(connection, params);
+  } else if (command === '352') {
+    handleWhoNumeric(connection, params);
   } else if (command === '332') {
     handleTopicNumeric(connection, params);
   } else if (command === '353') {
     handleNamesNumeric(connection, params);
+  } else if (command === '366') {
+    const channel = connection.resolveTrackedChannel(params[1] ?? '');
+    if (channel) {
+      connection.sendRaw(`WHO ${channel}`);
+    }
   }
 };
 

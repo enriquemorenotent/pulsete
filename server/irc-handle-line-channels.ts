@@ -1,5 +1,5 @@
 import { emitChannel, emitMessage, emitPeerQuit, emitStatus } from './irc-emit.js';
-import { renameChannelUser, upsertChannelUser } from '../shared/channel-users.js';
+import { renameChannelUser, updateChannelUserAway, upsertChannelUser } from '../shared/channel-users.js';
 import { parseChannelUserToken } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
 import type { IrcChannelEventContext } from './irc-contexts.js';
@@ -185,4 +185,20 @@ export const handleNamesNumeric = (connection: IrcChannelEventContext, params: s
   }
   connection.setTrackedChannelUsers(channel, knownUsers);
   emitChannel(connection, channel, { users: knownUsers });
+};
+
+export const handleWhoNumeric = (connection: IrcChannelEventContext, params: string[]) => {
+  const channel = connection.resolveTrackedChannel(params[1] ?? '');
+  const nick = params[5] ?? '';
+  const flags = params[6] ?? '';
+  if (!channel || !nick || !flags) {
+    return;
+  }
+  const currentUsers = connection.getTrackedChannelUsers(channel);
+  const users = updateChannelUserAway(currentUsers, nick, flags.includes('G'));
+  if (users === currentUsers) {
+    return;
+  }
+  connection.setTrackedChannelUsers(channel, users);
+  emitChannel(connection, channel, { users });
 };

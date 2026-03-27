@@ -217,3 +217,54 @@ test('irc connection routes 437 rejected joins through the pending session targe
     )
   );
 });
+
+test('irc connection refreshes away status from WHO after joining a tracked channel', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+
+  connection.join('#help');
+  connection.consume(':tester!user@example JOIN :#help\r\n');
+  connection.consume(':irc.example 353 tester = #help :tester alice\r\n');
+  connection.consume(':irc.example 366 tester #help :End of /NAMES list.\r\n');
+  connection.consume(':irc.example 352 tester #help user host irc.example alice G :0 Alice Example\r\n');
+
+  assert.deepEqual(writes, ['JOIN #help\r\n', 'WHO #help\r\n']);
+  assert.deepEqual(
+    (events.filter((event) => event.type === 'channel').at(-1)?.users as Array<Record<string, unknown>> | undefined)
+      ?.map((user) => ({ nick: user.nick, away: user.away })),
+    [
+      { nick: 'alice', away: true },
+      { nick: 'tester', away: false },
+    ],
+  );
+});

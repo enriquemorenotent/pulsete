@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Moon } from 'lucide-react';
 import type { ChannelState, FriendState, NetworkProfile } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { Input } from '@/components/ui/input.js';
@@ -74,6 +75,16 @@ export function NicklistPanel(props: NicklistPanelProps) {
                             >
                               <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
                             </button>
+                            {user.away ? (
+                              <span
+                                role="img"
+                                aria-label="Away"
+                                title="Away"
+                                className="inline-flex size-7 items-center justify-center text-muted-foreground"
+                              >
+                                <Moon className="size-4" />
+                              </span>
+                            ) : null}
                             <FriendToggleButton
                               active={Boolean(friend)}
                               onClick={() => void (friend ? props.onRemoveFriend(friend.id) : props.onAddFriend(user.nick))}

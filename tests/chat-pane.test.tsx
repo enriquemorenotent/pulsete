@@ -389,9 +389,9 @@ test('channel rows tint peer nick labels by their channel mode', () => {
     ],
     {
       channelUsers: [
-        { nick: 'Opal', mode: 'op' },
-        { nick: 'Vox', mode: 'voice' },
-        { nick: 'Guest', mode: 'normal' },
+        { nick: 'Opal', mode: 'op', away: false },
+        { nick: 'Vox', mode: 'voice', away: false },
+        { nick: 'Guest', mode: 'normal', away: false },
       ],
     },
   );
@@ -565,8 +565,8 @@ test('channel headers hide the overflow trigger when no secondary actions are av
 test('connected channel headers keep only the title and topic context', () => {
   const markup = renderChatPane([], {
     channelUsers: [
-      { nick: 'Alice', mode: 'op' },
-      { nick: 'Bob', mode: 'normal' },
+      { nick: 'Alice', mode: 'op', away: false },
+      { nick: 'Bob', mode: 'normal', away: false },
     ],
   });
 

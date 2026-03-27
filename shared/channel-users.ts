@@ -39,7 +39,7 @@ export const parseChannelUser = (
       ? (maybePrefix as keyof typeof modeByPrefix)
       : null;
     const nick = prefix ? trimmed.slice(1) : trimmed;
-    return nick ? { nick, mode: prefix ? modeByPrefix[prefix] : 'normal' } : null;
+    return nick ? { nick, mode: prefix ? modeByPrefix[prefix] : 'normal', away: false } : null;
   }
   const nick = value.nick.trim();
   if (!nick) {
@@ -48,6 +48,7 @@ export const parseChannelUser = (
   return {
     nick,
     mode: orderedModes.includes(value.mode) ? value.mode : 'normal',
+    away: value.away === true,
   };
 };
 
@@ -87,6 +88,7 @@ export const renameChannelUser = (users: ChannelUserState[], previousNick: strin
   return upsertChannelUser(removeChannelUser(users, previousNick), {
     nick: nextNick,
     mode: existing.mode,
+    away: existing.away,
   });
 };
 
@@ -99,5 +101,19 @@ export const updateChannelUserMode = (users: ChannelUserState[], nick: string, m
   return upsertChannelUser(users, {
     nick: existing.nick,
     mode,
+    away: existing.away,
+  });
+};
+
+export const updateChannelUserAway = (users: ChannelUserState[], nick: string, away: boolean) => {
+  const normalizedNick = normalizeIrcIdentifier(nick);
+  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick) === normalizedNick);
+  if (!existing || existing.away === away) {
+    return users;
+  }
+  return upsertChannelUser(users, {
+    nick: existing.nick,
+    mode: existing.mode,
+    away,
   });
 };

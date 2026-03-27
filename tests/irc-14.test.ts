@@ -198,7 +198,7 @@ test('irc connection clears stale channel reply contexts after a self part', () 
       writes.push(chunk);
     },
   } as unknown as net.Socket;
-  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal' }]);
+  connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.sendClientRaw('TOPIC #help :new topic', '#topic');
   connection.part('#help', 'Leaving', '#part');

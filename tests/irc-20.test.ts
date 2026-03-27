@@ -52,8 +52,8 @@ test('irc connection keeps an already joined channel after a retry JOIN times ou
   assert.deepEqual(writes, ['JOIN #help\r\n', 'JOIN #help\r\n']);
   assert.equal(connection.getChannelSession('#help')?.phase, 'joined');
   assert.deepEqual(connection.channels.users.get('#help') ?? [], [
-    { nick: 'alice', mode: 'normal' },
-    { nick: 'tester', mode: 'normal' },
+    { nick: 'alice', mode: 'normal', away: false },
+    { nick: 'tester', mode: 'normal', away: false },
   ]);
 });
 

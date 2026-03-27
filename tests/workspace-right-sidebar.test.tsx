@@ -49,7 +49,7 @@ const channel: ChannelState = {
   networkId: network.id,
   name: '#general',
   topic: 'General chat',
-  users: [{ nick: 'alice', mode: 'op' }],
+  users: [{ nick: 'alice', mode: 'op', away: false }],
 };
 
 const assistantThread: AssistantThread = {

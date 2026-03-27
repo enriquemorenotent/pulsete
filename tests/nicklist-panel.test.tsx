@@ -5,9 +5,14 @@ import type { ChannelState, ChannelUserState, FriendState, NetworkProfile } from
 import { NicklistPanel } from '../web/src/NicklistPanel.js';
 import { buildNicklistGroups } from '../web/src/nicklist-groups.js';
 
-const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+const makeUser = (
+  nick: string,
+  mode: ChannelUserState['mode'] = 'normal',
+  away = false,
+): ChannelUserState => ({
   nick,
   mode,
+  away,
 });
 
 const network: NetworkProfile = {
@@ -35,7 +40,7 @@ test('nicklist groups users by privilege level', () => {
     topic: '',
     users: [
       makeUser('zoe'),
-      makeUser('alice', 'op'),
+      makeUser('alice', 'op', true),
       makeUser('bob', 'voice'),
       makeUser('owner', 'owner'),
     ],
@@ -73,6 +78,32 @@ test('nicklist groups users by privilege level', () => {
   assert.match(markup, /class="truncate text-amber-300">alice</);
   assert.match(markup, /class="truncate text-emerald-300">bob</);
   assert.match(markup, /class="truncate text-inherit">zoe</);
+  assert.match(markup, /aria-label="Away"/);
+});
+
+test('nicklist renders the away icon alongside the friend star for away users', () => {
+  const channel: ChannelState = {
+    id: 'channel-1',
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: [makeUser('alice', 'normal', true)],
+  };
+
+  const markup = renderToStaticMarkup(
+    <NicklistPanel
+      network={network}
+      channel={channel}
+      friends={[{ id: 'friend-1', nick: 'alice' }] satisfies FriendState[]}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectNick={() => undefined}
+    />
+  );
+
+  assert.match(markup, /aria-label="Away"/);
+  assert.match(markup, /aria-label="Remove friend"/);
+  assert.match(markup, /aria-label="Away"[\s\S]*aria-label="Remove friend"/);
 });
 
 test('nicklist filtering promotes exact matches and friends before broader matches', () => {

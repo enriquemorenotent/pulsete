@@ -46,9 +46,14 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   lastReadMessageId: overrides.lastReadMessageId ?? null,
 });
 
-const makeUser = (nick: string, mode: ChannelUserState['mode'] = 'normal'): ChannelUserState => ({
+const makeUser = (
+  nick: string,
+  mode: ChannelUserState['mode'] = 'normal',
+  away = false,
+): ChannelUserState => ({
   nick,
   mode,
+  away,
 });
 
 const makeChannel = (overrides: Partial<ChannelState> = {}): ChannelState => ({
