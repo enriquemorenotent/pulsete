@@ -5,6 +5,7 @@ import {
   addBackgroundDmAudioContact,
   canPlayBackgroundDmAudioCue,
   findEligibleBackgroundDmAudioBuffer,
+  findEligibleBackgroundDmNotificationBuffer,
   parseBackgroundDmAudioSettings,
   serializeBackgroundDmAudioSettings,
 } from '../web/src/background-dm-audio.js';
@@ -23,11 +24,13 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 test('stored settings ignore invalid payloads', () => {
   assert.deepEqual(parseBackgroundDmAudioSettings(null), {
     enabled: false,
+    systemEnabled: false,
     sound: 'chirp',
     contacts: [],
   });
   assert.deepEqual(parseBackgroundDmAudioSettings('{"enabled":true,"contacts":[{"networkId":1}]}'), {
     enabled: true,
+    systemEnabled: false,
     sound: 'chirp',
     contacts: [],
   });
@@ -36,6 +39,7 @@ test('stored settings ignore invalid payloads', () => {
 test('stored settings fall back to the default sound when the payload is invalid', () => {
   assert.deepEqual(parseBackgroundDmAudioSettings('{"enabled":true,"sound":"gong","contacts":[]}'), {
     enabled: true,
+    systemEnabled: false,
     sound: 'chirp',
     contacts: [],
   });
@@ -44,6 +48,7 @@ test('stored settings fall back to the default sound when the payload is invalid
 test('adding contacts dedupes by network and IRC case-folded nick', () => {
   const settings = addBackgroundDmAudioContact({
     enabled: true,
+    systemEnabled: false,
     sound: 'glass',
     contacts: [{ networkId: 'network-1', nick: 'Alice' }],
   }, {
@@ -53,6 +58,7 @@ test('adding contacts dedupes by network and IRC case-folded nick', () => {
 
   assert.deepEqual(settings, {
     enabled: true,
+    systemEnabled: false,
     sound: 'glass',
     contacts: [{ networkId: 'network-1', nick: 'Alice' }],
   });
@@ -62,10 +68,11 @@ test('serializing settings preserves the chosen sound', () => {
   assert.equal(
     serializeBackgroundDmAudioSettings({
       enabled: true,
+      systemEnabled: true,
       sound: 'bell',
       contacts: [{ networkId: 'network-1', nick: 'Alice' }],
     }),
-    '{"enabled":true,"sound":"bell","contacts":[{"networkId":"network-1","nick":"Alice"}]}',
+    '{"enabled":true,"systemEnabled":true,"sound":"bell","contacts":[{"networkId":"network-1","nick":"Alice"}]}',
   );
 });
 
@@ -79,6 +86,7 @@ test('eligible cue fires for allowed DM unread growth in another buffer', () => 
     selectedBufferId: 'buffer-2',
     settings: {
       enabled: true,
+      systemEnabled: false,
       sound: 'chirp',
       contacts: [{ networkId: 'network-1', nick: 'alice' }],
     },
@@ -96,6 +104,7 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
     selectedBufferId: nextBuffer.id,
     settings: {
       enabled: true,
+      systemEnabled: false,
       sound: 'chirp',
       contacts: [{ networkId: 'network-1', nick: 'alice' }],
     },
@@ -107,6 +116,7 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
     selectedBufferId: 'buffer-2',
     settings: {
       enabled: true,
+      systemEnabled: false,
       sound: 'chirp',
       contacts: [{ networkId: 'network-1', nick: 'alice' }],
     },
@@ -118,10 +128,30 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
     selectedBufferId: 'buffer-2',
     settings: {
       enabled: true,
+      systemEnabled: false,
       sound: 'chirp',
       contacts: [{ networkId: 'network-1', nick: 'alice' }],
     },
   }), null);
+});
+
+test('system notification eligibility still works when audio is disabled', () => {
+  const previousBuffers = new Map([['buffer-1', { unread: 0 }]]);
+  const nextBuffer = makeBuffer({ unread: 1 });
+
+  const eligible = findEligibleBackgroundDmNotificationBuffer({
+    previousBuffers,
+    nextBuffers: [nextBuffer],
+    selectedBufferId: 'buffer-2',
+    settings: {
+      enabled: false,
+      systemEnabled: true,
+      sound: 'chirp',
+      contacts: [{ networkId: 'network-1', nick: 'alice' }],
+    },
+  });
+
+  assert.equal(eligible?.id, nextBuffer.id);
 });
 
 test('cooldown blocks repeated cues inside the throttle window', () => {

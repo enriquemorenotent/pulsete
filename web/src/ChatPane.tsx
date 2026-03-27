@@ -32,10 +32,10 @@ export type ChatPaneProps = {
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
   onSend: () => Promise<void>;
-  querySoundNotificationsEnabled?: boolean;
+  queryNotificationsEnabled?: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onToggleQuerySoundNotifications?: () => void;
+  onToggleQueryNotifications?: () => void;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   onToggleChannelAutoJoin: () => Promise<boolean>;
@@ -83,11 +83,11 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneHeader
         workspace={props.workspace}
         friends={props.friends}
-        querySoundNotificationsEnabled={props.querySoundNotificationsEnabled}
+        queryNotificationsEnabled={props.queryNotificationsEnabled}
         onOpenMentionedChannel={props.onOpenMentionedChannel}
         onAddFriend={props.onAddFriend}
         onRemoveFriend={props.onRemoveFriend}
-        onToggleQuerySoundNotifications={props.onToggleQuerySoundNotifications}
+        onToggleQueryNotifications={props.onToggleQueryNotifications}
         showChannelAutoJoin={props.showChannelAutoJoin}
         channelAutoJoinActive={props.channelAutoJoinActive}
         onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}

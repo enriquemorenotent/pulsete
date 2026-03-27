@@ -213,7 +213,7 @@ const renderQueryPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     friends: FriendState[];
-    querySoundNotificationsEnabled: boolean;
+    queryNotificationsEnabled: boolean;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -228,10 +228,10 @@ const renderQueryPane = (
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => undefined}
-      querySoundNotificationsEnabled={overrides.querySoundNotificationsEnabled ?? false}
+      queryNotificationsEnabled={overrides.queryNotificationsEnabled ?? false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onToggleQuerySoundNotifications={() => undefined}
+      onToggleQueryNotifications={() => undefined}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -610,17 +610,17 @@ test('query headers keep add friend visible instead of hiding it in overflow', (
   const markup = renderQueryPane([]);
 
   assert.match(markup, />Close</);
-  assert.match(markup, />Sound Off</);
+  assert.match(markup, />Enable Notifications</);
   assert.match(markup, />Add friend</);
   assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
 
-test('query headers show when sound notifications are already enabled for the active PM', () => {
+test('query headers show when notifications are already enabled for the active PM', () => {
   const markup = renderQueryPane([], {
-    querySoundNotificationsEnabled: true,
+    queryNotificationsEnabled: true,
   });
 
-  assert.match(markup, />Sound On</);
+  assert.match(markup, />Disable Notifications</);
 });
 
 test('reconnecting channel headers keep the explanatory subtitle alongside the mode line', () => {

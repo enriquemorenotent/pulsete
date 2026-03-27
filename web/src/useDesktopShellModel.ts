@@ -40,7 +40,6 @@ type DesktopChatModelParams = {
   actions: ChatActionSet;
   backgroundDmAudio: {
     settings: BackgroundDmAudioSettings;
-    setEnabled: (enabled: boolean) => void;
     addContact: (contact: BackgroundDmAudioContact) => void;
     removeContact: (contact: BackgroundDmAudioContact) => void;
   };
@@ -162,18 +161,18 @@ export function useDesktopChatModel({
   const canDownloadHistory = canClearHistory;
   const canImportHistory = canClearHistory;
   const canRepairSelfNickAliases = canClearHistory;
-  const selectedQuerySoundContact =
+  const selectedQueryNotificationContact =
     workspace.selectedBuffer?.kind === 'query'
       ? {
           networkId: workspace.selectedBuffer.networkId,
           nick: workspace.selectedBuffer.target,
         }
       : null;
-  const querySoundNotificationsEnabled = selectedQuerySoundContact
+  const queryNotificationsEnabled = selectedQueryNotificationContact
     ? isBackgroundDmAudioContactAllowed(backgroundDmAudio.settings, {
         kind: 'query',
-        networkId: selectedQuerySoundContact.networkId,
-        target: selectedQuerySoundContact.nick,
+        networkId: selectedQueryNotificationContact.networkId,
+        target: selectedQueryNotificationContact.nick,
       })
     : false;
   const participantQueryNetwork =
@@ -219,18 +218,19 @@ export function useDesktopChatModel({
           sendComposer: actions.sendComposer,
           forceScrollToBottomRef: ui.forceScrollToBottomRef,
         }),
-      querySoundNotificationsEnabled,
+      queryNotificationsEnabled,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
-      onToggleQuerySoundNotifications: selectedQuerySoundContact
+      onToggleQueryNotifications: selectedQueryNotificationContact
         ? () => {
-            if (querySoundNotificationsEnabled) {
-              backgroundDmAudio.removeContact(selectedQuerySoundContact);
+            if (queryNotificationsEnabled) {
+              backgroundDmAudio.removeContact(selectedQueryNotificationContact);
               return;
             }
-            backgroundDmAudio.addContact(selectedQuerySoundContact);
-            backgroundDmAudio.setEnabled(true);
-            primeBackgroundDmAudio();
+            backgroundDmAudio.addContact(selectedQueryNotificationContact);
+            if (backgroundDmAudio.settings.enabled) {
+              primeBackgroundDmAudio();
+            }
           }
         : undefined,
       showChannelAutoJoin: channelAutoJoin.available,
@@ -293,7 +293,6 @@ export function useDesktopChatModel({
       actions.addFriend,
       backgroundDmAudio.addContact,
       backgroundDmAudio.removeContact,
-      backgroundDmAudio.setEnabled,
       backgroundDmAudio.settings,
       actions.closeBuffer,
       actions.clearBufferHistory,
@@ -331,11 +330,11 @@ export function useDesktopChatModel({
       selfNickAliasesOpen,
       repairSelfNickAliasesBufferId,
       participantQueryNetwork,
-      querySoundNotificationsEnabled,
+      queryNotificationsEnabled,
       draft,
       friends,
       networks,
-      selectedQuerySoundContact,
+      selectedQueryNotificationContact,
       selectedMessages,
       selectedNetwork,
       ui.messageDisplayMode,

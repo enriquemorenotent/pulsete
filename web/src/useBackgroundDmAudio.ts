@@ -4,8 +4,7 @@ import {
   addBackgroundDmAudioContact,
   BACKGROUND_DM_AUDIO_SETTINGS_STORAGE_KEY,
   canPlayBackgroundDmAudioCue,
-  DEFAULT_BACKGROUND_DM_AUDIO_SOUND,
-  findEligibleBackgroundDmAudioBuffer,
+  findEligibleBackgroundDmNotificationBuffer,
   parseBackgroundDmAudioSettings,
   removeBackgroundDmAudioContact,
   serializeBackgroundDmAudioSettings,
@@ -16,10 +15,13 @@ import {
 
 type BackgroundDmAudioState = {
   settings: BackgroundDmAudioSettings;
+  systemPermission: NotificationPermission | 'unsupported';
   setEnabled: (enabled: boolean) => void;
+  setSystemEnabled: (enabled: boolean) => void;
   setSound: (sound: BackgroundDmAudioSound) => void;
   addContact: (contact: BackgroundDmAudioContact) => void;
   removeContact: (contact: BackgroundDmAudioContact) => void;
+  requestSystemPermission: () => Promise<NotificationPermission | 'unsupported'>;
 };
 
 type AudioContextConstructor = typeof AudioContext;
@@ -42,6 +44,22 @@ const getAudioContextConstructor = (): AudioContextConstructor | null => {
     return null;
   }
   return window.AudioContext ?? null;
+};
+
+const getNotificationPermission = (): NotificationPermission | 'unsupported' => {
+  if (typeof window === 'undefined' || typeof window.Notification === 'undefined') {
+    return 'unsupported';
+  }
+  return window.Notification.permission;
+};
+
+const shouldShowSystemNotification = () => {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  const isVisible = document.visibilityState === 'visible';
+  const hasFocus = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+  return !isVisible || !hasFocus;
 };
 
 const getBufferMap = (buffers: readonly BufferState[]) =>
@@ -162,6 +180,9 @@ const playCue = async (
 
 export function useBackgroundDmAudioSettings(): BackgroundDmAudioState {
   const [settings, setSettings] = useState(readStoredSettings);
+  const [systemPermission, setSystemPermission] = useState<
+    NotificationPermission | 'unsupported'
+  >(getNotificationPermission);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -177,10 +198,43 @@ export function useBackgroundDmAudioSettings(): BackgroundDmAudioState {
     }
   }, [settings]);
 
+  useEffect(() => {
+    const refreshPermission = () => {
+      setSystemPermission(getNotificationPermission());
+    };
+    refreshPermission();
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    window.addEventListener('focus', refreshPermission);
+    document.addEventListener('visibilitychange', refreshPermission);
+    return () => {
+      window.removeEventListener('focus', refreshPermission);
+      document.removeEventListener('visibilitychange', refreshPermission);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (systemPermission === 'granted') {
+      return;
+    }
+    setSettings((current) => current.systemEnabled ? {
+      ...current,
+      systemEnabled: false,
+    } : current);
+  }, [systemPermission]);
+
   const setEnabled = useCallback((enabled: boolean) => {
     setSettings((current) => current.enabled === enabled ? current : {
       ...current,
       enabled,
+    });
+  }, []);
+
+  const setSystemEnabled = useCallback((enabled: boolean) => {
+    setSettings((current) => current.systemEnabled === enabled ? current : {
+      ...current,
+      systemEnabled: enabled,
     });
   }, []);
 
@@ -199,17 +253,38 @@ export function useBackgroundDmAudioSettings(): BackgroundDmAudioState {
     setSettings((current) => removeBackgroundDmAudioContact(current, contact));
   }, []);
 
+  const requestSystemPermission = useCallback(async () => {
+    if (typeof window === 'undefined' || typeof window.Notification === 'undefined') {
+      setSystemPermission('unsupported');
+      return 'unsupported';
+    }
+    try {
+      const permission = await window.Notification.requestPermission();
+      setSystemPermission(permission);
+      return permission;
+    } catch {
+      const permission = getNotificationPermission();
+      setSystemPermission(permission);
+      return permission;
+    }
+  }, []);
+
   return {
     settings,
+    systemPermission,
     setEnabled,
+    setSystemEnabled,
     setSound,
     addContact,
     removeContact,
+    requestSystemPermission,
   };
 }
 
 export function useBackgroundDmAudioCue(input: {
   buffers: readonly BufferState[];
+  networkNamesById: ReadonlyMap<string, string>;
+  onSelectBuffer: (buffer: BufferState) => void;
   selectedBufferId: string | null;
   settings: BackgroundDmAudioSettings;
 }) {
@@ -255,7 +330,10 @@ export function useBackgroundDmAudioCue(input: {
     if (!previousBuffers) {
       return;
     }
-    const eligibleBuffer = findEligibleBackgroundDmAudioBuffer({
+    if (!input.settings.enabled && !input.settings.systemEnabled) {
+      return;
+    }
+    const eligibleBuffer = findEligibleBackgroundDmNotificationBuffer({
       previousBuffers,
       nextBuffers: input.buffers,
       selectedBufferId: input.selectedBufferId,
@@ -264,20 +342,49 @@ export function useBackgroundDmAudioCue(input: {
     if (!eligibleBuffer) {
       return;
     }
+    const shouldPlayAudio = input.settings.enabled;
+    const shouldNotify =
+      input.settings.systemEnabled
+      && getNotificationPermission() === 'granted'
+      && shouldShowSystemNotification();
+    if (!shouldPlayAudio && !shouldNotify) {
+      return;
+    }
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (!canPlayBackgroundDmAudioCue(now, lastPlayedAtRef.current)) {
       return;
     }
     lastPlayedAtRef.current = now;
-    const audioContext = ensureAudioContext();
-    if (!audioContext) {
-      return;
+    if (shouldPlayAudio) {
+      const audioContext = ensureAudioContext();
+      if (audioContext) {
+        void playCue(audioContext, input.settings.sound);
+      }
     }
-    void playCue(
-      audioContext,
-      input.settings.sound ?? DEFAULT_BACKGROUND_DM_AUDIO_SOUND,
-    );
-  }, [ensureAudioContext, input.buffers, input.selectedBufferId, input.settings]);
+    if (shouldNotify) {
+      try {
+        const networkName =
+          input.networkNamesById.get(eligibleBuffer.networkId) ?? eligibleBuffer.networkId;
+        const notification = new window.Notification(eligibleBuffer.target, {
+          body: `New private message on ${networkName}`,
+          tag: `pulsete-dm:${eligibleBuffer.id}`,
+        });
+        notification.onclick = () => {
+          window.focus();
+          input.onSelectBuffer(eligibleBuffer);
+          notification.close();
+        };
+      } catch {
+        // Browser notification delivery can still fail despite granted permission.
+      }
+    }
+  }, [
+    input.buffers,
+    input.networkNamesById,
+    input.onSelectBuffer,
+    input.selectedBufferId,
+    input.settings,
+  ]);
 
   return { prime, preview };
 }

@@ -22,12 +22,14 @@ export type BackgroundDmAudioSound =
 
 export type BackgroundDmAudioSettings = {
   enabled: boolean;
+  systemEnabled: boolean;
   sound: BackgroundDmAudioSound;
   contacts: BackgroundDmAudioContact[];
 };
 
 const defaultSettings: BackgroundDmAudioSettings = {
   enabled: false,
+  systemEnabled: false,
   sound: DEFAULT_BACKGROUND_DM_AUDIO_SOUND,
   contacts: [],
 };
@@ -79,6 +81,7 @@ export const parseBackgroundDmAudioSettings = (
     }
     return {
       enabled: parsed.enabled === true,
+      systemEnabled: parsed.systemEnabled === true,
       sound: isValidSound(parsed.sound)
         ? parsed.sound
         : DEFAULT_BACKGROUND_DM_AUDIO_SOUND,
@@ -97,6 +100,7 @@ export const serializeBackgroundDmAudioSettings = (
   settings: BackgroundDmAudioSettings,
 ) => JSON.stringify({
   enabled: settings.enabled,
+  systemEnabled: settings.systemEnabled,
   sound: settings.sound,
   contacts: dedupeContacts(settings.contacts),
 });
@@ -135,7 +139,19 @@ export const findEligibleBackgroundDmAudioBuffer = (input: {
   selectedBufferId: string | null;
   settings: BackgroundDmAudioSettings;
 }) => {
-  if (!input.settings.enabled || input.settings.contacts.length === 0) {
+  if (!input.settings.enabled) {
+    return null;
+  }
+  return findEligibleBackgroundDmNotificationBuffer(input);
+};
+
+export const findEligibleBackgroundDmNotificationBuffer = (input: {
+  previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
+  nextBuffers: readonly BufferState[];
+  selectedBufferId: string | null;
+  settings: BackgroundDmAudioSettings;
+}) => {
+  if (input.settings.contacts.length === 0) {
     return null;
   }
   for (const buffer of input.nextBuffers) {

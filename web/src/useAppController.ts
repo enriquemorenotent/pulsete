@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { State } from './app-types.js';
 import { useAppLifecycle } from './useAppLifecycle.js';
 import {
@@ -60,6 +60,10 @@ export function useAppController(): AppController {
     state.domain.networks,
     state.transient.channelList.networkId,
   );
+  const networkNamesById = useMemo(
+    () => new Map(state.domain.networks.map((network) => [network.id, network.name])),
+    [state.domain.networks],
+  );
   const selectedMessages = useSelectedMessages(
     state.domain.messages,
     workspace.selectedBuffer,
@@ -96,6 +100,8 @@ export function useAppController(): AppController {
     preview: previewBackgroundDmAudio,
   } = useBackgroundDmAudioCue({
     buffers: state.domain.buffers,
+    networkNamesById,
+    onSelectBuffer: actions.selectTabBuffer,
     selectedBufferId: workspace.selectedBuffer?.id ?? null,
     settings: backgroundDmAudio.settings,
   });

@@ -177,6 +177,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     assistant: emptyAssistantSnapshot,
     backgroundDmAudio: {
       enabled: false,
+      systemEnabled: false,
       sound: 'chirp',
       contacts: [],
     },
@@ -187,6 +188,9 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     onLogout: async () => undefined,
     onChangeModel: async () => undefined,
     onSetBackgroundDmAudioEnabled: () => undefined,
+    backgroundDmAudioSystemPermission: 'default',
+    onSetBackgroundDmAudioSystemEnabled: () => undefined,
+    onRequestBackgroundDmAudioSystemPermission: async () => 'default',
     onSetBackgroundDmAudioSound: () => undefined,
     onPreviewBackgroundDmAudioSound: () => undefined,
     onRemoveBackgroundDmAudioContact: () => undefined,

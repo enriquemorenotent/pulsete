@@ -17,14 +17,16 @@ export type PreferencesDialogProps = PreferencesDialogBodyProps & {
 export function PreferencesDialog(props: PreferencesDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={(open) => !open && props.onClose()}>
-      <DialogContent className="max-w-[42rem]">
+      <DialogContent className="max-h-[min(80vh,44rem)] max-w-[44rem] overflow-hidden">
         <DialogHeader className="space-y-1">
           <DialogTitle>Preferences</DialogTitle>
           <DialogDescription>
             Client-side app settings and assistant defaults.
           </DialogDescription>
         </DialogHeader>
-        <PreferencesDialogBody {...props} />
+        <div className="overflow-y-auto pr-1">
+          <PreferencesDialogBody {...props} />
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={props.onClose}>

@@ -61,6 +61,7 @@ const networks: NetworkProfile[] = [{
 
 const backgroundDmAudio: BackgroundDmAudioSettings = {
   enabled: true,
+  systemEnabled: false,
   sound: 'bell',
   contacts: [{ networkId: 'network-1', nick: 'Alice' }],
 };
@@ -76,19 +77,30 @@ test('preferences dialog shows codex limits with progress bars and hides spark b
       onLogout={async () => {}}
       onChangeModel={async () => {}}
       onSetBackgroundDmAudioEnabled={() => {}}
+      backgroundDmAudioSystemPermission="default"
+      onSetBackgroundDmAudioSystemEnabled={() => {}}
+      onRequestBackgroundDmAudioSystemPermission={async () => 'default'}
       onSetBackgroundDmAudioSound={() => {}}
       onPreviewBackgroundDmAudioSound={() => {}}
       onRemoveBackgroundDmAudioContact={() => {}}
     />
   );
 
-  assert.match(markup, /Background DM audio cue/);
-  assert.match(markup, /Enable background DM audio cue/);
-  assert.match(markup, /Audio cue sound/);
-  assert.match(markup, /aria-label="Audio cue sound"/);
+  assert.match(markup, /Notifications/);
+  assert.match(markup, /Assistant/);
+  assert.match(markup, /Private Message Notifications/);
+  assert.match(markup, /Delivery Methods/);
+  assert.match(markup, /Play sound cue/);
+  assert.match(markup, /Play sound cues for allowed private messages/);
+  assert.match(markup, /Show system notifications/);
+  assert.match(markup, /Allow notifications in the browser first/);
+  assert.match(markup, />Allow in Browser</);
+  assert.match(markup, /Show system notifications for allowed private messages/);
+  assert.match(markup, /Notification sound/);
+  assert.match(markup, /aria-label="Notification sound"/);
   assert.match(markup, /aria-label="Default model"/);
   assert.match(markup, /role="combobox"/);
-  assert.match(markup, /Preview audio cue sound/);
+  assert.match(markup, /Preview notification sound/);
   assert.match(markup, />Preview</);
   assert.match(markup, /Add contacts from a private-message header/);
   assert.match(markup, />Alice</);
@@ -122,6 +134,9 @@ test('preferences dialog renders a manual sign-in link while auth is pending', (
       onLogout={async () => {}}
       onChangeModel={async () => {}}
       onSetBackgroundDmAudioEnabled={() => {}}
+      backgroundDmAudioSystemPermission="default"
+      onSetBackgroundDmAudioSystemEnabled={() => {}}
+      onRequestBackgroundDmAudioSystemPermission={async () => 'default'}
       onSetBackgroundDmAudioSound={() => {}}
       onPreviewBackgroundDmAudioSound={() => {}}
       onRemoveBackgroundDmAudioContact={() => {}}
