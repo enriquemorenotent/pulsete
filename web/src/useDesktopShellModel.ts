@@ -129,6 +129,7 @@ export function useDesktopChatModel({
     workspace.selectedBuffer?.kind === 'channel'
       ? workspace.selectedNetwork
       : null;
+  const selectedNetwork = workspace.selectedNetwork;
   const clearHistoryBufferId = canClearHistory ? workspace.selectedBuffer?.id ?? null : null;
   const downloadHistoryBufferId = canDownloadHistory ? workspace.selectedBuffer?.id ?? null : null;
   const importHistoryBufferId = canImportHistory ? workspace.selectedBuffer?.id ?? null : null;
@@ -199,6 +200,9 @@ export function useDesktopChatModel({
       ? (nick) => { void actions.selectPrivateBuffer(participantQueryNetwork, nick); }
       : undefined,
     onOpenChannelList: actions.openChannelList,
+    onReconnectNetwork: selectedNetwork
+      ? () => actions.reconnectNetwork(selectedNetwork)
+      : undefined,
     onCloseChannel: actions.closeChannel,
     onCloseBuffer: actions.closeBuffer,
   }), [
@@ -213,6 +217,7 @@ export function useDesktopChatModel({
     actions.joinChannelFromList,
     actions.openChannelList,
     actions.openMentionedChannel,
+    actions.reconnectNetwork,
     actions.removeFriend,
     actions.selectPrivateBuffer,
     actions.sendComposer,
@@ -242,6 +247,7 @@ export function useDesktopChatModel({
     friends,
     networks,
     selectedMessages,
+    selectedNetwork,
     ui.messageDisplayMode,
     ui.openBufferToolDialog,
     ui.closeBufferToolDialog,

@@ -6,6 +6,7 @@ import { ChatPaneModeLine, shouldShowChatPaneHeaderSubtitle } from './ChatPaneMo
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
 import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
 import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
+import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import { findFriendByNick } from './friend-utils.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -36,6 +37,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
   const topic = props.workspace.selectedChannel?.topic.trim() ?? '';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
+    && !resolveChatPaneStatusBanner(props.workspace)
     ? props.workspace.headerSubtitle
     : '';
   const isServerBuffer =

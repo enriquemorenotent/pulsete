@@ -103,6 +103,7 @@ export type ChatActionSet = Pick<
   | 'joinChannelFromList'
   | 'openChannelList'
   | 'openMentionedChannel'
+  | 'reconnectNetwork'
   | 'removeFriend'
   | 'selectPrivateBuffer'
   | 'sendComposer'

@@ -12,6 +12,7 @@ import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
+import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
 import { HistoryImportDialog } from './HistoryImportDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
@@ -61,6 +62,7 @@ export type ChatPaneProps = {
   onOpenMentionedChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string) => void;
   onOpenChannelList: () => void;
+  onReconnectNetwork?: () => Promise<boolean>;
 };
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
@@ -95,6 +97,11 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onCloseChannel={props.onCloseChannel}
         onCloseBuffer={props.onCloseBuffer}
         onOpenChannelList={props.onOpenChannelList}
+      />
+      <ChatPaneStatusBanner
+        workspace={props.workspace}
+        onReconnectNetwork={props.onReconnectNetwork}
+        onRejoinChannel={props.onOpenMentionedChannel}
       />
       <ChatPaneMessageList
         selectedBuffer={props.workspace.selectedBuffer}
