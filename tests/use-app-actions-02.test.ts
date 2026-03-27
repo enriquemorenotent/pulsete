@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState,ChannelState,ClientMessage,NetworkProfile } from '../shared/protocol.js';
+import type {
+  BufferState,
+  ChannelState,
+  ClientMessage,
+  NetworkProfile,
+} from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
-import type { Action,State } from '../web/src/app-types.js';
+import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import type { SocketHandle } from '../web/src/client.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
@@ -51,7 +56,11 @@ const workspace: WorkspaceView = {
   selection: { kind: 'buffer', bufferId: selectedBuffer.id },
   connectionInstances: [network],
   selectedNetwork: network,
-  selectedRuntime: { phase: 'connected', serverName: 'irc.example.test', nick: 'tester' },
+  selectedRuntime: {
+    phase: 'connected',
+    serverName: 'irc.example.test',
+    nick: 'tester',
+  },
   selectedBuffer,
   selectedChannel,
   selectedPendingChannel: null,
@@ -63,10 +72,12 @@ const workspace: WorkspaceView = {
   showNicklist: true,
 };
 
-const makeState = (overrides: {
-  domain?: Partial<State['domain']>;
-  transient?: Partial<State['transient']>;
-} = {}): State => ({
+const makeState = (
+  overrides: {
+    domain?: Partial<State['domain']>;
+    transient?: Partial<State['transient']>;
+  } = {},
+): State => ({
   ...initialState,
   domain: {
     ...initialState.domain,
@@ -100,6 +111,11 @@ const createParams = (options: {
   const actions: Action[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
   const composerEntries: string[] = [];
+  const composerEntryCalls: Array<{
+    value: string;
+    contextKey?: string | null;
+  }> = [];
+  const draftCalls: Array<{ value: string; contextKey?: string | null }> = [];
   const state = options.state ?? makeState();
   const conversation = buildConversationModel({
     buffers: state.domain.buffers,
@@ -111,6 +127,8 @@ const createParams = (options: {
     actions,
     banners,
     composerEntries,
+    composerEntryCalls,
+    draftCalls,
     params: {
       session: {
         conversation,
@@ -122,9 +140,12 @@ const createParams = (options: {
         actions.push(action);
       },
       socketRef: { current: options.socket ?? null },
-      setDraft: () => {},
-      recordComposerEntry: (value: string) => {
+      setDraft: (value: string, contextKey?: string | null) => {
+        draftCalls.push({ value, contextKey });
+      },
+      recordComposerEntry: (value: string, contextKey?: string | null) => {
         composerEntries.push(value);
+        composerEntryCalls.push({ value, contextKey });
       },
       updateBanner: (kind: 'notice' | 'error', message: string) => {
         banners.push({ kind, message });
@@ -134,7 +155,11 @@ const createParams = (options: {
 };
 
 test('closeChannelList still clears local state while the gateway is unavailable', () => {
-  const { params, actions: dispatched, banners } = createParams({
+  const {
+    params,
+    actions: dispatched,
+    banners,
+  } = createParams({
     state: makeState({
       domain: {
         gatewayStatus: 'disconnected',
@@ -181,20 +206,23 @@ test('sendComposer blocks websocket-backed sends while the gateway is reconnecti
 
   assert.deepEqual(sent, []);
   assert.deepEqual(composerEntries, []);
-  assert.deepEqual(banners, [{ kind: 'error', message: gatewayReconnectMessage }]);
+  assert.deepEqual(banners, [
+    { kind: 'error', message: gatewayReconnectMessage },
+  ]);
 });
 
 test('sendComposer reports success for a sent message and records it in history', async () => {
   const sent: ClientMessage[] = [];
-  const { params, composerEntries, banners } = createParams({
-    draft: 'hello',
-    socket: {
-      send(message) {
-        sent.push(message);
+  const { params, composerEntries, composerEntryCalls, draftCalls, banners } =
+    createParams({
+      draft: 'hello',
+      socket: {
+        send(message) {
+          sent.push(message);
+        },
+        close() {},
       },
-      close() {},
-    },
-  });
+    });
   const actions = createAppActions(params);
 
   assert.equal(await actions.sendComposer(), true);
@@ -210,5 +238,9 @@ test('sendComposer reports success for a sent message and records it in history'
     },
   ]);
   assert.deepEqual(composerEntries, ['hello']);
+  assert.deepEqual(composerEntryCalls, [
+    { value: 'hello', contextKey: selectedBuffer.id },
+  ]);
+  assert.deepEqual(draftCalls, [{ value: '', contextKey: selectedBuffer.id }]);
   assert.deepEqual(banners, []);
 });

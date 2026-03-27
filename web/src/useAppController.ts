@@ -36,24 +36,29 @@ type AppController = {
 export function useAppController(): AppController {
   const composer = useComposerHistory();
   const ui = useAppUiState();
-  const { actions, conversation, dispatch, serverMessages, state, workspace } = useAppSession({ composer, ui });
+  const { actions, conversation, dispatch, serverMessages, state, workspace } =
+    useAppSession({ composer, ui });
   const connectionInstances = useConnectionInstances(state.domain.networks);
   const savedNetworks = useSavedNetworks(state.domain.networks);
   const visibleNetworks = useVisibleNetworks(
     savedNetworks,
-    state.transient.networkManager.showFavoritesOnly
+    state.transient.networkManager.showFavoritesOnly,
   );
-  const { managedRuntime, managedRuntimes, visibleManagedNetwork } = useManagedNetworkModel({
-    connectionInstances,
-    networkManager: state.transient.networkManager,
-    networkStates: state.domain.networkStates,
-    visibleNetworks,
-  });
+  const { managedRuntime, managedRuntimes, visibleManagedNetwork } =
+    useManagedNetworkModel({
+      connectionInstances,
+      networkManager: state.transient.networkManager,
+      networkStates: state.domain.networkStates,
+      visibleNetworks,
+    });
   const channelListNetwork = useChannelListNetwork(
     state.domain.networks,
-    state.transient.channelList.networkId
+    state.transient.channelList.networkId,
   );
-  const selectedMessages = useSelectedMessages(state.domain.messages, workspace.selectedBuffer);
+  const selectedMessages = useSelectedMessages(
+    state.domain.messages,
+    workspace.selectedBuffer,
+  );
   const sidebarConnections = useSidebarConnections(
     connectionInstances,
     conversation,
@@ -97,6 +102,7 @@ export function useAppController(): AppController {
   });
   const sidebar = useDesktopSidebarModel({
     actions,
+    composer,
     friends: state.domain.friends,
     friendPresence: state.domain.friendPresence,
     sidebarConnections,
@@ -153,7 +159,11 @@ export function useAppController(): AppController {
       return;
     }
     ui.closeBufferToolDialog();
-  }, [ui.bufferToolDialog, ui.closeBufferToolDialog, workspace.selectedBuffer?.id]);
+  }, [
+    ui.bufferToolDialog,
+    ui.closeBufferToolDialog,
+    workspace.selectedBuffer?.id,
+  ]);
 
   const shell = {
     workspace,

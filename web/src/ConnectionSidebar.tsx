@@ -9,10 +9,13 @@ import {
 
 export type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
-export const ConnectionSidebar = memo(function ConnectionSidebar(props: ConnectionSidebarProps) {
+export const ConnectionSidebar = memo(function ConnectionSidebar(
+  props: ConnectionSidebarProps,
+) {
   const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
   const [friendDraft, setFriendDraft] = useState('');
-  const defaultFriendsExpanded = props.connections.length === 0 && props.friends.length > 0;
+  const defaultFriendsExpanded =
+    props.connections.length === 0 && props.friends.length > 0;
   const [friendsExpanded, setFriendsExpanded] = useState(() => {
     if (typeof window === 'undefined') {
       return defaultFriendsExpanded;
@@ -37,6 +40,7 @@ export const ConnectionSidebar = memo(function ConnectionSidebar(props: Connecti
     <aside className="flex h-full min-h-0 flex-col gap-5 overflow-hidden px-3 py-4">
       <ConnectionSidebarConnections
         connections={props.connections}
+        draftBufferIds={props.draftBufferIds}
         onSelectNetwork={props.onSelectNetwork}
         onSelectBuffer={props.onSelectBuffer}
         onSelectPendingChannel={props.onSelectPendingChannel}

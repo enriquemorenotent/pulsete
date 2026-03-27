@@ -2,6 +2,7 @@ import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './buffer-activity.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
+import { ConnectionSidebarDraftMarker } from './ConnectionSidebarDraftMarker.js';
 import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingChannelRow.js';
 import { ConnectionSidebarActivityBadge } from './ConnectionSidebarUnreadBadge.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
@@ -10,6 +11,7 @@ import type { NetworkRuntimeState } from './workspace.js';
 
 type ConnectionSidebarNetworkSectionProps = {
   connection: SidebarConnectionView;
+  draftBufferIds?: ReadonlySet<string>;
   index: number;
   onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
   onSelectBuffer: ConnectionSidebarProps['onSelectBuffer'];
@@ -21,41 +23,63 @@ type ConnectionSidebarNetworkSectionProps = {
   onCloseBuffer: ConnectionSidebarProps['onCloseBuffer'];
 };
 
-export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkSectionProps) {
+export function ConnectionSidebarNetworkSection(
+  props: ConnectionSidebarNetworkSectionProps,
+) {
   const { connection } = props;
   const serverActivity = resolveBufferActivityState(connection.serverBuffer);
+  const secondaryStatusLabel = runtimeLabel(connection.runtime);
+  const serverHasDraft = connection.serverBuffer
+    ? (props.draftBufferIds?.has(connection.serverBuffer.id) ?? false)
+    : false;
 
   return (
-    <section className={cn('space-y-2', props.index > 0 && 'border-t border-white/[0.06] pt-4')}>
+    <section
+      className={cn(
+        'space-y-2',
+        props.index > 0 && 'border-t border-white/[0.06] pt-4',
+      )}
+    >
       <div
         className={cn(
           'group flex items-stretch rounded-[1rem] transition-colors',
           connection.selectedServer
             ? 'bg-white/[0.06] ring-1 ring-inset ring-primary/24 shadow-[0_10px_30px_rgba(0,0,0,0.18)]'
-            : 'hover:bg-white/[0.03]'
+            : 'hover:bg-white/[0.03]',
         )}
       >
         <button
           className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
           onClick={() => props.onSelectNetwork(connection.network)}
         >
-          <span className={cn('size-2.5 shrink-0 rounded-full shadow-[0_0_0_4px_rgba(255,255,255,0.03)]', dotTone(connection.runtime))} />
+          <span
+            className={cn(
+              'size-2.5 shrink-0 rounded-full shadow-[0_0_0_4px_rgba(255,255,255,0.03)]',
+              dotTone(connection.runtime),
+            )}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
               <span
                 className={cn(
                   'truncate text-[13px] text-foreground',
-                  serverActivity.hasUnread ? 'font-semibold' : 'font-medium'
+                  serverActivity.hasUnread ? 'font-semibold' : 'font-medium',
                 )}
               >
                 {connection.labelParts.name}
               </span>
+              {serverHasDraft ? <ConnectionSidebarDraftMarker /> : null}
               {serverActivity.hasUnread ? (
-                <ConnectionSidebarActivityBadge count={serverActivity.count} priority={serverActivity.priority} />
+                <ConnectionSidebarActivityBadge
+                  count={serverActivity.count}
+                  priority={serverActivity.priority}
+                />
               ) : null}
             </div>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              <span>{runtimeLabel(connection.runtime)}</span>
+              {secondaryStatusLabel ? (
+                <span>{secondaryStatusLabel}</span>
+              ) : null}
               <span className="font-mono normal-case tracking-normal text-muted-foreground/80">
                 as {connection.labelParts.nick}
               </span>
@@ -78,7 +102,11 @@ export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkS
             aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${connection.label}`}
             disabled={connection.runtime?.phase === 'connecting'}
           >
-            {connection.runtime?.phase === 'connected' ? <PowerOff className="size-3.5" /> : <RefreshCcw className="size-3.5" />}
+            {connection.runtime?.phase === 'connected' ? (
+              <PowerOff className="size-3.5" />
+            ) : (
+              <RefreshCcw className="size-3.5" />
+            )}
           </button>
           <button
             className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
@@ -90,7 +118,8 @@ export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkS
         </div>
       </div>
 
-      {connection.childBuffers.length > 0 || connection.pendingChannels.length > 0 ? (
+      {connection.childBuffers.length > 0 ||
+      connection.pendingChannels.length > 0 ? (
         <div className="space-y-1 border-l border-white/[0.06] pl-3">
           {connection.childBuffers.map(({ buffer, selected }) =>
             buffer.kind === 'channel' ? (
@@ -98,29 +127,38 @@ export function ConnectionSidebarNetworkSection(props: ConnectionSidebarNetworkS
                 key={buffer.id}
                 buffer={buffer}
                 dimmed={connection.childBuffersDimmed}
+                hasDraft={props.draftBufferIds?.has(buffer.id) ?? false}
                 selected={selected}
                 icon={Hash}
                 onSelect={() => props.onSelectBuffer(buffer)}
-                onClose={() => props.onCloseChannel(connection.network.id, buffer.target)}
+                onClose={() =>
+                  props.onCloseChannel(connection.network.id, buffer.target)
+                }
               />
             ) : (
               <ConnectionSidebarBufferRow
                 key={buffer.id}
                 buffer={buffer}
                 dimmed={connection.childBuffersDimmed}
+                hasDraft={props.draftBufferIds?.has(buffer.id) ?? false}
                 selected={selected}
                 icon={MessageSquareMore}
                 onSelect={() => props.onSelectBuffer(buffer)}
                 onClose={() => props.onCloseBuffer(buffer)}
               />
-            )
+            ),
           )}
           {connection.pendingChannels.map(({ pendingChannel, selected }) => (
             <ConnectionSidebarPendingChannelRow
               key={`${pendingChannel.networkId}:${pendingChannel.channel}`}
               pendingChannel={pendingChannel}
               selected={selected}
-              onSelect={() => props.onSelectPendingChannel(pendingChannel.networkId, pendingChannel.channel)}
+              onSelect={() =>
+                props.onSelectPendingChannel(
+                  pendingChannel.networkId,
+                  pendingChannel.channel,
+                )
+              }
             />
           ))}
         </div>
@@ -141,7 +179,7 @@ const dotTone = (runtime: NetworkRuntimeState | null) => {
 
 const runtimeLabel = (runtime: NetworkRuntimeState | null) => {
   if (runtime?.phase === 'connected') {
-    return 'Connected';
+    return null;
   }
   if (runtime?.phase === 'connecting') {
     return 'Connecting';

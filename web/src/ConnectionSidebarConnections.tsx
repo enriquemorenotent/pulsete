@@ -5,6 +5,7 @@ import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 type ConnectionSidebarConnectionsProps = Pick<
   ConnectionSidebarProps,
   | 'connections'
+  | 'draftBufferIds'
   | 'onSelectNetwork'
   | 'onSelectBuffer'
   | 'onSelectPendingChannel'
@@ -15,13 +16,19 @@ type ConnectionSidebarConnectionsProps = Pick<
   | 'onCloseBuffer'
 >;
 
-export function ConnectionSidebarConnections(props: ConnectionSidebarConnectionsProps) {
+export function ConnectionSidebarConnections(
+  props: ConnectionSidebarConnectionsProps,
+) {
   return (
     <section className="flex min-h-0 flex-[3_1_0%] flex-col overflow-hidden">
       <div className="mb-3 flex items-end justify-between gap-3 px-1">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Connections</p>
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">Buffers</h2>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            Connections
+          </p>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Buffers
+          </h2>
         </div>
         <span className="rounded-full bg-white/[0.05] px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
           {props.connections.length}
@@ -38,6 +45,7 @@ export function ConnectionSidebarConnections(props: ConnectionSidebarConnections
             <ConnectionSidebarNetworkSection
               key={connection.network.id}
               connection={connection}
+              draftBufferIds={props.draftBufferIds}
               index={index}
               onSelectNetwork={props.onSelectNetwork}
               onSelectBuffer={props.onSelectBuffer}

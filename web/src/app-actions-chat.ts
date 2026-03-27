@@ -19,7 +19,9 @@ type ChatActionParams = Pick<
   | 'recordComposerEntry'
   | 'setDraft'
   | 'updateBanner'
-> & ConversationActions & GatewayActions;
+> &
+  ConversationActions &
+  GatewayActions;
 
 export const createChatActions = ({
   clearBufferHistory,
@@ -38,8 +40,12 @@ export const createChatActions = ({
   setDraft,
   updateBanner,
 }: ChatActionParams) => {
-  const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
-  const selectTabBuffer = (buffer: BufferState) => selectBuffer(dispatch, buffer);
+  const executeMutation = createAppMutationExecutor({
+    applyServerMessages,
+    updateBanner,
+  });
+  const selectTabBuffer = (buffer: BufferState) =>
+    selectBuffer(dispatch, buffer);
   const selectPendingTab = (networkId: string, channel: string) =>
     selectPendingChannel(dispatch, networkId, channel);
 
@@ -78,7 +84,11 @@ export const createChatActions = ({
     if (!networkId) {
       return;
     }
-    joinChannel(networkId, channel, conversation.findServerBuffer(networkId)?.id);
+    joinChannel(
+      networkId,
+      channel,
+      conversation.findServerBuffer(networkId)?.id,
+    );
   };
 
   const closeChannel = (networkId: string, channel: string) => {
@@ -110,33 +120,36 @@ export const createChatActions = ({
 
   const sendComposer = async () => {
     const { draft, workspace } = getSession();
+    const draftBufferId = workspace.selectedBuffer?.id ?? null;
     if (draft.trim() && !getGatewaySocket()) {
       return false;
     }
     return executeMutation({
-      request: () => sendComposerMessage({
-        draft,
-        setDraft,
-        socket: getGatewaySocket(false),
-        updateBanner,
-        workspace,
-        onJoinChannel: async (networkId, channel, sourceBufferId) => {
-          joinChannel(networkId, channel, sourceBufferId);
-        },
-        onOpenChannelList: openChannelListForNetwork,
-        onOpenQuery: async (networkId, nick) => {
-          const { state } = getSession();
-          const networks = state.domain.networks;
-          const network = networks.find((candidate) => candidate.id === networkId) ?? null;
-          if (!network) {
-            throw new Error('Network not found');
-          }
-          await openOrSelectQueryBuffer(network, nick);
-        },
-      }),
+      request: () =>
+        sendComposerMessage({
+          draft,
+          setDraft: (value) => setDraft(value, draftBufferId),
+          socket: getGatewaySocket(false),
+          updateBanner,
+          workspace,
+          onJoinChannel: async (networkId, channel, sourceBufferId) => {
+            joinChannel(networkId, channel, sourceBufferId);
+          },
+          onOpenChannelList: openChannelListForNetwork,
+          onOpenQuery: async (networkId, nick) => {
+            const { state } = getSession();
+            const networks = state.domain.networks;
+            const network =
+              networks.find((candidate) => candidate.id === networkId) ?? null;
+            if (!network) {
+              throw new Error('Network not found');
+            }
+            await openOrSelectQueryBuffer(network, nick);
+          },
+        }),
       mapResult: (submitted) => {
         if (submitted) {
-          recordComposerEntry(submitted);
+          recordComposerEntry(submitted, draftBufferId);
         }
         return Boolean(submitted);
       },

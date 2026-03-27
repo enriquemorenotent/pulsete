@@ -11,12 +11,20 @@ export type ComposerHistoryStep = {
   draft: string;
 };
 
-export type ComposerController = {
+export type ComposerContextState = {
   draft: string;
-  setDraft: (value: string) => void;
-  recordComposerEntry: (entry: string) => void;
-  recallOlderDraft: () => void;
-  recallNewerDraft: () => void;
+  history: ComposerHistoryState;
+};
+
+export type ComposerDraftState = Record<string, ComposerContextState>;
+
+export type ComposerController = {
+  getDraft: (contextKey: string | null) => string;
+  hasDraft: (contextKey: string | null) => boolean;
+  setDraft: (contextKey: string | null, value: string) => void;
+  recordComposerEntry: (contextKey: string | null, entry: string) => void;
+  recallOlderDraft: (contextKey: string | null) => void;
+  recallNewerDraft: (contextKey: string | null) => void;
 };
 
 export const composerHistoryLimit = 100;
@@ -27,10 +35,17 @@ export const initialComposerHistoryState: ComposerHistoryState = {
   draftBeforeNavigation: '',
 };
 
+export const initialComposerContextState: ComposerContextState = {
+  draft: '',
+  history: initialComposerHistoryState,
+};
+
+export const initialComposerDraftState: ComposerDraftState = {};
+
 export const pushComposerHistoryEntry = (
   state: ComposerHistoryState,
   entry: string,
-  limit = composerHistoryLimit
+  limit = composerHistoryLimit,
 ): ComposerHistoryState => {
   const value = entry.trim();
   if (!value) {
@@ -47,19 +62,23 @@ export const pushComposerHistoryEntry = (
 export const stepComposerHistory = (
   state: ComposerHistoryState,
   direction: 'older' | 'newer',
-  currentDraft: string
+  currentDraft: string,
 ): ComposerHistoryStep | null => {
   if (state.entries.length === 0) {
     return null;
   }
 
   if (direction === 'older') {
-    const nextIndex = state.index === null ? state.entries.length - 1 : Math.max(0, state.index - 1);
+    const nextIndex =
+      state.index === null
+        ? state.entries.length - 1
+        : Math.max(0, state.index - 1);
     return {
       state: {
         entries: state.entries,
         index: nextIndex,
-        draftBeforeNavigation: state.index === null ? currentDraft : state.draftBeforeNavigation,
+        draftBeforeNavigation:
+          state.index === null ? currentDraft : state.draftBeforeNavigation,
       },
       draft: state.entries[nextIndex] ?? currentDraft,
     };
@@ -91,50 +110,166 @@ export const stepComposerHistory = (
   };
 };
 
+export const readComposerDraft = (
+  state: ComposerDraftState,
+  contextKey: string | null,
+) => (contextKey ? (state[contextKey]?.draft ?? '') : '');
+
+export const hasStoredComposerDraft = (
+  state: ComposerDraftState,
+  contextKey: string | null,
+) => readComposerDraft(state, contextKey).trim().length > 0;
+
+export const setComposerDraftForContext = (
+  state: ComposerDraftState,
+  contextKey: string | null,
+  draft: string,
+): ComposerDraftState => {
+  if (!contextKey) {
+    return state;
+  }
+  const current = state[contextKey] ?? initialComposerContextState;
+  if (current.draft === draft) {
+    return state;
+  }
+  return writeComposerContextState(state, contextKey, {
+    draft,
+    history: current.history,
+  });
+};
+
+export const pushComposerHistoryEntryForContext = (
+  state: ComposerDraftState,
+  contextKey: string | null,
+  entry: string,
+  limit = composerHistoryLimit,
+): ComposerDraftState => {
+  if (!contextKey) {
+    return state;
+  }
+  const current = state[contextKey] ?? initialComposerContextState;
+  const nextHistory = pushComposerHistoryEntry(current.history, entry, limit);
+  if (nextHistory === current.history) {
+    return state;
+  }
+  return writeComposerContextState(state, contextKey, {
+    draft: current.draft,
+    history: nextHistory,
+  });
+};
+
+export const stepComposerHistoryForContext = (
+  state: ComposerDraftState,
+  contextKey: string | null,
+  direction: 'older' | 'newer',
+): ComposerDraftState => {
+  if (!contextKey) {
+    return state;
+  }
+  const current = state[contextKey] ?? initialComposerContextState;
+  const result = stepComposerHistory(current.history, direction, current.draft);
+  if (!result) {
+    return state;
+  }
+  return writeComposerContextState(state, contextKey, {
+    draft: result.draft,
+    history: result.state,
+  });
+};
+
 export const useComposerHistory = (): ComposerController => {
-  const [draft, setDraftState] = useState('');
-  const [, setHistoryState] = useState(initialComposerHistoryState);
-  const draftRef = useRef(draft);
-  const historyStateRef = useRef(initialComposerHistoryState);
+  const [, setDraftState] = useState(initialComposerDraftState);
+  const draftStateRef = useRef(initialComposerDraftState);
 
-  const setDraft = useCallback((value: string) => {
-    draftRef.current = value;
-    setDraftState(value);
-  }, []);
+  const updateDraftState = useCallback(
+    (updater: (current: ComposerDraftState) => ComposerDraftState) => {
+      setDraftState((current) => {
+        const nextState = updater(current);
+        draftStateRef.current = nextState;
+        return nextState;
+      });
+    },
+    [],
+  );
 
-  const recordComposerEntry = useCallback((entry: string) => {
-    setHistoryState((current) => {
-      const nextState = pushComposerHistoryEntry(current, entry);
-      historyStateRef.current = nextState;
-      return nextState;
-    });
-  }, []);
+  const getDraft = useCallback(
+    (contextKey: string | null) =>
+      readComposerDraft(draftStateRef.current, contextKey),
+    [],
+  );
 
-  const recallOlderDraft = useCallback(() => {
-    const result = stepComposerHistory(historyStateRef.current, 'older', draftRef.current);
-    if (!result) {
-      return;
-    }
-    historyStateRef.current = result.state;
-    setHistoryState(result.state);
-    setDraft(result.draft);
-  }, [setDraft]);
+  const hasDraft = useCallback(
+    (contextKey: string | null) =>
+      hasStoredComposerDraft(draftStateRef.current, contextKey),
+    [],
+  );
 
-  const recallNewerDraft = useCallback(() => {
-    const result = stepComposerHistory(historyStateRef.current, 'newer', draftRef.current);
-    if (!result) {
-      return;
-    }
-    historyStateRef.current = result.state;
-    setHistoryState(result.state);
-    setDraft(result.draft);
-  }, [setDraft]);
+  const setDraft = useCallback(
+    (contextKey: string | null, value: string) => {
+      updateDraftState((current) =>
+        setComposerDraftForContext(current, contextKey, value),
+      );
+    },
+    [updateDraftState],
+  );
+
+  const recordComposerEntry = useCallback(
+    (contextKey: string | null, entry: string) => {
+      updateDraftState((current) =>
+        pushComposerHistoryEntryForContext(current, contextKey, entry),
+      );
+    },
+    [updateDraftState],
+  );
+
+  const recallOlderDraft = useCallback(
+    (contextKey: string | null) => {
+      updateDraftState((current) =>
+        stepComposerHistoryForContext(current, contextKey, 'older'),
+      );
+    },
+    [updateDraftState],
+  );
+
+  const recallNewerDraft = useCallback(
+    (contextKey: string | null) => {
+      updateDraftState((current) =>
+        stepComposerHistoryForContext(current, contextKey, 'newer'),
+      );
+    },
+    [updateDraftState],
+  );
 
   return {
-    draft,
+    getDraft,
+    hasDraft,
     setDraft,
     recordComposerEntry,
     recallOlderDraft,
     recallNewerDraft,
   };
 };
+
+const writeComposerContextState = (
+  state: ComposerDraftState,
+  contextKey: string,
+  nextState: ComposerContextState,
+): ComposerDraftState => {
+  if (isEmptyComposerContextState(nextState)) {
+    if (!(contextKey in state)) {
+      return state;
+    }
+    const { [contextKey]: _removed, ...remaining } = state;
+    return remaining;
+  }
+  return {
+    ...state,
+    [contextKey]: nextState,
+  };
+};
+
+const isEmptyComposerContextState = (state: ComposerContextState) =>
+  state.draft === '' &&
+  state.history.entries.length === 0 &&
+  state.history.index === null &&
+  state.history.draftBeforeNavigation === '';

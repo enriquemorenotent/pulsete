@@ -105,7 +105,7 @@ test('channel header actions keep close primary and move maintenance actions int
   });
 });
 
-test('query header actions move friend controls into overflow', () => {
+test('query header actions keep friend controls visible and leave utilities in overflow', () => {
   const selectedFriend: FriendState = {
     id: 'friend-1',
     nick: 'MissD',
@@ -129,8 +129,8 @@ test('query header actions move friend controls into overflow', () => {
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close'],
-    overflow: ['Remove friend', 'Download history', 'Self aliases'],
+    primary: ['Close', 'Remove friend'],
+    overflow: ['Download history', 'Self aliases'],
   });
 });
 

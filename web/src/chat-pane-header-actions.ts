@@ -44,7 +44,15 @@ export const resolveChatPaneHeaderActions = (
     };
   }
 
-  const primary = resolvePrimaryActions(context.workspace.selectedBuffer, context.workspace.selectedChannel, context.onCloseChannel, context.onCloseBuffer);
+  const primary = [
+    ...resolvePrimaryActions(
+      context.workspace.selectedBuffer,
+      context.workspace.selectedChannel,
+      context.onCloseChannel,
+      context.onCloseBuffer,
+    ),
+    ...resolveFriendPrimaryActions(context),
+  ];
   const overflow = resolveOverflowActions(context);
   return { primary, overflow };
 };
@@ -76,6 +84,26 @@ const resolvePrimaryActions = (
   return [];
 };
 
+const resolveFriendPrimaryActions = (
+  context: ResolveChatPaneHeaderActionsContext,
+): ChatPaneHeaderAction[] => {
+  const { selectedBuffer } = context.workspace;
+  if (selectedBuffer?.kind !== 'query') {
+    return [];
+  }
+  return [
+    {
+      id: 'friend',
+      label: context.selectedFriend ? 'Remove friend' : 'Add friend',
+      onSelect: () => {
+        void (context.selectedFriend
+          ? context.onRemoveFriend(context.selectedFriend.id)
+          : context.onAddFriend(selectedBuffer.target));
+      },
+    },
+  ];
+};
+
 const resolveOverflowActions = (
   context: ResolveChatPaneHeaderActionsContext,
 ): ChatPaneHeaderAction[] => {
@@ -88,18 +116,6 @@ const resolveOverflowActions = (
       label: context.channelAutoJoinActive ? 'Autojoin On' : 'Autojoin Off',
       onSelect: () => {
         void context.onToggleChannelAutoJoin();
-      },
-    });
-  }
-
-  if (selectedBuffer?.kind === 'query') {
-    overflow.push({
-      id: 'friend',
-      label: context.selectedFriend ? 'Remove friend' : 'Add friend',
-      onSelect: () => {
-        void (context.selectedFriend
-          ? context.onRemoveFriend(context.selectedFriend.id)
-          : context.onAddFriend(selectedBuffer.target));
       },
     });
   }

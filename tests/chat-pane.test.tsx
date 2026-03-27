@@ -212,12 +212,13 @@ const renderQueryPane = (
   overrides: Partial<{
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
+    friends: FriendState[];
   }> = {},
 ) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeQueryWorkspace()}
-      friends={[] satisfies FriendState[]}
+      friends={overrides.friends ?? ([] satisfies FriendState[])}
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"
@@ -600,6 +601,14 @@ test('server composers render command mode cues instead of a generic send box', 
   assert.match(markup, />Run</);
   assert.doesNotMatch(markup, />Command</);
   assert.doesNotMatch(markup, />Enter runs on Cuff-Link</);
+});
+
+test('query headers keep add friend visible instead of hiding it in overflow', () => {
+  const markup = renderQueryPane([]);
+
+  assert.match(markup, />Close</);
+  assert.match(markup, />Add friend</);
+  assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
 
 test('reconnecting channel headers keep the explanatory subtitle alongside the mode line', () => {

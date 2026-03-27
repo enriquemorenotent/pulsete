@@ -22,8 +22,8 @@ export type AppActionContext = {
   applyServerMessages: ApplyServerMessages;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
-  recordComposerEntry: (value: string) => void;
-  setDraft: (value: string) => void;
+  recordComposerEntry: (value: string, contextKey?: string | null) => void;
+  setDraft: (value: string, contextKey?: string | null) => void;
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
@@ -42,17 +42,40 @@ export type GatewayActions = {
 };
 
 export type ConversationActions = {
-  joinChannel: (networkId: string, channel: string, sourceBufferId?: string) => boolean;
+  joinChannel: (
+    networkId: string,
+    channel: string,
+    sourceBufferId?: string,
+  ) => boolean;
   clearBufferHistory: (bufferId: string) => Promise<boolean>;
   downloadBufferHistory: (bufferId: string) => Promise<boolean>;
-  importBufferHistory: (bufferId: string, input: BufferHistoryImportRequest) => Promise<boolean>;
-  updateBufferSelfNickAliases: (bufferId: string, input: BufferSelfNickAliasesRequest) => Promise<boolean>;
-  openOrSelectQueryBuffer: (network: NetworkProfile, nick: string) => Promise<BufferState>;
+  importBufferHistory: (
+    bufferId: string,
+    input: BufferHistoryImportRequest,
+  ) => Promise<boolean>;
+  updateBufferSelfNickAliases: (
+    bufferId: string,
+    input: BufferSelfNickAliasesRequest,
+  ) => Promise<boolean>;
+  openOrSelectQueryBuffer: (
+    network: NetworkProfile,
+    nick: string,
+  ) => Promise<BufferState>;
   openChannelListForNetwork: (networkId: string) => Promise<void>;
 };
 
 export const selectBuffer = (dispatch: AppDispatch, buffer: BufferState) =>
-  dispatch({ type: 'select', selection: { kind: 'buffer', bufferId: buffer.id } });
+  dispatch({
+    type: 'select',
+    selection: { kind: 'buffer', bufferId: buffer.id },
+  });
 
-export const selectPendingChannel = (dispatch: AppDispatch, networkId: string, channel: string) =>
-  dispatch({ type: 'select', selection: { kind: 'pending-channel', networkId, channel } });
+export const selectPendingChannel = (
+  dispatch: AppDispatch,
+  networkId: string,
+  channel: string,
+) =>
+  dispatch({
+    type: 'select',
+    selection: { kind: 'pending-channel', networkId, channel },
+  });

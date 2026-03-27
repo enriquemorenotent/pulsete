@@ -1,15 +1,21 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  hasStoredComposerDraft,
+  initialComposerDraftState,
   initialComposerHistoryState,
+  pushComposerHistoryEntryForContext,
   pushComposerHistoryEntry,
+  readComposerDraft,
+  setComposerDraftForContext,
+  stepComposerHistoryForContext,
   stepComposerHistory,
 } from '../web/src/composer-history.js';
 
 test('older history recalls the latest submitted entry first', () => {
   const state = pushComposerHistoryEntry(
     pushComposerHistoryEntry(initialComposerHistoryState, 'hello'),
-    '/join #help'
+    '/join #help',
   );
 
   const older = stepComposerHistory(state, 'older', '');
@@ -27,10 +33,12 @@ test('older history recalls the latest submitted entry first', () => {
 test('newer history restores the draft from before navigation', () => {
   const state = pushComposerHistoryEntry(
     pushComposerHistoryEntry(initialComposerHistoryState, 'first'),
-    'second'
+    'second',
   );
   const older = stepComposerHistory(state, 'older', 'typing now');
-  const newer = older ? stepComposerHistory(older.state, 'newer', older.draft) : null;
+  const newer = older
+    ? stepComposerHistory(older.state, 'newer', older.draft)
+    : null;
 
   assert.deepEqual(newer, {
     state: {
@@ -45,10 +53,12 @@ test('newer history restores the draft from before navigation', () => {
 test('history navigation clamps at the oldest entry', () => {
   const state = pushComposerHistoryEntry(
     pushComposerHistoryEntry(initialComposerHistoryState, 'first'),
-    'second'
+    'second',
   );
   const older = stepComposerHistory(state, 'older', '');
-  const oldest = older ? stepComposerHistory(older.state, 'older', older.draft) : null;
+  const oldest = older
+    ? stepComposerHistory(older.state, 'older', older.draft)
+    : null;
 
   assert.deepEqual(oldest?.draft, 'first');
   assert.equal(oldest?.state.index, 0);
@@ -58,4 +68,37 @@ test('blank submissions are not added to history', () => {
   const state = pushComposerHistoryEntry(initialComposerHistoryState, '   ');
 
   assert.deepEqual(state, initialComposerHistoryState);
+});
+
+test('composer drafts stay isolated per buffer context', () => {
+  let state = setComposerDraftForContext(
+    initialComposerDraftState,
+    'buffer-1',
+    'hello there',
+  );
+  state = setComposerDraftForContext(state, 'buffer-2', '/join #help');
+
+  assert.equal(readComposerDraft(state, 'buffer-1'), 'hello there');
+  assert.equal(readComposerDraft(state, 'buffer-2'), '/join #help');
+  assert.equal(hasStoredComposerDraft(state, 'buffer-1'), true);
+  assert.equal(hasStoredComposerDraft(state, 'missing'), false);
+});
+
+test('history recall only updates the active buffer context', () => {
+  let state = pushComposerHistoryEntryForContext(
+    initialComposerDraftState,
+    'buffer-1',
+    'first',
+  );
+  state = pushComposerHistoryEntryForContext(state, 'buffer-1', 'second');
+  state = setComposerDraftForContext(state, 'buffer-1', 'typing one');
+  state = setComposerDraftForContext(state, 'buffer-2', 'typing two');
+
+  state = stepComposerHistoryForContext(state, 'buffer-1', 'older');
+  assert.equal(readComposerDraft(state, 'buffer-1'), 'second');
+  assert.equal(readComposerDraft(state, 'buffer-2'), 'typing two');
+
+  state = stepComposerHistoryForContext(state, 'buffer-1', 'newer');
+  assert.equal(readComposerDraft(state, 'buffer-1'), 'typing one');
+  assert.equal(readComposerDraft(state, 'buffer-2'), 'typing two');
 });

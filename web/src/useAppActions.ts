@@ -19,8 +19,8 @@ type CreateAppActionsParams = {
   getSession: AppActionContext['getSession'];
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
-  recordComposerEntry: (value: string) => void;
-  setDraft: (value: string) => void;
+  recordComposerEntry: AppActionContext['recordComposerEntry'];
+  setDraft: AppActionContext['setDraft'];
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
@@ -29,8 +29,8 @@ type CreateStaticAppActionsParams = {
   session: AppSessionSnapshot;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
-  recordComposerEntry: (value: string) => void;
-  setDraft: (value: string) => void;
+  recordComposerEntry: AppActionContext['recordComposerEntry'];
+  setDraft: AppActionContext['setDraft'];
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
@@ -74,7 +74,8 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
 
 export function createAppActions(params: CreateStaticAppActionsParams) {
   const applyServerMessages =
-    params.applyServerMessages ?? createServerMessageBridge(params.dispatch).applyMutationMessages;
+    params.applyServerMessages ??
+    createServerMessageBridge(params.dispatch).applyMutationMessages;
   return createAppActionsFromSession({
     applyServerMessages,
     getSession: () => params.session,
@@ -123,7 +124,10 @@ export type SidebarActionSet = Pick<
   | 'selectPendingTab'
   | 'selectTabBuffer'
 >;
-export type NicklistActionSet = Pick<AppActions, 'addFriend' | 'removeFriend' | 'selectPrivateBuffer'>;
+export type NicklistActionSet = Pick<
+  AppActions,
+  'addFriend' | 'removeFriend' | 'selectPrivateBuffer'
+>;
 export type AssistantActionSet = Pick<
   AppActions,
   | 'cancelAssistantLogin'
