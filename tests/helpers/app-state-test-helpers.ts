@@ -59,6 +59,7 @@ export const emptySnapshot = (): AppSnapshot => ({
   networks: [],
   friends: [],
   friendPresence: {},
+  queryPresence: {},
   buffers: [],
   channels: [],
   pendingChannels: [],

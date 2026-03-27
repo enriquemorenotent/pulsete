@@ -54,6 +54,7 @@ export type AppDomainState = {
   networks: NetworkProfile[];
   friends: FriendState[];
   friendPresence: Record<string, boolean>;
+  queryPresence: Record<string, boolean>;
   buffers: BufferState[];
   channels: ChannelState[];
   pendingChannels: PendingChannelState[];
@@ -89,6 +90,7 @@ export type Action =
   | { type: 'upsert-friend'; friend: FriendState }
   | { type: 'remove-friend'; friendId: string }
   | { type: 'friend-presence'; friendId: string; online: boolean }
+  | { type: 'query-presence'; bufferId: string; online: boolean }
   | { type: 'upsert-buffer'; buffer: BufferState }
   | { type: 'remove-buffer'; bufferId: string; networkId: string }
   | { type: 'select'; selection: SelectedBuffer | null }

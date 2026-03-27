@@ -20,6 +20,7 @@ const emptySnapshot = {
   networks: [],
   friends: [],
   friendPresence: {},
+  queryPresence: {},
   buffers: [],
   channels: [],
   pendingChannels: [],

@@ -4,6 +4,7 @@ import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
 type ConnectionSidebarConnectionsProps = Pick<
   ConnectionSidebarProps,
+  | 'queryPresence'
   | 'connections'
   | 'onSelectNetwork'
   | 'onSelectBuffer'
@@ -45,6 +46,7 @@ export function ConnectionSidebarConnections(
               key={connection.network.id}
               connection={connection}
               index={index}
+              queryPresence={props.queryPresence ?? {}}
               onSelectNetwork={props.onSelectNetwork}
               onSelectBuffer={props.onSelectBuffer}
               onSelectPendingChannel={props.onSelectPendingChannel}

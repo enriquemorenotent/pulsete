@@ -85,7 +85,7 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
   }
   const [commandToken = '', ...rest] = trimmed.split(/\s+/);
   const command = commandToken.toUpperCase();
-  if (command === 'PRIVMSG' && rest[0]) {
+  if ((command === 'PRIVMSG' || command === 'NOTICE') && rest[0]) {
     return createMessageReplyContext(sourceTarget, rest[0]);
   }
   if (command === 'WHOIS') {

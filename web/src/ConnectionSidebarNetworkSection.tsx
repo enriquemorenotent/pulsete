@@ -11,6 +11,7 @@ import type { NetworkRuntimeState } from './workspace.js';
 type ConnectionSidebarNetworkSectionProps = {
   connection: SidebarConnectionView;
   index: number;
+  queryPresence: Record<string, boolean>;
   onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
   onSelectBuffer: ConnectionSidebarProps['onSelectBuffer'];
   onSelectPendingChannel: ConnectionSidebarProps['onSelectPendingChannel'];
@@ -26,7 +27,6 @@ export function ConnectionSidebarNetworkSection(
 ) {
   const { connection } = props;
   const serverActivity = resolveBufferActivityState(connection.serverBuffer);
-  const secondaryStatusLabel = runtimeLabel(connection.runtime);
 
   return (
     <section
@@ -71,9 +71,6 @@ export function ConnectionSidebarNetworkSection(
               ) : null}
             </div>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              {secondaryStatusLabel ? (
-                <span>{secondaryStatusLabel}</span>
-              ) : null}
               <span className="font-mono normal-case tracking-normal text-muted-foreground/80">
                 as {connection.labelParts.nick}
               </span>
@@ -123,6 +120,7 @@ export function ConnectionSidebarNetworkSection(
                 dimmed={connection.childBuffersDimmed}
                 selected={selected}
                 icon={Hash}
+                presence={null}
                 onSelect={() => props.onSelectBuffer(buffer)}
                 onClose={() =>
                   props.onCloseChannel(connection.network.id, buffer.target)
@@ -135,6 +133,7 @@ export function ConnectionSidebarNetworkSection(
                 dimmed={connection.childBuffersDimmed}
                 selected={selected}
                 icon={MessageSquareMore}
+                presence={resolveQueryPresence(props.queryPresence, buffer.id)}
                 onSelect={() => props.onSelectBuffer(buffer)}
                 onClose={() => props.onCloseBuffer(buffer)}
               />
@@ -159,6 +158,16 @@ export function ConnectionSidebarNetworkSection(
   );
 }
 
+const resolveQueryPresence = (
+  queryPresence: Record<string, boolean>,
+  bufferId: string,
+): 'online' | 'offline' | null => {
+  if (!(bufferId in queryPresence)) {
+    return null;
+  }
+  return queryPresence[bufferId] ? 'online' : 'offline';
+};
+
 const dotTone = (runtime: NetworkRuntimeState | null) => {
   if (runtime?.phase === 'connected') {
     return 'bg-emerald-400';
@@ -167,14 +176,4 @@ const dotTone = (runtime: NetworkRuntimeState | null) => {
     return 'bg-amber-300';
   }
   return 'bg-zinc-500';
-};
-
-const runtimeLabel = (runtime: NetworkRuntimeState | null) => {
-  if (runtime?.phase === 'connected') {
-    return null;
-  }
-  if (runtime?.phase === 'connecting') {
-    return 'Connecting';
-  }
-  return 'Offline';
 };

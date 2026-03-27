@@ -168,6 +168,15 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
     )
   );
   assert.equal(
+    events.filter(
+      (event) =>
+        event.type === 'peer-quit'
+        && event.nick === 'HELPER'
+        && event.reason === 'bye'
+    ).length,
+    1
+  );
+  assert.equal(
     events.some(
       (event) =>
         event.type === 'status'

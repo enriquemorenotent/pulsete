@@ -5,7 +5,11 @@ import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-st
 
 type RuntimeEventConversations = Pick<
   RuntimeConversationService,
-  'handleChannelEvent' | 'handleMessageEvent' | 'handleSendFailure' | 'handleStatusEvent'
+  | 'handleChannelEvent'
+  | 'handleMessageEvent'
+  | 'handlePeerQuitEvent'
+  | 'handleSendFailure'
+  | 'handleStatusEvent'
 >;
 type RuntimeEventStore = {
   conversations: RuntimeConversationStore;
@@ -46,6 +50,9 @@ export function translateRuntimeEvent(
   }
   if (event.type === 'message') {
     return conversations.handleMessageEvent(event);
+  }
+  if (event.type === 'peer-quit') {
+    return conversations.handlePeerQuitEvent(event);
   }
   if (event.type !== 'channel') {
     return [];

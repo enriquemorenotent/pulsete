@@ -1,21 +1,27 @@
 import { randomUUID } from 'node:crypto';
 import type WebSocket from 'ws';
-import type { FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import { IrcConnection } from './irc.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { requireRuntimeNetwork } from './runtime-network-guard.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
-import type { RuntimeFriendStore, RuntimeNetworkStore } from './runtime-store-ports.js';
+import type {
+  RuntimeConversationStore,
+  RuntimeFriendStore,
+  RuntimeNetworkStore,
+} from './runtime-store-ports.js';
 
 type RuntimeConnectionManagerOptions = {
   eventRouter: RuntimeEventRouter;
   onConnectionEvent?(event: RuntimeEvent): void;
+  conversations: Pick<RuntimeConversationStore, 'listBuffers'>;
   friends: Pick<RuntimeFriendStore, 'list'>;
   networks: Pick<RuntimeNetworkStore, 'getRuntime'>;
   isClosing(): boolean;
 };
 
 export class RuntimeConnectionManager {
+  private readonly conversations: RuntimeConnectionManagerOptions['conversations'];
   private readonly friends: Pick<RuntimeFriendStore, 'list'>;
   private readonly eventRouter: RuntimeEventRouter;
   private readonly networks: Pick<RuntimeNetworkStore, 'getRuntime'>;
@@ -24,6 +30,7 @@ export class RuntimeConnectionManager {
   readonly connections = new Map<string, IrcConnection>();
 
   constructor(options: RuntimeConnectionManagerOptions) {
+    this.conversations = options.conversations;
     this.friends = options.friends;
     this.eventRouter = options.eventRouter;
     this.networks = options.networks;
@@ -54,7 +61,7 @@ export class RuntimeConnectionManager {
       connection = new IrcConnection(profile, {
         onEvent: (event) => this.handleConnectionEvent(event),
       });
-      connection.setFriendNicks(this.friends.list().map((friend) => friend.nick));
+      connection.setFriendNicks(this.listTrackedPresenceNicks(networkId));
       this.connections.set(networkId, connection);
     }
     return connection;
@@ -99,11 +106,15 @@ export class RuntimeConnectionManager {
     return this.eventRouter.removeNetworks(networkIds);
   }
 
-  syncFriendTracking() {
-    const friendNicks = this.friends.list().map((friend) => friend.nick);
-    for (const connection of this.connections.values()) {
-      connection.setFriendNicks(friendNicks);
+  syncPresenceTracking(networkId?: string) {
+    const targetNetworkIds = networkId ? [networkId] : Array.from(this.connections.keys());
+    for (const targetNetworkId of targetNetworkIds) {
+      this.connections.get(targetNetworkId)?.setFriendNicks(this.listTrackedPresenceNicks(targetNetworkId));
     }
+  }
+
+  syncFriendTracking() {
+    this.syncPresenceTracking();
   }
 
   deleteFriendPresenceCache(friendId: string) {
@@ -112,6 +123,16 @@ export class RuntimeConnectionManager {
 
   collectFriendPresenceDiffs() {
     return this.eventRouter.collectFriendPresenceDiffs();
+  }
+
+  private listTrackedPresenceNicks(networkId: string) {
+    return [
+      ...this.friends.list().map((friend) => friend.nick),
+      ...this.conversations
+        .listBuffers(networkId)
+        .filter((buffer): buffer is BufferState & { kind: 'query' } => buffer.kind === 'query')
+        .map((buffer) => buffer.target),
+    ];
   }
 
   private handleConnectionEvent(event: RuntimeEvent) {

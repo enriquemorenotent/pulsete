@@ -123,6 +123,7 @@ export function useAppController(): AppController {
     actions,
     friends: state.domain.friends,
     friendPresence: state.domain.friendPresence,
+    queryPresence: state.domain.queryPresence,
     sidebarConnections,
   });
   const chat = useDesktopChatModel({

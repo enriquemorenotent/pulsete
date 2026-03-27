@@ -40,6 +40,8 @@ const toActions = (message: ServerMessage): Action[] => {
       return [{ type: 'remove-friend', friendId: message.friendId }];
     case 'friend.presence':
       return [{ type: 'friend-presence', friendId: message.friendId, online: message.online }];
+    case 'query.presence':
+      return [{ type: 'query-presence', bufferId: message.bufferId, online: message.online }];
     case 'buffer.upsert':
       return [{ type: 'upsert-buffer', buffer: message.buffer }];
     case 'buffer.remove':

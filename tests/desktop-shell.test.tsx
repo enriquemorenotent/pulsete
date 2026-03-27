@@ -96,6 +96,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     connections: [],
     friends: [],
     friendPresence: {},
+    queryPresence: {},
     onAddFriend: async () => true,
     onRemoveFriend: async () => true,
     onSelectFriend: async () => undefined,

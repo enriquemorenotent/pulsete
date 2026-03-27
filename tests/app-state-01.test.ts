@@ -37,6 +37,7 @@ test('snapshot selects the first instance server buffer', () => {
       networks: [network],
       friends: [],
       friendPresence: {},
+      queryPresence: {},
       buffers: [buffer],
       channels: [],
       pendingChannels: [],
@@ -84,6 +85,7 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
       networks: [network],
       friends: [],
       friendPresence: {},
+      queryPresence: {},
       buffers: [serverBuffer],
       channels: [],
       pendingChannels: [],
@@ -125,6 +127,24 @@ test('friend presence updates track online state by friend id', () => {
 
   assert.equal(withPresence.domain.friendPresence[friend.id], true);
   assert.equal(friend.id in withoutFriend.domain.friendPresence, false);
+});
+
+test('query presence updates track online state by buffer id and clear on buffer removal', () => {
+  const query = makeBuffer({ id: 'query-1', kind: 'query', target: 'Alice' });
+  const withBuffer = reducer(initialState, { type: 'upsert-buffer', buffer: query });
+  const withPresence = reducer(withBuffer, {
+    type: 'query-presence',
+    bufferId: query.id,
+    online: true,
+  });
+  const withoutBuffer = reducer(withPresence, {
+    type: 'remove-buffer',
+    bufferId: query.id,
+    networkId: query.networkId,
+  });
+
+  assert.equal(withPresence.domain.queryPresence[query.id], true);
+  assert.equal(query.id in withoutBuffer.domain.queryPresence, false);
 });
 
 test('gateway transitions reset transport state and clear the reconnect banner once ready', () => {

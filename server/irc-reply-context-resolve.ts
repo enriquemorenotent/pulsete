@@ -28,9 +28,18 @@ const rawModeReplyNumerics = new Set([...rawModeTargetedReplyNumerics, ...rawMod
 export const resolveReplyContext = (
   context: PendingReplyContext,
   command: string,
-  params: string[]
+  params: string[],
+  nick: string | null,
 ): ReplyResolution => {
   if (context.kind === 'message') {
+    if (
+      command === 'NOTICE'
+      && !!nick
+      && !isChannelTarget(context.target)
+      && isSameIrcIdentifier(nick, context.target)
+    ) {
+      return { matched: true, done: true };
+    }
     return messageErrorNumerics.has(command) && isSameIrcIdentifier(params[1] ?? '', context.target)
       ? { matched: true, done: true }
       : { matched: false, done: false };

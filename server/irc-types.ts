@@ -34,6 +34,7 @@ export type RuntimeEvent =
     }
   | { type: 'channel-pending'; networkId: string; channel: string }
   | { type: 'channel-pending-remove'; networkId: string; channel: string }
+  | { type: 'peer-quit'; networkId: string; nick: string; reason: string; self: boolean }
   | {
       type: 'channel-list-entry';
       networkId: string;

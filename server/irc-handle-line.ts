@@ -29,6 +29,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   if (handleRegistrationLine(connection, command, params, nick)) {
     return;
   }
+  const sourceIsUser = !!prefix?.includes('!');
   const isIsonUnsupported = command === '421' && (params[1] ?? '').toUpperCase() === 'ISON';
   const isonReplyContext = command === '303' || isIsonUnsupported
     ? connection.consumeReplyContext(command, params, nick)
@@ -53,7 +54,7 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     handleNumericReply(connection, command, params, nick, isonReplyContext);
   }
   if (command === 'PRIVMSG' || command === 'NOTICE') {
-    handleTextMessage(connection, command, params, nick);
+    handleTextMessage(connection, command, params, nick, sourceIsUser);
   } else if (command === 'JOIN') {
     handleJoin(connection, params, nick);
   } else if (command === 'PART') {

@@ -455,6 +455,7 @@ export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
   friendPresence: z.record(z.boolean()),
+  queryPresence: z.record(z.boolean()).default({}),
   buffers: z.array(bufferSchema),
   channels: z.array(channelSchema),
   pendingChannels: z.array(pendingChannelSchema).default([]),

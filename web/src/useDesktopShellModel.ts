@@ -33,6 +33,7 @@ type DesktopSidebarModelParams = {
   actions: SidebarActionSet;
   friends: State['domain']['friends'];
   friendPresence: State['domain']['friendPresence'];
+  queryPresence: State['domain']['queryPresence'];
   sidebarConnections: ConnectionSidebarProps['connections'];
 };
 
@@ -93,6 +94,7 @@ export function useDesktopSidebarModel({
   actions,
   friends,
   friendPresence,
+  queryPresence,
   sidebarConnections,
 }: DesktopSidebarModelParams): DesktopShellModel['sidebar'] {
   return useMemo(
@@ -100,6 +102,7 @@ export function useDesktopSidebarModel({
       connections: sidebarConnections,
       friends,
       friendPresence,
+      queryPresence,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
       onSelectFriend: actions.selectFriend,
@@ -126,6 +129,7 @@ export function useDesktopSidebarModel({
       actions.selectTabBuffer,
       friendPresence,
       friends,
+      queryPresence,
       sidebarConnections,
     ],
   );

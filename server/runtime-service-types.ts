@@ -33,8 +33,11 @@ export type RuntimeGateway = {
 };
 
 export type RuntimeConversationMutations = {
-  openQuery: RuntimeConversationService['openQuery'];
-  closeBuffer(bufferId: string): ReturnType<RuntimeConversationService['closeQueryBuffer']>;
+  openQuery(
+    networkId: string,
+    target: string,
+  ): { buffer: BufferState; messages: readonly ServerMessage[] };
+  closeBuffer(bufferId: string): { buffer: BufferState; messages: readonly ServerMessage[] };
   markBufferRead: RuntimeConversationService['markBufferRead'];
   history: RuntimeConversationService['listBufferHistory'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;

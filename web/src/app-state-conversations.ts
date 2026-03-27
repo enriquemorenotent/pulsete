@@ -61,6 +61,14 @@ export const reduceConversationDomain = (
           [action.friendId]: action.online,
         },
       };
+    case 'query-presence':
+      return {
+        ...domain,
+        queryPresence: {
+          ...domain.queryPresence,
+          [action.bufferId]: action.online,
+        },
+      };
     case 'upsert-buffer': {
       const buffers = domain.buffers.filter((buffer) => buffer.id !== action.buffer.id);
       buffers.push(action.buffer);
@@ -83,6 +91,9 @@ export const reduceConversationDomain = (
       return {
         ...domain,
         buffers: domain.buffers.filter((buffer) => buffer.id !== action.bufferId),
+        queryPresence: Object.fromEntries(
+          Object.entries(domain.queryPresence).filter(([bufferId]) => bufferId !== action.bufferId)
+        ),
         channels: domain.channels.filter((channel) => channel.id !== action.bufferId),
         messages: removedBuffer ? removeBufferMessages(domain.messages, removedBuffer) : domain.messages,
       };

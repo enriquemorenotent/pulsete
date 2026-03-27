@@ -129,3 +129,16 @@ export const emitPendingChannelRemoved = (connection: IrcEventContext, channel: 
     channel,
   });
 };
+
+export const emitPeerQuit = (
+  connection: IrcEventContext,
+  input: { nick: string; reason: string; self: boolean },
+) => {
+  emitEvent(connection, {
+    type: 'peer-quit',
+    networkId: connection.profile.id,
+    nick: input.nick,
+    reason: input.reason,
+    self: input.self,
+  });
+};

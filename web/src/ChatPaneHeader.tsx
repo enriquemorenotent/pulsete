@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import type { BufferState, FriendState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
-import { ChatPaneModeLine, shouldShowChatPaneHeaderSubtitle } from './ChatPaneModeLine.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
 import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
 import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
@@ -74,7 +73,6 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
         title={props.workspace.selectedNetwork?.name ?? 'Server'}
         subtitle={subtitle}
         topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
-        modeLine={<ChatPaneModeLine workspace={props.workspace} />}
         actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
       />
     );
@@ -87,7 +85,6 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       title={props.workspace.headerTitle}
       subtitle={subtitle}
       topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
-      modeLine={<ChatPaneModeLine workspace={props.workspace} />}
       actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
     />
   );
@@ -115,7 +112,6 @@ function PaneHeader(props: {
   subtitle: string;
   actions: ReactNode;
   topicBar?: ReactNode;
-  modeLine?: ReactNode;
 }) {
   return (
     <div className="shrink-0 border-b border-white/6 bg-background/32 backdrop-blur-sm">
@@ -133,7 +129,28 @@ function PaneHeader(props: {
         {props.actions}
       </div>
       {props.topicBar ? props.topicBar : null}
-      {props.modeLine ? props.modeLine : null}
     </div>
   );
+}
+
+function shouldShowChatPaneHeaderSubtitle(
+  workspace: WorkspaceView,
+  subtitle: string,
+) {
+  if (!subtitle) {
+    return false;
+  }
+
+  return subtitle !== resolveConnectedRuntimeSubtitle(workspace);
+}
+
+function resolveConnectedRuntimeSubtitle(workspace: WorkspaceView) {
+  const network = workspace.selectedNetwork;
+  if (!network) {
+    return null;
+  }
+
+  const runtimeNick = workspace.selectedRuntime?.nick ?? network.nick;
+  const runtimeHost = workspace.selectedRuntime?.serverName ?? 'server';
+  return `${runtimeNick} @ ${runtimeHost}`;
 }

@@ -263,6 +263,17 @@ export class RuntimeConversationService {
   }
 
   handleMessageEvent(event: Extract<RuntimeEvent, { type: 'message' }>) {
+    const openTargetNotice =
+      event.message.kind === 'notice'
+      && event.message.target !== 'server'
+      && !isChannelTarget(event.message.target)
+      && !this.options.conversations.getBufferByTarget(event.message.networkId, event.message.target);
+    const message = openTargetNotice
+      ? {
+          ...event.message,
+          target: 'server',
+        }
+      : event.message;
     const removedChannel = event.message.self && event.message.kind === 'part'
       ? this.options.conversations.getChannelByName(event.message.networkId, event.message.target)
       : null;
@@ -271,7 +282,7 @@ export class RuntimeConversationService {
     }
 
     const { saved, bufferUpdate } = appendConversationMessage(this.options.conversations, {
-      message: event.message,
+      message,
       currentNick: event.currentNick,
       altNicks: event.altNicks,
     });
@@ -301,6 +312,26 @@ export class RuntimeConversationService {
       messages.push({ type: 'buffer.remove', networkId: removedChannel.networkId, bufferId: removedChannel.id });
     }
     return messages;
+  }
+
+  handlePeerQuitEvent(event: Extract<RuntimeEvent, { type: 'peer-quit' }>) {
+    if (event.self) {
+      return [];
+    }
+    const queryBuffer = this.options.conversations.getBufferByTarget(event.networkId, event.nick);
+    if (queryBuffer?.kind !== 'query') {
+      return [];
+    }
+    return this.appendMessage({
+      id: randomUUID(),
+      networkId: event.networkId,
+      target: queryBuffer.target,
+      nick: event.nick,
+      body: `${event.nick} quit (${event.reason})`,
+      kind: 'quit' satisfies MessageKind,
+      self: false,
+      ts: Date.now(),
+    });
   }
 
   handleChannelEvent(event: Extract<RuntimeEvent, { type: 'channel' }>) {

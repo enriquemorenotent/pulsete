@@ -9,6 +9,7 @@ export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
   friends: FriendState[];
   friendPresence: Record<string, boolean>;
+  queryPresence?: Record<string, boolean>;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onSelectFriend: (friend: FriendState) => Promise<void>;

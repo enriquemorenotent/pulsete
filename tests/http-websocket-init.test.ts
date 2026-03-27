@@ -13,6 +13,7 @@ const createEmptySnapshot = () => ({
   networks: [],
   friends: [],
   friendPresence: {},
+  queryPresence: {},
   buffers: [],
   channels: [],
   pendingChannels: [],

@@ -55,12 +55,14 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     networks: store.networks,
   });
   const eventRouter = new RuntimeEventRouter({
+    buffers: store.conversations,
     conversations: conversationsService,
     friends: store.friends,
     publish: (messages) => publisher.publish(messages),
     sendSocket: (ws, message) => publisher.sendSocket(ws, message),
   });
   connectionManager = new RuntimeConnectionManager({
+    conversations: store.conversations,
     eventRouter,
     friends: store.friends,
     networks: store.networks,
@@ -119,8 +121,30 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     close: closeGateway,
   };
   const conversations: RuntimeConversationMutations = {
-    openQuery: (networkId, target) => publishMutation(conversationsService.openQuery(networkId, target)),
-    closeBuffer: (bufferId) => publishMutation(conversationsService.closeQueryBuffer(bufferId)),
+    openQuery: (networkId, target) => {
+      const result = conversationsService.openQuery(networkId, target);
+      connectionManager.syncPresenceTracking(networkId);
+      const messages: ServerMessage[] = [
+        ...result.messages,
+        ...connectionManager.collectFriendPresenceDiffs(),
+      ];
+      return publishMutation({
+        ...result,
+        messages,
+      });
+    },
+    closeBuffer: (bufferId) => {
+      const result = conversationsService.closeQueryBuffer(bufferId);
+      connectionManager.syncPresenceTracking(result.buffer.networkId);
+      const messages: ServerMessage[] = [
+        ...connectionManager.collectFriendPresenceDiffs(),
+        ...result.messages,
+      ];
+      return publishMutation({
+        ...result,
+        messages,
+      });
+    },
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),

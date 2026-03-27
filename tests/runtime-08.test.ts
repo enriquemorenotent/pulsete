@@ -133,6 +133,70 @@ test('private action messages open query buffers automatically', () => {
   assert.ok(sent.some((message) => message.type === 'message.append'));
 });
 
+test('direct user notices append to an open private message buffer', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'helper',
+        nick: 'helper',
+        body: 'heads up',
+        kind: 'notice',
+        self: false,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.conversations.listMessages(network.id, 'helper', 10)[0]?.body, 'heads up');
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 10).length, 0);
+  assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer: storage.conversations.getBuffer(query.id),
+  });
+});
+
+test('direct user notices fall back to the server buffer when no private message is open', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'helper',
+        nick: 'helper',
+        body: 'heads up',
+        kind: 'notice',
+        self: false,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper'), null);
+  assert.equal(storage.conversations.listMessages(network.id, 'helper', 10).length, 0);
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 10)[0]?.body, 'heads up');
+  assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer: storage.conversations.getServerBuffer(network.id),
+  });
+});
+
 test('service messages on the server buffer close stale service queries', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -164,6 +228,58 @@ test('service messages on the server buffer close stale service queries', () => 
     networkId: network.id,
     bufferId: query.id,
   });
+});
+
+test('peer quit events append a quit row to an open private message only once', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'peer-quit',
+      networkId: network.id,
+      nick: 'HELPER',
+      reason: 'bye',
+      self: false,
+    }
+  );
+
+  const appended = storage.conversations.listMessages(network.id, 'helper', 10);
+  assert.equal(appended.length, 1);
+  assert.equal(appended[0]?.target, 'helper');
+  assert.equal(appended[0]?.kind, 'quit');
+  assert.equal(appended[0]?.body, 'HELPER quit (bye)');
+  assert.equal(storage.conversations.getBuffer(query.id)?.priorityUnread, 1);
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.deepEqual(sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer: storage.conversations.getBuffer(query.id),
+  });
+});
+
+test('peer quit events do not create a private message buffer when none is open', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'peer-quit',
+      networkId: network.id,
+      nick: 'helper',
+      reason: 'bye',
+      self: false,
+    }
+  );
+
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper'), null);
+  assert.deepEqual(sent, []);
 });
 
 test('error status events stay ephemeral and do not append to conversation history', () => {

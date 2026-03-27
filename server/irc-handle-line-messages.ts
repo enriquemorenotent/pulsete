@@ -9,7 +9,8 @@ export const handleTextMessage = (
   connection: IrcMessageEventContext,
   command: 'PRIVMSG' | 'NOTICE',
   params: string[],
-  nick: string | null
+  nick: string | null,
+  sourceIsUser: boolean,
 ) => {
   const rawTarget = params[0] ?? 'server';
   const trackedChannel = isChannelTarget(rawTarget) ? connection.resolveTrackedChannel(rawTarget) : null;
@@ -20,12 +21,21 @@ export const handleTextMessage = (
   const ctcp = stripCtcp(payload);
   const isDirectTarget = !isChannelTarget(rawTarget) && isSelfNick(connection, rawTarget);
   const isDirectCtcp = isDirectTarget && ctcp !== null && !ctcp.startsWith('ACTION ');
-  const isDirectServiceMessage = isDirectTarget && command === 'PRIVMSG' && isServiceNick(nick);
-  const replyTarget = isDirectTarget && command === 'NOTICE'
+  const isDirectServiceMessage = isDirectTarget && !!nick && isServiceNick(nick);
+  const isDirectUserNotice =
+    isDirectTarget && command === 'NOTICE' && sourceIsUser && !!nick && !isDirectServiceMessage;
+  const replyTarget = isDirectUserNotice
     ? connection.consumeReplyTarget(command, params, nick, rawTarget)
     : null;
   const target = isDirectTarget
-    ? (replyTarget ?? (command === 'NOTICE' || isDirectCtcp || isDirectServiceMessage ? 'server' : nick ?? rawTarget))
+    ? (
+        replyTarget
+        ?? (
+          isDirectUserNotice
+            ? nick
+            : (command === 'NOTICE' || isDirectCtcp || isDirectServiceMessage ? 'server' : nick ?? rawTarget)
+        )
+      )
     : trackedChannel ?? rawTarget;
   const isAction = ctcp?.startsWith('ACTION ') ?? false;
   const actionBody = isAction && ctcp ? ctcp.slice('ACTION '.length) : null;

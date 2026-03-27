@@ -562,7 +562,7 @@ test('channel headers hide the overflow trigger when no secondary actions are av
   assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
 
-test('connected channel headers keep only non-duplicate context in the mode line', () => {
+test('connected channel headers keep only the title and topic context', () => {
   const markup = renderChatPane([], {
     channelUsers: [
       { nick: 'Alice', mode: 'op' },
@@ -577,7 +577,6 @@ test('connected channel headers keep only non-duplicate context in the mode line
   assert.doesNotMatch(markup, />Unread</);
   assert.doesNotMatch(markup, />Mentions</);
   assert.doesNotMatch(markup, /<p class="max-w-xl truncate text-\[12px\] uppercase tracking-\[0\.12em\] text-muted-foreground">sofia @ irc\.example\.test<\/p>/);
-  assert.doesNotMatch(markup, />Topic<\/span><span class="truncate normal-case tracking-normal text-foreground\/88">/);
 });
 
 test('channel topics render links in a dedicated wrapped row', () => {
@@ -589,12 +588,12 @@ test('channel topics render links in a dedicated wrapped row', () => {
   assert.match(markup, />#lounge</);
 });
 
-test('server headers show the active host in the mode line', () => {
+test('server headers omit the old metadata row', () => {
   const markup = renderServerPane([]);
 
-  assert.match(markup, />Host</);
-  assert.match(markup, />irc\.example\.test</);
   assert.doesNotMatch(markup, />State</);
+  assert.doesNotMatch(markup, />Host</);
+  assert.doesNotMatch(markup, />irc\.example\.test</);
 });
 
 test('server composers render command mode cues instead of a generic send box', () => {
@@ -623,7 +622,7 @@ test('query headers show when notifications are already enabled for the active P
   assert.match(markup, />Disable Notifications</);
 });
 
-test('reconnecting channel headers keep the explanatory subtitle alongside the mode line', () => {
+test('reconnecting channels rely on the inline status banner instead of header metadata', () => {
   const network = makeNetwork();
   const selectedBuffer = makeBuffer();
   const selectedChannel = makeChannel({
@@ -684,7 +683,8 @@ test('reconnecting channel headers keep the explanatory subtitle alongside the m
   );
 
   assert.match(markup, /Reconnecting\. History stays available until the connection returns\./);
-  assert.match(markup, /text-amber-300">Connecting</);
+  assert.doesNotMatch(markup, />Connecting</);
+  assert.doesNotMatch(markup, />Host</);
 });
 
 test('offline channels surface an inline reconnect action', () => {
@@ -814,7 +814,7 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
   assert.match(markup, />Rejoin #help</);
 });
 
-test('connected query headers skip the mode line when nothing contextual needs to be shown', () => {
+test('connected query headers stay free of metadata chrome', () => {
   const markup = renderQueryPane([]);
 
   assert.doesNotMatch(markup, />State</);

@@ -73,6 +73,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseServerSchema.extend({ type: z.literal('friend.upsert'), friend: friendSchema }),
   baseServerSchema.extend({ type: z.literal('friend.remove'), friendId: z.string() }),
   baseServerSchema.extend({ type: z.literal('friend.presence'), friendId: z.string(), online: z.boolean() }),
+  baseServerSchema.extend({ type: z.literal('query.presence'), bufferId: z.string(), online: z.boolean() }),
   baseServerSchema.extend({ type: z.literal('buffer.upsert'), buffer: bufferSchema }),
   baseServerSchema.extend({
     type: z.literal('buffer.remove'),

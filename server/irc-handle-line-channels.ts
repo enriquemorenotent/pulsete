@@ -1,4 +1,4 @@
-import { emitChannel, emitMessage, emitStatus } from './irc-emit.js';
+import { emitChannel, emitMessage, emitPeerQuit, emitStatus } from './irc-emit.js';
 import { renameChannelUser, upsertChannelUser } from '../shared/channel-users.js';
 import { parseChannelUserToken } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
@@ -103,9 +103,11 @@ export const handleQuit = (connection: IrcChannelEventContext, params: string[],
   if (!nick) {
     return;
   }
+  let sharedTrackedChannel = false;
   for (const [channel, users] of connection.getTrackedChannelUserEntries()) {
     const nextUsers = connection.updateChannelUsers(channel, nick, false);
     if (nextUsers.length !== users.length) {
+      sharedTrackedChannel = true;
       emitMessage(connection, createMessage(connection, {
         target: channel,
         nick,
@@ -115,6 +117,13 @@ export const handleQuit = (connection: IrcChannelEventContext, params: string[],
       }));
       emitChannel(connection, channel, { users: nextUsers });
     }
+  }
+  if (sharedTrackedChannel) {
+    emitPeerQuit(connection, {
+      nick,
+      reason,
+      self: isSelfNick(connection, nick),
+    });
   }
 };
 

@@ -10,6 +10,7 @@ type ConnectionSidebarBufferRowProps = {
   dimmed: boolean;
   selected: boolean;
   icon: ComponentType<{ className?: string }>;
+  presence: 'online' | 'offline' | null;
   onSelect: () => void;
   onClose: () => void;
 };
@@ -35,14 +36,24 @@ export function ConnectionSidebarBufferRow(
           props.dimmed && 'opacity-70',
         )}
         onClick={props.onSelect}
-        aria-label={`Open ${props.buffer.target}`}
+        aria-label={
+          props.presence
+            ? `Open ${props.buffer.target} (${props.presence})`
+            : `Open ${props.buffer.target}`
+        }
       >
-        <Icon
-          className={cn(
-            'size-3.5 shrink-0 text-muted-foreground',
-            props.selected && 'text-primary/80',
-          )}
-        />
+        <span className="relative flex size-4 shrink-0 items-center justify-center">
+          <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+          {props.presence ? (
+            <span
+              aria-hidden
+              className={cn(
+                'absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
+                props.presence === 'online' ? 'bg-emerald-400' : 'bg-rose-300',
+              )}
+            />
+          ) : null}
+        </span>
         <span
           className={cn(
             'truncate text-[13px]',
@@ -53,6 +64,9 @@ export function ConnectionSidebarBufferRow(
               !activity.priority &&
               'font-medium text-foreground',
             props.dimmed && !activity.hasUnread && 'text-muted-foreground',
+            props.presence === 'offline' &&
+              !activity.hasUnread &&
+              'text-muted-foreground/90',
           )}
         >
           {props.buffer.target}

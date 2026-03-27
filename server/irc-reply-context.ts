@@ -56,7 +56,7 @@ export const consumeReplyContext = (
   contexts: PendingReplyContext[],
   command: string,
   params: string[],
-  _nick: string | null,
+  nick: string | null,
   _rawTarget?: string
 ) => {
   const now = Date.now();
@@ -73,7 +73,7 @@ export const consumeReplyContext = (
     if (!context) {
       continue;
     }
-    const resolution = resolveReplyContext(context, command, params);
+    const resolution = resolveReplyContext(context, command, params, nick);
     if (!resolution.matched) {
       continue;
     }

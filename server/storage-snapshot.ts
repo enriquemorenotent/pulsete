@@ -29,6 +29,7 @@ export const createStorageSnapshot = (store: StorageSnapshotSource): AppSnapshot
     networks,
     friends: store.listFriends(),
     friendPresence: {},
+    queryPresence: {},
     buffers: store.listBuffers(),
     channels: store.listChannels(),
     pendingChannels: [],

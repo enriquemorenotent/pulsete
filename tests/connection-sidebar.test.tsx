@@ -90,6 +90,7 @@ test('offline connections keep channel and query rows visible and selectable', (
   assert.match(markup, /aria-label="Open alice"/);
   assert.doesNotMatch(markup, /aria-label="Open #help"[^>]*disabled/);
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
+  assert.doesNotMatch(markup, />Offline</);
 });
 
 test('connected rows rely on the status dot instead of repeating a connected label', () => {
@@ -127,6 +128,43 @@ test('connected rows rely on the status dot instead of repeating a connected lab
   assert.doesNotMatch(markup, />Connected</);
   assert.match(markup, />as sofia</);
   assert.match(markup, /bg-emerald-400/);
+});
+
+test('connecting rows rely on the status dot instead of repeating a connecting label', () => {
+  const network = makeNetwork();
+  const server = makeBuffer({ id: 'server-1' });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [server],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connecting' }) },
+        selection: { kind: 'buffer', bufferId: server.id },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.doesNotMatch(markup, />Connecting</);
+  assert.match(markup, />as sofia</);
+  assert.match(markup, /bg-amber-300/);
 });
 
 test('friend rows expose online and offline cues when the rail defaults open', () => {
@@ -375,4 +413,58 @@ test('priority unread buffers render the stronger activity badge styling', () =>
 
   assert.match(markup, /bg-primary\/14 text-primary/);
   assert.match(markup, />3</);
+});
+
+test('open query buffers show saved contact presence cues', () => {
+  const network = makeNetwork();
+  const offlineQuery = makeBuffer({
+    id: 'query-1',
+    kind: 'query',
+    target: 'alice',
+  });
+  const onlineQuery = makeBuffer({
+    id: 'query-2',
+    kind: 'query',
+    target: 'bob',
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), offlineQuery, onlineQuery],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[
+        { id: 'friend-1', nick: 'Alice' },
+        { id: 'friend-2', nick: 'Bob' },
+      ]}
+      friendPresence={{}}
+      queryPresence={{
+        [offlineQuery.id]: false,
+        [onlineQuery.id]: true,
+      }}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open alice \(offline\)"/);
+  assert.match(markup, /aria-label="Open bob \(online\)"/);
+  assert.match(markup, /bg-rose-300/);
+  assert.match(markup, /bg-emerald-400/);
 });
