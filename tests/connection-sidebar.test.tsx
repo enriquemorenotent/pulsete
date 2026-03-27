@@ -88,6 +88,8 @@ test('offline connections keep channel and query rows visible and selectable', (
 
   assert.match(markup, /aria-label="Open #help"/);
   assert.match(markup, /aria-label="Open alice"/);
+  assert.match(markup, /Connections<\/h2>/);
+  assert.doesNotMatch(markup, /Buffers<\/h2>/);
   assert.doesNotMatch(markup, /aria-label="Open #help"[^>]*disabled/);
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
   assert.doesNotMatch(markup, />Offline</);
@@ -198,9 +200,8 @@ test('friend rows expose online and offline cues when the rail defaults open', (
     />,
   );
 
-  assert.match(markup, /aria-label="Collapse friends"/);
-  assert.match(markup, /aria-expanded="true"/);
-  assert.match(markup, />1 online</);
+  assert.match(markup, /Friends<\/h2>/);
+  assert.doesNotMatch(markup, />1 online</);
   assert.match(markup, /aria-label="Open Alice \(online\)"/);
   assert.match(markup, /bg-emerald-400/);
 });
@@ -254,7 +255,7 @@ test('friends sort online contacts above offline ones and keep names alphabetica
   assert.ok(miraIndex < aliceIndex);
 });
 
-test('friends header shows the total registered friends count', () => {
+test('friends header shows only the section label', () => {
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
@@ -287,10 +288,11 @@ test('friends header shows the total registered friends count', () => {
     />,
   );
 
-  assert.match(markup, /Friends<\/h2><span[^>]*>2<\/span>/);
+  assert.match(markup, /Friends<\/h2>/);
+  assert.doesNotMatch(markup, /Friends<\/h2><span/);
 });
 
-test('friends collapse by default when live connections are present', () => {
+test('friends stay visible when live connections are present', () => {
   const network = makeNetwork();
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
@@ -324,10 +326,9 @@ test('friends collapse by default when live connections are present', () => {
     />,
   );
 
-  assert.match(markup, /aria-label="Expand friends"/);
-  assert.match(markup, /aria-expanded="false"/);
-  assert.match(markup, />0 online</);
-  assert.doesNotMatch(markup, /aria-label="Open Alice \(offline\)"/);
+  assert.doesNotMatch(markup, />0 online</);
+  assert.match(markup, /aria-label="Open Alice \(offline\)"/);
+  assert.match(markup, /aria-label="Open Bob \(offline\)"/);
 });
 
 test('pending channel selection ignores IRC casing in the sidebar', () => {
