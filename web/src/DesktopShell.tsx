@@ -90,7 +90,7 @@ export function DesktopShell(props: DesktopShellModel) {
         <div className="mr-auto min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-semibold tracking-tight text-foreground">Pulsete</span>
-            <span className="rounded-md border border-white/8 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="rounded-md border border-white/8 bg-white/4 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               IRC
             </span>
           </div>
@@ -126,7 +126,7 @@ export function DesktopShell(props: DesktopShellModel) {
           <Tabs
             value={compactPane}
             onValueChange={(value) => setCompactPane(value as CompactWorkspacePane)}
-            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-[1.25rem] border border-white/6 bg-black/20 p-3 shadow-[0_20px_70px_rgba(0,0,0,0.42)]"
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-white/6 bg-black/20 p-3 shadow-[0_20px_70px_rgba(0,0,0,0.42)]"
           >
             <TabsList className={`grid w-full shrink-0 ${showRightSidebar ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="browse" className="min-w-0">Browse</TabsTrigger>
@@ -158,9 +158,9 @@ export function DesktopShell(props: DesktopShellModel) {
           <div
             ref={layoutRef}
             style={layoutStyle}
-            className="flex h-full min-h-0 flex-1 overflow-hidden rounded-[1.25rem] border border-white/6 bg-black/20 shadow-[0_20px_70px_rgba(0,0,0,0.42)] lg:flex-row"
+            className="flex h-full min-h-0 flex-1 overflow-hidden rounded-lg border border-white/6 bg-black/20 shadow-[0_20px_70px_rgba(0,0,0,0.42)] lg:flex-row"
           >
-            <div className="min-h-0 bg-card/50 backdrop-blur-xl lg:w-[var(--sidebar-width)] lg:shrink-0">
+            <div className="min-h-0 bg-card/50 backdrop-blur-xl lg:w-(--sidebar-width) lg:shrink-0">
               <ConnectionSidebar {...props.sidebar} />
             </div>
             <SidebarResizeHandle

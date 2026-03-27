@@ -32,15 +32,15 @@ export function ConnectionSidebarNetworkSection(
     <section
       className={cn(
         'space-y-2',
-        props.index > 0 && 'border-t border-white/[0.06] pt-4',
+        props.index > 0 && 'border-t border-white/6 pt-4',
       )}
     >
       <div
         className={cn(
-          'group flex items-stretch rounded-[1rem] transition-colors',
+          'group flex items-stretch rounded-md transition-colors',
           connection.selectedServer
-            ? 'bg-white/[0.06] ring-1 ring-inset ring-primary/24 shadow-[0_10px_30px_rgba(0,0,0,0.18)]'
-            : 'hover:bg-white/[0.03]',
+            ? 'bg-white/6 ring-1 ring-inset ring-primary/24 shadow-[0_10px_30px_rgba(0,0,0,0.18)]'
+            : 'hover:bg-white/3'
         )}
       >
         <button
