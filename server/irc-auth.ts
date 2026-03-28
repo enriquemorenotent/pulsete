@@ -2,6 +2,14 @@ import { emitStatus } from './irc-emit.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import { matchesServiceTargetNick } from './irc-services.js';
 import {
+  applyAcknowledgedCapabilities,
+  normalizeCapabilityName,
+  parseCapabilityTokens,
+  recordAdvertisedCapabilities,
+  resolveRequestedCapabilities,
+  usesSaslPlain,
+} from './irc-capabilities.js';
+import {
   resolveNetworkAuthAccount,
   resolveNetworkAuthMethod,
   resolveNetworkAuthTarget,
@@ -45,14 +53,18 @@ export const createIdleSaslState = (): IrcSaslState => ({
   phase: 'idle',
   capabilityAdvertised: false,
   capEndSent: false,
+  offeredCapabilities: new Set<string>(),
+  pendingCapabilities: new Set<string>(),
 });
 
 export const createLoginSaslState = (profile: RuntimeNetworkProfile): IrcSaslState =>
-  usesSaslPlain(profile)
+  buildCapabilityNegotiationLines(profile).length > 0
     ? {
         phase: 'awaiting-cap-list',
         capabilityAdvertised: false,
         capEndSent: false,
+        offeredCapabilities: new Set<string>(),
+        pendingCapabilities: new Set<string>(),
       }
     : createIdleSaslState();
 
@@ -68,6 +80,11 @@ export const handleRegistrationAuthLine = (
 ) => {
   if (command === 'CAP') {
     return handleCapLine(connection, params);
+  }
+  if (command === '421' && (params[1] ?? '').toUpperCase() === 'CAP') {
+    emitStatus(connection, 'Server does not support CAP negotiation; continuing without modern capabilities', 'notice');
+    finishSaslNegotiation(connection, { sendCapEnd: false });
+    return true;
   }
   if (command === 'AUTHENTICATE') {
     return handleAuthenticateLine(connection, params);
@@ -121,6 +138,17 @@ export const handleNickservAutoJoinMessage = (
   return completeDeferredNickservAutoJoin(connection);
 };
 
+export const handleAccountLoginState = (
+  connection: IrcDeferredAutoJoinContext,
+  accountName: string | null,
+) => {
+  connection.lifecycle.accountName = accountName;
+  if (!accountName) {
+    return false;
+  }
+  return completeDeferredNickservAutoJoin(connection);
+};
+
 const handleCapLine = (connection: IrcRegistrationContext, params: string[]) => {
   const { sasl } = connection.lifecycle;
   if (sasl.phase === 'idle' || sasl.phase === 'completed') {
@@ -144,18 +172,27 @@ const handleCapList = (connection: IrcRegistrationContext, params: string[]) => 
   if (sasl.phase !== 'awaiting-cap-list') {
     return false;
   }
-  if (capabilityListHas(params.at(-1), 'sasl')) {
+  const tokens = parseCapabilityTokens(params.at(-1));
+  recordAdvertisedCapabilities(sasl.offeredCapabilities, tokens);
+  recordAdvertisedCapabilities(connection.lifecycle.capabilities.offered, tokens);
+  if ([...sasl.offeredCapabilities].some((capability) => normalizeCapabilityName(capability) === 'sasl')) {
     sasl.capabilityAdvertised = true;
   }
   if (params[2] === '*') {
     return true;
   }
-  if (!sasl.capabilityAdvertised) {
-    emitStatus(connection, 'Server does not advertise SASL; continuing without it', 'error');
+  const requestedCapabilities = resolveRequestedCapabilities(connection.profile, sasl.offeredCapabilities);
+  if (requestedCapabilities.size === 0) {
+    if (usesSaslPlain(connection.profile) && !sasl.capabilityAdvertised) {
+      emitStatus(connection, 'Server does not advertise SASL; continuing without it', 'error');
+    }
     finishSaslNegotiation(connection);
     return true;
   }
-  if (connection.sendRaw('CAP REQ :sasl')) {
+  const requestLine = `CAP REQ :${Array.from(requestedCapabilities).join(' ')}`;
+  if (connection.sendRaw(requestLine)) {
+    sasl.pendingCapabilities = requestedCapabilities;
+    connection.lifecycle.capabilities.pendingRequest = new Set(requestedCapabilities);
     sasl.phase = 'awaiting-cap-ack';
   }
   return true;
@@ -166,14 +203,22 @@ const handleCapAck = (connection: IrcRegistrationContext, params: string[]) => {
   if (sasl.phase !== 'awaiting-cap-ack') {
     return false;
   }
-  if (!capabilityListHas(params.at(-1), 'sasl')) {
-    emitStatus(connection, 'Server rejected the SASL capability request; continuing without it', 'error');
-    finishSaslNegotiation(connection);
+  const tokens = parseCapabilityTokens(params.at(-1));
+  applyAcknowledgedCapabilities(connection.lifecycle.capabilities, tokens);
+  for (const token of tokens) {
+    const name = normalizeCapabilityName(token);
+    if (name) {
+      sasl.pendingCapabilities.delete(name);
+    }
+  }
+  if (sasl.pendingCapabilities.size > 0) {
     return true;
   }
-  if (connection.sendRaw('AUTHENTICATE PLAIN')) {
+  if (usesSaslPlain(connection.profile) && connection.lifecycle.capabilities.negotiated.has('sasl') && connection.sendRaw('AUTHENTICATE PLAIN')) {
     sasl.phase = 'awaiting-authenticate-challenge';
+    return true;
   }
+  finishSaslNegotiation(connection);
   return true;
 };
 
@@ -182,11 +227,19 @@ const handleCapNak = (connection: IrcRegistrationContext, params: string[]) => {
   if (sasl.phase !== 'awaiting-cap-ack') {
     return false;
   }
+  const tokens = parseCapabilityTokens(params.at(-1));
+  for (const token of tokens) {
+    const name = normalizeCapabilityName(token);
+    if (name) {
+      sasl.pendingCapabilities.delete(name);
+      connection.lifecycle.capabilities.pendingRequest.delete(name);
+    }
+  }
   emitStatus(
     connection,
     params.at(-1)
-      ? `Server rejected SASL negotiation (${params.at(-1)})`
-      : 'Server rejected SASL negotiation',
+      ? `Server rejected requested capabilities (${params.at(-1)})`
+      : 'Server rejected requested capabilities',
     'error'
   );
   finishSaslNegotiation(connection);
@@ -236,6 +289,7 @@ const handleSaslFailure = (connection: IrcRegistrationContext, _command: string,
 };
 
 const handleAccountLoginSuccess = (connection: IrcRegistrationContext, params: string[]) => {
+  connection.lifecycle.accountName = params[2] ?? connection.lifecycle.accountName;
   const handledSasl = handleSaslSuccess(connection, '900', params);
   const handledNickserv = handleNickservAccountLogin(connection);
   return handledSasl || handledNickserv;
@@ -252,20 +306,10 @@ const buildServerPassLines = (profile: RuntimeNetworkProfile) => {
 };
 
 const buildCapabilityNegotiationLines = (profile: RuntimeNetworkProfile) =>
-  usesSaslPlain(profile) ? ['CAP LS 302'] : [];
-
-const usesSaslPlain = (profile: RuntimeNetworkProfile) =>
-  resolveNetworkAuthMethod(profile) === 'sasl-plain' && Boolean(profile.password);
+  shouldUseCapabilityNegotiation(profile) ? ['CAP LS 302'] : [];
 
 const usesNickServ = (profile: RuntimeNetworkProfile) =>
   resolveNetworkAuthMethod(profile) === 'nickserv' && Boolean(profile.password);
-
-const capabilityListHas = (value: string | undefined, capability: string) =>
-  (value ?? '')
-    .split(/\s+/)
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .some((entry) => entry.replace(/^[=~-]/, '').split('=')[0] === capability);
 
 const finishSaslNegotiation = (
   connection: IrcRegistrationContext,
@@ -278,16 +322,18 @@ const finishSaslNegotiation = (
     sasl.capEndSent = true;
   }
   sasl.phase = 'completed';
+  sasl.pendingCapabilities.clear();
+  connection.lifecycle.capabilities.pendingRequest.clear();
 };
 
 const getWelcomeSaslFallbackMessage = (phase: IrcSaslPhase) => {
   switch (phase) {
     case 'awaiting-cap-list':
-      return 'Server completed registration before replying to CAP LS; continuing without SASL';
+      return 'Server completed registration before replying to CAP LS; continuing without negotiated capabilities';
     case 'awaiting-cap-ack':
     case 'awaiting-authenticate-challenge':
     case 'awaiting-authenticate-result':
-      return 'Server completed registration before SASL negotiation finished; continuing without it';
+      return 'Server completed registration before capability negotiation finished; continuing without it';
     case 'idle':
     case 'completed':
       return null;
@@ -339,3 +385,6 @@ const joinConfiguredChannels = (connection: IrcDeferredAutoJoinContext) => {
   }
   return joinedAny;
 };
+
+const shouldUseCapabilityNegotiation = (profile: RuntimeNetworkProfile) =>
+  true;

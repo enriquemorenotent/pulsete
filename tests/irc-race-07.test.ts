@@ -4,7 +4,11 @@ import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
+import type { ChannelUserState } from '../shared/protocol.js';
 import { createMockSocket,makeUser } from './helpers/irc-race-test-helpers.js';
+
+const projectUserModes = (users: ChannelUserState[]) =>
+  users.map(({ nick, mode, away }) => ({ nick, mode, away }));
 
 test('channel mode changes keep user updates aligned after unknown arg-taking modes', () => {
   const connection = new IrcConnection(
@@ -32,7 +36,7 @@ test('channel mode changes keep user updates aligned after unknown arg-taking mo
   connection.channels.users.set('#help', [makeUser('alice')]);
   handleIrcLine(connection, ':chanop!user@host MODE #help +Lo #overflow alice');
 
-  assert.deepEqual(connection.channels.users.get('#help') ?? [], [makeUser('alice', 'op')]);
+  assert.deepEqual(projectUserModes(connection.channels.users.get('#help') ?? []), [makeUser('alice', 'op')]);
 });
 
 test('self kicks emit a self part message and remove channel membership', () => {

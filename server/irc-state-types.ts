@@ -32,6 +32,16 @@ export type IrcSaslState = {
   phase: IrcSaslPhase;
   capabilityAdvertised: boolean;
   capEndSent: boolean;
+  offeredCapabilities: Set<string>;
+  pendingCapabilities: Set<string>;
+};
+
+export type IrcCapabilityState = {
+  offered: Set<string>;
+  negotiated: Set<string>;
+  pendingRequest: Set<string>;
+  batchLabelById: Map<string, string>;
+  nextLabelId: number;
 };
 
 export type IrcLifecycleState = {
@@ -46,6 +56,8 @@ export type IrcLifecycleState = {
   currentNick: string;
   lastFailureMessage: string | null;
   sasl: IrcSaslState;
+  capabilities: IrcCapabilityState;
+  accountName: string | null;
   pendingNickservAutoJoinTarget: string | null;
 };
 
@@ -132,8 +144,20 @@ export type IrcReplyTracker = {
   reset(): void;
   prune(): void;
   queue(context: PendingReplyContext): void;
-  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
-  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
+  consumeReplyTarget(
+    command: string,
+    params: string[],
+    nick: string | null,
+    rawTarget?: string,
+    label?: string | null
+  ): string | null;
+  consumeReplyContext(
+    command: string,
+    params: string[],
+    nick: string | null,
+    rawTarget?: string,
+    label?: string | null
+  ): PendingReplyContext | null;
   discardPendingChannelReplyContexts(
     channel: string,
     predicate?: (context: Extract<PendingReplyContext, { kind: 'channel' }>) => boolean

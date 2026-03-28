@@ -51,16 +51,16 @@ export class ReplyTracker {
     }
   }
 
-  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string) {
+  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string, label?: string | null) {
     this.prune();
-    const target = consumeReplyTarget(this.contexts, command, params, nick, rawTarget);
+    const target = consumeReplyTarget(this.contexts, command, params, nick, rawTarget, label);
     this.refreshPendingNick();
     return target;
   }
 
-  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string) {
+  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string, label?: string | null) {
     this.prune();
-    const context = consumeReplyContext(this.contexts, command, params, nick, rawTarget);
+    const context = consumeReplyContext(this.contexts, command, params, nick, rawTarget, label);
     this.refreshPendingNick();
     return context;
   }

@@ -23,6 +23,7 @@ import {
   shouldDiscardUntargetedRawModeMatches,
 } from './irc-reply-context-select.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
+import { isChannelTarget, isSameIrcIdentifier } from './irc-parser.js';
 
 export type { PendingReplyContext } from './irc-reply-context-types.js';
 export {
@@ -43,9 +44,10 @@ export const consumeReplyTarget = (
   command: string,
   params: string[],
   nick: string | null,
-  rawTarget?: string
+  rawTarget?: string,
+  label?: string | null
 ) => {
-  const context = consumeReplyContext(contexts, command, params, nick, rawTarget);
+  const context = consumeReplyContext(contexts, command, params, nick, rawTarget, label);
   if (!context || !('sourceTarget' in context)) {
     return null;
   }
@@ -57,7 +59,8 @@ export const consumeReplyContext = (
   command: string,
   params: string[],
   nick: string | null,
-  _rawTarget?: string
+  _rawTarget?: string,
+  label?: string | null
 ) => {
   const now = Date.now();
 
@@ -67,11 +70,24 @@ export const consumeReplyContext = (
     }
   }
 
+  const candidateIndexes = label
+    ? contexts
+      .map((context, index) => (context?.label === label ? index : -1))
+      .filter((index) => index !== -1)
+    : contexts.map((_context, index) => index);
+
   const matches: ReplyMatch[] = [];
-  for (let index = 0; index < contexts.length; index += 1) {
+  for (const index of candidateIndexes) {
     const context = contexts[index];
     if (!context) {
       continue;
+    }
+    if (label && context.label === label) {
+      const labeledResolution = resolveLabeledReplyContext(context, command, params, nick);
+      if (labeledResolution.matched) {
+        matches.push({ index, context, resolution: labeledResolution });
+        continue;
+      }
     }
     const resolution = resolveReplyContext(context, command, params, nick);
     if (!resolution.matched) {
@@ -101,6 +117,29 @@ export const consumeReplyContext = (
     }
   }
   return selected.context;
+};
+
+const resolveLabeledReplyContext = (
+  context: PendingReplyContext,
+  command: string,
+  params: string[],
+  nick: string | null,
+) => {
+  if (command === 'ACK' || command === 'FAIL' || command === 'WARN' || command === 'NOTE') {
+    return { matched: true, done: true };
+  }
+  if (
+    (command === 'PRIVMSG' || command === 'NOTICE' || command === 'TAGMSG')
+    && context.kind === 'message'
+  ) {
+    const rawTarget = params[0] ?? '';
+    const matchesDirectTarget = !isChannelTarget(context.target) && isSameIrcIdentifier(rawTarget, context.target);
+    const matchesSelfEcho = isChannelTarget(context.target) && isSameIrcIdentifier(rawTarget, context.target);
+    if ((matchesDirectTarget || matchesSelfEcho) && (nick || rawTarget)) {
+      return { matched: true, done: true };
+    }
+  }
+  return resolveReplyContext(context, command, params, nick);
 };
 const discardReplyContexts = (contexts: PendingReplyContext[], matches: ReplyMatch[]) => {
   const discardIndexes = matches

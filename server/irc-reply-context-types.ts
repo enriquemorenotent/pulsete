@@ -1,12 +1,18 @@
 export type ChannelReplyOperation = 'join' | 'part' | 'topic-set' | 'topic-query' | 'names';
 
+type PendingReplyBase = {
+  expiresAt: number;
+  label?: string;
+};
+
 export type PendingReplyContext =
-  | { kind: 'message'; sourceTarget: string; target: string; optimisticMessageId?: string; expiresAt: number }
-  | { kind: 'whois'; sourceTarget: string; nick: string; expiresAt: number }
-  | { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string; expiresAt: number }
-  | { kind: 'raw-list'; sourceTarget: string; expiresAt: number }
-  | { kind: 'channel-list'; requestId: string; expiresAt: number }
+  | (PendingReplyBase & { kind: 'message'; sourceTarget: string; target: string; optimisticMessageId?: string })
+  | (PendingReplyBase & { kind: 'whois'; sourceTarget: string; nick: string })
+  | (PendingReplyBase & { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string })
+  | (PendingReplyBase & { kind: 'raw-list'; sourceTarget: string })
+  | (PendingReplyBase & { kind: 'channel-list'; requestId: string })
   | {
+      label?: string;
       kind: 'channel';
       sourceTarget: string;
       channel: string;
@@ -15,8 +21,8 @@ export type PendingReplyContext =
       requestedTopic?: string;
       expiresAt: number;
     }
-  | { kind: 'nick'; sourceTarget: string; requestedNick: string; expiresAt: number }
-  | { kind: 'ison'; sourceTarget: string; expiresAt: number }
-  | { kind: 'friend-presence-ison'; snapshotId: number; expiresAt: number };
+  | (PendingReplyBase & { kind: 'nick'; sourceTarget: string; requestedNick: string })
+  | (PendingReplyBase & { kind: 'ison'; sourceTarget: string })
+  | (PendingReplyBase & { kind: 'friend-presence-ison'; snapshotId: number });
 
 export const replyContextTtlMs = 15_000;

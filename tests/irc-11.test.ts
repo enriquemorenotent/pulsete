@@ -183,3 +183,124 @@ test('irc connection keeps generic raw-command numerics on the server buffer', (
     )
   );
 });
+
+test('irc connection trusts echoed self messages when echo-message is negotiated', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+  connection.lifecycle.capabilities.negotiated.add('echo-message');
+
+  connection.say('alice', 'hi', '#chat');
+
+  assert.deepEqual(writes, ['PRIVMSG alice :hi\r\n']);
+  assert.equal(events.some((event) => event.type === 'message'), false);
+
+  connection.consume('@time=2026-03-28T12:00:00.000Z :tester!user@example PRIVMSG alice :hi\r\n');
+
+  const messageEvent = events.find((event) => event.type === 'message') as
+    | { message?: { body?: string; self?: boolean; target?: string; ts?: number } }
+    | undefined;
+
+  assert.ok(messageEvent?.message);
+  assert.equal(messageEvent.message.target, 'alice');
+  assert.equal(messageEvent.message.body, 'hi');
+  assert.equal(messageEvent.message.self, true);
+  assert.equal(messageEvent.message.ts, Date.parse('2026-03-28T12:00:00.000Z'));
+});
+
+test('irc connection routes labeled standard reply failures back to the originating buffer', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      templateId: null,
+      managerHidden: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      username: 'tester',
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.lifecycle.connected = true;
+  connection.lifecycle.socket = {
+    write(chunk: string) {
+      writes.push(chunk);
+    },
+  } as unknown as net.Socket;
+  connection.lifecycle.capabilities.negotiated.add('labeled-response');
+
+  connection.say('alice', 'hi', '#chat');
+
+  const selfMessage = events.find(
+    (event) =>
+      event.type === 'message'
+      && (event.message as { body?: string } | undefined)?.body === 'hi'
+  ) as { message?: { id?: string } } | undefined;
+
+  assert.deepEqual(writes, ['@label=lr1 PRIVMSG alice :hi\r\n']);
+
+  connection.consume('@label=lr1 FAIL PRIVMSG CANNOTSEND :Cannot send to this user\r\n');
+
+  assert.ok(
+    events.some(
+      (event) =>
+        event.type === 'send-failed'
+        && event.sourceTarget === '#chat'
+        && event.target === 'alice'
+        && event.message === '* Cannot send to this user'
+        && event.rollbackMessageId === selfMessage?.message?.id
+    )
+  );
+  assert.equal(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && (event.target === '#chat' || event.target === 'server')
+        && event.message === '* Cannot send to this user'
+    ),
+    false,
+  );
+});

@@ -1,7 +1,9 @@
 import { parseChannelUser } from '../shared/channel-users.js';
+import { parseIrcMessageTags, type IrcMessageTags } from './irc-message-tags.js';
 export { findIrcCaseMatch, isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 
 export type ParsedLine = {
+  tags: IrcMessageTags;
   prefix: string | null;
   command: string;
   params: string[];
@@ -9,11 +11,20 @@ export type ParsedLine = {
 
 export const parseLine = (line: string): ParsedLine => {
   let rest = line.trimEnd();
+  let tags: IrcMessageTags = {};
+  if (rest.startsWith('@')) {
+    const spaceIndex = rest.indexOf(' ');
+    if (spaceIndex === -1) {
+      return { tags: parseIrcMessageTags(rest.slice(1)), prefix: null, command: '', params: [] };
+    }
+    tags = parseIrcMessageTags(rest.slice(1, spaceIndex));
+    rest = rest.slice(spaceIndex + 1).trimStart();
+  }
   let prefix: string | null = null;
   if (rest.startsWith(':')) {
     const spaceIndex = rest.indexOf(' ');
     if (spaceIndex === -1) {
-      return { prefix: rest.slice(1), command: '', params: [] };
+      return { tags, prefix: rest.slice(1), command: '', params: [] };
     }
     prefix = rest.slice(1, spaceIndex);
     rest = rest.slice(spaceIndex + 1).trimStart();
@@ -39,7 +50,7 @@ export const parseLine = (line: string): ParsedLine => {
     params.push(rest.slice(0, nextSpace));
     rest = rest.slice(nextSpace + 1);
   }
-  return { prefix, command, params };
+  return { tags, prefix, command, params };
 };
 
 export const nickFromPrefix = (prefix: string | null) => {
@@ -47,6 +58,19 @@ export const nickFromPrefix = (prefix: string | null) => {
     return null;
   }
   return prefix.split('!')[0] ?? prefix;
+};
+
+export const parsePrefixIdentity = (prefix: string | null) => {
+  if (!prefix) {
+    return { nick: null, username: null, host: null };
+  }
+  const [nickPart, rest = ''] = prefix.split('!', 2);
+  const [usernamePart, hostPart = ''] = rest.split('@', 2);
+  return {
+    nick: nickPart || null,
+    username: usernamePart || null,
+    host: hostPart || null,
+  };
 };
 
 export const stripCtcp = (text: string) => {

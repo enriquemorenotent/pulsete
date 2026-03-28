@@ -11,15 +11,32 @@ import { createConnection,createMockSocket,createWelcomeServer,waitFor } from '.
 
 test('parseLine skips repeated spaces between IRC parameters', () => {
   assert.deepEqual(parseLine('PING  :abc def'), {
+    tags: {},
     prefix: null,
     command: 'PING',
     params: ['abc def'],
   });
   assert.deepEqual(parseLine(':irc.example 353 tester = #help  :@alice +bob'), {
+    tags: {},
     prefix: 'irc.example',
     command: '353',
     params: ['tester', '=', '#help', '@alice +bob'],
   });
+});
+
+test('parseLine extracts IRCv3 tags before the prefix and command', () => {
+  assert.deepEqual(
+    parseLine('@time=2026-03-28T12:00:00.000Z;label=abc123 :alice!user@example PRIVMSG #chat :hello'),
+    {
+      tags: {
+        time: '2026-03-28T12:00:00.000Z',
+        label: 'abc123',
+      },
+      prefix: 'alice!user@example',
+      command: 'PRIVMSG',
+      params: ['#chat', 'hello'],
+    },
+  );
 });
 
 test('PING replies preserve the original parameter framing', () => {
@@ -212,6 +229,7 @@ test('tls connections wait for secureConnect before sending credentials', () => 
 
     assert.deepEqual(writes, [
       'PASS secret\r\n',
+      'CAP LS 302\r\n',
       'NICK tester\r\n',
       'USER tester 0 * :Test User\r\n',
     ]);
@@ -540,7 +558,7 @@ test('sasl plain aborts cleanly when the server welcomes before replying to CAP 
         (event) =>
           event.type === 'status'
           && event.kind === 'error'
-          && event.message === 'Server completed registration before replying to CAP LS; continuing without SASL'
+          && event.message === 'Server completed registration before replying to CAP LS; continuing without negotiated capabilities'
       ),
       true
     );

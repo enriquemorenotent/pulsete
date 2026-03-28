@@ -1,17 +1,24 @@
 import { emitMessage } from './irc-emit.js';
 import { handleNickservAutoJoinMessage } from './irc-auth.js';
 import { isServiceNick } from './irc-services.js';
+import { parseServerTimeTag, type IrcMessageTags } from './irc-message-tags.js';
 import { isChannelTarget, stripCtcp } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
 import type { IrcMessageEventContext } from './irc-contexts.js';
 
 export const handleTextMessage = (
   connection: IrcMessageEventContext,
-  command: 'PRIVMSG' | 'NOTICE',
+  command: 'PRIVMSG' | 'NOTICE' | 'TAGMSG',
   params: string[],
   nick: string | null,
   sourceIsUser: boolean,
+  prefix: string | null,
+  tags: IrcMessageTags,
+  replyLabel: string | null,
 ) => {
+  if (command === 'TAGMSG') {
+    return;
+  }
   const rawTarget = params[0] ?? 'server';
   const trackedChannel = isChannelTarget(rawTarget) ? connection.resolveTrackedChannel(rawTarget) : null;
   if (isChannelTarget(rawTarget) && !trackedChannel) {
@@ -25,7 +32,7 @@ export const handleTextMessage = (
   const isDirectUserNotice =
     isDirectTarget && command === 'NOTICE' && sourceIsUser && !!nick && !isDirectServiceMessage;
   const replyTarget = isDirectUserNotice
-    ? connection.consumeReplyTarget(command, params, nick, rawTarget)
+    ? connection.consumeReplyTarget(command, params, nick, rawTarget, replyLabel)
     : null;
   const target = isDirectTarget
     ? (
@@ -50,6 +57,9 @@ export const handleTextMessage = (
     body,
     kind: command === 'NOTICE' ? 'notice' : isAction ? 'action' : 'line',
     self: isSelfNick(connection, nick),
+    ts: parseServerTimeTag(tags) ?? undefined,
   }));
-  handleNickservAutoJoinMessage(connection, rawTarget, nick, payload);
+  if (prefix) {
+    handleNickservAutoJoinMessage(connection, rawTarget, nick, payload);
+  }
 };

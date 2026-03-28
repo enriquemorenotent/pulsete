@@ -13,13 +13,13 @@ export const isSelfNick = (connection: IrcNickIdentityContext, nick: string | nu
 
 export const createMessage = (
   connection: IrcMessageContext,
-  input: Omit<MessageInput, 'id' | 'networkId' | 'ts'>
+  input: Omit<MessageInput, 'id' | 'networkId' | 'ts'> & { ts?: number }
 ): MessageInput => {
   const message: MessageInput = {
     id: randomUUID(),
     networkId: connection.profile.id,
-    ts: Date.now(),
     ...input,
+    ts: input.ts ?? Date.now(),
   };
   return {
     ...message,

@@ -141,8 +141,8 @@ export class IrcConnection implements IrcConnectionState {
   rememberReconnectChannel(channel: string) { return this.controls.channelsControl.rememberReconnectChannel(channel); }
   forgetReconnectChannel(channel: string) { return this.controls.channelsControl.forgetReconnectChannel(channel); }
   getChannelSession(channel: string) { return this.controls.channelsControl.getChannelSession(channel); }
-  updateChannelUsers(channel: string, nick: string | null, joined: boolean) {
-    return this.controls.channelsControl.updateChannelUsers(channel, nick, joined);
+  updateChannelUsers(channel: string, nick: string | null, joined: boolean, details?: Partial<ChannelUserState>) {
+    return this.controls.channelsControl.updateChannelUsers(channel, nick, joined, details);
   }
   getTrackedChannelUsers(channel: string) { return this.controls.channelsControl.getTrackedChannelUsers(channel); }
   setTrackedChannelUsers(channel: string, users: ChannelUserState[]) {
@@ -163,11 +163,11 @@ export class IrcConnection implements IrcConnectionState {
   clearChannelSessions() { this.controls.channelsControl.clearChannelSessions(); }
 
   queueReplyContext(context: PendingReplyContext) { this.controls.replies.queueReplyContext(context); }
-  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string) {
-    return this.controls.replies.consumeReplyTarget(command, params, nick, rawTarget);
+  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string, label?: string | null) {
+    return this.controls.replies.consumeReplyTarget(command, params, nick, rawTarget, label);
   }
-  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string) {
-    return this.controls.replies.consumeReplyContext(command, params, nick, rawTarget);
+  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string, label?: string | null) {
+    return this.controls.replies.consumeReplyContext(command, params, nick, rawTarget, label);
   }
   prunePendingReplyContexts() { this.controls.replies.prunePendingReplyContexts(); }
   discardPendingChannelReplyContexts(

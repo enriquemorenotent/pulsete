@@ -23,6 +23,12 @@ export type IrcProfileUpdateStrategy =
 export const resetRuntimeSessionState = (connection: IrcLifecycleContext) => {
   connection.lifecycle.buffer = '';
   connection.lifecycle.sasl = createIdleSaslState();
+  connection.lifecycle.capabilities.offered.clear();
+  connection.lifecycle.capabilities.negotiated.clear();
+  connection.lifecycle.capabilities.pendingRequest.clear();
+  connection.lifecycle.capabilities.batchLabelById.clear();
+  connection.lifecycle.capabilities.nextLabelId = 0;
+  connection.lifecycle.accountName = null;
   connection.lifecycle.pendingNickservAutoJoinTarget = null;
   clearChannelSessions(connection);
   abortActiveChannelList(connection, 'Channel list request was interrupted');
@@ -45,6 +51,7 @@ export const applyOfflineLifecycleState = (connection: IrcLifecycleContext) => {
   connection.lifecycle.serverName = null;
   connection.lifecycle.currentNick = connection.profile.nick;
   connection.lifecycle.lastFailureMessage = null;
+  connection.lifecycle.accountName = null;
 };
 
 export const resolveProfileUpdateStrategy = (

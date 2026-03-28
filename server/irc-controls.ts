@@ -52,6 +52,7 @@ import {
 } from './irc-connection-lifecycle.js';
 import { consume, createSelfActionMessage, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
 import { emitMessage, emitStatus } from './irc-emit.js';
+import { hasNegotiatedCapability } from './irc-capabilities.js';
 import {
   clearFriendPresenceTimer,
   disableFriendPresence,
@@ -134,29 +135,35 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
       return sendTrackedRaw(connection, `PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
     },
     say: (target: string, text: string, sourceTarget = target) => {
-      const selfMessage = createSelfMessage(connection, target, text);
+      const useEchoMessage = hasNegotiatedCapability(connection.lifecycle.capabilities, 'echo-message');
+      const selfMessage = useEchoMessage ? null : createSelfMessage(connection, target, text);
       if (
         sendTrackedRaw(
           connection,
           `PRIVMSG ${target} :${text}`,
           sourceTarget,
-          createMessageReplyContext(sourceTarget, target, selfMessage.id)
+          createMessageReplyContext(sourceTarget, target, selfMessage?.id)
         )
       ) {
-        emitMessage(connection, selfMessage);
+        if (selfMessage) {
+          emitMessage(connection, selfMessage);
+        }
       }
     },
     action: (target: string, text: string, sourceTarget = target) => {
-      const selfMessage = createSelfActionMessage(connection, target, text);
+      const useEchoMessage = hasNegotiatedCapability(connection.lifecycle.capabilities, 'echo-message');
+      const selfMessage = useEchoMessage ? null : createSelfActionMessage(connection, target, text);
       if (
         sendTrackedRaw(
           connection,
           `PRIVMSG ${target} :\u0001ACTION ${text}\u0001`,
           sourceTarget,
-          createMessageReplyContext(sourceTarget, target, selfMessage.id)
+          createMessageReplyContext(sourceTarget, target, selfMessage?.id)
         )
       ) {
-        emitMessage(connection, selfMessage);
+        if (selfMessage) {
+          emitMessage(connection, selfMessage);
+        }
       }
     },
   },
@@ -200,8 +207,12 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
     rememberReconnectChannel: (channel: string) => rememberReconnectChannel(connection, channel),
     forgetReconnectChannel: (channel: string) => forgetReconnectChannel(connection, channel) ?? null,
     getChannelSession: (channel: string) => getChannelSession(connection, channel),
-    updateChannelUsers: (channel: string, nick: string | null, joined: boolean) =>
-      updateChannelUsers(connection, channel, nick, joined),
+    updateChannelUsers: (
+      channel: string,
+      nick: string | null,
+      joined: boolean,
+      details?: Partial<ChannelUserState>
+    ) => updateChannelUsers(connection, channel, nick, joined, details),
     getTrackedChannelUsers: (channel: string) => getTrackedChannelUsers(connection, channel),
     setTrackedChannelUsers: (channel: string, users: ChannelUserState[]) => setTrackedChannelUsers(connection, channel, users),
     getTrackedChannelUserEntries: () => getTrackedChannelUserEntries(connection),
@@ -218,10 +229,20 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
   },
   replies: {
     queueReplyContext: (context: PendingReplyContext) => queueReplyContext(connection, context),
-    consumeReplyTarget: (command: string, params: string[], nick: string | null, rawTarget?: string) =>
-      consumeReplyTarget(connection, command, params, nick, rawTarget),
-    consumeReplyContext: (command: string, params: string[], nick: string | null, rawTarget?: string) =>
-      consumeReplyContext(connection, command, params, nick, rawTarget),
+    consumeReplyTarget: (
+      command: string,
+      params: string[],
+      nick: string | null,
+      rawTarget?: string,
+      label?: string | null
+    ) => consumeReplyTarget(connection, command, params, nick, rawTarget, label),
+    consumeReplyContext: (
+      command: string,
+      params: string[],
+      nick: string | null,
+      rawTarget?: string,
+      label?: string | null
+    ) => consumeReplyContext(connection, command, params, nick, rawTarget, label),
     prunePendingReplyContexts: () => prunePendingReplyContexts(connection),
     discardPendingChannelReplyContexts: (
       channel: string,

@@ -126,7 +126,12 @@ export type IrcConnectionMethods = {
   rememberReconnectChannel(channel: string): string;
   forgetReconnectChannel(channel: string): string | null;
   getChannelSession(channel: string): ChannelSessionState | null;
-  updateChannelUsers(channel: string, nick: string | null, joined: boolean): ChannelUserState[];
+  updateChannelUsers(
+    channel: string,
+    nick: string | null,
+    joined: boolean,
+    details?: Partial<ChannelUserState>
+  ): ChannelUserState[];
   getTrackedChannelUsers(channel: string): ChannelUserState[];
   setTrackedChannelUsers(channel: string, users: ChannelUserState[]): ChannelUserState[];
   getTrackedChannelUserEntries(): Array<[string, ChannelUserState[]]>;
@@ -141,8 +146,20 @@ export type IrcConnectionMethods = {
   ): ChannelSessionState;
   clearChannelSessions(): void;
   queueReplyContext(context: PendingReplyContext): void;
-  consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string): string | null;
-  consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string): PendingReplyContext | null;
+  consumeReplyTarget(
+    command: string,
+    params: string[],
+    nick: string | null,
+    rawTarget?: string,
+    label?: string | null
+  ): string | null;
+  consumeReplyContext(
+    command: string,
+    params: string[],
+    nick: string | null,
+    rawTarget?: string,
+    label?: string | null
+  ): PendingReplyContext | null;
   prunePendingReplyContexts(): void;
   discardPendingChannelReplyContexts(
     channel: string,

@@ -7,6 +7,9 @@ import { IrcConnection } from '../server/irc.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 import { createMockSocket,makeUser } from './helpers/irc-race-test-helpers.js';
 
+const projectUserModes = (users: ChannelUserState[]) =>
+  users.map(({ nick, mode, away }) => ({ nick, mode, away }));
+
 test('updating login fields during handshake restarts even on the same server', () => {
   const originalConnect = net.connect;
   const firstWrites: string[] = [];
@@ -42,6 +45,7 @@ test('updating login fields during handshake restarts even on the same server', 
 
     assert.deepEqual(firstWrites, [
       'PASS oldpass\r\n',
+      'CAP LS 302\r\n',
       'NICK oldnick\r\n',
       'USER olduser 0 * :Old User\r\n',
     ]);
@@ -62,6 +66,7 @@ test('updating login fields during handshake restarts even on the same server', 
 
     assert.deepEqual(secondWrites, [
       'PASS newpass\r\n',
+      'CAP LS 302\r\n',
       'NICK newnick\r\n',
       'USER newuser 0 * :New User\r\n',
     ]);
@@ -100,14 +105,14 @@ test('multi-line names replies accumulate users across repeated 353 numerics', (
   handleIrcLine(connection, ':irc.example 353 tester = #help :@alice +bob');
   handleIrcLine(connection, ':irc.example 353 tester = #help :carol dave');
 
-  assert.deepEqual(connection.channels.users.get('#help') ?? [], [
+  assert.deepEqual(projectUserModes(connection.channels.users.get('#help') ?? []), [
     makeUser('alice', 'op'),
     makeUser('bob', 'voice'),
     makeUser('carol'),
     makeUser('dave'),
   ]);
   assert.deepEqual(
-    (events.filter((event) => event.type === 'channel').at(-1) as { users: ChannelUserState[] } | undefined)?.users,
+    projectUserModes((events.filter((event) => event.type === 'channel').at(-1) as { users: ChannelUserState[] } | undefined)?.users ?? []),
     [
       makeUser('alice', 'op'),
       makeUser('bob', 'voice'),
@@ -150,7 +155,7 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
   handleIrcLine(connection, ':HELPER!user@host QUIT :bye');
 
   assert.deepEqual(Array.from(connection.channels.users.keys()), ['#Help']);
-  assert.deepEqual(connection.channels.users.get('#Help') ?? [], [makeUser('tester')]);
+  assert.deepEqual(projectUserModes(connection.channels.users.get('#Help') ?? []), [makeUser('tester')]);
 
   const messageEvents = events.filter(
     (event): event is { type: 'message'; message: Record<string, unknown> } => event.type === 'message'
@@ -215,12 +220,12 @@ test('channel mode changes update nick privileges in the user list', () => {
   connection.channels.users.set('#help', [makeUser('alice'), makeUser('bob', 'voice')]);
   handleIrcLine(connection, ':chanop!user@host MODE #help +o-v alice bob');
 
-  assert.deepEqual(connection.channels.users.get('#help') ?? [], [
+  assert.deepEqual(projectUserModes(connection.channels.users.get('#help') ?? []), [
     makeUser('alice', 'op'),
     makeUser('bob'),
   ]);
   assert.deepEqual(
-    (events.filter((event) => event.type === 'channel').at(-1) as { users: ChannelUserState[] } | undefined)?.users,
+    projectUserModes((events.filter((event) => event.type === 'channel').at(-1) as { users: ChannelUserState[] } | undefined)?.users ?? []),
     [
       makeUser('alice', 'op'),
       makeUser('bob'),
@@ -254,5 +259,5 @@ test('channel mode changes preserve user updates when channel modes are mixed in
   connection.channels.users.set('#help', [makeUser('alice', 'op')]);
   handleIrcLine(connection, ':chanop!user@host MODE #help +nt-o alice');
 
-  assert.deepEqual(connection.channels.users.get('#help') ?? [], [makeUser('alice')]);
+  assert.deepEqual(projectUserModes(connection.channels.users.get('#help') ?? []), [makeUser('alice')]);
 });

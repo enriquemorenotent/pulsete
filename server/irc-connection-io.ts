@@ -6,6 +6,8 @@ import { maxBufferedIrcBytes, maxIrcCommandBytes } from './irc-limits.js';
 import { createReplyContextFromRaw, type PendingReplyContext } from './irc-reply-context.js';
 import type { IrcConnectionState } from './irc-types.js';
 import { resolveRuntimeMessageAttribution } from './message-attribution.js';
+import { hasNegotiatedCapability } from './irc-capabilities.js';
+import { encodeIrcMessageTags, parseIrcMessageTags } from './irc-message-tags.js';
 import type { MessageInput } from './storage-types.js';
 import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
@@ -139,10 +141,14 @@ export const sendTrackedRaw = (
     emitStatus(connection, connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
     return false;
   }
-  if (!sendRaw(connection, raw, sourceTarget)) {
+  const labeledReplyContext = replyContext ? attachReplyLabel(connection, raw, replyContext) : null;
+  const outgoingRaw = labeledReplyContext?.raw ?? raw;
+  if (!sendRaw(connection, outgoingRaw, sourceTarget)) {
     return false;
   }
-  if (replyContext) {
+  if (labeledReplyContext?.context) {
+    connection.queueReplyContext(labeledReplyContext.context);
+  } else if (replyContext) {
     connection.queueReplyContext(replyContext);
   }
   return true;
@@ -153,4 +159,32 @@ const handleOversizedServerLine = (connection: IrcRawIoContext) => {
   connection.lifecycle.lastFailureMessage = 'Server sent an oversized IRC line';
   emitStatus(connection, connection.lifecycle.lastFailureMessage, 'error');
   connection.lifecycle.socket?.destroy();
+};
+
+const attachReplyLabel = (
+  connection: Pick<IrcConnectionState, 'lifecycle'>,
+  raw: string,
+  replyContext: PendingReplyContext,
+) => {
+  if (!hasNegotiatedCapability(connection.lifecycle.capabilities, 'labeled-response')) {
+    return null;
+  }
+  const label = `lr${(connection.lifecycle.capabilities.nextLabelId += 1).toString(36)}`;
+  return {
+    raw: applyLabelToRaw(raw, label),
+    context: {
+      ...replyContext,
+      label,
+    },
+  };
+};
+
+const applyLabelToRaw = (raw: string, label: string) => {
+  const match = raw.match(/^@([^ ]+)\s+(.*)$/);
+  if (!match) {
+    return `@label=${label} ${raw}`;
+  }
+  const tags = parseIrcMessageTags(match[1] ?? '');
+  tags.label ??= label;
+  return `@${encodeIrcMessageTags(tags)} ${match[2] ?? ''}`.trimEnd();
 };

@@ -30,6 +30,8 @@ export type IrcChannelEventContext = IrcEventContext & IrcConnectionPick<
   | 'getTrackedChannelUserEntries'
   | 'getTrackedChannelUsers'
   | 'handleSelfChannelDeparture'
+  | 'join'
+  | 'listReconnectChannels'
   | 'rememberReconnectChannel'
   | 'removeChannelSession'
   | 'resolveTrackedChannel'

@@ -79,6 +79,10 @@ export const channelUserSchema = z.object({
   nick: z.string(),
   mode: channelUserModeSchema.default('normal'),
   away: z.boolean().default(false),
+  account: z.string().nullable().optional(),
+  username: z.string().nullable().optional(),
+  host: z.string().nullable().optional(),
+  realname: z.string().nullable().optional(),
 });
 export type ChannelUserState = z.infer<typeof channelUserSchema>;
 

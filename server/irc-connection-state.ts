@@ -38,6 +38,14 @@ export const createIrcConnectionState = (
     currentNick: profile.nick,
     lastFailureMessage: null,
     sasl: createIdleSaslState(),
+    capabilities: {
+      offered: new Set<string>(),
+      negotiated: new Set<string>(),
+      pendingRequest: new Set<string>(),
+      batchLabelById: new Map<string, string>(),
+      nextLabelId: 0,
+    },
+    accountName: null,
     pendingNickservAutoJoinTarget: resolveDeferredNickservAutoJoinTarget(profile),
   };
   const channels: IrcChannelTrackingState = {

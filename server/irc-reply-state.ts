@@ -13,10 +13,11 @@ export const consumeReplyTarget = (
   command: string,
   params: string[],
   nick: string | null,
-  rawTarget?: string
+  rawTarget?: string,
+  label?: string | null
 ) => {
   prunePendingReplyContexts(connection);
-  return connection.replyTracker.consumeReplyTarget(command, params, nick, rawTarget);
+  return connection.replyTracker.consumeReplyTarget(command, params, nick, rawTarget, label);
 };
 
 export const consumeReplyContext = (
@@ -24,10 +25,11 @@ export const consumeReplyContext = (
   command: string,
   params: string[],
   nick: string | null,
-  rawTarget?: string
+  rawTarget?: string,
+  label?: string | null
 ) => {
   prunePendingReplyContexts(connection);
-  return connection.replyTracker.consumeReplyContext(command, params, nick, rawTarget);
+  return connection.replyTracker.consumeReplyContext(command, params, nick, rawTarget, label);
 };
 
 export const discardPendingChannelReplyContexts = (

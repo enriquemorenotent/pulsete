@@ -10,14 +10,23 @@ export const updateChannelUsers = (
   connection: IrcChannelStateContext,
   channel: string,
   nick: string | null,
-  joined: boolean
+  joined: boolean,
+  details: Partial<ChannelUserState> = {}
 ) => {
   const channelKey = resolveTrackedChannelKey(connection, channel) ?? channel;
   const current = connection.channels.users.get(channelKey) ?? [];
   const nextUsers = !nick
     ? current
     : joined
-      ? upsertChannelUser(current, { nick, mode: 'normal', away: false })
+      ? upsertChannelUser(current, {
+          nick,
+          mode: details.mode ?? 'normal',
+          away: details.away ?? false,
+          account: details.account ?? null,
+          username: details.username ?? null,
+          host: details.host ?? null,
+          realname: details.realname ?? null,
+        })
       : removeChannelUser(current, nick);
   connection.channels.users.set(channelKey, nextUsers);
   return nextUsers;

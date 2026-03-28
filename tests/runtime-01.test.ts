@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
+import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -11,6 +12,76 @@ import {
   createPresenceServer,
   createRegisteredServer,
 } from './helpers/runtime-test-handshake-servers.js';
+
+test('runtime stores untagged live messages with a generated timestamp', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const received: string[] = [];
+  const server = net.createServer((socket) => {
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let sawNick = false;
+    let sawUser = false;
+    let sentWelcome = false;
+
+    const flush = () => {
+      let index = buffer.indexOf('\n');
+      while (index !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, '');
+        buffer = buffer.slice(index + 1);
+        received.push(line);
+        if (line.startsWith('NICK ')) {
+          sawNick = true;
+        }
+        if (line.startsWith('USER ')) {
+          sawUser = true;
+        }
+        if (!sentWelcome && sawNick && sawUser) {
+          sentWelcome = true;
+          socket.write(':irc.example 001 tester :Welcome\r\n');
+          socket.write(':alice!user@example PRIVMSG tester :hello there\r\n');
+        }
+        index = buffer.indexOf('\n');
+      }
+    };
+
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      flush();
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+
+  const network = storage.networks.upsert(createNetworkInput({
+    host: '127.0.0.1',
+    port: address.port,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'Tester Example',
+  }));
+
+  try {
+    runtime.sessions.connect(network.id);
+    await waitFor(() => storage.conversations.listAllMessages(network.id, 'alice').length === 1);
+
+    const [message] = storage.conversations.listAllMessages(network.id, 'alice');
+    assert.equal(message?.body, 'hello there');
+    assert.equal(message?.target, 'alice');
+    assert.equal(typeof message?.ts, 'number');
+    assert.ok((message?.ts ?? 0) > 0);
+  } finally {
+    runtime.sessions.disconnect(network.id);
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
 
 test('runtime uses updated network settings on reconnect', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));

@@ -51,11 +51,14 @@ test('irc connection keeps an already joined channel after a retry JOIN times ou
 
   assert.deepEqual(writes, ['JOIN #help\r\n', 'JOIN #help\r\n']);
   assert.equal(connection.getChannelSession('#help')?.phase, 'joined');
-  assert.deepEqual(connection.channels.users.get('#help') ?? [], [
+  assert.deepEqual(projectUserModes(connection.channels.users.get('#help') ?? []), [
     { nick: 'alice', mode: 'normal', away: false },
     { nick: 'tester', mode: 'normal', away: false },
   ]);
 });
+
+const projectUserModes = (users: Array<{ nick: string; mode: string; away: boolean }>) =>
+  users.map(({ nick, mode, away }) => ({ nick, mode, away }));
 
 test('irc connection surfaces private-message delivery errors from the server', async () => {
   const received: string[] = [];
