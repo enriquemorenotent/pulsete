@@ -33,7 +33,12 @@ export const buildPreviousLexicalRetrieval = (
   query: searchTerms.join(', '),
   confidence: 0.5,
   scoreSummary: 'hits=1',
-  context: 'Retrieved transcript context for MissD:\nOperation: search_buffer(limit=5)',
+  context: [
+    'Retrieved transcript context for MissD:',
+    'Operation: search_buffer(limit=5)',
+    `Search terms: ${searchTerms.join(', ')}`,
+    'Matching hits: 1',
+  ].join('\n'),
   matchCount: 1,
   matchedMessageIds: ['message-1'],
   windowMessageIds: [['message-1', 'message-2']],
