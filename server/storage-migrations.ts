@@ -1,6 +1,14 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { defaultAssistantModel } from '../shared/assistant-defaults.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import {
+  assistantTablesSchemaSql,
+  ensureAssistantTables,
+  ensureAssistantThreadScope,
+  ensureHistoryImportBatchesTable,
+  ensureMessagesSearchIndex,
+  historyImportBatchesSchemaSql,
+  messagesSearchIndexSchemaSql,
+} from './storage-schema-helpers.js';
 
 export const currentStorageSchemaVersion = 11;
 
@@ -71,14 +79,7 @@ const schemaSql = `
     ts INTEGER NOT NULL
   );
 
-  CREATE TABLE IF NOT EXISTS history_import_batches (
-    id TEXT PRIMARY KEY,
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
-    bufferId TEXT NOT NULL,
-    target TEXT NOT NULL,
-    selfNickSnapshot TEXT NOT NULL DEFAULT '[]',
-    createdAt INTEGER NOT NULL
-  );
+${historyImportBatchesSchemaSql}
 
   CREATE TABLE IF NOT EXISTS friends (
     id TEXT PRIMARY KEY,
@@ -87,71 +88,18 @@ const schemaSql = `
     updatedAt INTEGER NOT NULL
   );
 
-  CREATE TABLE IF NOT EXISTS assistant_threads (
-    id TEXT PRIMARY KEY,
-    bufferId TEXT,
-    networkId TEXT,
-    target TEXT,
-    scope TEXT NOT NULL DEFAULT 'buffer',
-    title TEXT NOT NULL,
-    task TEXT NOT NULL,
-    model TEXT NOT NULL,
-    turnStatus TEXT,
-    turnsJson TEXT NOT NULL DEFAULT '[]',
-    createdAt INTEGER NOT NULL,
-    updatedAt INTEGER NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS assistant_preferences (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    defaultModel TEXT NOT NULL,
-    activeThreadId TEXT,
-    createdAt INTEGER NOT NULL,
-    updatedAt INTEGER NOT NULL
-  );
+${assistantTablesSchemaSql}
 
   CREATE INDEX IF NOT EXISTS idx_messages_buffer
     ON messages(networkId, target, ts DESC);
 
-  CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
-    USING fts5(
-      messageId UNINDEXED,
-      networkId UNINDEXED,
-      target UNINDEXED,
-      nick,
-      body,
-      tokenize = 'porter unicode61'
-    );
-
-  CREATE TRIGGER IF NOT EXISTS messages_ai
-    AFTER INSERT ON messages
-  BEGIN
-    INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-    VALUES (new.rowid, new.id, new.networkId, new.target, coalesce(new.nick, ''), new.body);
-  END;
-
-  CREATE TRIGGER IF NOT EXISTS messages_ad
-    AFTER DELETE ON messages
-  BEGIN
-    DELETE FROM messages_fts WHERE rowid = old.rowid;
-  END;
-
-  CREATE TRIGGER IF NOT EXISTS messages_au
-    AFTER UPDATE ON messages
-  BEGIN
-    DELETE FROM messages_fts WHERE rowid = old.rowid;
-    INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-    VALUES (new.rowid, new.id, new.networkId, new.target, coalesce(new.nick, ''), new.body);
-  END;
+${messagesSearchIndexSchemaSql}
 
   CREATE INDEX IF NOT EXISTS idx_buffers_network
     ON buffers(networkId, createdAt ASC);
 
   CREATE INDEX IF NOT EXISTS idx_friends_nick
     ON friends(nick COLLATE NOCASE, createdAt ASC);
-
-  CREATE INDEX IF NOT EXISTS idx_assistant_threads_updated
-    ON assistant_threads(updatedAt DESC, createdAt DESC);
 `;
 
 type StorageMigrationContext = {
@@ -202,7 +150,7 @@ const storageMigrations: readonly StorageMigration[] = [
   {
     version: 5,
     apply: (db) => {
-      ensureAssistantTables(db);
+      ensureAssistantTables(db, ensureColumn);
     },
   },
   {
@@ -214,13 +162,13 @@ const storageMigrations: readonly StorageMigration[] = [
   {
     version: 7,
     apply: (db) => {
-      ensureAssistantThreadScope(db);
+      ensureAssistantThreadScope(db, ensureColumn);
     },
   },
   {
     version: 8,
     apply: (db) => {
-      ensureMessagesSearchIndex(db, true);
+      ensureMessagesSearchIndex(db, true, tableExists);
     },
   },
   {
@@ -300,8 +248,8 @@ const repairStorageSchemaDrift = (db: DatabaseSync) => {
   const addedAuthMethod = ensureColumn(db, 'networks', 'authMethod', "TEXT NOT NULL DEFAULT 'none'");
   ensureColumn(db, 'networks', 'authTarget', "TEXT NOT NULL DEFAULT 'NickServ'");
   ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
-  ensureAssistantTables(db);
-  ensureMessagesSearchIndex(db, false);
+  ensureAssistantTables(db, ensureColumn);
+  ensureMessagesSearchIndex(db, false, tableExists);
   ensureColumn(db, 'messages', 'speakerRole', "TEXT NOT NULL DEFAULT 'unknown'");
   ensureColumn(db, 'messages', 'speakerNick', 'TEXT');
   ensureColumn(db, 'messages', 'attributionSource', "TEXT NOT NULL DEFAULT 'unknown'");
@@ -357,74 +305,6 @@ const resetStoredMessageHistory = (db: DatabaseSync) => {
   db.exec('DELETE FROM messages');
   db.prepare('UPDATE buffers SET unread = 0, priorityUnread = 0, lastReadTs = NULL, lastReadMessageId = NULL, updatedAt = ?')
     .run(Date.now());
-};
-
-const ensureAssistantTables = (db: DatabaseSync) => {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS assistant_threads (
-      id TEXT PRIMARY KEY,
-      bufferId TEXT,
-      networkId TEXT,
-      target TEXT,
-      scope TEXT NOT NULL DEFAULT 'buffer',
-      title TEXT NOT NULL,
-      task TEXT NOT NULL,
-      model TEXT NOT NULL,
-      turnStatus TEXT,
-      turnsJson TEXT NOT NULL DEFAULT '[]',
-      createdAt INTEGER NOT NULL,
-      updatedAt INTEGER NOT NULL
-    )
-  `);
-  ensureColumn(db, 'assistant_threads', 'turnsJson', "TEXT NOT NULL DEFAULT '[]'");
-  ensureAssistantThreadScope(db);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS assistant_preferences (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      defaultModel TEXT NOT NULL,
-      activeThreadId TEXT,
-      createdAt INTEGER NOT NULL,
-      updatedAt INTEGER NOT NULL
-    )
-  `);
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_assistant_threads_updated
-      ON assistant_threads(updatedAt DESC, createdAt DESC)
-  `);
-  const count = db.prepare('SELECT COUNT(*) AS count FROM assistant_preferences').get() as { count?: number } | undefined;
-  if ((count?.count ?? 0) > 0) {
-    return;
-  }
-  const now = Date.now();
-  db.prepare(`
-    INSERT INTO assistant_preferences (id, defaultModel, activeThreadId, createdAt, updatedAt)
-    VALUES (1, ?, NULL, ?, ?)
-  `).run(defaultAssistantModel, now, now);
-};
-
-const ensureAssistantThreadScope = (db: DatabaseSync) => {
-  ensureColumn(db, 'assistant_threads', 'scope', "TEXT NOT NULL DEFAULT 'buffer'");
-  db.exec(`
-    UPDATE assistant_threads
-    SET scope = CASE
-      WHEN bufferId IS NULL THEN 'free'
-      ELSE 'buffer'
-    END
-    WHERE scope IS NULL OR scope = '' OR (bufferId IS NULL AND scope = 'buffer')
-  `);
-};
-
-const ensureHistoryImportBatchesTable = (db: DatabaseSync) => {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS history_import_batches (
-      id TEXT PRIMARY KEY,
-      networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
-      bufferId TEXT NOT NULL,
-      target TEXT NOT NULL,
-      selfNickSnapshot TEXT NOT NULL DEFAULT '[]',
-      createdAt INTEGER NOT NULL
-    )
-  `);
 };
 
 const backfillQueryBufferSelfNickAliases = (db: DatabaseSync) => {
@@ -484,67 +364,4 @@ const parseJson = <T>(value: string, fallback: T): T => {
   } catch {
     return fallback;
   }
-};
-
-const ensureMessagesSearchIndex = (db: DatabaseSync, forceRebuild: boolean) => {
-  const hadIndex = tableExists(db, 'messages_fts');
-  db.exec(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
-      USING fts5(
-        messageId UNINDEXED,
-        networkId UNINDEXED,
-        target UNINDEXED,
-        nick,
-        body,
-        tokenize = 'porter unicode61'
-      )
-  `);
-  db.exec('DROP TRIGGER IF EXISTS messages_ai');
-  db.exec('DROP TRIGGER IF EXISTS messages_ad');
-  db.exec('DROP TRIGGER IF EXISTS messages_au');
-  db.exec(`
-    CREATE TRIGGER messages_ai
-      AFTER INSERT ON messages
-    BEGIN
-      INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-      VALUES (new.rowid, new.id, new.networkId, new.target, coalesce(new.nick, ''), new.body);
-    END
-  `);
-  db.exec(`
-    CREATE TRIGGER messages_ad
-      AFTER DELETE ON messages
-    BEGIN
-      DELETE FROM messages_fts WHERE rowid = old.rowid;
-    END
-  `);
-  db.exec(`
-    CREATE TRIGGER messages_au
-      AFTER UPDATE ON messages
-    BEGIN
-      DELETE FROM messages_fts WHERE rowid = old.rowid;
-      INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-      VALUES (new.rowid, new.id, new.networkId, new.target, coalesce(new.nick, ''), new.body);
-    END
-  `);
-  if (forceRebuild || !hadIndex || messagesSearchIndexNeedsRebuild(db)) {
-    rebuildMessagesSearchIndex(db);
-  }
-};
-
-const messagesSearchIndexNeedsRebuild = (db: DatabaseSync) => {
-  if (!tableExists(db, 'messages') || !tableExists(db, 'messages_fts')) {
-    return false;
-  }
-  const messageCount = Number((db.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count?: number } | undefined)?.count ?? 0);
-  const indexCount = Number((db.prepare('SELECT COUNT(*) AS count FROM messages_fts').get() as { count?: number } | undefined)?.count ?? 0);
-  return messageCount !== indexCount;
-};
-
-const rebuildMessagesSearchIndex = (db: DatabaseSync) => {
-  db.exec('DELETE FROM messages_fts');
-  db.exec(`
-    INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-    SELECT rowid, id, networkId, target, coalesce(nick, ''), body
-    FROM messages
-  `);
 };

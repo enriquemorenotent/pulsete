@@ -12,6 +12,10 @@ export const makeUser = (
   nick,
   mode,
   away,
+  account: null,
+  username: null,
+  host: null,
+  realname: null,
 });
 
 export const createNetworkInput = (overrides: Partial<NetworkInput> = {}): NetworkInput => ({

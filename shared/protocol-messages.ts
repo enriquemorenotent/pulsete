@@ -4,7 +4,9 @@ import {
   assistantSnapshotSchema,
   assistantThreadSchema,
   assistantTurnSchema,
-  appSnapshotSchema,
+} from './protocol-assistant.js';
+import { appSnapshotSchema } from './protocol-app.js';
+import {
   bufferSchema,
   channelListEntrySchema,
   channelSchema,
@@ -15,7 +17,7 @@ import {
   networkSchema,
   pendingChannelSchema,
   presenceStatusSchema,
-} from './protocol-domain.js';
+} from './protocol-chat.js';
 
 const baseClientSchema = z.object({
   type: z.string(),
