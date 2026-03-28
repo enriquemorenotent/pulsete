@@ -2,7 +2,7 @@ import type { ChatMessage } from '../../shared/protocol.js';
 
 export type MessageRenderBlock =
   | { kind: 'day-divider'; key: string; label: string }
-  | { kind: 'single'; message: ChatMessage; messageIndex: number };
+  | { kind: 'single'; message: ChatMessage; messageIndex: number; hideTimestamp: boolean };
 
 export const formatMessageTime = (value: number) => {
   const date = new Date(value);
@@ -43,9 +43,15 @@ export const formatDayDividerLabel = (value: number, now = Date.now()) => {
   return dayKey;
 };
 
-export const buildRenderBlocks = (messages: ChatMessage[], now = Date.now()) => {
+export const buildRenderBlocks = (
+  messages: ChatMessage[],
+  options: { now?: number; listKind?: 'chat' | 'server' } = {},
+) => {
+  const now = options.now ?? Date.now();
+  const listKind = options.listKind ?? 'chat';
   const blocks: MessageRenderBlock[] = [];
   let previousDayKey: string | null = null;
+  let previousTimestampGroupKey: string | null = null;
   messages.forEach((message, messageIndex) => {
     const dayKey = getLocalDayKey(message.ts);
     if (dayKey !== previousDayKey) {
@@ -55,8 +61,12 @@ export const buildRenderBlocks = (messages: ChatMessage[], now = Date.now()) => 
         label: formatDayDividerLabel(message.ts, now),
       });
       previousDayKey = dayKey;
+      previousTimestampGroupKey = null;
     }
-    blocks.push({ kind: 'single', message, messageIndex });
+    const timestampGroupKey = resolveTimestampGroupKey(message, listKind);
+    const hideTimestamp = timestampGroupKey !== null && timestampGroupKey === previousTimestampGroupKey;
+    blocks.push({ kind: 'single', message, messageIndex, hideTimestamp });
+    previousTimestampGroupKey = timestampGroupKey;
   });
   return blocks;
 };
@@ -112,6 +122,30 @@ export const messageTone = (message: ChatMessage) => {
 };
 
 const padDatePart = (value: number) => String(value).padStart(2, '0');
+
+const resolveTimestampGroupKey = (
+  message: ChatMessage,
+  listKind: 'chat' | 'server',
+) => {
+  const senderKey = resolveTimestampGroupSenderKey(message, listKind);
+  if (!senderKey) {
+    return null;
+  }
+  return `${senderKey}:${Math.floor(message.ts / 60_000)}`;
+};
+
+const resolveTimestampGroupSenderKey = (
+  message: ChatMessage,
+  listKind: 'chat' | 'server',
+) => {
+  if (listKind === 'server') {
+    return getServerMessageSourceLabel(message);
+  }
+  if (!isCompactMessage(message)) {
+    return null;
+  }
+  return message.nick ?? null;
+};
 
 const getLocalDayKey = (value: number) => {
   const date = new Date(value);

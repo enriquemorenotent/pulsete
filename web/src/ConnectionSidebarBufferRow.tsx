@@ -45,13 +45,20 @@ export function ConnectionSidebarBufferRow(
 				}
 			>
 				<span className="relative flex size-4 shrink-0 items-center justify-center">
-					<Icon className="size-3.5 shrink-0 text-muted-foreground" />
+					<Icon
+						className={cn(
+							'size-3.5 shrink-0',
+							props.presence
+								? presenceIconTone(props.presence)
+								: 'text-muted-foreground',
+						)}
+					/>
 					{props.presence ? (
 						<span
 							aria-hidden
 							className={cn(
 								'absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
-								presenceTone(props.presence),
+								presenceBadgeTone(props.presence),
 							)}
 						/>
 					) : null}
@@ -96,7 +103,20 @@ export function ConnectionSidebarBufferRow(
 const presenceLabel = (presence: BufferPresenceDisplay) =>
 	presence === 'pending' ? 'checking status' : presence;
 
-const presenceTone = (presence: BufferPresenceDisplay) => {
+const presenceIconTone = (presence: BufferPresenceDisplay) => {
+	if (presence === 'pending') {
+		return 'text-zinc-400';
+	}
+	if (presence === 'online') {
+		return 'text-emerald-400';
+	}
+	if (presence === 'away') {
+		return 'text-yellow-400';
+	}
+	return 'text-red-400';
+};
+
+const presenceBadgeTone = (presence: BufferPresenceDisplay) => {
 	if (presence === 'pending') {
 		return 'bg-zinc-400';
 	}

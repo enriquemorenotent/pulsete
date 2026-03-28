@@ -83,6 +83,8 @@ test('/msg sends a private message without opening or selecting a query buffer',
     onOpenQuery: async (networkId, nick) => {
       openedQueries.push({ networkId, nick });
     },
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
   });
 
   assert.deepEqual(sent, [
@@ -128,6 +130,8 @@ test('/j joins a channel through the channel opener', async () => {
     onOpenQuery: async (networkId, nick) => {
       openedQueries.push({ networkId, nick });
     },
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
   });
 
   assert.deepEqual(sent, []);
@@ -164,6 +168,8 @@ test('/query opens or selects a private-message buffer', async () => {
     onOpenQuery: async (networkId, nick) => {
       openedQueries.push({ networkId, nick });
     },
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
   });
 
   assert.deepEqual(sent, []);
@@ -200,6 +206,8 @@ test('/ns sends a NickServ message without opening a query buffer', async () => 
     onOpenQuery: async (networkId, nick) => {
       openedQueries.push({ networkId, nick });
     },
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
   });
 
   assert.deepEqual(sent, [

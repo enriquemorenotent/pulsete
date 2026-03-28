@@ -423,17 +423,27 @@ test('open query buffers show saved contact presence cues', () => {
     kind: 'query',
     target: 'alice',
   });
-  const onlineQuery = makeBuffer({
+  const awayQuery = makeBuffer({
     id: 'query-2',
     kind: 'query',
     target: 'bob',
+  });
+  const onlineQuery = makeBuffer({
+    id: 'query-3',
+    kind: 'query',
+    target: 'carol',
   });
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
         networks: [network],
         conversation: buildConversationIndex({
-          buffers: [makeBuffer({ id: 'server-1' }), offlineQuery, onlineQuery],
+          buffers: [
+            makeBuffer({ id: 'server-1' }),
+            offlineQuery,
+            awayQuery,
+            onlineQuery,
+          ],
           channels: [],
           pendingChannels: [],
           messages: {},
@@ -448,7 +458,8 @@ test('open query buffers show saved contact presence cues', () => {
       friendPresence={{}}
       queryPresence={{
         [offlineQuery.id]: 'offline',
-        [onlineQuery.id]: 'away',
+        [awayQuery.id]: 'away',
+        [onlineQuery.id]: 'online',
       }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
@@ -466,8 +477,13 @@ test('open query buffers show saved contact presence cues', () => {
 
   assert.match(markup, /aria-label="Open alice \(offline\)"/);
   assert.match(markup, /aria-label="Open bob \(away\)"/);
+  assert.match(markup, /aria-label="Open carol \(online\)"/);
   assert.match(markup, /bg-red-400/);
   assert.match(markup, /bg-yellow-400/);
+  assert.match(markup, /bg-emerald-400/);
+  assert.match(markup, /text-red-400/);
+  assert.match(markup, /text-yellow-400/);
+  assert.match(markup, /text-emerald-400/);
 });
 
 test('connected query buffers show a gray badge while presence is resolving', () => {
@@ -509,6 +525,7 @@ test('connected query buffers show a gray badge while presence is resolving', ()
 
   assert.match(markup, /aria-label="Open alice \(checking status\)"/);
   assert.match(markup, /bg-zinc-400/);
+  assert.match(markup, /text-zinc-400/);
 });
 
 test('offline query buffers do not show a gray pending badge', () => {

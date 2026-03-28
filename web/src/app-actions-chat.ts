@@ -146,6 +146,8 @@ export const createChatActions = ({
             }
             await openOrSelectQueryBuffer(network, nick);
           },
+          onCloseChannel: closeChannel,
+          onCloseBuffer: closeBuffer,
         }),
       mapResult: (submitted) => {
         if (submitted) {

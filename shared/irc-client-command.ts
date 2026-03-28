@@ -13,6 +13,7 @@ const commandDefinitions = [
   { name: 'raw', slash: ['raw'], raw: [] },
   { name: 'connect', slash: ['connect'], raw: [] },
   { name: 'disconnect', slash: ['disconnect'], raw: [] },
+  { name: 'close', slash: ['close'], raw: [] },
   { name: 'quit', slash: [], raw: ['QUIT'] },
 ] as const;
 

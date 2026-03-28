@@ -83,6 +83,8 @@ test('/w sends a WHOIS raw command', async () => {
     onOpenQuery: async (networkId, nick) => {
       openedQueries.push({ networkId, nick });
     },
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
   });
 
   assert.deepEqual(sent, [
@@ -126,6 +128,8 @@ test('/list opens the channel list dialog without sending a raw IRC command', as
     onOpenQuery: async (networkId, nick) => {
       openedQueries.push({ networkId, nick });
     },
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
   });
 
   assert.deepEqual(sent, []);
@@ -154,8 +158,109 @@ test('/list rejects extra arguments', async () => {
       listedNetworks.push(networkId);
     },
     onOpenQuery: async () => {},
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
   });
 
   assert.deepEqual(banners, [{ kind: 'error', message: 'Usage: /list' }]);
   assert.deepEqual(listedNetworks, []);
+});
+
+test('/close closes the current channel through the close action', async () => {
+  const closedChannels: Array<{ networkId: string; channel: string }> = [];
+
+  await sendComposerMessage({
+    draft: '/close',
+    setDraft: () => {},
+    socket: {
+      send: () => {},
+      close: () => {},
+    },
+    updateBanner: () => {},
+    workspace,
+    onJoinChannel: async () => {},
+    onOpenChannelList: async () => {},
+    onOpenQuery: async () => {},
+    onCloseChannel: (networkId, channel) => {
+      closedChannels.push({ networkId, channel });
+    },
+    onCloseBuffer: async () => {},
+  });
+
+  assert.deepEqual(closedChannels, [{ networkId: 'network-1', channel: '#general' }]);
+});
+
+test('/close closes the current query buffer through the close action', async () => {
+  const closedBuffers: string[] = [];
+  const queryBuffer: BufferState = {
+    ...selectedBuffer,
+    kind: 'query',
+    target: 'alice',
+  };
+  const queryWorkspace: WorkspaceView = {
+    ...workspace,
+    mode: 'query-connected',
+    selectedBuffer: queryBuffer,
+    selectedChannel: null,
+    headerTitle: 'alice',
+    composerPlaceholder: 'Message alice',
+    showNicklist: false,
+  };
+
+  await sendComposerMessage({
+    draft: '/close',
+    setDraft: () => {},
+    socket: {
+      send: () => {},
+      close: () => {},
+    },
+    updateBanner: () => {},
+    workspace: queryWorkspace,
+    onJoinChannel: async () => {},
+    onOpenChannelList: async () => {},
+    onOpenQuery: async () => {},
+    onCloseChannel: () => {},
+    onCloseBuffer: async (buffer) => {
+      closedBuffers.push(buffer.id);
+    },
+  });
+
+  assert.deepEqual(closedBuffers, ['buffer-1']);
+});
+
+test('/close rejects the server buffer', async () => {
+  const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
+  const serverBuffer: BufferState = {
+    ...selectedBuffer,
+    kind: 'server',
+    target: 'server',
+  };
+  const serverWorkspace: WorkspaceView = {
+    ...workspace,
+    mode: 'server-connected',
+    selectedBuffer: serverBuffer,
+    selectedChannel: null,
+    headerTitle: 'Server',
+    composerMode: 'commands',
+    composerPlaceholder: 'Send an IRC command',
+    showNicklist: false,
+  };
+
+  await sendComposerMessage({
+    draft: '/close',
+    setDraft: () => {},
+    socket: {
+      send: () => {},
+      close: () => {},
+    },
+    updateBanner: (kind, message) => banners.push({ kind, message }),
+    workspace: serverWorkspace,
+    onJoinChannel: async () => {},
+    onOpenChannelList: async () => {},
+    onOpenQuery: async () => {},
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
+  });
+
+  assert.deepEqual(banners, [{ kind: 'error', message: 'Only channels and private messages can be closed with /close' }]);
 });

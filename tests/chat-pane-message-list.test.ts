@@ -58,7 +58,7 @@ test('buildRenderBlocks inserts day dividers only when the local calendar day ch
     { id: 'message-1', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'late', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 57, 0, 0).getTime() },
     { id: 'message-2', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'still same day', kind: 'line', self: false, ts: new Date(2026, 2, 11, 8, 12, 0, 0).getTime() },
     { id: 'message-3', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'next day', kind: 'line', self: false, ts: new Date(2026, 2, 12, 0, 5, 0, 0).getTime() },
-  ], new Date(2026, 2, 28, 12, 0, 0, 0).getTime());
+  ], { now: new Date(2026, 2, 28, 12, 0, 0, 0).getTime() });
 
   assert.deepEqual(
     blocks.map((block) => block.kind === 'day-divider' ? { kind: block.kind, label: block.label } : { kind: block.kind, messageIndex: block.messageIndex, id: block.message.id }),
@@ -68,6 +68,25 @@ test('buildRenderBlocks inserts day dividers only when the local calendar day ch
       { kind: 'single', messageIndex: 1, id: 'message-2' },
       { kind: 'day-divider', label: '2026-03-12' },
       { kind: 'single', messageIndex: 2, id: 'message-3' },
+    ],
+  );
+});
+
+test('buildRenderBlocks hides compact timestamps only for consecutive rows from the same sender in the same minute', () => {
+  const blocks = buildRenderBlocks([
+    { id: 'message-1', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'first', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 57, 1, 0).getTime() },
+    { id: 'message-2', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'second', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 57, 40, 0).getTime() },
+    { id: 'message-3', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'third', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 58, 1, 0).getTime() },
+    { id: 'message-4', networkId: 'network-1', target: '#help', nick: 'Ava', body: 'fourth', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 58, 20, 0).getTime() },
+  ]);
+
+  assert.deepEqual(
+    blocks.filter((block) => block.kind === 'single').map((block) => ({ id: block.message.id, hideTimestamp: block.hideTimestamp })),
+    [
+      { id: 'message-1', hideTimestamp: false },
+      { id: 'message-2', hideTimestamp: true },
+      { id: 'message-3', hideTimestamp: false },
+      { id: 'message-4', hideTimestamp: false },
     ],
   );
 });

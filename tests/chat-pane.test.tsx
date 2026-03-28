@@ -371,6 +371,19 @@ test('channel transcripts render day dividers when the calendar day changes', ()
   assert.match(markup, /2000-01-02/);
   assert.match(markup, /2000-01-01[\s\S]*late night/);
   assert.match(markup, /2000-01-02[\s\S]*next day/);
+  assert.match(markup, /sticky top-0 z-10 -mx-4 mb-3 bg-background\/80 px-4 py-2 backdrop-blur-sm/);
+});
+
+test('compact rows suppress repeated timestamps for the same sender within the same minute', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: 'Joby', body: 'first', ts: new Date(2026, 2, 11, 2, 57, 1, 0).getTime() }),
+    makeMessage({ id: 'message-2', nick: 'Joby', body: 'second', ts: new Date(2026, 2, 11, 2, 57, 40, 0).getTime() }),
+    makeMessage({ id: 'message-3', nick: 'Joby', body: 'third', ts: new Date(2026, 2, 11, 2, 58, 0, 0).getTime() }),
+  ]);
+
+  const visibleTimestampMetadata = markup.match(/title="2026-03-11 02:(57|58):/g) ?? [];
+  assert.equal(visibleTimestampMetadata.length, 2);
+  assert.match(markup, /invisible shrink-0 font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground/);
 });
 
 test('private-message rows color self and peer nick labels differently', () => {

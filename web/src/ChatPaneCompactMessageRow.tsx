@@ -21,6 +21,7 @@ import {
 type ChatPaneCompactMessageRowProps = {
   message: ChatMessage;
   participant: MessageParticipantPresentation;
+  hideTimestamp?: boolean;
   mode: MessageDisplayMode;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string) => void;
@@ -36,13 +37,24 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
   const hasVisibleText = hasVisibleFormattedMessageText(parsedContent);
   const bodyClassName = cn(isAction && 'italic');
   const timeLabel = (
-    <time
-      className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground"
-      dateTime={formatMessageTimestampDateTime(message.ts)}
-      title={formatMessageTimestampTitle(message.ts)}
-    >
-      {formatMessageTime(message.ts)}
-    </time>
+    props.hideTimestamp
+      ? (
+        <span
+          aria-hidden
+          className="invisible shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground"
+        >
+          00:00
+        </span>
+      )
+      : (
+        <time
+          className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground"
+          dateTime={formatMessageTimestampDateTime(message.ts)}
+          title={formatMessageTimestampTitle(message.ts)}
+        >
+          {formatMessageTime(message.ts)}
+        </time>
+      )
   );
   const metadata = (
     <>

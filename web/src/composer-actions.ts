@@ -1,3 +1,4 @@
+import type { BufferState } from '../../shared/protocol.js';
 import type { SocketHandle } from './client.js';
 import type { WorkspaceView } from './workspace-types.js';
 import { parseSlashIrcClientCommand } from '../../shared/irc-client-command.js';
@@ -13,6 +14,8 @@ type ComposerParams = {
   onJoinChannel: (networkId: string, channel: string, sourceBufferId?: string) => Promise<void>;
   onOpenChannelList: (networkId: string) => Promise<void>;
   onOpenQuery: (networkId: string, nick: string) => Promise<void>;
+  onCloseChannel: (networkId: string, channel: string) => void;
+  onCloseBuffer: (buffer: BufferState) => Promise<void>;
 };
 
 export async function sendComposerMessage(params: ComposerParams) {
@@ -111,6 +114,21 @@ async function runSlashCommand(text: string, params: ComposerParams) {
       }
       await params.onOpenChannelList(selection.networkId);
       break;
+    case 'close':
+      if (remainder) {
+        params.updateBanner('error', 'Usage: /close');
+        return null;
+      }
+      if (selection.kind === 'channel') {
+        params.onCloseChannel(selection.networkId, selection.target);
+        break;
+      }
+      if (selection.kind === 'query') {
+        await params.onCloseBuffer(selection);
+        break;
+      }
+      params.updateBanner('error', 'Only channels and private messages can be closed with /close');
+      return null;
     case 'whois':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /whois nick');
