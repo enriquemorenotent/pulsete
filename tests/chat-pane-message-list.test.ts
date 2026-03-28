@@ -4,6 +4,7 @@ import {
   restoreScrollOffsetAfterPrepend,
   shouldAutoLoadOlderHistory,
 } from '../web/src/ChatPaneMessageList.js';
+import { buildRenderBlocks } from '../web/src/chat-pane-message-utils.js';
 
 test('auto-load older history triggers once the transcript reaches the top edge', () => {
   assert.equal(shouldAutoLoadOlderHistory({
@@ -50,4 +51,23 @@ test('restoring scroll offset keeps the visible transcript anchored after prepen
   node.scrollHeight = 860;
   restoreScrollOffsetAfterPrepend(node, 640, 72);
   assert.equal(node.scrollTop, 292);
+});
+
+test('buildRenderBlocks inserts day dividers only when the local calendar day changes', () => {
+  const blocks = buildRenderBlocks([
+    { id: 'message-1', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'late', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 57, 0, 0).getTime() },
+    { id: 'message-2', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'still same day', kind: 'line', self: false, ts: new Date(2026, 2, 11, 8, 12, 0, 0).getTime() },
+    { id: 'message-3', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'next day', kind: 'line', self: false, ts: new Date(2026, 2, 12, 0, 5, 0, 0).getTime() },
+  ], new Date(2026, 2, 28, 12, 0, 0, 0).getTime());
+
+  assert.deepEqual(
+    blocks.map((block) => block.kind === 'day-divider' ? { kind: block.kind, label: block.label } : { kind: block.kind, messageIndex: block.messageIndex, id: block.message.id }),
+    [
+      { kind: 'day-divider', label: '2026-03-11' },
+      { kind: 'single', messageIndex: 0, id: 'message-1' },
+      { kind: 'single', messageIndex: 1, id: 'message-2' },
+      { kind: 'day-divider', label: '2026-03-12' },
+      { kind: 'single', messageIndex: 2, id: 'message-3' },
+    ],
+  );
 });

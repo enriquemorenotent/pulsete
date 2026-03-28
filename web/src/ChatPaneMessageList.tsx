@@ -21,7 +21,9 @@ import {
 import { ParticipantNickLabel } from './ParticipantNickLabel.js';
 import {
   buildRenderBlocks,
-  formatMessageTimestamp,
+  formatMessageTime,
+  formatMessageTimestampDateTime,
+  formatMessageTimestampTitle,
   getServerMessageSourceLabel,
   isActionMessage,
   isCompactMessage,
@@ -151,7 +153,11 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
         </div>
       ) : (
         <div className="space-y-1.5 font-mono text-[12px]" data-scroll-anchor-item>
-          {renderBlocks.map((block, index) => {
+          {renderBlocks.map((block) => {
+            if (block.kind === 'day-divider') {
+              return <DayDivider key={block.key} label={block.label} />;
+            }
+
             const serverSourceLabel =
               props.listKind === 'server'
                 ? getServerMessageSourceLabel(block.message)
@@ -169,7 +175,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
 
             return (
               <div key={block.message.id}>
-                {firstUnreadDividerIndex === index ? (
+                {firstUnreadDividerIndex === block.messageIndex ? (
                   <div ref={unreadDividerRef} data-unread-divider>
                     <UnreadDivider />
                   </div>
@@ -186,7 +192,13 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(props: Chat
                   <article className={cn('px-1 py-0.5 text-foreground', messageTone(block.message))}>
                     <div className="min-w-0">
                       <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                        <span className="tabular-nums normal-case tracking-normal">{formatMessageTimestamp(block.message.ts)}</span>
+                        <time
+                          className="tabular-nums normal-case tracking-normal"
+                          dateTime={formatMessageTimestampDateTime(block.message.ts)}
+                          title={formatMessageTimestampTitle(block.message.ts)}
+                        >
+                          {formatMessageTime(block.message.ts)}
+                        </time>
                         {participant.label ? (
                           <ParticipantNickLabel
                             nick={participant.label}
@@ -252,5 +264,13 @@ const UnreadDivider = () => (
     <span className="h-px flex-1 bg-primary/35" />
     <span>New messages</span>
     <span className="h-px flex-1 bg-primary/35" />
+  </div>
+);
+
+const DayDivider = (props: { label: string }) => (
+  <div className="my-3 flex items-center gap-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
+    <span className="h-px flex-1 bg-border/60" />
+    <span>{props.label}</span>
+    <span className="h-px flex-1 bg-border/60" />
   </div>
 );

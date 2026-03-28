@@ -344,18 +344,33 @@ test('compact chat rows use one grid skeleton for plain text and inline previews
   assert.doesNotMatch(previewMarkup, /col-start-2/);
 });
 
-test('message rows render a full date and time timestamp', () => {
+test('message rows render a compact time with full datetime metadata', () => {
+  const timestamp = new Date(2026, 2, 11, 2, 57, 36, 0).getTime();
   const markup = renderChatPane([
     makeMessage({
       id: 'message-1',
       nick: 'Joby',
       body: 'timestamped',
-      ts: new Date(2026, 2, 11, 2, 57, 36, 0).getTime(),
+      ts: timestamp,
     }),
   ]);
 
-  assert.match(markup, /2026-03-11 02:57:36/);
+  assert.match(markup, />02:57<\/time>/);
+  assert.match(markup, /title="2026-03-11 02:57:36"/);
+  assert.match(markup, new RegExp(`dateTime="${new Date(timestamp).toISOString()}"`));
   assert.match(markup, /font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground/);
+});
+
+test('channel transcripts render day dividers when the calendar day changes', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', body: 'late night', ts: new Date(2000, 0, 1, 23, 58, 0, 0).getTime() }),
+    makeMessage({ id: 'message-2', body: 'next day', ts: new Date(2000, 0, 2, 0, 3, 0, 0).getTime() }),
+  ]);
+
+  assert.match(markup, /2000-01-01/);
+  assert.match(markup, /2000-01-02/);
+  assert.match(markup, /2000-01-01[\s\S]*late night/);
+  assert.match(markup, /2000-01-02[\s\S]*next day/);
 });
 
 test('private-message rows color self and peer nick labels differently', () => {
@@ -481,10 +496,10 @@ test('server transcripts do not render the load older control', () => {
   assert.doesNotMatch(markup, /Load older/);
 });
 
-test('channel transcripts render a new messages divider at the first unread point', () => {
+test('channel transcripts keep the unread divider anchored after a day divider', () => {
   const messages = [
-    makeMessage({ id: 'message-1', body: 'older', ts: 1 }),
-    makeMessage({ id: 'message-2', body: 'newer', ts: 2 }),
+    makeMessage({ id: 'message-1', body: 'older', ts: new Date(1999, 11, 31, 23, 58, 0, 0).getTime() }),
+    makeMessage({ id: 'message-2', body: 'newer', ts: new Date(2000, 0, 1, 0, 3, 0, 0).getTime() }),
   ];
   const markup = renderToStaticMarkup(
     <ChatPane
@@ -526,6 +541,8 @@ test('channel transcripts render a new messages divider at the first unread poin
   );
 
   assert.match(markup, /New messages/);
+  assert.match(markup, /1999-12-31/);
+  assert.match(markup, /2000-01-01[\s\S]*New messages[\s\S]*newer/);
   assert.match(markup, /older/);
   assert.match(markup, /newer/);
 });

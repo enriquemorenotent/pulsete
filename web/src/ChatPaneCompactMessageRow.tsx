@@ -11,7 +11,9 @@ import {
 } from './FormattedMessageText.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import {
-  formatMessageTimestamp,
+  formatMessageTime,
+  formatMessageTimestampDateTime,
+  formatMessageTimestampTitle,
   isActionMessage,
   messageTone,
 } from './chat-pane-message-utils.js';
@@ -34,9 +36,13 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
   const hasVisibleText = hasVisibleFormattedMessageText(parsedContent);
   const bodyClassName = cn(isAction && 'italic');
   const timeLabel = (
-    <span className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground">
-      {formatMessageTimestamp(message.ts)}
-    </span>
+    <time
+      className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground"
+      dateTime={formatMessageTimestampDateTime(message.ts)}
+      title={formatMessageTimestampTitle(message.ts)}
+    >
+      {formatMessageTime(message.ts)}
+    </time>
   );
   const metadata = (
     <>
