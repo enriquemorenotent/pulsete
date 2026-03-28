@@ -1,0 +1,9 @@
+export const recentMessageLimit = 40;
+export const openingMessageLimit = 40;
+export const messageWindowRadius = 8;
+export const spanScanLimit = 3;
+export const spanScanWindowSize = 28;
+export const spanScanStride = 14;
+export const searchEvidenceMessageLimit = 10;
+export const evidenceNeighborMaxGapMs = 15 * 60_000;
+export const profileFactAnswerWindow = 3;
