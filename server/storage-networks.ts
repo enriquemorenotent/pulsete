@@ -118,17 +118,6 @@ export const deleteNetwork = (db: DatabaseSync, networkId: string) => {
   db.prepare('DELETE FROM networks WHERE id = ? OR templateId = ?').run(networkId, networkId);
 };
 
-export const migrateLegacyNetworkPasswords = (db: DatabaseSync, secretBox: SecretBox) => {
-  const rows = db.prepare('SELECT id, password FROM networks WHERE password IS NOT NULL')
-    .all() as Array<{ id: string; password: string }>;
-  for (const row of rows) {
-    if (!secretBox.isEncrypted(row.password)) {
-      db.prepare('UPDATE networks SET password = ? WHERE id = ?')
-        .run(secretBox.encrypt(row.password), row.id);
-    }
-  }
-};
-
 export const hasEncryptedNetworkPasswords = (db: DatabaseSync) =>
   (db.prepare('SELECT password FROM networks WHERE password IS NOT NULL').all() as Array<{ password: string }>)
     .some((row) => isEncryptedSecret(row.password));

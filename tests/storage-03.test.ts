@@ -77,64 +77,6 @@ test('query buffers and history match IRC nick casing insensitively', () => {
   assert.deepEqual(storage.conversations.listMessages(network.id, 'ALICE', 10), [message]);
 });
 
-test('query history lazily backfills legacy speaker attribution on read', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
-  const file = join(dir, 'db.sqlite');
-  const storage = new Storage(file);
-  const network = createConnectionInstance(storage, {
-    historicalSelfNicks: ['oldtester'],
-  });
-  storage.conversations.upsertQuery(network.id, 'MissD');
-
-  const legacy = new DatabaseSync(file);
-  legacy.prepare(`
-    INSERT INTO messages
-      (id, networkId, target, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    'legacy-1',
-    network.id,
-    'MissD',
-    'MissD',
-    'unknown',
-    null,
-    'unknown',
-    'low',
-    null,
-    'That was my hotel fantasy.',
-    'line',
-    1,
-    1,
-  );
-  legacy.close();
-
-  const [repaired] = storage.conversations.listMessages(network.id, 'missd', 10);
-  const verifyDb = new DatabaseSync(file);
-  const persisted = verifyDb.prepare(`
-    SELECT speakerRole, speakerNick, attributionSource, attributionConfidence, self
-    FROM messages
-    WHERE id = 'legacy-1'
-  `).get() as {
-    speakerRole: string;
-    speakerNick: string | null;
-    attributionSource: string;
-    attributionConfidence: string;
-    self: number;
-  };
-  verifyDb.close();
-
-  assert.equal(repaired?.speakerRole, 'peer');
-  assert.equal(repaired?.speakerNick, 'MissD');
-  assert.equal(repaired?.attributionSource, 'query-target');
-  assert.equal(repaired?.attributionConfidence, 'high');
-  assert.equal(repaired?.self, false);
-  assert.equal(persisted.speakerRole, 'peer');
-  assert.equal(persisted.speakerNick, 'MissD');
-  assert.equal(persisted.attributionSource, 'query-target');
-  assert.equal(persisted.attributionConfidence, 'high');
-  assert.equal(persisted.self, 0);
-});
-
 test('query alias repairs stay scoped to the selected private chat', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -187,9 +129,9 @@ test('query alias repairs stay scoped to the selected private chat', () => {
   assert.equal(storage.conversations.getMessageById('missd-imported')?.speakerRole, 'self');
   assert.equal(storage.conversations.getMessageById('missd-imported')?.attributionSource, 'query-alias');
   assert.equal(storage.conversations.getMessageById('missd-imported')?.self, true);
-  assert.equal(storage.conversations.getMessageById('other-query-imported')?.speakerRole, 'peer');
+  assert.equal(storage.conversations.getMessageById('other-query-imported')?.speakerRole, 'unknown');
   assert.equal(storage.conversations.getMessageById('other-query-imported')?.speakerNick, 'sofiaIsBack');
-  assert.equal(storage.conversations.getMessageById('other-query-imported')?.attributionSource, 'query-target');
+  assert.equal(storage.conversations.getMessageById('other-query-imported')?.attributionSource, 'unknown');
   assert.equal(storage.conversations.getMessageById('other-query-imported')?.self, false);
 });
 
@@ -501,28 +443,6 @@ test('deleteMessages removes all transcript rows for a matched buffer target', (
   assert.deepEqual(deleted.map((message) => message.id), ['delete-1', 'delete-2']);
   assert.deepEqual(storage.conversations.listMessages(network.id, 'alice', 10), []);
   assert.equal(storage.conversations.getMessageById('keep-server')?.body, 'server line');
-});
-
-test('legacy stored action rows are normalized when read back', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = createConnectionInstance(storage);
-
-  const saved = storage.conversations.appendMessage({
-    id: randomUUID(),
-    networkId: network.id,
-    target: 'alice',
-    nick: 'alice',
-    body: '* alice waves',
-    kind: 'line',
-    self: false,
-    ts: Date.now(),
-  });
-
-  assert.equal(saved.kind, 'action');
-  assert.equal(saved.body, 'waves');
-  assert.equal(storage.conversations.listMessages(network.id, 'alice', 5)[0]?.kind, 'action');
-  assert.equal(storage.conversations.listRecentMessages(5).at(-1)?.body, 'waves');
 });
 
 test('buffer upserts reuse case-insensitive query and channel ids', () => {

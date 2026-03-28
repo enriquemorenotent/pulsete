@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { existsSync,mkdtempSync,readdirSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -150,56 +150,4 @@ test('storage persists local workspace buffers and messages', () => {
   assert.equal(snapshot.buffers.some((buffer) => buffer.id === channel.id && buffer.unread === 2), true);
   assert.equal(snapshot.buffers.some((buffer) => buffer.id === query.id && buffer.kind === 'query'), true);
   assert.equal(snapshot.messages.at(-1)?.id, message.id);
-});
-
-test('legacy auth databases are backed up and replaced with a fresh local database', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
-  const file = join(dir, 'db.sqlite');
-  const legacy = new DatabaseSync(file);
-  legacy.exec(`
-    CREATE TABLE users (
-      id TEXT PRIMARY KEY,
-      username TEXT NOT NULL UNIQUE,
-      passwordHash TEXT NOT NULL,
-      salt TEXT NOT NULL,
-      createdAt INTEGER NOT NULL
-    );
-    CREATE TABLE networks (
-      id TEXT PRIMARY KEY,
-      userId TEXT NOT NULL,
-      name TEXT NOT NULL,
-      host TEXT NOT NULL,
-      port INTEGER NOT NULL,
-      tls INTEGER NOT NULL,
-      nick TEXT NOT NULL,
-      altNicks TEXT NOT NULL DEFAULT '[]',
-      username TEXT NOT NULL,
-      realName TEXT NOT NULL DEFAULT '',
-      password TEXT,
-      favorite INTEGER NOT NULL DEFAULT 0,
-      createdAt INTEGER NOT NULL,
-      updatedAt INTEGER NOT NULL
-    );
-  `);
-  legacy.close();
-
-  const storage = new Storage(file);
-  const snapshot = storage.snapshot();
-
-  const backups = readdirSync(dir).filter((name) => name.startsWith('db.sqlite.legacy-'));
-  assert.equal(backups.length, 1);
-  assert.equal(existsSync(join(dir, backups[0]!)), true);
-  assert.equal(snapshot.networks.length, 4);
-
-  const fresh = new DatabaseSync(file);
-  const tables = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
-    .all() as Array<{ name: string }>;
-  fresh.close();
-  const publicTables = tables
-    .map((entry) => entry.name)
-    .filter((name) => !name.startsWith('messages_fts_'));
-  assert.deepEqual(
-    publicTables,
-    ['assistant_preferences', 'assistant_threads', 'buffers', 'channel_details', 'friends', 'history_import_batches', 'messages', 'messages_fts', 'networks']
-  );
 });

@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import { isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import {
   buildSelfNickKeys,
   resolveImportedChannelAttribution,
   normalizeStoredAttribution,
-  resolveLegacyBackfillAttribution,
+  resolveQueryRepairAttribution,
   resolveRuntimeMessageAttribution,
 } from './message-attribution.js';
 import type {
@@ -37,18 +37,6 @@ const messageColumns = [
 
 type MessageLookup = (messageId: string) => MessageInput | null;
 type MessageCursor = { networkId: string; rowid: number; target: string; ts: number };
-type NetworkAliasRow = {
-  nick: string;
-  altNicks: string;
-};
-type BufferAliasRow = {
-  selfNickAliases: string;
-};
-
-type AttributionContext = {
-  networkAliases: Map<string, NetworkAliasRow | null>;
-  bufferAliases: Map<string, BufferAliasRow | null>;
-};
 
 export const appendMessage = (db: DatabaseSync, input: MessageInput, lookup: MessageLookup) => {
   const attribution = shouldRespectInputAttribution(input)
@@ -313,7 +301,7 @@ export const repairBufferMessageAttributions = (
   const repairedRows: MessageRow[] = [];
   for (const row of rows) {
     const next = input.bufferKind === 'query'
-      ? resolveLegacyBackfillAttribution({
+      ? resolveQueryRepairAttribution({
           nick: row.nick,
           target: input.target,
           selfNickKeys,
@@ -446,98 +434,7 @@ const buildIdPrefixWhereClause = (prefixes: string[]) => {
   };
 };
 
-const hydrateMessages = (db: DatabaseSync, rows: MessageRow[]) => {
-  const context: AttributionContext = {
-    networkAliases: new Map(),
-    bufferAliases: new Map(),
-  };
-  return rows.map((row) => hydrateMessage(db, row, context));
-};
-
-const hydrateMessage = (
-  db: DatabaseSync,
-  row: MessageRow,
-  context: AttributionContext,
-) => {
-  if (needsLegacyBackfill(row)) {
-    const updated = backfillMessageAttribution(db, row, context);
-    if (updated) {
-      row = {
-        ...row,
-        speakerRole: updated.speakerRole,
-        speakerNick: updated.speakerNick,
-        attributionSource: updated.attributionSource,
-        attributionConfidence: updated.attributionConfidence,
-        self: updated.self ? 1 : 0,
-      };
-    }
-  }
-  return toMessage(row);
-};
-
-const needsLegacyBackfill = (row: MessageRow) =>
-  isPrivateQueryTarget(row.target)
-  && (!row.attributionSource || row.attributionSource === 'unknown');
-
-const backfillMessageAttribution = (
-  db: DatabaseSync,
-  row: MessageRow,
-  context: AttributionContext,
-) => {
-  const network = getNetworkAliases(db, context, row.networkId);
-  const bufferAliases = getBufferAliases(db, context, row.networkId, row.target);
-  if (!network) {
-    return null;
-  }
-  const attribution = resolveLegacyBackfillAttribution({
-    nick: row.nick,
-    target: row.target,
-    selfNickKeys: buildSelfNickKeys({
-      nick: network.nick,
-      altNicks: parseJson<string[]>(network.altNicks, []),
-    }, parseJson<string[]>(bufferAliases?.selfNickAliases ?? '[]', [])),
-  });
-  updateMessageAttribution(db, {
-    id: row.id,
-    ...attribution,
-  });
-  return attribution;
-};
-
-const getNetworkAliases = (db: DatabaseSync, context: AttributionContext, networkId: string) => {
-  if (context.networkAliases.has(networkId)) {
-    return context.networkAliases.get(networkId) ?? null;
-  }
-  const row = db.prepare(`
-    SELECT nick, altNicks
-    FROM networks
-    WHERE id = ?
-  `).get(networkId) as NetworkAliasRow | undefined;
-  context.networkAliases.set(networkId, row ?? null);
-  return row ?? null;
-};
-
-const getBufferAliases = (
-  db: DatabaseSync,
-  context: AttributionContext,
-  networkId: string,
-  target: string,
-) => {
-  const key = `${networkId}:${normalizeIrcIdentifier(target)}`;
-  if (context.bufferAliases.has(key)) {
-    return context.bufferAliases.get(key) ?? null;
-  }
-  const rows = db.prepare(`
-    SELECT target, selfNickAliases
-    FROM buffers
-    WHERE networkId = ?
-  `).all(networkId) as Array<BufferAliasRow & { target: string }>;
-  const row = rows.find((candidate) => isSameIrcIdentifier(candidate.target, target));
-  context.bufferAliases.set(key, row ?? null);
-  return row ?? null;
-};
-
-const isPrivateQueryTarget = (target: string) => target !== 'server' && !/^[#&+!]/.test(target);
+const hydrateMessages = (_db: DatabaseSync, rows: MessageRow[]) => rows.map((row) => toMessage(row));
 
 const shouldRespectInputAttribution = (input: MessageInput) =>
   input.speakerRole !== undefined

@@ -13,7 +13,6 @@ export const speakerAttributionSourceSchema = z.enum([
   'query-alias',
   'query-target',
   'import-alias',
-  'legacy-backfill',
   'unknown',
 ]);
 export type SpeakerAttributionSource = z.infer<typeof speakerAttributionSourceSchema>;

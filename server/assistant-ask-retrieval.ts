@@ -72,7 +72,7 @@ export const resolveAssistantAskRetrieval = ({
   if (request.operation === 'fts_search') {
     return renderFtsSearchResults(subject, request, conversations, messages);
   }
-  return renderLegacySearchResults(subject, resolveAllMessages(subject, conversations, messages), request.searchTerms, request.limit);
+  return renderLexicalSearchResults(subject, resolveAllMessages(subject, conversations, messages), request.searchTerms, request.limit);
 };
 
 export const resolveAssistantAskRetrievedContext = (input: {
@@ -453,7 +453,7 @@ const renderSpanScanResults = (
   };
 };
 
-const renderLegacySearchResults = (
+const renderLexicalSearchResults = (
   subject: AssistantActiveBuffer,
   messages: ChatMessage[],
   searchTerms: string[],
@@ -475,7 +475,7 @@ const renderLegacySearchResults = (
       limit,
       searchTerms,
     },
-    stage: 'legacy_search',
+    stage: 'lexical_search',
     query: searchTerms.join(', '),
     confidence: hits.length > 0 ? 0.55 : 0,
     scoreSummary: `hits=${hits.length}`,

@@ -115,7 +115,6 @@ const storageMigrations: readonly StorageMigration[] = [
   {
     version: 1,
     apply: (db, context) => {
-      migrateLegacyBufferSchema(db);
       ensureColumn(db, 'networks', 'autoJoin', "TEXT NOT NULL DEFAULT '[]'");
       ensureColumn(db, 'networks', 'altNicks', "TEXT NOT NULL DEFAULT '[]'");
       ensureColumn(db, 'networks', 'realName', "TEXT NOT NULL DEFAULT ''");
@@ -214,7 +213,6 @@ export const applyStorageMigrations = (db: DatabaseSync, context: StorageMigrati
     setUserVersion(db, migration.version);
     version = migration.version;
   }
-  repairStorageSchemaDrift(db);
 };
 
 export const tableExists = (db: DatabaseSync, table: string) =>
@@ -234,61 +232,6 @@ const ensureColumn = (db: DatabaseSync, table: string, column: string, definitio
     return true;
   }
   return false;
-};
-
-const repairStorageSchemaDrift = (db: DatabaseSync) => {
-  migrateLegacyBufferSchema(db);
-  ensureColumn(db, 'networks', 'autoJoin', "TEXT NOT NULL DEFAULT '[]'");
-  ensureColumn(db, 'networks', 'altNicks', "TEXT NOT NULL DEFAULT '[]'");
-  ensureColumn(db, 'networks', 'historicalSelfNicks', "TEXT NOT NULL DEFAULT '[]'");
-  ensureColumn(db, 'networks', 'realName', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'networks', 'favorite', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'networks', 'templateId', 'TEXT');
-  ensureColumn(db, 'networks', 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
-  const addedAuthMethod = ensureColumn(db, 'networks', 'authMethod', "TEXT NOT NULL DEFAULT 'none'");
-  ensureColumn(db, 'networks', 'authTarget', "TEXT NOT NULL DEFAULT 'NickServ'");
-  ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
-  ensureAssistantTables(db, ensureColumn);
-  ensureMessagesSearchIndex(db, false, tableExists);
-  ensureColumn(db, 'messages', 'speakerRole', "TEXT NOT NULL DEFAULT 'unknown'");
-  ensureColumn(db, 'messages', 'speakerNick', 'TEXT');
-  ensureColumn(db, 'messages', 'attributionSource', "TEXT NOT NULL DEFAULT 'unknown'");
-  ensureColumn(db, 'messages', 'attributionConfidence', "TEXT NOT NULL DEFAULT 'low'");
-  ensureColumn(db, 'messages', 'importBatchId', 'TEXT');
-  ensureColumn(db, 'buffers', 'selfNickAliases', "TEXT NOT NULL DEFAULT '[]'");
-  ensureColumn(db, 'buffers', 'priorityUnread', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'buffers', 'lastReadTs', 'INTEGER');
-  ensureColumn(db, 'buffers', 'lastReadMessageId', 'TEXT');
-  ensureHistoryImportBatchesTable(db);
-  if (addedAuthMethod) {
-    db.exec("UPDATE networks SET authMethod = 'server-pass' WHERE password IS NOT NULL AND authMethod = 'none'");
-  }
-  db.exec("UPDATE networks SET authTarget = 'NickServ' WHERE authTarget IS NULL OR authTarget = ''");
-};
-
-const migrateLegacyBufferSchema = (db: DatabaseSync) => {
-  if (tableHasColumn(db, 'channels', 'networkId') && tableHasColumn(db, 'channels', 'name')) {
-    db.exec(`
-      INSERT OR IGNORE INTO buffers (id, networkId, kind, target, unread, createdAt, updatedAt)
-      SELECT id, networkId, 'channel', name, unread, createdAt, updatedAt
-      FROM channels
-    `);
-    db.exec(`
-      INSERT OR IGNORE INTO channel_details (id, topic, users, createdAt, updatedAt)
-      SELECT id, topic, users, createdAt, updatedAt
-      FROM channels
-    `);
-    db.exec('DROP TABLE channels');
-  }
-
-  if (tableHasColumn(db, 'queries', 'networkId') && tableHasColumn(db, 'queries', 'target')) {
-    db.exec(`
-      INSERT OR IGNORE INTO buffers (id, networkId, kind, target, unread, createdAt, updatedAt)
-      SELECT id, networkId, 'query', target, 0, createdAt, updatedAt
-      FROM queries
-    `);
-    db.exec('DROP TABLE queries');
-  }
 };
 
 const getUserVersion = (db: DatabaseSync) =>

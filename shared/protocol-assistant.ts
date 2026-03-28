@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import {
   messageKindSchema,
-  type MessageKind,
   speakerAttributionConfidenceSchema,
   speakerRoleSchema,
 } from './protocol-chat.js';
@@ -252,11 +251,7 @@ export type AssistantAskEvidenceLine = z.infer<typeof assistantAskEvidenceLineSc
 
 export const assistantAskEvidenceGroupSchema = z.object({
   heading: z.string(),
-  lines: z.array(z.union([assistantAskEvidenceLineSchema, z.string()]))
-    .transform((lines) => lines.map((line, index) => typeof line === 'string'
-      ? parseLegacyEvidenceLine(line, index)
-      : line))
-    .default([]),
+  lines: z.array(assistantAskEvidenceLineSchema).default([]),
 });
 export type AssistantAskEvidenceGroup = z.infer<typeof assistantAskEvidenceGroupSchema>;
 
@@ -332,50 +327,3 @@ export const assistantSnapshotSchema = z.object({
   threads: z.array(assistantThreadSummarySchema),
 });
 export type AssistantSnapshot = z.infer<typeof assistantSnapshotSchema>;
-
-const parseLegacyEvidenceLine = (line: string, index: number): AssistantAskEvidenceLine => {
-  const trimmed = line.trim();
-  const actionMatch = /^\*\s+([^ ]+)\s+([\s\S]+)$/.exec(trimmed);
-  if (actionMatch) {
-    const speaker = actionMatch[1]!;
-    return {
-      messageId: `legacy-${index}-${speaker}-${actionMatch[2]!.slice(0, 24)}`,
-      speakerRole: speaker.toLowerCase() === 'you' ? 'self' : 'unknown',
-      speakerNick: speaker,
-      attributionConfidence: speaker.toLowerCase() === 'you' ? 'low' : 'low',
-      body: actionMatch[2]!,
-      kind: 'action',
-    };
-  }
-  const speechMatch = /^([^:]+):\s*([\s\S]+)$/.exec(trimmed);
-  if (speechMatch) {
-    const speaker = speechMatch[1]!.trim();
-    return {
-      messageId: `legacy-${index}-${speaker}-${speechMatch[2]!.slice(0, 24)}`,
-      speakerRole: speaker.toLowerCase() === 'you' ? 'self' : 'unknown',
-      speakerNick: speaker,
-      attributionConfidence: 'low',
-      body: speechMatch[2]!,
-      kind: 'line',
-    };
-  }
-  const kindMatch = /^\[([a-z]+)\]\s+([\s\S]+)$/.exec(trimmed);
-  if (kindMatch && messageKindSchema.safeParse(kindMatch[1]).success) {
-    return {
-      messageId: `legacy-${index}-${kindMatch[1]}-${kindMatch[2]!.slice(0, 24)}`,
-      speakerRole: 'unknown',
-      speakerNick: null,
-      attributionConfidence: 'low',
-      body: kindMatch[2]!,
-      kind: kindMatch[1] as MessageKind,
-    };
-  }
-  return {
-    messageId: `legacy-${index}-${trimmed.slice(0, 24)}`,
-    speakerRole: 'unknown',
-    speakerNick: null,
-    attributionConfidence: 'low',
-    body: trimmed,
-    kind: 'line',
-  };
-};

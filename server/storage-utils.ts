@@ -1,5 +1,4 @@
 import { pbkdf2Sync } from 'node:crypto';
-import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { BufferState, ChannelState, ChannelUserState, FriendState } from '../shared/protocol.js';
@@ -176,33 +175,11 @@ export const toMessage = (row: MessageRow): MessageInput => ({
   attributionSource: normalizeAttributionSource(row.attributionSource),
   attributionConfidence: normalizeAttributionConfidence(row.attributionConfidence),
   importBatchId: row.importBatchId,
-  body: normalizeMessageBody(row),
-  kind: normalizeMessageKind(row),
+  body: row.body,
+  kind: row.kind as MessageInput['kind'],
   self: Boolean(row.self),
   ts: row.ts,
 });
-
-const normalizeMessageKind = (row: MessageRow): MessageInput['kind'] =>
-  isLegacyActionRow(row) ? 'action' : row.kind as MessageInput['kind'];
-
-const normalizeMessageBody = (row: MessageRow) => {
-  const match = getLegacyActionMatch(row);
-  return match ? match[2] : row.body;
-};
-
-const isLegacyActionRow = (row: MessageRow) =>
-  row.kind === 'line' && getLegacyActionMatch(row) !== null;
-
-const getLegacyActionMatch = (row: MessageRow) => {
-  if (row.kind !== 'line' || !row.nick) {
-    return null;
-  }
-  const match = /^\*\s+(\S+)\s+([\s\S]+)$/.exec(row.body);
-  if (!match) {
-    return null;
-  }
-  return isSameIrcIdentifier(match[1], row.nick) ? match : null;
-};
 
 const normalizeSpeakerRole = (value: string | null, self: number): SpeakerRole =>
   value === 'self' || value === 'peer' || value === 'other' || value === 'unknown'
@@ -216,7 +193,6 @@ const normalizeAttributionSource = (value: string | null): SpeakerAttributionSou
     || value === 'query-target'
     || value === 'query-alias'
     || value === 'import-alias'
-    || value === 'legacy-backfill'
     || value === 'unknown'
     ? value
     : 'unknown';

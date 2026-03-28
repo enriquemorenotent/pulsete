@@ -89,7 +89,7 @@ export const resolveImportedChannelAttribution = (
   };
 };
 
-export const resolveLegacyBackfillAttribution = (
+export const resolveQueryRepairAttribution = (
   input: Omit<QuerySpeakerAttributionInput, 'selfSource'>,
 ): SpeakerAttribution => {
   const attribution = resolveQuerySpeakerAttribution({ ...input, selfSource: 'query-alias' });

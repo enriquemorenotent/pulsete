@@ -29,10 +29,8 @@ import {
   type PendingExecution,
   type QueuedExecution,
   type RawThreadItem,
-  type RawThreadReadResponse,
   type RawThreadStartResponse,
   type RawTurn,
-  isLocalAssistantThreadId,
   staleTurnFailureMessage,
   toTurnError,
   toTurnStatus,
@@ -77,19 +75,13 @@ export class AssistantServiceRuntime {
 
   async readThread(summary: AssistantThreadSummary): Promise<AssistantThread> {
     const localTurns = this.params.assistant.getThreadTurns(summary.id) ?? [];
-    if (localTurns.length > 0 || isLocalAssistantThreadId(summary.id)) {
-      const normalizedTurns = normalizeStoredAssistantTurns(summary.task, localTurns);
-      if (normalizedTurns.changed) {
-        this.params.assistant.saveThreadTurns(summary.id, normalizedTurns.turns);
-      }
-      return {
-        ...summary,
-        turns: normalizedTurns.turns,
-      };
+    const normalizedTurns = normalizeStoredAssistantTurns(summary.task, localTurns);
+    if (normalizedTurns.changed) {
+      this.params.assistant.saveThreadTurns(summary.id, normalizedTurns.turns);
     }
     return {
       ...summary,
-      turns: await this.importLegacyThreadTurns(summary),
+      turns: normalizedTurns.turns,
     };
   }
 
@@ -432,22 +424,6 @@ export class AssistantServiceRuntime {
       turnId: localTurnId,
       item,
     });
-  }
-
-  private async importLegacyThreadTurns(summary: AssistantThreadSummary) {
-    try {
-      const response = await this.params.callAppServer<RawThreadReadResponse>('thread/read', {
-        threadId: summary.id,
-        includeTurns: true,
-      });
-      const turns = Array.isArray(response.thread?.turns)
-        ? response.thread.turns.map((turn) => mapTurn(summary.task, turn))
-        : [];
-      this.params.assistant.saveThreadTurns(summary.id, turns);
-      return turns;
-    } catch {
-      return [];
-    }
   }
 
   private resolveExecutionThreadOwner(executionThreadId: string) {

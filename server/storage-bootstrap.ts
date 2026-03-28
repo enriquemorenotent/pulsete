@@ -5,7 +5,6 @@ import { ensureAllNetworkBuffers, ensureNetworkBuffers } from './storage-network
 import {
   ensureDefaultNetworks,
   hasEncryptedNetworkPasswords,
-  migrateLegacyNetworkPasswords,
   upsertNetwork,
 } from './storage-networks.js';
 import type { NetworkInput } from './storage-types.js';
@@ -18,7 +17,6 @@ export type StorageBootstrapResources = {
 export const openStorageResources = (filePath?: string): StorageBootstrapResources => {
   const db = createDatabase(filePath);
   const secretBox = createSecretBox(filePath, { createIfMissing: !hasEncryptedNetworkPasswords(db) });
-  migrateLegacyNetworkPasswords(db, secretBox);
   return { db, secretBox };
 };
 
