@@ -18,10 +18,12 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 			}),
 	);
 	const activeFriends = sortedFriends.filter(
-		(friend) => resolvePresence(props.friendPresence[friend.id]) !== 'offline',
+		(friend) =>
+			resolvePresence(props.friendPresence[friend.id]) !== 'offline',
 	);
 	const offlineFriends = sortedFriends.filter(
-		(friend) => resolvePresence(props.friendPresence[friend.id]) === 'offline',
+		(friend) =>
+			resolvePresence(props.friendPresence[friend.id]) === 'offline',
 	);
 
 	return (
@@ -56,12 +58,6 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 									}
 								/>
 							))}
-							{activeFriends.length > 0 &&
-							offlineFriends.length > 0 ? (
-								<div className="py-1" aria-hidden>
-									<div className="border-t border-white/6" />
-								</div>
-							) : null}
 							{offlineFriends.map((friend) => (
 								<FriendRow
 									key={friend.id}
@@ -127,8 +123,9 @@ function FriendRow(props: {
 	);
 }
 
-const resolvePresence = (presence: PresenceStatus | undefined): PresenceStatus =>
-	presence ?? 'offline';
+const resolvePresence = (
+	presence: PresenceStatus | undefined,
+): PresenceStatus => presence ?? 'offline';
 
 const presenceWeight = (presence: PresenceStatus | undefined) => {
 	if (presence === 'online') {
@@ -147,5 +144,5 @@ const friendPresenceTone = (presence: PresenceStatus) => {
 	if (presence === 'away') {
 		return 'bg-yellow-400';
 	}
-	return 'bg-red-400';
+	return 'bg-neutral-700';
 };
