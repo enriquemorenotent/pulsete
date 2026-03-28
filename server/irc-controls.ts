@@ -58,7 +58,7 @@ import {
   handleFriendPresence,
   refreshFriendPresence,
   setFriendNicks,
-  updateOnlineFriendKeys,
+  updateFriendPresenceStatuses,
 } from './irc-friend-presence.js';
 import { createChannelReplyContext, createMessageReplyContext, createNickReplyContext } from './irc-reply-context.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
@@ -71,8 +71,14 @@ import {
   queueReplyContext,
 } from './irc-reply-state.js';
 import type { IrcConnectionState } from './irc-types.js';
-import type { ChannelSessionPhase, ChannelSessionState, IrcChannelListMode, IrcSocket } from './irc-state-types.js';
+import type {
+  ChannelSessionPhase,
+  ChannelSessionState,
+  IrcChannelListMode,
+  IrcSocket,
+} from './irc-state-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
+import type { PresenceStatus } from '../shared/protocol.js';
 
 export const createIrcControllers = (connection: IrcConnectionState) => ({
   lifecycleControl: {
@@ -155,10 +161,16 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
   friendsControl: {
     setFriendNicks: (nicks: string[]) => setFriendNicks(connection, nicks),
     refreshFriendPresence: () => refreshFriendPresence(connection),
-    handleFriendPresence: (pollId: number, onlineNicks: string[]) => handleFriendPresence(connection, pollId, onlineNicks),
+    handleFriendPresence: (
+      pollId: number,
+      nick: string,
+      presence: PresenceStatus | null,
+      done: boolean
+    ) => handleFriendPresence(connection, pollId, nick, presence, done),
     disableFriendPresence: () => disableFriendPresence(connection),
     clearFriendPresenceTimer: () => clearFriendPresenceTimer(connection),
-    updateOnlineFriendKeys: (onlineNicks: string[]) => updateOnlineFriendKeys(connection, onlineNicks),
+    updateFriendPresenceStatuses: (presenceByKey: Map<string, PresenceStatus>) =>
+      updateFriendPresenceStatuses(connection, presenceByKey),
   },
   channelLists: {
     requestChannelList: (requestId: string) => requestChannelList(connection, requestId),

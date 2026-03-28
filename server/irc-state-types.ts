@@ -1,6 +1,10 @@
 import type net from 'node:net';
 import type tls from 'node:tls';
-import type { ChannelListEntry, ChannelUserState } from '../shared/protocol.js';
+import type {
+  ChannelListEntry,
+  ChannelUserState,
+  PresenceStatus,
+} from '../shared/protocol.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
 
 export type ChannelSessionPhase = 'joining' | 'joined' | 'leaving';
@@ -54,13 +58,16 @@ export type IrcChannelTrackingState = {
 
 export type FriendPresencePollState = {
   id: number;
-  remainingResponses: number;
-  onlineNicks: string[];
+  remainingReplies: number;
+  presenceByKey: Map<string, PresenceStatus>;
+  requestedNickKeys: Set<string>;
 };
 
 export type IrcFriendPresenceState = {
   nicks: string[];
-  onlineKeys: Set<string>;
+  presenceByKey: Map<string, PresenceStatus>;
+  resolvedNicks: Set<string>;
+  snapshotByKey: Map<string, PresenceStatus>;
   timer: ReturnType<typeof setInterval> | null;
   pendingPoll: FriendPresencePollState | null;
   nextPollId: number;

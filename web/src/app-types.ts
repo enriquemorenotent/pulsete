@@ -12,6 +12,7 @@ import type {
   FriendState,
   NetworkProfile,
   PendingChannelState,
+  PresenceStatus,
 } from '../../shared/protocol.js';
 import type { ConversationMessages } from './conversation-message-state.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
@@ -53,8 +54,8 @@ export type AppDomainState = {
   gatewayStatus: GatewayStatus;
   networks: NetworkProfile[];
   friends: FriendState[];
-  friendPresence: Record<string, boolean>;
-  queryPresence: Record<string, boolean>;
+  friendPresence: Record<string, PresenceStatus>;
+  queryPresence: Record<string, PresenceStatus>;
   buffers: BufferState[];
   channels: ChannelState[];
   pendingChannels: PendingChannelState[];
@@ -89,8 +90,8 @@ export type Action =
   | { type: 'upsert-network'; network: NetworkProfile }
   | { type: 'upsert-friend'; friend: FriendState }
   | { type: 'remove-friend'; friendId: string }
-  | { type: 'friend-presence'; friendId: string; online: boolean }
-  | { type: 'query-presence'; bufferId: string; online: boolean }
+  | { type: 'friend-presence'; friendId: string; presence: PresenceStatus }
+  | { type: 'query-presence'; bufferId: string; presence: PresenceStatus }
   | { type: 'upsert-buffer'; buffer: BufferState }
   | { type: 'remove-buffer'; bufferId: string; networkId: string }
   | { type: 'select'; selection: SelectedBuffer | null }

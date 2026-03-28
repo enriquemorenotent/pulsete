@@ -72,9 +72,13 @@ export const createIsonReplyContext = (sourceTarget: string): PendingReplyContex
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
-export const createFriendPresenceReplyContext = (pollId: number): PendingReplyContext => ({
+export const createFriendPresenceReplyContext = (
+  pollId: number,
+  nick: string,
+): PendingReplyContext => ({
   kind: 'friend-presence',
   pollId,
+  nick,
   expiresAt: Date.now() + replyContextTtlMs,
 });
 

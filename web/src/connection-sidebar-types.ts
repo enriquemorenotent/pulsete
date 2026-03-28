@@ -2,14 +2,15 @@ import type {
   BufferState,
   FriendState,
   NetworkProfile,
+  PresenceStatus,
 } from '../../shared/protocol.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 
 export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
   friends: FriendState[];
-  friendPresence: Record<string, boolean>;
-  queryPresence?: Record<string, boolean>;
+  friendPresence: Record<string, PresenceStatus>;
+  queryPresence?: Record<string, PresenceStatus>;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onSelectFriend: (friend: FriendState) => Promise<void>;

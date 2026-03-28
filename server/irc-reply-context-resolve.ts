@@ -24,6 +24,7 @@ const channelListReplyNumerics = new Set(['321', '322', '323', '263', '421', '46
 const rawModeTargetedReplyNumerics = new Set(['401', '402']);
 const rawModeUntargetedReplyNumerics = new Set(['221', '501', '502']);
 const rawModeReplyNumerics = new Set([...rawModeTargetedReplyNumerics, ...rawModeUntargetedReplyNumerics]);
+const friendPresenceReplyNumerics = new Set(['315', '352']);
 
 export const resolveReplyContext = (
   context: PendingReplyContext,
@@ -74,8 +75,21 @@ export const resolveReplyContext = (
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
-  if (context.kind === 'ison' || context.kind === 'friend-presence') {
+  if (context.kind === 'ison') {
     return isIsonReply(command, params)
+      ? { matched: true, done: true }
+      : { matched: false, done: false };
+  }
+  if (context.kind === 'friend-presence') {
+    if (!friendPresenceReplyNumerics.has(command)) {
+      return { matched: false, done: false };
+    }
+    if (command === '352') {
+      return isSameIrcIdentifier(params[5] ?? '', context.nick)
+        ? { matched: true, done: false }
+        : { matched: false, done: false };
+    }
+    return isSameIrcIdentifier(params[1] ?? '', context.nick)
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
@@ -116,6 +130,7 @@ const fifoReplyNumerics = new Set([
   ...topicSetReplyNumerics,
   ...topicQueryReplyNumerics,
   ...channelListReplyNumerics,
+  ...friendPresenceReplyNumerics,
   ...namesReplyNumerics,
   ...rawModeReplyNumerics,
 ]);

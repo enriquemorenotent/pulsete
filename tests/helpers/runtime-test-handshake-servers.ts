@@ -95,7 +95,10 @@ export const createRegisteredServer = async (received: string[]) => {
   };
 };
 
-export const createIsonServer = async (received: string[], onlineNicks: string[]) => {
+export const createPresenceServer = async (
+  received: string[],
+  nickPresence: Record<string, 'online' | 'away'>,
+) => {
   const sockets = new Set<net.Socket>();
   const server = net.createServer((socket) => {
     sockets.add(socket);
@@ -122,10 +125,18 @@ export const createIsonServer = async (received: string[], onlineNicks: string[]
           socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
           sawUser = false;
         }
-        if (line.startsWith('ISON ') && nick) {
-          const tracked = line.slice('ISON '.length).trim().split(/\s+/).filter(Boolean);
-          const visible = tracked.filter((candidate) => onlineNicks.includes(candidate));
-          socket.write(`:irc.example 303 ${nick} :${visible.join(' ')}\r\n`);
+        if (line.startsWith('WHO ') && nick) {
+          const trackedNick = line.slice('WHO '.length).trim();
+          const presence = nickPresence[trackedNick];
+          if (presence) {
+            const flags = presence === 'away' ? 'G' : 'H';
+            socket.write(
+              `:irc.example 352 ${nick} * user host server ${trackedNick} ${flags} :0 ${trackedNick}\r\n`,
+            );
+          }
+          socket.write(
+            `:irc.example 315 ${nick} ${trackedNick} :End of WHO list\r\n`,
+          );
         }
         index = buffer.indexOf('\n');
       }

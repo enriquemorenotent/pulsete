@@ -5,7 +5,7 @@ import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
 import { waitFor } from './helpers/async-test-helpers.js';
 
-test('irc connection ignores stale ISON replies after friend tracking is cleared', () => {
+test('irc connection ignores stale WHO replies after friend tracking is cleared', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
   const connection = new IrcConnection(
@@ -41,13 +41,16 @@ test('irc connection ignores stale ISON replies after friend tracking is cleared
 
   connection.setFriendNicks(['Alice']);
   connection.setFriendNicks([]);
-  connection.consume(':irc.example 303 tester :Alice\r\n');
+  connection.consume(
+    ':irc.example 352 tester * user host server Alice H :0 Alice\r\n',
+  );
+  connection.consume(':irc.example 315 tester Alice :End of WHO list\r\n');
 
-  assert.deepEqual(writes, ['ISON Alice\r\n']);
+  assert.deepEqual(writes, ['WHO Alice\r\n']);
   assert.equal(events.some((event) => event.type === 'friend-presence'), false);
 });
 
-test('irc connection skips oversized friend nicks when polling ISON', () => {
+test('irc connection skips oversized friend nicks when polling WHO', () => {
   const writes: string[] = [];
   const connection = new IrcConnection(
     {
@@ -78,7 +81,7 @@ test('irc connection skips oversized friend nicks when polling ISON', () => {
 
   connection.setFriendNicks(['Alice', 'x'.repeat(600)]);
 
-  assert.ok(writes.includes('ISON Alice\r\n'));
+  assert.ok(writes.includes('WHO Alice\r\n'));
   assert.equal(writes.some((line) => line.includes('x'.repeat(600))), false);
 });
 

@@ -35,16 +35,28 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   const isonReplyContext = command === '303' || isIsonUnsupported
     ? connection.consumeReplyContext(command, params, nick)
     : null;
-  if (command === '303' && isonReplyContext?.kind === 'friend-presence') {
-    connection.handleFriendPresence(
-      isonReplyContext.pollId,
-      (params[1] ?? '').split(/\s+/).map((value) => value.trim()).filter(Boolean)
-    );
-    return;
-  }
-  if (isIsonUnsupported) {
-    connection.disableFriendPresence();
-    if (isonReplyContext?.kind === 'friend-presence') {
+  const friendPresenceReplyContext = command === '352' || command === '315'
+    ? connection.consumeReplyContext(command, params, nick)
+    : null;
+  if (friendPresenceReplyContext?.kind === 'friend-presence') {
+    if (command === '352') {
+      const presenceNick = params[5] ?? '';
+      const flags = params[6] ?? '';
+      if (presenceNick && flags) {
+        connection.handleFriendPresence(
+          friendPresenceReplyContext.pollId,
+          presenceNick,
+          flags.includes('G') ? 'away' : 'online',
+          false,
+        );
+      }
+    } else {
+      connection.handleFriendPresence(
+        friendPresenceReplyContext.pollId,
+        friendPresenceReplyContext.nick,
+        null,
+        true,
+      );
       return;
     }
   }

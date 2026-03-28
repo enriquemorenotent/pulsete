@@ -1,4 +1,4 @@
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState, PresenceStatus } from '../shared/protocol.js';
 import { createIdleSaslState, resolveDeferredNickservAutoJoinTarget } from './irc-auth.js';
 import { ReplyTracker } from './irc-reply-tracker.js';
 import type {
@@ -48,7 +48,9 @@ export const createIrcConnectionState = (
   };
   const friendPresence: IrcFriendPresenceState = {
     nicks: [],
-    onlineKeys: new Set<string>(),
+    presenceByKey: new Map<string, PresenceStatus>(),
+    resolvedNicks: new Set<string>(),
+    snapshotByKey: new Map<string, PresenceStatus>(),
     timer: null,
     pendingPoll: null,
     nextPollId: 0,

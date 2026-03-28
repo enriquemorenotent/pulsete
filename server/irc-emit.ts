@@ -1,6 +1,6 @@
 import type { IrcEventContext, IrcStateContext } from './irc-contexts.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState, PresenceStatus } from '../shared/protocol.js';
 import type { MessageInput } from './storage-types.js';
 
 export const emitEvent = (connection: IrcEventContext, event: RuntimeEvent) => {
@@ -93,11 +93,14 @@ export const emitChannelListFailed = (connection: IrcEventContext, requestId: st
   });
 };
 
-export const emitFriendPresence = (connection: IrcEventContext, onlineNicks: string[]) => {
+export const emitFriendPresence = (
+  connection: IrcEventContext,
+  presences: Record<string, PresenceStatus>,
+) => {
   emitEvent(connection, {
     type: 'friend-presence',
     networkId: connection.profile.id,
-    onlineNicks,
+    presences,
   });
 };
 

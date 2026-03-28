@@ -1,4 +1,8 @@
-import type { ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
+import type {
+  ChannelUserState,
+  NetworkRuntimeState,
+  PresenceStatus,
+} from '../shared/protocol.js';
 import type {
   ChannelSessionPhase,
   ChannelSessionState,
@@ -44,7 +48,11 @@ export type RuntimeEvent =
   | { type: 'channel-list-completed'; networkId: string; requestId: string }
   | { type: 'channel-list-failed'; networkId: string; requestId: string; message: string }
   | { type: 'message'; message: MessageInput; currentNick?: string; altNicks?: string[] }
-  | { type: 'friend-presence'; networkId: string; onlineNicks: string[] }
+  | {
+      type: 'friend-presence';
+      networkId: string;
+      presences: Record<string, PresenceStatus>;
+    }
   | { type: 'channel'; networkId: string; channel: string; topic?: string; users?: ChannelUserState[] };
 
 export type Handlers = {
@@ -89,10 +97,15 @@ export type IrcConnectionMethods = {
   applyNickFallback(fallbackNick: string, options: { replyTarget?: string; updatePending: boolean }): void;
   setFriendNicks(nicks: string[]): void;
   refreshFriendPresence(): void;
-  handleFriendPresence(pollId: number, onlineNicks: string[]): void;
+  handleFriendPresence(
+    pollId: number,
+    nick: string,
+    presence: PresenceStatus | null,
+    done: boolean
+  ): void;
   disableFriendPresence(): void;
   clearFriendPresenceTimer(): void;
-  updateOnlineFriendKeys(onlineNicks: string[]): void;
+  updateFriendPresenceStatuses(presenceByKey: Map<string, PresenceStatus>): void;
   requestChannelList(requestId: string): boolean;
   recordChannelListEntry(requestId: string, entry: ChannelListEntry): void;
   finishChannelListRequest(requestId: string): void;

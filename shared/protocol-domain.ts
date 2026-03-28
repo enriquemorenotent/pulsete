@@ -69,6 +69,9 @@ export const friendSchema = z.object({
 });
 export type FriendState = z.infer<typeof friendSchema>;
 
+export const presenceStatusSchema = z.enum(['online', 'away', 'offline']);
+export type PresenceStatus = z.infer<typeof presenceStatusSchema>;
+
 export const channelUserModeSchema = z.enum(['owner', 'admin', 'op', 'halfop', 'voice', 'normal']);
 export type ChannelUserMode = z.infer<typeof channelUserModeSchema>;
 
@@ -455,8 +458,8 @@ export type AssistantSnapshot = z.infer<typeof assistantSnapshotSchema>;
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
-  friendPresence: z.record(z.boolean()),
-  queryPresence: z.record(z.boolean()).default({}),
+  friendPresence: z.record(presenceStatusSchema),
+  queryPresence: z.record(presenceStatusSchema).default({}),
   buffers: z.array(bufferSchema),
   channels: z.array(channelSchema),
   pendingChannels: z.array(pendingChannelSchema).default([]),

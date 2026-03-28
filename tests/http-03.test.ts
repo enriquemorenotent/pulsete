@@ -35,9 +35,12 @@ test('friend routes persist entries and broadcast updates without auth', async (
       friend: { id: string; nick: string };
     };
     assert.equal(addMessage.friend.nick, 'Alice');
-    const presenceMessage = await presenceMessagePromise as { friendId: string; online: boolean };
+    const presenceMessage = await presenceMessagePromise as {
+      friendId: string;
+      presence: string;
+    };
     assert.equal(presenceMessage.friendId, addMessage.friend.id);
-    assert.equal(presenceMessage.online, false);
+    assert.equal(presenceMessage.presence, 'offline');
 
     const duplicateResponse = await requestJson(port, 'POST', '/api/friends', { nick: 'alice' });
     assert.equal(duplicateResponse.status, 200);

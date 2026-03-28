@@ -1,27 +1,35 @@
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
-import type { BufferState, FriendState, ServerMessage } from '../shared/protocol.js';
+import type {
+  BufferState,
+  FriendState,
+  PresenceStatus,
+  ServerMessage,
+} from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
 
 export class RuntimeFriendPresenceProjector {
-  private readonly friendPresenceByNetwork = new Map<string, Set<string>>();
-  private readonly friendPresenceCache = new Map<string, boolean>();
-  private readonly queryPresenceCache = new Map<string, boolean>();
+  private readonly friendPresenceByNetwork = new Map<string, Map<string, PresenceStatus>>();
+  private readonly friendPresenceCache = new Map<string, PresenceStatus>();
+  private readonly queryPresenceCache = new Map<string, PresenceStatus>();
+  private readonly disconnectedQueryNetworks = new Set<string>();
 
   clearAll() {
     this.friendPresenceByNetwork.clear();
     this.friendPresenceCache.clear();
     this.queryPresenceCache.clear();
+    this.disconnectedQueryNetworks.clear();
   }
 
   clearNetwork(networkId: string, friends: FriendState[], buffers: BufferState[]) {
-    return this.friendPresenceByNetwork.delete(networkId)
-      ? this.collectDiffs(friends, buffers)
-      : [];
+    this.friendPresenceByNetwork.delete(networkId);
+    this.disconnectedQueryNetworks.add(networkId);
+    return this.collectDiffs(friends, buffers);
   }
 
   removeNetworks(networkIds: readonly string[], friends: FriendState[], buffers: BufferState[]) {
     for (const networkId of networkIds) {
       this.friendPresenceByNetwork.delete(networkId);
+      this.disconnectedQueryNetworks.delete(networkId);
     }
     return this.collectDiffs(friends, buffers);
   }
@@ -35,28 +43,34 @@ export class RuntimeFriendPresenceProjector {
     friends: FriendState[],
     buffers: BufferState[],
   ) {
+    this.disconnectedQueryNetworks.delete(event.networkId);
     this.friendPresenceByNetwork.set(
       event.networkId,
-      new Set(event.onlineNicks.map(normalizeIrcIdentifier))
+      new Map(
+        Object.entries(event.presences).map(([nick, presence]) => [
+          normalizeIrcIdentifier(nick),
+          presence,
+        ]),
+      ),
     );
     return this.collectDiffs(friends, buffers);
   }
 
-  snapshot(friends: FriendState[]) {
+  snapshot(friends: FriendState[]): Record<string, PresenceStatus> {
     return Object.fromEntries(
-      friends.map((friend) => [friend.id, this.isNickOnlineAnywhere(friend.nick)])
-    );
+      friends.map((friend) => [friend.id, this.resolveNickPresenceAnywhere(friend.nick)])
+    ) as Record<string, PresenceStatus>;
   }
 
-  snapshotQueries(buffers: BufferState[]) {
+  snapshotQueries(buffers: BufferState[]): Record<string, PresenceStatus> {
     return Object.fromEntries(
       buffers
         .filter((buffer) => buffer.kind === 'query')
-        .map((buffer) => [
-          buffer.id,
-          this.isNickOnlineOnNetwork(buffer.networkId, buffer.target),
-        ])
-    );
+        .flatMap((buffer) => {
+          const presence = this.resolveQueryPresenceOnNetwork(buffer.networkId, buffer.target);
+          return presence ? [[buffer.id, presence]] : [];
+        })
+    ) as Record<string, PresenceStatus>;
   }
 
   collectDiffs(friends: FriendState[], buffers: BufferState[]) {
@@ -64,12 +78,16 @@ export class RuntimeFriendPresenceProjector {
     const nextQueryPresence = this.snapshotQueries(buffers);
     const messages: ServerMessage[] = [];
     for (const friend of friends) {
-      const online = nextPresence[friend.id] ?? false;
-      if (this.friendPresenceCache.get(friend.id) === online) {
+      const presence = nextPresence[friend.id] ?? 'offline';
+      if (this.friendPresenceCache.get(friend.id) === presence) {
         continue;
       }
-      this.friendPresenceCache.set(friend.id, online);
-      messages.push({ type: 'friend.presence', friendId: friend.id, online });
+      this.friendPresenceCache.set(friend.id, presence);
+      messages.push({
+        type: 'friend.presence',
+        friendId: friend.id,
+        presence,
+      });
     }
     for (const friendId of Array.from(this.friendPresenceCache.keys())) {
       if (friendId in nextPresence) {
@@ -77,12 +95,12 @@ export class RuntimeFriendPresenceProjector {
       }
       this.friendPresenceCache.delete(friendId);
     }
-    for (const [bufferId, online] of Object.entries(nextQueryPresence)) {
-      if (this.queryPresenceCache.get(bufferId) === online) {
+    for (const [bufferId, presence] of Object.entries(nextQueryPresence)) {
+      if (this.queryPresenceCache.get(bufferId) === presence) {
         continue;
       }
-      this.queryPresenceCache.set(bufferId, online);
-      messages.push({ type: 'query.presence', bufferId, online });
+      this.queryPresenceCache.set(bufferId, presence);
+      messages.push({ type: 'query.presence', bufferId, presence });
     }
     for (const bufferId of Array.from(this.queryPresenceCache.keys())) {
       if (bufferId in nextQueryPresence) {
@@ -93,17 +111,27 @@ export class RuntimeFriendPresenceProjector {
     return messages;
   }
 
-  private isNickOnlineAnywhere(nick: string) {
+  private resolveNickPresenceAnywhere(nick: string) {
     const normalized = normalizeIrcIdentifier(nick);
-    for (const onlineNicks of this.friendPresenceByNetwork.values()) {
-      if (onlineNicks.has(normalized)) {
-        return true;
+    let aggregate: PresenceStatus = 'offline';
+    for (const presenceByNick of this.friendPresenceByNetwork.values()) {
+      const presence = presenceByNick.get(normalized) ?? 'offline';
+      if (presence === 'online') {
+        return 'online';
+      }
+      if (presence === 'away') {
+        aggregate = 'away';
       }
     }
-    return false;
+    return aggregate;
   }
 
-  private isNickOnlineOnNetwork(networkId: string, nick: string) {
-    return this.friendPresenceByNetwork.get(networkId)?.has(normalizeIrcIdentifier(nick)) ?? false;
+  private resolveQueryPresenceOnNetwork(networkId: string, nick: string) {
+    const networkPresence = this.friendPresenceByNetwork.get(networkId);
+    const normalizedNick = normalizeIrcIdentifier(nick);
+    if (networkPresence?.has(normalizedNick)) {
+      return networkPresence.get(normalizedNick) ?? 'offline';
+    }
+    return this.disconnectedQueryNetworks.has(networkId) ? 'offline' : null;
   }
 }

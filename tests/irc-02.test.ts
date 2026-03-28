@@ -144,7 +144,7 @@ test('irc connection sends direct private messages to nick targets', async () =>
   server.close();
 });
 
-test('irc connection polls ISON and emits friend presence updates', async () => {
+test('irc connection polls WHO and emits friend presence updates', async () => {
   const received: string[] = [];
   const events: Array<{ type: string; [key: string]: unknown }> = [];
 
@@ -175,8 +175,17 @@ test('irc connection polls ISON and emits friend presence updates', async () => 
           sawUser = false;
         }
 
-        if (line === 'ISON Alice Bob') {
-          socket.write(':irc.example 303 tester :Alice\r\n');
+        if (line === 'WHO Alice') {
+          socket.write(
+            ':irc.example 352 tester * user host server Alice H :0 Alice\r\n',
+          );
+          socket.write(':irc.example 315 tester Alice :End of WHO list\r\n');
+        }
+        if (line === 'WHO Bob') {
+          socket.write(
+            ':irc.example 352 tester * user host server Bob G :0 Bob\r\n',
+          );
+          socket.write(':irc.example 315 tester Bob :End of WHO list\r\n');
         }
 
         index = buffer.indexOf('\n');
@@ -223,15 +232,17 @@ test('irc connection polls ISON and emits friend presence updates', async () => 
   connection.setFriendNicks(['Alice', 'Bob']);
   connection.connect();
 
-  await waitFor(() => received.includes('ISON Alice Bob'));
+  await waitFor(() => received.includes('WHO Alice'));
+  await waitFor(() => received.includes('WHO Bob'));
   await waitFor(
     () =>
       events.some(
         (event) =>
           event.type === 'friend-presence'
-          && Array.isArray(event.onlineNicks)
-          && event.onlineNicks.length === 1
-          && event.onlineNicks[0] === 'Alice'
+          && JSON.stringify(event.presences) === JSON.stringify({
+            Alice: 'online',
+            Bob: 'away',
+          })
       )
   );
 

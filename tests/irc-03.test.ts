@@ -54,7 +54,7 @@ test('raw ISON replies stay in the originating buffer and do not affect friend p
   assert.equal(events.some((event) => event.type === 'friend-presence'), false);
 });
 
-test('irc connection splits oversized ISON polls and aggregates replies', async () => {
+test('irc connection polls WHO for tracked nicks and aggregates replies', async () => {
   const received: string[] = [];
   const events: Array<{ type: string; [key: string]: unknown }> = [];
 
@@ -85,9 +85,14 @@ test('irc connection splits oversized ISON polls and aggregates replies', async 
           sawUser = false;
         }
 
-        if (line.startsWith('ISON ')) {
-          const firstNick = line.slice('ISON '.length).trim().split(/\s+/)[0];
-          socket.write(`:irc.example 303 tester :${firstNick}\r\n`);
+        if (line.startsWith('WHO ')) {
+          const trackedNick = line.slice('WHO '.length).trim();
+          socket.write(
+            `:irc.example 352 tester * user host server ${trackedNick} H :0 ${trackedNick}\r\n`,
+          );
+          socket.write(
+            `:irc.example 315 tester ${trackedNick} :End of WHO list\r\n`,
+          );
         }
 
         index = buffer.indexOf('\n');
@@ -135,18 +140,21 @@ test('irc connection splits oversized ISON polls and aggregates replies', async 
   connection.setFriendNicks(trackedFriends);
   connection.connect();
 
-  await waitFor(() => received.filter((line) => line.startsWith('ISON ')).length >= 2);
+  await waitFor(() => received.filter((line) => line.startsWith('WHO ')).length === trackedFriends.length);
   const expectedOnline = received
-    .filter((line) => line.startsWith('ISON '))
-    .map((line) => line.slice('ISON '.length).trim().split(/\s+/)[0]!)
+    .filter((line) => line.startsWith('WHO '))
+    .map((line) => line.slice('WHO '.length).trim())
     .sort();
   await waitFor(
     () =>
       events.some(
         (event) =>
           event.type === 'friend-presence'
-          && Array.isArray(event.onlineNicks)
-          && [...(event.onlineNicks as string[])].sort().join(',') === expectedOnline.join(',')
+          && Object.entries(event.presences as Record<string, string>)
+            .filter(([, presence]) => presence === 'online')
+            .map(([nick]) => nick)
+            .sort()
+            .join(',') === expectedOnline.join(',')
       )
   );
 
@@ -154,7 +162,7 @@ test('irc connection splits oversized ISON polls and aggregates replies', async 
   server.close();
 });
 
-test('irc connection ignores stale ISON replies when polls overlap', () => {
+test('irc connection ignores stale WHO replies when polls overlap', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];
   const connection = new IrcConnection(
@@ -195,11 +203,17 @@ test('irc connection ignores stale ISON replies when polls overlap', () => {
   connection.refreshFriendPresence();
   connection.refreshFriendPresence();
 
-  connection.consume(':irc.example 303 tester :Alice\r\n');
+  connection.consume(
+    ':irc.example 352 tester * user host server Alice H :0 Alice\r\n',
+  );
+  connection.consume(':irc.example 315 tester Alice :End of WHO list\r\n');
   assert.equal(events.some((event) => event.type === 'friend-presence'), false);
 
-  connection.consume(':irc.example 303 tester :Alice\r\n');
+  connection.consume(
+    ':irc.example 352 tester * user host server Alice G :0 Alice\r\n',
+  );
+  connection.consume(':irc.example 315 tester Alice :End of WHO list\r\n');
   const friendPresenceEvents = events.filter((event) => event.type === 'friend-presence');
   assert.equal(friendPresenceEvents.length, 1);
-  assert.deepEqual(friendPresenceEvents[0]?.onlineNicks, ['Alice']);
+  assert.deepEqual(friendPresenceEvents[0]?.presences, { Alice: 'away' });
 });

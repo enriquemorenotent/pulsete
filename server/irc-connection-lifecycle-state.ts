@@ -2,7 +2,10 @@ import { abortActiveChannelList, clearDrainingChannelList } from './irc-channel-
 import { createIdleSaslState } from './irc-auth.js';
 import { clearChannelSessions } from './irc-channel-state.js';
 import type { IrcConnectContext, IrcLifecycleContext } from './irc-contexts.js';
-import { clearFriendPresenceTimer, updateOnlineFriendKeys } from './irc-friend-presence.js';
+import {
+  clearFriendPresenceTimer,
+  updateFriendPresenceStatuses,
+} from './irc-friend-presence.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import {
   resolveNetworkAuthAccount,
@@ -26,8 +29,10 @@ export const resetRuntimeSessionState = (connection: IrcLifecycleContext) => {
   clearDrainingChannelList(connection);
   connection.replyTracker.reset();
   connection.friendPresence.pendingPoll = null;
+  connection.friendPresence.resolvedNicks.clear();
+  connection.friendPresence.snapshotByKey.clear();
   clearFriendPresenceTimer(connection);
-  updateOnlineFriendKeys(connection, []);
+  updateFriendPresenceStatuses(connection, new Map());
 };
 
 export const applyOfflineLifecycleState = (connection: IrcLifecycleContext) => {

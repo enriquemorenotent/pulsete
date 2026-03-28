@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import type { PresenceStatus } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
@@ -10,17 +11,17 @@ type ConnectionSidebarFriendsProps = Pick<
 export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 	const sortedFriends = [...props.friends].sort(
 		(left, right) =>
-			Number(Boolean(props.friendPresence[right.id])) -
-				Number(Boolean(props.friendPresence[left.id])) ||
+			presenceWeight(props.friendPresence[right.id]) -
+				presenceWeight(props.friendPresence[left.id]) ||
 			left.nick.localeCompare(right.nick, undefined, {
 				sensitivity: 'accent',
 			}),
 	);
-	const onlineFriends = sortedFriends.filter(
-		(friend) => props.friendPresence[friend.id],
+	const activeFriends = sortedFriends.filter(
+		(friend) => resolvePresence(props.friendPresence[friend.id]) !== 'offline',
 	);
 	const offlineFriends = sortedFriends.filter(
-		(friend) => !props.friendPresence[friend.id],
+		(friend) => resolvePresence(props.friendPresence[friend.id]) === 'offline',
 	);
 
 	return (
@@ -40,11 +41,13 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 						</div>
 					) : (
 						<div className="space-y-px border-white/6">
-							{onlineFriends.map((friend) => (
+							{activeFriends.map((friend) => (
 								<FriendRow
 									key={friend.id}
 									friend={friend}
-									online
+									presence={resolvePresence(
+										props.friendPresence[friend.id],
+									)}
 									onOpen={() =>
 										void props.onSelectFriend(friend)
 									}
@@ -53,7 +56,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 									}
 								/>
 							))}
-							{onlineFriends.length > 0 &&
+							{activeFriends.length > 0 &&
 							offlineFriends.length > 0 ? (
 								<div className="py-1" aria-hidden>
 									<div className="border-t border-white/6" />
@@ -63,7 +66,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 								<FriendRow
 									key={friend.id}
 									friend={friend}
-									online={false}
+									presence="offline"
 									onOpen={() =>
 										void props.onSelectFriend(friend)
 									}
@@ -82,7 +85,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 
 function FriendRow(props: {
 	friend: ConnectionSidebarProps['friends'][number];
-	online: boolean;
+	presence: PresenceStatus;
 	onOpen: () => void;
 	onRemove: () => void;
 }) {
@@ -92,19 +95,19 @@ function FriendRow(props: {
 				type="button"
 				className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
 				onClick={props.onOpen}
-				aria-label={`Open ${props.friend.nick} (${props.online ? 'online' : 'offline'})`}
+				aria-label={`Open ${props.friend.nick} (${props.presence})`}
 			>
 				<span
 					aria-hidden
 					className={cn(
 						'size-2 shrink-0 rounded-full',
-						props.online ? 'bg-emerald-400' : 'bg-zinc-500/70',
+						friendPresenceTone(props.presence),
 					)}
 				/>
 				<span
 					className={cn(
 						'truncate text-[13px]',
-						props.online
+						props.presence !== 'offline'
 							? 'text-foreground'
 							: 'text-muted-foreground/90',
 					)}
@@ -123,3 +126,26 @@ function FriendRow(props: {
 		</div>
 	);
 }
+
+const resolvePresence = (presence: PresenceStatus | undefined): PresenceStatus =>
+	presence ?? 'offline';
+
+const presenceWeight = (presence: PresenceStatus | undefined) => {
+	if (presence === 'online') {
+		return 2;
+	}
+	if (presence === 'away') {
+		return 1;
+	}
+	return 0;
+};
+
+const friendPresenceTone = (presence: PresenceStatus) => {
+	if (presence === 'online') {
+		return 'bg-emerald-400';
+	}
+	if (presence === 'away') {
+		return 'bg-yellow-400';
+	}
+	return 'bg-red-400';
+};

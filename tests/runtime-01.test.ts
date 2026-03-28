@@ -6,7 +6,11 @@ import test from 'node:test';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
-import { createHandshakeServer,createIsonServer,createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
+import {
+  createHandshakeServer,
+  createPresenceServer,
+  createRegisteredServer,
+} from './helpers/runtime-test-handshake-servers.js';
 
 test('runtime uses updated network settings on reconnect', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
@@ -193,7 +197,7 @@ test('runtime snapshot includes aggregated friend presence from live connections
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
-  const server = await createIsonServer(received, ['Alice']);
+  const server = await createPresenceServer(received, { Alice: 'away' });
   const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
@@ -206,10 +210,10 @@ test('runtime snapshot includes aggregated friend presence from live connections
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => received.some((line) => line === 'ISON Alice'));
-    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === true);
+    await waitFor(() => received.some((line) => line === 'WHO Alice'));
+    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === 'away');
 
-    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], true);
+    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], 'away');
   } finally {
     runtime.sessions.disconnect(network.id);
     server.closeConnections();
@@ -222,7 +226,7 @@ test('runtime snapshot includes presence for open query targets', async () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
-  const server = await createIsonServer(received, ['Alice']);
+  const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
@@ -235,10 +239,10 @@ test('runtime snapshot includes presence for open query targets', async () => {
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => received.some((line) => line === 'ISON Alice'));
-    await waitFor(() => runtime.gateway.snapshot().queryPresence[query.id] === true);
+    await waitFor(() => received.some((line) => line === 'WHO Alice'));
+    await waitFor(() => runtime.gateway.snapshot().queryPresence[query.id] === 'online');
 
-    assert.equal(runtime.gateway.snapshot().queryPresence[query.id], true);
+    assert.equal(runtime.gateway.snapshot().queryPresence[query.id], 'online');
   } finally {
     runtime.sessions.disconnect(network.id);
     server.closeConnections();
@@ -251,7 +255,7 @@ test('opening a query after connect starts tracking that target presence', async
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
-  const server = await createIsonServer(received, ['Alice']);
+  const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
@@ -266,10 +270,48 @@ test('opening a query after connect starts tracking that target presence', async
     await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const result = runtime.conversations.openQuery(network.id, 'Alice');
-    await waitFor(() => received.filter((line) => line === 'ISON Alice').length >= 1);
-    await waitFor(() => runtime.gateway.snapshot().queryPresence[result.buffer.id] === true);
+    await waitFor(() => received.filter((line) => line === 'WHO Alice').length >= 1);
+    await waitFor(() => runtime.gateway.snapshot().queryPresence[result.buffer.id] === 'online');
 
-    assert.equal(runtime.gateway.snapshot().queryPresence[result.buffer.id], true);
+    assert.equal(runtime.gateway.snapshot().queryPresence[result.buffer.id], 'online');
+  } finally {
+    runtime.sessions.disconnect(network.id);
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('opening a query after connect does not emit an immediate offline presence', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const received: string[] = [];
+  const server = await createPresenceServer(received, { Alice: 'online' });
+  const network = storage.networks.upsert(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'Tester Example',
+  }));
+
+  try {
+    runtime.sessions.connect(network.id);
+    await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
+
+    const result = runtime.conversations.openQuery(network.id, 'Alice');
+    assert.equal(
+      result.messages.some((message) =>
+        message.type === 'query.presence'
+        && message.bufferId === result.buffer.id
+        && message.presence === 'offline'),
+      false,
+    );
+    assert.equal(result.buffer.id in runtime.gateway.snapshot().queryPresence, false);
+
+    await waitFor(() => runtime.gateway.snapshot().queryPresence[result.buffer.id] === 'online');
+    assert.equal(runtime.gateway.snapshot().queryPresence[result.buffer.id], 'online');
   } finally {
     runtime.sessions.disconnect(network.id);
     server.closeConnections();
@@ -283,8 +325,10 @@ test('query presence stays scoped to the query network', async () => {
   const runtime = createRuntime(storage.runtimeStore);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
-  const first = await createIsonServer(firstReceived, []);
-  const second = await createIsonServer(secondReceived, ['Alice']);
+  const first = await createPresenceServer(firstReceived, {});
+  const second = await createPresenceServer(secondReceived, {
+    Alice: 'online',
+  });
   const firstNetwork = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: first.port,
@@ -309,10 +353,10 @@ test('query presence stays scoped to the query network', async () => {
     await waitFor(() => runtime.gateway.snapshot().networkStates[secondNetwork.id]?.phase === 'connected');
 
     const result = runtime.conversations.openQuery(firstNetwork.id, 'Alice');
-    await waitFor(() => firstReceived.some((line) => line === 'ISON Alice'));
+    await waitFor(() => firstReceived.some((line) => line === 'WHO Alice'));
     await waitFor(() => result.buffer.id in runtime.gateway.snapshot().queryPresence);
 
-    assert.equal(runtime.gateway.snapshot().queryPresence[result.buffer.id], false);
+    assert.equal(runtime.gateway.snapshot().queryPresence[result.buffer.id], 'offline');
   } finally {
     runtime.sessions.disconnect(firstNetwork.id);
     runtime.sessions.disconnect(secondNetwork.id);
@@ -328,7 +372,7 @@ test('runtime clears cached friend presence when a network disconnects', async (
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
-  const server = await createIsonServer(received, ['Alice']);
+  const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
     port: server.port,
@@ -341,13 +385,13 @@ test('runtime clears cached friend presence when a network disconnects', async (
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => received.some((line) => line === 'ISON Alice'));
-    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === true);
+    await waitFor(() => received.some((line) => line === 'WHO Alice'));
+    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === 'online');
 
     runtime.sessions.disconnect(network.id);
-    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === false);
+    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === 'offline');
 
-    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], false);
+    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], 'offline');
   } finally {
     runtime.sessions.disconnect(network.id);
     server.closeConnections();

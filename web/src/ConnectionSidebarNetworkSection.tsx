@@ -1,4 +1,5 @@
 import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
+import type { PresenceStatus } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './buffer-activity.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
@@ -8,10 +9,12 @@ import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
+type QueryPresenceDisplay = PresenceStatus | 'pending';
+
 type ConnectionSidebarNetworkSectionProps = {
 	connection: SidebarConnectionView;
 	index: number;
-	queryPresence: Record<string, boolean>;
+	queryPresence: Record<string, PresenceStatus>;
 	onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
 	onSelectBuffer: ConnectionSidebarProps['onSelectBuffer'];
 	onSelectPendingChannel: ConnectionSidebarProps['onSelectPendingChannel'];
@@ -143,6 +146,7 @@ export function ConnectionSidebarNetworkSection(
 								selected={selected}
 								icon={MessageSquareMore}
 								presence={resolveQueryPresence(
+									connection.runtime,
 									props.queryPresence,
 									buffer.id,
 								)}
@@ -173,13 +177,14 @@ export function ConnectionSidebarNetworkSection(
 }
 
 const resolveQueryPresence = (
-	queryPresence: Record<string, boolean>,
+	runtime: NetworkRuntimeState | null,
+	queryPresence: Record<string, PresenceStatus>,
 	bufferId: string,
-): 'online' | 'offline' | null => {
+) : QueryPresenceDisplay | null => {
 	if (!(bufferId in queryPresence)) {
-		return null;
+		return runtime?.phase === 'connected' ? 'pending' : null;
 	}
-	return queryPresence[bufferId] ? 'online' : 'offline';
+	return queryPresence[bufferId] ?? null;
 };
 
 const dotTone = (runtime: NetworkRuntimeState | null) => {

@@ -119,23 +119,27 @@ test('friend updates are sorted alphabetically in state', () => {
   assert.deepEqual(nextState.domain.friends.map((friend) => friend.nick), ['Alice', 'zoe']);
 });
 
-test('friend presence updates track online state by friend id', () => {
+test('friend presence updates track status by friend id', () => {
   const friend = makeFriend({ id: 'friend-1', nick: 'Alice' });
   const withFriend = reducer(initialState, { type: 'upsert-friend', friend });
-  const withPresence = reducer(withFriend, { type: 'friend-presence', friendId: friend.id, online: true });
+  const withPresence = reducer(withFriend, {
+    type: 'friend-presence',
+    friendId: friend.id,
+    presence: 'away',
+  });
   const withoutFriend = reducer(withPresence, { type: 'remove-friend', friendId: friend.id });
 
-  assert.equal(withPresence.domain.friendPresence[friend.id], true);
+  assert.equal(withPresence.domain.friendPresence[friend.id], 'away');
   assert.equal(friend.id in withoutFriend.domain.friendPresence, false);
 });
 
-test('query presence updates track online state by buffer id and clear on buffer removal', () => {
+test('query presence updates track status by buffer id and clear on buffer removal', () => {
   const query = makeBuffer({ id: 'query-1', kind: 'query', target: 'Alice' });
   const withBuffer = reducer(initialState, { type: 'upsert-buffer', buffer: query });
   const withPresence = reducer(withBuffer, {
     type: 'query-presence',
     bufferId: query.id,
-    online: true,
+    presence: 'online',
   });
   const withoutBuffer = reducer(withPresence, {
     type: 'remove-buffer',
@@ -143,7 +147,7 @@ test('query presence updates track online state by buffer id and clear on buffer
     networkId: query.networkId,
   });
 
-  assert.equal(withPresence.domain.queryPresence[query.id], true);
+  assert.equal(withPresence.domain.queryPresence[query.id], 'online');
   assert.equal(query.id in withoutBuffer.domain.queryPresence, false);
 });
 

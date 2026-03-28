@@ -58,7 +58,7 @@ export const reduceConversationDomain = (
         ...domain,
         friendPresence: {
           ...domain.friendPresence,
-          [action.friendId]: action.online,
+          [action.friendId]: action.presence,
         },
       };
     case 'query-presence':
@@ -66,7 +66,7 @@ export const reduceConversationDomain = (
         ...domain,
         queryPresence: {
           ...domain.queryPresence,
-          [action.bufferId]: action.online,
+          [action.bufferId]: action.presence,
         },
       };
     case 'upsert-buffer': {

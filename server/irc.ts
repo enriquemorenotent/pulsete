@@ -1,4 +1,9 @@
-import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState } from '../shared/protocol.js';
+import type {
+  ChannelListEntry,
+  ChannelUserState,
+  NetworkRuntimeState,
+  PresenceStatus,
+} from '../shared/protocol.js';
 import { createIrcControllers } from './irc-controls.js';
 import { createIrcConnectionState, type IrcConnectionOptions } from './irc-connection-state.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
@@ -85,10 +90,24 @@ export class IrcConnection implements IrcConnectionState {
 
   setFriendNicks(nicks: string[]) { this.controls.friendsControl.setFriendNicks(nicks); }
   refreshFriendPresence() { this.controls.friendsControl.refreshFriendPresence(); }
-  handleFriendPresence(pollId: number, onlineNicks: string[]) { this.controls.friendsControl.handleFriendPresence(pollId, onlineNicks); }
+  handleFriendPresence(
+    pollId: number,
+    nick: string,
+    presence: PresenceStatus | null,
+    done: boolean,
+  ) {
+    this.controls.friendsControl.handleFriendPresence(
+      pollId,
+      nick,
+      presence,
+      done,
+    );
+  }
   disableFriendPresence() { this.controls.friendsControl.disableFriendPresence(); }
   clearFriendPresenceTimer() { this.controls.friendsControl.clearFriendPresenceTimer(); }
-  updateOnlineFriendKeys(onlineNicks: string[]) { this.controls.friendsControl.updateOnlineFriendKeys(onlineNicks); }
+  updateFriendPresenceStatuses(presenceByKey: Map<string, PresenceStatus>) {
+    this.controls.friendsControl.updateFriendPresenceStatuses(presenceByKey);
+  }
 
   requestChannelList(requestId: string) { return this.controls.channelLists.requestChannelList(requestId); }
   recordChannelListEntry(requestId: string, entry: ChannelListEntry) { this.controls.channelLists.recordChannelListEntry(requestId, entry); }

@@ -1,16 +1,18 @@
 import type { ComponentType } from 'react';
 import { X } from 'lucide-react';
-import type { BufferState } from '../../shared/protocol.js';
+import type { BufferState, PresenceStatus } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './buffer-activity.js';
 import { ConnectionSidebarActivityBadge } from './ConnectionSidebarUnreadBadge.js';
+
+type BufferPresenceDisplay = PresenceStatus | 'pending';
 
 type ConnectionSidebarBufferRowProps = {
 	buffer: BufferState;
 	dimmed: boolean;
 	selected: boolean;
 	icon: ComponentType<{ className?: string }>;
-	presence: 'online' | 'offline' | null;
+	presence: BufferPresenceDisplay | null;
 	onSelect: () => void;
 	onClose: () => void;
 };
@@ -38,7 +40,7 @@ export function ConnectionSidebarBufferRow(
 				onClick={props.onSelect}
 				aria-label={
 					props.presence
-						? `Open ${props.buffer.target} (${props.presence})`
+						? `Open ${props.buffer.target} (${presenceLabel(props.presence)})`
 						: `Open ${props.buffer.target}`
 				}
 			>
@@ -49,9 +51,7 @@ export function ConnectionSidebarBufferRow(
 							aria-hidden
 							className={cn(
 								'absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
-								props.presence === 'online'
-									? 'bg-emerald-400'
-									: 'bg-rose-300',
+								presenceTone(props.presence),
 							)}
 						/>
 					) : null}
@@ -92,3 +92,19 @@ export function ConnectionSidebarBufferRow(
 		</div>
 	);
 }
+
+const presenceLabel = (presence: BufferPresenceDisplay) =>
+	presence === 'pending' ? 'checking status' : presence;
+
+const presenceTone = (presence: BufferPresenceDisplay) => {
+	if (presence === 'pending') {
+		return 'bg-zinc-400';
+	}
+	if (presence === 'online') {
+		return 'bg-emerald-400';
+	}
+	if (presence === 'away') {
+		return 'bg-yellow-400';
+	}
+	return 'bg-red-400';
+};

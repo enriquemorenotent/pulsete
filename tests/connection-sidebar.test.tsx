@@ -169,7 +169,7 @@ test('connecting rows rely on the status dot instead of repeating a connecting l
   assert.match(markup, /bg-amber-300/);
 });
 
-test('friend rows expose online and offline cues when the rail defaults open', () => {
+test('friend rows expose online and away cues when the rail defaults open', () => {
   const friend: FriendState = { id: 'friend-1', nick: 'Alice' };
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
@@ -185,7 +185,7 @@ test('friend rows expose online and offline cues when the rail defaults open', (
         selection: null,
       })}
       friends={[friend]}
-      friendPresence={{ [friend.id]: true }}
+      friendPresence={{ [friend.id]: 'away' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -202,11 +202,11 @@ test('friend rows expose online and offline cues when the rail defaults open', (
 
   assert.match(markup, /Friends<\/h2>/);
   assert.doesNotMatch(markup, />1 online</);
-  assert.match(markup, /aria-label="Open Alice \(online\)"/);
-  assert.match(markup, /bg-emerald-400/);
+  assert.match(markup, /aria-label="Open Alice \(away\)"/);
+  assert.match(markup, /bg-yellow-400/);
 });
 
-test('friends sort online contacts above offline ones and keep names alphabetical within each group', () => {
+test('friends sort online contacts above away, then offline', () => {
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
@@ -226,9 +226,9 @@ test('friends sort online contacts above offline ones and keep names alphabetica
         { id: 'friend-3', nick: 'Bea' },
       ]}
       friendPresence={{
-        'friend-1': false,
-        'friend-2': true,
-        'friend-3': true,
+        'friend-1': 'offline',
+        'friend-2': 'online',
+        'friend-3': 'away',
       }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
@@ -245,14 +245,14 @@ test('friends sort online contacts above offline ones and keep names alphabetica
   );
 
   const miraIndex = markup.indexOf('aria-label="Open Mira (online)"');
-  const beaIndex = markup.indexOf('aria-label="Open Bea (online)"');
+  const beaIndex = markup.indexOf('aria-label="Open Bea (away)"');
   const aliceIndex = markup.indexOf('aria-label="Open Alice (offline)"');
 
   assert.notEqual(miraIndex, -1);
   assert.notEqual(beaIndex, -1);
   assert.notEqual(aliceIndex, -1);
-  assert.ok(beaIndex < miraIndex);
-  assert.ok(miraIndex < aliceIndex);
+  assert.ok(miraIndex < beaIndex);
+  assert.ok(beaIndex < aliceIndex);
 });
 
 test('friends header shows only the section label', () => {
@@ -447,8 +447,8 @@ test('open query buffers show saved contact presence cues', () => {
       ]}
       friendPresence={{}}
       queryPresence={{
-        [offlineQuery.id]: false,
-        [onlineQuery.id]: true,
+        [offlineQuery.id]: 'offline',
+        [onlineQuery.id]: 'away',
       }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
@@ -465,7 +465,89 @@ test('open query buffers show saved contact presence cues', () => {
   );
 
   assert.match(markup, /aria-label="Open alice \(offline\)"/);
-  assert.match(markup, /aria-label="Open bob \(online\)"/);
-  assert.match(markup, /bg-rose-300/);
-  assert.match(markup, /bg-emerald-400/);
+  assert.match(markup, /aria-label="Open bob \(away\)"/);
+  assert.match(markup, /bg-red-400/);
+  assert.match(markup, /bg-yellow-400/);
+});
+
+test('connected query buffers show a gray badge while presence is resolving', () => {
+  const network = makeNetwork();
+  const pendingQuery = makeBuffer({
+    id: 'query-pending',
+    kind: 'query',
+    target: 'alice',
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), pendingQuery],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      queryPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open alice \(checking status\)"/);
+  assert.match(markup, /bg-zinc-400/);
+});
+
+test('offline query buffers do not show a gray pending badge', () => {
+  const network = makeNetwork();
+  const pendingQuery = makeBuffer({
+    id: 'query-pending',
+    kind: 'query',
+    target: 'alice',
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), pendingQuery],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'offline' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      queryPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open alice"/);
+  assert.doesNotMatch(markup, /bg-zinc-400/);
 });
