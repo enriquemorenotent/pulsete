@@ -24,7 +24,7 @@ const channelListReplyNumerics = new Set(['321', '322', '323', '263', '421', '46
 const rawModeTargetedReplyNumerics = new Set(['401', '402']);
 const rawModeUntargetedReplyNumerics = new Set(['221', '501', '502']);
 const rawModeReplyNumerics = new Set([...rawModeTargetedReplyNumerics, ...rawModeUntargetedReplyNumerics]);
-const friendPresenceReplyNumerics = new Set(['315', '352']);
+const friendPresenceIsonReplyNumerics = new Set(['303', '421']);
 
 export const resolveReplyContext = (
   context: PendingReplyContext,
@@ -80,18 +80,11 @@ export const resolveReplyContext = (
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
-  if (context.kind === 'friend-presence') {
-    if (!friendPresenceReplyNumerics.has(command)) {
+  if (context.kind === 'friend-presence-ison') {
+    if (!isIsonReply(command, params) || !friendPresenceIsonReplyNumerics.has(command)) {
       return { matched: false, done: false };
     }
-    if (command === '352') {
-      return isSameIrcIdentifier(params[5] ?? '', context.nick)
-        ? { matched: true, done: false }
-        : { matched: false, done: false };
-    }
-    return isSameIrcIdentifier(params[1] ?? '', context.nick)
-      ? { matched: true, done: true }
-      : { matched: false, done: false };
+    return { matched: true, done: true };
   }
   return { matched: false, done: false };
 };
@@ -123,14 +116,13 @@ export const prefersFifoReplyOrder = (command: string, params: string[]) =>
 
 export const rawModeUsesUntargetedReply = (command: string) => rawModeUntargetedReplyNumerics.has(command);
 
-const fifoReplyNumerics = new Set([
+  const fifoReplyNumerics = new Set([
   ...whoisReplyNumerics,
   ...joinReplyNumerics,
   ...partReplyNumerics,
   ...topicSetReplyNumerics,
   ...topicQueryReplyNumerics,
   ...channelListReplyNumerics,
-  ...friendPresenceReplyNumerics,
   ...namesReplyNumerics,
   ...rawModeReplyNumerics,
 ]);

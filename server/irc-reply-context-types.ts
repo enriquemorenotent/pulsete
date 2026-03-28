@@ -17,6 +17,6 @@ export type PendingReplyContext =
     }
   | { kind: 'nick'; sourceTarget: string; requestedNick: string; expiresAt: number }
   | { kind: 'ison'; sourceTarget: string; expiresAt: number }
-  | { kind: 'friend-presence'; pollId: number; nick: string; expiresAt: number };
+  | { kind: 'friend-presence-ison'; snapshotId: number; expiresAt: number };
 
 export const replyContextTtlMs = 15_000;

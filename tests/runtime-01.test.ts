@@ -210,10 +210,10 @@ test('runtime snapshot includes aggregated friend presence from live connections
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => received.some((line) => line === 'WHO Alice'));
-    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === 'away');
+    await waitFor(() => received.some((line) => line === 'ISON Alice'));
+    await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === 'online');
 
-    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], 'away');
+    assert.equal(runtime.gateway.snapshot().friendPresence[friend.id], 'online');
   } finally {
     runtime.sessions.disconnect(network.id);
     server.closeConnections();
@@ -239,7 +239,7 @@ test('runtime snapshot includes presence for open query targets', async () => {
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => received.some((line) => line === 'WHO Alice'));
+    await waitFor(() => received.some((line) => line === 'ISON Alice'));
     await waitFor(() => runtime.gateway.snapshot().queryPresence[query.id] === 'online');
 
     assert.equal(runtime.gateway.snapshot().queryPresence[query.id], 'online');
@@ -270,7 +270,7 @@ test('opening a query after connect starts tracking that target presence', async
     await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
     const result = runtime.conversations.openQuery(network.id, 'Alice');
-    await waitFor(() => received.filter((line) => line === 'WHO Alice').length >= 1);
+    await waitFor(() => received.filter((line) => line === 'ISON Alice').length >= 1);
     await waitFor(() => runtime.gateway.snapshot().queryPresence[result.buffer.id] === 'online');
 
     assert.equal(runtime.gateway.snapshot().queryPresence[result.buffer.id], 'online');
@@ -353,7 +353,7 @@ test('query presence stays scoped to the query network', async () => {
     await waitFor(() => runtime.gateway.snapshot().networkStates[secondNetwork.id]?.phase === 'connected');
 
     const result = runtime.conversations.openQuery(firstNetwork.id, 'Alice');
-    await waitFor(() => firstReceived.some((line) => line === 'WHO Alice'));
+    await waitFor(() => firstReceived.some((line) => line === 'ISON Alice'));
     await waitFor(() => result.buffer.id in runtime.gateway.snapshot().queryPresence);
 
     assert.equal(runtime.gateway.snapshot().queryPresence[result.buffer.id], 'offline');
@@ -385,7 +385,7 @@ test('runtime clears cached friend presence when a network disconnects', async (
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => received.some((line) => line === 'WHO Alice'));
+    await waitFor(() => received.some((line) => line === 'ISON Alice'));
     await waitFor(() => runtime.gateway.snapshot().friendPresence[friend.id] === 'online');
 
     runtime.sessions.disconnect(network.id);

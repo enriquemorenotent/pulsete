@@ -52,9 +52,13 @@ export const createIrcConnectionState = (
     resolvedNicks: new Set<string>(),
     snapshotByKey: new Map<string, PresenceStatus>(),
     timer: null,
-    pendingPoll: null,
-    nextPollId: 0,
+    pendingIsonSnapshot: null,
+    nextSnapshotId: 0,
     enabled: true,
+    monitorSupported: false,
+    monitorLimit: null,
+    activeTransport: null,
+    registeredMonitorNicks: new Map<string, string>(),
   };
   const channelList: IrcChannelListState = {
     session: { phase: 'idle' },

@@ -35,7 +35,7 @@ const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 test('resolveBufferActivityState exposes priority when present', () => {
   assert.deepEqual(
     resolveBufferActivityState(makeBuffer({ unread: 3, priorityUnread: 1 })),
-    { count: 3, hasUnread: true, priority: true }
+    { hasUnread: true, priority: true }
   );
 });
 

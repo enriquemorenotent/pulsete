@@ -90,17 +90,27 @@ export class IrcConnection implements IrcConnectionState {
 
   setFriendNicks(nicks: string[]) { this.controls.friendsControl.setFriendNicks(nicks); }
   refreshFriendPresence() { this.controls.friendsControl.refreshFriendPresence(); }
-  handleFriendPresence(
-    pollId: number,
-    nick: string,
-    presence: PresenceStatus | null,
-    done: boolean,
+  setFriendPresenceMonitorSupport(supported: boolean, limit: number | null) {
+    this.controls.friendsControl.setFriendPresenceMonitorSupport(supported, limit);
+  }
+  handleFriendPresenceIsonReply(
+    snapshotId: number,
+    onlineNicks: string[] | null,
+    unsupported: boolean,
   ) {
-    this.controls.friendsControl.handleFriendPresence(
-      pollId,
-      nick,
+    this.controls.friendsControl.handleFriendPresenceIsonReply(
+      snapshotId,
+      onlineNicks,
+      unsupported,
+    );
+  }
+  handleFriendPresenceMonitorUpdate(
+    nicks: string[],
+    presence: PresenceStatus,
+  ) {
+    return this.controls.friendsControl.handleFriendPresenceMonitorUpdate(
+      nicks,
       presence,
-      done,
     );
   }
   disableFriendPresence() { this.controls.friendsControl.disableFriendPresence(); }

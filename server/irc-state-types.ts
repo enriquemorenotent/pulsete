@@ -56,10 +56,12 @@ export type IrcChannelTrackingState = {
   joinTimeoutMs: number;
 };
 
-export type FriendPresencePollState = {
+export type FriendPresenceTransportMode = 'monitor' | 'ison';
+
+export type FriendPresenceIsonSnapshotState = {
   id: number;
   remainingReplies: number;
-  presenceByKey: Map<string, PresenceStatus>;
+  onlineNickKeys: Set<string>;
   requestedNickKeys: Set<string>;
 };
 
@@ -69,9 +71,13 @@ export type IrcFriendPresenceState = {
   resolvedNicks: Set<string>;
   snapshotByKey: Map<string, PresenceStatus>;
   timer: ReturnType<typeof setInterval> | null;
-  pendingPoll: FriendPresencePollState | null;
-  nextPollId: number;
+  pendingIsonSnapshot: FriendPresenceIsonSnapshotState | null;
+  nextSnapshotId: number;
   enabled: boolean;
+  monitorSupported: boolean;
+  monitorLimit: number | null;
+  activeTransport: FriendPresenceTransportMode | null;
+  registeredMonitorNicks: Map<string, string>;
 };
 
 export type IrcChannelListMode = 'raw' | 'structured';

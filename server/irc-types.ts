@@ -97,12 +97,13 @@ export type IrcConnectionMethods = {
   applyNickFallback(fallbackNick: string, options: { replyTarget?: string; updatePending: boolean }): void;
   setFriendNicks(nicks: string[]): void;
   refreshFriendPresence(): void;
-  handleFriendPresence(
-    pollId: number,
-    nick: string,
-    presence: PresenceStatus | null,
-    done: boolean
+  setFriendPresenceMonitorSupport(supported: boolean, limit: number | null): void;
+  handleFriendPresenceIsonReply(
+    snapshotId: number,
+    onlineNicks: string[] | null,
+    unsupported: boolean
   ): void;
+  handleFriendPresenceMonitorUpdate(nicks: string[], presence: PresenceStatus): boolean;
   disableFriendPresence(): void;
   clearFriendPresenceTimer(): void;
   updateFriendPresenceStatuses(presenceByKey: Map<string, PresenceStatus>): void;
@@ -164,7 +165,8 @@ export type IrcRuntimeChannelListConnection = Pick<
 >;
 
 export type {
-  FriendPresencePollState,
+  FriendPresenceIsonSnapshotState,
+  FriendPresenceTransportMode,
   IrcChannelListActiveState,
   IrcChannelListDrainingState,
   IrcChannelListState,

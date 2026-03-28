@@ -17,10 +17,13 @@ export const handleRegistrationLine = (
   command: string,
   params: string[],
   nick: string | null
-) => handleRegistrationAuthLine(connection, command, params)
+) => {
+  handleServerSupportLine(connection, command, params);
+  return handleRegistrationAuthLine(connection, command, params)
   || handleWelcome(connection, command, params, nick)
   || handleNickConflict(connection, command, params, nick)
   || handleNickRejected(connection, command, params, nick);
+};
 
 const handleWelcome = (connection: IrcRegistrationContext, command: string, params: string[], nick: string | null) => {
   if (command !== '001') {
@@ -40,7 +43,7 @@ const handleWelcome = (connection: IrcRegistrationContext, command: string, para
   for (const line of buildPostRegistrationAuthLines(connection.profile)) {
     connection.sendRaw(line);
   }
-  connection.refreshFriendPresence();
+  queueMicrotask(() => connection.refreshFriendPresence());
   handlePostRegistrationAutoJoin(connection);
   return true;
 };
@@ -109,4 +112,33 @@ const getNextNickOnConflict = (connection: IrcRegistrationContext, attemptedNick
   return currentIndex !== -1 && currentIndex < fallbacks.length - 1
     ? fallbacks[currentIndex + 1] as string
     : `${attemptedNick}_`;
+};
+
+const handleServerSupportLine = (
+  connection: IrcRegistrationContext,
+  command: string,
+  params: string[],
+) => {
+  if (command !== '005') {
+    return;
+  }
+  const monitorToken = params
+    .slice(1, -1)
+    .find((token) => token === 'MONITOR' || token.startsWith('MONITOR=') || token === '-MONITOR');
+  if (!monitorToken) {
+    return;
+  }
+  if (monitorToken === '-MONITOR') {
+    connection.setFriendPresenceMonitorSupport(false, null);
+    return;
+  }
+  const limit = monitorToken.startsWith('MONITOR=')
+    ? parseMonitorLimit(monitorToken.slice('MONITOR='.length))
+    : null;
+  connection.setFriendPresenceMonitorSupport(true, limit);
+};
+
+const parseMonitorLimit = (value: string) => {
+  const limit = Number.parseInt(value, 10);
+  return Number.isFinite(limit) && limit > 0 ? limit : null;
 };

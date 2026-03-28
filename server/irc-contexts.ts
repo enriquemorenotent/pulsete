@@ -87,5 +87,6 @@ export type IrcRegistrationContext = IrcEventContext & IrcConnectionPick<
   | 'listReconnectChannels'
   | 'markRegistered'
   | 'refreshFriendPresence'
+  | 'setFriendPresenceMonitorSupport'
   | 'sendRaw'
 >;

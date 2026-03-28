@@ -12,7 +12,6 @@ export const hasUnreadBufferActivity = (buffer: BufferActivityFields | null | un
   (buffer?.unread ?? 0) > 0 || (buffer?.priorityUnread ?? 0) > 0;
 
 export const resolveBufferActivityState = (buffer: BufferActivityFields | null | undefined) => ({
-  count: buffer?.unread ?? 0,
   hasUnread: hasUnreadBufferActivity(buffer),
   priority: (buffer?.priorityUnread ?? 0) > 0,
 });

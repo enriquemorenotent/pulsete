@@ -28,7 +28,12 @@ export const resetRuntimeSessionState = (connection: IrcLifecycleContext) => {
   abortActiveChannelList(connection, 'Channel list request was interrupted');
   clearDrainingChannelList(connection);
   connection.replyTracker.reset();
-  connection.friendPresence.pendingPoll = null;
+  connection.friendPresence.pendingIsonSnapshot = null;
+  connection.friendPresence.nextSnapshotId = 0;
+  connection.friendPresence.monitorSupported = false;
+  connection.friendPresence.monitorLimit = null;
+  connection.friendPresence.activeTransport = null;
+  connection.friendPresence.registeredMonitorNicks.clear();
   connection.friendPresence.resolvedNicks.clear();
   connection.friendPresence.snapshotByKey.clear();
   clearFriendPresenceTimer(connection);

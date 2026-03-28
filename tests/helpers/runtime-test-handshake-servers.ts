@@ -125,18 +125,14 @@ export const createPresenceServer = async (
           socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
           sawUser = false;
         }
-        if (line.startsWith('WHO ') && nick) {
-          const trackedNick = line.slice('WHO '.length).trim();
-          const presence = nickPresence[trackedNick];
-          if (presence) {
-            const flags = presence === 'away' ? 'G' : 'H';
-            socket.write(
-              `:irc.example 352 ${nick} * user host server ${trackedNick} ${flags} :0 ${trackedNick}\r\n`,
-            );
-          }
-          socket.write(
-            `:irc.example 315 ${nick} ${trackedNick} :End of WHO list\r\n`,
-          );
+        if (line.startsWith('ISON ') && nick) {
+          const trackedNicks = line
+            .slice('ISON '.length)
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+          const onlineNicks = trackedNicks.filter((trackedNick) => trackedNick in nickPresence);
+          socket.write(`:irc.example 303 ${nick} :${onlineNicks.join(' ')}\r\n`);
         }
         index = buffer.indexOf('\n');
       }

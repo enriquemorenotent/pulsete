@@ -144,7 +144,7 @@ test('irc connection sends direct private messages to nick targets', async () =>
   server.close();
 });
 
-test('irc connection polls WHO and emits friend presence updates', async () => {
+test('irc connection uses MONITOR updates for tracked friend presence without logging them', async () => {
   const received: string[] = [];
   const events: Array<{ type: string; [key: string]: unknown }> = [];
 
@@ -171,21 +171,14 @@ test('irc connection polls WHO and emits friend presence updates', async () => {
 
         if (sawNick && sawUser) {
           socket.write(':irc.example 001 tester :Welcome\r\n');
+          socket.write(':irc.example 005 tester CHANTYPES=# MONITOR=100 :are supported by this server\r\n');
           sawNick = false;
           sawUser = false;
         }
 
-        if (line === 'WHO Alice') {
-          socket.write(
-            ':irc.example 352 tester * user host server Alice H :0 Alice\r\n',
-          );
-          socket.write(':irc.example 315 tester Alice :End of WHO list\r\n');
-        }
-        if (line === 'WHO Bob') {
-          socket.write(
-            ':irc.example 352 tester * user host server Bob G :0 Bob\r\n',
-          );
-          socket.write(':irc.example 315 tester Bob :End of WHO list\r\n');
+        if (line === 'MONITOR + Alice,Bob') {
+          socket.write(':irc.example 730 tester :Alice!user@host\r\n');
+          socket.write(':irc.example 731 tester :Bob\r\n');
         }
 
         index = buffer.indexOf('\n');
@@ -232,8 +225,7 @@ test('irc connection polls WHO and emits friend presence updates', async () => {
   connection.setFriendNicks(['Alice', 'Bob']);
   connection.connect();
 
-  await waitFor(() => received.includes('WHO Alice'));
-  await waitFor(() => received.includes('WHO Bob'));
+  await waitFor(() => received.includes('MONITOR + Alice,Bob'));
   await waitFor(
     () =>
       events.some(
@@ -241,9 +233,18 @@ test('irc connection polls WHO and emits friend presence updates', async () => {
           event.type === 'friend-presence'
           && JSON.stringify(event.presences) === JSON.stringify({
             Alice: 'online',
-            Bob: 'away',
+            Bob: 'offline',
           })
       )
+  );
+  assert.equal(received.some((line) => line.startsWith('ISON ')), false);
+  assert.equal(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && (event.message === '* Alice!user@host' || event.message === '* Bob')
+    ),
+    false,
   );
 
   connection.disconnect();

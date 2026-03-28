@@ -1,7 +1,7 @@
 import {
   createChannelListReplyContext,
   createChannelReplyContext,
-  createFriendPresenceReplyContext,
+  createFriendPresenceIsonReplyContext,
   createIsonReplyContext,
   createMessageReplyContext,
   createNickReplyContext,
@@ -28,7 +28,7 @@ export type { PendingReplyContext } from './irc-reply-context-types.js';
 export {
   createChannelListReplyContext,
   createChannelReplyContext,
-  createFriendPresenceReplyContext,
+  createFriendPresenceIsonReplyContext,
   createIsonReplyContext,
   createMessageReplyContext,
   createNickReplyContext,

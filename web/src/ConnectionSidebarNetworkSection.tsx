@@ -1,10 +1,10 @@
-import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
+import { Hash, MessageSquareMore, PowerOff, RefreshCcw, Server, X } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './buffer-activity.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
 import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingChannelRow.js';
-import { ConnectionSidebarActivityBadge } from './ConnectionSidebarUnreadBadge.js';
+import { connectionSidebarLabelClass } from './connection-sidebar-label-class.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import type { NetworkRuntimeState } from './workspace.js';
@@ -49,42 +49,35 @@ export function ConnectionSidebarNetworkSection(
 				<button
 					className="flex min-w-0 flex-1 items-center gap-3 p-2 text-left"
 					onClick={() => props.onSelectNetwork(connection.network)}
+					aria-label={
+						serverActivity.hasUnread
+							? `Open ${connection.labelParts.name} (unread)`
+							: `Open ${connection.labelParts.name}`
+					}
 				>
-					<span
-						className={cn(
-							'size-2.5 shrink-0 rounded-full shadow-[0_0_0_4px_rgba(255,255,255,0.03)]',
-							dotTone(connection.runtime),
-						)}
-					/>
+					<span className="relative flex size-4 shrink-0 items-center justify-center">
+						<Server
+							aria-hidden
+							className={cn(
+								'size-3.5 shrink-0',
+								serverIconTone(connection.runtime),
+							)}
+						/>
+						{serverActivity.hasUnread ? (
+							<span
+								aria-hidden
+								className={cn(
+									'absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
+									unreadBadgeTone(),
+								)}
+							/>
+						) : null}
+					</span>
 					<div className="min-w-0 flex-1">
 						<div className="flex min-w-0 items-center gap-2">
-							<span
-								className={cn(
-									'truncate text-[13px] text-foreground',
-									serverActivity.hasUnread
-										? 'font-semibold'
-										: 'font-medium',
-								)}
-							>
+							<span className={connectionSidebarLabelClass(serverActivity)}>
 								{connection.labelParts.name}
 							</span>
-							{serverActivity.hasUnread ? (
-								<ConnectionSidebarActivityBadge
-									count={serverActivity.count}
-									priority={serverActivity.priority}
-								/>
-							) : null}
-						</div>
-						<div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-							<span className="font-mono normal-case tracking-normal text-muted-foreground/80">
-								as {connection.labelParts.nick}
-							</span>
-							{connection.labelParts.instanceIndex ===
-							null ? null : (
-								<span className="shrink-0 text-[11px] text-muted-foreground">
-									· {connection.labelParts.instanceIndex}
-								</span>
-							)}
 						</div>
 					</div>
 				</button>
@@ -187,12 +180,14 @@ const resolveQueryPresence = (
 	return queryPresence[bufferId] ?? null;
 };
 
-const dotTone = (runtime: NetworkRuntimeState | null) => {
+const serverIconTone = (runtime: NetworkRuntimeState | null) => {
 	if (runtime?.phase === 'connected') {
-		return 'bg-emerald-400';
+		return 'text-emerald-400';
 	}
 	if (runtime?.phase === 'connecting') {
-		return 'bg-amber-300';
+		return 'text-amber-300';
 	}
-	return 'bg-zinc-500';
+	return 'text-zinc-500';
 };
+
+const unreadBadgeTone = () => 'bg-primary';

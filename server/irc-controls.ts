@@ -55,8 +55,10 @@ import { emitMessage, emitStatus } from './irc-emit.js';
 import {
   clearFriendPresenceTimer,
   disableFriendPresence,
-  handleFriendPresence,
+  handleFriendPresenceIsonReply,
+  handleFriendPresenceMonitorUpdate,
   refreshFriendPresence,
+  setFriendPresenceMonitorSupport,
   setFriendNicks,
   updateFriendPresenceStatuses,
 } from './irc-friend-presence.js';
@@ -161,12 +163,15 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
   friendsControl: {
     setFriendNicks: (nicks: string[]) => setFriendNicks(connection, nicks),
     refreshFriendPresence: () => refreshFriendPresence(connection),
-    handleFriendPresence: (
-      pollId: number,
-      nick: string,
-      presence: PresenceStatus | null,
-      done: boolean
-    ) => handleFriendPresence(connection, pollId, nick, presence, done),
+    setFriendPresenceMonitorSupport: (supported: boolean, limit: number | null) =>
+      setFriendPresenceMonitorSupport(connection, supported, limit),
+    handleFriendPresenceIsonReply: (
+      snapshotId: number,
+      onlineNicks: string[] | null,
+      unsupported: boolean
+    ) => handleFriendPresenceIsonReply(connection, snapshotId, onlineNicks, unsupported),
+    handleFriendPresenceMonitorUpdate: (nicks: string[], presence: PresenceStatus) =>
+      handleFriendPresenceMonitorUpdate(connection, nicks, presence),
     disableFriendPresence: () => disableFriendPresence(connection),
     clearFriendPresenceTimer: () => clearFriendPresenceTimer(connection),
     updateFriendPresenceStatuses: (presenceByKey: Map<string, PresenceStatus>) =>

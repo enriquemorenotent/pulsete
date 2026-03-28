@@ -128,8 +128,12 @@ test('connected rows rely on the status dot instead of repeating a connected lab
   );
 
   assert.doesNotMatch(markup, />Connected</);
-  assert.match(markup, />as sofia</);
-  assert.match(markup, /bg-emerald-400/);
+  assert.doesNotMatch(markup, />as sofia</);
+  assert.match(markup, /text-emerald-400/);
+  assert.match(
+    markup,
+    /class="truncate text-\[13px\] text-foreground">Cuff-Link<\/span>/,
+  );
 });
 
 test('connecting rows rely on the status dot instead of repeating a connecting label', () => {
@@ -165,8 +169,98 @@ test('connecting rows rely on the status dot instead of repeating a connecting l
   );
 
   assert.doesNotMatch(markup, />Connecting</);
-  assert.match(markup, />as sofia</);
-  assert.match(markup, /bg-amber-300/);
+  assert.doesNotMatch(markup, />as sofia</);
+  assert.match(markup, /text-amber-300/);
+});
+
+test('server rows use the overlaid dot for unread state instead of a trailing marker', () => {
+  const network = makeNetwork();
+  const server = makeBuffer({
+    id: 'server-1',
+    unread: 2,
+    priorityUnread: 1,
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [server],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: server.id },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open Cuff-Link \(unread\)"/);
+  assert.match(markup, /text-emerald-400/);
+  assert.match(markup, /bg-primary/);
+  assert.match(
+    markup,
+    /class="truncate text-\[13px\] text-foreground font-semibold">Cuff-Link<\/span>/,
+  );
+  assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
+});
+
+test('server rows use medium weight for non-priority unread state', () => {
+  const network = makeNetwork();
+  const server = makeBuffer({
+    id: 'server-1',
+    unread: 2,
+    priorityUnread: 0,
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [server],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: server.id },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open Cuff-Link \(unread\)"/);
+  assert.match(markup, /bg-primary/);
+  assert.match(
+    markup,
+    /class="truncate text-\[13px\] text-foreground font-medium">Cuff-Link<\/span>/,
+  );
 });
 
 test('friend rows expose online and away cues when the rail defaults open', () => {
@@ -374,7 +468,7 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
   assert.match(markup, /aria-label="Open pending #Help"/);
 });
 
-test('priority unread buffers render the stronger activity badge styling', () => {
+test('priority unread buffers render a stronger unread marker instead of a count badge', () => {
   const network = makeNetwork();
   const channel = makeBuffer({
     id: 'channel-1',
@@ -412,8 +506,62 @@ test('priority unread buffers render the stronger activity badge styling', () =>
     />,
   );
 
-  assert.match(markup, /bg-primary\/14 text-primary/);
-  assert.match(markup, />3</);
+  assert.match(markup, /aria-label="Open #help \(unread\)"/);
+  assert.match(markup, /bg-primary/);
+  assert.match(
+    markup,
+    /class="truncate text-\[13px\] text-foreground font-semibold">#help<\/span>/,
+  );
+  assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
+  assert.doesNotMatch(markup, />3</);
+});
+
+test('non-priority unread buffers render the same blue unread marker instead of a count badge', () => {
+  const network = makeNetwork();
+  const channel = makeBuffer({
+    id: 'channel-1',
+    kind: 'channel',
+    target: '#help',
+    unread: 3,
+    priorityUnread: 0,
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), channel],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open #help \(unread\)"/);
+  assert.match(markup, /bg-primary/);
+  assert.match(
+    markup,
+    /class="truncate text-\[13px\] text-foreground font-medium">#help<\/span>/,
+  );
+  assert.doesNotMatch(markup, /aria-label="Unread messages"/);
+  assert.doesNotMatch(markup, />3</);
 });
 
 test('open query buffers show saved contact presence cues', () => {
@@ -478,12 +626,108 @@ test('open query buffers show saved contact presence cues', () => {
   assert.match(markup, /aria-label="Open alice \(offline\)"/);
   assert.match(markup, /aria-label="Open bob \(away\)"/);
   assert.match(markup, /aria-label="Open carol \(online\)"/);
-  assert.match(markup, /bg-red-400/);
-  assert.match(markup, /bg-yellow-400/);
-  assert.match(markup, /bg-emerald-400/);
   assert.match(markup, /text-red-400/);
   assert.match(markup, /text-yellow-400/);
   assert.match(markup, /text-emerald-400/);
+  assert.doesNotMatch(markup, /aria-label="Unread messages"/);
+});
+
+test('query rows use the overlaid dot for unread state instead of a trailing marker', () => {
+  const network = makeNetwork();
+  const unreadQuery = makeBuffer({
+    id: 'query-1',
+    kind: 'query',
+    target: 'alice',
+    unread: 2,
+    priorityUnread: 1,
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), unreadQuery],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      queryPresence={{ [unreadQuery.id]: 'online' }}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open alice \(online, unread\)"/);
+  assert.match(markup, /text-emerald-400/);
+  assert.match(markup, /bg-primary/);
+  assert.match(
+    markup,
+    /class="truncate text-\[13px\] text-foreground font-semibold">alice<\/span>/,
+  );
+  assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
+});
+
+test('query rows use the same blue overlaid dot for non-priority unread state', () => {
+  const network = makeNetwork();
+  const unreadQuery = makeBuffer({
+    id: 'query-1',
+    kind: 'query',
+    target: 'alice',
+    unread: 2,
+    priorityUnread: 0,
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), unreadQuery],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      queryPresence={{ [unreadQuery.id]: 'away' }}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open alice \(away, unread\)"/);
+  assert.match(markup, /text-yellow-400/);
+  assert.match(markup, /bg-primary/);
+  assert.match(
+    markup,
+    /class="truncate text-\[13px\] text-foreground font-medium">alice<\/span>/,
+  );
+  assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });
 
 test('connected query buffers show a gray badge while presence is resolving', () => {
@@ -524,8 +768,8 @@ test('connected query buffers show a gray badge while presence is resolving', ()
   );
 
   assert.match(markup, /aria-label="Open alice \(checking status\)"/);
-  assert.match(markup, /bg-zinc-400/);
   assert.match(markup, /text-zinc-400/);
+  assert.doesNotMatch(markup, /bg-zinc-400/);
 });
 
 test('offline query buffers do not show a gray pending badge', () => {

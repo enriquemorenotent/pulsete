@@ -35,30 +35,22 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   const isonReplyContext = command === '303' || isIsonUnsupported
     ? connection.consumeReplyContext(command, params, nick)
     : null;
-  const friendPresenceReplyContext = command === '352' || command === '315'
-    ? connection.consumeReplyContext(command, params, nick)
-    : null;
-  if (friendPresenceReplyContext?.kind === 'friend-presence') {
-    if (command === '352') {
-      const presenceNick = params[5] ?? '';
-      const flags = params[6] ?? '';
-      if (presenceNick && flags) {
-        connection.handleFriendPresence(
-          friendPresenceReplyContext.pollId,
-          presenceNick,
-          flags.includes('G') ? 'away' : 'online',
-          false,
-        );
-      }
-    } else {
-      connection.handleFriendPresence(
-        friendPresenceReplyContext.pollId,
-        friendPresenceReplyContext.nick,
-        null,
-        true,
-      );
-      return;
-    }
+  if (isonReplyContext?.kind === 'friend-presence-ison') {
+    connection.handleFriendPresenceIsonReply(
+      isonReplyContext.snapshotId,
+      command === '303' ? parseIsonReplyNicks(params) : null,
+      isIsonUnsupported,
+    );
+    return;
+  }
+  if (
+    (command === '730' || command === '731')
+    && connection.handleFriendPresenceMonitorUpdate(
+      parseMonitorReplyNicks(params),
+      command === '730' ? 'online' : 'offline',
+    )
+  ) {
+    return;
   }
   if (connection.handleChannelListNumeric(command, params)) {
     return;
@@ -95,6 +87,20 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     }
   }
 };
+
+const parseIsonReplyNicks = (params: string[]) =>
+  (params.at(-1) ?? '')
+    .split(/\s+/)
+    .map((nick) => nick.trim())
+    .filter(Boolean);
+
+const parseMonitorReplyNicks = (params: string[]) =>
+  (params.at(-1) ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => entry.split('!')[0] ?? entry)
+    .filter(Boolean);
 
 const handleNumericReply = (
   connection: IrcConnectionState,
