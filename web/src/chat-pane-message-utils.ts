@@ -90,6 +90,7 @@ export const getServerMessageSourceLabel = (message: ChatMessage) => {
 export const isCompactMessage = (message: ChatMessage) =>
   message.kind === 'line'
   || message.kind === 'action'
+  || (message.kind === 'notice' && !!message.nick)
   || message.kind === 'join'
   || message.kind === 'part'
   || message.kind === 'quit';

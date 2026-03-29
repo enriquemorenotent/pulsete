@@ -31,9 +31,16 @@ export const handleTextMessage = (
   const isDirectServiceMessage = isDirectTarget && !!nick && isServiceNick(nick);
   const isDirectUserNotice =
     isDirectTarget && command === 'NOTICE' && sourceIsUser && !!nick && !isDirectServiceMessage;
-  const replyTarget = isDirectUserNotice
-    ? connection.consumeReplyTarget(command, params, nick, rawTarget, replyLabel)
-    : null;
+  const directNoticeReplyContext =
+    isDirectTarget && command === 'NOTICE' && sourceIsUser && !!nick
+      ? connection.consumeReplyContext(command, params, nick, rawTarget, replyLabel)
+      : null;
+  const replyTarget =
+    directNoticeReplyContext
+    && directNoticeReplyContext.kind === 'message'
+    && (!isDirectServiceMessage || directNoticeReplyContext.outboundCommand === 'PRIVMSG')
+      ? directNoticeReplyContext.sourceTarget
+      : null;
   const target = isDirectTarget
     ? (
         replyTarget

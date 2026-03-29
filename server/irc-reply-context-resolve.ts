@@ -1,4 +1,5 @@
 import { isChannelTarget, isSameIrcIdentifier } from './irc-parser.js';
+import { matchesServiceTargetNick } from './irc-services.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
 
 export type ReplyResolution = {
@@ -33,11 +34,23 @@ export const resolveReplyContext = (
   nick: string | null,
 ): ReplyResolution => {
   if (context.kind === 'message') {
+    const matchesMessageTarget = !!nick
+      && (
+        isSameIrcIdentifier(nick, context.target)
+        || matchesServiceTargetNick(nick, context.target)
+      );
     if (
       command === 'NOTICE'
-      && !!nick
       && !isChannelTarget(context.target)
-      && isSameIrcIdentifier(nick, context.target)
+      && matchesMessageTarget
+    ) {
+      return { matched: true, done: true };
+    }
+    if (
+      command === 'NOTICE'
+      && context.commandLike
+      && isChannelTarget(context.sourceTarget)
+      && isChannelTarget(context.target)
     ) {
       return { matched: true, done: true };
     }

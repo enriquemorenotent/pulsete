@@ -50,9 +50,8 @@ import {
   setConnectDeadlineTimer,
   updateProfile,
 } from './irc-connection-lifecycle.js';
-import { consume, createSelfActionMessage, createSelfMessage, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
-import { emitMessage, emitStatus } from './irc-emit.js';
-import { hasNegotiatedCapability } from './irc-capabilities.js';
+import { consume, sendClientRaw, sendRaw, sendTrackedRaw } from './irc-connection-io.js';
+import { emitStatus } from './irc-emit.js';
 import {
   clearFriendPresenceTimer,
   disableFriendPresence,
@@ -63,7 +62,8 @@ import {
   setFriendNicks,
   updateFriendPresenceStatuses,
 } from './irc-friend-presence.js';
-import { createChannelReplyContext, createMessageReplyContext, createNickReplyContext } from './irc-reply-context.js';
+import { createIrcCommandControls } from './irc-controls-commands.js';
+import { createNickReplyContext } from './irc-reply-context.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
 import {
   consumePendingNickReplyContexts,
@@ -115,58 +115,7 @@ export const createIrcControllers = (connection: IrcConnectionState) => ({
     sendRaw: (raw: string, statusTarget?: string) => sendRaw(connection, raw, statusTarget),
     sendClientRaw: (raw: string, sourceTarget?: string) => sendClientRaw(connection, raw, sourceTarget),
   },
-  commands: {
-    join: (channel: string, sourceTarget = 'server', options: { visiblePending?: boolean } | string = {}) => {
-      if (!connection.lifecycle.connected) {
-        emitStatus(connection, connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
-        return false;
-      }
-      if (!connection.sendRaw(`JOIN ${channel}`, sourceTarget)) {
-        return false;
-      }
-      const visiblePending = typeof options === 'string' ? false : options.visiblePending ?? false;
-      connection.setChannelSession(channel, 'joining', { sourceTarget, visiblePending });
-      return true;
-    },
-    part: (channel: string, reason = 'Leaving', sourceTarget = channel) => {
-      if (connection.getChannelSession(channel)?.phase === 'joined') {
-        connection.setChannelSession(channel, 'leaving', { sourceTarget, visiblePending: false });
-      }
-      return sendTrackedRaw(connection, `PART ${channel} :${reason}`, sourceTarget, createChannelReplyContext(sourceTarget, channel, 'part'));
-    },
-    say: (target: string, text: string, sourceTarget = target) => {
-      const useEchoMessage = hasNegotiatedCapability(connection.lifecycle.capabilities, 'echo-message');
-      const selfMessage = useEchoMessage ? null : createSelfMessage(connection, target, text);
-      if (
-        sendTrackedRaw(
-          connection,
-          `PRIVMSG ${target} :${text}`,
-          sourceTarget,
-          createMessageReplyContext(sourceTarget, target, selfMessage?.id)
-        )
-      ) {
-        if (selfMessage) {
-          emitMessage(connection, selfMessage);
-        }
-      }
-    },
-    action: (target: string, text: string, sourceTarget = target) => {
-      const useEchoMessage = hasNegotiatedCapability(connection.lifecycle.capabilities, 'echo-message');
-      const selfMessage = useEchoMessage ? null : createSelfActionMessage(connection, target, text);
-      if (
-        sendTrackedRaw(
-          connection,
-          `PRIVMSG ${target} :\u0001ACTION ${text}\u0001`,
-          sourceTarget,
-          createMessageReplyContext(sourceTarget, target, selfMessage?.id)
-        )
-      ) {
-        if (selfMessage) {
-          emitMessage(connection, selfMessage);
-        }
-      }
-    },
-  },
+  commands: createIrcCommandControls(connection),
   friendsControl: {
     setFriendNicks: (nicks: string[]) => setFriendNicks(connection, nicks),
     refreshFriendPresence: () => refreshFriendPresence(connection),

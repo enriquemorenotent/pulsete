@@ -4,11 +4,15 @@ import { type ChannelReplyOperation, type PendingReplyContext, replyContextTtlMs
 export const createMessageReplyContext = (
   sourceTarget: string,
   target: string,
-  optimisticMessageId?: string
+  optimisticMessageId?: string,
+  outboundCommand: 'PRIVMSG' | 'NOTICE' = 'PRIVMSG',
+  commandLike = false,
 ): PendingReplyContext => ({
   kind: 'message',
   sourceTarget,
   target,
+  outboundCommand,
+  commandLike,
   optimisticMessageId,
   expiresAt: Date.now() + replyContextTtlMs,
 });
@@ -88,7 +92,8 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
   const [commandToken = '', ...rest] = trimmed.split(/\s+/);
   const command = commandToken.toUpperCase();
   if ((command === 'PRIVMSG' || command === 'NOTICE') && rest[0]) {
-    return createMessageReplyContext(sourceTarget, rest[0]);
+    const messageText = rest.slice(1).join(' ').replace(/^:/, '').trim();
+    return createMessageReplyContext(sourceTarget, rest[0], undefined, command, messageText.startsWith('!'));
   }
   if (command === 'WHOIS') {
     return rest.at(-1) ? createWhoisReplyContext(sourceTarget, rest.at(-1) as string) : null;
