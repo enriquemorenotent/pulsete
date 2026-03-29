@@ -13,6 +13,7 @@ import {
 import {
   getReplyPriority,
   prefersFifoReplyOrder,
+  refreshReplyContextAfterMatch,
   resolveReplyContext,
   type ReplyMatch,
 } from './irc-reply-context-resolve.js';
@@ -115,6 +116,8 @@ export const consumeReplyContext = (
     } else {
       contexts.splice(selected.index, 1);
     }
+  } else {
+    refreshReplyContextAfterMatch(selected.context, nick);
   }
   return selected.context;
 };

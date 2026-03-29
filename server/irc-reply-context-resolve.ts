@@ -1,6 +1,9 @@
 import { isChannelTarget, isSameIrcIdentifier } from './irc-parser.js';
 import { matchesServiceTargetNick } from './irc-services.js';
-import type { PendingReplyContext } from './irc-reply-context-types.js';
+import {
+  commandReplyBurstIdleMs,
+  type PendingReplyContext,
+} from './irc-reply-context-types.js';
 
 export type ReplyResolution = {
   matched: boolean;
@@ -12,6 +15,8 @@ export type ReplyMatch = {
   context: PendingReplyContext;
   resolution: ReplyResolution;
 };
+
+type MessageReplyContext = Extract<PendingReplyContext, { kind: 'message' }>;
 
 const messageErrorNumerics = new Set(['401', '404', '408', '411', '412', '413', '414', '716', '717']);
 const whoisReplyNumerics = new Set(['301', '311', '312', '313', '317', '318', '319', '330', '338', '401', '402']);
@@ -34,6 +39,7 @@ export const resolveReplyContext = (
   nick: string | null,
 ): ReplyResolution => {
   if (context.kind === 'message') {
+    const matchesBurstReplyNick = matchesMessageReplyNick(context, nick);
     const matchesMessageTarget = !!nick
       && (
         isSameIrcIdentifier(nick, context.target)
@@ -43,16 +49,18 @@ export const resolveReplyContext = (
       command === 'NOTICE'
       && !isChannelTarget(context.target)
       && matchesMessageTarget
+      && matchesBurstReplyNick
     ) {
-      return { matched: true, done: true };
+      return { matched: true, done: context.completion !== 'burst' };
     }
     if (
       command === 'NOTICE'
       && context.commandLike
       && isChannelTarget(context.sourceTarget)
       && isChannelTarget(context.target)
+      && matchesBurstReplyNick
     ) {
-      return { matched: true, done: true };
+      return { matched: true, done: context.completion !== 'burst' };
     }
     return messageErrorNumerics.has(command) && isSameIrcIdentifier(params[1] ?? '', context.target)
       ? { matched: true, done: true }
@@ -129,7 +137,21 @@ export const prefersFifoReplyOrder = (command: string, params: string[]) =>
 
 export const rawModeUsesUntargetedReply = (command: string) => rawModeUntargetedReplyNumerics.has(command);
 
-  const fifoReplyNumerics = new Set([
+export const refreshReplyContextAfterMatch = (
+  context: PendingReplyContext,
+  nick: string | null,
+) => {
+  if (context.kind !== 'message' || context.completion !== 'burst') {
+    return;
+  }
+  if (!context.replyNick && nick) {
+    context.replyNick = nick;
+  }
+  const maxExpiresAt = context.maxExpiresAt ?? context.expiresAt;
+  context.expiresAt = Math.min(Date.now() + commandReplyBurstIdleMs, maxExpiresAt);
+};
+
+const fifoReplyNumerics = new Set([
   ...whoisReplyNumerics,
   ...joinReplyNumerics,
   ...partReplyNumerics,
@@ -183,3 +205,8 @@ const matchesNickReply = (
   command: string,
   params: string[]
 ) => command === '431' || isSameIrcIdentifier(params[1] ?? '', context.requestedNick);
+
+const matchesMessageReplyNick = (
+  context: MessageReplyContext,
+  nick: string | null,
+) => !context.replyNick || (!!nick && isSameIrcIdentifier(nick, context.replyNick));

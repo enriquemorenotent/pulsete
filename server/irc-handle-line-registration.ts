@@ -2,6 +2,7 @@ import tls from 'node:tls';
 import {
   buildPostRegistrationAuthLines,
   handleWelcomeAuthFallback,
+  handleAccountLoginState,
   handlePostRegistrationAutoJoin,
   handleRegistrationAuthLine,
 } from './irc-auth.js';
@@ -19,6 +20,9 @@ export const handleRegistrationLine = (
   nick: string | null
 ) => {
   handleServerSupportLine(connection, command, params);
+  if (command === '900') {
+    handleAccountLoginState(connection, params[1] ?? null);
+  }
   return handleRegistrationAuthLine(connection, command, params)
   || handleWelcome(connection, command, params, nick)
   || handleNickConflict(connection, command, params, nick)

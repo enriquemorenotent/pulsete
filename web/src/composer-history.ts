@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+export { useComposerHistory } from './useComposerHistoryController.js';
 
 export type ComposerHistoryState = {
   entries: string[];
@@ -175,79 +175,6 @@ export const stepComposerHistoryForContext = (
     draft: result.draft,
     history: result.state,
   });
-};
-
-export const useComposerHistory = (): ComposerController => {
-  const [, setDraftState] = useState(initialComposerDraftState);
-  const draftStateRef = useRef(initialComposerDraftState);
-
-  const updateDraftState = useCallback(
-    (updater: (current: ComposerDraftState) => ComposerDraftState) => {
-      setDraftState((current) => {
-        const nextState = updater(current);
-        draftStateRef.current = nextState;
-        return nextState;
-      });
-    },
-    [],
-  );
-
-  const getDraft = useCallback(
-    (contextKey: string | null) =>
-      readComposerDraft(draftStateRef.current, contextKey),
-    [],
-  );
-
-  const hasDraft = useCallback(
-    (contextKey: string | null) =>
-      hasStoredComposerDraft(draftStateRef.current, contextKey),
-    [],
-  );
-
-  const setDraft = useCallback(
-    (contextKey: string | null, value: string) => {
-      updateDraftState((current) =>
-        setComposerDraftForContext(current, contextKey, value),
-      );
-    },
-    [updateDraftState],
-  );
-
-  const recordComposerEntry = useCallback(
-    (contextKey: string | null, entry: string) => {
-      updateDraftState((current) =>
-        pushComposerHistoryEntryForContext(current, contextKey, entry),
-      );
-    },
-    [updateDraftState],
-  );
-
-  const recallOlderDraft = useCallback(
-    (contextKey: string | null) => {
-      updateDraftState((current) =>
-        stepComposerHistoryForContext(current, contextKey, 'older'),
-      );
-    },
-    [updateDraftState],
-  );
-
-  const recallNewerDraft = useCallback(
-    (contextKey: string | null) => {
-      updateDraftState((current) =>
-        stepComposerHistoryForContext(current, contextKey, 'newer'),
-      );
-    },
-    [updateDraftState],
-  );
-
-  return {
-    getDraft,
-    hasDraft,
-    setDraft,
-    recordComposerEntry,
-    recallOlderDraft,
-    recallNewerDraft,
-  };
 };
 
 const writeComposerContextState = (

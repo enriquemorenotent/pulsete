@@ -5,6 +5,8 @@ type PendingReplyBase = {
   label?: string;
 };
 
+type MessageReplyCompletion = 'single' | 'burst';
+
 export type PendingReplyContext =
   | (PendingReplyBase & {
       kind: 'message';
@@ -12,6 +14,9 @@ export type PendingReplyContext =
       target: string;
       outboundCommand: 'PRIVMSG' | 'NOTICE';
       commandLike: boolean;
+      completion: MessageReplyCompletion;
+      maxExpiresAt?: number;
+      replyNick?: string | null;
       optimisticMessageId?: string;
     })
   | (PendingReplyBase & { kind: 'whois'; sourceTarget: string; nick: string })
@@ -33,3 +38,4 @@ export type PendingReplyContext =
   | (PendingReplyBase & { kind: 'friend-presence-ison'; snapshotId: number });
 
 export const replyContextTtlMs = 15_000;
+export const commandReplyBurstIdleMs = 1_500;

@@ -16,21 +16,12 @@ import {
   resolveImportedChannelAttribution,
   resolveImportedSpeakerAttribution,
 } from './message-attribution.js';
+import {
+  parseHexChatLogFile,
+  type ParsedLogMessage,
+  type ParserResult,
+} from './history-import-hexchat.js';
 import type { MessageInput } from './storage-types.js';
-
-type ParsedLogMessage = {
-  ts: number;
-  nick: string;
-  body: string;
-  kind: 'line' | 'action';
-  order: number;
-};
-
-type ParserResult = {
-  format: HistoryImportFormat;
-  messages: ParsedLogMessage[];
-  recognized: boolean;
-};
 
 type ImportLogFilesParams = {
   buffer: BufferState;
@@ -47,33 +38,6 @@ type ImportedMessage = MessageInput & {
 type Parser = (file: HistoryImportTextFile) => ParserResult;
 
 const logParsers: Parser[] = [parseHexChatLogFile];
-
-const timedLinePattern = /^(?<month>\S+)\s+(?<day>\d{1,2})\s+(?<time>\d{2}:\d{2}:\d{2})\s+(?<rest>.*)$/;
-const userMessagePattern = /^<(?<nick>[^>]+)>\s*(?<body>.*)$/;
-const actionMessagePattern = /^\*\s+(?<nick>\S+)(?:\s+(?<body>.*))?$/;
-const beginLoggingPattern = /^\*{4} BEGIN LOGGING AT .+ (?<year>\d{4})$/;
-const endLoggingPattern = /^\*{4} ENDING LOGGING AT .+ (?<year>\d{4})$/;
-
-const monthIndexes = new Map([
-  ['jan', 0],
-  ['feb', 1],
-  ['mar', 2],
-  ['mär', 2],
-  ['maerz', 2],
-  ['apr', 3],
-  ['may', 4],
-  ['mai', 4],
-  ['jun', 5],
-  ['jul', 6],
-  ['aug', 7],
-  ['sep', 8],
-  ['sept', 8],
-  ['oct', 9],
-  ['okt', 9],
-  ['nov', 10],
-  ['dec', 11],
-  ['dez', 11],
-]);
 
 export const importLogFiles = ({
   buffer,
@@ -143,125 +107,6 @@ const parseLogFile = (file: HistoryImportTextFile) => {
     }
   }
   throw badRequest(`Unsupported log format for ${file.name}. Only HexChat text logs are supported right now.`);
-};
-
-function parseHexChatLogFile(file: HistoryImportTextFile): ParserResult {
-  let currentYear: number | null = null;
-  let recognized = false;
-  const messages: ParsedLogMessage[] = [];
-  const lines = file.text.split(/\r?\n/);
-
-  for (const line of lines) {
-    if (!line.trim()) {
-      continue;
-    }
-    const beginLogging = line.match(beginLoggingPattern);
-    if (beginLogging?.groups?.year) {
-      currentYear = Number(beginLogging.groups.year);
-      recognized = true;
-      continue;
-    }
-    const endLogging = line.match(endLoggingPattern);
-    if (endLogging?.groups?.year) {
-      currentYear = Number(endLogging.groups.year);
-      recognized = true;
-      continue;
-    }
-
-    const timedLine = line.match(timedLinePattern);
-    if (!timedLine?.groups) {
-      continue;
-    }
-
-    const monthIndex = parseMonthToken(timedLine.groups.month, file.name);
-    const day = Number(timedLine.groups.day);
-    const timeParts = timedLine.groups.time.split(':').map(Number);
-    recognized = true;
-    if (currentYear === null) {
-      throw badRequest(`Could not determine a year for HexChat log ${file.name}.`);
-    }
-
-    const messageLine = timedLine.groups.rest.match(userMessagePattern);
-    if (messageLine?.groups?.nick) {
-      const body = messageLine.groups.body.trim();
-      if (!body) {
-        continue;
-      }
-      messages.push({
-        ts: buildLocalTimestamp(currentYear, monthIndex, day, timeParts, file.name),
-        nick: messageLine.groups.nick,
-        body,
-        kind: 'line',
-        order: messages.length,
-      });
-      continue;
-    }
-
-    const actionLine = timedLine.groups.rest.match(actionMessagePattern);
-    if (actionLine?.groups?.nick) {
-      const body = actionLine.groups.body?.trim() ?? '';
-      if (!body || shouldSkipHexChatAction(actionLine.groups.nick, body)) {
-        continue;
-      }
-      messages.push({
-        ts: buildLocalTimestamp(currentYear, monthIndex, day, timeParts, file.name),
-        nick: actionLine.groups.nick,
-        body,
-        kind: 'action',
-        order: messages.length,
-      });
-    }
-  }
-
-  return {
-    format: 'hexchat',
-    messages,
-    recognized,
-  };
-}
-
-const parseMonthToken = (token: string, fileName: string) => {
-  const normalized = token.replace(/\.$/, '').toLowerCase();
-  const monthIndex = monthIndexes.get(normalized);
-  if (monthIndex === undefined) {
-    throw badRequest(`Unsupported HexChat month token "${token}" in ${fileName}.`);
-  }
-  return monthIndex;
-};
-
-const buildLocalTimestamp = (
-  year: number,
-  monthIndex: number,
-  day: number,
-  timeParts: number[],
-  fileName: string,
-) => {
-  const [hours, minutes, seconds] = timeParts;
-  const date = new Date(year, monthIndex, day, hours, minutes, seconds, 0);
-  if (
-    date.getFullYear() !== year
-    || date.getMonth() !== monthIndex
-    || date.getDate() !== day
-    || date.getHours() !== hours
-    || date.getMinutes() !== minutes
-    || date.getSeconds() !== seconds
-  ) {
-    throw badRequest(`Invalid HexChat timestamp in ${fileName}.`);
-  }
-  return date.getTime();
-};
-
-const shouldSkipHexChatAction = (nick: string, body: string) => {
-  if (
-    !nick
-    || nick === 'Disconnected'
-    || nick.startsWith('[')
-    || nick.endsWith(']')
-    || nick.endsWith(':')
-  ) {
-    return true;
-  }
-  return /^(?:has (?:quit|left)\b|is offline\b|is online\b|disconnected\b)/i.test(body);
 };
 
 const normalizeParsedMessage = (

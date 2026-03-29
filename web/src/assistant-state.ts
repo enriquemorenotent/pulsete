@@ -1,7 +1,14 @@
 import { defaultAssistantModel } from '../../shared/assistant-defaults.js';
-import { canonicalizeAssistantText } from '../../shared/assistant-document.js';
 import type { AssistantItem, AssistantSnapshot, AssistantThread, AssistantTurn } from '../../shared/protocol.js';
 import type { Action, AppDomainState } from './app-types.js';
+import {
+  appendAssistantItemDelta,
+  interruptLoadedAssistantThread,
+  pruneAssistantThreads,
+  updateAssistantTurnsForThread,
+  upsertItem,
+  upsertTurn,
+} from './assistant-state-helpers.js';
 
 export const emptyAssistantSnapshot: AssistantSnapshot = {
   serviceStatus: 'starting',
@@ -67,13 +74,6 @@ export const reduceAssistantDomain = (
   }
 };
 
-const pruneAssistantThreads = (threads: Record<string, AssistantThread>, threadIds: string[]) => {
-  const allowed = new Set(threadIds);
-  return Object.fromEntries(
-    Object.entries(threads).filter(([threadId]) => allowed.has(threadId))
-  );
-};
-
 const interruptAssistantThread = (domain: AppDomainState, threadId: string) => {
   const updatedAt = Date.now();
   const interruptedStatus = 'interrupted' as const;
@@ -90,16 +90,11 @@ const interruptAssistantThread = (domain: AppDomainState, threadId: string) => {
     };
   });
   const loadedThread = domain.assistantThreads[threadId];
-  const nextThread = !loadedThread ? null : {
-    ...loadedThread,
-    turnStatus: loadedThread.turnStatus === 'inProgress' ? interruptedStatus : loadedThread.turnStatus,
+  const nextThread = interruptLoadedAssistantThread(
+    loadedThread,
+    interruptedStatus,
     updatedAt,
-    turns: loadedThread.turns.map((turn) => (
-      turn.status === 'inProgress'
-        ? { ...turn, status: interruptedStatus, error: null }
-        : turn
-    )),
-  };
+  );
   const threadChanged = loadedThread !== undefined && nextThread !== null && (
     nextThread.turnStatus !== loadedThread.turnStatus
     || nextThread.turns.some((turn, index) => turn !== loadedThread.turns[index])
@@ -176,21 +171,22 @@ const updateAssistantItem = (
   if (!thread) {
     return null;
   }
+  const nextThread = updateAssistantTurnsForThread(
+    domain,
+    threadId,
+    (turn) =>
+      turn.id === turnId
+        ? {
+            ...turn,
+            items: upsertItem(turn.items, item, appendText),
+          }
+        : turn,
+  );
   return {
     ...domain,
     assistantThreads: {
       ...domain.assistantThreads,
-      [threadId]: {
-        ...thread,
-        turns: thread.turns.map((turn) =>
-          turn.id === turnId
-            ? {
-                ...turn,
-                items: upsertItem(turn.items, item, appendText),
-              }
-            : turn
-        ),
-      },
+      [threadId]: nextThread ?? thread,
     },
   };
 };
@@ -206,58 +202,26 @@ const updateAssistantItemDelta = (
   if (!thread) {
     return null;
   }
+  const nextThread = updateAssistantTurnsForThread(
+    domain,
+    threadId,
+    (turn, currentThread) =>
+      turn.id === turnId
+        ? {
+            ...turn,
+            items: turn.items.map((item) =>
+              item.id === itemId
+                ? appendAssistantItemDelta(item, delta, currentThread.task)
+                : item,
+            ),
+          }
+        : turn,
+  );
   return {
     ...domain,
     assistantThreads: {
       ...domain.assistantThreads,
-      [threadId]: {
-        ...thread,
-        turns: thread.turns.map((turn) =>
-          turn.id === turnId
-            ? {
-                ...turn,
-                items: turn.items.map((item) =>
-                  item.id === itemId && item.type === 'agentMessage'
-                    ? {
-                        ...item,
-                        text: thread.task === 'ask'
-                          ? canonicalizeAssistantText(item.text + delta)
-                          : item.text + delta,
-                      }
-                    : item
-                ),
-              }
-            : turn
-        ),
-      },
+      [threadId]: nextThread ?? thread,
     },
   };
-};
-
-const upsertTurn = (turns: AssistantTurn[], nextTurn: AssistantTurn) => {
-  const index = turns.findIndex((turn) => turn.id === nextTurn.id);
-  if (index === -1) {
-    return [...turns, nextTurn];
-  }
-  return turns.map((turn, turnIndex) => turnIndex === index ? nextTurn : turn);
-};
-
-const upsertItem = (items: AssistantItem[], nextItem: AssistantItem, appendText: boolean) => {
-  const index = items.findIndex((item) => item.id === nextItem.id);
-  if (index === -1) {
-    return [...items, nextItem];
-  }
-  return items.map((item, itemIndex) => {
-    if (itemIndex !== index) {
-      return item;
-    }
-    if (
-      appendText
-      && item.type === 'agentMessage'
-      && nextItem.type === 'agentMessage'
-    ) {
-      return { ...nextItem, text: item.text + nextItem.text };
-    }
-    return nextItem;
-  });
 };

@@ -7,15 +7,22 @@ export const createMessageReplyContext = (
   optimisticMessageId?: string,
   outboundCommand: 'PRIVMSG' | 'NOTICE' = 'PRIVMSG',
   commandLike = false,
-): PendingReplyContext => ({
-  kind: 'message',
-  sourceTarget,
-  target,
-  outboundCommand,
-  commandLike,
-  optimisticMessageId,
-  expiresAt: Date.now() + replyContextTtlMs,
-});
+): PendingReplyContext => {
+  const expiresAt = Date.now() + replyContextTtlMs;
+  const completion = commandLike ? 'burst' : 'single';
+  return {
+    kind: 'message',
+    sourceTarget,
+    target,
+    outboundCommand,
+    commandLike,
+    completion,
+    maxExpiresAt: completion === 'burst' ? expiresAt : undefined,
+    replyNick: null,
+    optimisticMessageId,
+    expiresAt,
+  };
+};
 
 export const createWhoisReplyContext = (sourceTarget: string, nick: string): PendingReplyContext => ({
   kind: 'whois',

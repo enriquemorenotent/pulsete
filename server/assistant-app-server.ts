@@ -1,28 +1,18 @@
 import { EventEmitter } from 'node:events';
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createInterface, type Interface } from 'node:readline';
-
-type JsonRpcResponse = {
-  id: number;
-  result?: unknown;
-  error?: { code?: number; message?: string };
-};
-
-type JsonRpcNotification = {
-  method: string;
-  params?: unknown;
-};
-
-type JsonRpcRequest = {
-  id: number;
-  method: string;
-  params?: unknown;
-};
-
-type PendingRequest = {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-};
+import {
+  type AssistantAppServerChild,
+  assistantAppServerRestartDelayMs,
+  buildAssistantAppServerCloseError,
+  buildAssistantAppServerSpawnArgs,
+  type JsonRpcNotification,
+  type JsonRpcRequest,
+  type JsonRpcResponse,
+  type PendingRequest,
+  toAssistantAppServerError,
+} from './assistant-app-server-shared.js';
+export { buildAssistantAppServerSpawnArgs } from './assistant-app-server-shared.js';
 
 type AppServerEvents = {
   notification: [JsonRpcNotification];
@@ -30,22 +20,8 @@ type AppServerEvents = {
   unavailable: [Error | null];
 };
 
-const restartDelayMs = 1_000;
-const assistantAppServerConfigOverrides = [
-  // Pulsete should not inherit unsupported reasoning defaults from the user's global Codex config.
-  'model_reasoning_effort="high"',
-  'plan_mode_reasoning_effort="high"',
-] as const;
-
-export const buildAssistantAppServerSpawnArgs = () => ([
-  ...assistantAppServerConfigOverrides.flatMap((override) => ['-c', override]),
-  'app-server',
-  '--listen',
-  'stdio://',
-]);
-
 export class AssistantAppServer extends EventEmitter<AppServerEvents> {
-  private child: ChildProcessWithoutNullStreams | null = null;
+  private child: AssistantAppServerChild | null = null;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
   private stdoutReader: Interface | null = null;
   private nextId = 1;
@@ -102,7 +78,7 @@ export class AssistantAppServer extends EventEmitter<AppServerEvents> {
         return;
       }
       this.startupPromise = null;
-      this.emit('unavailable', toError(error));
+      this.emit('unavailable', toAssistantAppServerError(error));
       this.scheduleRestart();
     });
   }
@@ -148,18 +124,19 @@ export class AssistantAppServer extends EventEmitter<AppServerEvents> {
 
   private handleChildError(error: unknown) {
     this.ready = false;
-    return toError(error);
+    return toAssistantAppServerError(error);
   }
 
   private handleChildClose(
-    child: ChildProcessWithoutNullStreams,
+    child: AssistantAppServerChild,
     stdoutReader: Interface,
     error: Error | null,
     code: number | null,
     signal: NodeJS.Signals | null,
     stderrText: string,
   ) {
-    const closeError = error ?? buildChildCloseError(code, signal, stderrText);
+    const closeError =
+      error ?? buildAssistantAppServerCloseError(code, signal, stderrText);
     this.ready = false;
     this.startupPromise = null;
     stdoutReader.close();
@@ -184,7 +161,7 @@ export class AssistantAppServer extends EventEmitter<AppServerEvents> {
     this.restartTimer = setTimeout(() => {
       this.restartTimer = null;
       this.start();
-    }, restartDelayMs);
+    }, assistantAppServerRestartDelayMs);
   }
 
   private async waitForReady() {
@@ -271,19 +248,3 @@ export class AssistantAppServer extends EventEmitter<AppServerEvents> {
     this.pending.clear();
   }
 }
-
-const toError = (error: unknown) => error instanceof Error ? error : new Error(String(error));
-
-const buildChildCloseError = (
-  code: number | null,
-  signal: NodeJS.Signals | null,
-  stderrText: string
-) => {
-  const detail = stderrText.trim().split('\n').map((line) => line.trim()).filter(Boolean).at(-1) ?? null;
-  const summary = signal
-    ? `Assistant app-server exited via signal ${signal}`
-    : code === null
-      ? 'Assistant app-server closed unexpectedly'
-      : `Assistant app-server exited with code ${code}`;
-  return detail ? new Error(`${summary}: ${detail}`) : new Error(summary);
-};

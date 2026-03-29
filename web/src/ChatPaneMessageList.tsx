@@ -7,40 +7,27 @@ import {
 	type RefObject,
 	type UIEvent,
 } from 'react';
-import { Plug2 } from 'lucide-react';
 import type {
 	BufferState,
 	ChannelUserState,
 	ChatMessage,
 } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
-import { cn } from '@/lib/utils.js';
 import {
 	captureUnreadDividerAnchor,
 	resolveInitialTranscriptScrollTarget,
 	resolveVisibleUnreadDividerIndex,
 	type UnreadDividerAnchor,
 } from './buffer-activity.js';
-import { FormattedMessageText } from './FormattedMessageText.js';
-import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
+import { ChatPaneMessageBlock } from './ChatPaneMessageBlock.js';
+import { TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { MessageParticipantPresentation } from './message-participant-presentation.js';
 import {
 	buildChannelUserModesByNick,
-	resolveMessageParticipantPresentation,
 	resolveParticipantHighlightMode,
 } from './message-participant-presentation.js';
-import { ParticipantNickLabel } from './ParticipantNickLabel.js';
-import {
-	buildRenderBlocks,
-	formatMessageTime,
-	formatMessageTimestampDateTime,
-	formatMessageTimestampTitle,
-	getServerMessageSourceLabel,
-	isActionMessage,
-	isCompactMessage,
-	messageTone,
-} from './chat-pane-message-utils.js';
+import { buildRenderBlocks } from './chat-pane-message-utils.js';
 import {
 	refreshStickyScrollMode,
 	scrollNodeToBottom,
@@ -195,136 +182,26 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 				</div>
 			) : null}
 			{props.messages.length === 0 ? (
-				<div
-					className="flex h-full items-center justify-center"
-					data-scroll-anchor-item
-				>
-					<div className="w-full max-w-md rounded-[1.25rem] bg-white/[0.03] px-5 py-6 text-center ring-1 ring-white/[0.06]">
-						<div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-white/[0.05] text-muted-foreground">
-							<Plug2 className="size-4 text-muted-foreground" />
-						</div>
-						<p className="text-[13px] leading-6 text-muted-foreground">
-							{props.emptyBody}
-						</p>
-					</div>
-				</div>
+				<TranscriptEmptyState body={props.emptyBody} />
 			) : (
 				<div
 					className="space-y-1.5 font-mono text-[12px]"
 					data-scroll-anchor-item
 				>
 					{renderBlocks.map((block) => {
-						if (block.kind === 'day-divider') {
-							return (
-								<DayDivider
-									key={block.key}
-									label={block.label}
-								/>
-							);
-						}
-
-						const serverSourceLabel =
-							props.listKind === 'server'
-								? getServerMessageSourceLabel(block.message)
-								: null;
-						const shouldUseCompactRow =
-							props.listKind === 'server' ||
-							isCompactMessage(block.message);
-						const participant =
-							resolveMessageParticipantPresentation({
-								message: block.message,
-								listKind: props.listKind,
-								rowVariant: shouldUseCompactRow
-									? 'compact'
-									: 'full',
-								senderLabel: serverSourceLabel,
-								highlightMode: participantHighlightMode,
-								channelUserModesByNick,
-								allowParticipantQuery:
-									!!props.onOpenParticipantQuery,
-							});
-
 						return (
-							<div key={block.message.id}>
-								{firstUnreadDividerIndex ===
-								block.messageIndex ? (
-									<div
-										ref={unreadDividerRef}
-										data-unread-divider
-									>
-										<UnreadDivider />
-									</div>
-								) : null}
-								{shouldUseCompactRow ? (
-									<ChatPaneCompactMessageRow
-										message={block.message}
-										participant={participant}
-										hideTimestamp={block.hideTimestamp}
-										mode={props.mode}
-										onOpenChannel={props.onOpenChannel}
-										onOpenParticipantQuery={
-											props.onOpenParticipantQuery
-										}
-									/>
-								) : (
-									<article
-										className={cn(
-											'px-1 py-0.5 text-foreground',
-											messageTone(block.message),
-										)}
-									>
-										<div className="min-w-0">
-											<div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-												<time
-													className="tabular-nums normal-case tracking-normal"
-													dateTime={formatMessageTimestampDateTime(
-														block.message.ts,
-													)}
-													title={formatMessageTimestampTitle(
-														block.message.ts,
-													)}
-												>
-													{formatMessageTime(
-														block.message.ts,
-													)}
-												</time>
-												{participant.label ? (
-													<ParticipantNickLabel
-														nick={participant.label}
-														clickable={
-															participant.clickable
-														}
-														onOpenParticipantQuery={
-															props.onOpenParticipantQuery
-														}
-														className={cn(
-															'font-medium',
-															participant.toneClassName,
-														)}
-													/>
-												) : null}
-												{renderKindBadge(participant)}
-											</div>
-											<p
-												className={cn(
-													'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-inherit',
-													isActionMessage(
-														block.message,
-													) && 'italic',
-												)}
-											>
-												<FormattedMessageText
-													text={block.message.body}
-													mode={props.mode}
-													onOpenChannel={
-														props.onOpenChannel
-													}
-												/>
-											</p>
-										</div>
-									</article>
-								)}
-							</div>
+							<ChatPaneMessageBlock
+								key={block.kind === 'day-divider' ? block.key : block.message.id}
+								block={block}
+								channelUserModesByNick={channelUserModesByNick}
+								firstUnreadDividerIndex={firstUnreadDividerIndex}
+								listKind={props.listKind}
+								mode={props.mode}
+								onOpenChannel={props.onOpenChannel}
+								onOpenParticipantQuery={props.onOpenParticipantQuery}
+								participantHighlightMode={participantHighlightMode}
+								unreadDividerRef={unreadDividerRef}
+							/>
 						);
 					})}
 				</div>
@@ -359,26 +236,3 @@ export const restoreScrollOffsetAfterPrepend = (
 ) => {
 	node.scrollTop = previousTop + (node.scrollHeight - previousHeight);
 };
-
-const renderKindBadge = (participant: MessageParticipantPresentation) =>
-	participant.kindBadgeLabel ? (
-		<span>{participant.kindBadgeLabel}</span>
-	) : null;
-
-const UnreadDivider = () => (
-	<div className="my-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-primary">
-		<span className="h-px flex-1 bg-primary/35" />
-		<span>New messages</span>
-		<span className="h-px flex-1 bg-primary/35" />
-	</div>
-);
-
-const DayDivider = (props: { label: string }) => (
-	<div className="sticky top-0 z-10 -mx-4 mb-3 bg-background/80 px-4 py-2 backdrop-blur-sm">
-		<div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
-			<span className="h-px flex-1 bg-border/60" />
-			<span>{props.label}</span>
-			<span className="h-px flex-1 bg-border/60" />
-		</div>
-	</div>
-);
