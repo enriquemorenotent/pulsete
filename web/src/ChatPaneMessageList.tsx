@@ -4,6 +4,7 @@ import {
 	useLayoutEffect,
 	useMemo,
 	useRef,
+	useState,
 	type RefObject,
 	type UIEvent,
 } from 'react';
@@ -29,6 +30,7 @@ import {
 } from './message-participant-presentation.js';
 import { buildRenderBlocks } from './chat-pane-message-utils.js';
 import {
+	isScrollNearBottom,
 	refreshStickyScrollMode,
 	scrollNodeToBottom,
 } from './useStickyScroll.js';
@@ -45,6 +47,7 @@ type ChatPaneMessageListProps = {
 	loadingOlderHistory?: boolean;
 	onOpenChannel: (channel: string) => void;
 	onOpenParticipantQuery?: (nick: string) => void;
+	onJumpToLatest?: () => void;
 	onLoadOlderHistory?: () => Promise<void>;
 };
 
@@ -76,6 +79,12 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 	const loadingOlderRef = useRef(false);
 	const positionedBufferIdRef = useRef<string | null>(null);
 	const unreadDividerRef = useRef<HTMLDivElement | null>(null);
+	const [showJumpToLatest, setShowJumpToLatest] = useState(() =>
+		shouldShowJumpToLatestControl({
+			messagesLength: props.messages.length,
+			scrollMetrics: props.scrollRef.current,
+		}),
+	);
 	const renderBlocks = useMemo(
 		() => buildRenderBlocks(props.messages, { listKind: props.listKind }),
 		[props.listKind, props.messages],
@@ -87,6 +96,17 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 		listKind: props.listKind,
 		messagesLength: props.messages.length,
 	});
+	const syncJumpToLatestVisibility = useCallback(
+		(scrollMetrics?: ScrollMetrics | null) => {
+			setShowJumpToLatest(
+				shouldShowJumpToLatestControl({
+					messagesLength: props.messages.length,
+					scrollMetrics: scrollMetrics ?? props.scrollRef.current,
+				}),
+			);
+		},
+		[props.messages.length, props.scrollRef],
+	);
 	const handleLoadOlder = useCallback(async () => {
 		if (
 			!props.onLoadOlderHistory ||
@@ -111,13 +131,20 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 				previousHeight,
 				previousTop,
 			);
+			syncJumpToLatestVisibility(nextScrollContainer);
 		} finally {
 			loadingOlderRef.current = false;
 		}
-	}, [props.loadingOlderHistory, props.onLoadOlderHistory, props.scrollRef]);
+	}, [
+		props.loadingOlderHistory,
+		props.onLoadOlderHistory,
+		props.scrollRef,
+		syncJumpToLatestVisibility,
+	]);
 
 	const handleScroll = useCallback(
 		(event: UIEvent<HTMLDivElement>) => {
+			syncJumpToLatestVisibility(event.currentTarget);
 			if (
 				!shouldAutoLoadOlderHistory({
 					canLoadOlderHistory: !!showLoadOlder,
@@ -130,83 +157,112 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			}
 			void handleLoadOlder();
 		},
-		[handleLoadOlder, props.loadingOlderHistory, showLoadOlder],
+		[
+			handleLoadOlder,
+			props.loadingOlderHistory,
+			showLoadOlder,
+			syncJumpToLatestVisibility,
+		],
 	);
+	const handleJumpToLatest = useCallback(() => {
+		props.onJumpToLatest?.();
+		setShowJumpToLatest(false);
+	}, [props.onJumpToLatest]);
 
 	useLayoutEffect(() => {
 		const scrollContainer = props.scrollRef.current;
 		const bufferId = props.selectedBuffer?.id ?? null;
 		if (!scrollContainer || !bufferId) {
 			positionedBufferIdRef.current = null;
+			setShowJumpToLatest(false);
 			return;
 		}
 		if (
-			positionedBufferIdRef.current === bufferId ||
-			initialScrollTarget === 'wait'
+			positionedBufferIdRef.current !== bufferId &&
+			initialScrollTarget !== 'wait'
 		) {
-			return;
+			if (
+				initialScrollTarget === 'first-unread' &&
+				unreadDividerRef.current
+			) {
+				unreadDividerRef.current.scrollIntoView({ block: 'start' });
+			} else {
+				scrollNodeToBottom(scrollContainer);
+			}
+			refreshStickyScrollMode(scrollContainer);
+			positionedBufferIdRef.current = bufferId;
 		}
-		if (
-			initialScrollTarget === 'first-unread' &&
-			unreadDividerRef.current
-		) {
-			unreadDividerRef.current.scrollIntoView({ block: 'start' });
-		} else {
-			scrollNodeToBottom(scrollContainer);
-		}
-		refreshStickyScrollMode(scrollContainer);
-		positionedBufferIdRef.current = bufferId;
-	}, [initialScrollTarget, props.scrollRef, props.selectedBuffer?.id]);
+		syncJumpToLatestVisibility(scrollContainer);
+	}, [
+		initialScrollTarget,
+		props.scrollRef,
+		props.selectedBuffer?.id,
+		syncJumpToLatestVisibility,
+	]);
 
 	return (
-		<div
-			ref={props.scrollRef}
-			className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pt-0"
-			onScroll={handleScroll}
-		>
-			{showLoadOlder ? (
-				<div
-					className="mb-2 flex justify-center"
-					data-scroll-anchor-item
-				>
+		<div className="relative min-h-0 flex-1">
+			<div
+				ref={props.scrollRef}
+				className="h-full overflow-y-auto px-4 py-4 pt-0"
+				onScroll={handleScroll}
+			>
+				{showLoadOlder ? (
+					<div
+						className="mb-2 flex justify-center"
+						data-scroll-anchor-item
+					>
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={props.loadingOlderHistory}
+							onClick={() => void handleLoadOlder()}
+						>
+							{props.loadingOlderHistory
+								? 'Loading older...'
+								: 'Load older'}
+						</Button>
+					</div>
+				) : null}
+				{props.messages.length === 0 ? (
+					<TranscriptEmptyState body={props.emptyBody} />
+				) : (
+					<div
+						className="space-y-1.5 font-mono text-[12px]"
+						data-scroll-anchor-item
+					>
+						{renderBlocks.map((block) => {
+							return (
+								<ChatPaneMessageBlock
+									key={block.kind === 'day-divider' ? block.key : block.message.id}
+									block={block}
+									channelUserModesByNick={channelUserModesByNick}
+									firstUnreadDividerIndex={firstUnreadDividerIndex}
+									listKind={props.listKind}
+									mode={props.mode}
+									onOpenChannel={props.onOpenChannel}
+									onOpenParticipantQuery={props.onOpenParticipantQuery}
+									participantHighlightMode={participantHighlightMode}
+									unreadDividerRef={unreadDividerRef}
+								/>
+							);
+						})}
+					</div>
+				)}
+				<div aria-hidden className="h-px w-full" data-scroll-anchor-end />
+			</div>
+			{props.onJumpToLatest && showJumpToLatest ? (
+				<div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
 					<Button
 						variant="outline"
 						size="sm"
-						disabled={props.loadingOlderHistory}
-						onClick={() => void handleLoadOlder()}
+						className="pointer-events-auto rounded-full border-white/12 bg-[#2b303a]/88 px-3.5 text-[12px] text-foreground shadow-[0_14px_32px_rgba(0,0,0,0.36)] backdrop-blur-xl hover:bg-[#333845]/92"
+						onClick={handleJumpToLatest}
 					>
-						{props.loadingOlderHistory
-							? 'Loading older...'
-							: 'Load older'}
+						Jump to latest
 					</Button>
 				</div>
 			) : null}
-			{props.messages.length === 0 ? (
-				<TranscriptEmptyState body={props.emptyBody} />
-			) : (
-				<div
-					className="space-y-1.5 font-mono text-[12px]"
-					data-scroll-anchor-item
-				>
-					{renderBlocks.map((block) => {
-						return (
-							<ChatPaneMessageBlock
-								key={block.kind === 'day-divider' ? block.key : block.message.id}
-								block={block}
-								channelUserModesByNick={channelUserModesByNick}
-								firstUnreadDividerIndex={firstUnreadDividerIndex}
-								listKind={props.listKind}
-								mode={props.mode}
-								onOpenChannel={props.onOpenChannel}
-								onOpenParticipantQuery={props.onOpenParticipantQuery}
-								participantHighlightMode={participantHighlightMode}
-								unreadDividerRef={unreadDividerRef}
-							/>
-						);
-					})}
-				</div>
-			)}
-			<div aria-hidden className="h-px w-full" data-scroll-anchor-end />
 		</div>
 	);
 });
@@ -218,6 +274,8 @@ const waitForNextAnimationFrame = () =>
 
 const olderHistoryAutoLoadThresholdPx = 24;
 
+type ScrollMetrics = Pick<HTMLDivElement, 'clientHeight' | 'scrollHeight' | 'scrollTop'>;
+
 export const shouldAutoLoadOlderHistory = (input: {
 	canLoadOlderHistory: boolean;
 	loadingOlderHistory: boolean;
@@ -228,6 +286,14 @@ export const shouldAutoLoadOlderHistory = (input: {
 	!input.loadingOlderHistory &&
 	!input.loadingOlderInFlight &&
 	input.scrollTop <= olderHistoryAutoLoadThresholdPx;
+
+export const shouldShowJumpToLatestControl = (input: {
+	messagesLength: number;
+	scrollMetrics?: ScrollMetrics | null;
+}) =>
+	input.messagesLength > 0 &&
+	!!input.scrollMetrics &&
+	!isScrollNearBottom(input.scrollMetrics);
 
 export const restoreScrollOffsetAfterPrepend = (
 	node: Pick<HTMLDivElement, 'scrollHeight' | 'scrollTop'>,

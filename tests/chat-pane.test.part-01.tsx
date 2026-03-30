@@ -218,6 +218,33 @@ test('query transcripts show a loading state while older history is being fetche
   assert.match(markup, /disabled=""/);
 });
 
+test('query transcripts show a jump-to-latest pill when scrolled away from the live edge', () => {
+  const markup = renderQueryPane([
+    makeMessage({ id: 'message-1', nick: 'MissD', target: 'MissD', body: 'latest', ts: 2 }),
+  ], {
+    onJumpToLatest: () => undefined,
+    scrollRef: {
+      current: { clientHeight: 100, scrollHeight: 400, scrollTop: 180 } as HTMLDivElement,
+    },
+  });
+
+  assert.match(markup, /Jump to latest/);
+  assert.match(markup, /rounded-full/);
+});
+
+test('query transcripts hide the jump-to-latest pill while already near the bottom', () => {
+  const markup = renderQueryPane([
+    makeMessage({ id: 'message-1', nick: 'MissD', target: 'MissD', body: 'latest', ts: 2 }),
+  ], {
+    onJumpToLatest: () => undefined,
+    scrollRef: {
+      current: { clientHeight: 100, scrollHeight: 400, scrollTop: 276 } as HTMLDivElement,
+    },
+  });
+
+  assert.doesNotMatch(markup, /Jump to latest/);
+});
+
 test('server transcripts do not render the load older control', () => {
   const markup = renderServerPane([
     makeMessage({ id: 'message-1', nick: null, body: 'Connected', kind: 'system', ts: 1 }),
@@ -225,4 +252,3 @@ test('server transcripts do not render the load older control', () => {
 
   assert.doesNotMatch(markup, /Load older/);
 });
-

@@ -54,6 +54,7 @@ export type ChatPaneProps = {
   onUpdateSelfNickAliases?: (input: { selfNickAliases: string[] }) => Promise<boolean>;
   canLoadOlderHistory?: boolean;
   loadingOlderHistory?: boolean;
+  onJumpToLatest?: () => void;
   onLoadOlderHistory?: () => Promise<void>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
@@ -117,6 +118,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         listKind={isServerBuffer ? 'server' : 'chat'}
         canLoadOlderHistory={props.canLoadOlderHistory}
         loadingOlderHistory={props.loadingOlderHistory}
+        onJumpToLatest={props.onJumpToLatest}
         onOpenChannel={props.onOpenMentionedChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
         onLoadOlderHistory={props.onLoadOlderHistory}

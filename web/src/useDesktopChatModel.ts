@@ -147,6 +147,7 @@ export function useDesktopChatModel({
         : undefined,
       canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
       loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
+      onJumpToLatest: () => ui.forceScrollToBottomRef.current?.(),
       onLoadOlderHistory: selectedBufferHistory.loadOlderHistory,
       channelList,
       channelListNetwork,

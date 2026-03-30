@@ -189,6 +189,7 @@ export function useBackgroundDmAudioCue(input: {
     const eligibleBuffer = findEligibleBackgroundDmNotificationBuffer({
       previousBuffers,
       nextBuffers: input.buffers,
+      appVisibleAndFocused: !shouldShowSystemNotification(),
       selectedBufferId: input.selectedBufferId,
       settings: input.settings,
     });

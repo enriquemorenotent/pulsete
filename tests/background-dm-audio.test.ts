@@ -83,6 +83,7 @@ test('eligible cue fires for allowed DM unread growth in another buffer', () => 
   const eligible = findEligibleBackgroundDmAudioBuffer({
     previousBuffers,
     nextBuffers: [nextBuffer],
+    appVisibleAndFocused: true,
     selectedBufferId: 'buffer-2',
     settings: {
       enabled: true,
@@ -101,6 +102,7 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
   assert.equal(findEligibleBackgroundDmAudioBuffer({
     previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
     nextBuffers: [nextBuffer],
+    appVisibleAndFocused: true,
     selectedBufferId: nextBuffer.id,
     settings: {
       enabled: true,
@@ -113,6 +115,7 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
   assert.equal(findEligibleBackgroundDmAudioBuffer({
     previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
     nextBuffers: [makeBuffer({ unread: 1, networkId: 'network-2' })],
+    appVisibleAndFocused: true,
     selectedBufferId: 'buffer-2',
     settings: {
       enabled: true,
@@ -125,6 +128,7 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
   assert.equal(findEligibleBackgroundDmAudioBuffer({
     previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
     nextBuffers: [makeBuffer({ unread: 1, kind: 'channel', target: '#help' })],
+    appVisibleAndFocused: true,
     selectedBufferId: 'buffer-2',
     settings: {
       enabled: true,
@@ -142,10 +146,30 @@ test('system notification eligibility still works when audio is disabled', () =>
   const eligible = findEligibleBackgroundDmNotificationBuffer({
     previousBuffers,
     nextBuffers: [nextBuffer],
+    appVisibleAndFocused: false,
     selectedBufferId: 'buffer-2',
     settings: {
       enabled: false,
       systemEnabled: true,
+      sound: 'chirp',
+      contacts: [{ networkId: 'network-1', nick: 'alice' }],
+    },
+  });
+
+  assert.equal(eligible?.id, nextBuffer.id);
+});
+
+test('selected query buffer still qualifies when the app is not visible and focused', () => {
+  const nextBuffer = makeBuffer({ unread: 1 });
+
+  const eligible = findEligibleBackgroundDmAudioBuffer({
+    previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
+    nextBuffers: [nextBuffer],
+    appVisibleAndFocused: false,
+    selectedBufferId: nextBuffer.id,
+    settings: {
+      enabled: true,
+      systemEnabled: false,
       sound: 'chirp',
       contacts: [{ networkId: 'network-1', nick: 'alice' }],
     },

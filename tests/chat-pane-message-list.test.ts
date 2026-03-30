@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   restoreScrollOffsetAfterPrepend,
+  shouldShowJumpToLatestControl,
   shouldAutoLoadOlderHistory,
 } from '../web/src/ChatPaneMessageList.js';
 import { buildRenderBlocks } from '../web/src/chat-pane-message-utils.js';
@@ -51,6 +52,24 @@ test('restoring scroll offset keeps the visible transcript anchored after prepen
   node.scrollHeight = 860;
   restoreScrollOffsetAfterPrepend(node, 640, 72);
   assert.equal(node.scrollTop, 292);
+});
+
+test('jump-to-latest stays hidden for empty transcripts and near-bottom views', () => {
+  assert.equal(shouldShowJumpToLatestControl({
+    messagesLength: 0,
+    scrollMetrics: { clientHeight: 100, scrollHeight: 400, scrollTop: 180 },
+  }), false);
+  assert.equal(shouldShowJumpToLatestControl({
+    messagesLength: 3,
+    scrollMetrics: { clientHeight: 100, scrollHeight: 400, scrollTop: 276 },
+  }), false);
+});
+
+test('jump-to-latest becomes visible once the user is away from the live edge', () => {
+  assert.equal(shouldShowJumpToLatestControl({
+    messagesLength: 3,
+    scrollMetrics: { clientHeight: 100, scrollHeight: 400, scrollTop: 180 },
+  }), true);
 });
 
 test('buildRenderBlocks inserts day dividers only when the local calendar day changes', () => {

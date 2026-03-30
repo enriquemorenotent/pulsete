@@ -70,7 +70,9 @@ export const renderQueryPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     friends: FriendState[];
+    onJumpToLatest: () => void;
     queryNotificationsEnabled: boolean;
+    scrollRef: { current: HTMLDivElement | null };
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -80,7 +82,7 @@ export const renderQueryPane = (
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
+      scrollRef={overrides.scrollRef ?? createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
@@ -98,6 +100,7 @@ export const renderQueryPane = (
       onCloseSelfNickAliases={() => undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
+      onJumpToLatest={overrides.onJumpToLatest}
       onLoadOlderHistory={async () => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}

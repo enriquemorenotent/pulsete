@@ -136,6 +136,7 @@ export const isBackgroundDmAudioContactAllowed = (
 export const findEligibleBackgroundDmAudioBuffer = (input: {
   previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
   nextBuffers: readonly BufferState[];
+  appVisibleAndFocused: boolean;
   selectedBufferId: string | null;
   settings: BackgroundDmAudioSettings;
 }) => {
@@ -148,6 +149,7 @@ export const findEligibleBackgroundDmAudioBuffer = (input: {
 export const findEligibleBackgroundDmNotificationBuffer = (input: {
   previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
   nextBuffers: readonly BufferState[];
+  appVisibleAndFocused: boolean;
   selectedBufferId: string | null;
   settings: BackgroundDmAudioSettings;
 }) => {
@@ -155,7 +157,10 @@ export const findEligibleBackgroundDmNotificationBuffer = (input: {
     return null;
   }
   for (const buffer of input.nextBuffers) {
-    if (buffer.kind !== 'query' || buffer.id === input.selectedBufferId) {
+    if (
+      buffer.kind !== 'query'
+      || (input.appVisibleAndFocused && buffer.id === input.selectedBufferId)
+    ) {
       continue;
     }
     if (!isBackgroundDmAudioContactAllowed(input.settings, buffer)) {
