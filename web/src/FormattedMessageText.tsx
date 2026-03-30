@@ -1,4 +1,5 @@
-import { Fragment, memo, useMemo, type CSSProperties } from 'react';
+import { Fragment, memo, useMemo, useState, type CSSProperties } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from './components/ui/dialog.js';
 import { tokenizeFormattedMessage, tokenizeStrippedMessage, type MessageTextPart } from './formatted-message.js';
 import { escapeIrcTextForDebug } from './irc-format.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -56,33 +57,72 @@ export const hasVisibleFormattedMessageText = (content: ParsedFormattedMessageCo
 export const FormattedMessageInlinePreviews = memo(function FormattedMessageInlinePreviews(
   props: { hrefs: string[] },
 ) {
+  const [activeHref, setActiveHref] = useState<string | null>(null);
+
   if (props.hrefs.length === 0) {
     return null;
   }
 
   return (
-    <span className="mt-2 flex flex-wrap gap-2">
-      {props.hrefs.map((href) => (
-        <a
-          key={href}
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="block max-w-full overflow-hidden rounded-sm border border-border/80 bg-card/70 p-1"
-        >
-          <img
-            src={href}
-            alt={buildImageAltText(href)}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            className="block max-h-80 max-w-full rounded-sm object-contain"
-          />
-        </a>
-      ))}
-    </span>
+    <Dialog open={activeHref !== null} onOpenChange={(open) => !open && setActiveHref(null)}>
+      <span className="mt-2 flex flex-wrap gap-2">
+        {props.hrefs.map((href) => (
+          <button
+            key={href}
+            type="button"
+            onClick={() => setActiveHref(href)}
+            className="block max-w-full cursor-zoom-in overflow-hidden rounded-sm border border-border/80 bg-card/70 p-1 transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+          >
+            <img
+              src={href}
+              alt={buildImageAltText(href)}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              className="block max-h-80 max-w-full rounded-sm object-contain"
+            />
+          </button>
+        ))}
+      </span>
+      {activeHref ? (
+        <DialogContent className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0">
+          <DialogTitle className="sr-only">{buildImageAltText(activeHref)}</DialogTitle>
+          <DialogDescription className="sr-only">Expanded inline image preview.</DialogDescription>
+          <InlineImagePreviewDialogBody href={activeHref} />
+        </DialogContent>
+      ) : null}
+    </Dialog>
   );
 });
+
+export function InlineImagePreviewDialogBody(props: { href: string }) {
+  const altText = buildImageAltText(props.href);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-black/40 p-3 sm:p-4">
+        <img
+          src={props.href}
+          alt={altText}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="block max-h-[calc(90dvh-5.5rem)] max-w-full object-contain"
+        />
+      </div>
+      <DialogFooter className="shrink-0 border-t border-white/8 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <span className="min-w-0 truncate text-sm text-muted-foreground">{altText}</span>
+        <a
+          href={props.href}
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
+        >
+          Open original
+        </a>
+      </DialogFooter>
+    </div>
+  );
+}
 
 export const FormattedMessageText = memo(function FormattedMessageText(props: FormattedMessageTextProps) {
   const memoizedContent = useMemo(

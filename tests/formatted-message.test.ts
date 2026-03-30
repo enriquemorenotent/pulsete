@@ -3,7 +3,11 @@ import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { tokenizeFormattedMessage } from '../web/src/formatted-message.js';
-import { FormattedMessageText, parseFormattedMessageContent } from '../web/src/FormattedMessageText.js';
+import {
+  FormattedMessageText,
+  InlineImagePreviewDialogBody,
+  parseFormattedMessageContent,
+} from '../web/src/FormattedMessageText.js';
 
 test('keeps links clickable across IRC style changes', () => {
   const tokens = tokenizeFormattedMessage('Docs: https://exa\u0002mple.com now');
@@ -120,10 +124,11 @@ test('renders inline previews for direct image links', () => {
     })
   );
 
-  assert.match(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assert.match(html, /<button[^>]*type="button"/);
   assert.match(html, /<img[^>]*src="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
   assert.match(html, /alt="Inline image preview: cat\.PNG"/);
   assert.match(html, /Look/);
+  assert.doesNotMatch(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
   assert.doesNotMatch(html, />https:\/\/cdn\.example\.com\/cat\.PNG\?size=full</);
 });
 
@@ -135,9 +140,23 @@ test('renders inline previews when the image format is carried in query params',
     })
   );
 
-  assert.match(html, /href="https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large"/);
+  assert.match(html, /<button[^>]*type="button"/);
   assert.match(html, /<img[^>]*src="https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large"/);
+  assert.doesNotMatch(html, /href="https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large"/);
   assert.doesNotMatch(html, />https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large</);
+});
+
+test('inline image preview dialog exposes the full-size image and original link', () => {
+  const html = renderToStaticMarkup(
+    createElement(InlineImagePreviewDialogBody, {
+      href: 'https://cdn.example.com/cat.PNG?size=full',
+    })
+  );
+
+  assert.match(html, /Inline image preview: cat\.PNG/);
+  assert.match(html, /<img[^>]*src="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assert.match(html, />Open original</);
 });
 
 test('does not render inline previews for non-image links or raw mode', () => {
