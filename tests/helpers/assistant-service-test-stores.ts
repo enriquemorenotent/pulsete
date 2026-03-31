@@ -129,6 +129,7 @@ export const createConversationStore = (
     upsertChannel: () => { throw new Error('Not implemented in assistant-service test'); },
     upsertBuffer: () => { throw new Error('Not implemented in assistant-service test'); },
     upsertQuery: () => { throw new Error('Not implemented in assistant-service test'); },
+    renameQuery: () => { throw new Error('Not implemented in assistant-service test'); },
     appendMessage: () => { throw new Error('Not implemented in assistant-service test'); },
     repairBufferMessageAttributions: () => [],
   };

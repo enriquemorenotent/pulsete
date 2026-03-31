@@ -247,4 +247,3 @@ test('late error status events do not append to the server buffer after a query 
     message: 'No such nick',
   }]);
 });
-

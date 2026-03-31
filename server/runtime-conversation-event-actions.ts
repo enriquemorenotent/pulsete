@@ -113,6 +113,28 @@ export const handleRuntimeConversationPeerQuitEvent = (
   });
 };
 
+export const handleRuntimeConversationPeerNickEvent = (
+  options: RuntimeConversationServiceOptions,
+  event: Extract<RuntimeEvent, { type: 'peer-nick' }>,
+) => {
+  if (event.self) {
+    return [];
+  }
+  const renamed = options.conversations.renameQuery(event.networkId, event.oldNick, event.newNick);
+  if (!renamed) {
+    return [];
+  }
+  const messages: ServerMessage[] = [{ type: 'buffer.upsert', buffer: renamed.buffer }];
+  if (renamed.removedBufferId) {
+    messages.push({
+      type: 'buffer.remove',
+      networkId: event.networkId,
+      bufferId: renamed.removedBufferId,
+    });
+  }
+  return messages;
+};
+
 export const handleRuntimeConversationChannelEvent = (
   options: RuntimeConversationServiceOptions,
   event: Extract<RuntimeEvent, { type: 'channel' }>,

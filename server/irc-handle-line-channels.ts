@@ -1,4 +1,4 @@
-import { emitChannel, emitMessage, emitPeerQuit, emitStatus } from './irc-emit.js';
+import { emitChannel, emitMessage, emitPeerNick, emitPeerQuit, emitStatus } from './irc-emit.js';
 import {
   renameChannelUser,
   updateChannelUserAway,
@@ -160,8 +160,11 @@ export const handleNick = (connection: IrcChannelEventContext, params: string[],
       emitChannel(connection, channel, { users: nextUsers });
     }
   }
-  if (isSelfNick(connection, nick)) {
+  const selfNick = isSelfNick(connection, nick);
+  if (selfNick) {
     connection.confirmNick(newNick);
+  } else if (nick) {
+    emitPeerNick(connection, { oldNick: nick, newNick, self: false });
   }
   emitStatus(connection, `${nick ?? 'Someone'} is now known as ${newNick}`);
 };

@@ -7,6 +7,7 @@ type RuntimeEventConversations = Pick<
   RuntimeConversationService,
   | 'handleChannelEvent'
   | 'handleMessageEvent'
+  | 'handlePeerNickEvent'
   | 'handlePeerQuitEvent'
   | 'handleSendFailure'
   | 'handleStatusEvent'
@@ -50,6 +51,9 @@ export function translateRuntimeEvent(
   }
   if (event.type === 'message') {
     return conversations.handleMessageEvent(event);
+  }
+  if (event.type === 'peer-nick') {
+    return conversations.handlePeerNickEvent(event);
   }
   if (event.type === 'peer-quit') {
     return conversations.handlePeerQuitEvent(event);

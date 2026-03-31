@@ -175,6 +175,16 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
   assert.equal(
     events.filter(
       (event) =>
+        event.type === 'peer-nick'
+        && event.oldNick === 'helper'
+        && event.newNick === 'Helper'
+        && event.self === false
+    ).length,
+    1
+  );
+  assert.equal(
+    events.filter(
+      (event) =>
         event.type === 'peer-quit'
         && event.nick === 'HELPER'
         && event.reason === 'bye'
@@ -232,4 +242,3 @@ test('channel mode changes update nick privileges in the user list', () => {
     ]
   );
 });
-

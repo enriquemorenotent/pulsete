@@ -145,3 +145,16 @@ export const emitPeerQuit = (
     self: input.self,
   });
 };
+
+export const emitPeerNick = (
+  connection: IrcEventContext,
+  input: { oldNick: string; newNick: string; self: boolean },
+) => {
+  emitEvent(connection, {
+    type: 'peer-nick',
+    networkId: connection.profile.id,
+    oldNick: input.oldNick,
+    newNick: input.newNick,
+    self: input.self,
+  });
+};

@@ -11,6 +11,7 @@ import {
 import {
   handleRuntimeConversationChannelEvent,
   handleRuntimeConversationMessageEvent,
+  handleRuntimeConversationPeerNickEvent,
   handleRuntimeConversationPeerQuitEvent,
   handleRuntimeConversationSendFailure,
   handleRuntimeConversationStatusEvent,
@@ -66,6 +67,10 @@ export class RuntimeConversationService {
 
   handleMessageEvent(event: Extract<RuntimeEvent, { type: 'message' }>) {
     return handleRuntimeConversationMessageEvent(this.options, event);
+  }
+
+  handlePeerNickEvent(event: Extract<RuntimeEvent, { type: 'peer-nick' }>) {
+    return handleRuntimeConversationPeerNickEvent(this.options, event);
   }
 
   handlePeerQuitEvent(event: Extract<RuntimeEvent, { type: 'peer-quit' }>) {
