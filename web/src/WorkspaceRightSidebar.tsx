@@ -64,12 +64,24 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 px-3 py-4">
-      <Tabs value={tab} onValueChange={(value) => setTab(value as SidebarTab)}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="users" className="min-w-0">Users</TabsTrigger>
-          <TabsTrigger value="assistant" className="min-w-0">Assistant</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="shrink-0 border-b border-white/8">
+        <Tabs value={tab} onValueChange={(value) => setTab(value as SidebarTab)}>
+          <TabsList className="inline-flex h-auto w-auto gap-4 rounded-none border-0 bg-transparent p-0 text-muted-foreground">
+            <TabsTrigger
+              value="users"
+              className="min-w-0 rounded-none px-0 pb-2 pt-0.5 text-[12px] font-medium tracking-tight hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-1px_0_rgba(255,255,255,0.72)]"
+            >
+              Users
+            </TabsTrigger>
+            <TabsTrigger
+              value="assistant"
+              className="min-w-0 rounded-none px-0 pb-2 pt-0.5 text-[12px] font-medium tracking-tight hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-1px_0_rgba(255,255,255,0.72)]"
+            >
+              Assistant
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
       <div className="min-h-0 flex-1">
         {tab === 'users' ? (
           <NicklistPanel

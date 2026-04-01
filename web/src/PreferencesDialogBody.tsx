@@ -30,11 +30,23 @@ export type PreferencesDialogBodyProps = {
 
 export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
   return (
-    <Tabs defaultValue="notifications" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="notifications" className="min-w-0">Notifications</TabsTrigger>
-        <TabsTrigger value="assistant" className="min-w-0">Assistant</TabsTrigger>
-      </TabsList>
+    <Tabs defaultValue="notifications" className="flex flex-col gap-4">
+      <div className="-mx-4 shrink-0 border-b border-white/6 px-4">
+        <TabsList className="inline-flex h-auto w-auto gap-4 rounded-none border-0 bg-transparent p-0 text-muted-foreground">
+          <TabsTrigger
+            value="notifications"
+            className="min-w-0 rounded-none px-0 pb-2 pt-0.5 text-[12px] font-medium tracking-tight hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-1px_0_rgba(255,255,255,0.72)]"
+          >
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger
+            value="assistant"
+            className="min-w-0 rounded-none px-0 pb-2 pt-0.5 text-[12px] font-medium tracking-tight hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-1px_0_rgba(255,255,255,0.72)]"
+          >
+            Assistant
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="notifications" forceMount className="mt-0 data-[state=inactive]:hidden">
         <PreferencesNotificationsPanel
