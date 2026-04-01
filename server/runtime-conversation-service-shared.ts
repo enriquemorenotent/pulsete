@@ -1,7 +1,12 @@
-import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
+import type {
+  RuntimeConversationStore,
+  RuntimeMutedNickStore,
+  RuntimeNetworkStore,
+} from './runtime-store-ports.js';
 
 export type RuntimeConversationServiceOptions = {
   conversations: RuntimeConversationStore;
+  mutedNicks: Pick<RuntimeMutedNickStore, 'list'>;
   networks: Pick<RuntimeNetworkStore, 'get'>;
 };
 

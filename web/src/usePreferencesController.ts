@@ -4,10 +4,10 @@ import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { BackgroundDmAudioSettings, BackgroundDmAudioContact } from './background-dm-audio.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { AssistantActionSet } from './useAppActions.js';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 
 type PreferencesControllerParams = {
-  actions: AssistantActionSet;
+  actions: AssistantActionSet & Pick<import('./useAppActions.js').AppActions, 'removeMutedNick'>;
   assistant: State['domain']['assistant'];
   backgroundDmAudio: {
     settings: BackgroundDmAudioSettings;
@@ -18,6 +18,7 @@ type PreferencesControllerParams = {
     removeContact: (contact: BackgroundDmAudioContact) => void;
     requestSystemPermission: () => Promise<NotificationPermission | 'unsupported'>;
   };
+  mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
   primeBackgroundDmAudio: () => void;
   previewBackgroundDmAudio: (sound: BackgroundDmAudioSettings['sound']) => void;
@@ -28,6 +29,7 @@ export function usePreferencesController({
   actions,
   assistant,
   backgroundDmAudio,
+  mutedNicks,
   networks,
   primeBackgroundDmAudio,
   previewBackgroundDmAudio,
@@ -37,6 +39,7 @@ export function usePreferencesController({
     open: ui.preferencesOpen,
     assistant,
     backgroundDmAudio: backgroundDmAudio.settings,
+    mutedNicks,
     networks,
     onClose: ui.closePreferences,
     onStartLogin: actions.startAssistantChatgptLogin,
@@ -55,6 +58,7 @@ export function usePreferencesController({
     onSetBackgroundDmAudioSound: backgroundDmAudio.setSound,
     onPreviewBackgroundDmAudioSound: previewBackgroundDmAudio,
     onRemoveBackgroundDmAudioContact: backgroundDmAudio.removeContact,
+    onRemoveMutedNick: actions.removeMutedNick,
   }), [
     actions.cancelAssistantLogin,
     actions.logoutAssistant,
@@ -68,7 +72,9 @@ export function usePreferencesController({
     backgroundDmAudio.settings,
     backgroundDmAudio.systemPermission,
     backgroundDmAudio.requestSystemPermission,
+    mutedNicks,
     networks,
+    actions.removeMutedNick,
     primeBackgroundDmAudio,
     previewBackgroundDmAudio,
     ui.closePreferences,

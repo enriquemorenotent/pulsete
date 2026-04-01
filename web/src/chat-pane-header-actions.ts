@@ -11,6 +11,7 @@ export type ChatPaneHeaderAction = {
 type ResolveChatPaneHeaderActionsContext = {
   workspace: WorkspaceView;
   selectedFriend: FriendState | null;
+  selectedQueryMuted?: boolean;
   queryNotificationsEnabled?: boolean;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
@@ -19,6 +20,8 @@ type ResolveChatPaneHeaderActionsContext = {
   canImportHistory?: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onMuteSelectedQuery?: () => Promise<boolean>;
+  onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
   onClearHistory?: () => Promise<boolean>;
@@ -53,6 +56,7 @@ export const resolveChatPaneHeaderActions = (
       context.onCloseChannel,
       context.onCloseBuffer,
     ),
+    ...resolveMutedNickPrimaryActions(context),
     ...resolveQueryNotificationPrimaryActions(context),
     ...resolveFriendPrimaryActions(context),
   ];
@@ -111,7 +115,7 @@ const resolveQueryNotificationPrimaryActions = (
   context: ResolveChatPaneHeaderActionsContext,
 ): ChatPaneHeaderAction[] => {
   const { selectedBuffer } = context.workspace;
-  if (selectedBuffer?.kind !== 'query' || !context.onToggleQueryNotifications) {
+  if (selectedBuffer?.kind !== 'query' || context.selectedQueryMuted || !context.onToggleQueryNotifications) {
     return [];
   }
   return [
@@ -123,6 +127,33 @@ const resolveQueryNotificationPrimaryActions = (
       onSelect: context.onToggleQueryNotifications,
     },
   ];
+};
+
+const resolveMutedNickPrimaryActions = (
+  context: ResolveChatPaneHeaderActionsContext,
+): ChatPaneHeaderAction[] => {
+  if (context.workspace.selectedBuffer?.kind !== 'query') {
+    return [];
+  }
+  if (context.selectedQueryMuted && context.onUnmuteSelectedQuery) {
+    return [{
+      id: 'unmute-query',
+      label: 'Unmute',
+      onSelect: () => {
+        void context.onUnmuteSelectedQuery?.();
+      },
+    }];
+  }
+  if (!context.selectedQueryMuted && context.onMuteSelectedQuery) {
+    return [{
+      id: 'mute-query',
+      label: 'Mute',
+      onSelect: () => {
+        void context.onMuteSelectedQuery?.();
+      },
+    }];
+  }
+  return [];
 };
 
 const resolveOverflowActions = (

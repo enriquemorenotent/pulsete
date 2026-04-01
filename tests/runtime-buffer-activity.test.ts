@@ -73,3 +73,16 @@ test('server traffic never increments priority unread', () => {
     false
   );
 });
+
+test('muted messages do not increment unread or priority unread', () => {
+  const next = resolveNextBufferActivity({
+    buffer: makeBuffer({ kind: 'query', target: 'alice', unread: 2, priorityUnread: 1 }),
+    message: makeMessage({ target: 'alice', body: 'hi there' }),
+    currentNick: 'tester',
+    altNicks: ['tester_'],
+    messageMuted: true,
+  });
+
+  assert.equal(next.unread, 2);
+  assert.equal(next.priorityUnread, 1);
+});

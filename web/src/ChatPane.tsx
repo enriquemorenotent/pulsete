@@ -32,9 +32,13 @@ export type ChatPaneProps = {
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
   onSend: () => Promise<void>;
+  selectedQueryMuted?: boolean;
+  mutedQueryNick?: string | null;
   queryNotificationsEnabled?: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onMuteSelectedQuery?: () => Promise<boolean>;
+  onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
@@ -84,10 +88,13 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneHeader
         workspace={props.workspace}
         friends={props.friends}
+        selectedQueryMuted={props.selectedQueryMuted}
         queryNotificationsEnabled={props.queryNotificationsEnabled}
         onOpenMentionedChannel={props.onOpenMentionedChannel}
         onAddFriend={props.onAddFriend}
         onRemoveFriend={props.onRemoveFriend}
+        onMuteSelectedQuery={props.onMuteSelectedQuery}
+        onUnmuteSelectedQuery={props.onUnmuteSelectedQuery}
         onToggleQueryNotifications={props.onToggleQueryNotifications}
         showChannelAutoJoin={props.showChannelAutoJoin}
         channelAutoJoinActive={props.channelAutoJoinActive}
@@ -105,6 +112,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       />
       <ChatPaneStatusBanner
         workspace={props.workspace}
+        mutedQueryNick={props.mutedQueryNick}
         onReconnectNetwork={props.onReconnectNetwork}
         onRejoinChannel={props.onOpenMentionedChannel}
       />

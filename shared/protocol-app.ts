@@ -5,6 +5,7 @@ import {
   channelSchema,
   chatMessageSchema,
   friendSchema,
+  mutedNickSchema,
   networkRuntimeStateSchema,
   networkSchema,
   pendingChannelSchema,
@@ -14,6 +15,7 @@ import {
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
+  mutedNicks: z.array(mutedNickSchema).default([]),
   friendPresence: z.record(presenceStatusSchema),
   queryPresence: z.record(presenceStatusSchema).default({}),
   buffers: z.array(bufferSchema),

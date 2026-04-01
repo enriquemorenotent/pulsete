@@ -175,7 +175,7 @@ test('standalone notice rows with a sender render sender text without avatar mar
   ]);
 
   assert.match(markup, /Nova/);
-  assert.match(markup, />notice</i);
+  assert.match(markup, />Heads up</);
   assert.doesNotMatch(markup, /data-message-avatar=/);
 });
 

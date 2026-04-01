@@ -38,6 +38,10 @@ const toActions = (message: ServerMessage): Action[] => {
       return [{ type: 'upsert-friend', friend: message.friend }];
     case 'friend.remove':
       return [{ type: 'remove-friend', friendId: message.friendId }];
+    case 'muted-nick.upsert':
+      return [{ type: 'upsert-muted-nick', mutedNick: message.mutedNick }];
+    case 'muted-nick.remove':
+      return [{ type: 'remove-muted-nick', mutedNickId: message.mutedNickId }];
     case 'friend.presence':
       return [{
         type: 'friend-presence',

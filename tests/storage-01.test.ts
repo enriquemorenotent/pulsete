@@ -118,6 +118,7 @@ test('storage persists local workspace buffers and messages', () => {
   });
   const query = storage.conversations.upsertQuery(network.id, 'helper');
   const friend = storage.friends.upsert({ nick: 'alice' });
+  const mutedNick = storage.mutedNicks.upsert({ networkId: network.id, nick: 'helper' });
   const message = storage.conversations.appendMessage({
     id: randomUUID(),
     networkId: network.id,
@@ -139,9 +140,11 @@ test('storage persists local workspace buffers and messages', () => {
   assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper')?.id, query.id);
   assert.deepEqual(storage.conversations.listMessages(network.id, '#archlinux', 10), [message]);
   assert.equal(storage.friends.list()[0]?.id, friend.id);
+  assert.equal(storage.mutedNicks.list(network.id)[0]?.id, mutedNick.id);
 
   const snapshot = storage.snapshot();
   assert.equal(snapshot.friends[0]?.id, friend.id);
+  assert.equal(snapshot.mutedNicks[0]?.id, mutedNick.id);
   assert.equal(snapshot.channels[0]?.id, channel.id);
   assert.equal(
     snapshot.buffers.some((buffer) => buffer.networkId === network.id && buffer.kind === 'server' && buffer.target === 'server'),
@@ -150,4 +153,20 @@ test('storage persists local workspace buffers and messages', () => {
   assert.equal(snapshot.buffers.some((buffer) => buffer.id === channel.id && buffer.unread === 2), true);
   assert.equal(snapshot.buffers.some((buffer) => buffer.id === query.id && buffer.kind === 'query'), true);
   assert.equal(snapshot.messages.at(-1)?.id, message.id);
+});
+
+test('muted nick storage dedupes case-insensitively per network while allowing other networks', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const firstNetwork = createConnectionInstance(storage, { name: 'FirstNet' });
+  const secondNetwork = createConnectionInstance(storage, { name: 'SecondNet' });
+
+  const first = storage.mutedNicks.upsert({ networkId: firstNetwork.id, nick: 'Alice' });
+  const duplicate = storage.mutedNicks.upsert({ networkId: firstNetwork.id, nick: 'alice' });
+  const otherNetwork = storage.mutedNicks.upsert({ networkId: secondNetwork.id, nick: 'ALICE' });
+
+  assert.equal(first.id, duplicate.id);
+  assert.equal(storage.mutedNicks.list(firstNetwork.id).length, 1);
+  assert.equal(storage.mutedNicks.list(secondNetwork.id).length, 1);
+  assert.notEqual(first.id, otherNetwork.id);
 });

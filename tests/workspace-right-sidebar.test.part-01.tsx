@@ -125,8 +125,11 @@ const assistantProps: AssistantPanelProps = {
 
 const nicklist: DesktopShellNicklistModel = {
   friends: [],
+  mutedNicks: [],
   onAddFriend: async () => true,
+  onAddMutedNick: async () => true,
   onRemoveFriend: async () => true,
+  onRemoveMutedNick: async () => true,
   onSelectNick: () => {},
 };
 

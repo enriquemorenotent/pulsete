@@ -76,6 +76,14 @@ export const normalizeFriendNick = (value: string) => {
   return nick;
 };
 
+export const normalizeMutedNick = (value: string) => {
+  const nick = normalizeQueryTarget(value);
+  if (Buffer.byteLength(nick, 'utf8') > maxIsonNickBytes) {
+    throw badRequest('Muted nick is too long');
+  }
+  return nick;
+};
+
 export const normalizeMessageTarget = (value: string) =>
   channelTargetPattern.test(value.trim()) ? normalizeChannelTarget(value) : normalizeQueryTarget(value);
 

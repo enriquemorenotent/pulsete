@@ -19,6 +19,7 @@ const createSocket = (): SocketHandle => ({
 const emptySnapshot = {
   networks: [],
   friends: [],
+  mutedNicks: [],
   friendPresence: {},
   queryPresence: {},
   buffers: [],

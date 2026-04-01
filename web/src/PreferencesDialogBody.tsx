@@ -1,4 +1,4 @@
-import type { AssistantSnapshot, NetworkProfile } from '../../shared/protocol.js';
+import type { AssistantSnapshot, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 import type {
   BackgroundDmAudioContact,
   BackgroundDmAudioSettings,
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.j
 export type PreferencesDialogBodyProps = {
   assistant: AssistantSnapshot;
   backgroundDmAudio: BackgroundDmAudioSettings;
+  mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
   onStartLogin: () => Promise<unknown>;
   onCancelLogin: (loginId: string) => Promise<unknown>;
@@ -24,6 +25,7 @@ export type PreferencesDialogBodyProps = {
   onSetBackgroundDmAudioSound: (sound: BackgroundDmAudioSettings['sound']) => void;
   onPreviewBackgroundDmAudioSound: (sound: BackgroundDmAudioSettings['sound']) => void;
   onRemoveBackgroundDmAudioContact: (contact: BackgroundDmAudioContact) => void;
+  onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
 };
 
 export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
@@ -37,6 +39,7 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
       <TabsContent value="notifications" forceMount className="mt-0 data-[state=inactive]:hidden">
         <PreferencesNotificationsPanel
           backgroundDmAudio={props.backgroundDmAudio}
+          mutedNicks={props.mutedNicks}
           networks={props.networks}
           onSetBackgroundDmAudioEnabled={props.onSetBackgroundDmAudioEnabled}
           backgroundDmAudioSystemPermission={props.backgroundDmAudioSystemPermission}
@@ -45,6 +48,7 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
           onSetBackgroundDmAudioSound={props.onSetBackgroundDmAudioSound}
           onPreviewBackgroundDmAudioSound={props.onPreviewBackgroundDmAudioSound}
           onRemoveBackgroundDmAudioContact={props.onRemoveBackgroundDmAudioContact}
+          onRemoveMutedNick={props.onRemoveMutedNick}
         />
       </TabsContent>
 

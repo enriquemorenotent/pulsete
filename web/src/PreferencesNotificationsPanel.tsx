@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 import type {
   BackgroundDmAudioContact,
   BackgroundDmAudioSettings,
@@ -28,6 +28,7 @@ const notificationPermissionCopy: Record<NotificationPermission | 'unsupported',
 type PreferencesNotificationsPanelProps = {
   backgroundDmAudio: BackgroundDmAudioSettings;
   backgroundDmAudioSystemPermission: NotificationPermission | 'unsupported';
+  mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
   onSetBackgroundDmAudioEnabled: (enabled: boolean) => void;
   onSetBackgroundDmAudioSystemEnabled: (enabled: boolean) => void;
@@ -37,6 +38,7 @@ type PreferencesNotificationsPanelProps = {
   onSetBackgroundDmAudioSound: (sound: BackgroundDmAudioSettings['sound']) => void;
   onPreviewBackgroundDmAudioSound: (sound: BackgroundDmAudioSettings['sound']) => void;
   onRemoveBackgroundDmAudioContact: (contact: BackgroundDmAudioContact) => void;
+  onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
 };
 
 export function PreferencesNotificationsPanel(props: PreferencesNotificationsPanelProps) {
@@ -53,6 +55,16 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
         : leftNetwork.localeCompare(rightNetwork);
     }),
     [networkNameById, props.backgroundDmAudio.contacts],
+  );
+  const sortedMutedNicks = useMemo(
+    () => [...props.mutedNicks].sort((left, right) => {
+      const leftNetwork = networkNameById.get(left.networkId) ?? left.networkId;
+      const rightNetwork = networkNameById.get(right.networkId) ?? right.networkId;
+      return leftNetwork === rightNetwork
+        ? left.nick.localeCompare(right.nick)
+        : leftNetwork.localeCompare(rightNetwork);
+    }),
+    [networkNameById, props.mutedNicks],
   );
 
   return (
@@ -211,6 +223,48 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
           ) : (
             <p className="text-muted-foreground">
               No contacts selected yet. Use a private-message header to enable notifications for a contact.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              Muted Nicks
+            </p>
+            <p className="text-muted-foreground">
+              Muted nicks stay stored in history, but their new traffic is hidden and does not count as unread.
+            </p>
+          </div>
+
+          {sortedMutedNicks.length > 0 ? (
+            <ul className="space-y-2">
+              {sortedMutedNicks.map((mutedNick) => {
+                const networkName = networkNameById.get(mutedNick.networkId) ?? mutedNick.networkId;
+                return (
+                  <li
+                    key={mutedNick.id}
+                    className="flex items-center justify-between gap-3 rounded-md border border-white/6 bg-black/14 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{mutedNick.nick}</p>
+                      <p className="truncate text-[12px] text-muted-foreground">{networkName}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void props.onRemoveMutedNick(mutedNick.id)}
+                      aria-label={`Unmute ${mutedNick.nick}`}
+                    >
+                      Remove
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">
+              No muted nicks yet. Use a query header or nicklist row to mute someone.
             </p>
           )}
         </div>

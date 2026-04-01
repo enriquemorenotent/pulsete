@@ -3,6 +3,7 @@ import { createChatActions } from './app-actions-chat.js';
 import { createConversationActions } from './app-actions-conversation.js';
 import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
+import { createMutedNickActions } from './app-actions-muted-nicks.js';
 import { createNetworkActions } from './app-actions-networks.js';
 import {
   type AppActionContext,
@@ -53,6 +54,9 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
     ...actionContext,
     ...gateway,
   });
+  const mutedNickActions = createMutedNickActions({
+    ...actionContext,
+  });
   return {
     ...createAssistantActions({
       ...actionContext,
@@ -64,6 +68,7 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
       ...actionContext,
       ...conversation,
     }),
+    ...mutedNickActions,
     ...createChatActions({
       ...actionContext,
       ...gateway,
@@ -94,6 +99,7 @@ export type AppActions = ReturnType<typeof createAppActions>;
 export type ChatActionSet = Pick<
   AppActions,
   | 'addFriend'
+  | 'addMutedNick'
   | 'closeBuffer'
   | 'clearBufferHistory'
   | 'closeChannel'
@@ -106,6 +112,7 @@ export type ChatActionSet = Pick<
   | 'openMentionedChannel'
   | 'reconnectNetwork'
   | 'removeFriend'
+  | 'removeMutedNick'
   | 'selectPrivateBuffer'
   | 'sendComposer'
   | 'toggleCurrentChannelAutoJoin'
@@ -126,7 +133,7 @@ export type SidebarActionSet = Pick<
 >;
 export type NicklistActionSet = Pick<
   AppActions,
-  'addFriend' | 'removeFriend' | 'selectPrivateBuffer'
+  'addFriend' | 'addMutedNick' | 'removeFriend' | 'removeMutedNick' | 'selectPrivateBuffer'
 >;
 export type AssistantActionSet = Pick<
   AppActions,

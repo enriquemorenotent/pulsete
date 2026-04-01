@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Moon } from 'lucide-react';
-import type { ChannelState, FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type { ChannelState, FriendState, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -8,14 +8,19 @@ import { channelUserModeTone } from './channel-user-tone.js';
 import { findFriendByNick } from './friend-utils.js';
 import { FriendToggleButton } from './FriendToggleButton.js';
 import { buildNicklistGroups } from './nicklist-groups.js';
+import { findMutedNick } from './muted-nick-utils.js';
+import { MuteToggleButton } from './MuteToggleButton.js';
 import { SidebarWidget } from './SidebarWidget.js';
 
 type NicklistPanelProps = {
   network: NetworkProfile | null;
   channel: ChannelState;
   friends: FriendState[];
+  mutedNicks: MutedNickState[];
   onAddFriend: (nick: string) => Promise<boolean>;
+  onAddMutedNick: (networkId: string, nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };
 
@@ -66,6 +71,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                       </div>
                       {group.users.map((user) => {
                         const friend = findFriendByNick(props.friends, user.nick);
+                        const mutedNick = props.network ? findMutedNick(props.mutedNicks, props.network.id, user.nick) : null;
                         return (
                           <div key={user.nick} className="flex items-center rounded-sm">
                             <button
@@ -89,6 +95,16 @@ export function NicklistPanel(props: NicklistPanelProps) {
                               active={Boolean(friend)}
                               onClick={() => void (friend ? props.onRemoveFriend(friend.id) : props.onAddFriend(user.nick))}
                             />
+                            {props.network ? (
+                              <MuteToggleButton
+                                active={Boolean(mutedNick)}
+                                onClick={() => void (
+                                  mutedNick
+                                    ? props.onRemoveMutedNick(mutedNick.id)
+                                    : props.onAddMutedNick(props.network!.id, user.nick)
+                                )}
+                              />
+                            ) : null}
                           </div>
                         );
                       })}

@@ -3,6 +3,7 @@ import { StorageAssistantRepository } from './storage-assistant-repository.js';
 import { initializeStorageDefaults, openStorageResources } from './storage-bootstrap.js';
 import { StorageConversationsRepository } from './storage-conversations-repository.js';
 import { StorageFriendsRepository } from './storage-friends-repository.js';
+import { StorageMutedNicksRepository } from './storage-muted-nicks-repository.js';
 import { StorageNetworksRepository } from './storage-networks-repository.js';
 import { createStorageViews } from './storage-runtime-store.js';
 import { createStorageSnapshot } from './storage-snapshot.js';
@@ -19,6 +20,7 @@ export class Storage {
   readonly networks: StorageNetworksRepository;
   readonly conversations: StorageConversationsRepository;
   readonly friends: StorageFriendsRepository;
+  readonly mutedNicks: StorageMutedNicksRepository;
   readonly snapshotSource: StorageSnapshotSource;
   readonly runtimeStore: RuntimeStore;
 
@@ -31,10 +33,12 @@ export class Storage {
     this.networks = new StorageNetworksRepository(this.db, this.secretBox);
     this.conversations = new StorageConversationsRepository(this.db);
     this.friends = new StorageFriendsRepository(this.db);
+    this.mutedNicks = new StorageMutedNicksRepository(this.db);
     const views = createStorageViews({
       assistant: this.assistant,
       conversations: this.conversations,
       friends: this.friends,
+      mutedNicks: this.mutedNicks,
       networks: this.networks,
     });
     this.snapshotSource = views.snapshotSource;

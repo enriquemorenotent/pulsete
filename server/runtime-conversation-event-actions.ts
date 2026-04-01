@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { MessageKind, ServerMessage } from '../shared/protocol.js';
+import { isNickMuted } from '../shared/muted-nicks.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
 import {
@@ -54,6 +55,11 @@ export const handleRuntimeConversationMessageEvent = (
     && !isChannelTarget(event.message.target)
     && !options.conversations.getBufferByTarget(event.message.networkId, event.message.target);
   const message = openTargetNotice ? { ...event.message, target: 'server' } : event.message;
+  const messageMuted = isNickMuted(
+    options.mutedNicks.list(message.networkId),
+    message.networkId,
+    message.nick,
+  );
   const removedChannel = event.message.self && event.message.kind === 'part'
     ? options.conversations.getChannelByName(event.message.networkId, event.message.target)
     : null;
@@ -64,6 +70,12 @@ export const handleRuntimeConversationMessageEvent = (
     message,
     currentNick: event.currentNick,
     altNicks: event.altNicks,
+    messageMuted,
+    allowCreateBuffer: !messageMuted
+      || message.self
+      || message.target === 'server'
+      || isChannelTarget(message.target)
+      || (message.kind !== 'line' && message.kind !== 'action'),
   });
   const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
   if (bufferUpdate) {
@@ -147,7 +159,15 @@ const appendRuntimeConversationMessage = (
   options: RuntimeConversationServiceOptions,
   message: MessageInput,
 ) => {
-  const { saved, bufferUpdate } = appendConversationMessage(options.conversations, { message });
+  const messageMuted = isNickMuted(
+    options.mutedNicks.list(message.networkId),
+    message.networkId,
+    message.nick,
+  );
+  const { saved, bufferUpdate } = appendConversationMessage(options.conversations, {
+    message,
+    messageMuted,
+  });
   const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
   if (bufferUpdate) {
     messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });

@@ -72,6 +72,8 @@ export const renderQueryPane = (
     friends: FriendState[];
     onJumpToLatest: () => void;
     queryNotificationsEnabled: boolean;
+    selectedQueryMuted: boolean;
+    mutedQueryNick: string;
     scrollRef: { current: HTMLDivElement | null };
   }> = {},
 ) =>
@@ -87,9 +89,13 @@ export const renderQueryPane = (
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => undefined}
+      selectedQueryMuted={overrides.selectedQueryMuted}
+      mutedQueryNick={overrides.mutedQueryNick}
       queryNotificationsEnabled={overrides.queryNotificationsEnabled ?? false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      onMuteSelectedQuery={async () => true}
+      onUnmuteSelectedQuery={async () => true}
       onToggleQueryNotifications={() => undefined}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}

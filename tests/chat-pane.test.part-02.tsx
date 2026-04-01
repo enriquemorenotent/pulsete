@@ -150,6 +150,19 @@ test('query headers show when notifications are already enabled for the active P
   assert.match(markup, />Disable Notifications</);
 });
 
+test('muted query headers hide notification actions and show the muted banner', () => {
+  const markup = renderQueryPane([], {
+    selectedQueryMuted: true,
+    mutedQueryNick: 'MissD',
+  });
+
+  assert.match(markup, />Unmute</);
+  assert.doesNotMatch(markup, /Enable Notifications/);
+  assert.doesNotMatch(markup, /Disable Notifications/);
+  assert.match(markup, />Muted</);
+  assert.match(markup, /Messages from MissD are hidden here and won’t create unread or notification activity\./);
+});
+
 test('reconnecting channels rely on the inline status banner instead of header metadata', () => {
   const network = makeNetwork();
   const selectedBuffer = makeBuffer();

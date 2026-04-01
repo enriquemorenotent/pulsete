@@ -15,6 +15,7 @@ import {
   type ServerMessage,
   type BufferState,
   type FriendState,
+  type MutedNickState,
   type NetworkProfile,
   type ChatMessage,
 } from '../../shared/protocol.js';
@@ -122,6 +123,16 @@ export const api = {
     }),
   removeFriend: (friendId: string) =>
     apiRequest<{ ok: boolean; friendId: string; messages: ServerMessage[] }>(`/api/friends/${friendId}`, {
+      method: 'DELETE',
+      body: '{}',
+    }),
+  addMutedNick: (networkId: string, nick: string) =>
+    apiRequest<{ mutedNick: MutedNickState; messages: ServerMessage[] }>('/api/muted-nicks', {
+      method: 'POST',
+      body: JSON.stringify({ networkId, nick }),
+    }),
+  removeMutedNick: (mutedNickId: string) =>
+    apiRequest<{ ok: boolean; mutedNickId: string; messages: ServerMessage[] }>(`/api/muted-nicks/${mutedNickId}`, {
       method: 'DELETE',
       body: '{}',
     }),

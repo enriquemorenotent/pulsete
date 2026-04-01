@@ -71,6 +71,7 @@ test('preferences dialog shows codex limits with progress bars and hides spark b
     <PreferencesDialogBody
       assistant={assistant}
       backgroundDmAudio={backgroundDmAudio}
+      mutedNicks={[{ id: 'mute-1', networkId: 'network-1', nick: 'MissD' }]}
       networks={networks}
       onStartLogin={async () => {}}
       onCancelLogin={async () => {}}
@@ -83,6 +84,7 @@ test('preferences dialog shows codex limits with progress bars and hides spark b
       onSetBackgroundDmAudioSound={() => {}}
       onPreviewBackgroundDmAudioSound={() => {}}
       onRemoveBackgroundDmAudioContact={() => {}}
+      onRemoveMutedNick={async () => true}
     />
   );
 
@@ -105,6 +107,8 @@ test('preferences dialog shows codex limits with progress bars and hides spark b
   assert.match(markup, /Add contacts from a private-message header/);
   assert.match(markup, />Alice</);
   assert.match(markup, />TestNet</);
+  assert.match(markup, /Muted Nicks/);
+  assert.match(markup, />MissD</);
   assert.match(markup, /Codex/);
   assert.match(markup, /5h limit/);
   assert.match(markup, /Weekly limit/);
@@ -128,6 +132,7 @@ test('preferences dialog renders a manual sign-in link while auth is pending', (
         },
       }}
       backgroundDmAudio={backgroundDmAudio}
+      mutedNicks={[]}
       networks={networks}
       onStartLogin={async () => {}}
       onCancelLogin={async () => {}}
@@ -140,6 +145,7 @@ test('preferences dialog renders a manual sign-in link while auth is pending', (
       onSetBackgroundDmAudioSound={() => {}}
       onPreviewBackgroundDmAudioSound={() => {}}
       onRemoveBackgroundDmAudioContact={() => {}}
+      onRemoveMutedNick={async () => true}
     />
   );
 

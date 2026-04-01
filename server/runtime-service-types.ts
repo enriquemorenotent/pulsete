@@ -18,6 +18,7 @@ import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
 import type { RuntimeFriendService } from './runtime-friend-service.js';
 import type { RuntimeIrcService } from './runtime-irc-service.js';
+import type { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type { createRuntimeSnapshot } from './runtime-snapshot.js';
 import type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
@@ -55,6 +56,11 @@ export type RuntimeConversationMutations = {
 export type RuntimeFriendMutations = {
   upsertFriend: RuntimeFriendService['upsertFriend'];
   removeFriend: RuntimeFriendService['removeFriend'];
+};
+
+export type RuntimeMutedNickMutations = {
+  upsertMutedNick: RuntimeMutedNickService['upsertMutedNick'];
+  removeMutedNick: RuntimeMutedNickService['removeMutedNick'];
 };
 
 export type RuntimeNetworkMutations = {
@@ -114,6 +120,10 @@ export type RuntimeHttpApi = {
     add: RuntimeFriendMutations['upsertFriend'];
     remove: RuntimeFriendMutations['removeFriend'];
   };
+  mutedNicks: {
+    add: RuntimeMutedNickMutations['upsertMutedNick'];
+    remove: RuntimeMutedNickMutations['removeMutedNick'];
+  };
   assistant: RuntimeAssistantApi;
 };
 
@@ -130,6 +140,7 @@ export type RuntimeServices = {
   sessions: RuntimeNetworkSessionService;
   conversations: RuntimeConversationMutations;
   friends: RuntimeFriendMutations;
+  mutedNicks: RuntimeMutedNickMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
   assistant: RuntimeAssistantApi;

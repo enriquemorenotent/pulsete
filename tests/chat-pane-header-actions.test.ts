@@ -160,6 +160,54 @@ test('query header notification action reflects enabled state', () => {
   });
 });
 
+test('query header actions expose mute while the query is still active', () => {
+  const queryBuffer = makeBuffer({
+    kind: 'query',
+    target: 'MissD',
+  });
+  const actions = resolveChatPaneHeaderActions(createContext({
+    workspace: makeWorkspace({
+      mode: 'query-connected',
+      selectedBuffer: queryBuffer,
+      selectedChannel: null,
+      headerTitle: 'MissD',
+      composerPlaceholder: 'Message MissD',
+      showNicklist: false,
+    }),
+    onMuteSelectedQuery: async () => true,
+  }));
+
+  assert.deepEqual(resolveActionLabels(actions), {
+    primary: ['Close', 'Mute', 'Enable Notifications', 'Add friend'],
+    overflow: [],
+  });
+});
+
+test('muted query header actions hide notifications and offer unmute', () => {
+  const queryBuffer = makeBuffer({
+    kind: 'query',
+    target: 'MissD',
+  });
+  const actions = resolveChatPaneHeaderActions(createContext({
+    workspace: makeWorkspace({
+      mode: 'query-connected',
+      selectedBuffer: queryBuffer,
+      selectedChannel: null,
+      headerTitle: 'MissD',
+      composerPlaceholder: 'Message MissD',
+      showNicklist: false,
+    }),
+    selectedQueryMuted: true,
+    onMuteSelectedQuery: async () => true,
+    onUnmuteSelectedQuery: async () => true,
+  }));
+
+  assert.deepEqual(resolveActionLabels(actions), {
+    primary: ['Close', 'Unmute', 'Add friend'],
+    overflow: [],
+  });
+});
+
 test('server header actions keep list channels visible without overflow', () => {
   const serverBuffer = makeBuffer({
     kind: 'server',

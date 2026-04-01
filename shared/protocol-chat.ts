@@ -68,6 +68,13 @@ export const friendSchema = z.object({
 });
 export type FriendState = z.infer<typeof friendSchema>;
 
+export const mutedNickSchema = z.object({
+  id: z.string(),
+  networkId: z.string(),
+  nick: z.string(),
+});
+export type MutedNickState = z.infer<typeof mutedNickSchema>;
+
 export const presenceStatusSchema = z.enum(['online', 'away', 'offline']);
 export type PresenceStatus = z.infer<typeof presenceStatusSchema>;
 

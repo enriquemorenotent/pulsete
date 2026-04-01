@@ -1,7 +1,7 @@
 import type { AssistantPanelProps } from './AssistantPanel.js';
 import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
-import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type { FriendState, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -25,8 +25,11 @@ export type DesktopShellCommandPaletteModel = {
 
 export type DesktopShellNicklistModel = {
   friends: FriendState[];
+  mutedNicks: MutedNickState[];
   onAddFriend: (nick: string) => Promise<boolean>;
+  onAddMutedNick: (networkId: string, nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };
 

@@ -82,6 +82,8 @@ export const appendConversationMessage = (
     message: MessageInput;
     currentNick?: string | null;
     altNicks?: readonly string[];
+    messageMuted?: boolean;
+    allowCreateBuffer?: boolean;
   },
 ) => {
   const bufferUpdate = resolveMessageBuffer(store, input);
@@ -114,9 +116,14 @@ const resolveMessageBuffer = (
     message: MessageInput;
     currentNick?: string | null;
     altNicks?: readonly string[];
+    messageMuted?: boolean;
+    allowCreateBuffer?: boolean;
   },
 ) => {
   const existing = store.getBufferByTarget(input.message.networkId, input.message.target);
+  if (!existing && input.allowCreateBuffer === false) {
+    return null;
+  }
   const created = existing ?? createMessageBuffer(store, input.message);
   if (!created) {
     return null;
@@ -127,6 +134,7 @@ const resolveMessageBuffer = (
     message: input.message,
     currentNick: input.currentNick,
     altNicks: input.altNicks,
+    messageMuted: input.messageMuted,
   });
   if (nextBuffer === created) {
     return created;

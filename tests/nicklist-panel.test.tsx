@@ -51,8 +51,11 @@ test('nicklist groups users by privilege level', () => {
       network={network}
       channel={channel}
       friends={[] satisfies FriendState[]}
+      mutedNicks={[]}
       onAddFriend={async () => true}
+      onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
   );
@@ -95,15 +98,45 @@ test('nicklist renders the away icon alongside the friend star for away users', 
       network={network}
       channel={channel}
       friends={[{ id: 'friend-1', nick: 'alice' }] satisfies FriendState[]}
+      mutedNicks={[]}
       onAddFriend={async () => true}
+      onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
   );
 
   assert.match(markup, /aria-label="Away"/);
   assert.match(markup, /aria-label="Remove friend"/);
+  assert.match(markup, /aria-label="Mute nick"/);
   assert.match(markup, /aria-label="Away"[\s\S]*aria-label="Remove friend"/);
+});
+
+test('nicklist shows the unmute control for muted users', () => {
+  const channel: ChannelState = {
+    id: 'channel-1',
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: [makeUser('alice')],
+  };
+
+  const markup = renderToStaticMarkup(
+    <NicklistPanel
+      network={network}
+      channel={channel}
+      friends={[] satisfies FriendState[]}
+      mutedNicks={[{ id: 'mute-1', networkId: network.id, nick: 'Alice' }]}
+      onAddFriend={async () => true}
+      onAddMutedNick={async () => true}
+      onRemoveFriend={async () => true}
+      onRemoveMutedNick={async () => true}
+      onSelectNick={() => undefined}
+    />
+  );
+
+  assert.match(markup, /aria-label="Unmute nick"/);
 });
 
 test('nicklist filtering promotes exact matches and friends before broader matches', () => {

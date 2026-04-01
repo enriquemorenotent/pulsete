@@ -32,6 +32,7 @@ type DesktopSidebarModelParams = {
 type DesktopNicklistModelParams = {
   actions: NicklistActionSet;
   friends: State['domain']['friends'];
+  mutedNicks: State['domain']['mutedNicks'];
 };
 
 export function useDesktopHeaderModel({
@@ -103,19 +104,26 @@ export function useDesktopSidebarModel({
 export function useDesktopNicklistModel({
   actions,
   friends,
+  mutedNicks,
 }: DesktopNicklistModelParams): DesktopShellModel['nicklist'] {
   return useMemo(
     () => ({
       friends,
+      mutedNicks,
       onAddFriend: actions.addFriend,
+      onAddMutedNick: actions.addMutedNick,
       onRemoveFriend: actions.removeFriend,
+      onRemoveMutedNick: actions.removeMutedNick,
       onSelectNick: actions.selectPrivateBuffer,
     }),
     [
       actions.addFriend,
+      actions.addMutedNick,
       actions.removeFriend,
+      actions.removeMutedNick,
       actions.selectPrivateBuffer,
       friends,
+      mutedNicks,
     ],
   );
 }

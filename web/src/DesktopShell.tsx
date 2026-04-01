@@ -44,10 +44,6 @@ export function DesktopShell(props: DesktopShellModel) {
   const [compactPane, setCompactPane] = useState<CompactWorkspacePane>(() =>
     getDefaultCompactWorkspacePane(selectedBufferId),
   );
-  const shellContextLabel =
-    props.workspace.headerTitle
-    || props.workspace.selectedNetwork?.name
-    || 'No active connection';
   const layoutStyle = {
     '--sidebar-width': `${leftSidebarResize.sidebarWidth}px`,
     '--right-sidebar-width': `${rightSidebarResize.sidebarWidth}px`,
@@ -94,9 +90,6 @@ export function DesktopShell(props: DesktopShellModel) {
               IRC
             </span>
           </div>
-          <p className="truncate pt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-            {shellContextLabel}
-          </p>
         </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           {props.header.showMessageDisplayModeToggle ? (

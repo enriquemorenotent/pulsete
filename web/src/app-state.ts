@@ -7,6 +7,7 @@ import {
   reduceConversationDomain,
   sortBuffers,
   sortFriends,
+  sortMutedNicks,
   sortPendingChannels,
 } from './app-state-conversations.js';
 import { initialChannelListState } from './app-state-channel-list.js';
@@ -22,6 +23,7 @@ const initialDomainState: AppDomainState = {
   gatewayStatus: 'connecting',
   networks: [],
   friends: [],
+  mutedNicks: [],
   friendPresence: {},
   queryPresence: {},
   buffers: [],
@@ -59,6 +61,7 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
   gatewayStatus: state.domain.gatewayStatus,
   networks: snapshot.networks,
   friends: sortFriends(snapshot.friends),
+  mutedNicks: sortMutedNicks(snapshot.mutedNicks),
   friendPresence: snapshot.friendPresence,
   queryPresence: snapshot.queryPresence,
   buffers: sortBuffers(snapshot.buffers),

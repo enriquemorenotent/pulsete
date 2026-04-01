@@ -105,6 +105,36 @@ test('self-sent private messages open query buffers automatically', () => {
   );
 });
 
+test('incoming private messages from muted nicks stay in history without opening a query buffer', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  storage.mutedNicks.upsert({ networkId: network.id, nick: 'helper' });
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'message',
+      message: {
+        id: randomUUID(),
+        networkId: network.id,
+        target: 'helper',
+        nick: 'HELPER',
+        body: 'hello there',
+        kind: 'line',
+        self: false,
+        ts: Date.now(),
+      },
+    }
+  );
+
+  assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper'), null);
+  assert.equal(storage.conversations.listMessages(network.id, 'helper', 10)[0]?.body, 'hello there');
+  assert.equal(sent.some((message) => message.type === 'message.append'), true);
+  assert.equal(sent.some((message) => message.type === 'buffer.upsert'), false);
+});
+
 test('private action messages open query buffers automatically', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -229,4 +259,3 @@ test('service messages on the server buffer close stale service queries', () => 
     bufferId: query.id,
   });
 });
-

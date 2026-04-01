@@ -82,6 +82,7 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.irc.join('missing-network', '#help'), /Network not found/);
   assert.throws(() => runtime.irc.part('missing-network', '#help'), /Network not found/);
   assert.throws(() => runtime.conversations.closeBuffer('missing-buffer'), /Buffer not found/);
+  assert.throws(() => runtime.mutedNicks.upsertMutedNick('missing-network', 'alice'), /Network not found/);
   assert.throws(() => runtime.irc.join(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
   assert.throws(() => runtime.irc.join(network.id, '#help,#ops'), /Channel name must refer to a single channel/);
   assert.throws(() => runtime.irc.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
@@ -92,7 +93,11 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.friends.upsertFriend('   '), /Private-message target is required/);
   assert.throws(() => runtime.friends.upsertFriend('#help'), /Private-message target is required/);
   assert.throws(() => runtime.friends.upsertFriend('alice,bob'), /Private-message target must refer to a single nick/);
+  assert.throws(() => runtime.mutedNicks.upsertMutedNick(network.id, '   '), /Private-message target is required/);
+  assert.throws(() => runtime.mutedNicks.upsertMutedNick(network.id, '#help'), /Private-message target is required/);
+  assert.throws(() => runtime.mutedNicks.upsertMutedNick(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
   assert.throws(() => runtime.friends.removeFriend('missing-friend'), /Friend not found/);
+  assert.throws(() => runtime.mutedNicks.removeMutedNick('missing-muted-nick'), /Muted nick not found/);
   assert.throws(() => runtime.conversations.closeBuffer(channel.id), /Only private message buffers can be closed/);
   assert.throws(() => runtime.conversations.clearHistory(storage.conversations.upsertBuffer({
     networkId: network.id,
@@ -115,6 +120,46 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.deepEqual(storage.conversations.listChannels(network.id), [channel]);
   assert.equal(storage.conversations.getBuffer(query.id)?.target, 'helper');
   assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10), []);
+});
+
+test('muting and unmuting recomputes unread counts for existing buffers immediately', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput({
+    nick: 'tester',
+    altNicks: ['tester_'],
+  }));
+  const channel = storage.conversations.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+  });
+
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: '#help',
+    nick: 'Alice',
+    body: 'hello tester',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.setBufferUnread(channel.id, 1, 1);
+
+  const muted = runtime.mutedNicks.upsertMutedNick(network.id, 'alice');
+
+  assert.equal(storage.conversations.getBuffer(channel.id)?.unread, 0);
+  assert.equal(storage.conversations.getBuffer(channel.id)?.priorityUnread, 0);
+  assert.equal(muted.messages.some((message) => message.type === 'muted-nick.upsert'), true);
+  assert.equal(muted.messages.some((message) => message.type === 'buffer.upsert'), true);
+
+  const unmuted = runtime.mutedNicks.removeMutedNick(muted.mutedNick.id);
+
+  assert.equal(storage.conversations.getBuffer(channel.id)?.unread, 1);
+  assert.equal(storage.conversations.getBuffer(channel.id)?.priorityUnread, 1);
+  assert.equal(unmuted.messages.some((message) => message.type === 'muted-nick.remove'), true);
+  assert.equal(unmuted.messages.some((message) => message.type === 'buffer.upsert'), true);
 });
 
 test('runtime clearHistory removes the selected buffer transcript and resets unread state', () => {

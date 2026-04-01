@@ -1,7 +1,11 @@
 import type { ServerMessage } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
-import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
+import type {
+  RuntimeConversationStore,
+  RuntimeMutedNickStore,
+  RuntimeNetworkStore,
+} from './runtime-store-ports.js';
 
 type RuntimeEventConversations = Pick<
   RuntimeConversationService,
@@ -14,6 +18,7 @@ type RuntimeEventConversations = Pick<
 >;
 type RuntimeEventStore = {
   conversations: RuntimeConversationStore;
+  mutedNicks: Pick<RuntimeMutedNickStore, 'list'>;
   networks: Pick<RuntimeNetworkStore, 'get'>;
 };
 type RuntimeEventSink = {
@@ -67,6 +72,7 @@ export function translateRuntimeEvent(
 export function handleRuntimeEvent(runtime: RuntimeEventSink, event: RuntimeEvent) {
   const conversations = new RuntimeConversationService({
     conversations: runtime.store.conversations,
+    mutedNicks: runtime.store.mutedNicks,
     networks: runtime.store.networks,
   });
   for (const message of translateRuntimeEvent(event, conversations)) {

@@ -7,15 +7,16 @@ type BufferActivityInput = {
   message: MessageInput;
   currentNick?: string | null;
   altNicks?: readonly string[];
+  messageMuted?: boolean;
 };
 
 const channelPriorityKinds = new Set<MessageInput['kind']>(['line', 'action', 'notice']);
 
-export const shouldIncrementUnread = (message: MessageInput) =>
-  !message.self && (message.target === 'server' || message.kind !== 'system');
+export const shouldIncrementUnread = (message: MessageInput, messageMuted = false) =>
+  !messageMuted && !message.self && (message.target === 'server' || message.kind !== 'system');
 
 export const shouldIncrementPriorityUnread = (input: BufferActivityInput) => {
-  if (!shouldIncrementUnread(input.message)) {
+  if (!shouldIncrementUnread(input.message, input.messageMuted)) {
     return false;
   }
   if (input.buffer.kind === 'query') {
@@ -31,7 +32,9 @@ export const shouldIncrementPriorityUnread = (input: BufferActivityInput) => {
 };
 
 export const resolveNextBufferActivity = (input: BufferActivityInput) => {
-  const nextUnread = shouldIncrementUnread(input.message) ? input.buffer.unread + 1 : input.buffer.unread;
+  const nextUnread = shouldIncrementUnread(input.message, input.messageMuted)
+    ? input.buffer.unread + 1
+    : input.buffer.unread;
   const nextPriorityUnread = shouldIncrementPriorityUnread(input)
     ? input.buffer.priorityUnread + 1
     : input.buffer.priorityUnread;

@@ -11,6 +11,7 @@ import type { ComposerController } from './composer-history.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import { filterMutedMessages, findMutedNick } from './muted-nick-utils.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { ChatActionSet } from './useAppActions.js';
 import type { SelectedBufferHistoryControls } from './useSelectedBufferEffects.js';
@@ -25,6 +26,7 @@ export type DesktopChatModelParams = {
   };
   composer: ComposerController;
   friends: State['domain']['friends'];
+  mutedNicks: State['domain']['mutedNicks'];
   networks: State['domain']['networks'];
   primeBackgroundDmAudio: () => void;
   channelList: State['transient']['channelList'];
@@ -48,6 +50,7 @@ export function useDesktopChatModel({
   backgroundDmAudio,
   composer,
   friends,
+  mutedNicks,
   networks,
   primeBackgroundDmAudio,
   channelList,
@@ -68,6 +71,9 @@ export function useDesktopChatModel({
   const selectedQueryNotificationContact = workspace.selectedBuffer?.kind === 'query'
     ? { networkId: workspace.selectedBuffer.networkId, nick: workspace.selectedBuffer.target }
     : null;
+  const selectedMutedNick = workspace.selectedBuffer?.kind === 'query'
+    ? findMutedNick(mutedNicks, workspace.selectedBuffer.networkId, workspace.selectedBuffer.target)
+    : null;
   const queryNotificationsEnabled = selectedQueryNotificationContact
     ? isBackgroundDmAudioContactAllowed(backgroundDmAudio.settings, {
         kind: 'query',
@@ -75,6 +81,10 @@ export function useDesktopChatModel({
         target: selectedQueryNotificationContact.nick,
       })
     : false;
+  const visibleSelectedMessages = useMemo(
+    () => filterMutedMessages(selectedMessages, mutedNicks),
+    [mutedNicks, selectedMessages],
+  );
   const participantQueryNetwork = workspace.selectedBuffer?.kind === 'channel'
     ? workspace.selectedNetwork
     : null;
@@ -90,7 +100,7 @@ export function useDesktopChatModel({
     () => ({
       workspace,
       friends,
-      selectedMessages,
+      selectedMessages: visibleSelectedMessages,
       draft,
       focusContextKey: composerContextKey,
       completionEnabled: composerCompletion.enabled,
@@ -106,10 +116,18 @@ export function useDesktopChatModel({
           sendComposer: actions.sendComposer,
           forceScrollToBottomRef: ui.forceScrollToBottomRef,
         }),
+      selectedQueryMuted: Boolean(selectedMutedNick),
+      mutedQueryNick: selectedMutedNick?.nick ?? null,
       queryNotificationsEnabled,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
-      onToggleQueryNotifications: selectedQueryNotificationContact
+      onMuteSelectedQuery: selectedQueryNotificationContact
+        ? () => actions.addMutedNick(selectedQueryNotificationContact.networkId, selectedQueryNotificationContact.nick)
+        : undefined,
+      onUnmuteSelectedQuery: selectedMutedNick
+        ? () => actions.removeMutedNick(selectedMutedNick.id)
+        : undefined,
+      onToggleQueryNotifications: selectedQueryNotificationContact && !selectedMutedNick
         ? () => {
             if (queryNotificationsEnabled) {
               backgroundDmAudio.removeContact(selectedQueryNotificationContact);
@@ -173,13 +191,15 @@ export function useDesktopChatModel({
       composerContextKey,
       draft,
       friends,
+      mutedNicks,
       historyImportOpen,
       participantQueryNetwork,
       primeBackgroundDmAudio,
       queryNotificationsEnabled,
+      selectedMutedNick,
       selectedBufferHistory,
       selectedBufferId,
-      selectedMessages,
+      visibleSelectedMessages,
       selectedNetwork,
       selectedQueryNotificationContact,
       selfNickAliasesOpen,

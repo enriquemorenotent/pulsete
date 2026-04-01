@@ -5,7 +5,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
 import { emptyAssistantSnapshot } from '../web/src/assistant-state.js';
 import { DesktopShell } from '../web/src/DesktopShell.js';
-import type { DesktopShellModel } from '../web/src/desktop-shell-model.js';
 import { emptyNetworkForm } from '../web/src/network-form.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
@@ -29,17 +28,6 @@ const network: NetworkProfile = {
   autoJoin: [],
 };
 
-const serverBuffer: BufferState = {
-  id: 'buffer-server',
-  networkId: network.id,
-  kind: 'server',
-  target: 'server',
-  unread: 0,
-  priorityUnread: 0,
-  lastReadTs: null,
-  lastReadMessageId: null,
-};
-
 const channelBuffer: BufferState = {
   id: 'buffer-channel',
   networkId: network.id,
@@ -59,28 +47,27 @@ const channel: ChannelState = {
   users: [],
 };
 
-const createWorkspace = (overrides: Partial<WorkspaceView>): WorkspaceView => ({
-  mode: 'server-connected',
-  selection: { kind: 'buffer', bufferId: serverBuffer.id },
+const createWorkspace = (): WorkspaceView => ({
+  mode: 'channel-connected',
+  selection: { kind: 'buffer', bufferId: channelBuffer.id },
   connectionInstances: [network],
   selectedNetwork: network,
   selectedRuntime: null,
-  selectedBuffer: serverBuffer,
-  selectedChannel: null,
+  selectedBuffer: channelBuffer,
+  selectedChannel: channel,
   selectedPendingChannel: null,
-  headerTitle: 'server',
+  headerTitle: channel.name,
   headerSubtitle: '',
   composerMode: 'normal',
-  composerPlaceholder: 'Type a message',
-  emptyBody: '',
-  showNicklist: false,
-  ...overrides,
+  composerPlaceholder: `Message ${channel.name} or /command`,
+  emptyBody: 'Wait for activity or send a message.',
+  showNicklist: true,
 });
 
-const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
+const createModel = (workspace: WorkspaceView) => ({
   workspace,
   header: {
-    messageDisplayMode: 'colors',
+    messageDisplayMode: 'colors' as const,
     showMessageDisplayModeToggle: true,
     onMessageDisplayModeChange: () => undefined,
     onOpenNetworkManager: () => undefined,
@@ -114,7 +101,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     friends: [],
     selectedMessages: [],
     draft: '',
-    messageDisplayMode: 'colors',
+    messageDisplayMode: 'colors' as const,
     scrollRef: createRef<HTMLDivElement>(),
     onDraftChange: () => undefined,
     onRecallOlderDraft: () => undefined,
@@ -136,14 +123,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     onLoadOlderHistory: async () => undefined,
     onCloseChannel: () => undefined,
     onCloseBuffer: () => undefined,
-    channelList: {
-      open: false,
-      networkId: null,
-      requestId: null,
-      status: 'idle',
-      entries: [],
-      error: null,
-    },
+    channelList: { open: false, networkId: null, requestId: null, status: 'idle' as const, entries: [], error: null },
     channelListNetwork: null,
     onCloseChannelList: () => undefined,
     onJoinChannelFromList: async () => undefined,
@@ -179,12 +159,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
   preferences: {
     open: false,
     assistant: emptyAssistantSnapshot,
-    backgroundDmAudio: {
-      enabled: false,
-      systemEnabled: false,
-      sound: 'chirp',
-      contacts: [],
-    },
+    backgroundDmAudio: { enabled: false, systemEnabled: false, sound: 'chirp' as const, contacts: [] },
     mutedNicks: [],
     networks: [network],
     onClose: () => undefined,
@@ -193,9 +168,9 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     onLogout: async () => undefined,
     onChangeModel: async () => undefined,
     onSetBackgroundDmAudioEnabled: () => undefined,
-    backgroundDmAudioSystemPermission: 'default',
+    backgroundDmAudioSystemPermission: 'default' as const,
     onSetBackgroundDmAudioSystemEnabled: () => undefined,
-    onRequestBackgroundDmAudioSystemPermission: async () => 'default',
+    onRequestBackgroundDmAudioSystemPermission: async () => 'default' as const,
     onSetBackgroundDmAudioSound: () => undefined,
     onPreviewBackgroundDmAudioSound: () => undefined,
     onRemoveBackgroundDmAudioContact: () => undefined,
@@ -221,7 +196,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
   networkEditor: {
     open: false,
     form: emptyNetworkForm(),
-    activeTab: 'servers',
+    activeTab: 'servers' as const,
     onTabChange: () => undefined,
     onClose: () => undefined,
     onSubmit: () => undefined,
@@ -229,20 +204,9 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
   },
 });
 
-test('desktop shell renders a second resize handle when the right sidebar is visible', () => {
-  const markup = renderToStaticMarkup(
-    <DesktopShell
-      {...createModel(createWorkspace({
-        mode: 'channel-connected',
-        selection: { kind: 'buffer', bufferId: channelBuffer.id },
-        selectedBuffer: channelBuffer,
-        selectedChannel: channel,
-        headerTitle: '#general',
-        showNicklist: true,
-      }))}
-    />
-  );
+test('desktop shell header avoids rendering any secondary context line', () => {
+  const markup = renderToStaticMarkup(<DesktopShell {...createModel(createWorkspace())} />);
 
-  assert.match(markup, /aria-label="Resize left sidebar"/);
-  assert.match(markup, /aria-label="Resize right sidebar"/);
+  assert.match(markup, />Pulsete</);
+  assert.doesNotMatch(markup, /<p class="truncate pt-1 font-mono text-\[10px\] uppercase tracking-\[0\.22em\] text-muted-foreground">/);
 });

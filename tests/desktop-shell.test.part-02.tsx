@@ -153,8 +153,11 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
   },
   nicklist: {
     friends: [],
+    mutedNicks: [],
     onAddFriend: async () => true,
+    onAddMutedNick: async () => true,
     onRemoveFriend: async () => true,
+    onRemoveMutedNick: async () => true,
     onSelectNick: () => undefined,
   },
   assistant: {
@@ -182,6 +185,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
       sound: 'chirp',
       contacts: [],
     },
+    mutedNicks: [],
     networks: [network],
     onClose: () => undefined,
     onStartLogin: async () => undefined,
@@ -195,6 +199,7 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     onSetBackgroundDmAudioSound: () => undefined,
     onPreviewBackgroundDmAudioSound: () => undefined,
     onRemoveBackgroundDmAudioContact: () => undefined,
+    onRemoveMutedNick: async () => true,
   },
   networkManager: {
     open: false,
@@ -241,4 +246,3 @@ test('desktop shell renders a visible command palette trigger in the header', ()
   assert.match(markup, /Go to…/);
   assert.match(markup, /Ctrl\/Cmd\+K/);
 });
-

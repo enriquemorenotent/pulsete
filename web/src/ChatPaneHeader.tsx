@@ -12,10 +12,13 @@ import type { WorkspaceView } from './workspace.js';
 type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
   friends: FriendState[];
+  selectedQueryMuted?: boolean;
   queryNotificationsEnabled?: boolean;
   onOpenMentionedChannel: (channel: string) => void;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onMuteSelectedQuery?: () => Promise<boolean>;
+  onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
@@ -48,6 +51,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const actions = resolveChatPaneHeaderActions({
     workspace: props.workspace,
     selectedFriend,
+    selectedQueryMuted: props.selectedQueryMuted ?? false,
     queryNotificationsEnabled: props.queryNotificationsEnabled,
     showChannelAutoJoin: props.showChannelAutoJoin,
     channelAutoJoinActive: props.channelAutoJoinActive,
@@ -56,6 +60,8 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     canImportHistory: props.canImportHistory,
     onAddFriend: props.onAddFriend,
     onRemoveFriend: props.onRemoveFriend,
+    onMuteSelectedQuery: props.onMuteSelectedQuery,
+    onUnmuteSelectedQuery: props.onUnmuteSelectedQuery,
     onToggleQueryNotifications: props.onToggleQueryNotifications,
     onToggleChannelAutoJoin: props.onToggleChannelAutoJoin,
     onClearHistory: props.onClearHistory,

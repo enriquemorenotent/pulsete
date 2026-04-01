@@ -76,8 +76,11 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
             network={props.workspace.selectedNetwork}
             channel={props.workspace.selectedChannel}
             friends={props.nicklist.friends}
+            mutedNicks={props.nicklist.mutedNicks}
             onAddFriend={props.nicklist.onAddFriend}
+            onAddMutedNick={props.nicklist.onAddMutedNick}
             onRemoveFriend={props.nicklist.onRemoveFriend}
+            onRemoveMutedNick={props.nicklist.onRemoveMutedNick}
             onSelectNick={props.nicklist.onSelectNick}
           />
         ) : (

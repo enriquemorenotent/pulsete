@@ -5,6 +5,7 @@ import type {
   RuntimeConversationMutations,
   RuntimeFriendMutations,
   RuntimeHttpApi,
+  RuntimeMutedNickMutations,
   RuntimeNetworkMutations,
 } from './runtime-service-types.js';
 import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
@@ -14,6 +15,7 @@ type CreateRuntimeHttpApiParams = {
   catalog: RuntimeNetworkCatalog;
   conversations: RuntimeConversationMutations;
   friends: RuntimeFriendMutations;
+  mutedNicks: RuntimeMutedNickMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
   sessions: RuntimeNetworkSessionService;
@@ -24,6 +26,7 @@ export const createRuntimeHttpApi = ({
   catalog,
   conversations,
   friends,
+  mutedNicks,
   irc,
   networks,
   sessions,
@@ -50,6 +53,10 @@ export const createRuntimeHttpApi = ({
   friends: {
     add: (nick) => friends.upsertFriend(nick),
     remove: (friendId) => friends.removeFriend(friendId),
+  },
+  mutedNicks: {
+    add: (networkId, nick) => mutedNicks.upsertMutedNick(networkId, nick),
+    remove: (mutedNickId) => mutedNicks.removeMutedNick(mutedNickId),
   },
   assistant: {
     startChatgptLogin: () => assistant.startChatgptLogin(),

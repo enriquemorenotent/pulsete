@@ -8,6 +8,7 @@ import { RuntimeEventRouter } from './runtime-event-router.js';
 import { RuntimeFriendService } from './runtime-friend-service.js';
 import { createRuntimeHttpApi } from './runtime-http-api.js';
 import { RuntimeIrcService } from './runtime-irc-service.js';
+import { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import { RuntimePublisher } from './runtime-publisher.js';
 import { createRuntimeSnapshot } from './runtime-snapshot.js';
@@ -15,6 +16,7 @@ import type {
   RuntimeConversationMutations,
   RuntimeFriendMutations,
   RuntimeGateway,
+  RuntimeMutedNickMutations,
   RuntimeNetworkMutations,
   RuntimeServices,
   RuntimeStore,
@@ -52,6 +54,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
 
   const conversationsService = new RuntimeConversationService({
     conversations: store.conversations,
+    mutedNicks: store.mutedNicks,
     networks: store.networks,
   });
   const eventRouter = new RuntimeEventRouter({
@@ -72,6 +75,11 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const friendMutations = new RuntimeFriendService({
     connectionManager,
     friends: store.friends,
+  });
+  const mutedNickMutations = new RuntimeMutedNickService({
+    conversations: store.conversations,
+    mutedNicks: store.mutedNicks,
+    networks: store.networks,
   });
   const irc = new RuntimeIrcService({
     connectionManager,
@@ -156,6 +164,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     upsertFriend: (nick) => publishMutation(friendMutations.upsertFriend(nick)),
     removeFriend: (friendId) => publishMutation(friendMutations.removeFriend(friendId)),
   };
+  const mutedNicks: RuntimeMutedNickMutations = {
+    upsertMutedNick: (networkId, nick) => publishMutation(mutedNickMutations.upsertMutedNick(networkId, nick)),
+    removeMutedNick: (mutedNickId) => publishMutation(mutedNickMutations.removeMutedNick(mutedNickId)),
+  };
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
@@ -166,6 +178,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     catalog: store.networks,
     conversations,
     friends,
+    mutedNicks,
     irc,
     networks,
     sessions,
@@ -185,6 +198,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     sessions,
     conversations,
     friends,
+    mutedNicks,
     irc,
     networks,
     assistant: assistantApi,

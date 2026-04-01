@@ -1,5 +1,5 @@
 import type { AppDomainState, Action } from './app-types.js';
-import type { BufferState, FriendState, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, FriendState, MutedNickState, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
   appendConversationMessages,
@@ -17,6 +17,13 @@ export const sortBuffers = (buffers: BufferState[]) =>
 
 export const sortFriends = (friends: FriendState[]) =>
   [...friends].sort((left, right) => left.nick.localeCompare(right.nick, undefined, { sensitivity: 'accent' }));
+
+export const sortMutedNicks = (mutedNicks: MutedNickState[]) =>
+  [...mutedNicks].sort((left, right) =>
+    left.networkId === right.networkId
+      ? left.nick.localeCompare(right.nick, undefined, { sensitivity: 'accent' })
+      : left.networkId.localeCompare(right.networkId)
+  );
 
 export const sortPendingChannels = (pendingChannels: PendingChannelState[]) =>
   [...pendingChannels].sort((left, right) =>
@@ -52,6 +59,16 @@ export const reduceConversationDomain = (
         friendPresence: Object.fromEntries(
           Object.entries(domain.friendPresence).filter(([friendId]) => friendId !== action.friendId)
         ),
+      };
+    case 'upsert-muted-nick': {
+      const mutedNicks = domain.mutedNicks.filter((mutedNick) => mutedNick.id !== action.mutedNick.id);
+      mutedNicks.push(action.mutedNick);
+      return { ...domain, mutedNicks: sortMutedNicks(mutedNicks) };
+    }
+    case 'remove-muted-nick':
+      return {
+        ...domain,
+        mutedNicks: domain.mutedNicks.filter((mutedNick) => mutedNick.id !== action.mutedNickId),
       };
     case 'friend-presence':
       return {

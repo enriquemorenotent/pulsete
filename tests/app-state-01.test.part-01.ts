@@ -36,6 +36,7 @@ test('snapshot selects the first instance server buffer', () => {
     snapshot: {
       networks: [network],
       friends: [],
+      mutedNicks: [],
       friendPresence: {},
       queryPresence: {},
       buffers: [buffer],
@@ -84,6 +85,7 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
     snapshot: {
       networks: [network],
       friends: [],
+      mutedNicks: [],
       friendPresence: {},
       queryPresence: {},
       buffers: [serverBuffer],
@@ -236,4 +238,3 @@ test('append-messages keeps prepended pages ahead of equal-timestamp rows', () =
     ['older-1', 'older-2', 'newer-1', 'newer-2']
   );
 });
-

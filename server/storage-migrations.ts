@@ -8,7 +8,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 11;
+export const currentStorageSchemaVersion = 12;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -103,6 +103,25 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureColumn(db, 'buffers', 'priorityUnread', 'INTEGER NOT NULL DEFAULT 0');
       ensureColumn(db, 'buffers', 'lastReadTs', 'INTEGER');
       ensureColumn(db, 'buffers', 'lastReadMessageId', 'TEXT');
+    },
+  },
+  {
+    version: 12,
+    apply: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS muted_nicks (
+          id TEXT PRIMARY KEY,
+          networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+          nick TEXT NOT NULL COLLATE NOCASE,
+          createdAt INTEGER NOT NULL,
+          updatedAt INTEGER NOT NULL,
+          UNIQUE(networkId, nick)
+        );
+      `);
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_muted_nicks_network_nick
+          ON muted_nicks(networkId, nick COLLATE NOCASE, createdAt ASC);
+      `);
     },
   },
 ];

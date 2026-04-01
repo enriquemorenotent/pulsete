@@ -131,6 +131,7 @@ export function useAppController(): AppController {
     backgroundDmAudio,
     composer,
     friends: state.domain.friends,
+    mutedNicks: state.domain.mutedNicks,
     networks: state.domain.networks,
     primeBackgroundDmAudio,
     channelList: state.transient.channelList,
@@ -143,6 +144,7 @@ export function useAppController(): AppController {
   const nicklist = useDesktopNicklistModel({
     actions,
     friends: state.domain.friends,
+    mutedNicks: state.domain.mutedNicks,
   });
   const assistant = useAssistantController({
     actions,
@@ -155,6 +157,7 @@ export function useAppController(): AppController {
     actions,
     assistant: state.domain.assistant,
     backgroundDmAudio,
+    mutedNicks: state.domain.mutedNicks,
     networks: state.domain.networks,
     primeBackgroundDmAudio,
     previewBackgroundDmAudio,

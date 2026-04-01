@@ -10,6 +10,7 @@ import type {
   ChannelState,
   ChannelUserState,
   FriendState,
+  MutedNickState,
 } from '../shared/protocol.js';
 import type {
   BufferInput,
@@ -17,6 +18,7 @@ import type {
   FriendInput,
   MessagePage,
   MessageInput,
+  MutedNickInput,
   NetworkInput,
   NetworkSaveResult,
   RuntimeNetworkProfile,
@@ -29,6 +31,7 @@ export type RuntimeSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];
   listFriends(): FriendState[];
+  listMutedNicks(networkId?: string): MutedNickState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
   listAssistantThreads(): AssistantThreadSummary[];
@@ -88,6 +91,14 @@ export type RuntimeFriendStore = {
   remove(friendId: string): FriendState | null;
 };
 
+export type RuntimeMutedNickStore = {
+  list(networkId?: string): MutedNickState[];
+  get(mutedNickId: string): MutedNickState | null;
+  findByNick(networkId: string, nick: string): MutedNickState | null;
+  upsert(input: MutedNickInput): MutedNickState;
+  remove(mutedNickId: string): MutedNickState | null;
+};
+
 export type RuntimeAssistantStore = {
   listThreads(): AssistantThreadSummary[];
   getThread(threadId: string): AssistantThreadSummary | null;
@@ -114,6 +125,7 @@ export type RuntimeStore = {
   snapshotSource: RuntimeSnapshotSource;
   conversations: RuntimeConversationStore;
   friends: RuntimeFriendStore;
+  mutedNicks: RuntimeMutedNickStore;
   networks: RuntimeNetworkStore;
   assistant: RuntimeAssistantStore;
 };

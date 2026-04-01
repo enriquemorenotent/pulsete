@@ -16,6 +16,7 @@ import type {
   ChannelState,
   ChannelUserState,
   FriendState,
+  MutedNickState,
   NetworkAuthMethod,
   NetworkProfile,
 } from '../shared/protocol.js';
@@ -97,6 +98,14 @@ export type FriendRow = {
   updatedAt: number;
 };
 
+export type MutedNickRow = {
+  id: string;
+  networkId: string;
+  nick: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type AssistantThreadRow = {
   id: string;
   bufferId: string | null;
@@ -152,6 +161,8 @@ export type BufferInput = Omit<BufferState, 'id' | 'unread' | 'priorityUnread' |
 
 export type FriendInput = Omit<FriendState, 'id'> & Partial<Pick<FriendState, 'id'>>;
 
+export type MutedNickInput = Omit<MutedNickState, 'id'> & Partial<Pick<MutedNickState, 'id'>>;
+
 export type MessageInput = {
   id: string;
   networkId: string;
@@ -206,6 +217,7 @@ export type StorageSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];
   listFriends(): FriendState[];
+  listMutedNicks(networkId?: string): MutedNickState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
   listAssistantThreads(): AssistantThreadSummary[];

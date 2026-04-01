@@ -10,6 +10,7 @@ import type {
   ChannelUserState,
   ChatMessage,
   FriendState,
+  MutedNickState,
   NetworkProfile,
   PendingChannelState,
   PresenceStatus,
@@ -54,6 +55,7 @@ export type AppDomainState = {
   gatewayStatus: GatewayStatus;
   networks: NetworkProfile[];
   friends: FriendState[];
+  mutedNicks: MutedNickState[];
   friendPresence: Record<string, PresenceStatus>;
   queryPresence: Record<string, PresenceStatus>;
   buffers: BufferState[];
@@ -90,6 +92,8 @@ export type Action =
   | { type: 'upsert-network'; network: NetworkProfile }
   | { type: 'upsert-friend'; friend: FriendState }
   | { type: 'remove-friend'; friendId: string }
+  | { type: 'upsert-muted-nick'; mutedNick: MutedNickState }
+  | { type: 'remove-muted-nick'; mutedNickId: string }
   | { type: 'friend-presence'; friendId: string; presence: PresenceStatus }
   | { type: 'query-presence'; bufferId: string; presence: PresenceStatus }
   | { type: 'upsert-buffer'; buffer: BufferState }

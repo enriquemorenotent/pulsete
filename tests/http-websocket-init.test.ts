@@ -12,6 +12,7 @@ type WebSocketTestContextOverrides = Partial<WebSocketTestContext>;
 const createEmptySnapshot = () => ({
   networks: [],
   friends: [],
+  mutedNicks: [],
   friendPresence: {},
   queryPresence: {},
   buffers: [],

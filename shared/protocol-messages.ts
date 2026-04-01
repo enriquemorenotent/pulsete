@@ -13,6 +13,7 @@ import {
   channelUserSchema,
   chatMessageSchema,
   friendSchema,
+  mutedNickSchema,
   networkRuntimePhaseSchema,
   networkSchema,
   pendingChannelSchema,
@@ -75,6 +76,8 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseServerSchema.extend({ type: z.literal('network.upsert'), network: networkSchema }),
   baseServerSchema.extend({ type: z.literal('friend.upsert'), friend: friendSchema }),
   baseServerSchema.extend({ type: z.literal('friend.remove'), friendId: z.string() }),
+  baseServerSchema.extend({ type: z.literal('muted-nick.upsert'), mutedNick: mutedNickSchema }),
+  baseServerSchema.extend({ type: z.literal('muted-nick.remove'), mutedNickId: z.string() }),
   baseServerSchema.extend({
     type: z.literal('friend.presence'),
     friendId: z.string(),

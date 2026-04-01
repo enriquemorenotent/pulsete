@@ -1,7 +1,7 @@
 import { pbkdf2Sync } from 'node:crypto';
 import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
-import type { BufferState, ChannelState, ChannelUserState, FriendState } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState } from '../shared/protocol.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
 import { getLocalIrcIdentity } from '../shared/local-defaults.js';
 import type { SecretBox } from './network-secret.js';
@@ -11,6 +11,7 @@ import type {
   FriendRow,
   MessageInput,
   MessageRow,
+  MutedNickRow,
   NetworkInput,
   NetworkRow,
   RuntimeNetworkProfile,
@@ -149,6 +150,12 @@ export const toBufferState = (row: BufferRow): BufferState => ({
 
 export const toFriendState = (row: FriendRow): FriendState => ({
   id: row.id,
+  nick: row.nick,
+});
+
+export const toMutedNickState = (row: MutedNickRow): MutedNickState => ({
+  id: row.id,
+  networkId: row.networkId,
   nick: row.nick,
 });
 
