@@ -1,14 +1,24 @@
-import { X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, MoreHorizontal, X } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol.js';
+import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
 type ConnectionSidebarFriendsProps = Pick<
 	ConnectionSidebarProps,
-	'friends' | 'friendPresence' | 'onRemoveFriend' | 'onSelectFriend'
+	| 'friends'
+	| 'friendPresence'
+	| 'hideOfflineFriends'
+	| 'onRemoveFriend'
+	| 'onSelectFriend'
+	| 'onToggleHideOfflineFriends'
 >;
 
 export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
+	const hideOfflineFriends = props.hideOfflineFriends ?? false;
+	const [menuOpen, setMenuOpen] = useState(false);
+	const menuRef = useRef<HTMLDivElement | null>(null);
 	const sortedFriends = [...props.friends].sort(
 		(left, right) =>
 			presenceWeight(props.friendPresence[right.id]) -
@@ -25,15 +35,76 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 		(friend) =>
 			resolvePresence(props.friendPresence[friend.id]) === 'offline',
 	);
+	const visibleFriends = hideOfflineFriends
+		? activeFriends
+		: [...activeFriends, ...offlineFriends];
+
+	useEffect(() => {
+		if (!menuOpen) {
+			return;
+		}
+		const handlePointerDown = (event: PointerEvent) => {
+			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+				setMenuOpen(false);
+			}
+		};
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				setMenuOpen(false);
+			}
+		};
+		window.addEventListener('pointerdown', handlePointerDown);
+		window.addEventListener('keydown', handleKeyDown);
+		return () => {
+			window.removeEventListener('pointerdown', handlePointerDown);
+			window.removeEventListener('keydown', handleKeyDown);
+		};
+	}, [menuOpen]);
 
 	return (
 		<>
 			<section className="shrink-0 border-t border-white/6 p-4">
-				<div className="px-2 py-1">
+				<div className="flex items-center justify-between gap-3 px-2 py-1">
 					<div className="min-w-0">
 						<h2 className="text-[13px] font-semibold tracking-tight text-foreground">
 							Friends
 						</h2>
+					</div>
+					<div ref={menuRef} className="relative shrink-0">
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon"
+							className="size-7 text-muted-foreground hover:text-foreground"
+							aria-label="Friends options"
+							aria-expanded={menuOpen}
+							aria-haspopup="menu"
+							onClick={() => setMenuOpen((current) => !current)}
+						>
+							<MoreHorizontal className="size-4" />
+						</Button>
+						{menuOpen ? (
+							<div
+								role="menu"
+								className="absolute right-0 top-full z-30 mt-2 min-w-48 overflow-hidden rounded-[0.9rem] border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+							>
+								<button
+									type="button"
+									role="menuitemcheckbox"
+									aria-checked={hideOfflineFriends}
+									className="flex w-full items-center justify-between rounded-[0.7rem] px-2.5 py-2 text-left text-[12px] text-foreground transition-colors hover:bg-white/[0.06]"
+									onClick={() => {
+										setMenuOpen(false);
+										props.onToggleHideOfflineFriends?.();
+									}}
+								>
+									<span>Hide offline nicks</span>
+									{hideOfflineFriends ? (
+										<Check className="size-3.5 text-primary" />
+									) : null}
+								</button>
+							</div>
+						) : null}
 					</div>
 				</div>
 				<div className="mt-1 max-h-[min(32dvh,16rem)] overflow-y-auto overscroll-contain pr-0.5">
@@ -41,28 +112,19 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 						<div className="px-2.5 py-1.5 text-[13px] text-muted-foreground">
 							No friends saved yet.
 						</div>
+					) : visibleFriends.length === 0 ? (
+						<div className="px-2.5 py-1.5 text-[13px] text-muted-foreground">
+							No friends are online right now.
+						</div>
 					) : (
 						<div className="space-y-px border-white/6">
-							{activeFriends.map((friend) => (
+							{visibleFriends.map((friend) => (
 								<FriendRow
 									key={friend.id}
 									friend={friend}
 									presence={resolvePresence(
 										props.friendPresence[friend.id],
 									)}
-									onOpen={() =>
-										void props.onSelectFriend(friend)
-									}
-									onRemove={() =>
-										void props.onRemoveFriend(friend.id)
-									}
-								/>
-							))}
-							{offlineFriends.map((friend) => (
-								<FriendRow
-									key={friend.id}
-									friend={friend}
-									presence="offline"
 									onOpen={() =>
 										void props.onSelectFriend(friend)
 									}

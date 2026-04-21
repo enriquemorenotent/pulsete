@@ -25,8 +25,10 @@ export const ConnectionSidebar = memo(function ConnectionSidebar(
 			<ConnectionSidebarFriends
 				friends={props.friends}
 				friendPresence={props.friendPresence}
+				hideOfflineFriends={props.hideOfflineFriends}
 				onRemoveFriend={props.onRemoveFriend}
 				onSelectFriend={props.onSelectFriend}
+				onToggleHideOfflineFriends={props.onToggleHideOfflineFriends}
 			/>
 		</aside>
 	);

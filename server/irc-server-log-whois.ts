@@ -28,7 +28,7 @@ export const formatWhoisNumeric = (command: string, params: string[]) => {
     const host = normalizeText(params[3]);
     const realName = normalizeText(params[5]);
     return nick && username && host
-      ? [`* ${nick} is ${username}@${host}${realName ? ` (${realName})` : ''}`]
+      ? [`* ${nick} is ${username} at ${host}${realName ? ` (${realName})` : ''}`]
       : [];
   }
   if (command === '312') {

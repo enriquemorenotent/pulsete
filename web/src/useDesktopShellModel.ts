@@ -27,6 +27,7 @@ type DesktopSidebarModelParams = {
   friendPresence: State['domain']['friendPresence'];
   queryPresence: State['domain']['queryPresence'];
   sidebarConnections: ConnectionSidebarProps['connections'];
+  ui: Pick<AppUiState, 'hideOfflineFriends' | 'toggleHideOfflineFriends'>;
 };
 
 type DesktopNicklistModelParams = {
@@ -62,16 +63,19 @@ export function useDesktopSidebarModel({
   friendPresence,
   queryPresence,
   sidebarConnections,
+  ui,
 }: DesktopSidebarModelParams): DesktopShellModel['sidebar'] {
   return useMemo(
     () => ({
       connections: sidebarConnections,
       friends,
       friendPresence,
+      hideOfflineFriends: ui.hideOfflineFriends,
       queryPresence,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
       onSelectFriend: actions.selectFriend,
+      onToggleHideOfflineFriends: ui.toggleHideOfflineFriends,
       onSelectNetwork: actions.selectNetworkBuffer,
       onSelectBuffer: actions.selectTabBuffer,
       onSelectPendingChannel: actions.selectPendingTab,
@@ -97,6 +101,8 @@ export function useDesktopSidebarModel({
       friends,
       queryPresence,
       sidebarConnections,
+      ui.hideOfflineFriends,
+      ui.toggleHideOfflineFriends,
     ],
   );
 }

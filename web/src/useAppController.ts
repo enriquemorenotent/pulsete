@@ -125,6 +125,7 @@ export function useAppController(): AppController {
     friendPresence: state.domain.friendPresence,
     queryPresence: state.domain.queryPresence,
     sidebarConnections,
+    ui,
   });
   const chat = useDesktopChatModel({
     actions,

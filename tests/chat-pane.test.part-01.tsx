@@ -54,8 +54,8 @@ test('compact chat rows use one grid skeleton for plain text and inline previews
     makeMessage({ id: 'message-2', nick: 'Joby', body: 'Look https://example.test/cat.png', ts: 1 }),
   ]);
 
-  assert.match(plainMarkup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
-  assert.match(previewMarkup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(plainMarkup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(previewMarkup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
   assert.match(previewMarkup, /Inline image preview: cat\.png/);
   assert.match(previewMarkup, /Look /);
   assert.doesNotMatch(previewMarkup, /col-start-2/);
@@ -179,6 +179,16 @@ test('standalone notice rows with a sender render sender text without avatar mar
   assert.doesNotMatch(markup, /data-message-avatar=/);
 });
 
+test('system rows in channel transcripts use the compact inline timestamp layout', () => {
+  const markup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: null, body: '* coco is logged in as coco', kind: 'system', ts: 1 }),
+  ]);
+
+  assert.match(markup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
+  assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
+  assert.doesNotMatch(markup, /flex flex-wrap items-center gap-2 text-\[11px\] uppercase/);
+});
+
 test('server tab rows keep inline source labels instead of grouped headers', () => {
   const markup = renderServerPane([
     makeMessage({ id: 'message-1', nick: null, body: 'Connected', kind: 'system', ts: 1 }),
@@ -189,7 +199,7 @@ test('server tab rows keep inline source labels instead of grouped headers', () 
   const serverLabels = markup.match(/>Server</g) ?? [];
   assert.equal(serverLabels.length, 2);
   assert.match(markup, />Notice</);
-  assert.match(markup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
+  assert.match(markup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
   assert.doesNotMatch(markup, /opacity-0 transition-opacity/);
   assert.doesNotMatch(markup, /text-\[15px\] font-semibold/);
   assert.doesNotMatch(markup, /flex min-w-0 flex-wrap items-baseline/);

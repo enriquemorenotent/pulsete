@@ -10,10 +10,12 @@ export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
   friends: FriendState[];
   friendPresence: Record<string, PresenceStatus>;
+  hideOfflineFriends?: boolean;
   queryPresence?: Record<string, PresenceStatus>;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onSelectFriend: (friend: FriendState) => Promise<void>;
+  onToggleHideOfflineFriends?: () => void;
   onSelectNetwork: (network: NetworkProfile) => void;
   onSelectBuffer: (buffer: BufferState) => void;
   onSelectPendingChannel: (networkId: string, channel: string) => void;

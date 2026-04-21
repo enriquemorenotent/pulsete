@@ -179,7 +179,7 @@ test('friends sort online contacts above away, then offline', () => {
   assert.ok(beaIndex < aliceIndex);
 });
 
-test('friends header shows only the section label', () => {
+test('friends header includes an overflow menu button', () => {
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
@@ -213,6 +213,91 @@ test('friends header shows only the section label', () => {
   );
 
   assert.match(markup, /Friends<\/h2>/);
-  assert.doesNotMatch(markup, /Friends<\/h2><span/);
+  assert.match(markup, /aria-label="Friends options"/);
+  assert.match(markup, /aria-haspopup="menu"/);
 });
 
+test('friends section can hide offline nicks while keeping online friends visible', () => {
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [] satisfies NetworkProfile[],
+        conversation: buildConversationIndex({
+          buffers: [] satisfies BufferState[],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: {},
+        selection: null,
+      })}
+      friends={[
+        { id: 'friend-1', nick: 'Alice' },
+        { id: 'friend-2', nick: 'Bob' },
+        { id: 'friend-3', nick: 'Cara' },
+      ]}
+      friendPresence={{
+        'friend-1': 'offline',
+        'friend-2': 'away',
+        'friend-3': 'online',
+      }}
+      hideOfflineFriends
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onToggleHideOfflineFriends={() => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.doesNotMatch(markup, /aria-label="Open Alice \(offline\)"/);
+  assert.match(markup, /aria-label="Open Bob \(away\)"/);
+  assert.match(markup, /aria-label="Open Cara \(online\)"/);
+});
+
+test('friends section shows an empty state when offline friends are hidden and none are online', () => {
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [] satisfies NetworkProfile[],
+        conversation: buildConversationIndex({
+          buffers: [] satisfies BufferState[],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: {},
+        selection: null,
+      })}
+      friends={[
+        { id: 'friend-1', nick: 'Alice' },
+        { id: 'friend-2', nick: 'Bob' },
+      ]}
+      friendPresence={{}}
+      hideOfflineFriends
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onToggleHideOfflineFriends={() => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /No friends are online right now\./);
+  assert.doesNotMatch(markup, /aria-label="Open Alice \(offline\)"/);
+  assert.doesNotMatch(markup, /aria-label="Open Bob \(offline\)"/);
+});

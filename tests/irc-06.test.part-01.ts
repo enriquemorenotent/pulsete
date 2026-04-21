@@ -98,7 +98,7 @@ test('irc connection routes whois replies to the originating buffer', async () =
           event.type === 'status'
           && event.kind === 'system'
           && event.target === '#chat'
-          && event.message === '* helper is helper@users.example (Helper Person)'
+          && event.message === '* helper is helper at users.example (Helper Person)'
       )
       && events.some(
         (event) =>
@@ -184,7 +184,7 @@ test('irc connection routes duplicate WHOIS replies for the same nick in request
         event.type === 'status'
         && event.target === '#first'
         && event.kind === 'system'
-        && event.message === '* alice is user@host (Alice Example)'
+        && event.message === '* alice is user at host (Alice Example)'
     )
   );
   assert.ok(
@@ -202,7 +202,7 @@ test('irc connection routes duplicate WHOIS replies for the same nick in request
         event.type === 'status'
         && event.target === '#second'
         && event.kind === 'system'
-        && event.message === '* alice is user@host (Alice Example)'
+        && event.message === '* alice is user at host (Alice Example)'
     )
   );
   assert.ok(
@@ -215,4 +215,3 @@ test('irc connection routes duplicate WHOIS replies for the same nick in request
     )
   );
 });
-

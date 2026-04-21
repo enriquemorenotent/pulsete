@@ -52,21 +52,20 @@ test('irc connection routes labeled WHOIS replies to the matching buffer even wh
 
   assert.ok(
     events.some(
-      (event) =>
+        (event) =>
         event.type === 'status'
         && event.target === '#second'
         && event.kind === 'system'
-        && event.message === '* alice is user@host-two (Second Reply)'
+        && event.message === '* alice is user at host-two (Second Reply)'
     )
   );
   assert.ok(
     events.some(
-      (event) =>
+        (event) =>
         event.type === 'status'
         && event.target === '#first'
         && event.kind === 'system'
-        && event.message === '* alice is user@host-one (First Reply)'
+        && event.message === '* alice is user at host-one (First Reply)'
     )
   );
 });
-
