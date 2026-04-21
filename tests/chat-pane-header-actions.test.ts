@@ -80,6 +80,7 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   onAddFriend: async () => true,
   onRemoveFriend: async () => true,
   onToggleQueryNotifications: () => undefined,
+  onWhoisSelectedQuery: () => undefined,
   onToggleChannelAutoJoin: async () => true,
   onClearHistory: async () => true,
   onDownloadHistory: async () => true,
@@ -132,7 +133,7 @@ test('query header actions keep friend controls visible and leave utilities in o
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close', 'Enable Notifications', 'Remove friend'],
-    overflow: ['Download history', 'Self aliases'],
+    overflow: ['WHOIS', 'Download history', 'Self aliases'],
   });
 });
 
@@ -156,7 +157,7 @@ test('query header notification action reflects enabled state', () => {
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close', 'Disable Notifications', 'Add friend'],
-    overflow: [],
+    overflow: ['WHOIS'],
   });
 });
 
@@ -179,7 +180,7 @@ test('query header actions expose mute while the query is still active', () => {
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close', 'Mute', 'Enable Notifications', 'Add friend'],
-    overflow: [],
+    overflow: ['WHOIS'],
   });
 });
 
@@ -204,7 +205,7 @@ test('muted query header actions hide notifications and offer unmute', () => {
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close', 'Unmute', 'Add friend'],
-    overflow: [],
+    overflow: ['WHOIS'],
   });
 });
 

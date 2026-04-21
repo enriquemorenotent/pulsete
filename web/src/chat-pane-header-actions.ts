@@ -23,6 +23,7 @@ type ResolveChatPaneHeaderActionsContext = {
   onMuteSelectedQuery?: () => Promise<boolean>;
   onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
+  onWhoisSelectedQuery?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
   onClearHistory?: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
@@ -161,6 +162,14 @@ const resolveOverflowActions = (
 ): ChatPaneHeaderAction[] => {
   const { selectedBuffer } = context.workspace;
   const overflow: ChatPaneHeaderAction[] = [];
+
+  if (selectedBuffer?.kind === 'query' && context.onWhoisSelectedQuery) {
+    overflow.push({
+      id: 'query-whois',
+      label: 'WHOIS',
+      onSelect: context.onWhoisSelectedQuery,
+    });
+  }
 
   if (context.showChannelAutoJoin) {
     overflow.push({

@@ -161,6 +161,14 @@ export const createChatActions = ({
     });
   };
 
+  const requestWhois = (networkId: string, nick: string, sourceBufferId?: string) =>
+    sendGatewayMessage({
+      type: 'raw.send',
+      networkId,
+      raw: `WHOIS ${nick}`,
+      sourceBufferId,
+    });
+
   return {
     clearBufferHistory,
     closeBuffer,
@@ -172,6 +180,7 @@ export const createChatActions = ({
     joinChannelFromList,
     openChannelList,
     openMentionedChannel,
+    requestWhois,
     selectPendingTab,
     selectTabBuffer,
     sendComposer,

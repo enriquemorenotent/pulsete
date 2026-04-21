@@ -113,6 +113,7 @@ export type ChatActionSet = Pick<
   | 'reconnectNetwork'
   | 'removeFriend'
   | 'removeMutedNick'
+  | 'requestWhois'
   | 'selectPrivateBuffer'
   | 'sendComposer'
   | 'toggleCurrentChannelAutoJoin'

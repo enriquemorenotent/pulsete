@@ -40,6 +40,7 @@ export type ChatPaneProps = {
   onMuteSelectedQuery?: () => Promise<boolean>;
   onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
+  onWhoisSelectedQuery?: () => void;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   onToggleChannelAutoJoin: () => Promise<boolean>;
@@ -96,6 +97,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onMuteSelectedQuery={props.onMuteSelectedQuery}
         onUnmuteSelectedQuery={props.onUnmuteSelectedQuery}
         onToggleQueryNotifications={props.onToggleQueryNotifications}
+        onWhoisSelectedQuery={props.onWhoisSelectedQuery}
         showChannelAutoJoin={props.showChannelAutoJoin}
         channelAutoJoinActive={props.channelAutoJoinActive}
         onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}

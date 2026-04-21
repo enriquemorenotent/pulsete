@@ -244,3 +244,28 @@ test('sendComposer reports success for a sent message and records it in history'
   assert.deepEqual(draftCalls, [{ value: '', contextKey: selectedBuffer.id }]);
   assert.deepEqual(banners, []);
 });
+
+test('requestWhois sends a raw WHOIS command through the gateway', () => {
+  const sent: ClientMessage[] = [];
+  const { params, banners } = createParams({
+    socket: {
+      send(message) {
+        sent.push(message);
+      },
+      close() {},
+    },
+  });
+  const actions = createAppActions(params);
+
+  assert.equal(actions.requestWhois(network.id, 'MissD', 'buffer-query'), true);
+
+  assert.deepEqual(sent, [
+    {
+      type: 'raw.send',
+      networkId: network.id,
+      raw: 'WHOIS MissD',
+      sourceBufferId: 'buffer-query',
+    },
+  ]);
+  assert.deepEqual(banners, []);
+});

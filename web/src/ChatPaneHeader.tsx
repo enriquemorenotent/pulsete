@@ -20,6 +20,7 @@ type ChatPaneHeaderProps = {
   onMuteSelectedQuery?: () => Promise<boolean>;
   onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
+  onWhoisSelectedQuery?: () => void;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   onToggleChannelAutoJoin: () => Promise<boolean>;
@@ -63,6 +64,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     onMuteSelectedQuery: props.onMuteSelectedQuery,
     onUnmuteSelectedQuery: props.onUnmuteSelectedQuery,
     onToggleQueryNotifications: props.onToggleQueryNotifications,
+    onWhoisSelectedQuery: props.onWhoisSelectedQuery,
     onToggleChannelAutoJoin: props.onToggleChannelAutoJoin,
     onClearHistory: props.onClearHistory,
     onDownloadHistory: props.onDownloadHistory,

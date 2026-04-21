@@ -139,6 +139,14 @@ export function useDesktopChatModel({
             }
           }
         : undefined,
+      onWhoisSelectedQuery: selectedQueryNotificationContact
+        ? () =>
+            actions.requestWhois(
+              selectedQueryNotificationContact.networkId,
+              selectedQueryNotificationContact.nick,
+              workspace.selectedBuffer?.id,
+            )
+        : undefined,
       showChannelAutoJoin: channelAutoJoin.available,
       channelAutoJoinActive: channelAutoJoin.active,
       onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
