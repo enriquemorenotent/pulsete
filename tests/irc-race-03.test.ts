@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket } from './helpers/irc-race-test-helpers.js';
+import { createMockSocket, makeUser } from './helpers/irc-race-test-helpers.js';
 
 test('nick fallback keeps the attempted nick when the retry write fails', () => {
   const writes: string[] = [];
@@ -63,6 +63,7 @@ test('nick fallback keeps the attempted nick when the retry write fails', () => 
 test('connected nick changes wait for server confirmation before mutating current nick', () => {
   const writes: string[] = [];
   const states: string[] = [];
+  const messages: Array<{ target: string; body: string; kind: string; nick: string | null }> = [];
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -85,12 +86,21 @@ test('connected nick changes wait for server confirmation before mutating curren
         if (event.type === 'state') {
           states.push(event.nick);
         }
+        if (event.type === 'message') {
+          messages.push({
+            target: event.message.target,
+            body: event.message.body,
+            kind: event.message.kind,
+            nick: event.message.nick,
+          });
+        }
       },
     }
   );
 
   connection.lifecycle.connected = true;
   connection.lifecycle.socket = createMockSocket(writes) as any;
+  connection.channels.users.set('#Help', [makeUser('tester'), makeUser('alice')]);
   connection.setNick('newnick');
 
   assert.equal(connection.lifecycle.currentNick, 'tester');
@@ -102,7 +112,17 @@ test('connected nick changes wait for server confirmation before mutating curren
 
   assert.equal(connection.lifecycle.currentNick, 'newnick');
   assert.equal(connection.replyTracker.pendingNick, null);
+  assert.deepEqual(
+    connection.channels.users.get('#Help')?.map((user) => ({ nick: user.nick, mode: user.mode, away: user.away })),
+    [makeUser('alice'), makeUser('newnick')]
+  );
   assert.deepEqual(states, ['newnick']);
+  assert.deepEqual(messages, [{
+    target: '#Help',
+    body: 'tester is now known as newnick',
+    kind: 'system',
+    nick: null,
+  }]);
 });
 
 test('pending nick self events are handled before the nick echo arrives', () => {

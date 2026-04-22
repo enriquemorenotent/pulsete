@@ -1,4 +1,5 @@
 const normalizeText = (value: string | undefined) => (value ?? '').trim();
+const formatWhoisDetail = (nick: string, detail: string) => `* ${nick} ${detail}`;
 
 const formatDuration = (rawSeconds: string) => {
   const totalSeconds = Number.parseInt(rawSeconds, 10);
@@ -49,11 +50,22 @@ export const formatWhoisNumeric = (command: string, params: string[]) => {
   if (command === '319') {
     return nick && normalizeText(params[2]) ? [`* ${nick} is on ${normalizeText(params[2])}`] : [];
   }
+  if (command === '307' || command === '310' || command === '320' || command === '335' || command === '379') {
+    const detail = normalizeText(params[2]);
+    return nick && detail ? [formatWhoisDetail(nick, detail)] : [];
+  }
   if (command === '330') {
     return nick && normalizeText(params[2]) ? [`* ${nick} is logged in as ${normalizeText(params[2])}`] : [];
   }
   if (command === '338') {
     return nick && normalizeText(params[2]) ? [`* ${nick} is connecting from ${normalizeText(params[2])}`] : [];
+  }
+  if (command === '378') {
+    return nick && normalizeText(params[2]) ? [`* ${nick} is connecting from ${normalizeText(params[2])}`] : [];
+  }
+  if (command === '276' || command === '671') {
+    const detail = normalizeText(params[2]);
+    return nick && detail ? [formatWhoisDetail(nick, detail)] : [];
   }
   if (command === '401' || command === '402') {
     const target = nick;

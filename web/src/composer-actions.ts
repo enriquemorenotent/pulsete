@@ -164,6 +164,20 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         sourceBufferId: selection.id,
       });
       break;
+    case 'hostserv':
+      if (!remainder) {
+        params.updateBanner('error', 'Usage: /hs command');
+        return null;
+      }
+      socket.send({
+        type: 'message.send',
+        networkId: selection.networkId,
+        target: 'HostServ',
+        body: remainder,
+        kind: 'message',
+        sourceBufferId: selection.id,
+      });
+      break;
     case 'me':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /me action');

@@ -150,23 +150,34 @@ export const handleNick = (connection: IrcChannelEventContext, params: string[],
   if (!newNick) {
     return;
   }
+  const selfNick = isSelfNick(connection, nick);
+  let sharedTrackedChannel = false;
   for (const [channel, users] of connection.getTrackedChannelUserEntries()) {
     if (!nick) {
       continue;
     }
     const nextUsers = renameChannelUser(users, nick, newNick);
     if (nextUsers.length !== users.length || nextUsers.some((user, index) => user !== users[index])) {
+      sharedTrackedChannel = true;
       connection.setTrackedChannelUsers(channel, nextUsers);
+      emitMessage(connection, createMessage(connection, {
+        target: channel,
+        nick: null,
+        body: `${nick} is now known as ${newNick}`,
+        kind: 'system',
+        self: selfNick,
+      }));
       emitChannel(connection, channel, { users: nextUsers });
     }
   }
-  const selfNick = isSelfNick(connection, nick);
   if (selfNick) {
     connection.confirmNick(newNick);
   } else if (nick) {
     emitPeerNick(connection, { oldNick: nick, newNick, self: false });
   }
-  emitStatus(connection, `${nick ?? 'Someone'} is now known as ${newNick}`);
+  if (!sharedTrackedChannel) {
+    emitStatus(connection, `${nick ?? 'Someone'} is now known as ${newNick}`);
+  }
 };
 
 export const handleTopic = (connection: IrcChannelEventContext, params: string[], nick: string | null) => {

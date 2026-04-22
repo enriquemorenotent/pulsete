@@ -37,6 +37,7 @@ type LoadOlderBufferHistoryParams = {
 
 export type SelectedBufferHistoryControls = {
   canLoadOlderHistory: boolean;
+  initialHistoryPending: boolean;
   isLoadingOlderHistory: boolean;
   loadOlderHistory: () => Promise<void>;
 };
@@ -51,6 +52,10 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
   const hasOlderHistory = selectedBufferId
     ? params.historyHasOlderByBufferId[selectedBufferId] === true
     : false;
+  const initialHistoryPending =
+    !!selectedBufferId &&
+    params.gatewayStatus === 'connected' &&
+    !hasLoadedHistory;
 
   useEffect(() => {
     if (!params.selectedBuffer) {
@@ -129,6 +134,7 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
       && params.selectedBuffer?.kind !== 'server'
       && params.selectedMessages.length > 0
       && hasOlderHistory,
+    initialHistoryPending,
     isLoadingOlderHistory: params.historyLoadingOlder,
     loadOlderHistory,
   };

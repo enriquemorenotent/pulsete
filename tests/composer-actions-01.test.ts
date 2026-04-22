@@ -226,3 +226,74 @@ test('/ns sends a NickServ message without opening a query buffer', async () => 
   assert.deepEqual(listedNetworks, []);
   assert.deepEqual(openedQueries, []);
 });
+
+test('/hs sends a HostServ message without opening a query buffer', async () => {
+  const sent: ClientMessage[] = [];
+  const drafts: string[] = [];
+  const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
+  const openedChannels: Array<{ networkId: string; channel: string }> = [];
+  const listedNetworks: string[] = [];
+  const openedQueries: Array<{ networkId: string; nick: string }> = [];
+
+  await sendComposerMessage({
+    draft: '/hs help',
+    setDraft: (value) => drafts.push(value),
+    socket: {
+      send: (message) => sent.push(message),
+      close: () => {},
+    },
+    updateBanner: (kind, message) => banners.push({ kind, message }),
+    workspace,
+    onJoinChannel: async (networkId, channel) => {
+      openedChannels.push({ networkId, channel });
+    },
+    onOpenChannelList: async (networkId) => {
+      listedNetworks.push(networkId);
+    },
+    onOpenQuery: async (networkId, nick) => {
+      openedQueries.push({ networkId, nick });
+    },
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
+  });
+
+  assert.deepEqual(sent, [
+    {
+      type: 'message.send',
+      networkId: 'network-1',
+      target: 'HostServ',
+      body: 'help',
+      kind: 'message',
+      sourceBufferId: 'buffer-1',
+    },
+  ]);
+  assert.deepEqual(drafts, ['']);
+  assert.deepEqual(banners, []);
+  assert.deepEqual(openedChannels, []);
+  assert.deepEqual(listedNetworks, []);
+  assert.deepEqual(openedQueries, []);
+});
+
+test('/hs rejects empty hostserv commands', async () => {
+  const sent: ClientMessage[] = [];
+  const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
+
+  await sendComposerMessage({
+    draft: '/hs',
+    setDraft: () => {},
+    socket: {
+      send: (message) => sent.push(message),
+      close: () => {},
+    },
+    updateBanner: (kind, message) => banners.push({ kind, message }),
+    workspace,
+    onJoinChannel: async () => {},
+    onOpenChannelList: async () => {},
+    onOpenQuery: async () => {},
+    onCloseChannel: () => {},
+    onCloseBuffer: async () => {},
+  });
+
+  assert.deepEqual(sent, []);
+  assert.deepEqual(banners, [{ kind: 'error', message: 'Usage: /hs command' }]);
+});

@@ -19,7 +19,10 @@ export const ChatPaneExpandedMessageRow = (props: {
   onOpenParticipantQuery?: (nick: string) => void;
   participant: MessageParticipantPresentation;
 }) => (
-  <article className={cn('px-1 py-0.5 text-foreground', messageTone(props.message))}>
+  <article
+    className={cn('px-1 py-0.5 text-foreground', messageTone(props.message))}
+    data-message-id={props.message.id}
+  >
     <div className="min-w-0">
       <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
         <time

@@ -168,6 +168,14 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
     messageEvents.some(
       (event) =>
         event.message.target === '#Help'
+        && event.message.kind === 'system'
+        && event.message.body === 'helper is now known as Helper'
+    )
+  );
+  assert.ok(
+    messageEvents.some(
+      (event) =>
+        event.message.target === '#Help'
         && event.message.kind === 'quit'
         && event.message.body === 'HELPER quit (bye)'
     )
@@ -190,6 +198,14 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
         && event.reason === 'bye'
     ).length,
     1
+  );
+  assert.equal(
+    events.some(
+      (event) =>
+        event.type === 'status'
+        && event.message === 'helper is now known as Helper'
+    ),
+    false
   );
   assert.equal(
     events.some(

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  resolveElementViewportScrollTop,
+  resolveSelectionPositionMode,
+  resolveUnreadViewportOffset,
   restoreScrollOffsetAfterPrepend,
   shouldShowJumpToLatestControl,
   shouldAutoLoadOlderHistory,
@@ -52,6 +55,45 @@ test('restoring scroll offset keeps the visible transcript anchored after prepen
   node.scrollHeight = 860;
   restoreScrollOffsetAfterPrepend(node, 640, 72);
   assert.equal(node.scrollTop, 292);
+});
+
+test('selection positioning keeps waiting only while the initial unread history page is loading', () => {
+  assert.equal(resolveSelectionPositionMode({
+    initialHistoryPending: true,
+    initialScrollTarget: 'wait',
+  }), 'wait');
+  assert.equal(resolveSelectionPositionMode({
+    initialHistoryPending: false,
+    initialScrollTarget: 'wait',
+  }), 'bottom');
+  assert.equal(resolveSelectionPositionMode({
+    initialHistoryPending: true,
+    initialScrollTarget: 'first-unread',
+  }), 'first-unread');
+});
+
+test('selection positioning targets the upper third of the viewport for unread content', () => {
+  assert.equal(resolveUnreadViewportOffset({ clientHeight: 200 }), 50);
+  assert.equal(resolveUnreadViewportOffset({ clientHeight: 96 }), 24);
+});
+
+test('selection positioning clamps unread placement within the transcript bounds', () => {
+  assert.equal(
+    resolveElementViewportScrollTop(
+      { clientHeight: 100, scrollHeight: 320 },
+      20,
+      25,
+    ),
+    0,
+  );
+  assert.equal(
+    resolveElementViewportScrollTop(
+      { clientHeight: 100, scrollHeight: 320 },
+      290,
+      25,
+    ),
+    220,
+  );
 });
 
 test('jump-to-latest stays hidden for empty transcripts and near-bottom views', () => {

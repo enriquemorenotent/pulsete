@@ -7,6 +7,7 @@ const commandDefinitions = [
   { name: 'whois', slash: ['whois', 'w'], raw: ['WHOIS'] },
   { name: 'nickserv', slash: ['nickserv', 'ns'], raw: [] },
   { name: 'chanserv', slash: ['chanserv', 'cs'], raw: [] },
+  { name: 'hostserv', slash: ['hostserv', 'hs'], raw: [] },
   { name: 'me', slash: ['me'], raw: [] },
   { name: 'nick', slash: ['nick', 'n'], raw: ['NICK'] },
   { name: 'topic', slash: ['topic'], raw: ['TOPIC'] },

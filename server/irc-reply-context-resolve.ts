@@ -19,7 +19,27 @@ export type ReplyMatch = {
 type MessageReplyContext = Extract<PendingReplyContext, { kind: 'message' }>;
 
 const messageErrorNumerics = new Set(['401', '404', '408', '411', '412', '413', '414', '716', '717']);
-const whoisReplyNumerics = new Set(['301', '311', '312', '313', '317', '318', '319', '330', '338', '401', '402']);
+const whoisReplyNumerics = new Set([
+  '276',
+  '301',
+  '307',
+  '310',
+  '311',
+  '312',
+  '313',
+  '317',
+  '318',
+  '319',
+  '320',
+  '330',
+  '335',
+  '338',
+  '378',
+  '379',
+  '401',
+  '402',
+  '671',
+]);
 const nickReplyNumerics = new Set(['431', '432', '433', '436', '437']);
 const joinReplyNumerics = new Set(['403', '405', '437', '471', '472', '473', '474', '475', '476', '477']);
 const partReplyNumerics = new Set(['442']);

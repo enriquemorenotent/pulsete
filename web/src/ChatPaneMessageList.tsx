@@ -1,6 +1,7 @@
 import {
 	memo,
 	useCallback,
+	useEffect,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -23,7 +24,6 @@ import {
 import { ChatPaneMessageBlock } from './ChatPaneMessageBlock.js';
 import { TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
-import type { MessageParticipantPresentation } from './message-participant-presentation.js';
 import {
 	buildChannelUserModesByNick,
 	resolveParticipantHighlightMode,
@@ -44,6 +44,7 @@ type ChatPaneMessageListProps = {
 	mode: MessageDisplayMode;
 	listKind: 'chat' | 'server';
 	canLoadOlderHistory?: boolean;
+	initialHistoryPending?: boolean;
 	loadingOlderHistory?: boolean;
 	onOpenChannel: (channel: string) => void;
 	onOpenParticipantQuery?: (nick: string) => void;
@@ -77,8 +78,13 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 		[props.messages, props.selectedBuffer, unreadDividerAnchor],
 	);
 	const loadingOlderRef = useRef(false);
-	const positionedBufferIdRef = useRef<string | null>(null);
 	const unreadDividerRef = useRef<HTMLDivElement | null>(null);
+	const manualScrollIntentAtRef = useRef(0);
+	const programmaticScrollEventsRef = useRef(0);
+	const selectionPositionRef = useRef<ActiveSelectionPosition | null>(null);
+	const selectionCorrectionRef = useRef<SelectionImageCorrection | null>(null);
+	const selectionCorrectionCleanupRef = useRef<(() => void) | null>(null);
+	const selectionCorrectionFrameRef = useRef<number | null>(null);
 	const [showJumpToLatest, setShowJumpToLatest] = useState(() =>
 		shouldShowJumpToLatestControl({
 			messagesLength: props.messages.length,
@@ -104,8 +110,177 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 					scrollMetrics: scrollMetrics ?? props.scrollRef.current,
 				}),
 			);
-		},
+			},
 		[props.messages.length, props.scrollRef],
+	);
+	const clearSelectionImageCorrection = useCallback(
+		(bufferId?: string | null) => {
+			const activeCorrection = selectionCorrectionRef.current;
+			if (
+				bufferId !== undefined &&
+				activeCorrection &&
+				activeCorrection.bufferId !== bufferId
+			) {
+				return;
+			}
+			if (
+				typeof window !== 'undefined' &&
+				selectionCorrectionFrameRef.current !== null
+			) {
+				window.cancelAnimationFrame(selectionCorrectionFrameRef.current);
+				selectionCorrectionFrameRef.current = null;
+			}
+			selectionCorrectionCleanupRef.current?.();
+			selectionCorrectionCleanupRef.current = null;
+			selectionCorrectionRef.current = null;
+		},
+		[],
+	);
+	const applySelectionImageCorrection = useCallback(() => {
+		const activeCorrection = selectionCorrectionRef.current;
+		const scrollContainer = props.scrollRef.current;
+		if (
+			!activeCorrection ||
+			!scrollContainer ||
+			activeCorrection.bufferId !== props.selectedBuffer?.id
+		) {
+			return;
+		}
+		if (activeCorrection.mode === 'bottom') {
+			programmaticScrollEventsRef.current += 2;
+			scrollNodeToBottom(scrollContainer);
+		} else {
+			const unreadDivider = unreadDividerRef.current;
+			if (!unreadDivider) {
+				return;
+			}
+			programmaticScrollEventsRef.current += 2;
+			scrollContainer.scrollTop = resolveElementViewportScrollTop(
+				scrollContainer,
+				resolveElementTopInScrollContainer(scrollContainer, unreadDivider),
+				activeCorrection.targetOffsetPx,
+			);
+		}
+		refreshStickyScrollMode(scrollContainer);
+		syncJumpToLatestVisibility(scrollContainer);
+	}, [props.scrollRef, props.selectedBuffer?.id, syncJumpToLatestVisibility]);
+	const scheduleSelectionImageCorrection = useCallback(() => {
+		const activeCorrection = selectionCorrectionRef.current;
+		if (
+			typeof window === 'undefined' ||
+			!activeCorrection ||
+			selectionCorrectionFrameRef.current !== null
+		) {
+			return;
+		}
+		const correctionBufferId = activeCorrection.bufferId;
+		selectionCorrectionFrameRef.current = window.requestAnimationFrame(() => {
+			selectionCorrectionFrameRef.current = null;
+			applySelectionImageCorrection();
+			const currentCorrection = selectionCorrectionRef.current;
+			if (
+				currentCorrection?.bufferId === correctionBufferId &&
+				currentCorrection.remainingImages <= 0
+			) {
+				clearSelectionImageCorrection(correctionBufferId);
+			}
+		});
+	}, [applySelectionImageCorrection, clearSelectionImageCorrection]);
+	const beginSelectionImageCorrection = useCallback(
+		(mode: SelectionPositionMode) => {
+			clearSelectionImageCorrection();
+			const bufferId = props.selectedBuffer?.id ?? null;
+			const scrollContainer = props.scrollRef.current;
+			if (
+				!bufferId ||
+				!scrollContainer ||
+				mode === 'wait'
+			) {
+				return;
+			}
+			const pendingImages = collectIncompleteTranscriptImages(scrollContainer);
+			if (pendingImages.length === 0) {
+				return;
+			}
+			selectionCorrectionRef.current = {
+				bufferId,
+				mode: mode === 'first-unread' ? 'unread' : 'bottom',
+				targetOffsetPx:
+					mode === 'first-unread'
+						? resolveUnreadViewportOffset(scrollContainer)
+						: 0,
+				remainingImages: pendingImages.length,
+			};
+			const cleanupCallbacks = pendingImages.map((image) => {
+				const handleLoad = () => {
+					const activeCorrection = selectionCorrectionRef.current;
+					if (!activeCorrection || activeCorrection.bufferId !== bufferId) {
+						return;
+					}
+					activeCorrection.remainingImages -= 1;
+					scheduleSelectionImageCorrection();
+				};
+				const handleError = () => {
+					const activeCorrection = selectionCorrectionRef.current;
+					if (!activeCorrection || activeCorrection.bufferId !== bufferId) {
+						return;
+					}
+					activeCorrection.remainingImages -= 1;
+					if (activeCorrection.remainingImages <= 0) {
+						clearSelectionImageCorrection(bufferId);
+					}
+				};
+				image.addEventListener('load', handleLoad, { once: true });
+				image.addEventListener('error', handleError, { once: true });
+				return () => {
+					image.removeEventListener('load', handleLoad);
+					image.removeEventListener('error', handleError);
+				};
+			});
+			selectionCorrectionCleanupRef.current = () => {
+				for (const cleanup of cleanupCallbacks) {
+					cleanup();
+				}
+			};
+		},
+		[
+			clearSelectionImageCorrection,
+			props.scrollRef,
+			props.selectedBuffer?.id,
+			scheduleSelectionImageCorrection,
+		],
+	);
+	const applySelectionPosition = useCallback(
+		(mode: SelectionPositionMode) => {
+			const scrollContainer = props.scrollRef.current;
+			if (!scrollContainer || mode === 'wait') {
+				return false;
+			}
+			if (mode === 'first-unread') {
+				const unreadDivider = unreadDividerRef.current;
+				if (!unreadDivider) {
+					return false;
+				}
+				programmaticScrollEventsRef.current += 2;
+				scrollContainer.scrollTop = resolveElementViewportScrollTop(
+					scrollContainer,
+					resolveElementTopInScrollContainer(scrollContainer, unreadDivider),
+					resolveUnreadViewportOffset(scrollContainer),
+				);
+			} else {
+				programmaticScrollEventsRef.current += 2;
+				scrollNodeToBottom(scrollContainer);
+			}
+			refreshStickyScrollMode(scrollContainer);
+			syncJumpToLatestVisibility(scrollContainer);
+			beginSelectionImageCorrection(mode);
+			return true;
+		},
+		[
+			beginSelectionImageCorrection,
+			props.scrollRef,
+			syncJumpToLatestVisibility,
+		],
 	);
 	const handleLoadOlder = useCallback(async () => {
 		if (
@@ -126,6 +301,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			if (!nextScrollContainer) {
 				return;
 			}
+			programmaticScrollEventsRef.current += 2;
 			restoreScrollOffsetAfterPrepend(
 				nextScrollContainer,
 				previousHeight,
@@ -145,6 +321,18 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 	const handleScroll = useCallback(
 		(event: UIEvent<HTMLDivElement>) => {
 			syncJumpToLatestVisibility(event.currentTarget);
+			if (programmaticScrollEventsRef.current > 0) {
+				programmaticScrollEventsRef.current -= 1;
+				manualScrollIntentAtRef.current = 0;
+				return;
+			}
+			if (
+				Date.now() - manualScrollIntentAtRef.current
+				<= manualScrollIntentWindowMs
+			) {
+				clearSelectionImageCorrection(props.selectedBuffer?.id ?? null);
+			}
+			manualScrollIntentAtRef.current = 0;
 			if (
 				!shouldAutoLoadOlderHistory({
 					canLoadOlderHistory: !!showLoadOlder,
@@ -158,43 +346,70 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			void handleLoadOlder();
 		},
 		[
+			clearSelectionImageCorrection,
 			handleLoadOlder,
 			props.loadingOlderHistory,
+			props.selectedBuffer?.id,
 			showLoadOlder,
 			syncJumpToLatestVisibility,
 		],
 	);
 	const handleJumpToLatest = useCallback(() => {
+		clearSelectionImageCorrection(props.selectedBuffer?.id ?? null);
 		props.onJumpToLatest?.();
 		setShowJumpToLatest(false);
-	}, [props.onJumpToLatest]);
+	}, [clearSelectionImageCorrection, props.onJumpToLatest, props.selectedBuffer?.id]);
+
+	useEffect(() => {
+		return () => {
+			clearSelectionImageCorrection();
+		};
+	}, [clearSelectionImageCorrection]);
+
+	useEffect(() => {
+		const bufferId = props.selectedBuffer?.id ?? null;
+		if (!bufferId) {
+			selectionPositionRef.current = null;
+			clearSelectionImageCorrection();
+			setShowJumpToLatest(false);
+			return;
+		}
+		return () => {
+			clearSelectionImageCorrection(bufferId);
+		};
+	}, [clearSelectionImageCorrection, props.selectedBuffer?.id]);
 
 	useLayoutEffect(() => {
 		const scrollContainer = props.scrollRef.current;
 		const bufferId = props.selectedBuffer?.id ?? null;
 		if (!scrollContainer || !bufferId) {
-			positionedBufferIdRef.current = null;
-			setShowJumpToLatest(false);
 			return;
 		}
-		if (
-			positionedBufferIdRef.current !== bufferId &&
-			initialScrollTarget !== 'wait'
-		) {
-			if (
-				initialScrollTarget === 'first-unread' &&
-				unreadDividerRef.current
-			) {
-				unreadDividerRef.current.scrollIntoView({ block: 'start' });
-			} else {
-				scrollNodeToBottom(scrollContainer);
-			}
-			refreshStickyScrollMode(scrollContainer);
-			positionedBufferIdRef.current = bufferId;
+		let selectionPosition = selectionPositionRef.current;
+		if (!selectionPosition || selectionPosition.bufferId !== bufferId) {
+			selectionPosition = { bufferId, positioned: false };
+			selectionPositionRef.current = selectionPosition;
+		}
+		if (selectionPosition.positioned) {
+			syncJumpToLatestVisibility(scrollContainer);
+			return;
+		}
+		const selectionMode = resolveSelectionPositionMode({
+			initialHistoryPending: props.initialHistoryPending ?? false,
+			initialScrollTarget,
+		});
+		if (selectionMode === 'wait') {
+			syncJumpToLatestVisibility(scrollContainer);
+			return;
+		}
+		if (applySelectionPosition(selectionMode)) {
+			selectionPosition.positioned = true;
 		}
 		syncJumpToLatestVisibility(scrollContainer);
 	}, [
+		applySelectionPosition,
 		initialScrollTarget,
+		props.initialHistoryPending,
 		props.scrollRef,
 		props.selectedBuffer?.id,
 		syncJumpToLatestVisibility,
@@ -205,7 +420,16 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			<div
 				ref={props.scrollRef}
 				className="h-full overflow-y-auto px-4 py-4 pt-0"
+				onPointerDownCapture={() => {
+					manualScrollIntentAtRef.current = Date.now();
+				}}
 				onScroll={handleScroll}
+				onTouchMoveCapture={() => {
+					manualScrollIntentAtRef.current = Date.now();
+				}}
+				onWheelCapture={() => {
+					manualScrollIntentAtRef.current = Date.now();
+				}}
 			>
 				{showLoadOlder ? (
 					<div
@@ -302,3 +526,62 @@ export const restoreScrollOffsetAfterPrepend = (
 ) => {
 	node.scrollTop = previousTop + (node.scrollHeight - previousHeight);
 };
+
+const unreadViewportOffsetRatio = 0.25;
+const manualScrollIntentWindowMs = 250;
+
+type SelectionPositionMode = 'wait' | 'first-unread' | 'bottom';
+
+type ActiveSelectionPosition = {
+	bufferId: string;
+	positioned: boolean;
+};
+
+type SelectionImageCorrection = {
+	bufferId: string;
+	mode: 'bottom' | 'unread';
+	targetOffsetPx: number;
+	remainingImages: number;
+};
+
+export const resolveSelectionPositionMode = (input: {
+	initialHistoryPending: boolean;
+	initialScrollTarget: ReturnType<typeof resolveInitialTranscriptScrollTarget>;
+}): SelectionPositionMode => {
+	if (input.initialScrollTarget === 'wait') {
+		return input.initialHistoryPending ? 'wait' : 'bottom';
+	}
+	return input.initialScrollTarget === 'first-unread'
+		? 'first-unread'
+		: 'bottom';
+};
+
+export const resolveUnreadViewportOffset = (
+	scrollMetrics: Pick<HTMLDivElement, 'clientHeight'>,
+) => Math.round(scrollMetrics.clientHeight * unreadViewportOffsetRatio);
+
+export const resolveElementViewportScrollTop = (
+	scrollMetrics: Pick<HTMLDivElement, 'clientHeight' | 'scrollHeight'>,
+	elementTop: number,
+	viewportOffsetPx: number,
+) => clampScrollTop(
+	elementTop - viewportOffsetPx,
+	scrollMetrics.scrollHeight - scrollMetrics.clientHeight,
+);
+
+const resolveElementTopInScrollContainer = (
+	scrollContainer: Pick<HTMLDivElement, 'getBoundingClientRect' | 'scrollTop'>,
+	element: Pick<HTMLElement, 'getBoundingClientRect'>,
+) => {
+	const containerRect = scrollContainer.getBoundingClientRect();
+	const elementRect = element.getBoundingClientRect();
+	return elementRect.top - containerRect.top + scrollContainer.scrollTop;
+};
+
+const collectIncompleteTranscriptImages = (
+	scrollContainer: HTMLDivElement,
+) => Array.from(scrollContainer.querySelectorAll<HTMLImageElement>('img'))
+	.filter((image) => !image.complete);
+
+const clampScrollTop = (scrollTop: number, maxScrollTop: number) =>
+	Math.max(0, Math.min(Math.round(scrollTop), Math.max(0, maxScrollTop)));

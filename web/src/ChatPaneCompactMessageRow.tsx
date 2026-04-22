@@ -75,7 +75,10 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
   );
 
   return (
-    <article className={cn('px-1 py-0.5 text-foreground', messageTone(message))}>
+    <article
+      className={cn('px-1 py-0.5 text-foreground', messageTone(message))}
+      data-message-id={message.id}
+    >
       <div className="grid items-start grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 font-sans">
         {timeLabel}
         <div className="min-w-0">

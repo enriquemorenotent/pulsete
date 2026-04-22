@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SocketHandle } from './client.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
@@ -29,16 +29,57 @@ export type AppUiState = {
   toggleHideOfflineFriends: () => void;
 };
 
+export const HIDE_OFFLINE_FRIENDS_STORAGE_KEY =
+  'pulsete.hideOfflineFriends';
+
+export const parseHideOfflineFriendsPreference = (
+  value: string | null,
+) => value === 'true';
+
+export const readStoredHideOfflineFriendsPreference = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  try {
+    return parseHideOfflineFriendsPreference(
+      window.localStorage.getItem(HIDE_OFFLINE_FRIENDS_STORAGE_KEY),
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const persistHideOfflineFriendsPreference = (value: boolean) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(
+      HIDE_OFFLINE_FRIENDS_STORAGE_KEY,
+      String(value),
+    );
+  } catch {
+    return;
+  }
+};
+
 export function useAppUiState(): AppUiState {
   const [bufferToolDialog, setBufferToolDialog] = useState<BufferToolDialogState>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [hideOfflineFriends, setHideOfflineFriends] = useState(false);
+  const [hideOfflineFriends, setHideOfflineFriends] = useState(
+    readStoredHideOfflineFriendsPreference,
+  );
   const [messageDisplayMode, setMessageDisplayMode] = useState<MessageDisplayMode>('colors');
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const forceScrollToBottomRef = useRef<(() => void) | null>(null);
   const socketRef = useRef<SocketHandle | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const didAutoOpenManagerRef = useRef(false);
+
+  useEffect(() => {
+    persistHideOfflineFriendsPreference(hideOfflineFriends);
+  }, [hideOfflineFriends]);
+
   const closeBufferToolDialog = useCallback(() => setBufferToolDialog(null), []);
   const closeCommandPalette = useCallback(() => setCommandPaletteOpen(false), []);
   const closePreferences = useCallback(() => setPreferencesOpen(false), []);

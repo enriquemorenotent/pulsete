@@ -172,6 +172,7 @@ export function useDesktopChatModel({
         ? (input) => actions.updateBufferSelfNickAliases(selectedBufferId, input)
         : undefined,
       canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
+      initialHistoryPending: selectedBufferHistory.initialHistoryPending,
       loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
       onJumpToLatest: () => ui.forceScrollToBottomRef.current?.(),
       onLoadOlderHistory: selectedBufferHistory.loadOlderHistory,

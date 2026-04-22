@@ -38,8 +38,10 @@ test('irc connection routes whois replies to the originating buffer', async () =
 
         if (line === 'WHOIS helper') {
           socket.write(':irc.example 311 tester helper helper users.example * :Helper Person\r\n');
+          socket.write(':irc.example 307 tester helper :is a registered nick\r\n');
           socket.write(':irc.example 319 tester helper :#chat @#ops\r\n');
           socket.write(':irc.example 312 tester helper irc.example :Example IRC Server\r\n');
+          socket.write(':irc.example 671 tester helper :is using a secure connection\r\n');
           socket.write(':irc.example 317 tester helper 125 1700000000 :seconds idle, signon time\r\n');
           socket.write(':irc.example 318 tester helper :End of /WHOIS list.\r\n');
         }
@@ -105,6 +107,13 @@ test('irc connection routes whois replies to the originating buffer', async () =
           event.type === 'status'
           && event.kind === 'system'
           && event.target === '#chat'
+          && event.message === '* helper is a registered nick'
+      )
+      && events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'system'
+          && event.target === '#chat'
           && event.message === '* helper is on #chat @#ops'
       )
       && events.some(
@@ -119,6 +128,13 @@ test('irc connection routes whois replies to the originating buffer', async () =
           event.type === 'status'
           && event.kind === 'system'
           && event.target === '#chat'
+          && event.message === '* helper is using a secure connection'
+      )
+      && events.some(
+        (event) =>
+          event.type === 'status'
+          && event.kind === 'system'
+          && event.target === '#chat'
           && event.message === '* helper has been idle for 2m 5s'
       )
       && events.some(
@@ -127,6 +143,15 @@ test('irc connection routes whois replies to the originating buffer', async () =
           && event.kind === 'system'
           && event.target === '#chat'
           && event.message === '* End of WHOIS for helper'
+      )
+      && !events.some(
+        (event) =>
+          event.type === 'status'
+          && event.target === undefined
+          && (
+            event.message === '* helper is a registered nick'
+            || event.message === '* helper is using a secure connection'
+          )
       )
   );
 
