@@ -72,12 +72,15 @@ test('programmatic scroll ownership matches the active buffer and expected scrol
   }), true);
 });
 
-test('programmatic scroll ownership yields to divergent scroll positions and other buffers', () => {
+test('programmatic scroll ownership treats same-buffer divergence as user takeover without input heuristics', () => {
   assert.equal(isProgrammaticScrollEvent({
     activeTransaction: { bufferId: 'buffer-1', expectedScrollTop: 240 },
     bufferId: 'buffer-1',
     scrollTop: 242,
   }), false);
+});
+
+test('programmatic scroll ownership ignores transactions from other buffers and missing state', () => {
   assert.equal(isProgrammaticScrollEvent({
     activeTransaction: { bufferId: 'buffer-1', expectedScrollTop: 240 },
     bufferId: 'buffer-2',

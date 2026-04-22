@@ -377,6 +377,8 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 		(event: UIEvent<HTMLDivElement>) => {
 			syncJumpToLatestVisibility(event.currentTarget);
 			const bufferId = props.selectedBuffer?.id ?? null;
+			// Any divergent scroll means the user has taken over, regardless of whether
+			// it came from mouse, keyboard, scrollbar drag, or assistive tooling.
 			if (isProgrammaticScrollEvent({
 				activeTransaction: programmaticScrollRef.current,
 				bufferId,
