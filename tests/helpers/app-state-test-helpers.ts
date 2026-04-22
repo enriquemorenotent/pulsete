@@ -21,6 +21,7 @@ export const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkPro
   authAccount: overrides.authAccount ?? '',
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
+  personaNote: overrides.personaNote ?? '',
 });
 
 export const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({

@@ -25,10 +25,12 @@ import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.j
 import { useNetworkManagerController } from './useNetworkManagerController.js';
 import { usePreferencesController } from './usePreferencesController.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import { openExistingNetworkEditor } from './network-editor-actions.js';
 import {
   useBackgroundDmAudioCue,
   useBackgroundDmAudioSettings,
 } from './useBackgroundDmAudio.js';
+import { getNetworkRootId } from '../../shared/network-model.js';
 
 type AppController = {
   banner: State['transient']['banner'];
@@ -179,6 +181,16 @@ export function useAppController(): AppController {
     editor: state.transient.networkManager.editor,
     mode: state.transient.networkManager.mode,
   });
+  const serverProfileNetwork = useMemo(() => {
+    const selectedNetwork = workspace.selectedNetwork;
+    if (!selectedNetwork) {
+      return null;
+    }
+    const rootId = getNetworkRootId(selectedNetwork);
+    return state.domain.networks.find((network) => network.id === rootId && !network.managerHidden)
+      ?? state.domain.networks.find((network) => network.id === rootId)
+      ?? null;
+  }, [state.domain.networks, workspace.selectedNetwork]);
 
   useEffect(() => {
     if (!ui.bufferToolDialog) {
@@ -202,6 +214,19 @@ export function useAppController(): AppController {
     chat,
     nicklist,
     assistant,
+    serverProfile: {
+      network: serverProfileNetwork,
+      onEdit: () => {
+        if (!serverProfileNetwork) {
+          return;
+        }
+        openExistingNetworkEditor(serverProfileNetwork, {
+          dispatch,
+          initialTab: 'persona',
+          returnMode: 'closed',
+        });
+      },
+    },
     preferences,
     networkManager,
     networkEditor,

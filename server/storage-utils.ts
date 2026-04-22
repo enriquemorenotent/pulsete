@@ -50,6 +50,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       realName: identity.realName,
       favorite: true,
       autoJoin: [],
+      personaNote: '',
     },
     {
       templateId: null,
@@ -65,6 +66,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       realName: identity.realName,
       favorite: true,
       autoJoin: [],
+      personaNote: '',
     },
     {
       templateId: null,
@@ -80,6 +82,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       realName: identity.realName,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       templateId: null,
@@ -95,6 +98,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       realName: identity.realName,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
   ];
 };
@@ -119,6 +123,7 @@ export const toNetworkProfile = (row: NetworkRow): StoredNetworkProfile => {
     authAccount: row.authAccount,
     favorite: Boolean(row.favorite),
     autoJoin: parseJson<string[]>(row.autoJoin, []),
+    personaNote: row.personaNote ?? '',
   };
   return profile.managerHidden
     ? profile as Extract<StoredNetworkProfile, { managerHidden: true }>

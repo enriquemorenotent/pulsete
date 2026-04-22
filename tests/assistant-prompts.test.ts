@@ -22,6 +22,7 @@ const network: NetworkProfile = {
   hasPassword: false,
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 };
 
 const buffer: BufferState = {

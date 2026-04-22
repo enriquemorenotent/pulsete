@@ -1,19 +1,25 @@
 import { getLocalIrcIdentity } from '../../shared/local-defaults.js';
-import type { Action, AppDomainState } from './app-types.js';
-import { emptyNetworkForm, toForm } from './network-form.js';
+import type { Action, AppDomainState, NetworkEditorState } from './app-types.js';
+import { emptyNetworkForm, toForm, type EditorTab } from './network-form.js';
 
 type EditorActionParams = {
   dispatch: (action: Action) => void;
 };
 
-export function openNewNetworkEditor(params: EditorActionParams) {
+type OpenNetworkEditorOptions = EditorActionParams & {
+  initialTab?: EditorTab;
+  returnMode?: NetworkEditorState['returnMode'];
+};
+
+export function openNewNetworkEditor(params: OpenNetworkEditorOptions) {
   const identity = getLocalIrcIdentity();
   params.dispatch({
     type: 'open-network-editor',
     managedNetworkId: null,
     editor: {
       kind: 'new',
-      tab: 'servers',
+      tab: params.initialTab ?? 'servers',
+      returnMode: params.returnMode ?? 'manager',
       form: {
         ...emptyNetworkForm(),
         nick: identity.nick,
@@ -28,14 +34,15 @@ export function openNewNetworkEditor(params: EditorActionParams) {
 
 export function openExistingNetworkEditor(
   network: AppDomainState['networks'][number],
-  params: EditorActionParams,
+  params: OpenNetworkEditorOptions,
 ) {
   params.dispatch({
     type: 'open-network-editor',
     managedNetworkId: network.id,
     editor: {
       kind: 'existing',
-      tab: 'servers',
+      tab: params.initialTab ?? 'servers',
+      returnMode: params.returnMode ?? 'manager',
       form: toForm(network),
     },
   });

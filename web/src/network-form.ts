@@ -6,7 +6,7 @@ import {
   resolveNetworkAuthTarget,
 } from '../../shared/network-model.js';
 
-export type EditorTab = 'servers' | 'autojoin';
+export type EditorTab = 'servers' | 'autojoin' | 'persona';
 
 export type NetworkForm = {
   id?: string;
@@ -27,6 +27,7 @@ export type NetworkForm = {
   hasSavedPassword: boolean;
   favorite: boolean;
   autoJoin: string;
+  personaNote: string;
 };
 
 export type SaveNetworkPayload = {
@@ -46,6 +47,7 @@ export type SaveNetworkPayload = {
   clearPassword?: boolean;
   favorite: boolean;
   autoJoin: string[];
+  personaNote: string;
 };
 
 export const emptyNetworkForm = (): NetworkForm => ({
@@ -66,6 +68,7 @@ export const emptyNetworkForm = (): NetworkForm => ({
   hasSavedPassword: false,
   favorite: false,
   autoJoin: '',
+  personaNote: '',
 });
 
 export const parseAutoJoin = (text: string) =>
@@ -93,6 +96,7 @@ export const toForm = (network: NetworkProfile): NetworkForm => ({
   hasSavedPassword: network.hasPassword,
   favorite: network.favorite,
   autoJoin: network.autoJoin.join(', '),
+  personaNote: network.personaNote ?? '',
 });
 
 export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
@@ -118,6 +122,7 @@ export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
     clearPassword: password ? false : form.clearPassword || undefined,
     favorite: form.favorite,
     autoJoin: parseAutoJoin(form.autoJoin),
+    personaNote: (form.personaNote ?? '').replace(/\r\n?/g, '\n'),
   };
 };
 
@@ -137,4 +142,5 @@ export const createConnectionInstancePayload = (network: NetworkProfile) => ({
   authAccount: network.authAccount ?? '',
   favorite: network.favorite,
   autoJoin: network.autoJoin,
+  personaNote: network.personaNote ?? '',
 });

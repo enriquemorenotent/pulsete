@@ -19,6 +19,7 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
   realName: 'Tester Example',
   favorite: false,
   autoJoin: [],
+  personaNote: '',
   ...overrides,
 });
 
@@ -42,6 +43,7 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
     realName: overrides.realName ?? template.realName,
     favorite: overrides.favorite ?? template.favorite,
     autoJoin: overrides.autoJoin ?? template.autoJoin,
+    personaNote: overrides.personaNote ?? template.personaNote,
   }));
 };
 
@@ -148,7 +150,7 @@ test('existing local databases reset stored messages and unread counts on the fo
   const count = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
   upgraded.close();
 
-  assert.equal(version.user_version, 11);
+  assert.equal(version.user_version, 13);
   assert.equal(count.count, 0);
 });
 

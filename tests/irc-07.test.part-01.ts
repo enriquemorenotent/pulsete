@@ -68,6 +68,7 @@ test('irc connection keeps direct notices on the server buffer', async () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -160,6 +161,7 @@ test('irc connection keeps private-message delivery notices on the server buffer
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -209,6 +211,7 @@ test('irc connection keeps unrelated direct server notices on the server buffer'
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

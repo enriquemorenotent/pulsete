@@ -35,6 +35,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   authAccount: overrides.authAccount,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
+  personaNote: overrides.personaNote ?? '',
 });
 
 const makePeer = (root: NetworkProfile, overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
@@ -175,6 +176,7 @@ test('network manager detail helpers produce scan-friendly UI copy', () => {
     authMethod: 'nickserv',
     authAccount: 'sofia',
     autoJoin: ['#pulsete', '#ops'],
+    personaNote: '',
   });
 
   assert.equal(getNetworkManagerAuthLabel(network), 'NickServ');

@@ -102,13 +102,14 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.equal(network?.authMethod, 'server-pass');
   assert.equal(network?.authTarget, 'NickServ');
   assert.equal(network?.authAccount, '');
-  assert.equal(version.user_version, 11);
+  assert.equal(version.user_version, 13);
   assert.equal(columns.some((column) => column.name === 'templateId'), true);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), true);
   assert.equal(columns.some((column) => column.name === 'historicalSelfNicks'), true);
   assert.equal(columns.some((column) => column.name === 'authMethod'), true);
   assert.equal(columns.some((column) => column.name === 'authTarget'), true);
   assert.equal(columns.some((column) => column.name === 'authAccount'), true);
+  assert.equal(columns.some((column) => column.name === 'personaNote'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'selfNickAliases'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'priorityUnread'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'lastReadTs'), true);
@@ -242,4 +243,3 @@ test('storage migration seeds query self aliases from that buffer import batches
 
   assert.deepEqual(buffer?.selfNickAliases, ['sofiaIsBack', 'oldsofia']);
 });
-

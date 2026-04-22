@@ -23,6 +23,7 @@ test('irc connection refreshes away status from WHO after joining a tracked chan
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -74,6 +75,7 @@ test('irc connection updates channel roster details from modern server events wi
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

@@ -23,6 +23,7 @@ test('irc connection keeps WHOIS 401 replies out of stale private-message contex
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -82,6 +83,7 @@ test('irc connection emits private-message 401 replies as send failures', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -146,6 +148,7 @@ test('irc connection keeps generic raw-command numerics on the server buffer', (
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -203,6 +206,7 @@ test('irc connection trusts echoed self messages when echo-message is negotiated
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

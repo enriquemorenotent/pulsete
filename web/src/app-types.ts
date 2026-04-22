@@ -34,6 +34,7 @@ export type ChannelListState = {
 export type NetworkEditorState = {
   kind: 'new' | 'existing';
   tab: EditorTab;
+  returnMode: 'closed' | 'manager';
   form: NetworkForm;
 };
 

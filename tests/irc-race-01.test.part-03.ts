@@ -35,6 +35,7 @@ test('sasl plain falls back cleanly when the server does not advertise sasl', ()
       password: 'hunter2',
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -91,6 +92,7 @@ test('sasl plain aborts cleanly when the server welcomes before replying to CAP 
       password: 'hunter2',
       favorite: false,
       autoJoin: ['#chat'],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

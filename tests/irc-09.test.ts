@@ -23,6 +23,7 @@ test('irc connection keeps delivery notices on the server buffer after channel m
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -84,6 +85,7 @@ test('irc connection keeps direct notices on the server buffer after generic raw
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -135,6 +137,7 @@ test('irc connection keeps raw MODE 401 replies from stale private-message conte
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

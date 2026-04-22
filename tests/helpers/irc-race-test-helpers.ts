@@ -118,6 +118,7 @@ export const createConnection = (onEvent: (event: Record<string, unknown>) => vo
     hasPassword: false,
     favorite: false,
     autoJoin: [],
+    personaNote: '',
   },
   { onEvent }
 );

@@ -27,6 +27,7 @@ const network: NetworkProfile = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 };
 
 const serverBuffer: BufferState = {

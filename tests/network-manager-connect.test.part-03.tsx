@@ -35,6 +35,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   authAccount: overrides.authAccount,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
+  personaNote: overrides.personaNote ?? '',
 });
 
 const makePeer = (root: NetworkProfile, overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
@@ -140,6 +141,7 @@ test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insen
     managerHidden: false,
     templateId: null,
     autoJoin: ['#Help', '#help', '#ops'],
+    personaNote: '',
   });
   const peer = makePeer(saved, { id: 'instance-1' });
   const channelBuffer = makeBuffer({ id: 'buffer-1', networkId: peer.id, kind: 'channel', target: '#help' });

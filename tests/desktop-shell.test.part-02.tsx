@@ -27,6 +27,7 @@ const network: NetworkProfile = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 };
 
 const serverBuffer: BufferState = {
@@ -231,7 +232,17 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
 
 test('desktop shell keeps only the left resize handle when no right sidebar is available', () => {
   const markup = renderToStaticMarkup(
-    <DesktopShell {...createModel(createWorkspace({}))} />
+    <DesktopShell
+      {...createModel(createWorkspace({
+        mode: 'empty',
+        selection: null,
+        connectionInstances: [],
+        selectedNetwork: null,
+        selectedBuffer: null,
+        headerTitle: 'No active connection',
+        composerMode: 'hidden',
+      }))}
+    />
   );
 
   assert.match(markup, /aria-label="Resize left sidebar"/);

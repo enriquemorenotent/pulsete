@@ -30,6 +30,7 @@ const network: NetworkProfile = {
   hasPassword: false,
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 };
 
 test('nicklist groups users by privilege level', () => {

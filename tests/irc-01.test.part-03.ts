@@ -101,6 +101,7 @@ test('irc connection can authenticate through SASL before autojoin', async () =>
       password: 'hunter2',
       favorite: false,
       autoJoin: ['#chat'],
+      personaNote: '',
     },
     {
       onEvent: () => {},

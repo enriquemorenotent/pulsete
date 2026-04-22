@@ -24,6 +24,7 @@ test('irc connection keeps an already joined channel after a retry JOIN times ou
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -128,6 +129,7 @@ test('irc connection surfaces private-message delivery errors from the server', 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

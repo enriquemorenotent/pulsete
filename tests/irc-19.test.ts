@@ -23,6 +23,7 @@ test('irc connection keeps pending nick changes from stealing channel 437 replie
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -79,6 +80,7 @@ test('irc connection keeps channel 437 replies out of nick contexts regardless o
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -135,6 +137,7 @@ test('irc connection clears join rollback metadata after a successful self join'
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -194,6 +197,7 @@ test('irc connection clears all pending join rollback metadata after duplicate s
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

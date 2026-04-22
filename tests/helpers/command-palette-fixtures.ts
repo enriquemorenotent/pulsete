@@ -25,6 +25,7 @@ export const network: NetworkProfile = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 };
 
 export const serverBuffer: BufferState = {

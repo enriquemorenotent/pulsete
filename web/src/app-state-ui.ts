@@ -117,7 +117,7 @@ export const reduceTransientAction = (
         ...transient,
         networkManager: {
           ...transient.networkManager,
-          mode: 'manager',
+          mode: transient.networkManager.editor?.returnMode ?? 'manager',
           editor: null,
         },
       };

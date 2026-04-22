@@ -31,6 +31,7 @@ const createConnectedIrc = () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     { onEvent: (event) => { events.push(event); } },
   );

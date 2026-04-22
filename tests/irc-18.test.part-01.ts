@@ -23,6 +23,7 @@ test('irc connection surfaces raw NAMES payloads for unjoined channels', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -82,6 +83,7 @@ test('irc connection surfaces raw TOPIC payloads for unjoined channels', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -141,6 +143,7 @@ test('irc connection routes rejected joins through the pending session target', 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -189,6 +192,7 @@ test('irc connection routes 437 rejected joins through the pending session targe
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

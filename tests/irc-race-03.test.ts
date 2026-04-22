@@ -25,6 +25,7 @@ test('nick fallback keeps the attempted nick when the retry write fails', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -80,6 +81,7 @@ test('connected nick changes wait for server confirmation before mutating curren
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -137,6 +139,7 @@ test('pending nick self events are handled before the nick echo arrives', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -185,6 +188,7 @@ test('rejected connected nick changes keep the last accepted nick', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

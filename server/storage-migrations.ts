@@ -8,7 +8,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 12;
+export const currentStorageSchemaVersion = 13;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -122,6 +122,12 @@ const storageMigrations: readonly StorageMigration[] = [
         CREATE INDEX IF NOT EXISTS idx_muted_nicks_network_nick
           ON muted_nicks(networkId, nick COLLATE NOCASE, createdAt ASC);
       `);
+    },
+  },
+  {
+    version: 13,
+    apply: (db) => {
+      ensureColumn(db, 'networks', 'personaNote', "TEXT NOT NULL DEFAULT ''");
     },
   },
 ];

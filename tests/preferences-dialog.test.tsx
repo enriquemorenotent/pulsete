@@ -57,6 +57,7 @@ const networks: NetworkProfile[] = [{
   hasPassword: false,
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 }];
 
 const backgroundDmAudio: BackgroundDmAudioSettings = {

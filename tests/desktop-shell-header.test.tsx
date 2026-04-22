@@ -26,6 +26,7 @@ const network: NetworkProfile = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 };
 
 const channelBuffer: BufferState = {

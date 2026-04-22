@@ -61,6 +61,11 @@ export type DesktopShellNetworkEditorModel = {
   onChange: (form: Partial<NetworkForm>) => void;
 };
 
+export type DesktopShellServerProfileModel = {
+  network: NetworkProfile | null;
+  onEdit: () => void;
+};
+
 export type DesktopShellModel = {
   workspace: WorkspaceView;
   header: DesktopShellHeaderModel;
@@ -69,6 +74,7 @@ export type DesktopShellModel = {
   chat: ChatPaneProps;
   nicklist: DesktopShellNicklistModel;
   assistant: AssistantPanelProps;
+  serverProfile?: DesktopShellServerProfileModel;
   preferences: PreferencesDialogProps;
   networkManager: DesktopShellNetworkManagerModel;
   networkEditor: DesktopShellNetworkEditorModel;

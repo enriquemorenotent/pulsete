@@ -27,6 +27,7 @@ test('reconnect timers are unrefd and cleared on manual disconnect', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     { onEvent() {} }
   );
@@ -94,6 +95,7 @@ test('manual reconnect resets the exhausted retry budget', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     { onEvent() {} }
   );
@@ -159,6 +161,7 @@ test('nick fallback uses the updated profile nick after reconnecting', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     { onEvent() {} }
   );
@@ -204,6 +207,7 @@ test('nick conflicts use configured alternate nicknames before suffix fallback',
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

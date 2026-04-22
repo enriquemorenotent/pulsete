@@ -40,6 +40,7 @@ export type NetworkRow = {
   authAccount: string;
   favorite: number;
   autoJoin: string;
+  personaNote: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -139,7 +140,9 @@ type NetworkWriteInput = {
   clearPassword?: boolean;
 };
 
-export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword'> & NetworkWriteInput;
+export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword' | 'personaNote'> & {
+  personaNote?: string;
+} & NetworkWriteInput;
 
 export type NetworkSaveResult =
   | {

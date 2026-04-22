@@ -22,6 +22,7 @@ test('network form omits hidden passwords when auth is set to none', () => {
     hasSavedPassword: true,
     favorite: false,
     autoJoin: '#chat',
+    personaNote: '',
   });
 
   assert.equal(payload.password, undefined);
@@ -50,8 +51,35 @@ test('network form includes the explicit auth account for sasl', () => {
     hasSavedPassword: false,
     favorite: false,
     autoJoin: '#chat',
+    personaNote: '',
   });
 
   assert.equal(payload.authMethod, 'sasl-plain');
   assert.equal(payload.authAccount, 'alice');
+});
+
+test('network form preserves multiline persona notes and normalizes line endings', () => {
+  const payload = toSaveNetworkPayload({
+    id: 'network-1',
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: '6667',
+    tls: false,
+    nick: 'tester',
+    nick2: '',
+    nick3: '',
+    username: 'tester',
+    realName: 'Tester Example',
+    authMethod: 'none',
+    authTarget: 'NickServ',
+    authAccount: '',
+    password: '',
+    clearPassword: false,
+    hasSavedPassword: false,
+    favorite: false,
+    autoJoin: '',
+    personaNote: 'Line one\r\nLine two',
+  });
+
+  assert.equal(payload.personaNote, 'Line one\nLine two');
 });

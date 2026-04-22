@@ -23,6 +23,7 @@ test('irc connection clears duplicate successful topic-change contexts before la
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -83,6 +84,7 @@ test('irc connection clears duplicate topic-error contexts for the same channel'
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: () => {},
@@ -132,6 +134,7 @@ test('irc connection keeps older topic-change contexts after a later topic self 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -192,6 +195,7 @@ test('irc connection surfaces otherwise unformatted numerics from raw commands',
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

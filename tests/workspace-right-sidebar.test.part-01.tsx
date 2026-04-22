@@ -26,6 +26,7 @@ const network: NetworkProfile = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
+  personaNote: '',
 };
 
 const channelBuffer: BufferState = {
@@ -223,4 +224,46 @@ test('query workspace renders the assistant panel without sidebar tabs', () => {
   assert.doesNotMatch(markup, /Draft/);
   assert.doesNotMatch(markup, /Sign out/);
   assert.doesNotMatch(markup, /Default model/);
+});
+
+test('server workspace renders the profile sidebar instead of assistant chrome', () => {
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={createWorkspace({
+        mode: 'server-connected',
+        selection: { kind: 'buffer', bufferId: 'buffer-server' },
+        selectedBuffer: {
+          id: 'buffer-server',
+          networkId: network.id,
+          kind: 'server',
+          target: 'server',
+          unread: 0,
+          priorityUnread: 0,
+          lastReadTs: null,
+          lastReadMessageId: null,
+        },
+        selectedChannel: null,
+        headerTitle: 'server',
+        showNicklist: false,
+      })}
+      nicklist={nicklist}
+      assistant={assistantProps}
+      serverProfile={{
+        network: {
+          ...network,
+          managerHidden: false,
+          personaNote: 'White 30yo female\nConfident and playful',
+        },
+        onEdit: () => {},
+      }}
+    />
+  );
+
+  assert.match(markup, /Profile/);
+  assert.match(markup, /Persona/);
+  assert.match(markup, /White 30yo female/);
+  assert.match(markup, /Confident and playful/);
+  assert.match(markup, />Edit<\/button>/);
+  assert.doesNotMatch(markup, /New chat/);
+  assert.doesNotMatch(markup, /Threads/);
 });

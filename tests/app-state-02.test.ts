@@ -122,6 +122,7 @@ test('network manager transitions between manager and editor modes inside reduce
       kind: 'existing',
       tab: 'servers',
       form: { ...emptyNetworkForm(), id: 'network-1', name: 'Libera.Chat' },
+      returnMode: 'manager',
     },
   });
   const updated = reducer(editing, { type: 'update-network-editor-form', form: { host: 'irc.libera.chat' } });
@@ -146,6 +147,7 @@ test('closing the network manager clears editor state but preserves favorites fi
           kind: 'new',
           tab: 'autojoin',
           form: emptyNetworkForm(),
+          returnMode: 'manager',
         },
       },
     },

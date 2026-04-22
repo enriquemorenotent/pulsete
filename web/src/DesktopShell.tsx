@@ -37,7 +37,12 @@ export function DesktopShell(props: DesktopShellModel) {
     edge: 'right',
     storageKey: RIGHT_SIDEBAR_WIDTH_STORAGE_KEY,
   });
-  const showRightSidebar = props.workspace.selectedBuffer?.kind === 'channel' || props.workspace.selectedBuffer?.kind === 'query';
+  const rightSidebarKind = props.workspace.selectedBuffer?.kind === 'server'
+    ? 'profile'
+    : props.workspace.selectedBuffer?.kind === 'channel' || props.workspace.selectedBuffer?.kind === 'query'
+      ? 'assistant'
+      : null;
+  const showRightSidebar = rightSidebarKind !== null;
   const selectedBufferId = props.workspace.selectedBuffer?.id ?? null;
   const compactLayout = useMediaQuery(compactDesktopShellQuery);
   const previousSelectedBufferIdRef = useRef(selectedBufferId);
@@ -127,7 +132,9 @@ export function DesktopShell(props: DesktopShellModel) {
                 Chat
               </TabsTrigger>
               {showRightSidebar ? (
-                <TabsTrigger value="assistant" className="min-w-0">Assistant</TabsTrigger>
+                <TabsTrigger value="assistant" className="min-w-0">
+                  {rightSidebarKind === 'profile' ? 'Profile' : 'Assistant'}
+                </TabsTrigger>
               ) : null}
             </TabsList>
             <div className="min-h-0 flex-1 overflow-hidden">
@@ -142,6 +149,7 @@ export function DesktopShell(props: DesktopShellModel) {
                   workspace={props.workspace}
                   nicklist={props.nicklist}
                   assistant={props.assistant}
+                  serverProfile={props.serverProfile}
                   initialTab="assistant"
                 />
               ) : null}
@@ -182,6 +190,7 @@ export function DesktopShell(props: DesktopShellModel) {
                     workspace={props.workspace}
                     nicklist={props.nicklist}
                     assistant={props.assistant}
+                    serverProfile={props.serverProfile}
                   />
                 </div>
               </>

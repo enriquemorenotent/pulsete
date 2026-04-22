@@ -23,6 +23,7 @@ test('irc connection keeps queued rejoin failures bound after a self part', () =
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -83,6 +84,7 @@ test('irc connection clears stale part contexts after a self kick', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -143,6 +145,7 @@ test('irc connection keeps queued rejoin failures bound after a self kick', () =
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

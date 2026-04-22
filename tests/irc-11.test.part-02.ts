@@ -23,6 +23,7 @@ test('irc connection routes labeled standard reply failures back to the originat
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {

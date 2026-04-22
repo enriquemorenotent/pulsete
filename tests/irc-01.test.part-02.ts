@@ -68,6 +68,7 @@ test('irc connection maps direct messages to sender buffer', async () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -170,6 +171,7 @@ test('irc connection can identify through NickServ before autojoin', async () =>
       password: 'hunter2',
       favorite: false,
       autoJoin: ['#chat'],
+      personaNote: '',
     },
     {
       onEvent: () => {},

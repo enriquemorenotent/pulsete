@@ -24,6 +24,7 @@ test('raw ISON replies stay in the originating buffer and do not affect friend p
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -123,6 +124,7 @@ test('irc connection batches ISON snapshots for tracked nicks and keeps them out
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -184,6 +186,7 @@ test('irc connection ignores stale ISON replies when snapshots overlap', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
+      personaNote: '',
     },
     {
       onEvent: (event) => {
