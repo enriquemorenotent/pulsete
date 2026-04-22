@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Storage } from '../server/storage.js';
-import { createNetworkInput } from './helpers/runtime-test-common.js';
+import { createNetworkInput,makeUser } from './helpers/runtime-test-common.js';
 
 test('peer nick events retarget an open private message buffer and preserve transcript continuity', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
@@ -64,6 +64,7 @@ test('peer nick events retarget an open private message buffer and preserve tran
     [
       { target: 'guide', body: 'before rename' },
       { target: 'guide', body: 'after rename' },
+      { target: 'guide', body: 'helper is now known as guide' },
     ],
   );
   assert.ok(
@@ -124,11 +125,131 @@ test('peer nick events merge an existing destination query buffer into the origi
   assert.equal(storage.conversations.getBuffer(originalQuery.id)?.priorityUnread, 1);
   assert.deepEqual(
     storage.conversations.listMessages(network.id, 'guide', 10).map((message) => message.body),
-    ['old buffer', 'new buffer'],
+    ['old buffer', 'new buffer', 'helper is now known as guide'],
   );
   assert.deepEqual(sent.find((message) => message.type === 'buffer.remove'), {
     type: 'buffer.remove',
     networkId: network.id,
     bufferId: renamedQuery.id,
   });
+});
+
+test('peer nick events append a channel notice for shared channels without a server fallback', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  storage.conversations.upsertChannel({
+    id: randomUUID(),
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: [makeUser('guide'), makeUser('alice')],
+  });
+
+  handleRuntimeEvent(
+    { store: storage, publish() {} },
+    {
+      type: 'peer-nick',
+      networkId: network.id,
+      oldNick: 'helper',
+      newNick: 'guide',
+      self: false,
+    }
+  );
+
+  assert.deepEqual(
+    storage.conversations.listMessages(network.id, '#help', 10).map((message) => message.body),
+    ['helper is now known as guide'],
+  );
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 10).length, 0);
+});
+
+test('peer nick events append notices to both shared channels and an open private message', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  storage.conversations.upsertQuery(network.id, 'helper');
+  storage.conversations.upsertChannel({
+    id: randomUUID(),
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: [makeUser('guide'), makeUser('alice')],
+  });
+
+  handleRuntimeEvent(
+    { store: storage, publish() {} },
+    {
+      type: 'peer-nick',
+      networkId: network.id,
+      oldNick: 'helper',
+      newNick: 'guide',
+      self: false,
+    }
+  );
+
+  assert.deepEqual(
+    storage.conversations.listMessages(network.id, '#help', 10).map((message) => message.body),
+    ['helper is now known as guide'],
+  );
+  assert.deepEqual(
+    storage.conversations.listMessages(network.id, 'guide', 10).map((message) => message.body),
+    ['helper is now known as guide'],
+  );
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 10).length, 0);
+});
+
+test('peer nick events fall back to the server buffer when no conversation context exists', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+
+  handleRuntimeEvent(
+    { store: storage, publish() {} },
+    {
+      type: 'peer-nick',
+      networkId: network.id,
+      oldNick: 'helper',
+      newNick: 'guide',
+      self: false,
+    }
+  );
+
+  assert.deepEqual(
+    storage.conversations.listMessages(network.id, 'server', 10).map((message) => message.body),
+    ['helper is now known as guide'],
+  );
+});
+
+test('self nick events append a shared-channel notice without a server fallback', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  storage.conversations.upsertChannel({
+    id: randomUUID(),
+    networkId: network.id,
+    name: '#help',
+    topic: '',
+    users: [makeUser('guide'), makeUser('alice')],
+  });
+
+  handleRuntimeEvent(
+    { store: storage, publish() {} },
+    {
+      type: 'peer-nick',
+      networkId: network.id,
+      oldNick: 'tester',
+      newNick: 'guide',
+      self: true,
+    }
+  );
+
+  assert.deepEqual(
+    storage.conversations.listMessages(network.id, '#help', 10).map((message) => ({
+      body: message.body,
+      self: message.self,
+    })),
+    [{ body: 'tester is now known as guide', self: true }],
+  );
+  assert.equal(storage.conversations.listMessages(network.id, 'server', 10).length, 0);
 });

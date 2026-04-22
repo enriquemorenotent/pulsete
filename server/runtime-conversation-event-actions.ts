@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { MessageKind, ServerMessage } from '../shared/protocol.js';
 import { isNickMuted } from '../shared/muted-nicks.js';
+import { isSameIrcIdentifier } from './irc-parser.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
 import {
@@ -129,21 +130,35 @@ export const handleRuntimeConversationPeerNickEvent = (
   options: RuntimeConversationServiceOptions,
   event: Extract<RuntimeEvent, { type: 'peer-nick' }>,
 ) => {
-  if (event.self) {
-    return [];
+  const messages: ServerMessage[] = [];
+  let queryTarget: string | null = null;
+  if (!event.self) {
+    const renamed = options.conversations.renameQuery(event.networkId, event.oldNick, event.newNick);
+    if (renamed) {
+      queryTarget = renamed.buffer.target;
+      messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });
+      if (renamed.removedBufferId) {
+        messages.push({
+          type: 'buffer.remove',
+          networkId: event.networkId,
+          bufferId: renamed.removedBufferId,
+        });
+      }
+    }
   }
-  const renamed = options.conversations.renameQuery(event.networkId, event.oldNick, event.newNick);
-  if (!renamed) {
-    return [];
+
+  const noticeTargets = new Set(resolveNickChangeChannelTargets(options, event));
+  if (queryTarget) {
+    noticeTargets.add(queryTarget);
   }
-  const messages: ServerMessage[] = [{ type: 'buffer.upsert', buffer: renamed.buffer }];
-  if (renamed.removedBufferId) {
-    messages.push({
-      type: 'buffer.remove',
-      networkId: event.networkId,
-      bufferId: renamed.removedBufferId,
-    });
+  if (noticeTargets.size === 0) {
+    noticeTargets.add('server');
   }
+
+  for (const target of noticeTargets) {
+    messages.push(...appendRuntimeConversationMessage(options, createNickChangeMessage(event, target)));
+  }
+
   return messages;
 };
 
@@ -174,6 +189,28 @@ const appendRuntimeConversationMessage = (
   }
   return messages;
 };
+
+const createNickChangeMessage = (
+  event: Extract<RuntimeEvent, { type: 'peer-nick' }>,
+  target: string,
+): MessageInput => ({
+  id: randomUUID(),
+  networkId: event.networkId,
+  target,
+  nick: null,
+  body: `${event.oldNick} is now known as ${event.newNick}`,
+  kind: 'system',
+  self: event.self,
+  ts: Date.now(),
+});
+
+const resolveNickChangeChannelTargets = (
+  options: RuntimeConversationServiceOptions,
+  event: Extract<RuntimeEvent, { type: 'peer-nick' }>,
+) => options.conversations
+  .listChannels(event.networkId)
+  .filter((channel) => channel.users.some((user) => isSameIrcIdentifier(user.nick, event.newNick)))
+  .map((channel) => channel.name);
 
 const resolveStatusTarget = (
   options: RuntimeConversationServiceOptions,

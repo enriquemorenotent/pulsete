@@ -63,7 +63,7 @@ test('nick fallback keeps the attempted nick when the retry write fails', () => 
 test('connected nick changes wait for server confirmation before mutating current nick', () => {
   const writes: string[] = [];
   const states: string[] = [];
-  const messages: Array<{ target: string; body: string; kind: string; nick: string | null }> = [];
+  const peerNickEvents: Array<{ oldNick: string; newNick: string; self: boolean }> = [];
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -86,12 +86,11 @@ test('connected nick changes wait for server confirmation before mutating curren
         if (event.type === 'state') {
           states.push(event.nick);
         }
-        if (event.type === 'message') {
-          messages.push({
-            target: event.message.target,
-            body: event.message.body,
-            kind: event.message.kind,
-            nick: event.message.nick,
+        if (event.type === 'peer-nick') {
+          peerNickEvents.push({
+            oldNick: event.oldNick,
+            newNick: event.newNick,
+            self: event.self,
           });
         }
       },
@@ -117,12 +116,7 @@ test('connected nick changes wait for server confirmation before mutating curren
     [makeUser('alice'), makeUser('newnick')]
   );
   assert.deepEqual(states, ['newnick']);
-  assert.deepEqual(messages, [{
-    target: '#Help',
-    body: 'tester is now known as newnick',
-    kind: 'system',
-    nick: null,
-  }]);
+  assert.deepEqual(peerNickEvents, [{ oldNick: 'tester', newNick: 'newnick', self: true }]);
 });
 
 test('pending nick self events are handled before the nick echo arrives', () => {
