@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
 import type { BufferState, FriendState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
@@ -81,7 +82,13 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
         title={props.workspace.selectedNetwork?.name ?? 'Server'}
         subtitle={subtitle}
         topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
-        actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
+        actions={(
+          <PaneHeaderActions
+            title={props.workspace.selectedNetwork?.name ?? 'Server'}
+            primary={actions.primary}
+            overflow={actions.overflow}
+          />
+        )}
       />
     );
   }
@@ -93,23 +100,47 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       title={props.workspace.headerTitle}
       subtitle={subtitle}
       topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
-      actions={<PaneHeaderActions primary={actions.primary} overflow={actions.overflow} />}
+      actions={(
+        <PaneHeaderActions
+          title={props.workspace.headerTitle}
+          primary={actions.primary}
+          overflow={actions.overflow}
+        />
+      )}
     />
   );
 }
 
-function PaneHeaderActions(props: { primary: ChatPaneHeaderAction[]; overflow: ChatPaneHeaderAction[] }) {
+function PaneHeaderActions(props: {
+  title: string;
+  primary: ChatPaneHeaderAction[];
+  overflow: ChatPaneHeaderAction[];
+}) {
   if (props.primary.length === 0 && props.overflow.length === 0) {
     return null;
   }
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-      {props.primary.map((action) => (
-        <Button key={action.id} variant="outline" size="sm" onClick={action.onSelect}>
-          {action.label}
-        </Button>
-      ))}
+      {props.primary.map((action) =>
+        action.id === 'close-query' ? (
+          <Button
+            key={action.id}
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-7 text-muted-foreground"
+            aria-label={`Close ${props.title}`}
+            onClick={action.onSelect}
+          >
+            <X className="size-3.5" />
+          </Button>
+        ) : (
+          <Button key={action.id} variant="outline" size="sm" onClick={action.onSelect}>
+            {action.label}
+          </Button>
+        ),
+      )}
       <ChatPaneHeaderActionMenu actions={props.overflow} />
     </div>
   );
@@ -126,12 +157,19 @@ function PaneHeader(props: {
       <div className="flex items-start justify-between gap-4 px-4 py-4">
         <div className="min-w-0">
           {props.title ? (
-            <h2 className={cn('truncate text-lg font-semibold tracking-tight text-foreground', props.subtitle && 'mb-1')}>
+            <h2
+              className={cn(
+                'truncate text-lg font-semibold tracking-tight text-foreground',
+                props.subtitle && 'mb-1',
+              )}
+            >
               {props.title}
             </h2>
           ) : null}
           {props.subtitle ? (
-            <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">{props.subtitle}</p>
+            <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">
+              {props.subtitle}
+            </p>
           ) : null}
         </div>
         {props.actions}

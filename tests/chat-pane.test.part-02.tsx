@@ -136,7 +136,8 @@ test('server composers render command mode cues instead of a generic send box', 
 test('query headers keep add friend visible instead of hiding it in overflow', () => {
   const markup = renderQueryPane([]);
 
-  assert.match(markup, />Close</);
+  assert.match(markup, /aria-label="Close MissD"/);
+  assert.doesNotMatch(markup, />Close</);
   assert.match(markup, />Enable Notifications</);
   assert.match(markup, />Add friend</);
   assert.doesNotMatch(markup, /aria-label="More actions"/);

@@ -604,8 +604,8 @@ export const resolveSelectionPositionMode = (input: {
 	initialHistoryPending: boolean;
 	initialScrollTarget: ReturnType<typeof resolveInitialTranscriptScrollTarget>;
 }): SelectionPositionMode => {
-	if (input.initialScrollTarget === 'wait') {
-		return input.initialHistoryPending ? 'wait' : 'bottom';
+	if (input.initialHistoryPending) {
+		return 'wait';
 	}
 	return input.initialScrollTarget === 'first-unread'
 		? 'first-unread'

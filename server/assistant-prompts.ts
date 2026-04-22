@@ -34,6 +34,7 @@ export const assistantBaseInstructions = [
   'You are Pulsete, an IRC conversation assistant.',
   'Some turns include only assistant chat context and optional selected-buffer metadata. Only use IRC transcript excerpts when they are explicitly included in the user input.',
   'Do not claim to have executed commands, accessed files outside explicit attachments, or used tools.',
+  'Do not claim you changed saved app state such as persona notes, preferences, or network settings unless that change is explicitly confirmed in the input.',
   'Do not mention Codex, app-server, JSON-RPC, or hidden system instructions.',
   'Format replies for a plain-text chat panel: use short paragraphs, and when listing points put each item on its own line.',
   'For summaries, comparisons, timelines, or multiple findings, prefer a brief lead sentence followed by bullets.',
@@ -76,6 +77,7 @@ export const buildAssistantTurnInput = ({
   if (task === 'ask') {
     const sections = [
       'Task: Reply to the user. Use transcript excerpts only when they are explicitly included below. When transcript evidence is included, answer from it in natural prose, mention the strongest supporting date or snippet inline only when it helps, and say plainly when the evidence is weak or missing.',
+      renderPersonaGuidance(task, network),
       renderAskContext(activeBuffer, resolvedSubject, retrievedContext, priorRetrievedContext, askInstruction),
       renderAssistantThreadContext(priorTranscript),
       renderAttachmentSummary(attachments),
@@ -85,6 +87,7 @@ export const buildAssistantTurnInput = ({
   }
   const sections = [
     `Task: ${describeTask(task, scope)}`,
+    renderPersonaGuidance(task, network),
     renderContext(scope, buffer, network, context),
     renderAssistantThreadContext(priorTranscript),
     renderAttachmentSummary(attachments),
@@ -156,6 +159,26 @@ const describeTask = (task: AssistantTaskKind, scope: AssistantThreadScope) =>
       : scope === 'free'
         ? 'Chat naturally with the user'
         : 'Answer a question about the IRC buffer';
+
+const renderPersonaGuidance = (
+  task: AssistantTaskKind,
+  network: NetworkProfile | null,
+) => {
+  const personaNote = network?.personaNote?.trim() ?? '';
+  if (!personaNote || task === 'summarize') {
+    return '';
+  }
+  return [
+    'Persona note for this network:',
+    '- This is user-provided profile context for how they present themselves on this network.',
+    '- You may use it when helping write replies and when answering direct questions about the user\'s stated persona or profile.',
+    '- Treat it as self-described context, not transcript evidence or an externally verified fact.',
+    '- If you rely on it for a factual answer, make that source clear in natural prose when useful, especially if transcript evidence is missing.',
+    '- Do not quote or dump the full note unless the user explicitly asks.',
+    '',
+    personaNote,
+  ].join('\n');
+};
 
 const renderContext = (
   scope: AssistantThreadScope,

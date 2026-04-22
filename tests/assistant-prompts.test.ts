@@ -45,6 +45,11 @@ const activeBuffer: AssistantActiveBuffer = {
 
 const context = 'History coverage: full buffer history\n\nFull transcript:\n[2026-03-23 18:00] alice: Hello there';
 
+const networkWithPersona: NetworkProfile = {
+  ...network,
+  personaNote: 'Warm, concise, and a little playful.',
+};
+
 test('extractAssistantUserPrompt keeps only the typed request from the assistant envelope', () => {
   const prompt = 'Reply briefly and mention the last thing Alice said.';
   const input = buildAssistantTurnInput({
@@ -86,10 +91,45 @@ test('ask prompt envelopes include selected-buffer metadata without implying tra
   assert.match(input, /Retrieved transcript context:\n\(none loaded for this turn\)/);
 });
 
+test('ask prompt envelopes include persona guidance for reply-writing and self-profile answers', () => {
+  const input = buildAssistantTurnInput({
+    activeBuffer,
+    askInstruction: 'Help draft a reply.',
+    buffer,
+    context,
+    network: networkWithPersona,
+    prompt: 'Help me answer Alice.',
+    retrievedContext: '',
+    scope: 'free',
+    task: 'ask',
+  });
+
+  assert.match(input, /Persona note for this network:/);
+  assert.match(input, /profile context for how they present themselves/);
+  assert.match(input, /answering direct questions about the user's stated persona or profile/);
+  assert.match(input, /Warm, concise, and a little playful\./);
+});
+
+test('draft prompt envelopes include persona guidance', () => {
+  const input = buildAssistantTurnInput({
+    buffer,
+    context,
+    network: networkWithPersona,
+    prompt: 'Draft a reply to Alice.',
+    scope: 'buffer',
+    task: 'draft',
+  });
+
+  assert.match(input, /Task: Draft a reply/);
+  assert.match(input, /Persona note for this network:/);
+  assert.match(input, /Warm, concise, and a little playful\./);
+});
+
 test('assistant base instructions require readable list formatting in chat replies', () => {
   assert.match(assistantBaseInstructions, /plain-text chat panel/);
   assert.match(assistantBaseInstructions, /brief lead sentence followed by bullets/);
   assert.match(assistantBaseInstructions, /sound like a person in chat/);
+  assert.match(assistantBaseInstructions, /Do not claim you changed saved app state such as persona notes/);
   assert.match(assistantBaseInstructions, /Do not use rigid labels like "Answer:", "Evidence:", or "Limits:"/);
   assert.match(assistantBaseInstructions, /renders transcript evidence separately/);
   assert.match(assistantBaseInstructions, /Do not invent or relabel transcript speakers/);

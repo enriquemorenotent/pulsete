@@ -1,10 +1,13 @@
 import type {
+  BufferState,
+  NetworkProfile,
   AssistantSnapshot,
+  ServerMessage,
   AssistantThread,
   AssistantThreadSummary,
   AssistantTurnAttachmentInput,
-  ServerMessage,
 } from '../shared/protocol.js';
+import type { AssistantStateMutation } from './assistant-actions.js';
 import type {
   LiveTurnState,
   PendingExecution,
@@ -26,6 +29,9 @@ export type AssistantServiceRuntimeParams = {
   publish: (message: ServerMessage | readonly ServerMessage[]) => void;
   runAppServerTask: (task: () => Promise<void>) => void;
   snapshot: () => AssistantSnapshot;
+  applyAssistantMutation?: (mutation: AssistantStateMutation) => {
+    messages: readonly ServerMessage[];
+  } | null;
 };
 
 export type AssistantServiceRuntimeState = {

@@ -1,8 +1,27 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { AssistantTurnAttachmentInput, ChatMessage } from '../shared/protocol.js';
 import { AssistantService } from '../server/assistant-service.js';
-import { conversationStore, createConversationStore, createAssistantStore, makeThread, networkStore } from './helpers/assistant-service-test-stores.js';
+import { conversationStore, createConversationStore, createAssistantStore, makeBuffer, makeThread, networkStore } from './helpers/assistant-service-test-stores.js';
+
+const personaNetwork: StoredNetworkProfile = {
+  id: 'network-1',
+  templateId: null,
+  managerHidden: false,
+  name: 'PersonaNet',
+  host: 'irc.example.test',
+  port: 6667,
+  tls: false,
+  nick: 'tester',
+  altNicks: ['tester_'],
+  username: 'tester',
+  realName: 'Tester',
+  hasPassword: false,
+  favorite: false,
+  autoJoin: [],
+  personaNote: 'Friendly, confident, and lightly teasing.',
+};
 
 test('assistant service keeps eager history packaging for summarize tasks', async () => {
   const assistantStore = createAssistantStore([makeThread({ id: 'thread-1', task: 'summarize', title: 'Summary · alice', turnStatus: null })]);
@@ -30,6 +49,57 @@ test('assistant service keeps eager history packaging for summarize tasks', asyn
   assert.match(focusInput?.text ?? '', /First 20 messages/);
   assert.match(focusInput?.text ?? '', /opening 0/);
   assert.match(focusInput?.text ?? '', /opening 19/);
+});
+
+test('assistant service includes the selected network persona note in ask turn envelopes', async () => {
+  const assistantStore = createAssistantStore([makeThread({
+    id: 'thread-1',
+    bufferId: null,
+    networkId: null,
+    target: null,
+    scope: 'free',
+    title: 'Chat',
+    task: 'ask',
+    turnStatus: null,
+  })]);
+  const activeBuffer = makeBuffer({ id: 'buffer-1', networkId: personaNetwork.id, kind: 'query', target: 'alice' });
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: createConversationStore([], activeBuffer),
+    networks: {
+      ...networkStore,
+      get: (networkId) => networkId === personaNetwork.id ? personaNetwork : null,
+    },
+    publish: () => {},
+    autoStart: false,
+  });
+  const calls: Array<{ method: string; params: unknown }> = [];
+  const privateService = service as unknown as {
+    appServer: { call: (method: string, params?: unknown) => Promise<unknown> };
+  };
+
+  privateService.appServer = {
+    call: async (method: string, params?: unknown) => {
+      calls.push({ method, params });
+      if (method === 'thread/start') return { thread: { id: 'execution-1' } };
+      if (method === 'turn/start') return {};
+      throw new Error(`Unexpected app-server method: ${method}`);
+    },
+  };
+
+  await service.startTurn({
+    threadId: 'thread-1',
+    prompt: 'What is my age?',
+    activeBufferId: activeBuffer.id,
+  });
+
+  const turnStartParams = calls[1]?.params as { input: Array<{ type: string; text?: string }> };
+  const promptEnvelope = turnStartParams.input[0]?.text ?? '';
+  assert.match(promptEnvelope, /Persona note for this network:/);
+  assert.match(promptEnvelope, /Friendly, confident, and lightly teasing\./);
+  assert.match(promptEnvelope, /answering direct questions about the user's stated persona or profile/);
+  assert.match(promptEnvelope, /User request:\nWhat is my age\?/);
+  assert.match(promptEnvelope, /Selected buffer metadata:/);
 });
 
 test('assistant service persists attachment metadata locally and excludes prior attachment contents from later turns', async () => {

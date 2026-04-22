@@ -102,6 +102,14 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     networks: store.networks,
     autoStart: assistantAutoStart,
     publish: (messages) => publisher.publish(messages),
+    applyAssistantMutation: (mutation) => {
+      switch (mutation.kind) {
+        case 'persona.note.save':
+          return networkMutations.updatePersonaNote(mutation.networkId, mutation.note);
+        default:
+          return null;
+      }
+    },
   });
   const assistantApi: RuntimeServices['assistant'] = {
     startChatgptLogin: () => assistant.startChatgptLogin(),
@@ -170,6 +178,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   };
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
+    updatePersonaNote: (networkId, personaNote) => networkMutations.updatePersonaNote(networkId, personaNote),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
     deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
   };

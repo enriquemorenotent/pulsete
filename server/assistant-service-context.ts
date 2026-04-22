@@ -89,11 +89,13 @@ export const resolveBufferTaskContext = ({
 
 export const resolveAskContext = ({
   activeBuffer,
+  networks,
   priorTurns,
   prompt,
   conversations,
 }: {
   activeBuffer: AssistantActiveBuffer | null;
+  networks: Pick<RuntimeNetworkStore, 'get'>;
   priorTurns: AssistantTurn[];
   prompt: string;
   conversations: Pick<RuntimeConversationStore, 'listBuffers' | 'listAllMessages' | 'getMessageWindow' | 'listOpeningMessages' | 'listRecentMessagesForBuffer' | 'searchMessages'>;
@@ -115,11 +117,14 @@ export const resolveAskContext = ({
   const priorRetrievedContext = plan.reusePreviousRetrievals
     ? renderAskRetrievalContexts(previousRetrievals)
     : '';
+  const networkId = plan.resolvedSubject?.networkId ?? activeBuffer?.networkId ?? null;
+  const network = networkId ? networks.get(networkId) as NetworkProfile | null : null;
   if (plan.outcome !== 'retrieve' || !plan.resolvedSubject) {
     return {
       activeBuffer,
       resolvedSubject: plan.resolvedSubject,
       askInstruction: plan.instruction,
+      network,
       priorRetrievedContext,
       retrievedContext: '',
       routing: mergeAskTurnRouting(plan.routing, []),
@@ -134,6 +139,7 @@ export const resolveAskContext = ({
     activeBuffer,
     resolvedSubject: plan.resolvedSubject,
     askInstruction: plan.instruction,
+    network,
     priorRetrievedContext,
     retrievedContext: renderAskRetrievalContexts(retrievals),
     routing: mergeAskTurnRouting(plan.routing, retrievals),

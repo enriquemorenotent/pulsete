@@ -71,6 +71,12 @@ const askThread: AssistantThread = {
   turns: [],
 };
 
+type AssistantTurnRequestBody = {
+  activeBufferId: string | null;
+  clientTurnId: string;
+  prompt: string;
+};
+
 const workspace: WorkspaceView = {
   mode: 'channel-connected',
   selection: { kind: 'buffer', bufferId: selectedBuffer.id },
@@ -242,9 +248,122 @@ test('startAssistantTurn renders an optimistic user turn before the request reso
   }
 });
 
+test('startAssistantTurn applies persona-note mutation messages returned by assistant chat', async () => {
+  const state = createState({
+    domain: {
+      assistant: {
+        ...initialState.domain.assistant,
+        serviceStatus: 'ready',
+        activeThreadId: askSummary.id,
+        threads: [askSummary],
+      },
+      assistantThreads: {
+        [askThread.id]: askThread,
+      },
+    },
+  });
+  const { params, banners, dispatched } = createParams(state);
+  let requestBody: AssistantTurnRequestBody | null = null;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = ((input, init) => {
+    if (String(input) !== '/api/assistant/threads/thread-1/turns') {
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    }
+    requestBody = JSON.parse(String(init?.body ?? '{}')) as AssistantTurnRequestBody;
+    return Promise.resolve(okJson({
+      ok: true,
+      messages: [
+        {
+          type: 'network.upsert',
+          network: {
+            ...network,
+            personaNote: 'Confident and playful',
+          },
+        },
+        {
+          type: 'assistant.turn.completed',
+          threadId: 'thread-1',
+          turn: {
+            id: requestBody.clientTurnId,
+            status: 'completed',
+            error: null,
+            items: [
+              {
+                type: 'userMessage',
+                id: `${requestBody.clientTurnId}:user`,
+                text: requestBody.prompt,
+                attachments: [],
+              },
+              {
+                type: 'agentMessage',
+                id: `${requestBody.clientTurnId}:assistant`,
+                text: 'Updated your persona note for TestNet.\n\nCurrent note:\nConfident and playful',
+                phase: null,
+                artifact: null,
+              },
+            ],
+            activeBuffer: {
+              bufferId: selectedBuffer.id,
+              networkId: selectedBuffer.networkId,
+              target: selectedBuffer.target,
+              title: selectedBuffer.target,
+            },
+            resolvedSubject: null,
+            routing: null,
+          },
+        },
+        {
+          type: 'assistant.snapshot',
+          assistant: {
+            ...state.domain.assistant,
+            activeThreadId: askSummary.id,
+            threads: [{ ...askSummary, turnStatus: 'completed', updatedAt: 3 }],
+          },
+        },
+      ],
+    }) as Response);
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions(params);
+    const started = await actions.startAssistantTurn(
+      'thread-1',
+      'Set my persona note to: Confident and playful',
+      [],
+      selectedBuffer.id,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(started, true);
+    assert.ok(requestBody);
+    const resolvedRequestBody = requestBody as AssistantTurnRequestBody;
+    assert.equal(resolvedRequestBody.activeBufferId, selectedBuffer.id);
+    assert.deepEqual(dispatched.map((action) => action.type), [
+      'assistant-turn-started',
+      'upsert-network',
+      'assistant-turn-completed',
+      'assistant-snapshot',
+    ]);
+    const upsert = dispatched[1];
+    assert.equal(upsert?.type, 'upsert-network');
+    assert.equal(upsert?.type === 'upsert-network' && upsert.network.personaNote, 'Confident and playful');
+    const completed = dispatched[2];
+    assert.equal(completed?.type, 'assistant-turn-completed');
+    assert.equal(completed?.type === 'assistant-turn-completed' && completed.turn.id, resolvedRequestBody.clientTurnId);
+    assert.match(
+      completed?.type === 'assistant-turn-completed' && completed.turn.items[1]?.type === 'agentMessage'
+        ? completed.turn.items[1].text
+        : '',
+      /Updated your persona note for TestNet\./,
+    );
+    assert.deepEqual(banners, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 const okJson = (body: unknown) => ({
   ok: true,
   status: 200,
   json: async () => body,
 }) as Response;
-

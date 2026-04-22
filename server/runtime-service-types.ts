@@ -65,6 +65,7 @@ export type RuntimeMutedNickMutations = {
 
 export type RuntimeNetworkMutations = {
   saveNetwork: NetworkLifecycleService['saveNetwork'];
+  updatePersonaNote: NetworkLifecycleService['updatePersonaNote'];
   duplicateNetwork: NetworkLifecycleService['duplicateNetwork'];
   deleteNetwork: NetworkLifecycleService['deleteNetwork'];
 };

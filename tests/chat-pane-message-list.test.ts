@@ -110,7 +110,7 @@ test('programmatic scroll transactions expire only for the matching frame token'
   );
 });
 
-test('selection positioning keeps waiting only while the initial unread history page is loading', () => {
+test('selection positioning waits until the initial buffer history has loaded', () => {
   assert.equal(resolveSelectionPositionMode({
     initialHistoryPending: true,
     initialScrollTarget: 'wait',
@@ -121,6 +121,14 @@ test('selection positioning keeps waiting only while the initial unread history 
   }), 'bottom');
   assert.equal(resolveSelectionPositionMode({
     initialHistoryPending: true,
+    initialScrollTarget: 'bottom',
+  }), 'wait');
+  assert.equal(resolveSelectionPositionMode({
+    initialHistoryPending: true,
+    initialScrollTarget: 'first-unread',
+  }), 'wait');
+  assert.equal(resolveSelectionPositionMode({
+    initialHistoryPending: false,
     initialScrollTarget: 'first-unread',
   }), 'first-unread');
 });

@@ -7,6 +7,7 @@ import type {
 } from '../shared/protocol.js';
 import { randomUUID } from 'node:crypto';
 import { badRequest } from './app-error.js';
+import type { AssistantStateMutation } from './assistant-actions.js';
 import { AssistantAppServer } from './assistant-app-server.js';
 import { AssistantServiceAppState } from './assistant-service-app-state.js';
 import { handleAssistantServiceNotification } from './assistant-service-notifications.js';
@@ -25,6 +26,9 @@ type AssistantServiceParams = {
   networks: RuntimeNetworkStore;
   publish: (message: ServerMessage | readonly ServerMessage[]) => void;
   autoStart?: boolean;
+  applyAssistantMutation?: (mutation: AssistantStateMutation) => {
+    messages: readonly ServerMessage[];
+  } | null;
 };
 
 export class AssistantService {
@@ -42,6 +46,7 @@ export class AssistantService {
       publish: (message) => this.publish(message),
       runAppServerTask: (task) => this.runAppServerTask(task),
       snapshot: () => this.snapshot(),
+      applyAssistantMutation: params.applyAssistantMutation,
     });
     this.appState = new AssistantServiceAppState({
       assistant: params.assistant,

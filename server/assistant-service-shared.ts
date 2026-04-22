@@ -4,9 +4,11 @@ import type {
   AssistantActiveBuffer,
   AssistantAttachmentMetadata,
   AssistantRateLimits,
+  AssistantTurnAttachmentInput,
   AssistantTurnRouting,
   AssistantTurnStatus,
 } from '../shared/protocol.js';
+import type { AssistantPendingAction } from './assistant-actions.js';
 
 export const assistantSandboxCwd = tmpdir();
 export const assistantThreadSandbox = 'read-only';
@@ -89,6 +91,8 @@ export type LiveTurnState = {
 export type PendingExecutionBase = {
   activeBuffer: AssistantActiveBuffer | null;
   attachments: AssistantAttachmentMetadata[];
+  attachmentInputs: AssistantTurnAttachmentInput[];
+  assistantAction: AssistantPendingAction | null;
   localTurnId: string;
   prompt: string;
   resolvedSubject: AssistantActiveBuffer | null;
