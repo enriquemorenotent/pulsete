@@ -47,6 +47,13 @@ export const createAssistantThreadActions = (
       );
       return null;
     }
+    if (task === 'ask' && !session.workspace.selectedBuffer) {
+      context.updateBanner(
+        'error',
+        'Select a channel or private message before starting an assistant chat',
+      );
+      return null;
+    }
     const bufferId = session.workspace.selectedBuffer?.id ?? null;
     return context.executeMutation({
       request: () => api.createAssistantThread({ bufferId, task, model }),

@@ -7,7 +7,13 @@ import { flushAssistantEvents } from './helpers/assistant-service-test-runtime.j
 
 test('assistant service creates local threads without an app-server round trip', async () => {
   const assistantStore = createAssistantStore([]);
-  const service = new AssistantService({ assistant: assistantStore, conversations: conversationStore, networks: networkStore, publish: () => {}, autoStart: false });
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: { ...conversationStore, getBuffer: () => makeBuffer() },
+    networks: networkStore,
+    publish: () => {},
+    autoStart: false,
+  });
   const calls: Array<{ method: string; params: unknown }> = [];
   const privateService = service as unknown as { appServer: { call: (method: string, params?: unknown) => Promise<unknown> } };
 
@@ -18,13 +24,14 @@ test('assistant service creates local threads without an app-server round trip',
     },
   };
 
-  const thread = await service.createThread({ bufferId: null, task: 'ask' });
+  const thread = await service.createThread({ bufferId: 'buffer-1', task: 'ask' });
   assert.equal(calls.length, 0);
   assert.match(thread.id, /^assistant:/);
+  assert.equal(thread.scope, 'buffer');
   assert.equal(service.snapshot().activeThreadId, thread.id);
 });
 
-test('assistant service creates free chat threads without buffer bindings', async () => {
+test('assistant service creates ask threads bound to the selected buffer', async () => {
   const assistantStore = createAssistantStore([]);
   const service = new AssistantService({
     assistant: assistantStore,
@@ -35,14 +42,14 @@ test('assistant service creates free chat threads without buffer bindings', asyn
   });
 
   const thread = await service.createThread({ bufferId: 'buffer-1', scope: 'free', task: 'ask' });
-  assert.equal(thread.scope, 'free');
-  assert.equal(thread.bufferId, null);
-  assert.equal(thread.networkId, null);
-  assert.equal(thread.target, null);
-  assert.equal(thread.title, 'Chat');
+  assert.equal(thread.scope, 'buffer');
+  assert.equal(thread.bufferId, 'buffer-1');
+  assert.equal(thread.networkId, 'network-1');
+  assert.equal(thread.target, 'MissD');
+  assert.equal(thread.title, 'Ask · MissD');
 });
 
-test('assistant service defaults ask threads to the unified free-chat surface', async () => {
+test('assistant service defaults ask threads to the current buffer surface', async () => {
   const assistantStore = createAssistantStore([]);
   const service = new AssistantService({
     assistant: assistantStore,
@@ -53,11 +60,27 @@ test('assistant service defaults ask threads to the unified free-chat surface', 
   });
 
   const thread = await service.createThread({ bufferId: 'buffer-1', task: 'ask' });
-  assert.equal(thread.scope, 'free');
-  assert.equal(thread.bufferId, null);
-  assert.equal(thread.networkId, null);
-  assert.equal(thread.target, null);
-  assert.equal(thread.title, 'Chat');
+  assert.equal(thread.scope, 'buffer');
+  assert.equal(thread.bufferId, 'buffer-1');
+  assert.equal(thread.networkId, 'network-1');
+  assert.equal(thread.target, 'MissD');
+  assert.equal(thread.title, 'Ask · MissD');
+});
+
+test('assistant service requires a buffer before starting an ask thread', async () => {
+  const assistantStore = createAssistantStore([]);
+  const service = new AssistantService({
+    assistant: assistantStore,
+    conversations: conversationStore,
+    networks: networkStore,
+    publish: () => {},
+    autoStart: false,
+  });
+
+  await assert.rejects(
+    () => service.createThread({ bufferId: null, task: 'ask' }),
+    /Select a channel or private message before starting an assistant chat/,
+  );
 });
 
 test('assistant service deletes idle threads and clears the active thread reference', async () => {

@@ -54,11 +54,11 @@ const selectedChannel: ChannelState = {
 
 const askSummary: AssistantThreadSummary = {
   id: 'thread-1',
-  bufferId: null,
-  networkId: null,
-  target: null,
-  scope: 'free',
-  title: 'Chat',
+  bufferId: selectedBuffer.id,
+  networkId: network.id,
+  target: selectedBuffer.target,
+  scope: 'buffer',
+  title: 'Ask · #general',
   task: 'ask',
   model: 'gpt-5.4',
   turnStatus: null,
@@ -190,4 +190,3 @@ const okJson = (body: unknown) => ({
   status: 200,
   json: async () => body,
 }) as Response;
-

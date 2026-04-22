@@ -4,6 +4,7 @@ import type { AssistantPanelProps } from './AssistantPanel.js';
 import type { WorkspaceView } from './workspace-types.js';
 import type { AssistantActionSet } from './useAppActions.js';
 import type { AssistantThread, AssistantThreadSummary, AssistantTurnAttachmentInput } from '../../shared/protocol.js';
+import { getAskThreadForBuffer, getAskThreadsForBuffer } from './assistant-thread-selection.js';
 
 type AssistantControllerParams = {
   actions: AssistantActionSet;
@@ -36,13 +37,10 @@ export const isAssistantBusy = (
 ) => selectedThreadSummary?.turnStatus === 'inProgress'
   || !!selectedThread?.turns.some((turn) => turn.status === 'inProgress');
 
-export const getAskThreads = (
-  threads: State['domain']['assistant']['threads'],
-) => [...threads]
-  .filter((thread) => thread.task === 'ask')
-  .sort((left, right) => right.updatedAt - left.updatedAt);
-
-const getAssistantContextKey = (threadId: string | null) => threadId ?? 'assistant-chat';
+const getAssistantContextKey = (
+  threadId: string | null,
+  bufferId: string | null,
+) => threadId ?? bufferId ?? 'assistant-chat';
 
 const getAssistantContextTitle = () => 'Chat';
 
@@ -80,7 +78,7 @@ const getAssistantContextSubtitle = (
   } else if (subjectPending) {
     sections.push('Assistant subject: awaiting confirmation.');
   } else if (workspace.selectedBuffer) {
-    sections.push('The assistant can use the current buffer as a hint if needed.');
+    sections.push('This assistant chat is scoped to the current buffer.');
   } else {
     sections.push('The assistant will only use what you type or attach until a subject is resolved.');
   }
@@ -98,16 +96,14 @@ export function useAssistantController({
   workspace,
 }: AssistantControllerParams): AssistantPanelProps {
   const selectedBufferId = workspace.selectedBuffer?.id ?? null;
-  const threads = useMemo(
-    () => getAskThreads(assistant.threads),
-    [assistant.threads]
+  const selectedThreadSummary = useMemo(
+    () => getAskThreadForBuffer(assistant.threads, selectedBufferId),
+    [assistant.threads, selectedBufferId],
   );
-  const preferredThreadId = assistantUi.selectedThreadId ?? assistant.activeThreadId ?? null;
-  const selectedThreadSummary = (
-    preferredThreadId
-      ? threads.find((thread) => thread.id === preferredThreadId) ?? null
-      : null
-  ) ?? threads[0] ?? null;
+  const bufferAskThreadIds = useMemo(
+    () => getAskThreadsForBuffer(assistant.threads, selectedBufferId).map((thread) => thread.id),
+    [assistant.threads, selectedBufferId],
+  );
   const selectedThreadId = selectedThreadSummary?.id ?? null;
   const selectedThread = selectedThreadId ? assistantThreads[selectedThreadId] ?? null : null;
   const resolvedSubjectLabel = getAssistantResolvedSubjectLabel(selectedThread);
@@ -132,14 +128,22 @@ export function useAssistantController({
     activeBufferLabel: getAssistantBufferLabel(workspace),
     assistant,
     busy,
-    contextKey: getAssistantContextKey(selectedThreadId),
+    contextKey: getAssistantContextKey(selectedThreadId, selectedBufferId),
     contextSubtitle: getAssistantContextSubtitle(workspace, resolvedSubjectLabel, subjectPending),
     contextTitle: getAssistantContextTitle(),
     loading,
     resolvedSubjectLabel,
     subjectPending,
     thread: selectedThread,
-    onNewChat: async () => !!(await actions.createAssistantThread('ask')),
+    onNewChat: async () => {
+      if (bufferAskThreadIds.length > 0) {
+        const cleared = await actions.clearAssistantThreads(bufferAskThreadIds);
+        if (!cleared) {
+          return false;
+        }
+      }
+      return !!(await actions.createAssistantThread('ask'));
+    },
     onOpenChannel: actions.openMentionedChannel,
     onStop: async () => selectedThreadId ? actions.interruptAssistantThread(selectedThreadId) : false,
     onSubmitPrompt: async (prompt, attachments: AssistantTurnAttachmentInput[]) => {
@@ -161,6 +165,8 @@ export function useAssistantController({
     actions.startAssistantTurn,
     assistant,
     busy,
+    bufferAskThreadIds,
+    actions.clearAssistantThreads,
     resolvedSubjectLabel,
     loading,
     selectedBufferId,

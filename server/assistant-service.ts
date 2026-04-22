@@ -106,7 +106,9 @@ export class AssistantService {
         : null;
     if (scope === 'buffer' && !buffer) {
       throw badRequest(
-        'Select a buffer before starting a buffer-scoped assistant thread',
+        input.task === 'ask'
+          ? 'Select a channel or private message before starting an assistant chat'
+          : 'Select a buffer before starting a buffer-scoped assistant thread',
       );
     }
     const target = scope === 'buffer' ? buffer?.target ?? null : null;
@@ -203,7 +205,7 @@ export class AssistantService {
   }
 
   private resolveAssistantThreadScope(task: AssistantTaskKind, scope: AssistantThreadScope | undefined): AssistantThreadScope {
-    return task !== 'ask' ? 'buffer' : (scope ?? 'free');
+    return task === 'ask' ? 'buffer' : (scope ?? 'buffer');
   }
 
   private runAppServerTask(task: () => Promise<void>) {
