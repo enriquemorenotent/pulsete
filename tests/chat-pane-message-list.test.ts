@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  expireProgrammaticScrollTransaction,
+  isProgrammaticScrollEvent,
   resolveElementViewportScrollTop,
   resolveSelectionPositionMode,
   resolveUnreadViewportOffset,
@@ -55,6 +57,54 @@ test('restoring scroll offset keeps the visible transcript anchored after prepen
   node.scrollHeight = 860;
   restoreScrollOffsetAfterPrepend(node, 640, 72);
   assert.equal(node.scrollTop, 292);
+});
+
+test('programmatic scroll ownership matches the active buffer and expected scroll position', () => {
+  assert.equal(isProgrammaticScrollEvent({
+    activeTransaction: { bufferId: 'buffer-1', expectedScrollTop: 240 },
+    bufferId: 'buffer-1',
+    scrollTop: 240,
+  }), true);
+  assert.equal(isProgrammaticScrollEvent({
+    activeTransaction: { bufferId: 'buffer-1', expectedScrollTop: 240 },
+    bufferId: 'buffer-1',
+    scrollTop: 241,
+  }), true);
+});
+
+test('programmatic scroll ownership yields to divergent scroll positions and other buffers', () => {
+  assert.equal(isProgrammaticScrollEvent({
+    activeTransaction: { bufferId: 'buffer-1', expectedScrollTop: 240 },
+    bufferId: 'buffer-1',
+    scrollTop: 242,
+  }), false);
+  assert.equal(isProgrammaticScrollEvent({
+    activeTransaction: { bufferId: 'buffer-1', expectedScrollTop: 240 },
+    bufferId: 'buffer-2',
+    scrollTop: 240,
+  }), false);
+  assert.equal(isProgrammaticScrollEvent({
+    activeTransaction: null,
+    bufferId: 'buffer-1',
+    scrollTop: 240,
+  }), false);
+});
+
+test('programmatic scroll transactions expire only for the matching frame token', () => {
+  assert.equal(
+    expireProgrammaticScrollTransaction(
+      { bufferId: 'buffer-1', expectedScrollTop: 240, token: 3 },
+      3,
+    ),
+    null,
+  );
+  assert.deepEqual(
+    expireProgrammaticScrollTransaction(
+      { bufferId: 'buffer-1', expectedScrollTop: 240, token: 4 },
+      3,
+    ),
+    { bufferId: 'buffer-1', expectedScrollTop: 240, token: 4 },
+  );
 });
 
 test('selection positioning keeps waiting only while the initial unread history page is loading', () => {

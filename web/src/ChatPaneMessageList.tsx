@@ -79,12 +79,13 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 	);
 	const loadingOlderRef = useRef(false);
 	const unreadDividerRef = useRef<HTMLDivElement | null>(null);
-	const manualScrollIntentAtRef = useRef(0);
-	const programmaticScrollEventsRef = useRef(0);
 	const selectionPositionRef = useRef<ActiveSelectionPosition | null>(null);
 	const selectionCorrectionRef = useRef<SelectionImageCorrection | null>(null);
 	const selectionCorrectionCleanupRef = useRef<(() => void) | null>(null);
 	const selectionCorrectionFrameRef = useRef<number | null>(null);
+	const programmaticScrollRef = useRef<ProgrammaticScrollTransaction | null>(null);
+	const programmaticScrollCleanupRef = useRef<number | null>(null);
+	const programmaticScrollTokenRef = useRef(0);
 	const [showJumpToLatest, setShowJumpToLatest] = useState(() =>
 		shouldShowJumpToLatestControl({
 			messagesLength: props.messages.length,
@@ -136,6 +137,57 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 		},
 		[],
 	);
+	const clearProgrammaticScroll = useCallback((bufferId?: string | null) => {
+		const activeTransaction = programmaticScrollRef.current;
+		if (
+			bufferId !== undefined &&
+			activeTransaction &&
+			activeTransaction.bufferId !== bufferId
+		) {
+			return;
+		}
+		if (
+			typeof window !== 'undefined' &&
+			programmaticScrollCleanupRef.current !== null
+		) {
+			window.cancelAnimationFrame(programmaticScrollCleanupRef.current);
+			programmaticScrollCleanupRef.current = null;
+		}
+		programmaticScrollRef.current = null;
+	}, []);
+	const applyProgrammaticScroll = useCallback(
+		(mutateScroll: (node: HTMLDivElement) => void) => {
+			const scrollContainer = props.scrollRef.current;
+			const bufferId = props.selectedBuffer?.id ?? null;
+			if (!scrollContainer || !bufferId) {
+				return false;
+			}
+			const token = programmaticScrollTokenRef.current + 1;
+			programmaticScrollTokenRef.current = token;
+			mutateScroll(scrollContainer);
+			programmaticScrollRef.current = {
+				bufferId,
+				expectedScrollTop: scrollContainer.scrollTop,
+				token,
+			};
+			if (typeof window !== 'undefined') {
+				if (programmaticScrollCleanupRef.current !== null) {
+					window.cancelAnimationFrame(programmaticScrollCleanupRef.current);
+				}
+				programmaticScrollCleanupRef.current = window.requestAnimationFrame(() => {
+					programmaticScrollCleanupRef.current = null;
+					programmaticScrollRef.current = expireProgrammaticScrollTransaction(
+						programmaticScrollRef.current,
+						token,
+					);
+				});
+			}
+			refreshStickyScrollMode(scrollContainer);
+			syncJumpToLatestVisibility(scrollContainer);
+			return true;
+		},
+		[props.scrollRef, props.selectedBuffer?.id, syncJumpToLatestVisibility],
+	);
 	const applySelectionImageCorrection = useCallback(() => {
 		const activeCorrection = selectionCorrectionRef.current;
 		const scrollContainer = props.scrollRef.current;
@@ -147,23 +199,23 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			return;
 		}
 		if (activeCorrection.mode === 'bottom') {
-			programmaticScrollEventsRef.current += 2;
-			scrollNodeToBottom(scrollContainer);
+			applyProgrammaticScroll((node) => {
+				scrollNodeToBottom(node);
+			});
 		} else {
 			const unreadDivider = unreadDividerRef.current;
 			if (!unreadDivider) {
 				return;
 			}
-			programmaticScrollEventsRef.current += 2;
-			scrollContainer.scrollTop = resolveElementViewportScrollTop(
-				scrollContainer,
-				resolveElementTopInScrollContainer(scrollContainer, unreadDivider),
-				activeCorrection.targetOffsetPx,
-			);
+			applyProgrammaticScroll((node) => {
+				node.scrollTop = resolveElementViewportScrollTop(
+					node,
+					resolveElementTopInScrollContainer(node, unreadDivider),
+					activeCorrection.targetOffsetPx,
+				);
+			});
 		}
-		refreshStickyScrollMode(scrollContainer);
-		syncJumpToLatestVisibility(scrollContainer);
-	}, [props.scrollRef, props.selectedBuffer?.id, syncJumpToLatestVisibility]);
+	}, [applyProgrammaticScroll, props.scrollRef, props.selectedBuffer?.id]);
 	const scheduleSelectionImageCorrection = useCallback(() => {
 		const activeCorrection = selectionCorrectionRef.current;
 		if (
@@ -261,25 +313,28 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 				if (!unreadDivider) {
 					return false;
 				}
-				programmaticScrollEventsRef.current += 2;
-				scrollContainer.scrollTop = resolveElementViewportScrollTop(
-					scrollContainer,
-					resolveElementTopInScrollContainer(scrollContainer, unreadDivider),
-					resolveUnreadViewportOffset(scrollContainer),
-				);
+				if (!applyProgrammaticScroll((node) => {
+					node.scrollTop = resolveElementViewportScrollTop(
+						node,
+						resolveElementTopInScrollContainer(node, unreadDivider),
+						resolveUnreadViewportOffset(node),
+					);
+				})) {
+					return false;
+				}
 			} else {
-				programmaticScrollEventsRef.current += 2;
-				scrollNodeToBottom(scrollContainer);
+				if (!applyProgrammaticScroll((node) => {
+					scrollNodeToBottom(node);
+				})) {
+					return false;
+				}
 			}
-			refreshStickyScrollMode(scrollContainer);
-			syncJumpToLatestVisibility(scrollContainer);
 			beginSelectionImageCorrection(mode);
 			return true;
 		},
 		[
+			applyProgrammaticScroll,
 			beginSelectionImageCorrection,
-			props.scrollRef,
-			syncJumpToLatestVisibility,
 		],
 	);
 	const handleLoadOlder = useCallback(async () => {
@@ -301,38 +356,36 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			if (!nextScrollContainer) {
 				return;
 			}
-			programmaticScrollEventsRef.current += 2;
-			restoreScrollOffsetAfterPrepend(
-				nextScrollContainer,
-				previousHeight,
-				previousTop,
-			);
-			syncJumpToLatestVisibility(nextScrollContainer);
+			applyProgrammaticScroll((node) => {
+				restoreScrollOffsetAfterPrepend(
+					node,
+					previousHeight,
+					previousTop,
+				);
+			});
 		} finally {
 			loadingOlderRef.current = false;
 		}
 	}, [
+		applyProgrammaticScroll,
 		props.loadingOlderHistory,
 		props.onLoadOlderHistory,
 		props.scrollRef,
-		syncJumpToLatestVisibility,
 	]);
 
 	const handleScroll = useCallback(
 		(event: UIEvent<HTMLDivElement>) => {
 			syncJumpToLatestVisibility(event.currentTarget);
-			if (programmaticScrollEventsRef.current > 0) {
-				programmaticScrollEventsRef.current -= 1;
-				manualScrollIntentAtRef.current = 0;
+			const bufferId = props.selectedBuffer?.id ?? null;
+			if (isProgrammaticScrollEvent({
+				activeTransaction: programmaticScrollRef.current,
+				bufferId,
+				scrollTop: event.currentTarget.scrollTop,
+			})) {
 				return;
 			}
-			if (
-				Date.now() - manualScrollIntentAtRef.current
-				<= manualScrollIntentWindowMs
-			) {
-				clearSelectionImageCorrection(props.selectedBuffer?.id ?? null);
-			}
-			manualScrollIntentAtRef.current = 0;
+			clearProgrammaticScroll(bufferId);
+			clearSelectionImageCorrection(bufferId);
 			if (
 				!shouldAutoLoadOlderHistory({
 					canLoadOlderHistory: !!showLoadOlder,
@@ -346,6 +399,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			void handleLoadOlder();
 		},
 		[
+			clearProgrammaticScroll,
 			clearSelectionImageCorrection,
 			handleLoadOlder,
 			props.loadingOlderHistory,
@@ -363,21 +417,24 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 	useEffect(() => {
 		return () => {
 			clearSelectionImageCorrection();
+			clearProgrammaticScroll();
 		};
-	}, [clearSelectionImageCorrection]);
+	}, [clearProgrammaticScroll, clearSelectionImageCorrection]);
 
 	useEffect(() => {
 		const bufferId = props.selectedBuffer?.id ?? null;
 		if (!bufferId) {
 			selectionPositionRef.current = null;
 			clearSelectionImageCorrection();
+			clearProgrammaticScroll();
 			setShowJumpToLatest(false);
 			return;
 		}
 		return () => {
 			clearSelectionImageCorrection(bufferId);
+			clearProgrammaticScroll(bufferId);
 		};
-	}, [clearSelectionImageCorrection, props.selectedBuffer?.id]);
+	}, [clearProgrammaticScroll, clearSelectionImageCorrection, props.selectedBuffer?.id]);
 
 	useLayoutEffect(() => {
 		const scrollContainer = props.scrollRef.current;
@@ -420,16 +477,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 			<div
 				ref={props.scrollRef}
 				className="h-full overflow-y-auto px-4 py-4 pt-0"
-				onPointerDownCapture={() => {
-					manualScrollIntentAtRef.current = Date.now();
-				}}
 				onScroll={handleScroll}
-				onTouchMoveCapture={() => {
-					manualScrollIntentAtRef.current = Date.now();
-				}}
-				onWheelCapture={() => {
-					manualScrollIntentAtRef.current = Date.now();
-				}}
 			>
 				{showLoadOlder ? (
 					<div
@@ -528,13 +576,19 @@ export const restoreScrollOffsetAfterPrepend = (
 };
 
 const unreadViewportOffsetRatio = 0.25;
-const manualScrollIntentWindowMs = 250;
+const programmaticScrollTolerancePx = 1;
 
 type SelectionPositionMode = 'wait' | 'first-unread' | 'bottom';
 
 type ActiveSelectionPosition = {
 	bufferId: string;
 	positioned: boolean;
+};
+
+type ProgrammaticScrollTransaction = {
+	bufferId: string;
+	expectedScrollTop: number;
+	token: number;
 };
 
 type SelectionImageCorrection = {
@@ -585,3 +639,23 @@ const collectIncompleteTranscriptImages = (
 
 const clampScrollTop = (scrollTop: number, maxScrollTop: number) =>
 	Math.max(0, Math.min(Math.round(scrollTop), Math.max(0, maxScrollTop)));
+
+export const isProgrammaticScrollEvent = (input: {
+	activeTransaction: Pick<
+		ProgrammaticScrollTransaction,
+		'bufferId' | 'expectedScrollTop'
+	> | null;
+	bufferId: string | null;
+	scrollTop: number;
+	tolerancePx?: number;
+}) =>
+	!!input.activeTransaction &&
+	!!input.bufferId &&
+	input.activeTransaction.bufferId === input.bufferId &&
+	Math.abs(input.activeTransaction.expectedScrollTop - input.scrollTop)
+		<= (input.tolerancePx ?? programmaticScrollTolerancePx);
+
+export const expireProgrammaticScrollTransaction = (
+	activeTransaction: ProgrammaticScrollTransaction | null,
+	token: number,
+) => activeTransaction?.token === token ? null : activeTransaction;
