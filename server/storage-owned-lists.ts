@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 
 type OwnedListSpec = {
@@ -9,7 +9,7 @@ type OwnedListSpec = {
 };
 
 const readOwnedValues = <T extends string>(
-  db: DatabaseSync,
+  db: SqliteDb,
   spec: OwnedListSpec,
   ownerId: string,
 ) => (
@@ -22,7 +22,7 @@ const readOwnedValues = <T extends string>(
 ).map((row) => row.value);
 
 const replaceOwnedValues = (
-  db: DatabaseSync,
+  db: SqliteDb,
   spec: OwnedListSpec,
   ownerId: string,
   values: readonly string[],
@@ -84,40 +84,40 @@ const bufferSelfNickAliasSpec: OwnedListSpec = {
   keyColumn: 'nickKey',
 };
 
-export const listNetworkAltNicks = (db: DatabaseSync, networkId: string) =>
+export const listNetworkAltNicks = (db: SqliteDb, networkId: string) =>
   readOwnedValues(db, networkAltNickSpec, networkId);
 
-export const replaceNetworkAltNicks = (db: DatabaseSync, networkId: string, values: readonly string[]) => {
+export const replaceNetworkAltNicks = (db: SqliteDb, networkId: string, values: readonly string[]) => {
   replaceOwnedValues(db, networkAltNickSpec, networkId, values);
 };
 
-export const listNetworkHistoricalSelfNicks = (db: DatabaseSync, networkId: string) =>
+export const listNetworkHistoricalSelfNicks = (db: SqliteDb, networkId: string) =>
   readOwnedValues(db, networkHistoricalSelfNickSpec, networkId);
 
 export const replaceNetworkHistoricalSelfNicks = (
-  db: DatabaseSync,
+  db: SqliteDb,
   networkId: string,
   values: readonly string[],
 ) => {
   replaceOwnedValues(db, networkHistoricalSelfNickSpec, networkId, values);
 };
 
-export const listNetworkAutoJoinChannels = (db: DatabaseSync, networkId: string) =>
+export const listNetworkAutoJoinChannels = (db: SqliteDb, networkId: string) =>
   readOwnedValues(db, networkAutoJoinSpec, networkId);
 
 export const replaceNetworkAutoJoinChannels = (
-  db: DatabaseSync,
+  db: SqliteDb,
   networkId: string,
   values: readonly string[],
 ) => {
   replaceOwnedValues(db, networkAutoJoinSpec, networkId, values);
 };
 
-export const listBufferSelfNickAliases = (db: DatabaseSync, bufferId: string) =>
+export const listBufferSelfNickAliases = (db: SqliteDb, bufferId: string) =>
   readOwnedValues(db, bufferSelfNickAliasSpec, bufferId);
 
 export const replaceBufferSelfNickAliases = (
-  db: DatabaseSync,
+  db: SqliteDb,
   bufferId: string,
   values: readonly string[],
 ) => {

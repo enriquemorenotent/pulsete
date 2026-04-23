@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import {
   defaultNetworkAuthMethod,
   resolveNetworkAuthTarget,
@@ -27,12 +27,12 @@ import {
 const networkColumns =
   'id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt';
 
-export const listNetworks = (db: DatabaseSync): StoredNetworkProfile[] => {
+export const listNetworks = (db: SqliteDb): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
   return (db.prepare(sql).all() as NetworkRow[]).map((row) => toNetworkProfile(row, readNetworkLists(db, row.id)));
 };
 
-export const ensureDefaultNetworks = (db: DatabaseSync, saveNetwork: SaveNetwork) => {
+export const ensureDefaultNetworks = (db: SqliteDb, saveNetwork: SaveNetwork) => {
   const existing = db.prepare('SELECT COUNT(*) AS count FROM networks').get() as NetworkCountRow;
   if (existing.count > 0) {
     return;
@@ -42,13 +42,13 @@ export const ensureDefaultNetworks = (db: DatabaseSync, saveNetwork: SaveNetwork
   }
 };
 
-export const getNetwork = (db: DatabaseSync, networkId: string): StoredNetworkProfile | null => {
+export const getNetwork = (db: SqliteDb, networkId: string): StoredNetworkProfile | null => {
   const row = getNetworkRow(db, networkId);
   return row ? toNetworkProfile(row, readNetworkLists(db, row.id)) : null;
 };
 
 export const getRuntimeNetwork = (
-  db: DatabaseSync,
+  db: SqliteDb,
   networkId: string,
   secretBox: SecretBox
 ): RuntimeNetworkProfile | null => {
@@ -57,7 +57,7 @@ export const getRuntimeNetwork = (
 };
 
 export const upsertNetwork = (
-  db: DatabaseSync,
+  db: SqliteDb,
   input: NetworkInput,
   secretBox: SecretBox
 ): StoredNetworkProfile => {
@@ -119,32 +119,28 @@ export const upsertNetwork = (
   return profile;
 };
 
-export const deleteNetwork = (db: DatabaseSync, networkId: string) => {
+export const deleteNetwork = (db: SqliteDb, networkId: string) => {
   db.prepare('DELETE FROM networks WHERE id = ? OR templateId = ?').run(networkId, networkId);
 };
 
-export const hasEncryptedNetworkPasswords = (db: DatabaseSync) =>
+export const hasEncryptedNetworkPasswords = (db: SqliteDb) =>
   (db.prepare('SELECT password FROM networks WHERE password IS NOT NULL').all() as Array<{ password: string }>)
     .some((row) => isEncryptedSecret(row.password));
 
-const getNetworkRow = (db: DatabaseSync, networkId: string) => {
-  const sql = `SELECT ${networkColumns} FROM networks WHERE id = ?`;
-  return db.prepare(sql).get(networkId) as NetworkRow | undefined;
-};
+const getNetworkRow = (db: SqliteDb, networkId: string) =>
+  db.prepare(`SELECT ${networkColumns} FROM networks WHERE id = ?`).get(networkId) as NetworkRow | undefined;
 
-const getTemplateRow = (db: DatabaseSync, templateId: string) => {
-  const sql = `SELECT ${networkColumns} FROM networks WHERE id = ?`;
-  return db.prepare(sql).get(templateId) as NetworkRow | undefined;
-};
+const getTemplateRow = (db: SqliteDb, templateId: string) =>
+  db.prepare(`SELECT ${networkColumns} FROM networks WHERE id = ?`).get(templateId) as NetworkRow | undefined;
 
-const readNetworkLists = (db: DatabaseSync, networkId: string) => ({
+const readNetworkLists = (db: SqliteDb, networkId: string) => ({
   altNicks: listNetworkAltNicks(db, networkId),
   historicalSelfNicks: listNetworkHistoricalSelfNicks(db, networkId),
   autoJoin: listNetworkAutoJoinChannels(db, networkId),
 });
 
 const validateTemplateRelationship = (
-  db: DatabaseSync,
+  db: SqliteDb,
   input: NetworkInput,
   existing: NetworkRow | null
 ) => {
@@ -241,10 +237,7 @@ const resolveStoredAuthAccount = (
   return '';
 };
 
-const requireStoredPasswordForAuthMethod = (
-  authMethod: NetworkRow['authMethod'],
-  storedPassword: string | null
-) => {
+const requireStoredPasswordForAuthMethod = (authMethod: NetworkRow['authMethod'], storedPassword: string | null) => {
   if (authMethod !== 'none' && !storedPassword) {
     throw badRequest('Selected authentication method requires a saved password');
   }

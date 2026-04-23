@@ -1,9 +1,9 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import { getFriend, listFriends, removeFriend, upsertFriend } from './storage-friends.js';
 import type { FriendInput } from './storage-types.js';
 
 export class StorageFriendsRepository {
-  constructor(private readonly db: DatabaseSync) {}
+  constructor(private readonly db: SqliteDb) {}
 
   list() {
     return listFriends(this.db);

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { networkAuthMethodSchema } from '../shared/protocol.js';
 import { badRequest } from './app-error.js';
 import { normalizeAuthTarget, normalizeChannelTarget, requireIrcToken, requireSingleLineValue } from './irc-validate.js';
-import type { NetworkInput } from './storage.js';
+import type { NetworkInput } from './storage-types.js';
 
 const networkInputSchema = z.object({
   templateId: z.string().nullable().optional().default(null),

@@ -1,12 +1,6 @@
-import { randomUUID } from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
-import {
-  replaceBufferSelfNickAliases,
-  replaceNetworkAltNicks,
-  replaceNetworkAutoJoinChannels,
-  replaceNetworkHistoricalSelfNicks,
-} from './storage-owned-lists.js';
+import { migrateNormalizedStorage } from './storage-normalized-migration.js';
 import {
   ensureHistoryImportBatchesTable,
   ensureMessagesSearchIndex,
@@ -21,7 +15,7 @@ type StorageMigrationContext = {
 
 type StorageMigration = {
   version: number;
-  apply(db: DatabaseSync, context: StorageMigrationContext): void;
+  apply(db: SqliteDb, context: StorageMigrationContext): void;
 };
 
 const storageMigrations: readonly StorageMigration[] = [
@@ -132,16 +126,16 @@ const storageMigrations: readonly StorageMigration[] = [
   {
     version: 14,
     apply: (db) => {
-      migrateNormalizedStorage(db);
+      migrateNormalizedStorage(db, { tableExists, tableHasColumn });
     },
   },
 ];
 
-export const bootstrapStorageSchema = (db: DatabaseSync) => {
+export const bootstrapStorageSchema = (db: SqliteDb) => {
   db.exec(storageBootstrapSchemaSql);
 };
 
-export const applyStorageMigrations = (db: DatabaseSync, context: StorageMigrationContext) => {
+export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationContext) => {
   let version = getUserVersion(db);
   if (!context.existedBeforeOpen && version === 0) {
     setUserVersion(db, currentStorageSchemaVersion);
@@ -161,18 +155,18 @@ export const applyStorageMigrations = (db: DatabaseSync, context: StorageMigrati
   }
 };
 
-export const tableExists = (db: DatabaseSync, table: string) =>
+export const tableExists = (db: SqliteDb, table: string) =>
   Boolean(
     db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
       .get(table)
   );
 
-export const tableHasColumn = (db: DatabaseSync, table: string, column: string) =>
+export const tableHasColumn = (db: SqliteDb, table: string, column: string) =>
   tableExists(db, table)
   && (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
     .some((entry) => entry.name === column);
 
-const ensureColumn = (db: DatabaseSync, table: string, column: string, definition: string) => {
+const ensureColumn = (db: SqliteDb, table: string, column: string, definition: string) => {
   if (!tableHasColumn(db, table, column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
     return true;
@@ -180,14 +174,14 @@ const ensureColumn = (db: DatabaseSync, table: string, column: string, definitio
   return false;
 };
 
-const getUserVersion = (db: DatabaseSync) =>
+const getUserVersion = (db: SqliteDb) =>
   Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
 
-const setUserVersion = (db: DatabaseSync, version: number) => {
+const setUserVersion = (db: SqliteDb, version: number) => {
   db.exec(`PRAGMA user_version = ${version}`);
 };
 
-const resetStoredMessageHistory = (db: DatabaseSync) => {
+const resetStoredMessageHistory = (db: SqliteDb) => {
   ensureColumn(db, 'buffers', 'priorityUnread', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'buffers', 'lastReadTs', 'INTEGER');
   ensureColumn(db, 'buffers', 'lastReadMessageId', 'TEXT');
@@ -196,7 +190,7 @@ const resetStoredMessageHistory = (db: DatabaseSync) => {
     .run(Date.now());
 };
 
-const backfillQueryBufferSelfNickAliases = (db: DatabaseSync) => {
+const backfillQueryBufferSelfNickAliases = (db: SqliteDb) => {
   const queryBuffers = db.prepare(`
     SELECT buffers.id, networks.nick, networks.altNicks
     FROM buffers
@@ -253,351 +247,4 @@ const parseJson = <T>(value: string, fallback: T): T => {
   } catch {
     return fallback;
   }
-};
-
-const migrateNormalizedStorage = (db: DatabaseSync) => {
-  const networkLists = tableHasColumn(db, 'networks', 'altNicks')
-    ? (
-        db.prepare('SELECT id, altNicks, historicalSelfNicks, autoJoin FROM networks').all() as Array<{
-          id: string;
-          altNicks: string;
-          historicalSelfNicks: string;
-          autoJoin: string;
-        }>
-      )
-    : [];
-  const bufferAliases = tableHasColumn(db, 'buffers', 'selfNickAliases')
-    ? (
-        db.prepare('SELECT id, selfNickAliases FROM buffers').all() as Array<{
-          id: string;
-          selfNickAliases: string;
-        }>
-      )
-    : [];
-  const existingBuffers = (db.prepare(`
-    SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt
-    FROM buffers
-    ORDER BY createdAt ASC
-  `).all() as Array<{
-    id: string;
-    networkId: string;
-    kind: 'server' | 'channel' | 'query';
-    target: string;
-    unread: number;
-    priorityUnread: number;
-    lastReadTs: number | null;
-    lastReadMessageId: string | null;
-    createdAt: number;
-    updatedAt: number;
-  }>).map((row) => ({
-    ...row,
-    isOpen: true,
-  }));
-  const messageConversations = tableHasColumn(db, 'messages', 'networkId')
-    ? (
-        db.prepare(`
-          SELECT networkId, target, MIN(ts) AS createdAt
-          FROM messages
-          GROUP BY networkId, target
-        `).all() as Array<{ networkId: string; target: string; createdAt: number }>
-      )
-    : [];
-  const batchConversations = tableHasColumn(db, 'history_import_batches', 'networkId')
-    ? (
-        db.prepare(`
-          SELECT networkId, target, MIN(createdAt) AS createdAt
-          FROM history_import_batches
-          GROUP BY networkId, target
-        `).all() as Array<{ networkId: string; target: string; createdAt: number }>
-      )
-    : [];
-
-  const buffersByKey = new Map<string, typeof existingBuffers[number]>();
-  const buffersById = new Map<string, typeof existingBuffers[number]>();
-  for (const buffer of existingBuffers) {
-    buffersByKey.set(bufferConversationKey(buffer.networkId, buffer.target), buffer);
-    buffersById.set(buffer.id, buffer);
-  }
-  for (const conversation of [...messageConversations, ...batchConversations]) {
-    const key = bufferConversationKey(conversation.networkId, conversation.target);
-    if (buffersByKey.has(key)) {
-      continue;
-    }
-    const fallback = {
-      id: randomUUID(),
-      networkId: conversation.networkId,
-      kind: inferBufferKind(conversation.target),
-      target: conversation.target,
-      isOpen: conversation.target === 'server',
-      unread: 0,
-      priorityUnread: 0,
-      lastReadTs: null,
-      lastReadMessageId: null,
-      createdAt: conversation.createdAt ?? Date.now(),
-      updatedAt: conversation.createdAt ?? Date.now(),
-    } as const;
-    buffersByKey.set(key, fallback);
-    buffersById.set(fallback.id, fallback);
-  }
-
-  db.exec('PRAGMA foreign_keys = OFF');
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    dropNormalizedStorageScratchTables(db);
-    db.exec('DROP TRIGGER IF EXISTS messages_ai');
-    db.exec('DROP TRIGGER IF EXISTS messages_ad');
-    db.exec('DROP TRIGGER IF EXISTS messages_au');
-    db.exec('DROP TABLE IF EXISTS messages_fts');
-    db.exec('DROP TABLE IF EXISTS network_alt_nicks');
-    db.exec('DROP TABLE IF EXISTS network_historical_self_nicks');
-    db.exec('DROP TABLE IF EXISTS network_auto_join_channels');
-    db.exec('DROP TABLE IF EXISTS buffer_self_nick_aliases');
-
-    db.exec(`
-      CREATE TABLE networks_next (
-        id TEXT PRIMARY KEY,
-        templateId TEXT,
-        managerHidden INTEGER NOT NULL DEFAULT 0,
-        name TEXT NOT NULL,
-        host TEXT NOT NULL,
-        port INTEGER NOT NULL,
-        tls INTEGER NOT NULL,
-        nick TEXT NOT NULL,
-        username TEXT NOT NULL,
-        realName TEXT NOT NULL DEFAULT '',
-        password TEXT,
-        authMethod TEXT NOT NULL DEFAULT 'none',
-        authTarget TEXT NOT NULL DEFAULT 'NickServ',
-        authAccount TEXT NOT NULL DEFAULT '',
-        favorite INTEGER NOT NULL DEFAULT 0,
-        createdAt INTEGER NOT NULL,
-        updatedAt INTEGER NOT NULL
-      );
-      CREATE TABLE buffers_next (
-        id TEXT PRIMARY KEY,
-        networkId TEXT NOT NULL REFERENCES networks_next(id) ON DELETE CASCADE,
-        kind TEXT NOT NULL,
-        target TEXT NOT NULL,
-        targetKey TEXT NOT NULL,
-        isOpen INTEGER NOT NULL DEFAULT 1,
-        unread INTEGER NOT NULL DEFAULT 0,
-        priorityUnread INTEGER NOT NULL DEFAULT 0,
-        lastReadTs INTEGER,
-        lastReadMessageId TEXT,
-        createdAt INTEGER NOT NULL,
-        updatedAt INTEGER NOT NULL,
-        UNIQUE(networkId, targetKey)
-      );
-      CREATE TABLE channel_details_next (
-        id TEXT PRIMARY KEY REFERENCES buffers_next(id) ON DELETE CASCADE,
-        topic TEXT NOT NULL DEFAULT '',
-        users TEXT NOT NULL DEFAULT '[]',
-        createdAt INTEGER NOT NULL,
-        updatedAt INTEGER NOT NULL
-      );
-      CREATE TABLE messages_next (
-        id TEXT PRIMARY KEY,
-        bufferId TEXT NOT NULL REFERENCES buffers_next(id) ON DELETE CASCADE,
-        nick TEXT,
-        speakerRole TEXT NOT NULL DEFAULT 'unknown',
-        speakerNick TEXT,
-        attributionSource TEXT NOT NULL DEFAULT 'unknown',
-        attributionConfidence TEXT NOT NULL DEFAULT 'low',
-        importBatchId TEXT,
-        body TEXT NOT NULL,
-        kind TEXT NOT NULL,
-        self INTEGER NOT NULL,
-        ts INTEGER NOT NULL
-      );
-      CREATE TABLE history_import_batches_next (
-        id TEXT PRIMARY KEY,
-        bufferId TEXT NOT NULL REFERENCES buffers_next(id) ON DELETE CASCADE,
-        selfNickSnapshot TEXT NOT NULL DEFAULT '[]',
-        createdAt INTEGER NOT NULL
-      );
-    `);
-
-    db.exec(`
-      INSERT INTO networks_next
-        (id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
-      SELECT id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt
-      FROM networks
-    `);
-
-    const insertBuffer = db.prepare(`
-      INSERT INTO buffers_next
-        (id, networkId, kind, target, targetKey, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    for (const buffer of buffersById.values()) {
-      insertBuffer.run(
-        buffer.id,
-        buffer.networkId,
-        buffer.kind,
-        buffer.target,
-        normalizeIrcIdentifier(buffer.target),
-        buffer.isOpen ? 1 : 0,
-        buffer.unread,
-        buffer.priorityUnread,
-        buffer.lastReadTs,
-        buffer.lastReadMessageId,
-        buffer.createdAt,
-        buffer.updatedAt,
-      );
-    }
-
-    if (tableExists(db, 'channel_details')) {
-      db.exec(`
-        INSERT INTO channel_details_next (id, topic, users, createdAt, updatedAt)
-        SELECT id, topic, users, createdAt, updatedAt
-        FROM channel_details
-      `);
-    }
-
-    if (tableHasColumn(db, 'messages', 'networkId')) {
-      const insertMessage = db.prepare(`
-        INSERT INTO messages_next
-          (id, bufferId, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      const rows = db.prepare(`
-        SELECT id, networkId, target, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts
-        FROM messages
-        ORDER BY rowid ASC
-      `).all() as Array<{
-        id: string;
-        networkId: string;
-        target: string;
-        nick: string | null;
-        speakerRole: string | null;
-        speakerNick: string | null;
-        attributionSource: string | null;
-        attributionConfidence: string | null;
-        importBatchId: string | null;
-        body: string;
-        kind: string;
-        self: number;
-        ts: number;
-      }>;
-      for (const row of rows) {
-        const buffer = buffersByKey.get(bufferConversationKey(row.networkId, row.target));
-        if (!buffer) {
-          continue;
-        }
-        insertMessage.run(
-          row.id,
-          buffer.id,
-          row.nick,
-          row.speakerRole ?? 'unknown',
-          row.speakerNick,
-          row.attributionSource ?? 'unknown',
-          row.attributionConfidence ?? 'low',
-          row.importBatchId,
-          row.body,
-          row.kind,
-          row.self,
-          row.ts,
-        );
-      }
-    }
-
-    if (tableExists(db, 'history_import_batches')) {
-      const insertBatch = db.prepare(`
-        INSERT INTO history_import_batches_next
-          (id, bufferId, selfNickSnapshot, createdAt)
-        VALUES (?, ?, ?, ?)
-      `);
-      const hasLegacyBatchColumns =
-        tableHasColumn(db, 'history_import_batches', 'networkId')
-        && tableHasColumn(db, 'history_import_batches', 'target');
-      const rows = hasLegacyBatchColumns
-        ? db.prepare(`
-            SELECT id, bufferId, networkId, target, selfNickSnapshot, createdAt
-            FROM history_import_batches
-            ORDER BY createdAt ASC
-          `).all() as Array<{
-            id: string;
-            bufferId: string;
-            networkId: string;
-            target: string;
-            selfNickSnapshot: string;
-            createdAt: number;
-          }>
-        : db.prepare(`
-            SELECT id, bufferId, selfNickSnapshot, createdAt
-            FROM history_import_batches
-            ORDER BY createdAt ASC
-          `).all() as Array<{
-            id: string;
-            bufferId: string;
-            selfNickSnapshot: string;
-            createdAt: number;
-          }>;
-      for (const row of rows) {
-        const legacyRow = row as {
-          networkId?: string;
-          target?: string;
-        };
-        const buffer = buffersById.get(row.bufferId)
-          ?? (typeof legacyRow.networkId === 'string' && typeof legacyRow.target === 'string'
-            ? buffersByKey.get(bufferConversationKey(legacyRow.networkId, legacyRow.target))
-            : null);
-        if (!buffer) {
-          continue;
-        }
-        insertBatch.run(row.id, buffer.id, row.selfNickSnapshot, row.createdAt);
-      }
-    }
-
-    db.exec('DROP TABLE history_import_batches');
-    db.exec('DROP TABLE messages');
-    db.exec('DROP TABLE channel_details');
-    db.exec('DROP TABLE buffers');
-    db.exec('DROP TABLE networks');
-    db.exec('ALTER TABLE networks_next RENAME TO networks');
-    db.exec('ALTER TABLE buffers_next RENAME TO buffers');
-    db.exec('ALTER TABLE channel_details_next RENAME TO channel_details');
-    db.exec('ALTER TABLE messages_next RENAME TO messages');
-    db.exec('ALTER TABLE history_import_batches_next RENAME TO history_import_batches');
-    db.exec(storageBootstrapSchemaSql);
-
-    for (const row of networkLists) {
-      replaceNetworkAltNicks(db, row.id, parseJson<string[]>(row.altNicks, []));
-      replaceNetworkHistoricalSelfNicks(db, row.id, parseJson<string[]>(row.historicalSelfNicks, []));
-      replaceNetworkAutoJoinChannels(db, row.id, parseJson<string[]>(row.autoJoin, []));
-    }
-    for (const row of bufferAliases) {
-      replaceBufferSelfNickAliases(db, row.id, parseJson<string[]>(row.selfNickAliases, []));
-    }
-
-    ensureMessagesSearchIndex(db, true, tableExists);
-    db.exec('COMMIT');
-  } catch (error) {
-    try {
-      db.exec('ROLLBACK');
-    } catch {
-      // Ignore rollback failures after a migration error.
-    }
-    throw error;
-  } finally {
-    db.exec('PRAGMA foreign_keys = ON');
-  }
-};
-
-const inferBufferKind = (target: string) =>
-  target === 'server'
-    ? 'server' as const
-    : /^[#&+!]/.test(target)
-      ? 'channel' as const
-      : 'query' as const;
-
-const bufferConversationKey = (networkId: string, target: string) =>
-  `${networkId}:${normalizeIrcIdentifier(target)}`;
-
-const dropNormalizedStorageScratchTables = (db: DatabaseSync) => {
-  db.exec('DROP TABLE IF EXISTS history_import_batches_next');
-  db.exec('DROP TABLE IF EXISTS messages_next');
-  db.exec('DROP TABLE IF EXISTS channel_details_next');
-  db.exec('DROP TABLE IF EXISTS buffers_next');
-  db.exec('DROP TABLE IF EXISTS networks_next');
 };

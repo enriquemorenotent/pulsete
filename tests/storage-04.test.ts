@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync,unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage,type NetworkInput } from '../server/storage.js';
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
@@ -87,7 +87,7 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
   assert.equal((publicProfile as { password?: string } | null)?.password, undefined);
   assert.equal(storage.networks.getRuntime(network.id)?.password, 'server-secret');
 
-  const db = new DatabaseSync(file);
+  const db = openSqliteDatabase(file);
   const row = db.prepare('SELECT password FROM networks WHERE id = ?').get(network.id) as { password: string };
   db.close();
   assert.notEqual(row.password, 'server-secret');

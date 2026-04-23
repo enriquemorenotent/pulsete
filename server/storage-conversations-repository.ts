@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { BufferState, ChannelUserState } from '../shared/protocol.js';
 import {
   appendMessage,
@@ -40,7 +40,7 @@ import { runInTransaction } from './storage-db.js';
 import type { BufferInput, ChannelInput, HistoryImportBatchInput, MessageInput } from './storage-types.js';
 
 export class StorageConversationsRepository {
-  constructor(private readonly db: DatabaseSync) {}
+  constructor(private readonly db: SqliteDb) {}
 
   listBuffers(networkId?: string) {
     return listBuffers(this.db, networkId);
@@ -178,7 +178,7 @@ export class StorageConversationsRepository {
   }
 }
 
-const renameQuery = (db: DatabaseSync, networkId: string, fromTarget: string, toTarget: string) => {
+const renameQuery = (db: SqliteDb, networkId: string, fromTarget: string, toTarget: string) => {
   const source = getStoredBufferByTarget(db, networkId, fromTarget);
   if (source?.kind !== 'query') {
     return null;

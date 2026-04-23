@@ -1,4 +1,3 @@
-import type { DatabaseSync } from 'node:sqlite';
 import { initializeStorageDefaults, openStorageResources } from './storage-bootstrap.js';
 import { StorageConversationsRepository } from './storage-conversations-repository.js';
 import { StorageFriendsRepository } from './storage-friends-repository.js';
@@ -7,12 +6,13 @@ import { StorageNetworksRepository } from './storage-networks-repository.js';
 import { createStorageViews } from './storage-runtime-store.js';
 import { createStorageSnapshot } from './storage-snapshot.js';
 import type { RuntimeStore } from './runtime-service-types.js';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { MessageInput, NetworkInput, StorageSnapshotSource } from './storage-types.js';
 
 export { type MessageInput, type NetworkInput };
 
 export class Storage {
-  private readonly db: DatabaseSync;
+  private readonly db: SqliteDb;
   private readonly secretBox;
   private closed = false;
   readonly networks: StorageNetworksRepository;

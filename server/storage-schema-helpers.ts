@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 
 export const historyImportBatchesSchemaSql = `
   CREATE TABLE IF NOT EXISTS history_import_batches (
@@ -43,14 +43,14 @@ const messagesSearchIndexTriggersSql = (clause = '') => `
   END;
 `;
 
-export const ensureHistoryImportBatchesTable = (db: DatabaseSync) => {
+export const ensureHistoryImportBatchesTable = (db: SqliteDb) => {
   db.exec(historyImportBatchesSchemaSql);
 };
 
 export const ensureMessagesSearchIndex = (
-  db: DatabaseSync,
+  db: SqliteDb,
   forceRebuild: boolean,
-  tableExists: (db: DatabaseSync, table: string) => boolean,
+  tableExists: (db: SqliteDb, table: string) => boolean,
 ) => {
   const hadIndex = tableExists(db, 'messages_fts');
   db.exec(messagesSearchIndexTableSql);
@@ -64,8 +64,8 @@ export const ensureMessagesSearchIndex = (
 };
 
 const messagesSearchIndexNeedsRebuild = (
-  db: DatabaseSync,
-  tableExists: (db: DatabaseSync, table: string) => boolean,
+  db: SqliteDb,
+  tableExists: (db: SqliteDb, table: string) => boolean,
 ) => {
   if (!tableExists(db, 'messages') || !tableExists(db, 'messages_fts')) {
     return false;
@@ -75,7 +75,7 @@ const messagesSearchIndexNeedsRebuild = (
   return messageCount !== indexCount;
 };
 
-const rebuildMessagesSearchIndex = (db: DatabaseSync) => {
+const rebuildMessagesSearchIndex = (db: SqliteDb) => {
   db.exec('DELETE FROM messages_fts');
   db.exec(`
     INSERT INTO messages_fts (rowid, messageId, bufferId, nick, body)

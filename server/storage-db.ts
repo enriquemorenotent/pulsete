@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { applyStorageMigrations, bootstrapStorageSchema } from './storage-migrations.js';
+import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
 
 export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => {
   mkdirSync(dirname(filePath), { recursive: true });
   const existedBeforeOpen = existsSync(filePath);
-  const db = new DatabaseSync(filePath);
+  const db = openSqliteDatabase(filePath);
   applyDatabasePragmas(db);
   const hasUserTables = databaseHasUserTables(db);
   if (!hasUserTables) {
@@ -16,13 +16,13 @@ export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => 
   return db;
 };
 
-const applyDatabasePragmas = (db: DatabaseSync) => {
+const applyDatabasePragmas = (db: SqliteDb) => {
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
 };
 
-const databaseHasUserTables = (db: DatabaseSync) =>
+const databaseHasUserTables = (db: SqliteDb) =>
   Number(
     (
       db.prepare(`
@@ -34,7 +34,7 @@ const databaseHasUserTables = (db: DatabaseSync) =>
     )?.count ?? 0
   ) > 0;
 
-export const runInTransaction = <T>(db: DatabaseSync, task: () => T) => {
+export const runInTransaction = <T>(db: SqliteDb, task: () => T) => {
   db.exec('BEGIN IMMEDIATE');
   try {
     const result = task();

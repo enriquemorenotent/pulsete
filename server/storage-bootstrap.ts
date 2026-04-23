@@ -1,4 +1,3 @@
-import type { DatabaseSync } from 'node:sqlite';
 import { createSecretBox, type SecretBox } from './network-secret.js';
 import { createDatabase, runInTransaction } from './storage-db.js';
 import { ensureAllNetworkBuffers, ensureNetworkBuffers } from './storage-network-invariants.js';
@@ -7,10 +6,11 @@ import {
   hasEncryptedNetworkPasswords,
   upsertNetwork,
 } from './storage-networks.js';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { NetworkInput } from './storage-types.js';
 
 export type StorageBootstrapResources = {
-  db: DatabaseSync;
+  db: SqliteDb;
   secretBox: SecretBox;
 };
 
@@ -27,7 +27,7 @@ export const initializeStorageDefaults = ({ db, secretBox }: StorageBootstrapRes
   });
 };
 
-const saveNetworkWithServerBuffer = (db: DatabaseSync, secretBox: SecretBox, input: NetworkInput) => {
+const saveNetworkWithServerBuffer = (db: SqliteDb, secretBox: SecretBox, input: NetworkInput) => {
   const network = upsertNetwork(db, input, secretBox);
   ensureNetworkBuffers(db, network);
   return network;

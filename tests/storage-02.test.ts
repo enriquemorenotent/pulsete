@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage,type NetworkInput } from '../server/storage.js';
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
@@ -48,7 +48,7 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
 test('existing local databases reset stored messages and unread counts on the formatting upgrade', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
-  const existing = new DatabaseSync(file);
+  const existing = openSqliteDatabase(file);
   const now = Date.now();
   existing.exec(`
     PRAGMA user_version = 0;
@@ -143,7 +143,7 @@ test('existing local databases reset stored messages and unread counts on the fo
   assert.deepEqual(snapshot.messages, []);
   assert.equal(snapshot.buffers.find((buffer) => buffer.id === 'buffer-1')?.unread, 0);
 
-  const upgraded = new DatabaseSync(file);
+  const upgraded = openSqliteDatabase(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const count = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
   upgraded.close();

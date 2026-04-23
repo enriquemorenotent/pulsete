@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { MutedNickState } from '../shared/protocol.js';
 import { findMutedNickByNick } from '../shared/muted-nicks.js';
 import type { MutedNickInput, MutedNickRow } from './storage-types.js';
 import { toMutedNickState } from './storage-utils.js';
 
-export const listMutedNicks = (db: DatabaseSync, networkId?: string): MutedNickState[] => {
+export const listMutedNicks = (db: SqliteDb, networkId?: string): MutedNickState[] => {
   const sql = networkId
     ? `SELECT id, networkId, nick, createdAt, updatedAt
        FROM muted_nicks
@@ -20,17 +20,17 @@ export const listMutedNicks = (db: DatabaseSync, networkId?: string): MutedNickS
   return (rows as MutedNickRow[]).map(toMutedNickState);
 };
 
-export const getMutedNick = (db: DatabaseSync, mutedNickId: string): MutedNickState | null => {
+export const getMutedNick = (db: SqliteDb, mutedNickId: string): MutedNickState | null => {
   const row = db.prepare(
     'SELECT id, networkId, nick, createdAt, updatedAt FROM muted_nicks WHERE id = ?',
   ).get(mutedNickId) as MutedNickRow | undefined;
   return row ? toMutedNickState(row) : null;
 };
 
-export const getMutedNickByNick = (db: DatabaseSync, networkId: string, nick: string): MutedNickState | null =>
+export const getMutedNickByNick = (db: SqliteDb, networkId: string, nick: string): MutedNickState | null =>
   findMutedNickByNick(listMutedNicks(db, networkId), networkId, nick);
 
-export const upsertMutedNick = (db: DatabaseSync, input: MutedNickInput) => {
+export const upsertMutedNick = (db: SqliteDb, input: MutedNickInput) => {
   const existing = (input.id ? getMutedNick(db, input.id) : null) ?? getMutedNickByNick(db, input.networkId, input.nick);
   if (existing) {
     db.prepare('UPDATE muted_nicks SET updatedAt = ? WHERE id = ?').run(Date.now(), existing.id);
@@ -50,7 +50,7 @@ export const upsertMutedNick = (db: DatabaseSync, input: MutedNickInput) => {
   return getMutedNick(db, id)!;
 };
 
-export const removeMutedNick = (db: DatabaseSync, mutedNickId: string) => {
+export const removeMutedNick = (db: SqliteDb, mutedNickId: string) => {
   const existing = getMutedNick(db, mutedNickId);
   if (!existing) {
     return null;

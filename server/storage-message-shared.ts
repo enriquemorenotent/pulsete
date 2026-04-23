@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { MessageInput, MessagePage, MessageRow } from './storage-types.js';
 import { getStoredBufferByTarget } from './storage-buffers.js';
 import { toMessage } from './storage-utils.js';
@@ -27,10 +27,10 @@ export const messageJoin = 'FROM messages AS m JOIN buffers AS b ON b.id = m.buf
 export type MessageLookup = (messageId: string) => MessageInput | null;
 export type MessageCursor = { bufferId: string; rowid: number; ts: number };
 
-export const getMessageBufferId = (db: DatabaseSync, networkId: string, target: string) =>
+export const getMessageBufferId = (db: SqliteDb, networkId: string, target: string) =>
   getStoredBufferByTarget(db, networkId, target)?.id ?? null;
 
-export const getMessageCursor = (db: DatabaseSync, messageId: string) =>
+export const getMessageCursor = (db: SqliteDb, messageId: string) =>
   db.prepare('SELECT bufferId, rowid, ts FROM messages WHERE id = ?').get(messageId) as MessageCursor | undefined;
 
 export const buildIdPrefixWhereClause = (prefixes: string[], column = 'id') => {
@@ -44,4 +44,4 @@ export const buildIdPrefixWhereClause = (prefixes: string[], column = 'id') => {
   };
 };
 
-export const hydrateMessages = (_db: DatabaseSync, rows: MessageRow[]) => rows.map((row) => toMessage(row));
+export const hydrateMessages = (_db: SqliteDb, rows: MessageRow[]) => rows.map((row) => toMessage(row));

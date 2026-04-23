@@ -1,28 +1,28 @@
 import { randomUUID } from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { FriendState } from '../shared/protocol.js';
 import type { FriendInput, FriendRow } from './storage-types.js';
 import { toFriendState } from './storage-utils.js';
 
-export const listFriends = (db: DatabaseSync): FriendState[] =>
+export const listFriends = (db: SqliteDb): FriendState[] =>
   (
     db.prepare('SELECT id, nick, createdAt, updatedAt FROM friends ORDER BY nick COLLATE NOCASE ASC, createdAt ASC')
       .all() as FriendRow[]
   ).map(toFriendState);
 
-export const getFriend = (db: DatabaseSync, friendId: string): FriendState | null => {
+export const getFriend = (db: SqliteDb, friendId: string): FriendState | null => {
   const row = db.prepare('SELECT id, nick, createdAt, updatedAt FROM friends WHERE id = ?')
     .get(friendId) as FriendRow | undefined;
   return row ? toFriendState(row) : null;
 };
 
-export const getFriendByNick = (db: DatabaseSync, nick: string): FriendState | null => {
+export const getFriendByNick = (db: SqliteDb, nick: string): FriendState | null => {
   const row = db.prepare('SELECT id, nick, createdAt, updatedAt FROM friends WHERE nick = ? COLLATE NOCASE')
     .get(nick) as FriendRow | undefined;
   return row ? toFriendState(row) : null;
 };
 
-export const upsertFriend = (db: DatabaseSync, input: FriendInput) => {
+export const upsertFriend = (db: SqliteDb, input: FriendInput) => {
   const existing = (input.id ? getFriend(db, input.id) : null) ?? getFriendByNick(db, input.nick);
   if (existing) {
     db.prepare('UPDATE friends SET updatedAt = ? WHERE id = ?').run(Date.now(), existing.id);
@@ -41,7 +41,7 @@ export const upsertFriend = (db: DatabaseSync, input: FriendInput) => {
   return getFriend(db, id)!;
 };
 
-export const removeFriend = (db: DatabaseSync, friendId: string) => {
+export const removeFriend = (db: SqliteDb, friendId: string) => {
   const existing = getFriend(db, friendId);
   if (!existing) {
     return null;

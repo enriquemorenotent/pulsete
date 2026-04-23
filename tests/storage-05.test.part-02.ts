@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage } from '../server/storage.js';
 
 test('startup repair preserves explicit none auth methods on current schemas', () => {
@@ -38,7 +38,7 @@ test('startup repair preserves explicit none auth methods on current schemas', (
 test('versioned storage migrations rebuild the message search index for existing transcripts', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
-  const existing = new DatabaseSync(file);
+  const existing = openSqliteDatabase(file);
   const now = Date.now();
 
   existing.exec(`
@@ -140,7 +140,7 @@ test('versioned storage migrations rebuild the message search index for existing
 
   const storage = new Storage(file);
   const searchResults = storage.conversations.searchMessages('network-1', 'missd', 'hotel', 10);
-  const upgraded = new DatabaseSync(file);
+  const upgraded = openSqliteDatabase(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const indexCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages_fts').get() as { count: number };
   upgraded.close();

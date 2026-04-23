@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import {
   normalizeStoredAttribution,
   resolveRuntimeMessageAttribution,
@@ -14,7 +14,7 @@ import {
 } from './storage-message-shared.js';
 import type { MessageInput, MessageRow } from './storage-types.js';
 
-export const appendMessage = (db: DatabaseSync, input: MessageInput, lookup: MessageLookup) => {
+export const appendMessage = (db: SqliteDb, input: MessageInput, lookup: MessageLookup) => {
   const bufferId = ensureMessageBufferId(db, input);
   if (!bufferId) {
     throw new Error(`Buffer not found for message target: ${input.networkId}:${input.target}`);
@@ -43,7 +43,7 @@ export const appendMessage = (db: DatabaseSync, input: MessageInput, lookup: Mes
   return lookup(input.id)!;
 };
 
-export const deleteMessages = (db: DatabaseSync, networkId: string, target: string) => {
+export const deleteMessages = (db: SqliteDb, networkId: string, target: string) => {
   const bufferId = getMessageBufferId(db, networkId, target);
   if (!bufferId) {
     return [];
@@ -61,7 +61,7 @@ export const deleteMessages = (db: DatabaseSync, networkId: string, target: stri
   return hydrateMessages(db, rows);
 };
 
-export const deleteMessagesByIdPrefixes = (db: DatabaseSync, prefixes: string[]) => {
+export const deleteMessagesByIdPrefixes = (db: SqliteDb, prefixes: string[]) => {
   const clauses = buildIdPrefixWhereClause(prefixes, 'm.id');
   if (!clauses) {
     return [];
@@ -86,7 +86,7 @@ const shouldRespectInputAttribution = (input: MessageInput) =>
   || input.attributionSource !== undefined
   || input.attributionConfidence !== undefined;
 
-const ensureMessageBufferId = (db: DatabaseSync, input: MessageInput) => {
+const ensureMessageBufferId = (db: SqliteDb, input: MessageInput) => {
   const existing = getMessageBufferId(db, input.networkId, input.target);
   if (existing) {
     return existing;
@@ -112,7 +112,7 @@ const resolveMessageBufferKind = (target: string) =>
       ? 'channel' as const
       : 'query' as const;
 
-const ensureChannelDetails = (db: DatabaseSync, bufferId: string) => {
+const ensureChannelDetails = (db: SqliteDb, bufferId: string) => {
   const now = Date.now();
   db.prepare(`
     INSERT INTO channel_details

@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage } from '../server/storage.js';
 
 test('versioned storage migrations add template metadata columns incrementally', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
-  const existing = new DatabaseSync(file);
+  const existing = openSqliteDatabase(file);
   const now = Date.now();
 
   existing.exec(`
@@ -90,7 +90,7 @@ test('versioned storage migrations add template metadata columns incrementally',
 
   const storage = new Storage(file);
   const network = storage.networks.get('network-1');
-  const upgraded = new DatabaseSync(file);
+  const upgraded = openSqliteDatabase(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const columns = upgraded.prepare('PRAGMA table_info(networks)').all() as Array<{ name: string }>;
   const bufferColumns = upgraded.prepare('PRAGMA table_info(buffers)').all() as Array<{ name: string }>;
@@ -140,7 +140,7 @@ test('versioned storage migrations add template metadata columns incrementally',
 test('storage migration seeds query self aliases from that buffer import batches', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
-  const existing = new DatabaseSync(file);
+  const existing = openSqliteDatabase(file);
   const now = Date.now();
 
   existing.exec(`
@@ -268,7 +268,7 @@ test('storage migration seeds query self aliases from that buffer import batches
 test('normalized storage migration can retry after leftover scratch tables from a failed attempt', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
-  const existing = new DatabaseSync(file);
+  const existing = openSqliteDatabase(file);
   const now = Date.now();
 
   existing.exec(`
@@ -417,7 +417,7 @@ test('normalized storage migration can retry after leftover scratch tables from 
   existing.close();
 
   const storage = new Storage(file);
-  const upgraded = new DatabaseSync(file);
+  const upgraded = openSqliteDatabase(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const scratchTables = (
     upgraded.prepare(`

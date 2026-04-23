@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import {
   buildSelfNickKeys,
   resolveImportedChannelAttribution,
@@ -7,7 +7,7 @@ import {
 import { getMessageBufferId, hydrateMessages, messageColumns, messageJoin } from './storage-message-shared.js';
 import type { MessageAttributionUpdate, MessageRow } from './storage-types.js';
 
-export const updateMessageAttribution = (db: DatabaseSync, input: MessageAttributionUpdate) => {
+export const updateMessageAttribution = (db: SqliteDb, input: MessageAttributionUpdate) => {
   db.prepare(`
     UPDATE messages
     SET speakerRole = ?, speakerNick = ?, attributionSource = ?, attributionConfidence = ?, self = ?
@@ -23,7 +23,7 @@ export const updateMessageAttribution = (db: DatabaseSync, input: MessageAttribu
 };
 
 export const repairBufferMessageAttributions = (
-  db: DatabaseSync,
+  db: SqliteDb,
   input: {
     bufferKind: 'channel' | 'query';
     networkId: string;

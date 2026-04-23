@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import {
   getMutedNick,
   getMutedNickByNick,
@@ -9,7 +9,7 @@ import {
 import type { MutedNickInput } from './storage-types.js';
 
 export class StorageMutedNicksRepository {
-  constructor(private readonly db: DatabaseSync) {}
+  constructor(private readonly db: SqliteDb) {}
 
   list(networkId?: string) {
     return listMutedNicks(this.db, networkId);

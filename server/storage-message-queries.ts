@@ -1,4 +1,4 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { MessagePage, MessageRow } from './storage-types.js';
 import {
   emptyMessagePage,
@@ -10,18 +10,18 @@ import {
   type MessageCursor,
 } from './storage-message-shared.js';
 
-export const getMessageById = (db: DatabaseSync, messageId: string) => {
+export const getMessageById = (db: SqliteDb, messageId: string) => {
   const row = db.prepare(`SELECT ${messageColumns} ${messageJoin} WHERE m.id = ?`).get(messageId) as MessageRow | undefined;
   return row ? hydrateMessages(db, [row])[0] ?? null : null;
 };
 
-export const listMessages = (db: DatabaseSync, networkId: string, target: string, limit = 200) => {
+export const listMessages = (db: SqliteDb, networkId: string, target: string, limit = 200) => {
   const bufferId = getMessageBufferId(db, networkId, target);
   return bufferId ? selectMessages(db, bufferId, limit) : [];
 };
 
 export const listMessagePage = (
-  db: DatabaseSync,
+  db: SqliteDb,
   networkId: string,
   target: string,
   limit = 200,
@@ -37,12 +37,12 @@ export const listMessagePage = (
     : selectMessagePage(db, bufferId, limit, cursor);
 };
 
-export const listAllMessages = (db: DatabaseSync, networkId: string, target: string) => {
+export const listAllMessages = (db: SqliteDb, networkId: string, target: string) => {
   const bufferId = getMessageBufferId(db, networkId, target);
   return bufferId ? selectMessages(db, bufferId) : [];
 };
 
-export const listOpeningMessages = (db: DatabaseSync, networkId: string, target: string, limit = 200) => {
+export const listOpeningMessages = (db: SqliteDb, networkId: string, target: string, limit = 200) => {
   const bufferId = getMessageBufferId(db, networkId, target);
   if (!bufferId) {
     return [];
@@ -57,10 +57,10 @@ export const listOpeningMessages = (db: DatabaseSync, networkId: string, target:
   return hydrateMessages(db, rows);
 };
 
-export const listRecentMessagesForBuffer = (db: DatabaseSync, networkId: string, target: string, limit = 200) =>
+export const listRecentMessagesForBuffer = (db: SqliteDb, networkId: string, target: string, limit = 200) =>
   listMessages(db, networkId, target, limit);
 
-export const getMessageWindow = (db: DatabaseSync, messageId: string, before: number, after: number) => {
+export const getMessageWindow = (db: SqliteDb, messageId: string, before: number, after: number) => {
   const cursor = getMessageCursor(db, messageId);
   if (!cursor) {
     return [];
@@ -80,7 +80,7 @@ export const getMessageWindow = (db: DatabaseSync, messageId: string, before: nu
   return hydrateMessages(db, [...beforeRows.reverse(), ...afterRows]);
 };
 
-export const searchMessages = (db: DatabaseSync, networkId: string, target: string, query: string, limit = 10) => {
+export const searchMessages = (db: SqliteDb, networkId: string, target: string, query: string, limit = 10) => {
   const bufferId = getMessageBufferId(db, networkId, target);
   if (!bufferId || query.trim().length === 0) {
     return [];
@@ -100,7 +100,7 @@ export const searchMessages = (db: DatabaseSync, networkId: string, target: stri
   return messages.map((message, index) => ({ message, score: rows[index]!.score }));
 };
 
-export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
+export const listRecentMessages = (db: SqliteDb, limit = 200) => {
   const rows = db.prepare(`
     SELECT ${messageColumns}
     ${messageJoin}
@@ -110,7 +110,7 @@ export const listRecentMessages = (db: DatabaseSync, limit = 200) => {
   return hydrateMessages(db, rows).reverse();
 };
 
-const selectMessages = (db: DatabaseSync, bufferId: string, limit?: number) => {
+const selectMessages = (db: SqliteDb, bufferId: string, limit?: number) => {
   const limitClause = typeof limit === 'number' ? '\n    LIMIT ?' : '';
   const args = typeof limit === 'number' ? [bufferId, limit] : [bufferId];
   const rows = db.prepare(`
@@ -123,7 +123,7 @@ const selectMessages = (db: DatabaseSync, bufferId: string, limit?: number) => {
 };
 
 const selectMessagePage = (
-  db: DatabaseSync,
+  db: SqliteDb,
   bufferId: string,
   limit: number,
   before: MessageCursor | null,

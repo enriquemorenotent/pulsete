@@ -1,4 +1,3 @@
-import type { DatabaseSync } from 'node:sqlite';
 import type { SecretBox } from './network-secret.js';
 import type { ConnectionInstanceProfile } from '../shared/network-model.js';
 import { isConnectionInstance } from '../shared/network-model.js';
@@ -11,11 +10,12 @@ import {
 } from './storage-networks.js';
 import { ensureNetworkBuffers } from './storage-network-invariants.js';
 import { runInTransaction } from './storage-db.js';
+import type { SqliteDb } from './storage-sqlite.js';
 import type { NetworkInput, NetworkSaveResult } from './storage-types.js';
 
 export class StorageNetworksRepository {
   constructor(
-    private readonly db: DatabaseSync,
+    private readonly db: SqliteDb,
     private readonly secretBox: SecretBox,
   ) {}
 

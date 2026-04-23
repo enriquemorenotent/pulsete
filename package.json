@@ -2,6 +2,9 @@
   "name": "pulsete",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "PORT=18487 tsx watch server/index.ts",
@@ -21,6 +24,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@tailwindcss/vite": "^4.2.2",
+    "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
@@ -33,6 +37,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.11",
     "@types/react-dom": "^19.1.7",
