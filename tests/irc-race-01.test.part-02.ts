@@ -35,7 +35,6 @@ test('sasl plain connections negotiate capabilities before completing registrati
       password: 'hunter2',
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -108,7 +107,6 @@ test('sasl plain connections complete negotiation on numeric 900 success', () =>
       password: 'hunter2',
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -161,7 +159,6 @@ test('numeric 900 releases deferred NickServ autojoin after identify', () => {
       password: 'hunter2',
       favorite: false,
       autoJoin: ['#chat'],
-      personaNote: '',
     },
     { onEvent() {} }
   );
@@ -203,7 +200,6 @@ test('nickserv identify success accepts configured service targets and notice st
       password: 'hunter2',
       favorite: false,
       autoJoin: ['#chat'],
-      personaNote: '',
     },
     { onEvent() {} }
   );

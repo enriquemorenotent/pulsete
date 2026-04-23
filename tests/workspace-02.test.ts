@@ -23,7 +23,6 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   hasPassword: overrides.hasPassword ?? false,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
-  personaNote: overrides.personaNote ?? '',
 });
 
 const makeRuntime = (overrides: Partial<NetworkRuntimeState> = {}): NetworkRuntimeState => ({

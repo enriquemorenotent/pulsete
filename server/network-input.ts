@@ -23,7 +23,6 @@ const networkInputSchema = z.object({
   clearPassword: z.boolean().optional().default(false),
   favorite: z.boolean().optional().default(false),
   autoJoin: z.array(z.string()).optional().default([]),
-  personaNote: z.string().optional().default(''),
 }).refine((input) => input.password === undefined || input.password.length > 0, {
   message: 'Password cannot be empty',
   path: ['password'],
@@ -65,7 +64,6 @@ export const parseNetworkInput = (body: unknown, id?: string): NetworkInput => {
   return {
     ...data,
     autoJoin: data.autoJoin.map((channel) => normalizeChannelTarget(channel)),
-    personaNote: data.personaNote.replace(/\r\n?/g, '\n'),
     id: id ?? bodyId,
   };
 };

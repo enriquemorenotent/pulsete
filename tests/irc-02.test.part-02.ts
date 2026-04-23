@@ -75,7 +75,6 @@ test('irc connection uses MONITOR updates for tracked friend presence without lo
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { assistantSnapshotSchema } from './protocol-assistant.js';
 import {
   bufferSchema,
   channelSchema,
@@ -23,6 +22,5 @@ export const appSnapshotSchema = z.object({
   pendingChannels: z.array(pendingChannelSchema).default([]),
   messages: z.array(chatMessageSchema),
   networkStates: z.record(networkRuntimeStateSchema),
-  assistant: assistantSnapshotSchema,
 });
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;

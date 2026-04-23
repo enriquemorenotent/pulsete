@@ -23,7 +23,6 @@ test('irc connection drops oversized pending lines instead of buffering indefini
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -70,7 +69,6 @@ test('irc connection drops oversized complete lines before dispatching them', ()
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -118,7 +116,6 @@ test('irc connection accepts large chunks when they contain complete IRC lines',
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

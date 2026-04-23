@@ -22,7 +22,6 @@ const network: NetworkProfile = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
-  personaNote: '',
 };
 
 const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({

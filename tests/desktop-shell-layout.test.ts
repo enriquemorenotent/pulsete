@@ -19,31 +19,31 @@ test('compact layout moves from browse to chat after selecting a buffer', () => 
       current: 'browse',
       selectedBufferId: 'buffer-2',
       previousSelectedBufferId: 'buffer-1',
-      showAssistantPane: true,
+      showDetailsPane: true,
     }),
     'chat',
   );
 });
 
-test('compact layout keeps the assistant pane active while switching between assistant buffers', () => {
+test('compact layout keeps the details pane active while switching between buffers with a sidebar', () => {
   assert.equal(
     resolveCompactWorkspacePane({
-      current: 'assistant',
+      current: 'details',
       selectedBufferId: 'buffer-2',
       previousSelectedBufferId: 'buffer-1',
-      showAssistantPane: true,
+      showDetailsPane: true,
     }),
-    'assistant',
+    'details',
   );
 });
 
-test('compact layout falls back to chat when the assistant pane becomes unavailable', () => {
+test('compact layout falls back to chat when the details pane becomes unavailable', () => {
   assert.equal(
     resolveCompactWorkspacePane({
-      current: 'assistant',
+      current: 'details',
       selectedBufferId: 'buffer-1',
       previousSelectedBufferId: 'buffer-1',
-      showAssistantPane: false,
+      showDetailsPane: false,
     }),
     'chat',
   );

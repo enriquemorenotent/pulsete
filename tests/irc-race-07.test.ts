@@ -27,7 +27,6 @@ test('channel mode changes keep user updates aligned after unknown arg-taking mo
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: () => {},
@@ -58,7 +57,6 @@ test('self kicks emit a self part message and remove channel membership', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -102,7 +100,6 @@ test('self part removes local channel state without emitting a replacement chann
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -152,7 +149,6 @@ test('late channel events and messages do not recreate a self-parted channel', (
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -201,7 +197,6 @@ test('socket close clears parser buffers and nick tracking', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     { onEvent() {} }
   );

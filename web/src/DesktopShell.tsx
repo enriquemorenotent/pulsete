@@ -39,8 +39,8 @@ export function DesktopShell(props: DesktopShellModel) {
   });
   const rightSidebarKind = props.workspace.selectedBuffer?.kind === 'server'
     ? 'profile'
-    : props.workspace.selectedBuffer?.kind === 'channel' || props.workspace.selectedBuffer?.kind === 'query'
-      ? 'assistant'
+    : props.workspace.selectedBuffer?.kind === 'channel'
+      ? 'users'
       : null;
   const showRightSidebar = rightSidebarKind !== null;
   const selectedBufferId = props.workspace.selectedBuffer?.id ?? null;
@@ -60,7 +60,7 @@ export function DesktopShell(props: DesktopShellModel) {
       current: compactPane,
       selectedBufferId,
       previousSelectedBufferId,
-      showAssistantPane: showRightSidebar,
+      showDetailsPane: showRightSidebar,
     });
     previousSelectedBufferIdRef.current = selectedBufferId;
     if (nextPane !== compactPane) {
@@ -132,8 +132,8 @@ export function DesktopShell(props: DesktopShellModel) {
                 Chat
               </TabsTrigger>
               {showRightSidebar ? (
-                <TabsTrigger value="assistant" className="min-w-0">
-                  {rightSidebarKind === 'profile' ? 'Profile' : 'Assistant'}
+                <TabsTrigger value="details" className="min-w-0">
+                  {rightSidebarKind === 'profile' ? 'Profile' : 'Users'}
                 </TabsTrigger>
               ) : null}
             </TabsList>
@@ -144,13 +144,11 @@ export function DesktopShell(props: DesktopShellModel) {
               {compactPane === 'chat' ? (
                 <ChatPane {...props.chat} />
               ) : null}
-              {compactPane === 'assistant' && showRightSidebar ? (
+              {compactPane === 'details' && showRightSidebar ? (
                 <WorkspaceRightSidebar
                   workspace={props.workspace}
                   nicklist={props.nicklist}
-                  assistant={props.assistant}
                   serverProfile={props.serverProfile}
-                  initialTab="assistant"
                 />
               ) : null}
             </div>
@@ -189,7 +187,6 @@ export function DesktopShell(props: DesktopShellModel) {
                   <WorkspaceRightSidebar
                     workspace={props.workspace}
                     nicklist={props.nicklist}
-                    assistant={props.assistant}
                     serverProfile={props.serverProfile}
                   />
                 </div>

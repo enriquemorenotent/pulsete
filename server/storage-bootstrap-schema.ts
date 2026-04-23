@@ -1,5 +1,4 @@
 import {
-  assistantTablesSchemaSql,
   historyImportBatchesSchemaSql,
   messagesSearchIndexSchemaSql,
 } from './storage-schema-helpers.js';
@@ -28,7 +27,6 @@ export const storageBootstrapSchemaSql = `
     authAccount TEXT NOT NULL DEFAULT '',
     favorite INTEGER NOT NULL DEFAULT 0,
     autoJoin TEXT NOT NULL,
-    personaNote TEXT NOT NULL DEFAULT '',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
   );
@@ -89,8 +87,6 @@ ${historyImportBatchesSchemaSql}
     updatedAt INTEGER NOT NULL,
     UNIQUE(networkId, nick)
   );
-
-${assistantTablesSchemaSql}
 
   CREATE INDEX IF NOT EXISTS idx_messages_buffer
     ON messages(networkId, target, ts DESC);

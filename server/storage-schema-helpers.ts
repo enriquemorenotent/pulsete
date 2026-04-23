@@ -1,35 +1,4 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { defaultAssistantModel } from '../shared/assistant-defaults.js';
-
-type EnsureColumn = (db: DatabaseSync, table: string, column: string, definition: string) => boolean;
-
-export const assistantTablesSchemaSql = `
-  CREATE TABLE IF NOT EXISTS assistant_threads (
-    id TEXT PRIMARY KEY,
-    bufferId TEXT,
-    networkId TEXT,
-    target TEXT,
-    scope TEXT NOT NULL DEFAULT 'buffer',
-    title TEXT NOT NULL,
-    task TEXT NOT NULL,
-    model TEXT NOT NULL,
-    turnStatus TEXT,
-    turnsJson TEXT NOT NULL DEFAULT '[]',
-    createdAt INTEGER NOT NULL,
-    updatedAt INTEGER NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS assistant_preferences (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    defaultModel TEXT NOT NULL,
-    activeThreadId TEXT,
-    createdAt INTEGER NOT NULL,
-    updatedAt INTEGER NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_assistant_threads_updated
-    ON assistant_threads(updatedAt DESC, createdAt DESC);
-`;
 
 export const historyImportBatchesSchemaSql = `
   CREATE TABLE IF NOT EXISTS history_import_batches (
@@ -81,33 +50,6 @@ export const messagesSearchIndexSchemaSql = `
 ${messagesSearchIndexTableSql}
 ${messagesSearchIndexTriggersSql('IF NOT EXISTS ')}
 `;
-
-export const ensureAssistantTables = (db: DatabaseSync, ensureColumn: EnsureColumn) => {
-  db.exec(assistantTablesSchemaSql);
-  ensureColumn(db, 'assistant_threads', 'turnsJson', "TEXT NOT NULL DEFAULT '[]'");
-  ensureAssistantThreadScope(db, ensureColumn);
-  const count = db.prepare('SELECT COUNT(*) AS count FROM assistant_preferences').get() as { count?: number } | undefined;
-  if ((count?.count ?? 0) > 0) {
-    return;
-  }
-  const now = Date.now();
-  db.prepare(`
-    INSERT INTO assistant_preferences (id, defaultModel, activeThreadId, createdAt, updatedAt)
-    VALUES (1, ?, NULL, ?, ?)
-  `).run(defaultAssistantModel, now, now);
-};
-
-export const ensureAssistantThreadScope = (db: DatabaseSync, ensureColumn: EnsureColumn) => {
-  ensureColumn(db, 'assistant_threads', 'scope', "TEXT NOT NULL DEFAULT 'buffer'");
-  db.exec(`
-    UPDATE assistant_threads
-    SET scope = CASE
-      WHEN bufferId IS NULL THEN 'free'
-      ELSE 'buffer'
-    END
-    WHERE scope IS NULL OR scope = '' OR (bufferId IS NULL AND scope = 'buffer')
-  `);
-};
 
 export const ensureHistoryImportBatchesTable = (db: DatabaseSync) => {
   db.exec(historyImportBatchesSchemaSql);

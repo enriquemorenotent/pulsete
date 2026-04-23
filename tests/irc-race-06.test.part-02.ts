@@ -27,7 +27,6 @@ test('channel mode changes preserve user updates when channel modes are mixed in
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: () => {},

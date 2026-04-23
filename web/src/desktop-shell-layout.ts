@@ -1,10 +1,10 @@
-export type CompactWorkspacePane = 'browse' | 'chat' | 'assistant';
+export type CompactWorkspacePane = 'browse' | 'chat' | 'details';
 
 type ResolveCompactWorkspacePaneParams = {
   current: CompactWorkspacePane;
   selectedBufferId: string | null;
   previousSelectedBufferId: string | null;
-  showAssistantPane: boolean;
+  showDetailsPane: boolean;
 };
 
 export const getDefaultCompactWorkspacePane = (
@@ -15,7 +15,7 @@ export const resolveCompactWorkspacePane = ({
   current,
   selectedBufferId,
   previousSelectedBufferId,
-  showAssistantPane,
+  showDetailsPane,
 }: ResolveCompactWorkspacePaneParams): CompactWorkspacePane => {
   if (!selectedBufferId) {
     return 'browse';
@@ -23,7 +23,7 @@ export const resolveCompactWorkspacePane = ({
   if (current === 'browse' && previousSelectedBufferId !== selectedBufferId) {
     return 'chat';
   }
-  if (current === 'assistant' && !showAssistantPane) {
+  if (current === 'details' && !showDetailsPane) {
     return 'chat';
   }
   return current;

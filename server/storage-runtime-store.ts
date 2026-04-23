@@ -1,4 +1,3 @@
-import type { StorageAssistantRepository } from './storage-assistant-repository.js';
 import type { StorageConversationsRepository } from './storage-conversations-repository.js';
 import type { StorageFriendsRepository } from './storage-friends-repository.js';
 import type { StorageMutedNicksRepository } from './storage-muted-nicks-repository.js';
@@ -7,7 +6,6 @@ import type { StorageSnapshotSource } from './storage-types.js';
 import type { RuntimeStore } from './runtime-store-ports.js';
 
 type StorageRepositories = {
-  assistant: StorageAssistantRepository;
   conversations: StorageConversationsRepository;
   friends: StorageFriendsRepository;
   mutedNicks: StorageMutedNicksRepository;
@@ -22,12 +20,9 @@ export const createStorageViews = (repositories: StorageRepositories) => {
     listMutedNicks: (networkId) => repositories.mutedNicks.list(networkId),
     listNetworks: () => repositories.networks.list(),
     listRecentMessages: (limit) => repositories.conversations.listRecentMessages(limit),
-    listAssistantThreads: () => repositories.assistant.listThreads(),
-    getAssistantPreferences: () => repositories.assistant.getPreferences(),
   };
   const runtimeStore: RuntimeStore = {
     snapshotSource,
-    assistant: repositories.assistant,
     conversations: repositories.conversations,
     friends: repositories.friends,
     mutedNicks: repositories.mutedNicks,

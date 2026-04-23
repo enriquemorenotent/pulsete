@@ -17,7 +17,7 @@ import {
 } from './storage-utils.js';
 
 const networkColumns =
-  'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin, personaNote';
+  'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin';
 
 export const listNetworks = (db: DatabaseSync): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
@@ -61,12 +61,11 @@ export const upsertNetwork = (
   const storedAuthMethod = resolveStoredAuthMethod(input, existing, template);
   const storedAuthTarget = resolveStoredAuthTarget(input, existing, template);
   const storedAuthAccount = resolveStoredAuthAccount(input, existing, template);
-  const storedPersonaNote = resolveStoredPersonaNote(input, existing, template);
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
   db.prepare(
     `INSERT INTO networks
-       (id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin, personaNote, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        templateId = excluded.templateId,
        managerHidden = excluded.managerHidden,
@@ -85,7 +84,6 @@ export const upsertNetwork = (
        authAccount = excluded.authAccount,
        favorite = excluded.favorite,
        autoJoin = excluded.autoJoin,
-       personaNote = excluded.personaNote,
        updatedAt = excluded.updatedAt`
   ).run(
     id,
@@ -106,7 +104,6 @@ export const upsertNetwork = (
     storedAuthAccount,
     input.favorite ? 1 : 0,
     JSON.stringify(input.autoJoin ?? []),
-    storedPersonaNote,
     now,
     now
   );
@@ -232,14 +229,6 @@ const resolveStoredAuthAccount = (
   }
   return '';
 };
-
-const resolveStoredPersonaNote = (
-  input: NetworkInput,
-  existing: NetworkRow | null,
-  template: NetworkRow | null
-) => normalizePersonaNote(input.personaNote ?? existing?.personaNote ?? template?.personaNote ?? '');
-
-const normalizePersonaNote = (value: string) => value.replace(/\r\n?/g, '\n');
 
 const requireStoredPasswordForAuthMethod = (
   authMethod: NetworkRow['authMethod'],

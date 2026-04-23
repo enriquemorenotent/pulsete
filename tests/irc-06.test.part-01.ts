@@ -79,7 +79,6 @@ test('irc connection routes whois replies to the originating buffer', async () =
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -181,7 +180,6 @@ test('irc connection routes duplicate WHOIS replies for the same nick in request
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

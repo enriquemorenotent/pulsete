@@ -167,32 +167,6 @@ test('storage rejects auth methods that do not have a saved password', () => {
   );
 });
 
-test('persona notes inherit on hidden clones and propagate from saved network updates', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.networks.upsert(createNetworkInput({
-    name: 'PersonaNet',
-    personaNote: 'White 30yo female',
-  }));
-
-  const clone = storage.networks.upsert(createNetworkInput({
-    templateId: network.id,
-    managerHidden: true,
-    name: 'PersonaNet clone',
-  }));
-
-  assert.equal(clone.personaNote, 'White 30yo female');
-
-  const updated = storage.networks.saveWithRelatedInstances({
-    ...network,
-    personaNote: '60 yo black male',
-  });
-
-  assert.equal(updated.requested.personaNote, '60 yo black male');
-  assert.equal(updated.relatedInstances[0]?.personaNote, '60 yo black male');
-  assert.equal(storage.networks.get(clone.id)?.personaNote, '60 yo black male');
-});
-
 test('storage fails fast when encrypted passwords exist but the secret key is missing', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');

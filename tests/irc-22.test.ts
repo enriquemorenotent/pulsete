@@ -23,7 +23,6 @@ test('service notice replies to a bot command stay in the source buffer', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -73,7 +72,6 @@ test('service notice replies match configured service targets and stay in the so
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -123,7 +121,6 @@ test('channel command notices stay in the originating channel buffer', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

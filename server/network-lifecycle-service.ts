@@ -43,7 +43,6 @@ export class NetworkLifecycleService {
       password: runtimeProfile.password,
       favorite: network.favorite,
       autoJoin: network.autoJoin,
-      personaNote: network.personaNote,
     });
     const messages = [{ type: 'network.upsert', network: duplicate } satisfies ServerMessage];
     return { network: duplicate, serverBuffer: null, messages };
@@ -60,30 +59,6 @@ export class NetworkLifecycleService {
     const messages = createNetworkUpsertMessages(this.context.conversations, updatedProfiles);
     this.applyMutation(updatedProfiles.map((profile) => profile.id));
     return { network: saveResult.requested, serverBuffer, messages };
-  }
-
-  updatePersonaNote(networkId: string, personaNote: string) {
-    const current = requireStoredNetwork(this.context.networks, networkId);
-    const rootNetwork = requireStoredNetwork(this.context.networks, getNetworkRootId(current));
-    return this.saveNetwork({
-      templateId: rootNetwork.templateId,
-      managerHidden: rootNetwork.managerHidden,
-      name: rootNetwork.name,
-      host: rootNetwork.host,
-      port: rootNetwork.port,
-      tls: rootNetwork.tls,
-      nick: rootNetwork.nick,
-      altNicks: rootNetwork.altNicks,
-      historicalSelfNicks: rootNetwork.historicalSelfNicks ?? [],
-      username: rootNetwork.username,
-      realName: rootNetwork.realName,
-      authMethod: rootNetwork.authMethod,
-      authTarget: rootNetwork.authTarget,
-      authAccount: rootNetwork.authAccount,
-      favorite: rootNetwork.favorite,
-      autoJoin: rootNetwork.autoJoin,
-      personaNote,
-    }, rootNetwork.id);
   }
 
   deleteNetwork(networkId: string) {

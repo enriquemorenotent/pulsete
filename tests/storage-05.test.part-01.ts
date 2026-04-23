@@ -109,7 +109,6 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.equal(columns.some((column) => column.name === 'authMethod'), true);
   assert.equal(columns.some((column) => column.name === 'authTarget'), true);
   assert.equal(columns.some((column) => column.name === 'authAccount'), true);
-  assert.equal(columns.some((column) => column.name === 'personaNote'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'selfNickAliases'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'priorityUnread'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'lastReadTs'), true);

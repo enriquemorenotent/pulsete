@@ -1,8 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import {
-  ensureAssistantTables,
-  ensureAssistantThreadScope,
   ensureHistoryImportBatchesTable,
   ensureMessagesSearchIndex,
 } from './storage-schema-helpers.js';
@@ -56,21 +54,15 @@ const storageMigrations: readonly StorageMigration[] = [
   },
   {
     version: 5,
-    apply: (db) => {
-      ensureAssistantTables(db, ensureColumn);
-    },
+    apply: () => {},
   },
   {
     version: 6,
-    apply: (db) => {
-      ensureColumn(db, 'assistant_threads', 'turnsJson', "TEXT NOT NULL DEFAULT '[]'");
-    },
+    apply: () => {},
   },
   {
     version: 7,
-    apply: (db) => {
-      ensureAssistantThreadScope(db, ensureColumn);
-    },
+    apply: () => {},
   },
   {
     version: 8,
@@ -126,9 +118,7 @@ const storageMigrations: readonly StorageMigration[] = [
   },
   {
     version: 13,
-    apply: (db) => {
-      ensureColumn(db, 'networks', 'personaNote', "TEXT NOT NULL DEFAULT ''");
-    },
+    apply: () => {},
   },
 ];
 

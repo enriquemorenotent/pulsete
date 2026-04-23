@@ -22,17 +22,16 @@ const network: AppDomainState['networks'][number] = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
-  personaNote: 'White 30yo female',
 };
 
-test('openExistingNetworkEditor can target the persona tab and return to the closed state', () => {
+test('openExistingNetworkEditor can target the servers tab and return to the closed state', () => {
   const actions: Action[] = [];
 
   openExistingNetworkEditor(network, {
     dispatch: (action) => {
       actions.push(action);
     },
-    initialTab: 'persona',
+    initialTab: 'servers',
     returnMode: 'closed',
   });
 
@@ -42,7 +41,7 @@ test('openExistingNetworkEditor can target the persona tab and return to the clo
     managedNetworkId: network.id,
     editor: {
       kind: 'existing',
-      tab: 'persona',
+      tab: 'servers',
       returnMode: 'closed',
       form: {
         id: network.id,
@@ -63,7 +62,6 @@ test('openExistingNetworkEditor can target the persona tab and return to the clo
         hasSavedPassword: false,
         favorite: false,
         autoJoin: '',
-        personaNote: 'White 30yo female',
       },
     },
   });

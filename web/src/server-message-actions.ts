@@ -93,36 +93,6 @@ const toActions = (message: ServerMessage): Action[] => {
         target: message.target,
         messageIds: message.messageIds,
       }];
-    case 'assistant.snapshot':
-      return [{ type: 'assistant-snapshot', assistant: message.assistant }];
-    case 'assistant.thread.loaded':
-      return [{ type: 'assistant-thread-loaded', thread: message.thread }];
-    case 'assistant.turn.started':
-      return [{ type: 'assistant-turn-started', threadId: message.threadId, turn: message.turn }];
-    case 'assistant.turn.completed':
-      return [{ type: 'assistant-turn-completed', threadId: message.threadId, turn: message.turn }];
-    case 'assistant.item.started':
-      return [{
-        type: 'assistant-item-started',
-        threadId: message.threadId,
-        turnId: message.turnId,
-        item: message.item,
-      }];
-    case 'assistant.item.delta':
-      return [{
-        type: 'assistant-item-delta',
-        threadId: message.threadId,
-        turnId: message.turnId,
-        itemId: message.itemId,
-        delta: message.delta,
-      }];
-    case 'assistant.item.completed':
-      return [{
-        type: 'assistant-item-completed',
-        threadId: message.threadId,
-        turnId: message.turnId,
-        item: message.item,
-      }];
     case 'presence.update':
       return [{
         type: 'update-presence',

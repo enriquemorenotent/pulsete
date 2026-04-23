@@ -73,7 +73,6 @@ export class StorageNetworksRepository {
           authAccount: network.authAccount,
           favorite: network.favorite,
           autoJoin: network.autoJoin,
-          personaNote: network.personaNote,
           ...(input.password !== undefined ? { password: input.password } : {}),
           ...(input.clearPassword ? { clearPassword: true } : {}),
         }, this.secretBox);

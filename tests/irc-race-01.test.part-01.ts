@@ -156,7 +156,6 @@ test('late close from an old socket does not disconnect the new connection', asy
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -217,7 +216,6 @@ test('tls connections wait for secureConnect before sending credentials', () => 
       password: 'secret',
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     { onEvent() {} }
   );

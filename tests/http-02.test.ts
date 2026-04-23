@@ -117,7 +117,6 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     password: 'hunter2',
     favorite: true,
     autoJoin: ['#help'],
-    personaNote: '',
   }));
   const server = createServer(createHttpHandler(runtime.http));
   attachWebSocketServer(server, runtime.ws);

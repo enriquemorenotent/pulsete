@@ -25,7 +25,6 @@ test('queued connected nick changes keep the accepted nick after a later rejecti
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -77,7 +76,6 @@ test('duplicate connected nick requests are fully retired after a successful sel
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -124,7 +122,6 @@ test('queued connected nick rejections keep the rejected nick bound to its origi
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -173,7 +170,6 @@ test('duplicate rejected nick requests do not leave stale pending nick state beh
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

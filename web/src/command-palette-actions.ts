@@ -11,7 +11,7 @@ export const buildCommandPaletteActionEntries = (
   input: BuildCommandPaletteEntrySpecsInput,
 ): CommandPaletteEntrySpec[] => {
   const entries: CommandPaletteEntrySpec[] = [
-    createActionEntry('open-preferences', 'Preferences', 'App settings and assistant account', ['settings', 'preferences', 'assistant']),
+    createActionEntry('open-preferences', 'Preferences', 'App settings and notifications', ['settings', 'preferences', 'notifications']),
     createActionEntry('open-network-manager', 'Network Manager', 'Saved networks and live connection state', ['networks', 'connections', 'server']),
   ];
 

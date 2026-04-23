@@ -23,7 +23,6 @@ test('irc connection keeps ambiguous same-channel 442 replies on the server buff
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -90,7 +89,6 @@ test('irc connection clears ambiguous same-channel 442 contexts before later rep
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -158,7 +156,6 @@ test('irc connection clears successful topic-change contexts before later topic 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

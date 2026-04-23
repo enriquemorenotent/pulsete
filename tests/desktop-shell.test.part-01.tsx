@@ -3,7 +3,6 @@ import test from 'node:test';
 import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
-import { emptyAssistantSnapshot } from '../web/src/assistant-state.js';
 import { DesktopShell } from '../web/src/DesktopShell.js';
 import type { DesktopShellModel } from '../web/src/desktop-shell-model.js';
 import { emptyNetworkForm } from '../web/src/network-form.js';
@@ -27,7 +26,6 @@ const network: NetworkProfile = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
-  personaNote: '',
 };
 
 const serverBuffer: BufferState = {
@@ -161,25 +159,8 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     onRemoveMutedNick: async () => true,
     onSelectNick: () => undefined,
   },
-  assistant: {
-    activeBufferLabel: workspace.selectedBuffer?.target ?? null,
-    assistant: emptyAssistantSnapshot,
-    contextSubtitle: 'Ask the assistant about this buffer.',
-    contextKey: workspace.selectedBuffer?.id ?? 'none',
-    contextTitle: workspace.headerTitle,
-    loading: false,
-    busy: false,
-    resolvedSubjectLabel: null,
-    subjectPending: false,
-    thread: null,
-    onNewChat: async () => true,
-    onOpenChannel: () => undefined,
-    onStop: async () => true,
-    onSubmitPrompt: async () => true,
-  },
   preferences: {
     open: false,
-    assistant: emptyAssistantSnapshot,
     backgroundDmAudio: {
       enabled: false,
       systemEnabled: false,
@@ -189,10 +170,6 @@ const createModel = (workspace: WorkspaceView): DesktopShellModel => ({
     mutedNicks: [],
     networks: [network],
     onClose: () => undefined,
-    onStartLogin: async () => undefined,
-    onCancelLogin: async () => undefined,
-    onLogout: async () => undefined,
-    onChangeModel: async () => undefined,
     onSetBackgroundDmAudioEnabled: () => undefined,
     backgroundDmAudioSystemPermission: 'default',
     onSetBackgroundDmAudioSystemEnabled: () => undefined,

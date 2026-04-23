@@ -68,7 +68,6 @@ test('irc connection keeps direct service messages on the server buffer', async 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -134,7 +133,6 @@ test('irc connection reports failed connects without a generic closed notice', a
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

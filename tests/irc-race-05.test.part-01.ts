@@ -25,7 +25,6 @@ test('older nick conflicts do not overwrite a newer pending nick request', () =>
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -72,7 +71,6 @@ test('profile updates retry a rejected connected nick change when the desired ni
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     { onEvent() {} }
   );
@@ -112,7 +110,6 @@ test('connected profiles do not reconnect when only an unused password changes',
       password: 'oldpass',
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -159,7 +156,6 @@ test('connecting connections reject client commands before registration complete
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

@@ -24,7 +24,6 @@ test('irc connection keeps tracked joins live before the nicklist arrives', () =
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -127,7 +126,6 @@ test('irc connection sends direct private messages to nick targets', async () =>
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: () => {},

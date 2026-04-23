@@ -1,10 +1,4 @@
 import { z } from 'zod';
-import {
-  assistantItemSchema,
-  assistantSnapshotSchema,
-  assistantThreadSchema,
-  assistantTurnSchema,
-} from './protocol-assistant.js';
 import { appSnapshotSchema } from './protocol-app.js';
 import {
   bufferSchema,
@@ -130,37 +124,6 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     networkId: z.string(),
     target: z.string(),
     messageIds: z.array(z.string()),
-  }),
-  baseServerSchema.extend({ type: z.literal('assistant.snapshot'), assistant: assistantSnapshotSchema }),
-  baseServerSchema.extend({ type: z.literal('assistant.thread.loaded'), thread: assistantThreadSchema }),
-  baseServerSchema.extend({
-    type: z.literal('assistant.turn.started'),
-    threadId: z.string(),
-    turn: assistantTurnSchema,
-  }),
-  baseServerSchema.extend({
-    type: z.literal('assistant.turn.completed'),
-    threadId: z.string(),
-    turn: assistantTurnSchema,
-  }),
-  baseServerSchema.extend({
-    type: z.literal('assistant.item.started'),
-    threadId: z.string(),
-    turnId: z.string(),
-    item: assistantItemSchema,
-  }),
-  baseServerSchema.extend({
-    type: z.literal('assistant.item.delta'),
-    threadId: z.string(),
-    turnId: z.string(),
-    itemId: z.string(),
-    delta: z.string(),
-  }),
-  baseServerSchema.extend({
-    type: z.literal('assistant.item.completed'),
-    threadId: z.string(),
-    turnId: z.string(),
-    item: assistantItemSchema,
   }),
   baseServerSchema.extend({
     type: z.literal('presence.update'),

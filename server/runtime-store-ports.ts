@@ -2,9 +2,6 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type {
-  AssistantTurn,
-  AssistantPreferences,
-  AssistantThreadSummary,
   AppSnapshot,
   BufferState,
   ChannelState,
@@ -23,9 +20,6 @@ import type {
   NetworkSaveResult,
   RuntimeNetworkProfile,
 } from './storage-types.js';
-import type {
-  AssistantThreadInput,
-} from './storage-types.js';
 
 export type RuntimeSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
@@ -34,8 +28,6 @@ export type RuntimeSnapshotSource = {
   listMutedNicks(networkId?: string): MutedNickState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
-  listAssistantThreads(): AssistantThreadSummary[];
-  getAssistantPreferences(): AssistantPreferences;
 };
 
 export type RuntimeConversationStore = {
@@ -99,17 +91,6 @@ export type RuntimeMutedNickStore = {
   remove(mutedNickId: string): MutedNickState | null;
 };
 
-export type RuntimeAssistantStore = {
-  listThreads(): AssistantThreadSummary[];
-  getThread(threadId: string): AssistantThreadSummary | null;
-  getThreadTurns(threadId: string): AssistantTurn[] | null;
-  saveThreadTurns(threadId: string, turns: AssistantTurn[]): void;
-  upsertThread(input: AssistantThreadInput): AssistantThreadSummary | null;
-  removeThread(threadId: string): void;
-  getPreferences(): AssistantPreferences;
-  savePreferences(input: AssistantPreferences): AssistantPreferences;
-};
-
 export type RuntimeNetworkStore = {
   list(): StoredNetworkProfile[];
   get(networkId: string): StoredNetworkProfile | null;
@@ -127,5 +108,4 @@ export type RuntimeStore = {
   friends: RuntimeFriendStore;
   mutedNicks: RuntimeMutedNickStore;
   networks: RuntimeNetworkStore;
-  assistant: RuntimeAssistantStore;
 };

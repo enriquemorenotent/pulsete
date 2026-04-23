@@ -24,7 +24,6 @@ test('irc connection routes labeled WHOIS replies to the matching buffer even wh
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

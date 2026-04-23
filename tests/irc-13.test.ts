@@ -24,7 +24,6 @@ test('irc connection expires a stalled LIST drain and allows a later retry witho
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -78,7 +77,6 @@ test('irc connection refuses a second LIST while one is already active', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -122,7 +120,6 @@ test('irc connection keeps unrelated command errors from failing LIST', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -183,7 +180,6 @@ test('irc connection keeps raw LIST numerics on the server buffer', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

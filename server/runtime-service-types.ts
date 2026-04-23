@@ -1,12 +1,6 @@
 import type WebSocket from 'ws';
 import type {
   BufferHistoryImportSummary,
-  AssistantPreferences,
-  AssistantTaskKind,
-  AssistantThreadScope,
-  AssistantThread,
-  AssistantThreadSummary,
-  AssistantTurnAttachmentInput,
   BufferHistoryImportRequest,
   BufferSelfNickAliasesRequest,
   BufferState,
@@ -65,36 +59,8 @@ export type RuntimeMutedNickMutations = {
 
 export type RuntimeNetworkMutations = {
   saveNetwork: NetworkLifecycleService['saveNetwork'];
-  updatePersonaNote: NetworkLifecycleService['updatePersonaNote'];
   duplicateNetwork: NetworkLifecycleService['duplicateNetwork'];
   deleteNetwork: NetworkLifecycleService['deleteNetwork'];
-};
-
-export type RuntimeAssistantApi = {
-  startChatgptLogin(): Promise<{ loginId: string; authUrl: string }>;
-  cancelLogin(loginId: string): Promise<void>;
-  logout(): Promise<void>;
-  createThread(input: {
-    bufferId: string | null;
-    scope?: AssistantThreadScope;
-    task: AssistantTaskKind;
-    model?: string;
-  }): Promise<AssistantThreadSummary>;
-  deleteThread(threadId: string): Promise<{ messages: readonly ServerMessage[] }>;
-  readThread(threadId: string): Promise<AssistantThread>;
-  startTurn(input: {
-    threadId: string;
-    activeBufferId?: string | null;
-    clientTurnId?: string;
-    prompt: string;
-    attachments?: AssistantTurnAttachmentInput[];
-  }): Promise<{ messages: readonly ServerMessage[] }>;
-  interruptThread(threadId: string): Promise<void>;
-  interruptTurn(threadId: string, turnId: string): Promise<void>;
-  updatePreferences(input: {
-    defaultModel?: string;
-    activeThreadId?: string | null;
-  }): AssistantPreferences;
 };
 
 export type RuntimeHttpApi = {
@@ -125,7 +91,6 @@ export type RuntimeHttpApi = {
     add: RuntimeMutedNickMutations['upsertMutedNick'];
     remove: RuntimeMutedNickMutations['removeMutedNick'];
   };
-  assistant: RuntimeAssistantApi;
 };
 
 export type RuntimeWebSocketApi = {
@@ -144,7 +109,6 @@ export type RuntimeServices = {
   mutedNicks: RuntimeMutedNickMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
-  assistant: RuntimeAssistantApi;
   http: RuntimeHttpApi;
   ws: RuntimeWebSocketApi;
 };

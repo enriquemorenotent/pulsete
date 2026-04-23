@@ -16,7 +16,6 @@ import {
   useDesktopNicklistModel,
   useDesktopSidebarModel,
 } from './useDesktopShellModel.js';
-import { useAssistantController } from './useAssistantController.js';
 import { useAppSession } from './useAppSession.js';
 import { useAppUiState } from './useAppUiState.js';
 import { useComposerHistory } from './composer-history.js';
@@ -149,16 +148,8 @@ export function useAppController(): AppController {
     friends: state.domain.friends,
     mutedNicks: state.domain.mutedNicks,
   });
-  const assistant = useAssistantController({
-    actions,
-    assistant: state.domain.assistant,
-    assistantThreads: state.domain.assistantThreads,
-    assistantUi: state.transient.assistant,
-    workspace,
-  });
   const preferences = usePreferencesController({
     actions,
-    assistant: state.domain.assistant,
     backgroundDmAudio,
     mutedNicks: state.domain.mutedNicks,
     networks: state.domain.networks,
@@ -213,7 +204,6 @@ export function useAppController(): AppController {
     sidebar,
     chat,
     nicklist,
-    assistant,
     serverProfile: {
       network: serverProfileNetwork,
       onEdit: () => {
@@ -222,7 +212,7 @@ export function useAppController(): AppController {
         }
         openExistingNetworkEditor(serverProfileNetwork, {
           dispatch,
-          initialTab: 'persona',
+          initialTab: 'servers',
           returnMode: 'closed',
         });
       },

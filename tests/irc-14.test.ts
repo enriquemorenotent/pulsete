@@ -23,7 +23,6 @@ test('irc connection refuses a raw LIST while a structured LIST is active', () =
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -71,7 +70,6 @@ test('irc connection routes topic change status to the affected channel', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -128,7 +126,6 @@ test('irc connection keeps topic errors bound to topic commands on the same chan
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -187,7 +184,6 @@ test('irc connection clears stale channel reply contexts after a self part', () 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

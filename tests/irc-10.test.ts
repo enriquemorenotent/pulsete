@@ -23,7 +23,6 @@ test('irc connection clears raw MODE contexts after untargeted mode errors', () 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -92,7 +91,6 @@ test('irc connection clears duplicate raw MODE contexts after untargeted mode er
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -153,7 +151,6 @@ test('irc connection clears duplicate raw MODE contexts after targeted mode erro
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

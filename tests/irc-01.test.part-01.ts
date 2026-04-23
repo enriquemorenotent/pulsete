@@ -86,7 +86,6 @@ test('irc connection negotiates, joins, and parses messages', async () => {
       hasPassword: false,
       favorite: false,
       autoJoin: ['#chat'],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

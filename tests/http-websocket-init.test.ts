@@ -3,7 +3,6 @@ import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import WebSocket from 'ws';
 import { initializeWebSocketConnection } from '../server/ws-server.js';
-import { emptyAssistantSnapshot } from '../web/src/assistant-state.js';
 import { createFailingWebSocket, createThrowingWebSocket } from './helpers/http-websocket-test-helpers.js';
 
 type WebSocketTestContext = Parameters<typeof initializeWebSocketConnection>[1];
@@ -20,7 +19,6 @@ const createEmptySnapshot = () => ({
   pendingChannels: [],
   messages: [],
   networkStates: {},
-  assistant: emptyAssistantSnapshot,
 });
 
 const createWebSocketTestContext = (overrides: WebSocketTestContextOverrides = {}): WebSocketTestContext => ({

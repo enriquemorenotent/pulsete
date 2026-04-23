@@ -1,5 +1,4 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { handleAssistantRoutes } from './http-assistant.js';
 import { toAppError } from './app-error.js';
 import { handleBufferRoutes } from './http-buffers.js';
 import { handleFriendRoutes } from './http-friends.js';
@@ -19,7 +18,6 @@ export const createHttpHandler = (context: HttpContext) => async (req: IncomingM
       || await handleFriendRoutes(args)
       || await handleMutedNickRoutes(args)
       || await handleBufferRoutes(args)
-      || await handleAssistantRoutes(args)
     ) {
       return;
     }

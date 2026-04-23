@@ -1,14 +1,11 @@
 import { useMemo } from 'react';
-import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { BackgroundDmAudioSettings, BackgroundDmAudioContact } from './background-dm-audio.js';
 import type { AppUiState } from './useAppUiState.js';
-import type { AssistantActionSet } from './useAppActions.js';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 
 type PreferencesControllerParams = {
-  actions: AssistantActionSet & Pick<import('./useAppActions.js').AppActions, 'removeMutedNick'>;
-  assistant: State['domain']['assistant'];
+  actions: Pick<import('./useAppActions.js').AppActions, 'removeMutedNick'>;
   backgroundDmAudio: {
     settings: BackgroundDmAudioSettings;
     systemPermission: NotificationPermission | 'unsupported';
@@ -27,7 +24,6 @@ type PreferencesControllerParams = {
 
 export function usePreferencesController({
   actions,
-  assistant,
   backgroundDmAudio,
   mutedNicks,
   networks,
@@ -37,15 +33,10 @@ export function usePreferencesController({
 }: PreferencesControllerParams): DesktopShellModel['preferences'] {
   return useMemo(() => ({
     open: ui.preferencesOpen,
-    assistant,
     backgroundDmAudio: backgroundDmAudio.settings,
     mutedNicks,
     networks,
     onClose: ui.closePreferences,
-    onStartLogin: actions.startAssistantChatgptLogin,
-    onCancelLogin: actions.cancelAssistantLogin,
-    onLogout: actions.logoutAssistant,
-    onChangeModel: actions.updateAssistantDefaultModel,
     onSetBackgroundDmAudioEnabled: (enabled) => {
       backgroundDmAudio.setEnabled(enabled);
       if (enabled) {
@@ -60,11 +51,6 @@ export function usePreferencesController({
     onRemoveBackgroundDmAudioContact: backgroundDmAudio.removeContact,
     onRemoveMutedNick: actions.removeMutedNick,
   }), [
-    actions.cancelAssistantLogin,
-    actions.logoutAssistant,
-    actions.startAssistantChatgptLogin,
-    actions.updateAssistantDefaultModel,
-    assistant,
     backgroundDmAudio.removeContact,
     backgroundDmAudio.setEnabled,
     backgroundDmAudio.setSystemEnabled,

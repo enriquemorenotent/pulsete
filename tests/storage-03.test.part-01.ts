@@ -31,7 +31,6 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
   realName: 'Tester Example',
   favorite: false,
   autoJoin: [],
-  personaNote: '',
   ...overrides,
 });
 
@@ -55,7 +54,6 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
     realName: overrides.realName ?? template.realName,
     favorite: overrides.favorite ?? template.favorite,
     autoJoin: overrides.autoJoin ?? template.autoJoin,
-    personaNote: overrides.personaNote ?? template.personaNote,
   }));
 };
 

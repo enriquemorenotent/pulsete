@@ -50,7 +50,6 @@ test('snapshot selects the first instance server buffer', () => {
           nick: network.nick,
         },
       },
-      assistant: initialState.domain.assistant,
     },
   });
 
@@ -99,7 +98,6 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
           nick: 'tester',
         },
       },
-      assistant: initialState.domain.assistant,
     },
   });
 

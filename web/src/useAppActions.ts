@@ -1,4 +1,3 @@
-import { createAssistantActions } from './app-actions-assistant.js';
 import { createChatActions } from './app-actions-chat.js';
 import { createConversationActions } from './app-actions-conversation.js';
 import { createFriendActions } from './app-actions-friends.js';
@@ -58,9 +57,6 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
     ...actionContext,
   });
   return {
-    ...createAssistantActions({
-      ...actionContext,
-    }),
     ...createNetworkActions({
       ...actionContext,
     }),
@@ -135,22 +131,6 @@ export type SidebarActionSet = Pick<
 export type NicklistActionSet = Pick<
   AppActions,
   'addFriend' | 'addMutedNick' | 'removeFriend' | 'removeMutedNick' | 'selectPrivateBuffer'
->;
-export type AssistantActionSet = Pick<
-  AppActions,
-  | 'cancelAssistantLogin'
-  | 'clearAssistantThreads'
-  | 'createAssistantThread'
-  | 'interruptAssistantThread'
-  | 'interruptAssistantTurn'
-  | 'loadAssistantThread'
-  | 'logoutAssistant'
-  | 'openMentionedChannel'
-  | 'setAssistantActiveThread'
-  | 'startAssistantChatgptLogin'
-  | 'startAssistantTurn'
-  | 'updateAssistantDefaultModel'
-  | 'useAssistantDraft'
 >;
 export type NetworkManagerActionSet = Pick<
   AppActions,

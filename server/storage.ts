@@ -1,5 +1,4 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { StorageAssistantRepository } from './storage-assistant-repository.js';
 import { initializeStorageDefaults, openStorageResources } from './storage-bootstrap.js';
 import { StorageConversationsRepository } from './storage-conversations-repository.js';
 import { StorageFriendsRepository } from './storage-friends-repository.js';
@@ -16,7 +15,6 @@ export class Storage {
   private readonly db: DatabaseSync;
   private readonly secretBox;
   private closed = false;
-  readonly assistant: StorageAssistantRepository;
   readonly networks: StorageNetworksRepository;
   readonly conversations: StorageConversationsRepository;
   readonly friends: StorageFriendsRepository;
@@ -29,13 +27,11 @@ export class Storage {
     this.db = resources.db;
     this.secretBox = resources.secretBox;
     initializeStorageDefaults(resources);
-    this.assistant = new StorageAssistantRepository(this.db);
     this.networks = new StorageNetworksRepository(this.db, this.secretBox);
     this.conversations = new StorageConversationsRepository(this.db);
     this.friends = new StorageFriendsRepository(this.db);
     this.mutedNicks = new StorageMutedNicksRepository(this.db);
     const views = createStorageViews({
-      assistant: this.assistant,
       conversations: this.conversations,
       friends: this.friends,
       mutedNicks: this.mutedNicks,

@@ -24,7 +24,6 @@ test('irc connection ignores stale ISON replies after friend tracking is cleared
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -66,7 +65,6 @@ test('irc connection skips oversized friend nicks when snapshotting presence', (
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     { onEvent() {} }
   );
@@ -116,7 +114,6 @@ test('irc connection times out stalled logins instead of hanging forever', async
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -188,7 +185,6 @@ test('irc connection times out stalled logins even when the server stays chatty'
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

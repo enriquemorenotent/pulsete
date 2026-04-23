@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import type { ServerMessage } from '../shared/protocol.js';
-import { AssistantService } from './assistant-service.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -35,8 +34,6 @@ const tagMutationMessages = (messages: readonly ServerMessage[]) => {
   const mutationId = randomUUID();
   return messages.map((message) => ({ ...message, mutationId }));
 };
-
-const assistantAutoStart = !process.env.NODE_TEST_CONTEXT;
 
 export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
@@ -96,44 +93,16 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     conversations: store.conversations,
     networks: store.networks,
   });
-  const assistant = new AssistantService({
-    assistant: store.assistant,
-    conversations: store.conversations,
-    networks: store.networks,
-    autoStart: assistantAutoStart,
-    publish: (messages) => publisher.publish(messages),
-    applyAssistantMutation: (mutation) => {
-      switch (mutation.kind) {
-        case 'persona.note.save':
-          return networkMutations.updatePersonaNote(mutation.networkId, mutation.note);
-        default:
-          return null;
-      }
-    },
-  });
-  const assistantApi: RuntimeServices['assistant'] = {
-    startChatgptLogin: () => assistant.startChatgptLogin(),
-    cancelLogin: (loginId) => assistant.cancelLogin(loginId),
-    logout: () => assistant.logout(),
-    createThread: (input) => assistant.createThread(input),
-    deleteThread: async (threadId) => publishMutation(await assistant.deleteThread(threadId)),
-    readThread: (threadId) => assistant.readThread(threadId),
-    startTurn: async (input) => publishMutation(await assistant.startTurn(input)),
-    interruptThread: (threadId) => assistant.interruptThread(threadId),
-    interruptTurn: (threadId, turnId) => assistant.interruptTurn(threadId, turnId),
-    updatePreferences: (input) => assistant.updatePreferences(input),
-  };
   const closeGateway = () => {
     closing = true;
     socketHub.closeAll();
-    assistant.close();
     connectionManager.close();
   };
   const gateway: RuntimeGateway = {
     attachSocket: (ws) => socketHub.attach(ws),
     detachSocket: (ws) => socketHub.detach(ws),
     publish: (message) => publisher.publish(message),
-    snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager, assistant.snapshot()),
+    snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager),
     close: closeGateway,
   };
   const conversations: RuntimeConversationMutations = {
@@ -178,12 +147,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   };
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
-    updatePersonaNote: (networkId, personaNote) => networkMutations.updatePersonaNote(networkId, personaNote),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
     deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
   };
   const http = createRuntimeHttpApi({
-    assistant: assistantApi,
     catalog: store.networks,
     conversations,
     friends,
@@ -210,7 +177,6 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     mutedNicks,
     irc,
     networks,
-    assistant: assistantApi,
     http,
     ws,
   };

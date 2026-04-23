@@ -6,11 +6,6 @@ import type {
   SpeakerAttributionConfidence,
   SpeakerAttributionSource,
   SpeakerRole,
-  AssistantThreadScope,
-  AssistantTurn,
-  AssistantPreferences,
-  AssistantTaskKind,
-  AssistantThreadSummary,
   AppSnapshot,
   BufferState,
   ChannelState,
@@ -40,7 +35,6 @@ export type NetworkRow = {
   authAccount: string;
   favorite: number;
   autoJoin: string;
-  personaNote: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -107,29 +101,6 @@ export type MutedNickRow = {
   updatedAt: number;
 };
 
-export type AssistantThreadRow = {
-  id: string;
-  bufferId: string | null;
-  networkId: string | null;
-  target: string | null;
-  scope: AssistantThreadScope;
-  title: string;
-  task: AssistantTaskKind;
-  model: string;
-  turnStatus: AssistantThreadSummary['turnStatus'];
-  turnsJson: string;
-  createdAt: number;
-  updatedAt: number;
-};
-
-export type AssistantPreferencesRow = {
-  id: number;
-  defaultModel: string;
-  activeThreadId: string | null;
-  createdAt: number;
-  updatedAt: number;
-};
-
 export type RuntimeNetworkProfile = StoredNetworkProfile & {
   password?: string;
 };
@@ -140,8 +111,7 @@ type NetworkWriteInput = {
   clearPassword?: boolean;
 };
 
-export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword' | 'personaNote'> & {
-  personaNote?: string;
+export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword'> & {
 } & NetworkWriteInput;
 
 export type NetworkSaveResult =
@@ -206,16 +176,6 @@ export type MessagePage = {
   hasMore: boolean;
 };
 
-export type AssistantThreadInput = Omit<AssistantThreadSummary, 'createdAt' | 'updatedAt'> & {
-  createdAt?: number;
-  updatedAt?: number;
-};
-
-export type AssistantThreadTurnsInput = {
-  threadId: string;
-  turns: AssistantTurn[];
-};
-
 export type StorageSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];
@@ -223,8 +183,6 @@ export type StorageSnapshotSource = {
   listMutedNicks(networkId?: string): MutedNickState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
-  listAssistantThreads(): AssistantThreadSummary[];
-  getAssistantPreferences(): AssistantPreferences;
 };
 
 export type CountRow = { count: number };

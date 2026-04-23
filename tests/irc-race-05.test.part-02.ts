@@ -32,7 +32,6 @@ test('updating a profile while connecting restarts the handshake with the new se
       password: 'oldpass',
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

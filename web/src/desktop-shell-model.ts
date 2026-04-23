@@ -1,4 +1,3 @@
-import type { AssistantPanelProps } from './AssistantPanel.js';
 import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
 import type { FriendState, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
@@ -73,7 +72,6 @@ export type DesktopShellModel = {
   sidebar: ConnectionSidebarProps;
   chat: ChatPaneProps;
   nicklist: DesktopShellNicklistModel;
-  assistant: AssistantPanelProps;
   serverProfile?: DesktopShellServerProfileModel;
   preferences: PreferencesDialogProps;
   networkManager: DesktopShellNetworkManagerModel;

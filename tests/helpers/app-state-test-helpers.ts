@@ -1,5 +1,4 @@
 import type { AppSnapshot, BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
-import { emptyAssistantSnapshot } from '../../web/src/assistant-state.js';
 import { initialState } from '../../web/src/app-state.js';
 import type { State } from '../../web/src/app-types.js';
 
@@ -21,7 +20,6 @@ export const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkPro
   authAccount: overrides.authAccount ?? '',
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
-  personaNote: overrides.personaNote ?? '',
 });
 
 export const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
@@ -67,7 +65,6 @@ export const emptySnapshot = (): AppSnapshot => ({
   pendingChannels: [],
   messages: [],
   networkStates: {},
-  assistant: emptyAssistantSnapshot,
 });
 
 export const makeState = (overrides: {

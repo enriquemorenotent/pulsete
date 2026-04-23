@@ -22,7 +22,7 @@ export function PreferencesDialog(props: PreferencesDialogProps) {
           <DialogHeader className="shrink-0 space-y-1 border-b border-white/6 px-4 py-4">
             <DialogTitle>Preferences</DialogTitle>
             <DialogDescription>
-              Client-side app settings and assistant defaults.
+              Client-side app settings.
             </DialogDescription>
           </DialogHeader>
 

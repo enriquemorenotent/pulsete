@@ -10,7 +10,6 @@ import {
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
-import { Textarea } from '@/components/ui/textarea.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 
@@ -48,7 +47,6 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
               <TabsList>
                 <TabsTrigger value="servers">Servers</TabsTrigger>
                 <TabsTrigger value="autojoin">Autojoin</TabsTrigger>
-                <TabsTrigger value="persona">Persona</TabsTrigger>
               </TabsList>
             </div>
 
@@ -59,9 +57,6 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
                 </TabsContent>
                 <TabsContent value="autojoin" className="mt-0">
                   <AutojoinTab form={props.form} onChange={props.onChange} />
-                </TabsContent>
-                <TabsContent value="persona" className="mt-0">
-                  <PersonaTab form={props.form} onChange={props.onChange} />
                 </TabsContent>
               </div>
             </ScrollArea>
@@ -163,25 +158,6 @@ function AutojoinTab(props: { form: NetworkForm; onChange: (form: Partial<Networ
       </div>
       <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
         Comma-separated channels joined after connection.
-      </div>
-    </div>
-  );
-}
-
-function PersonaTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void }) {
-  return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <Label>Persona</Label>
-        <Textarea
-          value={props.form.personaNote}
-          onChange={(event) => props.onChange({ personaNote: event.target.value })}
-          placeholder={'Example:\nWhite 30yo female\nConfident and playful\nAvoid mentioning real location'}
-          className="min-h-40"
-        />
-      </div>
-      <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
-        Private notes for how you present yourself on this network. Stored per saved network and shared by its live instances.
       </div>
     </div>
   );

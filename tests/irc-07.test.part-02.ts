@@ -23,7 +23,6 @@ test('irc connection routes direct user notices to the sender target', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -67,7 +66,6 @@ test('irc connection routes bot notice replies back to the source buffer', () =>
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -119,7 +117,6 @@ test('irc connection keeps direct service notices on the server buffer even afte
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

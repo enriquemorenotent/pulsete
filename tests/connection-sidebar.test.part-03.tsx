@@ -28,7 +28,6 @@ const makeNetwork = (
   hasPassword: overrides.hasPassword ?? false,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
-  personaNote: overrides.personaNote ?? '',
 });
 
 const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({

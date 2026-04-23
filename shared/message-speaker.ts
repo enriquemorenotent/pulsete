@@ -1,5 +1,4 @@
 import type {
-  AssistantAskEvidenceLine,
   ChatMessage,
   SpeakerAttributionConfidence,
   SpeakerRole,
@@ -8,11 +7,6 @@ import type {
 type MessageSpeakerLike = Pick<
   ChatMessage,
   'nick' | 'self' | 'speakerRole' | 'speakerNick' | 'attributionConfidence'
->;
-
-type EvidenceSpeakerLike = Pick<
-  AssistantAskEvidenceLine,
-  'speakerRole' | 'speakerNick' | 'attributionConfidence'
 >;
 
 const unknownSpeakerLabel = 'Unknown';
@@ -26,12 +20,6 @@ export const getSpeakerNick = (message: Pick<MessageSpeakerLike, 'nick' | 'speak
 export const getAttributionConfidence = (
   message: Pick<MessageSpeakerLike, 'attributionConfidence'>,
 ): SpeakerAttributionConfidence => message.attributionConfidence ?? 'low';
-
-export const getEvidenceSpeakerLabel = (line: EvidenceSpeakerLike) => (
-  line.speakerRole === 'self' && line.attributionConfidence === 'high'
-    ? 'You'
-    : line.speakerNick?.trim() || unknownSpeakerLabel
-);
 
 export const getTranscriptSpeakerLabel = (message: MessageSpeakerLike) => {
   if (message.self || (getSpeakerRole(message) === 'self' && getAttributionConfidence(message) === 'high')) {

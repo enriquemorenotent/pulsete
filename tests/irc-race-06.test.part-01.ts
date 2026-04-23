@@ -35,7 +35,6 @@ test('updating login fields during handshake restarts even on the same server', 
       password: 'oldpass',
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     { onEvent() {} }
   );
@@ -94,7 +93,6 @@ test('multi-line names replies accumulate users across repeated 353 numerics', (
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -142,7 +140,6 @@ test('IRC self and channel matching ignores nickname and channel casing', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -230,7 +227,6 @@ test('channel mode changes update nick privileges in the user list', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

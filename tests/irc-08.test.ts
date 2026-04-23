@@ -23,7 +23,6 @@ test('irc connection keeps unrelated auth notices on the server buffer', () => {
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -75,7 +74,6 @@ test('irc connection keeps unrelated cannot-send notices on the server buffer', 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -127,7 +125,6 @@ test('irc connection keeps message blocked notices on the server buffer', () => 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -179,7 +176,6 @@ test('irc connection keeps ambiguous delivery notices on the server buffer', () 
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {

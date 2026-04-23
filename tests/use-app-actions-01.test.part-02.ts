@@ -31,7 +31,6 @@ const network: NetworkProfile = {
   hasPassword: false,
   favorite: false,
   autoJoin: [],
-  personaNote: '',
 };
 
 const selectedBuffer: BufferState = {

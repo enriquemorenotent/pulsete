@@ -24,7 +24,6 @@ test('irc connection streams dedicated LIST replies without generic status noise
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -90,7 +89,6 @@ test('irc connection refuses a structured LIST while a raw LIST reply is still p
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
@@ -140,7 +138,6 @@ test('irc connection times out a stalled LIST, drains late numerics, and retries
       hasPassword: false,
       favorite: false,
       autoJoin: [],
-      personaNote: '',
     },
     {
       onEvent: (event) => {
