@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { sendComposerAndFollowBottom } from './chat-pane-send.js';
 import {
   isBackgroundDmAudioContactAllowed,
   type BackgroundDmAudioContact,
@@ -41,10 +40,8 @@ export type DesktopChatModelParams = {
     AppUiState,
     | 'bufferToolDialog'
     | 'closeBufferToolDialog'
-    | 'forceScrollToBottomRef'
     | 'messageDisplayMode'
     | 'openBufferToolDialog'
-    | 'scrollRef'
   >;
 };
 
@@ -110,15 +107,10 @@ export function useDesktopChatModel({
       completionContextKey: composerCompletion.contextKey,
       completionCandidates: composerCompletion.candidates,
       messageDisplayMode: ui.messageDisplayMode,
-      scrollRef: ui.scrollRef,
       onDraftChange: (value) => composer.setDraft(composerContextKey, value),
       onRecallOlderDraft: () => composer.recallOlderDraft(composerContextKey),
       onRecallNewerDraft: () => composer.recallNewerDraft(composerContextKey),
-      onSend: () =>
-        sendComposerAndFollowBottom({
-          sendComposer: actions.sendComposer,
-          forceScrollToBottomRef: ui.forceScrollToBottomRef,
-        }),
+      onSend: actions.sendComposer,
       selectedQueryMuted: Boolean(selectedMutedNick),
       mutedQueryNick: selectedMutedNick?.nick ?? null,
       queryNotificationsEnabled,
@@ -177,7 +169,6 @@ export function useDesktopChatModel({
       canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
       initialHistoryPending: selectedBufferHistory.initialHistoryPending,
       loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
-      onJumpToLatest: () => ui.forceScrollToBottomRef.current?.(),
       onLoadOlderHistory: selectedBufferHistory.loadOlderHistory,
       channelList,
       channelListNetwork,

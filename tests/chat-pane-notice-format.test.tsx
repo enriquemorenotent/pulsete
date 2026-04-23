@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { BufferState, ChannelState, ChatMessage, NetworkProfile } from '../shared/protocol.js';
 import type { ChannelListState } from '../web/src/app-types.js';
@@ -97,11 +96,10 @@ test('chat transcripts render sender notices inline without a notice badge', () 
       selectedMessages={[makeMessage()]}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
       onDraftChange={() => {}}
       onRecallOlderDraft={() => {}}
       onRecallNewerDraft={() => {}}
-      onSend={async () => {}}
+      onSend={async () => false}
       onAddFriend={async () => false}
       onRemoveFriend={async () => false}
       showChannelAutoJoin={false}

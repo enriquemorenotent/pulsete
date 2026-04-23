@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { FriendState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
@@ -25,11 +24,10 @@ test('channel transcripts keep the unread divider anchored after a day divider',
       selectedMessages={messages}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
-      onSend={async () => undefined}
+      onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       showChannelAutoJoin={false}
@@ -198,11 +196,10 @@ test('reconnecting channels rely on the inline status banner instead of header m
       selectedMessages={[]}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
-      onSend={async () => undefined}
+      onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       showChannelAutoJoin={false}

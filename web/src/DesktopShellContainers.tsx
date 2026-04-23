@@ -31,7 +31,6 @@ import {
   useDesktopSidebarModel,
 } from './useDesktopShellModel.js';
 import { useSelectedBufferEffects } from './useSelectedBufferEffects.js';
-import { useStickyScroll } from './useStickyScroll.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 
@@ -122,12 +121,6 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     selectedBuffer: workspace.selectedBuffer,
     selectedMessages,
     windowFocused,
-  });
-  useStickyScroll({
-    forceScrollToBottomRef: ui.forceScrollToBottomRef,
-    snapToBottomOnSelection: false,
-    scrollRef: ui.scrollRef,
-    selectedBufferId: workspace.selectedBuffer?.id,
   });
   const model = useDesktopChatModel({
     actions,

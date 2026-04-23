@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { FriendState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
@@ -41,11 +40,10 @@ test('offline channels surface an inline reconnect action', () => {
       selectedMessages={[]}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
-      onSend={async () => undefined}
+      onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       showChannelAutoJoin={false}
@@ -104,11 +102,10 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
       selectedMessages={[]}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
-      onSend={async () => undefined}
+      onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       showChannelAutoJoin={false}

@@ -1,4 +1,3 @@
-import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ChannelUserState, ChatMessage, FriendState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
@@ -28,11 +27,10 @@ export const renderChatPane = (
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
-      onSend={async () => undefined}
+      onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
@@ -51,7 +49,7 @@ export const renderChatPane = (
       onUpdateSelfNickAliases={overrides.canRepairSelfNickAliases ? async () => true : undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
-      onLoadOlderHistory={async () => undefined}
+      onLoadOlderHistory={async () => 0}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -70,11 +68,9 @@ export const renderQueryPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     friends: FriendState[];
-    onJumpToLatest: () => void;
     queryNotificationsEnabled: boolean;
     selectedQueryMuted: boolean;
     mutedQueryNick: string;
-    scrollRef: { current: HTMLDivElement | null };
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -84,11 +80,10 @@ export const renderQueryPane = (
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={overrides.scrollRef ?? createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
-      onSend={async () => undefined}
+      onSend={async () => false}
       selectedQueryMuted={overrides.selectedQueryMuted}
       mutedQueryNick={overrides.mutedQueryNick}
       queryNotificationsEnabled={overrides.queryNotificationsEnabled ?? false}
@@ -106,8 +101,7 @@ export const renderQueryPane = (
       onCloseSelfNickAliases={() => undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
-      onJumpToLatest={overrides.onJumpToLatest}
-      onLoadOlderHistory={async () => undefined}
+      onLoadOlderHistory={async () => 0}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -128,11 +122,10 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"
-      scrollRef={createRef<HTMLDivElement>()}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
-      onSend={async () => undefined}
+      onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       showChannelAutoJoin={false}

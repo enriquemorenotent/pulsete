@@ -16,14 +16,12 @@ export type AppUiState = {
   closePreferences: () => void;
   commandPaletteOpen: boolean;
   didAutoOpenManagerRef: { current: boolean };
-  forceScrollToBottomRef: { current: (() => void) | null };
   hideOfflineFriends: boolean;
   messageDisplayMode: MessageDisplayMode;
   openBufferToolDialog: (kind: BufferToolDialogKind, bufferId: string) => void;
   openCommandPalette: () => void;
   openPreferences: () => void;
   preferencesOpen: boolean;
-  scrollRef: { current: HTMLDivElement | null };
   setMessageDisplayMode: (mode: MessageDisplayMode) => void;
   socketRef: { current: SocketHandle | null };
   toggleHideOfflineFriends: () => void;
@@ -71,9 +69,7 @@ export function useAppUiState(): AppUiState {
   );
   const [messageDisplayMode, setMessageDisplayMode] = useState<MessageDisplayMode>('colors');
   const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const forceScrollToBottomRef = useRef<(() => void) | null>(null);
   const socketRef = useRef<SocketHandle | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
   const didAutoOpenManagerRef = useRef(false);
 
   useEffect(() => {
@@ -100,14 +96,12 @@ export function useAppUiState(): AppUiState {
     closePreferences,
     commandPaletteOpen,
     didAutoOpenManagerRef,
-    forceScrollToBottomRef,
     hideOfflineFriends,
     messageDisplayMode,
     openBufferToolDialog,
     openCommandPalette,
     openPreferences,
     preferencesOpen,
-    scrollRef,
     setMessageDisplayMode,
     socketRef,
     toggleHideOfflineFriends,

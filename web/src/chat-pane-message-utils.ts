@@ -1,9 +1,5 @@
 import type { ChatMessage } from '../../shared/protocol.js';
 
-export type MessageRenderBlock =
-  | { kind: 'day-divider'; key: string; label: string }
-  | { kind: 'single'; message: ChatMessage; messageIndex: number; hideTimestamp: boolean };
-
 export const formatMessageTime = (value: number) => {
   const date = new Date(value);
   return [
@@ -41,34 +37,6 @@ export const formatDayDividerLabel = (value: number, now = Date.now()) => {
     return 'Yesterday';
   }
   return dayKey;
-};
-
-export const buildRenderBlocks = (
-  messages: ChatMessage[],
-  options: { now?: number; listKind?: 'chat' | 'server' } = {},
-) => {
-  const now = options.now ?? Date.now();
-  const listKind = options.listKind ?? 'chat';
-  const blocks: MessageRenderBlock[] = [];
-  let previousDayKey: string | null = null;
-  let previousTimestampGroupKey: string | null = null;
-  messages.forEach((message, messageIndex) => {
-    const dayKey = getLocalDayKey(message.ts);
-    if (dayKey !== previousDayKey) {
-      blocks.push({
-        kind: 'day-divider',
-        key: `day-${dayKey}`,
-        label: formatDayDividerLabel(message.ts, now),
-      });
-      previousDayKey = dayKey;
-      previousTimestampGroupKey = null;
-    }
-    const timestampGroupKey = resolveTimestampGroupKey(message, listKind);
-    const hideTimestamp = timestampGroupKey !== null && timestampGroupKey === previousTimestampGroupKey;
-    blocks.push({ kind: 'single', message, messageIndex, hideTimestamp });
-    previousTimestampGroupKey = timestampGroupKey;
-  });
-  return blocks;
 };
 
 export const getServerMessageSourceLabel = (message: ChatMessage) => {

@@ -12,6 +12,7 @@ export type ParsedFormattedMessageContent = {
 };
 
 type FormattedMessageTextProps = {
+  onInlinePreviewLoad?: () => void;
   parsedContent?: ParsedFormattedMessageContent;
   renderInlinePreviews?: boolean;
   text: string;
@@ -55,7 +56,7 @@ export const hasVisibleFormattedMessageText = (content: ParsedFormattedMessageCo
 };
 
 export const FormattedMessageInlinePreviews = memo(function FormattedMessageInlinePreviews(
-  props: { hrefs: string[] },
+  props: { hrefs: string[]; onInlinePreviewLoad?: () => void },
 ) {
   const [activeHref, setActiveHref] = useState<string | null>(null);
 
@@ -78,6 +79,8 @@ export const FormattedMessageInlinePreviews = memo(function FormattedMessageInli
               alt={buildImageAltText(href)}
               loading="lazy"
               decoding="async"
+              onError={props.onInlinePreviewLoad}
+              onLoad={props.onInlinePreviewLoad}
               referrerPolicy="no-referrer"
               className="block max-h-80 max-w-full rounded-sm object-contain"
             />
@@ -169,7 +172,12 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
           </a>
         );
       })}
-      {props.renderInlinePreviews === false ? null : <FormattedMessageInlinePreviews hrefs={content.inlineImageHrefs} />}
+      {props.renderInlinePreviews === false ? null : (
+        <FormattedMessageInlinePreviews
+          hrefs={content.inlineImageHrefs}
+          onInlinePreviewLoad={props.onInlinePreviewLoad}
+        />
+      )}
     </>
   );
 });

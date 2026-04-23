@@ -228,7 +228,7 @@ test('loadOlderBufferHistory prepends older messages and updates hasOlder state'
   const olderMessage = { ...message, id: 'message-0', ts: 0 };
   const dispatched: Array<{ type: string; [key: string]: unknown }> = [];
 
-  await loadOlderBufferHistory({
+  const prependedCount = await loadOlderBufferHistory({
     beforeMessageId: message.id,
     bufferId: 'buffer-1',
     gatewayStatus: 'connected',
@@ -238,6 +238,7 @@ test('loadOlderBufferHistory prepends older messages and updates hasOlder state'
     loadHistory: async () => ({ messages: [olderMessage], hasMore: false }),
   });
 
+  assert.equal(prependedCount, 1);
   assert.deepEqual(dispatched, [
     { type: 'set-history-loading-older', value: true },
     { type: 'prepend-messages', messages: [olderMessage] },

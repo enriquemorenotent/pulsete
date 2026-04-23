@@ -1,4 +1,4 @@
-import { memo, type RefObject } from 'react';
+import { memo, useCallback, useReducer } from 'react';
 import type {
   BufferHistoryImportRequest,
   BufferState,
@@ -27,11 +27,10 @@ export type ChatPaneProps = {
   completionContextKey?: string | null;
   completionCandidates?: string[];
   messageDisplayMode: MessageDisplayMode;
-  scrollRef: RefObject<HTMLDivElement | null>;
   onDraftChange: (value: string) => void;
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
-  onSend: () => Promise<void>;
+  onSend: () => Promise<boolean>;
   selectedQueryMuted?: boolean;
   mutedQueryNick?: string | null;
   queryNotificationsEnabled?: boolean;
@@ -60,8 +59,7 @@ export type ChatPaneProps = {
   canLoadOlderHistory?: boolean;
   initialHistoryPending?: boolean;
   loadingOlderHistory?: boolean;
-  onJumpToLatest?: () => void;
-  onLoadOlderHistory?: () => Promise<void>;
+  onLoadOlderHistory?: () => Promise<number>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   channelList: ChannelListState;
@@ -75,6 +73,10 @@ export type ChatPaneProps = {
 };
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
+  const [followOutputRequestId, requestFollowOutput] = useReducer(
+    (value: number) => value + 1,
+    0,
+  );
   const selectedBuffer = props.workspace.selectedBuffer;
   const selectedChatBuffer: (BufferState & { kind: 'channel' | 'query' }) | null =
     selectedBuffer && (selectedBuffer.kind === 'channel' || selectedBuffer.kind === 'query')
@@ -84,6 +86,13 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
     props.workspace.mode === 'server-offline';
+  const handleSend = useCallback(async () => {
+    const submitted = await props.onSend();
+    if (submitted) {
+      requestFollowOutput();
+    }
+    return submitted;
+  }, [props.onSend]);
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
@@ -122,15 +131,14 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneMessageList
         selectedBuffer={props.workspace.selectedBuffer}
         channelUsers={props.workspace.selectedChannel?.users ?? []}
+        followOutputRequestId={followOutputRequestId}
         messages={props.selectedMessages}
-        scrollRef={props.scrollRef}
         emptyBody={props.workspace.emptyBody}
         mode={props.messageDisplayMode}
         listKind={isServerBuffer ? 'server' : 'chat'}
         canLoadOlderHistory={props.canLoadOlderHistory}
         initialHistoryPending={props.initialHistoryPending}
         loadingOlderHistory={props.loadingOlderHistory}
-        onJumpToLatest={props.onJumpToLatest}
         onOpenChannel={props.onOpenMentionedChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
         onLoadOlderHistory={props.onLoadOlderHistory}
@@ -147,7 +155,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           onDraftChange={props.onDraftChange}
           onRecallOlderDraft={props.onRecallOlderDraft}
           onRecallNewerDraft={props.onRecallNewerDraft}
-          onSend={props.onSend}
+          onSend={handleSend}
         />
       ) : null}
       <ChannelListDialog

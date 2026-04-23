@@ -39,7 +39,7 @@ export type SelectedBufferHistoryControls = {
   canLoadOlderHistory: boolean;
   initialHistoryPending: boolean;
   isLoadingOlderHistory: boolean;
-  loadOlderHistory: () => Promise<void>;
+  loadOlderHistory: () => Promise<number>;
 };
 
 export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams): SelectedBufferHistoryControls {
@@ -119,7 +119,7 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
   }, [params.dispatch, params.gatewayStatus, hasLoadedHistory, selectedBufferId]);
 
   const loadOlderHistory = useCallback(async () => {
-    await loadOlderBufferHistory({
+    return loadOlderBufferHistory({
       beforeMessageId: params.selectedMessages[0]?.id ?? null,
       bufferId: selectedBufferId,
       gatewayStatus: params.gatewayStatus,
@@ -182,16 +182,18 @@ export async function loadOlderBufferHistory({
 }: LoadOlderBufferHistoryParams) {
   if (!bufferId || !beforeMessageId || gatewayStatus !== 'connected') {
     dispatch({ type: 'set-history-loading-older', value: false });
-    return;
+    return 0;
   }
   dispatch({ type: 'set-history-loading-older', value: true });
   try {
     const payload = await loadHistory(bufferId, undefined, beforeMessageId);
     applyHistoryPayload(dispatch, bufferId, payload, 'prepend-messages');
     dispatch({ type: 'set-history-loading-older', value: false });
+    return payload.messages.length;
   } catch {
     dispatch({ type: 'set-history-loading-older', value: false });
     dispatch({ type: 'set-banner', banner: { kind: 'error', message: 'Failed to load older history' } });
+    return 0;
   }
 }
 

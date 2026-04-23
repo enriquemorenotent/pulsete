@@ -15,6 +15,7 @@ import type { MessageParticipantPresentation } from './message-participant-prese
 export const ChatPaneExpandedMessageRow = (props: {
   message: ChatMessage;
   mode: MessageDisplayMode;
+  onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string) => void;
   participant: MessageParticipantPresentation;
@@ -51,6 +52,7 @@ export const ChatPaneExpandedMessageRow = (props: {
         <FormattedMessageText
           text={props.message.body}
           mode={props.mode}
+          onInlinePreviewLoad={props.onInlinePreviewLoad}
           onOpenChannel={props.onOpenChannel}
         />
       </p>

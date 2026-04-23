@@ -57,7 +57,7 @@ type ChatPaneComposerProps = {
   onDraftChange: (value: string) => void;
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
-  onSend: () => Promise<void>;
+  onSend: () => Promise<boolean>;
 };
 
 export function ChatPaneComposer(props: ChatPaneComposerProps) {
