@@ -1,6 +1,10 @@
-import { existsSync, mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { applyStorageMigrations, bootstrapStorageSchema } from './storage-migrations.js';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
+import {
+  applyStorageMigrations,
+  bootstrapStorageSchema,
+  currentStorageSchemaVersion,
+} from './storage-migrations.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
 
 export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => {
@@ -11,6 +15,10 @@ export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => 
   const hasUserTables = databaseHasUserTables(db);
   if (!hasUserTables) {
     bootstrapStorageSchema(db);
+  }
+  const version = getDatabaseUserVersion(db);
+  if (existedBeforeOpen && hasUserTables && version < currentStorageSchemaVersion) {
+    createPreMigrationBackup(db, filePath, version);
   }
   applyStorageMigrations(db, { existedBeforeOpen: existedBeforeOpen && hasUserTables });
   return db;
@@ -33,6 +41,30 @@ const databaseHasUserTables = (db: SqliteDb) =>
       `).get() as { count?: number } | undefined
     )?.count ?? 0
   ) > 0;
+
+const getDatabaseUserVersion = (db: SqliteDb) =>
+  Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
+
+const createPreMigrationBackup = (db: SqliteDb, filePath: string, fromVersion: number) => {
+  db.prepare('PRAGMA wal_checkpoint(PASSIVE)').get();
+  const backupPath = preMigrationBackupPath(filePath, fromVersion, new Date());
+  mkdirSync(dirname(backupPath), { recursive: true });
+  copyFileSync(filePath, backupPath);
+  copySidecarIfPresent(`${filePath}-wal`, `${backupPath}-wal`);
+  copySidecarIfPresent(`${filePath}-shm`, `${backupPath}-shm`);
+};
+
+const preMigrationBackupPath = (filePath: string, fromVersion: number, date: Date) => {
+  const timestamp = date.toISOString().replace(/[:.]/g, '-');
+  const name = `${basename(filePath)}.pre-migration-v${fromVersion}-to-v${currentStorageSchemaVersion}-${timestamp}.sqlite`;
+  return join(dirname(filePath), 'backups', name);
+};
+
+const copySidecarIfPresent = (source: string, destination: string) => {
+  if (existsSync(source)) {
+    copyFileSync(source, destination);
+  }
+};
 
 export const runInTransaction = <T>(db: SqliteDb, task: () => T) => {
   db.exec('BEGIN IMMEDIATE');

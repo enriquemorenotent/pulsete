@@ -21,14 +21,11 @@ type StorageMigration = {
 const storageMigrations: readonly StorageMigration[] = [
   {
     version: 1,
-    apply: (db, context) => {
+    apply: (db) => {
       ensureColumn(db, 'networks', 'autoJoin', "TEXT NOT NULL DEFAULT '[]'");
       ensureColumn(db, 'networks', 'altNicks', "TEXT NOT NULL DEFAULT '[]'");
       ensureColumn(db, 'networks', 'realName', "TEXT NOT NULL DEFAULT ''");
       ensureColumn(db, 'networks', 'favorite', 'INTEGER NOT NULL DEFAULT 0');
-      if (context.existedBeforeOpen) {
-        resetStoredMessageHistory(db);
-      }
     },
   },
   {
@@ -192,13 +189,4 @@ const getUserVersion = (db: SqliteDb) =>
 
 const setUserVersion = (db: SqliteDb, version: number) => {
   db.exec(`PRAGMA user_version = ${version}`);
-};
-
-const resetStoredMessageHistory = (db: SqliteDb) => {
-  ensureColumn(db, 'buffers', 'priorityUnread', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'buffers', 'lastReadTs', 'INTEGER');
-  ensureColumn(db, 'buffers', 'lastReadMessageId', 'TEXT');
-  db.exec('DELETE FROM messages');
-  db.prepare('UPDATE buffers SET unread = 0, priorityUnread = 0, lastReadTs = NULL, lastReadMessageId = NULL, updatedAt = ?')
-    .run(Date.now());
 };
