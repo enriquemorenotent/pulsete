@@ -59,7 +59,7 @@ export const parseNetworkInput = (body: unknown, id?: string): NetworkInput => {
     requireIrcToken(data.authAccount, 'Authentication account cannot contain whitespace');
   }
   if (data.password !== undefined) {
-    requireIrcToken(data.password, 'Password cannot contain whitespace');
+    requireSingleLineValue(data.password, 'Password cannot contain carriage returns or line feeds');
   }
   return {
     ...data,

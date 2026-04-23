@@ -7,7 +7,8 @@ import { waitFor } from './helpers/async-test-helpers.js';
 
 test('irc connection can authenticate through SASL before autojoin', async () => {
   const received: string[] = [];
-  const expectedPayload = Buffer.from('\u0000account\u0000hunter2', 'utf8').toString('base64');
+  const password = ' hunter 2 ';
+  const expectedPayload = Buffer.from(`\u0000account\u0000${password}`, 'utf8').toString('base64');
 
   const server = net.createServer((socket) => {
     socket.setEncoding('utf8');
@@ -98,7 +99,7 @@ test('irc connection can authenticate through SASL before autojoin', async () =>
       hasPassword: true,
       authMethod: 'sasl-plain',
       authAccount: 'account',
-      password: 'hunter2',
+      password,
       favorite: false,
       autoJoin: ['#chat'],
     },
@@ -113,11 +114,10 @@ test('irc connection can authenticate through SASL before autojoin', async () =>
   await waitFor(() => received.includes('CAP END'));
   await waitFor(() => received.includes('JOIN #chat'));
 
-  assert.equal(received.includes('PASS hunter2'), false);
+  assert.equal(received.some((line) => line.startsWith('PASS ')), false);
   assert.ok(received.indexOf('CAP END') < received.indexOf('JOIN #chat'));
   assert.ok(received.indexOf(`AUTHENTICATE ${expectedPayload}`) < received.indexOf('CAP END'));
 
   connection.disconnect();
   server.close();
 });
-

@@ -16,6 +16,7 @@ import {
 import { isEncryptedSecret } from './network-secret.js';
 import { badRequest, notFound } from './app-error.js';
 import type { SecretBox } from './network-secret.js';
+import { validatePasswordForAuthMethod } from './network-password.js';
 import type { NetworkCountRow, NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-types.js';
 import {
   defaultNetworkTemplates,
@@ -65,8 +66,9 @@ export const upsertNetwork = (
   const now = Date.now();
   const existing = input.id ? (getNetworkRow(db, input.id) ?? null) : null;
   const template = validateTemplateRelationship(db, input, existing);
-  const storedPassword = resolveStoredPassword(input, secretBox, existing, template);
   const storedAuthMethod = resolveStoredAuthMethod(input, existing, template);
+  validatePasswordForAuthMethod(input.password, storedAuthMethod);
+  const storedPassword = resolveStoredPassword(input, secretBox, existing, template);
   const storedAuthTarget = resolveStoredAuthTarget(input, existing, template);
   const storedAuthAccount = resolveStoredAuthAccount(input, existing, template);
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);

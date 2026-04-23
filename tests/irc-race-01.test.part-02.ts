@@ -10,6 +10,7 @@ test('sasl plain connections negotiate capabilities before completing registrati
   const originalConnect = net.connect;
   const writes: string[] = [];
   const events: Array<Record<string, unknown>> = [];
+  const password = ' hunter 2 ';
   const socket = createMockSocket(writes);
   net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
 
@@ -29,7 +30,7 @@ test('sasl plain connections negotiate capabilities before completing registrati
       hasPassword: true,
       authMethod: 'sasl-plain',
       authAccount: 'account',
-      password: 'hunter2',
+      password,
       favorite: false,
       autoJoin: [],
     },
@@ -59,7 +60,7 @@ test('sasl plain connections negotiate capabilities before completing registrati
     handleIrcLine(connection, ':irc.example AUTHENTICATE +');
     assert.equal(
       writes.at(-1),
-      `AUTHENTICATE ${Buffer.from('\u0000account\u0000hunter2', 'utf8').toString('base64')}\r\n`
+      `AUTHENTICATE ${Buffer.from(`\u0000account\u0000${password}`, 'utf8').toString('base64')}\r\n`
     );
 
     handleIrcLine(connection, ':irc.example 903 tester :SASL authentication successful');
@@ -216,4 +217,3 @@ test('nickserv identify success accepts configured service targets and notice st
   ]);
   assert.equal(connection.lifecycle.pendingNickservAutoJoinTarget, null);
 });
-

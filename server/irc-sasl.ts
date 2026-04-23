@@ -39,7 +39,7 @@ export const handleRegistrationAuthLine = (connection: IrcRegistrationContext, c
 };
 
 export const buildServerPassLines = (profile: RuntimeNetworkProfile) =>
-  resolveNetworkAuthMethod(profile) === 'server-pass' && profile.password ? [`PASS ${profile.password}`] : [];
+  resolveNetworkAuthMethod(profile) === 'server-pass' && profile.password ? [`PASS :${profile.password}`] : [];
 
 export const buildCapabilityNegotiationLines = (_profile: RuntimeNetworkProfile) => ['CAP LS 302'];
 

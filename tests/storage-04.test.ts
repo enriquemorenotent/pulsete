@@ -121,20 +121,52 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
   assert.equal(storage.networks.getRuntime(network.id)?.password, undefined);
 });
 
-test('password-only updates infer server-pass when authMethod is omitted', () => {
+test('password-only updates infer server-pass when authMethod is omitted and preserve whitespace', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
   const storage = new Storage(file);
   const network = storage.networks.upsert(createNetworkInput());
+  const password = ' server-secret ';
 
   const updated = storage.networks.upsert(createNetworkInput({
     id: network.id,
-    password: 'server-secret',
+    password,
   }));
 
   assert.equal(updated.authMethod, 'server-pass');
   assert.equal(updated.hasPassword, true);
-  assert.equal(storage.networks.getRuntime(network.id)?.password, 'server-secret');
+  assert.equal(storage.networks.getRuntime(network.id)?.password, password);
+});
+
+test('storage validates passwords by auth method', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const saslPassword = ' secret pass ';
+
+  const saslNetwork = storage.networks.upsert(createNetworkInput({
+    authMethod: 'sasl-plain',
+    authAccount: 'account',
+    password: saslPassword,
+  }));
+
+  assert.equal(storage.networks.getRuntime(saslNetwork.id)?.password, saslPassword);
+  assert.throws(
+    () => storage.networks.upsert(createNetworkInput({
+      name: 'NickServNet',
+      authMethod: 'nickserv',
+      authTarget: 'NickServ',
+      password: 'secret code',
+    })),
+    /NickServ passwords cannot contain whitespace/
+  );
+  assert.throws(
+    () => storage.networks.upsert(createNetworkInput({
+      name: 'MultilineNet',
+      password: 'secret\r\ncode',
+    })),
+    /Password cannot contain carriage returns or line feeds/
+  );
 });
 
 test('storage rejects auth methods that do not have a saved password', () => {

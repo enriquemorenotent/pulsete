@@ -55,3 +55,28 @@ test('network form includes the explicit auth account for sasl', () => {
   assert.equal(payload.authMethod, 'sasl-plain');
   assert.equal(payload.authAccount, 'alice');
 });
+
+test('network form preserves exact passwords for password-based auth methods', () => {
+  const payload = toSaveNetworkPayload({
+    id: 'network-1',
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: '6667',
+    tls: false,
+    nick: 'tester',
+    nick2: 'tester_',
+    nick3: 'tester__',
+    username: 'ident',
+    realName: 'Tester Example',
+    authMethod: 'sasl-plain',
+    authTarget: 'NickServ',
+    authAccount: 'alice',
+    password: ' secret pass ',
+    clearPassword: false,
+    hasSavedPassword: false,
+    favorite: false,
+    autoJoin: '#chat',
+  });
+
+  assert.equal(payload.password, ' secret pass ');
+});

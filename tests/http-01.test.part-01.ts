@@ -213,4 +213,3 @@ test('network save rejects auth methods without a saved password', async () => {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
-

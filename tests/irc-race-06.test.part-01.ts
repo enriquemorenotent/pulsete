@@ -32,7 +32,7 @@ test('updating login fields during handshake restarts even on the same server', 
       username: 'olduser',
       realName: 'Old User',
       hasPassword: true,
-      password: 'oldpass',
+      password: ' oldpass ',
       favorite: false,
       autoJoin: [],
     },
@@ -42,9 +42,8 @@ test('updating login fields during handshake restarts even on the same server', 
   try {
     connection.connect();
     sockets[0].emit('connect');
-
     assert.deepEqual(firstWrites, [
-      'PASS oldpass\r\n',
+      'PASS : oldpass \r\n',
       'CAP LS 302\r\n',
       'NICK oldnick\r\n',
       'USER olduser 0 * :Old User\r\n',
@@ -56,16 +55,14 @@ test('updating login fields during handshake restarts even on the same server', 
       altNicks: ['newnick_', 'newnick__'],
       username: 'newuser',
       realName: 'New User',
-      password: 'newpass',
+      password: ' newpass ',
     });
 
     assert.equal(connectCalls, 2);
     assert.equal(sockets[0].destroyed, true);
-
     sockets[1].emit('connect');
-
     assert.deepEqual(secondWrites, [
-      'PASS newpass\r\n',
+      'PASS : newpass \r\n',
       'CAP LS 302\r\n',
       'NICK newnick\r\n',
       'USER newuser 0 * :New User\r\n',

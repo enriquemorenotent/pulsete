@@ -186,10 +186,9 @@ test('irc connection can identify through NickServ before autojoin', async () =>
   sendIdentifySuccess();
   await waitFor(() => received.includes('JOIN #chat'));
 
-  assert.equal(received.includes('PASS hunter2'), false);
+  assert.equal(received.some((line) => line.startsWith('PASS ')), false);
   assert.ok(received.indexOf('PRIVMSG NickServ :IDENTIFY account hunter2') < received.indexOf('JOIN #chat'));
 
   connection.disconnect();
   server.close();
 });
-

@@ -71,7 +71,7 @@ test('updating a profile while connecting restarts the handshake with the new se
     sockets[1].emit('connect');
 
     assert.deepEqual(secondWrites, [
-      'PASS newpass\r\n',
+      'PASS :newpass\r\n',
       'CAP LS 302\r\n',
       'NICK newnick\r\n',
       'USER newuser 0 * :New User\r\n',
@@ -83,4 +83,3 @@ test('updating a profile while connecting restarts the handshake with the new se
     net.connect = originalConnect;
   }
 });
-

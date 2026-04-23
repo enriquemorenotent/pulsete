@@ -97,7 +97,7 @@ export const toForm = (network: NetworkProfile): NetworkForm => ({
 
 export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
   const usesAuthAccount = form.authMethod === 'nickserv' || form.authMethod === 'sasl-plain';
-  const password = form.authMethod === 'none' ? '' : form.password.trim();
+  const password = form.authMethod === 'none' ? '' : form.password;
   const authAccount = usesAuthAccount ? form.authAccount.trim() : '';
   return {
     id: form.id,

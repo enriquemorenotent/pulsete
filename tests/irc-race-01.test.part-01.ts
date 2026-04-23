@@ -228,7 +228,7 @@ test('tls connections wait for secureConnect before sending credentials', () => 
     socket.emit('secureConnect');
 
     assert.deepEqual(writes, [
-      'PASS secret\r\n',
+      'PASS :secret\r\n',
       'CAP LS 302\r\n',
       'NICK tester\r\n',
       'USER tester 0 * :Test User\r\n',
@@ -238,4 +238,3 @@ test('tls connections wait for secureConnect before sending credentials', () => 
     connection.disconnect();
   }
 });
-
