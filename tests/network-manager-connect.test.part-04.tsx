@@ -13,6 +13,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   id: overrides.id ?? 'saved-network-1',
   templateId: overrides.templateId ?? null,
   managerHidden: overrides.managerHidden ?? false,
+  connectionClosed: overrides.connectionClosed,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -84,4 +85,3 @@ test('network manager detail helpers produce scan-friendly UI copy', () => {
   assert.equal(getNetworkManagerStatusLabel({ phase: 'connecting', serverName: null, nick: network.nick }), 'Connecting');
   assert.equal(getNetworkManagerStatusLabel({ phase: 'offline', serverName: null, nick: network.nick }), 'Offline');
 });
-

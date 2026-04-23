@@ -29,7 +29,15 @@ test('websocket join, message, and part commands reach the live IRC connection',
   const { socket } = await connectWebSocket(port);
 
   try {
+    const instancePromise = waitForWebSocketMessage(
+      socket,
+      (message) =>
+        message.type === 'network.upsert'
+        && (message.network as { templateId?: string } | undefined)?.templateId === network.id,
+      'connection instance network.upsert'
+    );
     socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
+    const connectionId = ((await instancePromise) as { network: { id: string } }).network.id;
     await waitFor(() => ircReceived.includes('NICK tester'));
 
     const joinPromise = waitForWebSocketMessage(
@@ -39,7 +47,7 @@ test('websocket join, message, and part commands reach the live IRC connection',
         && (message.pendingChannel as { channel?: string } | undefined)?.channel === '#help',
       'websocket join pending channel'
     );
-    socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: '#help' }));
+    socket.send(JSON.stringify({ type: 'channel.join', networkId: connectionId, channel: '#help' }));
     assert.equal(((await joinPromise) as { pendingChannel: { channel: string } }).pendingChannel.channel, '#help');
     await waitFor(() => ircReceived.includes('JOIN #help'));
 
@@ -55,7 +63,7 @@ test('websocket join, message, and part commands reach the live IRC connection',
     );
     socket.send(JSON.stringify({
       type: 'message.send',
-      networkId: network.id,
+      networkId: connectionId,
       target: 'helper',
       body: 'hello there',
       kind: 'message',
@@ -69,15 +77,17 @@ test('websocket join, message, and part commands reach the live IRC connection',
 
     socket.send(JSON.stringify({
       type: 'raw.send',
-      networkId: network.id,
+      networkId: connectionId,
       raw: 'WHOIS alice',
     }));
     await waitFor(() => ircReceived.includes('WHOIS alice'));
 
-    socket.send(JSON.stringify({ type: 'channel.part', networkId: network.id, channel: '#help' }));
+    socket.send(JSON.stringify({ type: 'channel.part', networkId: connectionId, channel: '#help' }));
     await waitFor(() => ircReceived.some((line) => line.startsWith('PART #help :Leaving')));
   } finally {
-    runtime.sessions.disconnect(network.id);
+    for (const connectionId of Array.from(runtime.connections.keys())) {
+      runtime.sessions.disconnect(connectionId);
+    }
     await closeWebSocket(socket);
     ircServer.closeConnections();
     await new Promise<void>((resolve, reject) => ircServer.server.close((error) => (error ? reject(error) : resolve())));

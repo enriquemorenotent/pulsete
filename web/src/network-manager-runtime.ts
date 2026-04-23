@@ -18,7 +18,7 @@ export function buildManagedRuntime(
   if (openInstances.some((network) => networkStates[network.id]?.phase === 'connecting')) {
     return { phase: 'connecting' as const, serverName: null, nick: managedNetwork.nick };
   }
-  return instances.length > 0 ? { phase: 'offline' as const, serverName: null, nick: managedNetwork.nick } : null;
+  return openInstances.length > 0 ? { phase: 'offline' as const, serverName: null, nick: managedNetwork.nick } : null;
 }
 
 export const buildManagedRuntimeMap = (

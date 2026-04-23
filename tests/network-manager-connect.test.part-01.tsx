@@ -13,6 +13,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   id: overrides.id ?? 'saved-network-1',
   templateId: overrides.templateId ?? null,
   managerHidden: overrides.managerHidden ?? false,
+  connectionClosed: overrides.connectionClosed,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -103,6 +104,7 @@ const createHarness = (session: AppSessionSnapshot) => {
       dispatched.push(action);
     },
     getState: () => session.state,
+    getWorkspace: () => session.workspace,
     updateBanner: (kind, message) => {
       banners.push({ kind, message });
     },

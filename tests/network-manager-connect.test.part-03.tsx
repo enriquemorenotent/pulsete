@@ -6,13 +6,13 @@ import { createNetworkActions } from '../web/src/app-actions-networks.js';
 import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
-import { createConnectionInstancePayload } from '../web/src/network-form.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'saved-network-1',
   templateId: overrides.templateId ?? null,
   managerHidden: overrides.managerHidden ?? false,
+  connectionClosed: overrides.connectionClosed,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -113,6 +113,7 @@ const createHarness = (session: AppSessionSnapshot) => {
       dispatched.push(action);
     },
     getState: () => session.state,
+    getWorkspace: () => session.workspace,
     updateBanner: (kind, message) => {
       banners.push({ kind, message });
     },
@@ -208,11 +209,8 @@ test('connectNetwork creates a new hidden instance when no peer exists yet', asy
       method: String(init?.method ?? 'GET'),
       body: String(init?.body ?? ''),
     });
-    if (String(input) === '/api/networks') {
-      return okJson({ network: instance, serverBuffer, messages: [] });
-    }
-    if (String(input) === `/api/networks/${instance.id}/connect`) {
-      return okJson({ ok: true });
+    if (String(input) === `/api/networks/${saved.id}/connect`) {
+      return okJson({ ok: true, network: instance, serverBuffer, messages: [] });
     }
     throw new Error(`Unexpected fetch: ${String(input)}`);
   }) as typeof fetch;
@@ -223,12 +221,7 @@ test('connectNetwork creates a new hidden instance when no peer exists yet', asy
     assert.equal(started, true);
     assert.deepEqual(fetchCalls, [
       {
-        url: '/api/networks',
-        method: 'POST',
-        body: JSON.stringify(createConnectionInstancePayload(saved)),
-      },
-      {
-        url: `/api/networks/${instance.id}/connect`,
+        url: `/api/networks/${saved.id}/connect`,
         method: 'POST',
         body: '{}',
       },

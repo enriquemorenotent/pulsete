@@ -92,27 +92,31 @@ test('http connect and disconnect routes drive the IRC connection lifecycle', as
   try {
     const connectedStatePromise = waitForWebSocketMessage(
       socket,
-      (message) => message.type === 'network.state' && message.networkId === network.id && message.phase === 'connected',
+      (message) => message.type === 'network.state' && message.phase === 'connected',
       'connected network.state'
     );
     const connectResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/connect`, {});
     assert.equal(connectResponse.status, 200);
     assert.equal(connectResponse.json.ok, true);
+    const connectionId = (connectResponse.json.network as { id: string }).id;
+    assert.notEqual(connectionId, network.id);
     await waitFor(() => ircReceived.includes('NICK tester'));
-    await connectedStatePromise;
+    assert.equal((await connectedStatePromise as { networkId: string }).networkId, connectionId);
 
     const disconnectedStatePromise = waitForWebSocketMessage(
       socket,
-      (message) => message.type === 'network.state' && message.networkId === network.id && message.phase === 'offline',
+      (message) => message.type === 'network.state' && message.networkId === connectionId && message.phase === 'offline',
       'disconnected network.state'
     );
-    const disconnectResponse = await requestJson(port, 'POST', `/api/networks/${network.id}/disconnect`, {});
+    const disconnectResponse = await requestJson(port, 'POST', `/api/networks/${connectionId}/disconnect`, {});
     assert.equal(disconnectResponse.status, 200);
     assert.equal(disconnectResponse.json.ok, true);
     await waitFor(() => ircReceived.some((line) => line.startsWith('QUIT :Client disconnecting')));
     await disconnectedStatePromise;
   } finally {
-    runtime.sessions.disconnect(network.id);
+    for (const connectionId of Array.from(runtime.connections.keys())) {
+      runtime.sessions.disconnect(connectionId);
+    }
     await closeWebSocket(socket);
     ircServer.closeConnections();
     await new Promise<void>((resolve, reject) => ircServer.server.close((error) => (error ? reject(error) : resolve())));

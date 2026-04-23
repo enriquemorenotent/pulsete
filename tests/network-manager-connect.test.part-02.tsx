@@ -12,6 +12,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   id: overrides.id ?? 'saved-network-1',
   templateId: overrides.templateId ?? null,
   managerHidden: overrides.managerHidden ?? false,
+  connectionClosed: overrides.connectionClosed,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -112,6 +113,7 @@ const createHarness = (session: AppSessionSnapshot) => {
       dispatched.push(action);
     },
     getState: () => session.state,
+    getWorkspace: () => session.workspace,
     updateBanner: (kind, message) => {
       banners.push({ kind, message });
     },
@@ -144,7 +146,7 @@ test('connectNetwork reconnects an existing offline peer instead of creating a d
       body: String(init?.body ?? ''),
     });
     if (String(input) === `/api/networks/${peer.id}/connect`) {
-      return okJson({ ok: true });
+      return okJson({ ok: true, network: peer, serverBuffer, messages: [] });
     }
     throw new Error(`Unexpected fetch: ${String(input)}`);
   }) as typeof fetch;

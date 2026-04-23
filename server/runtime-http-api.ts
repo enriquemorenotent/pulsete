@@ -16,7 +16,7 @@ type CreateRuntimeHttpApiParams = {
   mutedNicks: RuntimeMutedNickMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
-  sessions: Pick<RuntimeNetworkSessionService, 'connect' | 'disconnect'>;
+  sessions: Pick<RuntimeNetworkSessionService, 'disconnect'>;
 };
 
 export const createRuntimeHttpApi = ({
@@ -34,7 +34,7 @@ export const createRuntimeHttpApi = ({
     duplicate: (networkId) => networks.duplicateNetwork(networkId),
     remove: (networkId) => networks.deleteNetwork(networkId),
     close: (networkId) => networks.closeConnection(networkId),
-    connect: (networkId) => sessions.connect(networkId),
+    connect: (networkId) => networks.connectNetwork(networkId),
     disconnect: (networkId) => sessions.disconnect(networkId),
   },
   buffers: {

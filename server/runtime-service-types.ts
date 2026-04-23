@@ -5,6 +5,7 @@ import type {
   BufferSelfNickAliasesRequest,
   BufferState,
   ClientMessage,
+  NetworkProfile,
   ServerMessage,
 } from '../shared/protocol.js';
 import type { NetworkLifecycleService } from './network-lifecycle-service.js';
@@ -60,6 +61,7 @@ export type RuntimeNetworkMutations = {
   saveNetwork: NetworkLifecycleService['saveNetwork'];
   duplicateNetwork: NetworkLifecycleService['duplicateNetwork'];
   deleteNetwork: NetworkLifecycleService['deleteNetwork'];
+  connectNetwork(networkId: string): { network: NetworkProfile; serverBuffer: BufferState | null; messages: readonly ServerMessage[] };
   closeConnection: NetworkLifecycleService['closeConnection'];
 };
 
@@ -70,7 +72,7 @@ export type RuntimeHttpApi = {
     duplicate: RuntimeNetworkMutations['duplicateNetwork'];
     remove: RuntimeNetworkMutations['deleteNetwork'];
     close: RuntimeNetworkMutations['closeConnection'];
-    connect(networkId: string): ReturnType<RuntimeNetworkSessionService['connect']>;
+    connect: RuntimeNetworkMutations['connectNetwork'];
     disconnect(networkId: string): void;
   };
   buffers: {

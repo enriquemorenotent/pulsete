@@ -148,10 +148,21 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
     deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
+    connectNetwork: (networkId) => {
+      const opened = networkMutations.openConnection(networkId);
+      const result = publishMutation({
+        network: opened.network,
+        serverBuffer: opened.serverBuffer,
+        messages: opened.messages,
+      });
+      if (opened.shouldConnect) {
+        sessions.connect(opened.network.id);
+      }
+      return result;
+    },
     closeConnection: (networkId) => publishMutation(networkMutations.closeConnection(networkId)),
   };
   const sessionMutations = {
-    connect: (networkId: string) => publishMutation(sessions.connect(networkId)),
     disconnect: (networkId: string) => sessions.disconnect(networkId),
   };
   const http = createRuntimeHttpApi({

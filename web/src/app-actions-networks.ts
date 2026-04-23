@@ -12,7 +12,7 @@ import type { State } from './app-types.js';
 import { api } from './client.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { resolveCurrentChannelAutoJoinState, toggleChannelAutoJoin } from './channel-autojoin.js';
-import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm } from './network-form.js';
+import { toSaveNetworkPayload, type NetworkForm } from './network-form.js';
 
 type NetworkActionParams = Pick<
   AppActionContext,
@@ -107,7 +107,6 @@ export const createNetworkActions = ({
 
   const connectNetwork = async (network: NetworkProfile) => {
     const state = getState();
-    const conversation = readConversation(getState, getConversation);
     const plan = resolveManagedNetworkConnectPlan({
       network,
       networks: state.domain.networks,
@@ -119,10 +118,9 @@ export const createNetworkActions = ({
     if (plan.kind === 'reconnect-existing-peer') {
       return executeMutation({
         request: () => api.connectNetwork(plan.peer.id),
-        onSuccess: () => {
-          const buffer = conversation.findServerBuffer(plan.peer.id);
-          if (buffer) {
-            selectBuffer(dispatch, buffer);
+        onSuccess: (result) => {
+          if (result.serverBuffer) {
+            selectBuffer(dispatch, result.serverBuffer);
           }
         },
         mapResult: () => true,
@@ -132,14 +130,10 @@ export const createNetworkActions = ({
       });
     }
     return executeMutation({
-      request: async () => {
-        const instance = await api.saveNetwork(createConnectionInstancePayload(network));
-        await api.connectNetwork(instance.network.id);
-        return { instance, messages: instance.messages };
-      },
-      onSuccess: ({ instance }) => {
-        if (instance.serverBuffer) {
-          selectBuffer(dispatch, instance.serverBuffer);
+      request: () => api.connectNetwork(network.id),
+      onSuccess: (result) => {
+        if (result.serverBuffer) {
+          selectBuffer(dispatch, result.serverBuffer);
         }
       },
       mapResult: () => true,
@@ -152,6 +146,11 @@ export const createNetworkActions = ({
   const reconnectNetwork = async (network: NetworkProfile) => {
     return executeMutation({
       request: () => api.connectNetwork(network.id),
+      onSuccess: (result) => {
+        if (result.serverBuffer) {
+          selectBuffer(dispatch, result.serverBuffer);
+        }
+      },
       mapResult: () => true,
       successMessage: 'Reconnect requested',
       errorMessage: 'Failed to reconnect',

@@ -62,10 +62,13 @@ export const api = {
       },
     ),
   connectNetwork: (networkId: string) =>
-    apiRequest<{ messages: ServerMessage[]; ok: boolean }>(`/api/networks/${networkId}/connect`, {
-      method: 'POST',
-      body: '{}',
-    }),
+    apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; ok: boolean; serverBuffer: BufferState | null }>(
+      `/api/networks/${networkId}/connect`,
+      {
+        method: 'POST',
+        body: '{}',
+      },
+    ),
   disconnectNetwork: (networkId: string) =>
     apiRequest<{ messages: ServerMessage[]; ok: boolean }>(`/api/networks/${networkId}/disconnect`, {
       method: 'POST',

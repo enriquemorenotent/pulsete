@@ -1,7 +1,6 @@
 import type { NetworkAuthMethod, NetworkProfile } from '../../shared/protocol.js';
 import {
   defaultNetworkAuthTarget,
-  getNetworkRootId,
   resolveNetworkAuthMethod,
   resolveNetworkAuthTarget,
 } from '../../shared/network-model.js';
@@ -120,22 +119,3 @@ export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
     autoJoin: parseAutoJoin(form.autoJoin),
   };
 };
-
-export const createConnectionInstancePayload = (network: NetworkProfile) => ({
-  templateId: getNetworkRootId(network),
-  managerHidden: true,
-  connectionClosed: false,
-  name: network.name,
-  host: network.host,
-  port: network.port,
-  tls: network.tls,
-  nick: network.nick,
-  altNicks: network.altNicks,
-  username: network.username,
-  realName: network.realName,
-  authMethod: resolveNetworkAuthMethod(network),
-  authTarget: resolveNetworkAuthTarget(network.authTarget),
-  authAccount: network.authAccount ?? '',
-  favorite: network.favorite,
-  autoJoin: network.autoJoin,
-});
