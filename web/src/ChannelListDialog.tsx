@@ -1,5 +1,6 @@
-import { useDeferredValue, useEffect, useState } from 'react';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Virtuoso } from 'react-virtuoso';
+import type { ChannelListEntry, NetworkProfile } from '../../shared/protocol.js';
 import type { ChannelListState } from './app-types.js';
 import { Button } from '@/components/ui/button.js';
 import {
@@ -11,7 +12,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
-import { ScrollArea } from '@/components/ui/scroll-area.js';
 
 type ChannelListDialogProps = {
   network: NetworkProfile | null;
@@ -24,12 +24,10 @@ export function ChannelListDialog(props: ChannelListDialogProps) {
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const search = deferredQuery.trim().toLowerCase();
-  const filteredEntries = props.state.entries.filter((entry) => {
-    if (!search) {
-      return true;
-    }
-    return entry.name.toLowerCase().includes(search) || entry.topic.toLowerCase().includes(search);
-  });
+  const filteredEntries = useMemo(
+    () => filterChannelListEntries(props.state.entries, search),
+    [props.state.entries, search],
+  );
 
   useEffect(() => {
     if (!props.state.open) {
@@ -62,25 +60,16 @@ export function ChannelListDialog(props: ChannelListDialogProps) {
             <span className="text-right">Action</span>
           </div>
 
-          <ScrollArea className="min-h-0 flex-1">
+          <div className="min-h-0 flex-1">
             {filteredEntries.length > 0 ? (
-              <div className="divide-y divide-border">
-                {filteredEntries.map((entry) => (
-                  <div
-                    key={`${props.state.requestId ?? 'pending'}:${entry.name}:${entry.users}:${entry.topic}`}
-                    className="grid grid-cols-[minmax(0,16rem)_5rem_minmax(0,1fr)_6rem] gap-3 px-4 py-2 text-[13px]"
-                  >
-                    <span className="truncate font-medium text-foreground">{entry.name}</span>
-                    <span className="text-right font-mono text-muted-foreground">{entry.users}</span>
-                    <span className="truncate text-muted-foreground">{entry.topic || 'No topic'}</span>
-                    <div className="flex justify-end">
-                      <Button size="sm" variant="outline" onClick={() => void props.onJoin(entry.name)}>
-                        Join
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Virtuoso
+                style={{ height: '100%' }}
+                data={filteredEntries}
+                computeItemKey={resolveChannelListItemKey}
+                itemContent={(_index, entry) => (
+                  <ChannelListRow entry={entry} onJoin={props.onJoin} />
+                )}
+              />
             ) : (
               <div className="flex h-full min-h-60 items-center justify-center px-6 py-8">
                 <div className="max-w-md border border-border bg-card px-4 py-5 text-center text-[13px] text-muted-foreground">
@@ -88,12 +77,12 @@ export function ChannelListDialog(props: ChannelListDialogProps) {
                 </div>
               </div>
             )}
-          </ScrollArea>
+          </div>
 
           <div className="shrink-0 border-t border-border px-4 py-3">
             <DialogFooter className="sm:flex-row sm:justify-between">
               <div className="text-[12px] text-muted-foreground">
-                {props.state.error ? props.state.error : `${props.state.entries.length} channel${props.state.entries.length === 1 ? '' : 's'} loaded`}
+                {props.state.error ? props.state.error : buildFooterText(props.state)}
               </div>
               <Button variant="outline" onClick={props.onClose}>
                 Close
@@ -106,20 +95,63 @@ export function ChannelListDialog(props: ChannelListDialogProps) {
   );
 }
 
+const ChannelListRow = memo(function ChannelListRow(props: {
+  entry: ChannelListEntry;
+  onJoin: (channel: string) => Promise<void>;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,16rem)_5rem_minmax(0,1fr)_6rem] gap-3 border-b border-border px-4 py-2 text-[13px]">
+      <span className="truncate font-medium text-foreground">{props.entry.name}</span>
+      <span className="text-right font-mono text-muted-foreground">{props.entry.users}</span>
+      <span className="truncate text-muted-foreground">{props.entry.topic || 'No topic'}</span>
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onClick={() => void props.onJoin(props.entry.name)}>
+          Join
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+const filterChannelListEntries = (entries: ChannelListEntry[], search: string) => {
+  if (!search) {
+    return entries;
+  }
+  return entries.filter(
+    (entry) => entry.name.toLowerCase().includes(search) || entry.topic.toLowerCase().includes(search),
+  );
+};
+
+const resolveChannelListItemKey = (
+  index: number,
+  entry: ChannelListEntry | undefined,
+) => entry ? `${entry.name}:${entry.users}:${entry.topic}:${index}` : `channel-list-row:${index}`;
+
 const buildStatusText = (state: ChannelListState, visibleCount: number, filtered: boolean) => {
-  const total = state.entries.length;
+  const retained = state.entries.length;
+  const total = state.totalEntries ?? retained;
+  const truncation = state.truncated ? ` · first ${retained} of ${total}` : '';
   if (state.status === 'loading') {
     return filtered
-      ? `Scanning ${total} channels · showing ${visibleCount}`
-      : `Scanning ${total} channels`;
+      ? `Scanning ${total} channels · showing ${visibleCount}${truncation}`
+      : `Scanning ${total} channels${truncation}`;
   }
   if (filtered) {
-    return `Showing ${visibleCount} of ${total} channels`;
+    return `Showing ${visibleCount} of ${retained} channels${truncation}`;
   }
   if (state.status === 'error') {
-    return total > 0 ? `Loaded ${total} channels before the request stopped` : 'The request did not complete';
+    return retained > 0 ? `Loaded ${retained} channels before the request stopped` : 'The request did not complete';
   }
-  return `${total} channel${total === 1 ? '' : 's'}`;
+  return `${retained} channel${retained === 1 ? '' : 's'}${truncation}`;
+};
+
+const buildFooterText = (state: ChannelListState) => {
+  const retained = state.entries.length;
+  const total = state.totalEntries ?? retained;
+  if (state.truncated) {
+    return `First ${retained} of ${total} channels loaded`;
+  }
+  return `${retained} channel${retained === 1 ? '' : 's'} loaded`;
 };
 
 const buildEmptyStateText = (state: ChannelListState, filtered: boolean) => {

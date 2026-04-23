@@ -24,6 +24,8 @@ export type ChannelListState = {
   requestId: string | null;
   status: 'idle' | 'loading' | 'ready' | 'error';
   entries: ChannelListEntry[];
+  totalEntries: number | null;
+  truncated: boolean;
   error: string | null;
 };
 
@@ -103,7 +105,8 @@ export type Action =
   | { type: 'close-channel-list' }
   | { type: 'channel-list-started'; networkId: string; requestId: string }
   | { type: 'channel-list-entry'; networkId: string; requestId: string; entry: ChannelListEntry }
-  | { type: 'channel-list-completed'; networkId: string; requestId: string }
+  | { type: 'channel-list-entries'; networkId: string; requestId: string; entries: ChannelListEntry[] }
+  | { type: 'channel-list-completed'; networkId: string; requestId: string; totalEntries?: number; truncated?: boolean }
   | { type: 'channel-list-failed'; networkId: string; requestId: string; message: string }
   | { type: 'open-network-manager' }
   | { type: 'close-network-manager' }

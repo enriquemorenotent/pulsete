@@ -59,6 +59,8 @@ const closedChannelList: ChannelListState = {
   requestId: null,
   status: 'idle',
   entries: [],
+  totalEntries: null,
+  truncated: false,
   error: null,
 };
 

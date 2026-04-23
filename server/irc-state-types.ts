@@ -94,6 +94,13 @@ export type IrcFriendPresenceState = {
 
 export type IrcChannelListMode = 'raw' | 'structured';
 
+export type IrcChannelListSnapshot = {
+  requestId: string;
+  entries: ChannelListEntry[];
+  totalEntries: number;
+  truncated: boolean;
+};
+
 export type IrcChannelListSession =
   | { phase: 'idle' }
   | {
@@ -102,6 +109,8 @@ export type IrcChannelListSession =
       sourceTarget: null;
       requestId: string | null;
       entries: ChannelListEntry[];
+      totalEntries: number;
+      truncated: boolean;
     }
   | {
       phase: 'active';

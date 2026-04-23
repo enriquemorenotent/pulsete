@@ -76,11 +76,17 @@ export const emitChannelListEntry = (
   });
 };
 
-export const emitChannelListCompleted = (connection: IrcEventContext, requestId: string) => {
+export const emitChannelListCompleted = (
+  connection: IrcEventContext,
+  requestId: string,
+  result: { totalEntries: number; truncated: boolean }
+) => {
   emitEvent(connection, {
     type: 'channel-list-completed',
     networkId: connection.profile.id,
     requestId,
+    totalEntries: result.totalEntries,
+    truncated: result.truncated,
   });
 };
 

@@ -1,3 +1,4 @@
+import { channelListEntryLimit } from '../../shared/channel-list.js';
 import type { Action, ChannelListState } from './app-types.js';
 
 export const initialChannelListState: ChannelListState = {
@@ -6,6 +7,8 @@ export const initialChannelListState: ChannelListState = {
   requestId: null,
   status: 'idle',
   entries: [],
+  totalEntries: null,
+  truncated: false,
   error: null,
 };
 
@@ -22,6 +25,8 @@ export const reduceChannelListState = (state: ChannelListState, action: Action):
         requestId: null,
         status: 'loading',
         entries: [],
+        totalEntries: null,
+        truncated: false,
         error: null,
       };
     case 'channel-list-started':
@@ -30,11 +35,21 @@ export const reduceChannelListState = (state: ChannelListState, action: Action):
         : state;
     case 'channel-list-entry':
       return matchesChannelListRequest(state, action.networkId, action.requestId)
-        ? { ...state, entries: [...state.entries, action.entry] }
+        ? appendChannelListEntries(state, [action.entry])
+        : state;
+    case 'channel-list-entries':
+      return matchesChannelListRequest(state, action.networkId, action.requestId)
+        ? appendChannelListEntries(state, action.entries)
         : state;
     case 'channel-list-completed':
       return matchesChannelListRequest(state, action.networkId, action.requestId)
-        ? { ...state, status: 'ready', error: null }
+        ? {
+            ...state,
+            status: 'ready',
+            totalEntries: action.totalEntries ?? state.totalEntries ?? state.entries.length,
+            truncated: action.truncated ?? state.truncated,
+            error: null,
+          }
         : state;
     case 'channel-list-failed':
       return canFailChannelList(state, action.networkId, action.requestId)
@@ -77,3 +92,21 @@ const canFailChannelList = (state: ChannelListState, networkId: string, requestI
     (state.requestId !== null && state.requestId === requestId)
     || (state.requestId === null && state.status === 'loading')
   );
+
+const appendChannelListEntries = (
+  state: ChannelListState,
+  entries: readonly ChannelListState['entries'][number][],
+): ChannelListState => {
+  if (entries.length === 0) {
+    return state;
+  }
+  const remaining = Math.max(0, channelListEntryLimit - state.entries.length);
+  const accepted = remaining > 0 ? entries.slice(0, remaining) : [];
+  const totalEntries = (state.totalEntries ?? state.entries.length) + entries.length;
+  return {
+    ...state,
+    entries: accepted.length > 0 ? [...state.entries, ...accepted] : state.entries,
+    totalEntries,
+    truncated: state.truncated || accepted.length < entries.length,
+  };
+};

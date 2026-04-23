@@ -175,6 +175,8 @@ test('gateway transitions reset transport state and clear the reconnect banner o
         requestId: 'request-1',
         status: 'loading',
         entries: [{ name: '#help', users: 42, topic: 'Support' }],
+        totalEntries: 1,
+        truncated: false,
         error: null,
       },
     },

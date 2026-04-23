@@ -1,8 +1,10 @@
 import type { ChannelListEntry } from '../shared/protocol.js';
+import { channelListEntryLimit } from '../shared/channel-list.js';
 import type {
   IrcChannelListActiveState,
   IrcChannelListMode,
   IrcChannelListSession,
+  IrcChannelListSnapshot,
   IrcChannelListState,
 } from './irc-state-types.js';
 
@@ -25,7 +27,9 @@ export const getActiveStructuredChannelListSnapshot = (state: IrcChannelListStat
   return {
     requestId: session.requestId,
     entries: [...session.entries],
-  };
+    totalEntries: session.totalEntries,
+    truncated: session.truncated,
+  } satisfies IrcChannelListSnapshot;
 };
 
 export const startChannelListSession = (
@@ -40,6 +44,8 @@ export const startChannelListSession = (
         requestId: options.requestId ?? null,
         sourceTarget: null,
         entries: [],
+        totalEntries: 0,
+        truncated: false,
       }
     : {
         phase: 'active',
@@ -54,13 +60,19 @@ export const appendStructuredChannelListEntry = (
   state: IrcChannelListState,
   requestId: string,
   entry: ChannelListEntry
-): Extract<IrcChannelListActiveState, { mode: 'structured' }> | null => {
+): { session: Extract<IrcChannelListActiveState, { mode: 'structured' }>; retained: boolean } | null => {
   const session = state.session;
   if (session.phase !== 'active' || session.mode !== 'structured' || session.requestId !== requestId) {
     return null;
   }
-  session.entries.push(entry);
-  return session;
+  session.totalEntries += 1;
+  if (session.entries.length < channelListEntryLimit) {
+    session.entries.push(entry);
+    return { session, retained: true };
+  } else {
+    session.truncated = true;
+    return { session, retained: false };
+  }
 };
 
 export const finishStructuredChannelListSession = (

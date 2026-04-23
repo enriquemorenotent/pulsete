@@ -6,6 +6,7 @@ import type {
 import type {
   ChannelSessionPhase,
   ChannelSessionState,
+  IrcChannelListSnapshot,
   IrcChannelListMode,
   IrcChannelListState,
   IrcChannelTrackingState,
@@ -46,7 +47,13 @@ export type RuntimeEvent =
       requestId: string;
       entry: { name: string; users: number; topic: string };
     }
-  | { type: 'channel-list-completed'; networkId: string; requestId: string }
+  | {
+      type: 'channel-list-completed';
+      networkId: string;
+      requestId: string;
+      totalEntries: number;
+      truncated: boolean;
+    }
   | { type: 'channel-list-failed'; networkId: string; requestId: string; message: string }
   | { type: 'message'; message: MessageInput; currentNick?: string; altNicks?: string[] }
   | {
@@ -112,7 +119,7 @@ export type IrcConnectionMethods = {
   recordChannelListEntry(requestId: string, entry: ChannelListEntry): void;
   finishChannelListRequest(requestId: string): void;
   getChannelListRequestFailureMessage(): string;
-  getActiveChannelListSnapshot(): { requestId: string; entries: ChannelListEntry[] } | null;
+  getActiveChannelListSnapshot(): IrcChannelListSnapshot | null;
   handleChannelListNumeric(command: string, params: string[]): boolean;
   clearActiveChannelList(): void;
   abortActiveChannelList(message: string): void;
@@ -182,6 +189,7 @@ export type {
   FriendPresenceTransportMode,
   IrcChannelListActiveState,
   IrcChannelListDrainingState,
+  IrcChannelListSnapshot,
   IrcChannelListState,
   IrcChannelTrackingState,
   IrcFriendPresenceState,

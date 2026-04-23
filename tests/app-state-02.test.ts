@@ -45,6 +45,8 @@ test('channel list resets when the gateway drops, its network disconnects, or th
         requestId: 'request-1',
         status: 'loading',
         entries: [{ name: '#help', users: 42, topic: 'Support' }],
+        totalEntries: 1,
+        truncated: false,
         error: null,
       },
     },

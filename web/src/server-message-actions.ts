@@ -62,13 +62,26 @@ const toActions = (message: ServerMessage): Action[] => {
       return [{ type: 'channel-list-started', networkId: message.networkId, requestId: message.requestId }];
     case 'channel.list.entry':
       return [{
-        type: 'channel-list-entry',
+        type: 'channel-list-entries',
         networkId: message.networkId,
         requestId: message.requestId,
-        entry: message.entry,
+        entries: [message.entry],
+      }];
+    case 'channel.list.entries':
+      return [{
+        type: 'channel-list-entries',
+        networkId: message.networkId,
+        requestId: message.requestId,
+        entries: message.entries,
       }];
     case 'channel.list.completed':
-      return [{ type: 'channel-list-completed', networkId: message.networkId, requestId: message.requestId }];
+      return [{
+        type: 'channel-list-completed',
+        networkId: message.networkId,
+        requestId: message.requestId,
+        totalEntries: message.totalEntries,
+        truncated: message.truncated,
+      }];
     case 'channel.list.failed':
       return [{
         type: 'channel-list-failed',

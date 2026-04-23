@@ -33,9 +33,9 @@ test('runtime replays active LIST entries to a later requester without sending L
     await waitFor(() =>
       firstSocket.sent.some(
         (message) =>
-          message.type === 'channel.list.entry'
+          message.type === 'channel.list.entries'
           && message.requestId === requestId
-          && message.entry.name === '#help'
+          && message.entries.some((entry) => entry.name === '#help')
       )
     );
 
@@ -44,9 +44,9 @@ test('runtime replays active LIST entries to a later requester without sending L
     await waitFor(() =>
       secondSocket.sent.some(
         (message) =>
-          message.type === 'channel.list.entry'
+          message.type === 'channel.list.entries'
           && message.requestId === requestId
-          && message.entry.name === '#help'
+          && message.entries.some((entry) => entry.name === '#help')
       )
     );
     await waitFor(() =>
@@ -59,18 +59,11 @@ test('runtime replays active LIST entries to a later requester without sending L
 
     assert.equal(received.filter((line) => line === 'LIST').length, 1);
     assert.equal(
-      firstSocket.sent.filter(
-        (message) =>
-          message.type === 'channel.list.entry'
-          && message.requestId === requestId
-          && message.entry.name === '#help'
-      ).length,
+      channelListEntries(firstSocket.sent, requestId).filter((entry) => entry.name === '#help').length,
       1
     );
     assert.deepEqual(
-      secondSocket.sent
-        .filter((message): message is Extract<ServerMessage, { type: 'channel.list.entry' }> => message.type === 'channel.list.entry')
-        .map((message) => message.entry),
+      channelListEntries(secondSocket.sent, requestId),
       [
         { name: '#help', users: 42, topic: 'Support room' },
         { name: '#ops', users: 7, topic: 'Operators' },
@@ -104,9 +97,9 @@ test('runtime does not replay active LIST entries twice to the same requester', 
     await waitFor(() =>
       socket.sent.some(
         (message) =>
-          message.type === 'channel.list.entry'
+          message.type === 'channel.list.entries'
           && message.requestId === requestId
-          && message.entry.name === '#help'
+          && message.entries.some((entry) => entry.name === '#help')
       )
     );
 
@@ -130,21 +123,11 @@ test('runtime does not replay active LIST entries twice to the same requester', 
       1
     );
     assert.equal(
-      socket.sent.filter(
-        (message) =>
-          message.type === 'channel.list.entry'
-          && message.requestId === requestId
-          && message.entry.name === '#help'
-      ).length,
+      channelListEntries(socket.sent, requestId).filter((entry) => entry.name === '#help').length,
       1
     );
     assert.equal(
-      socket.sent.filter(
-        (message) =>
-          message.type === 'channel.list.entry'
-          && message.requestId === requestId
-          && message.entry.name === '#ops'
-      ).length,
+      channelListEntries(socket.sent, requestId).filter((entry) => entry.name === '#ops').length,
       1
     );
   } finally {
@@ -175,9 +158,9 @@ test('runtime replays active LIST entries after the same requester cancels and r
     await waitFor(() =>
       socket.sent.some(
         (message) =>
-          message.type === 'channel.list.entry'
+          message.type === 'channel.list.entries'
           && message.requestId === requestId
-          && message.entry.name === '#help'
+          && message.entries.some((entry) => entry.name === '#help')
       )
     );
 
@@ -199,9 +182,19 @@ test('runtime replays active LIST entries after the same requester cancels and r
       socket.sent.filter((message) => message.type.startsWith('channel.list')),
       [
         { type: 'channel.list.started', networkId: network.id, requestId },
-        { type: 'channel.list.entry', networkId: network.id, requestId, entry: { name: '#help', users: 42, topic: 'Support room' } },
-        { type: 'channel.list.entry', networkId: network.id, requestId, entry: { name: '#ops', users: 7, topic: 'Operators' } },
-        { type: 'channel.list.completed', networkId: network.id, requestId },
+        {
+          type: 'channel.list.entries',
+          networkId: network.id,
+          requestId,
+          entries: [{ name: '#help', users: 42, topic: 'Support room' }],
+        },
+        {
+          type: 'channel.list.entries',
+          networkId: network.id,
+          requestId,
+          entries: [{ name: '#ops', users: 7, topic: 'Operators' }],
+        },
+        { type: 'channel.list.completed', networkId: network.id, requestId, totalEntries: 2, truncated: false },
       ]
     );
   } finally {
@@ -210,3 +203,8 @@ test('runtime replays active LIST entries after the same requester cancels and r
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
   }
 });
+
+const channelListEntries = (messages: ServerMessage[], requestId: string) =>
+  messages.flatMap((message) =>
+    message.type === 'channel.list.entries' && message.requestId === requestId ? message.entries : []
+  );

@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import type { ServerMessage } from '../shared/protocol.js';
 import { createNetworkInput,makeUser,waitFor } from './helpers/runtime-test-common.js';
 import { createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
 import { createListServer } from './helpers/runtime-test-list-servers.js';
@@ -211,8 +210,9 @@ test('runtime streams structured channel list events from IRC LIST', async () =>
     assert.ok(socket.sent.some((message) => message.type === 'channel.list.started' && message.requestId === requestId));
     assert.deepEqual(
       socket.sent
-        .filter((message): message is Extract<ServerMessage, { type: 'channel.list.entry' }> => message.type === 'channel.list.entry')
-        .map((message) => message.entry),
+        .flatMap((message) =>
+          message.type === 'channel.list.entries' && message.requestId === requestId ? message.entries : []
+        ),
       [
         { name: '#help', users: 42, topic: 'Support room' },
         { name: '#ops', users: 7, topic: 'Operators' },

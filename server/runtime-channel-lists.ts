@@ -1,11 +1,12 @@
 import type WebSocket from 'ws';
-import type { ServerMessage } from '../shared/protocol.js';
+import { channelListBatchFlushMs, channelListBatchSize } from '../shared/channel-list.js';
+import type { ChannelListEntry, ServerMessage } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
 import type { IrcRuntimeChannelListConnection } from './irc-types.js';
 
 type ChannelListMessage = Extract<
   ServerMessage,
-  { type: 'channel.list.started' | 'channel.list.entry' | 'channel.list.completed' | 'channel.list.failed' }
+  { type: 'channel.list.started' | 'channel.list.entries' | 'channel.list.completed' | 'channel.list.failed' }
 >;
 
 type ChannelListConnection = IrcRuntimeChannelListConnection;
@@ -13,6 +14,8 @@ type ChannelListConnection = IrcRuntimeChannelListConnection;
 type ChannelListSession = {
   requestId: string;
   subscribers: Set<WebSocket>;
+  pendingEntries: ChannelListEntry[];
+  flushTimer: ReturnType<typeof setTimeout> | null;
 };
 
 export class RuntimeChannelListService {
@@ -21,21 +24,35 @@ export class RuntimeChannelListService {
   constructor(private readonly send: (ws: WebSocket, message: ChannelListMessage) => void) {}
 
   clearAll() {
+    for (const session of this.sessions.values()) {
+      this.clearPendingEntries(session);
+    }
     this.sessions.clear();
   }
 
   clearNetwork(networkId: string) {
-    this.sessions.delete(networkId);
+    const session = this.sessions.get(networkId);
+    if (session) {
+      this.clearPendingEntries(session);
+      this.sessions.delete(networkId);
+    }
   }
 
   removeSocket(ws: WebSocket) {
     for (const session of this.sessions.values()) {
       session.subscribers.delete(ws);
+      if (session.subscribers.size === 0) {
+        this.clearPendingEntries(session);
+      }
     }
   }
 
   cancel(networkId: string, ws: WebSocket) {
-    this.sessions.get(networkId)?.subscribers.delete(ws);
+    const session = this.sessions.get(networkId);
+    session?.subscribers.delete(ws);
+    if (session?.subscribers.size === 0) {
+      this.clearPendingEntries(session);
+    }
   }
 
   request(networkId: string, connection: ChannelListConnection, requestId: string, requester?: WebSocket) {
@@ -48,17 +65,12 @@ export class RuntimeChannelListService {
       if (alreadySubscribed) {
         return activeSnapshot.requestId;
       }
+      this.flushEntries(networkId, activeSession);
       if (requester) {
         activeSession.subscribers.add(requester);
       }
       this.sendMessage(networkId, { type: 'channel.list.started', networkId, requestId: activeSnapshot.requestId }, requester);
-      for (const entry of activeSnapshot.entries) {
-        this.sendMessage(
-          networkId,
-          { type: 'channel.list.entry', networkId, requestId: activeSnapshot.requestId, entry },
-          requester
-        );
-      }
+      this.sendEntryBatches(networkId, activeSnapshot.requestId, activeSnapshot.entries, requester);
       return activeSnapshot.requestId;
     }
 
@@ -66,6 +78,8 @@ export class RuntimeChannelListService {
       this.sessions.set(networkId, {
         requestId,
         subscribers: requester ? new Set([requester]) : new Set<WebSocket>(),
+        pendingEntries: [],
+        flushTimer: null,
       });
       this.sendMessage(networkId, { type: 'channel.list.started', networkId, requestId }, requester);
       return requestId;
@@ -95,32 +109,31 @@ export class RuntimeChannelListService {
       return;
     }
     if (event.type === 'channel-list-entry') {
-      this.sendMessage(event.networkId, {
-        type: 'channel.list.entry',
-        networkId: event.networkId,
-        requestId: event.requestId,
-        entry: event.entry,
-      });
+      this.queueEntry(event.networkId, session, event.entry);
       return;
     }
 
     if (event.type === 'channel-list-completed') {
+      this.flushEntries(event.networkId, session);
       this.sendMessage(event.networkId, {
         type: 'channel.list.completed',
         networkId: event.networkId,
         requestId: event.requestId,
+        totalEntries: event.totalEntries,
+        truncated: event.truncated,
       });
-      this.sessions.delete(event.networkId);
+      this.clearNetwork(event.networkId);
       return;
     }
 
+    this.flushEntries(event.networkId, session);
     this.sendMessage(event.networkId, {
       type: 'channel.list.failed',
       networkId: event.networkId,
       requestId: event.requestId,
       message: event.message,
     });
-    this.sessions.delete(event.networkId);
+    this.clearNetwork(event.networkId);
   }
 
   private sendMessage(networkId: string, message: ChannelListMessage, requester?: WebSocket) {
@@ -139,12 +152,82 @@ export class RuntimeChannelListService {
     }
   }
 
+  private queueEntry(networkId: string, session: ChannelListSession, entry: ChannelListEntry) {
+    if (session.subscribers.size === 0) {
+      return;
+    }
+    session.pendingEntries.push(entry);
+    if (session.pendingEntries.length >= channelListBatchSize) {
+      this.flushEntries(networkId, session);
+      return;
+    }
+    this.scheduleFlush(networkId, session);
+  }
+
+  private scheduleFlush(networkId: string, session: ChannelListSession) {
+    if (session.flushTimer) {
+      return;
+    }
+    session.flushTimer = setTimeout(() => {
+      session.flushTimer = null;
+      this.flushEntries(networkId, session);
+    }, channelListBatchFlushMs);
+    session.flushTimer.unref?.();
+  }
+
+  private flushEntries(networkId: string, session: ChannelListSession) {
+    if (session.flushTimer) {
+      clearTimeout(session.flushTimer);
+      session.flushTimer = null;
+    }
+    if (session.pendingEntries.length === 0) {
+      return;
+    }
+    const entries = session.pendingEntries;
+    session.pendingEntries = [];
+    this.sendMessage(networkId, {
+      type: 'channel.list.entries',
+      networkId,
+      requestId: session.requestId,
+      entries,
+    });
+  }
+
+  private sendEntryBatches(
+    networkId: string,
+    requestId: string,
+    entries: readonly ChannelListEntry[],
+    requester?: WebSocket
+  ) {
+    for (let index = 0; index < entries.length; index += channelListBatchSize) {
+      this.sendMessage(networkId, {
+        type: 'channel.list.entries',
+        networkId,
+        requestId,
+        entries: entries.slice(index, index + channelListBatchSize),
+      }, requester);
+    }
+  }
+
+  private clearPendingEntries(session: ChannelListSession) {
+    if (session.flushTimer) {
+      clearTimeout(session.flushTimer);
+      session.flushTimer = null;
+    }
+    session.pendingEntries = [];
+  }
+
   private getOrCreateSession(networkId: string, requestId: string) {
     const existing = this.sessions.get(networkId);
     if (existing?.requestId === requestId) {
       return existing;
     }
-    const created: ChannelListSession = { requestId, subscribers: new Set<WebSocket>() };
+    const created: ChannelListSession = {
+      requestId,
+      subscribers: new Set<WebSocket>(),
+      pendingEntries: [],
+      flushTimer: null,
+    };
     this.sessions.set(networkId, created);
     return created;
   }

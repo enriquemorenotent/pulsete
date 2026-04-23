@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type {
-  BufferState,
-  ChannelState,
-  ClientMessage,
-  NetworkProfile,
-} from '../shared/protocol.js';
+import type { BufferState, ChannelState, ClientMessage, NetworkProfile } from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
@@ -56,11 +51,7 @@ const workspace: WorkspaceView = {
   selection: { kind: 'buffer', bufferId: selectedBuffer.id },
   connectionInstances: [network],
   selectedNetwork: network,
-  selectedRuntime: {
-    phase: 'connected',
-    serverName: 'irc.example.test',
-    nick: 'tester',
-  },
+  selectedRuntime: { phase: 'connected', serverName: 'irc.example.test', nick: 'tester' },
   selectedBuffer,
   selectedChannel,
   selectedPendingChannel: null,
@@ -72,12 +63,10 @@ const workspace: WorkspaceView = {
   showNicklist: true,
 };
 
-const makeState = (
-  overrides: {
-    domain?: Partial<State['domain']>;
-    transient?: Partial<State['transient']>;
-  } = {},
-): State => ({
+const makeState = (overrides: {
+  domain?: Partial<State['domain']>;
+  transient?: Partial<State['transient']>;
+} = {}): State => ({
   ...initialState,
   domain: {
     ...initialState.domain,
@@ -103,18 +92,11 @@ const makeState = (
   },
 });
 
-const createParams = (options: {
-  draft?: string;
-  state?: State;
-  socket?: SocketHandle | null;
-}) => {
+const createParams = (options: { draft?: string; state?: State; socket?: SocketHandle | null }) => {
   const actions: Action[] = [];
   const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
   const composerEntries: string[] = [];
-  const composerEntryCalls: Array<{
-    value: string;
-    contextKey?: string | null;
-  }> = [];
+  const composerEntryCalls: Array<{ value: string; contextKey?: string | null }> = [];
   const draftCalls: Array<{ value: string; contextKey?: string | null }> = [];
   const state = options.state ?? makeState();
   const conversation = buildConversationModel({
@@ -155,11 +137,7 @@ const createParams = (options: {
 };
 
 test('closeChannelList still clears local state while the gateway is unavailable', () => {
-  const {
-    params,
-    actions: dispatched,
-    banners,
-  } = createParams({
+  const { params, actions: dispatched, banners } = createParams({
     state: makeState({
       domain: {
         gatewayStatus: 'disconnected',
@@ -171,6 +149,8 @@ test('closeChannelList still clears local state while the gateway is unavailable
           requestId: 'request-1',
           status: 'loading',
           entries: [],
+          totalEntries: null,
+          truncated: false,
           error: null,
         },
       },
@@ -206,23 +186,20 @@ test('sendComposer blocks websocket-backed sends while the gateway is reconnecti
 
   assert.deepEqual(sent, []);
   assert.deepEqual(composerEntries, []);
-  assert.deepEqual(banners, [
-    { kind: 'error', message: gatewayReconnectMessage },
-  ]);
+  assert.deepEqual(banners, [{ kind: 'error', message: gatewayReconnectMessage }]);
 });
 
 test('sendComposer reports success for a sent message and records it in history', async () => {
   const sent: ClientMessage[] = [];
-  const { params, composerEntries, composerEntryCalls, draftCalls, banners } =
-    createParams({
-      draft: 'hello',
-      socket: {
-        send(message) {
-          sent.push(message);
-        },
-        close() {},
+  const { params, composerEntries, composerEntryCalls, draftCalls, banners } = createParams({
+    draft: 'hello',
+    socket: {
+      send(message) {
+        sent.push(message);
       },
-    });
+      close() {},
+    },
+  });
   const actions = createAppActions(params);
 
   assert.equal(await actions.sendComposer(), true);

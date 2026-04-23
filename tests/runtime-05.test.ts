@@ -33,9 +33,9 @@ test('runtime drops channel-list events after the requester disconnects mid-LIST
     await waitFor(() =>
       requesterSocket.sent.some(
         (message) =>
-          message.type === 'channel.list.entry'
+          message.type === 'channel.list.entries'
           && message.requestId === requestId
-          && message.entry.name === '#help'
+          && message.entries.some((entry) => entry.name === '#help')
       )
     );
 
@@ -74,9 +74,9 @@ test('runtime reports a failed channel-list request when the network disconnects
     await waitFor(() =>
       socket.sent.some(
         (message) =>
-          message.type === 'channel.list.entry'
+          message.type === 'channel.list.entries'
           && message.requestId === requestId
-          && message.entry.name === '#help'
+          && message.entries.some((entry) => entry.name === '#help')
       )
     );
 
@@ -117,9 +117,9 @@ test('runtime reports a failed channel-list request when disconnect is requested
     await waitFor(() =>
       socket.sent.some(
         (message) =>
-          message.type === 'channel.list.entry'
+          message.type === 'channel.list.entries'
           && message.requestId === requestId
-          && message.entry.name === '#help'
+          && message.entries.some((entry) => entry.name === '#help')
       )
     );
 

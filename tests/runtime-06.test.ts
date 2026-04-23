@@ -130,7 +130,12 @@ test('runtime reports when a timed-out LIST is still draining late server replie
   runtime.gateway.attachSocket(socket);
   (runtime as unknown as {
     connections: Map<string, {
-      getActiveChannelListSnapshot(): { requestId: string; entries: [] } | null;
+      getActiveChannelListSnapshot(): {
+        requestId: string;
+        entries: [];
+        totalEntries: number;
+        truncated: boolean;
+      } | null;
       requestChannelList(requestId: string): boolean;
       getChannelListRequestFailureMessage(): string;
     }>;

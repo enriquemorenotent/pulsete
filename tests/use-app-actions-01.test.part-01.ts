@@ -205,6 +205,8 @@ test('joinChannelFromList reuses an existing pending channel selection without s
           requestId: 'request-1',
           status: 'ready',
           entries: [],
+          totalEntries: 0,
+          truncated: false,
           error: null,
         },
       },
@@ -246,4 +248,3 @@ test('openChannelList does not wedge loading state when the socket send fails', 
   assert.deepEqual(dispatched, []);
   assert.deepEqual(banners, [{ kind: 'error', message: gatewayReconnectMessage }]);
 });
-

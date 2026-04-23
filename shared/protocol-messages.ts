@@ -107,9 +107,17 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     entry: channelListEntrySchema,
   }),
   baseServerSchema.extend({
+    type: z.literal('channel.list.entries'),
+    networkId: z.string(),
+    requestId: z.string(),
+    entries: z.array(channelListEntrySchema),
+  }),
+  baseServerSchema.extend({
     type: z.literal('channel.list.completed'),
     networkId: z.string(),
     requestId: z.string(),
+    totalEntries: z.number().int().nonnegative().optional(),
+    truncated: z.boolean().optional(),
   }),
   baseServerSchema.extend({
     type: z.literal('channel.list.failed'),
