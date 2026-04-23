@@ -150,6 +150,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
       version = migration.version;
     }
   }
+  ensureLegacyNetworkColumns(db);
   if (tableHasColumn(db, 'messages', 'bufferId')) {
     ensureMessagesSearchIndex(db, false, tableExists);
   }
@@ -172,6 +173,11 @@ const ensureColumn = (db: SqliteDb, table: string, column: string, definition: s
     return true;
   }
   return false;
+};
+
+const ensureLegacyNetworkColumns = (db: SqliteDb) => {
+  ensureColumn(db, 'networks', 'templateId', 'TEXT');
+  ensureColumn(db, 'networks', 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
 };
 
 const getUserVersion = (db: SqliteDb) =>

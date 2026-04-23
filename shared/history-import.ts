@@ -9,7 +9,7 @@ export const selfNickAliasesSchema = z.array(z.string().trim().min(1, 'Nick name
   .max(historyImportSelfNickLimit, `Add at most ${historyImportSelfNickLimit} self nick aliases`)
   .default([]);
 
-export const historyImportFormatSchema = z.enum(['hexchat']);
+export const historyImportFormatSchema = z.enum(['hexchat', 'pulsete']);
 export type HistoryImportFormat = z.infer<typeof historyImportFormatSchema>;
 
 export const historyImportTextFileSchema = z.object({

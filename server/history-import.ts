@@ -21,6 +21,7 @@ import {
   type ParsedLogMessage,
   type ParserResult,
 } from './history-import-hexchat.js';
+import { parsePulseteHistoryFile } from './history-import-pulsete.js';
 import type { MessageInput } from './storage-types.js';
 
 type ImportLogFilesParams = {
@@ -37,7 +38,7 @@ type ImportedMessage = MessageInput & {
 
 type Parser = (file: HistoryImportTextFile) => ParserResult;
 
-const logParsers: Parser[] = [parseHexChatLogFile];
+const logParsers: Parser[] = [parseHexChatLogFile, parsePulseteHistoryFile];
 
 export const importLogFiles = ({
   buffer,
@@ -107,7 +108,7 @@ const parseLogFile = (file: HistoryImportTextFile) => {
       return result;
     }
   }
-  throw badRequest(`Unsupported log format for ${file.name}. Only HexChat text logs are supported right now.`);
+  throw badRequest(`Unsupported log format for ${file.name}. Only HexChat logs and Pulsete history exports are supported right now.`);
 };
 
 const normalizeParsedMessage = (
