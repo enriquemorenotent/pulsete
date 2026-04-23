@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { Storage,type NetworkInput } from '../server/storage.js';
 import type { ChannelUserState } from '../shared/protocol.js';

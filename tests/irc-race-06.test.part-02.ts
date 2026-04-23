@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
 import type { ChannelUserState } from '../shared/protocol.js';
-import { createMockSocket,makeUser } from './helpers/irc-race-test-helpers.js';
+import { makeUser } from './helpers/irc-race-test-helpers.js';
 
 const projectUserModes = (users: ChannelUserState[]) =>
   users.map(({ nick, mode, away }) => ({ nick, mode, away }));

@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
-import { initialState } from '../web/src/app-state.js';
-import { createNetworkActions, resolveManagedNetworkConnectPlan } from '../web/src/app-actions-networks.js';
-import type { Action, State } from '../web/src/app-types.js';
-import type { AppSessionSnapshot } from '../web/src/app-session.js';
-import { buildConversationModel } from '../web/src/conversation-model.js';
+import type { NetworkProfile } from '../shared/protocol.js';
 import {
   getNetworkManagerAuthLabel,
   getNetworkManagerAutoJoinLabel,
@@ -13,9 +8,6 @@ import {
   getNetworkManagerRowStatus,
   getNetworkManagerStatusLabel,
 } from '../web/src/network-manager-dialog-model.js';
-import { buildManagedRuntimeMap } from '../web/src/network-manager-runtime.js';
-import { createConnectionInstancePayload } from '../web/src/network-form.js';
-import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'saved-network-1',
@@ -37,102 +29,11 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   autoJoin: overrides.autoJoin ?? [],
 });
 
-const makePeer = (root: NetworkProfile, overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
-  makeNetwork({
-    ...root,
-    id: overrides.id ?? 'instance-1',
-    templateId: overrides.templateId ?? root.id,
-    managerHidden: overrides.managerHidden ?? true,
-    ...overrides,
-  });
 
-const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
-  id: overrides.id ?? 'server-buffer-1',
-  networkId: overrides.networkId ?? 'instance-1',
-  kind: overrides.kind ?? 'server',
-  target: overrides.target ?? 'server',
-  unread: overrides.unread ?? 0,
-  priorityUnread: overrides.priorityUnread ?? 0,
-  lastReadTs: overrides.lastReadTs ?? null,
-  lastReadMessageId: overrides.lastReadMessageId ?? null,
-});
 
-const emptyWorkspace: WorkspaceView = {
-  mode: 'empty',
-  selection: null,
-  connectionInstances: [],
-  selectedNetwork: null,
-  selectedRuntime: null,
-  selectedBuffer: null,
-  selectedChannel: null,
-  selectedPendingChannel: null,
-  headerTitle: '',
-  headerSubtitle: '',
-  composerMode: 'hidden',
-  composerPlaceholder: '',
-  emptyBody: '',
-  showNicklist: false,
-};
 
-const makeSession = ({
-  networks,
-  buffers = [],
-  networkStates = {},
-  workspace = emptyWorkspace,
-}: {
-  networks: NetworkProfile[];
-  buffers?: BufferState[];
-  networkStates?: State['domain']['networkStates'];
-  workspace?: WorkspaceView;
-}): AppSessionSnapshot => {
-  const state: State = {
-    ...initialState,
-    domain: {
-      ...initialState.domain,
-      phase: 'ready',
-      gatewayStatus: 'connected',
-      networks,
-      buffers,
-      channels: [],
-      pendingChannels: [],
-      networkStates,
-    },
-    transient: initialState.transient,
-  };
 
-  return {
-    conversation: buildConversationModel({
-      buffers: state.domain.buffers,
-      channels: state.domain.channels,
-      pendingChannels: state.domain.pendingChannels,
-    }),
-    draft: '',
-    state,
-    workspace,
-  };
-};
 
-const createHarness = (session: AppSessionSnapshot) => {
-  const dispatched: Action[] = [];
-  const banners: Array<{ kind: 'notice' | 'error'; message: string }> = [];
-  const actions = createNetworkActions({
-    applyServerMessages: () => {},
-    dispatch: (action) => {
-      dispatched.push(action);
-    },
-    getSession: () => session,
-    updateBanner: (kind, message) => {
-      banners.push({ kind, message });
-    },
-  });
-  return { actions, banners, dispatched };
-};
-
-const okJson = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  json: async () => body,
-}) as Response;
 
 test('getNetworkManagerConnectButtonState disables the button for an already connected network', () => {
   assert.deepEqual(

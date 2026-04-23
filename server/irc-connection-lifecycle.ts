@@ -4,14 +4,7 @@ import {
   clearConnectDeadlineTimer,
   clearReconnectTimer,
   scheduleReconnect,
-  setConnectDeadlineTimer,
 } from './irc-connection-lifecycle-retry.js';
-import {
-  applyNickFallback,
-  clearPendingNick,
-  confirmNick,
-  updateProfile,
-} from './irc-connection-lifecycle-profile.js';
 import {
   applyOfflineTransition,
   applyOpenedSocketTransition,

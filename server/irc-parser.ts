@@ -1,6 +1,6 @@
 import { parseChannelUser } from '../shared/channel-users.js';
 import { parseIrcMessageTags, type IrcMessageTags } from './irc-message-tags.js';
-export { findIrcCaseMatch, isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+export { findIrcCaseMatch, isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 
 export type ParsedLine = {
   tags: IrcMessageTags;

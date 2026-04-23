@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
-import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,7 +7,6 @@ import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import {
-  createHandshakeServer,
   createPresenceServer,
   createRegisteredServer,
 } from './helpers/runtime-test-handshake-servers.js';

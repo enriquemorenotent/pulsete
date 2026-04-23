@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { Storage,type NetworkInput } from '../server/storage.js';
 import type { ChannelUserState } from '../shared/protocol.js';
@@ -84,7 +83,6 @@ test('query alias repairs stay scoped to the selected private chat', () => {
     nick: 'sofia',
     altNicks: ['sofia_', 'sofia__'],
   });
-  const missdBuffer = storage.conversations.upsertQuery(network.id, 'MissD');
   storage.conversations.upsertQuery(network.id, 'sofiaIsBack');
 
   storage.conversations.appendMessage({

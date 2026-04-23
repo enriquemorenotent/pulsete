@@ -2,18 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
-import { createNetworkActions, resolveManagedNetworkConnectPlan } from '../web/src/app-actions-networks.js';
+import { createNetworkActions } from '../web/src/app-actions-networks.js';
 import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
-import {
-  getNetworkManagerAuthLabel,
-  getNetworkManagerAutoJoinLabel,
-  getNetworkManagerConnectButtonState,
-  getNetworkManagerRowStatus,
-  getNetworkManagerStatusLabel,
-} from '../web/src/network-manager-dialog-model.js';
-import { buildManagedRuntimeMap } from '../web/src/network-manager-runtime.js';
 import { createConnectionInstancePayload } from '../web/src/network-form.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 

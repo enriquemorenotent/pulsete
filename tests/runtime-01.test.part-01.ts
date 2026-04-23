@@ -9,7 +9,6 @@ import { Storage } from '../server/storage.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import {
   createHandshakeServer,
-  createPresenceServer,
   createRegisteredServer,
 } from './helpers/runtime-test-handshake-servers.js';
 

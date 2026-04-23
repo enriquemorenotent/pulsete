@@ -2,11 +2,7 @@ import {
   type BufferHistoryImportSummary,
   type BufferHistoryImportRequest,
   type BufferSelfNickAliasesRequest,
-  clientMessageSchema,
-  decodeServer,
-  encode,
   historyWindowLimit,
-  type ClientMessage,
   type ServerMessage,
   type BufferState,
   type FriendState,
@@ -14,7 +10,7 @@ import {
   type NetworkProfile,
   type ChatMessage,
 } from '../../shared/protocol.js';
-import { connectSocket, type SocketHandle } from './client-socket.js';
+
 export { connectSocket, type SocketHandle } from './client-socket.js';
 
 export type BufferHistoryPayload = {
@@ -43,9 +39,9 @@ export const api = {
     apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(
       payload.id ? `/api/networks/${payload.id}` : '/api/networks',
       {
-      method: payload.id ? 'PUT' : 'POST',
-      body: JSON.stringify(payload),
-      }
+        method: payload.id ? 'PUT' : 'POST',
+        body: JSON.stringify(payload),
+      },
     ),
   deleteNetwork: (networkId: string) =>
     apiRequest<{ deletedNetworkIds: string[]; messages: ServerMessage[]; ok: boolean }>(`/api/networks/${networkId}`, {
@@ -53,10 +49,13 @@ export const api = {
       body: '{}',
     }),
   duplicateNetwork: (networkId: string) =>
-    apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(`/api/networks/${networkId}/duplicate`, {
-      method: 'POST',
-      body: '{}',
-    }),
+    apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(
+      `/api/networks/${networkId}/duplicate`,
+      {
+        method: 'POST',
+        body: '{}',
+      },
+    ),
   connectNetwork: (networkId: string) =>
     apiRequest<{ ok: boolean }>(`/api/networks/${networkId}/connect`, {
       method: 'POST',
@@ -85,7 +84,7 @@ export const api = {
       {
         method: 'POST',
         body: JSON.stringify(payload),
-      }
+      },
     ),
   updateBufferSelfNickAliases: (bufferId: string, payload: BufferSelfNickAliasesRequest) =>
     apiRequest<{ ok: boolean; buffer: BufferState; repairedCount: number; messages: ServerMessage[] }>(
@@ -93,7 +92,7 @@ export const api = {
       {
         method: 'PUT',
         body: JSON.stringify(payload),
-      }
+      },
     ),
   downloadBufferHistory: async (bufferId: string) => {
     const response = await fetch(`/api/buffers/${bufferId}/history/download`);

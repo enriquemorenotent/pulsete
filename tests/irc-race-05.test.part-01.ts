@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket,makeUser } from './helpers/irc-race-test-helpers.js';
+import { createMockSocket } from './helpers/irc-race-test-helpers.js';
 
 test('older nick conflicts do not overwrite a newer pending nick request', () => {
   const writes: string[] = [];

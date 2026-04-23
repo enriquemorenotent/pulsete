@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { FriendState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import { closedChannelList, makeBuffer, makeChannel, makeNetwork } from './chat-pane.test.fixtures.js';
-import { renderChatPane, renderQueryPane, renderServerPane } from './chat-pane.test.renderers.js';
+import { renderQueryPane } from './chat-pane.test.renderers.js';
 
 test('offline channels surface an inline reconnect action', () => {
   const network = makeNetwork();

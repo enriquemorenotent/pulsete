@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { Storage } from '../server/storage.js';
-import { createNetworkInput,makeUser } from './helpers/runtime-test-common.js';
+import { createNetworkInput } from './helpers/runtime-test-common.js';
 
 test('incoming private messages open query buffers automatically', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));

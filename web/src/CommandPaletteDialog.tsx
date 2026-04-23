@@ -104,7 +104,6 @@ export function CommandPaletteDialog(props: CommandPaletteDialogProps) {
     }
   };
 
-  const sections = groupEntriesBySection(filteredEntries);
 
   return (
     <Dialog open={props.open} onOpenChange={(open) => !open && props.onClose()}>

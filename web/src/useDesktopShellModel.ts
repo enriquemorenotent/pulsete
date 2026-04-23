@@ -7,10 +7,6 @@ import type {
   NicklistActionSet,
   SidebarActionSet,
 } from './useAppActions.js';
-import {
-  useDesktopChatModel,
-  type DesktopChatModelParams,
-} from './useDesktopChatModel.js';
 export { useDesktopChatModel } from './useDesktopChatModel.js';
 
 type DesktopHeaderModelParams = {

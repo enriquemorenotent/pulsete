@@ -1,4 +1,4 @@
-import type { BufferState, ChannelState, ChannelUserState, ChatMessage, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState, ChatMessage, NetworkProfile } from '../shared/protocol.js';
 import type { ChannelListState } from '../web/src/app-types.js';
 import type { WorkspaceView } from '../web/src/workspace.js';
 

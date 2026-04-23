@@ -11,7 +11,6 @@ import {
 import type { MessageDisplayMode } from './message-display-mode.js';
 import {
 	resolveMessageParticipantPresentation,
-	type MessageParticipantPresentation,
 	type ParticipantHighlightMode,
 } from './message-participant-presentation.js';
 

@@ -9,7 +9,7 @@ import { resolveCurrentChannelAutoJoinState } from './channel-autojoin.js';
 import { buildComposerCompletionModel } from './composer-completion.js';
 import type { ComposerController } from './composer-history.js';
 import type { ChatPaneProps } from './ChatPane.js';
-import type { Action, State } from './app-types.js';
+import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import { filterMutedMessages, findMutedNick } from './muted-nick-utils.js';
 import type { AppUiState } from './useAppUiState.js';

@@ -19,7 +19,7 @@ export const handleAccount = (
   if (isSelfNick(connection, nick)) {
     handleAccountLoginState(connection, account);
   }
-  updateUsersAcrossTrackedChannels(connection, nick, (users) =>
+  updateUsersAcrossTrackedChannels(connection, (users) =>
     updateChannelUserDetails(users, nick, { account }),
   );
 };
@@ -32,7 +32,7 @@ export const handleAway = (
   if (!nick) {
     return;
   }
-  updateUsersAcrossTrackedChannels(connection, nick, (users) =>
+  updateUsersAcrossTrackedChannels(connection, (users) =>
     updateChannelUserAway(users, nick, params.length > 0),
   );
 };
@@ -47,7 +47,7 @@ export const handleChghost = (
   }
   const username = params[0]?.trim() || null;
   const host = params[1]?.trim() || null;
-  updateUsersAcrossTrackedChannels(connection, nick, (users) =>
+  updateUsersAcrossTrackedChannels(connection, (users) =>
     updateChannelUserDetails(users, nick, { username, host }),
   );
 };
@@ -61,14 +61,13 @@ export const handleSetname = (
     return;
   }
   const realname = params[0]?.trim() || null;
-  updateUsersAcrossTrackedChannels(connection, nick, (users) =>
+  updateUsersAcrossTrackedChannels(connection, (users) =>
     updateChannelUserDetails(users, nick, { realname }),
   );
 };
 
 const updateUsersAcrossTrackedChannels = (
   connection: IrcChannelEventContext,
-  nick: string,
   updater: (
     users: ReturnType<IrcChannelEventContext['getTrackedChannelUsers']>,
   ) => ReturnType<IrcChannelEventContext['getTrackedChannelUsers']>,

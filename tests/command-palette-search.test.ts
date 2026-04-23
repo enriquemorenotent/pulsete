@@ -12,8 +12,6 @@ import {
   buildPaletteInput,
   channelBuffer,
   connection,
-  friend,
-  network,
   otherNetwork,
   serverBuffer,
 } from './helpers/command-palette-fixtures.js';

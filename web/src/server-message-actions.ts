@@ -9,12 +9,6 @@ export function dispatchInboundServerMessage(message: ServerMessage, dispatch: D
   }
 }
 
-export function dispatchInboundServerMessages(messages: readonly ServerMessage[], dispatch: Dispatch) {
-  for (const message of messages) {
-    dispatchInboundServerMessage(message, dispatch);
-  }
-}
-
 const toActions = (message: ServerMessage): Action[] => {
   switch (message.type) {
     case 'state.ready':

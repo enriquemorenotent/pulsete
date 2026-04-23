@@ -63,4 +63,3 @@ export const isApiRequest = (value: string | undefined) => {
   }
   return isApi(tryParseRequestUrl(value)?.pathname ?? '');
 };
-export const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

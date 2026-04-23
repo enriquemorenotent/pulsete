@@ -172,11 +172,6 @@ export type IrcConnectionMethods = {
 
 export type IrcConnectionState = IrcConnectionData & IrcConnectionMethods;
 
-export type IrcRuntimeCommandConnection = Pick<
-  IrcConnectionState,
-  'action' | 'disconnect' | 'join' | 'lifecycle' | 'part' | 'say' | 'sendClientRaw' | 'sendRaw' | 'setNick'
->;
-
 export type IrcRuntimeChannelListConnection = Pick<
   IrcConnectionState,
   'getActiveChannelListSnapshot' | 'getChannelListRequestFailureMessage' | 'requestChannelList'

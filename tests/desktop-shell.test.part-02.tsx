@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../shared/protocol.js';
 import { DesktopShell } from '../web/src/DesktopShell.js';
 import type { DesktopShellModel } from '../web/src/desktop-shell-model.js';
 import { emptyNetworkForm } from '../web/src/network-form.js';
@@ -39,24 +39,7 @@ const serverBuffer: BufferState = {
   lastReadMessageId: null,
 };
 
-const channelBuffer: BufferState = {
-  id: 'buffer-channel',
-  networkId: network.id,
-  kind: 'channel',
-  target: '#general',
-  unread: 0,
-  priorityUnread: 0,
-  lastReadTs: null,
-  lastReadMessageId: null,
-};
 
-const channel: ChannelState = {
-  id: channelBuffer.id,
-  networkId: network.id,
-  name: '#general',
-  topic: 'General chat',
-  users: [],
-};
 
 const createWorkspace = (overrides: Partial<WorkspaceView>): WorkspaceView => ({
   mode: 'server-connected',

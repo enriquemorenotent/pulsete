@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
-import { waitFor } from './helpers/async-test-helpers.js';
 
 test('irc connection routes direct user notices to the sender target', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];

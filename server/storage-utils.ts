@@ -1,4 +1,3 @@
-import { pbkdf2Sync } from 'node:crypto';
 import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState } from '../shared/protocol.js';
@@ -16,9 +15,6 @@ import type {
   NetworkRow,
   RuntimeNetworkProfile,
 } from './storage-types.js';
-
-export const hashPassword = (password: string, salt: string) =>
-  pbkdf2Sync(password, salt, 120_000, 64, 'sha512').toString('hex');
 
 export const parseJson = <T>(value: string, fallback: T): T => {
   try {

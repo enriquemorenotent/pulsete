@@ -4,7 +4,6 @@ import type {
   BufferState,
   BufferHistoryImportSummary,
   ChannelState,
-  ClientMessage,
   NetworkProfile,
 } from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
@@ -12,7 +11,6 @@ import type { Action,State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import type { SocketHandle } from '../web/src/client.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
-import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { createAppActions } from '../web/src/useAppActions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 

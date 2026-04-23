@@ -15,7 +15,7 @@ import type { RuntimeIrcService } from './runtime-irc-service.js';
 import type { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type { createRuntimeSnapshot } from './runtime-snapshot.js';
-import type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
+import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
 
 export type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
 

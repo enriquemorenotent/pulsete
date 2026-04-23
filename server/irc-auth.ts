@@ -16,7 +16,6 @@ import {
   createIdleSaslState,
   finishSaslNegotiation,
   getWelcomeSaslFallbackMessage,
-  handleRegistrationAuthLine,
 } from './irc-sasl.js';
 
 export { createIdleSaslState, handleRegistrationAuthLine } from './irc-sasl.js';

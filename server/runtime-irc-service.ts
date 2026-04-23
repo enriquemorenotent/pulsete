@@ -1,4 +1,3 @@
-import type { IrcRuntimeCommandConnection } from './irc-types.js';
 import {
   normalizeChannelTarget,
   normalizeMessageBody,
@@ -16,7 +15,6 @@ type RuntimeIrcServiceOptions = {
   networks: Pick<RuntimeNetworkStore, 'get'>;
 };
 
-type RuntimeIrcConnection = IrcRuntimeCommandConnection;
 
 export class RuntimeIrcService {
   constructor(private readonly options: RuntimeIrcServiceOptions) {}

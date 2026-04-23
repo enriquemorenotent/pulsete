@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { makeBuffer, makeChannel, makeMessage, makeQueryWorkspace, makeServerWorkspace, makeWorkspace } from './chat-pane.test.fixtures.js';
+import { makeMessage } from './chat-pane.test.fixtures.js';
 import { renderChatPane, renderQueryPane, renderServerPane } from './chat-pane.test.renderers.js';
 
 

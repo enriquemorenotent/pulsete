@@ -43,11 +43,6 @@ const messagesSearchIndexTriggersSql = (clause = '') => `
   END;
 `;
 
-export const messagesSearchIndexSchemaSql = `
-${messagesSearchIndexTableSql}
-${messagesSearchIndexTriggersSql('IF NOT EXISTS ')}
-`;
-
 export const ensureHistoryImportBatchesTable = (db: DatabaseSync) => {
   db.exec(historyImportBatchesSchemaSql);
 };

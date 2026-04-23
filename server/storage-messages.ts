@@ -15,7 +15,6 @@ export {
   deleteMessagesByIdPrefixes,
 } from './storage-message-mutations.js';
 export {
-  updateMessageAttribution,
   repairBufferMessageAttributions,
 } from './storage-message-attribution-store.js';
 export {

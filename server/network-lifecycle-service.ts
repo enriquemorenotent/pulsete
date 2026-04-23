@@ -1,4 +1,4 @@
-import { getNetworkRootId, isConnectionInstance } from '../shared/network-model.js';
+import { isConnectionInstance } from '../shared/network-model.js';
 import type { ServerMessage } from '../shared/protocol.js';
 import { collectRequestedServerBuffer, createNetworkRemoveMessages, createNetworkUpsertMessages } from './network-lifecycle-messages.js';
 import { badRequest, notFound } from './app-error.js';

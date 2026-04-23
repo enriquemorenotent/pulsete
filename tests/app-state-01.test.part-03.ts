@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { initialChannelListState,initialState,reducer } from '../web/src/app-state.js';
+import { reducer } from '../web/src/app-state.js';
 import { indexConversationMessages,toConversationMessageKey } from '../web/src/conversation-message-state.js';
-import { gatewayReconnectMessage } from '../web/src/gateway.js';
-import { emptySnapshot, makeBuffer, makeFriend, makeMessage, makeNetwork, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
+import { makeBuffer, makeMessage, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
 test('pending selections promote to the confirmed channel buffer', () => {
   const state = makeState({

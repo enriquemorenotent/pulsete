@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { EventEmitter } from 'node:events';
 import net from 'node:net';
 import test from 'node:test';
-import tls from 'node:tls';
 import { handleIrcLine } from '../server/irc-handle-line.js';
-import { parseLine } from '../server/irc-parser.js';
 import { IrcConnection } from '../server/irc.js';
-import { createConnection,createMockSocket,createWelcomeServer,waitFor } from './helpers/irc-race-test-helpers.js';
+import { createMockSocket } from './helpers/irc-race-test-helpers.js';
 
 test('sasl plain falls back cleanly when the server does not advertise sasl', () => {
   const originalConnect = net.connect;
