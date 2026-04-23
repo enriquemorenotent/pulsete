@@ -102,7 +102,7 @@ const createHarness = (session: AppSessionSnapshot) => {
     dispatch: (action) => {
       dispatched.push(action);
     },
-    getSession: () => session,
+    getState: () => session.state,
     updateBanner: (kind, message) => {
       banners.push({ kind, message });
     },
@@ -215,4 +215,3 @@ test('connectNetwork is a silent no-op when a saved network already has a connec
     globalThis.fetch = originalFetch;
   }
 });
-

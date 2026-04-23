@@ -10,6 +10,7 @@ import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import {
   type AppActionContext,
+  getConversation,
   selectBuffer,
   selectPendingChannel,
   type ConversationActions,
@@ -18,13 +19,13 @@ import {
 
 type ConversationActionParams = Pick<
   AppActionContext,
-  'applyServerMessages' | 'dispatch' | 'getSession' | 'updateBanner'
+  'applyServerMessages' | 'dispatch' | 'getState' | 'updateBanner'
 > & GatewayActions;
 
 export const createConversationActions = ({
   applyServerMessages,
   dispatch,
-  getSession,
+  getState,
   updateBanner,
   getGatewaySocket,
   sendGatewayMessage,
@@ -32,7 +33,8 @@ export const createConversationActions = ({
   const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
 
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
-    const { conversation, state } = getSession();
+    const state = getState();
+    const conversation = getConversation(getState);
     const existingBuffer = conversation.findChannelBuffer(networkId, channel);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
@@ -59,7 +61,7 @@ export const createConversationActions = ({
   };
 
   const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string): Promise<BufferState> => {
-    const { conversation } = getSession();
+    const conversation = getConversation(getState);
     const existingBuffer = conversation.findQueryBuffer(network.id, nick);
     if (existingBuffer) {
       selectBuffer(dispatch, existingBuffer);
@@ -75,7 +77,7 @@ export const createConversationActions = ({
     if (!getGatewaySocket()) {
       return;
     }
-    const { state } = getSession();
+    const state = getState();
     const channelList = state.transient.channelList;
     const runtime = state.domain.networkStates[networkId] ?? null;
     if (runtime?.phase !== 'connected') {

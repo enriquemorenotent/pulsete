@@ -6,19 +6,24 @@ import type {
   NetworkProfile,
   ServerMessage,
 } from '../../shared/protocol.js';
+import { selectConversation, selectWorkspace } from './app-selectors.js';
+import type { ConversationModel } from './conversation-model.js';
 import type { Action } from './app-types.js';
-import type { AppSessionSnapshot } from './app-session.js';
 import type { SocketHandle } from './client.js';
+import type { WorkspaceView } from './workspace-types.js';
 
 export type MutableRef<T> = { current: T };
 
 export type AppDispatch = (action: Action) => void;
 
-export type AppSessionGetter = () => AppSessionSnapshot;
+export type AppStateGetter = () => import('./app-types.js').State;
 export type ApplyServerMessages = (messages: readonly ServerMessage[]) => void;
 
 export type AppActionContext = {
-  getSession: AppSessionGetter;
+  getConversation?: () => ConversationModel;
+  getState: AppStateGetter;
+  getDraft: (contextKey: string | null) => string;
+  getWorkspace?: () => WorkspaceView;
   applyServerMessages: ApplyServerMessages;
   dispatch: AppDispatch;
   socketRef: MutableRef<SocketHandle | null>;
@@ -32,7 +37,7 @@ export type BannerActions = {
 };
 
 export type GatewayActionParams = BannerActions & {
-  getSession: AppSessionGetter;
+  getState: AppStateGetter;
   socketRef: MutableRef<SocketHandle | null>;
 };
 
@@ -79,3 +84,19 @@ export const selectPendingChannel = (
     type: 'select',
     selection: { kind: 'pending-channel', networkId, channel },
   });
+
+export const getConversation = (getState: AppStateGetter) =>
+  selectConversation(getState());
+
+export const getWorkspace = (getState: AppStateGetter) =>
+  selectWorkspace(getState());
+
+export const readConversation = (
+  getState: AppStateGetter,
+  getConversationOverride?: () => ConversationModel,
+) => getConversationOverride?.() ?? getConversation(getState);
+
+export const readWorkspace = (
+  getState: AppStateGetter,
+  getWorkspaceOverride?: () => WorkspaceView,
+) => getWorkspaceOverride?.() ?? getWorkspace(getState);

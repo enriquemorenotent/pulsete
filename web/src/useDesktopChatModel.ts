@@ -7,7 +7,10 @@ import {
 } from './background-dm-audio.js';
 import { resolveCurrentChannelAutoJoinState } from './channel-autojoin.js';
 import { buildComposerCompletionModel } from './composer-completion.js';
-import type { ComposerController } from './composer-history.js';
+import {
+  useComposerDraft,
+  type ComposerStoreApi,
+} from './composer-store.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
@@ -24,7 +27,7 @@ export type DesktopChatModelParams = {
     addContact: (contact: BackgroundDmAudioContact) => void;
     removeContact: (contact: BackgroundDmAudioContact) => void;
   };
-  composer: ComposerController;
+  composer: ComposerStoreApi;
   friends: State['domain']['friends'];
   mutedNicks: State['domain']['mutedNicks'];
   networks: State['domain']['networks'];
@@ -62,7 +65,7 @@ export function useDesktopChatModel({
 }: DesktopChatModelParams): DesktopShellModel['chat'] {
   const channelAutoJoin = resolveCurrentChannelAutoJoinState(networks, workspace);
   const composerContextKey = workspace.selectedBuffer?.id ?? null;
-  const draft = composer.getDraft(composerContextKey);
+  const draft = useComposerDraft(composer, composerContextKey);
   const composerCompletion = useMemo(() => buildComposerCompletionModel(workspace), [workspace]);
   const canClearHistory =
     workspace.selectedBuffer?.kind === 'channel'

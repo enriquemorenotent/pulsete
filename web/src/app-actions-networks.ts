@@ -3,7 +3,11 @@ import type { NetworkProfile } from '../../shared/protocol.js';
 import type {
   AppActionContext,
 } from './app-actions-types.js';
-import { selectBuffer } from './app-actions-types.js';
+import {
+  readConversation,
+  readWorkspace,
+  selectBuffer,
+} from './app-actions-types.js';
 import type { State } from './app-types.js';
 import { api } from './client.js';
 import { createAppMutationExecutor } from './app-mutation.js';
@@ -12,7 +16,12 @@ import { createConnectionInstancePayload, toSaveNetworkPayload, type NetworkForm
 
 type NetworkActionParams = Pick<
   AppActionContext,
-  'applyServerMessages' | 'dispatch' | 'getSession' | 'updateBanner'
+  | 'applyServerMessages'
+  | 'dispatch'
+  | 'getConversation'
+  | 'getState'
+  | 'getWorkspace'
+  | 'updateBanner'
 >;
 
 export type ManagedNetworkConnectPlan =
@@ -46,7 +55,9 @@ export const resolveManagedNetworkConnectPlan = ({
 export const createNetworkActions = ({
   applyServerMessages,
   dispatch,
-  getSession,
+  getConversation,
+  getState,
+  getWorkspace,
   updateBanner,
 }: NetworkActionParams) => {
   const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
@@ -94,7 +105,8 @@ export const createNetworkActions = ({
   };
 
   const connectNetwork = async (network: NetworkProfile) => {
-    const { conversation, state } = getSession();
+    const state = getState();
+    const conversation = readConversation(getState, getConversation);
     const plan = resolveManagedNetworkConnectPlan({
       network,
       networks: state.domain.networks,
@@ -177,7 +189,7 @@ export const createNetworkActions = ({
   };
 
   const selectNetworkBuffer = (network: NetworkProfile) => {
-    const { conversation } = getSession();
+    const conversation = readConversation(getState, getConversation);
     const buffer = conversation.findServerBuffer(network.id);
     if (buffer) {
       selectBuffer(dispatch, buffer);
@@ -185,7 +197,8 @@ export const createNetworkActions = ({
   };
 
   const toggleCurrentChannelAutoJoin = async () => {
-    const { state, workspace } = getSession();
+    const state = getState();
+    const workspace = readWorkspace(getState, getWorkspace);
     const autoJoin = resolveCurrentChannelAutoJoinState(state.domain.networks, workspace);
     if (!autoJoin.network || !autoJoin.channel) {
       return false;

@@ -3,20 +3,25 @@ import type {
   AppActionContext,
   ConversationActions,
 } from './app-actions-types.js';
-import { selectBuffer } from './app-actions-types.js';
+import { readWorkspace, selectBuffer } from './app-actions-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import { resolveFriendSelection } from './friend-selection.js';
 
 type FriendActionParams = Pick<
   AppActionContext,
-  'applyServerMessages' | 'dispatch' | 'getSession' | 'updateBanner'
+  | 'applyServerMessages'
+  | 'dispatch'
+  | 'getState'
+  | 'getWorkspace'
+  | 'updateBanner'
 > & ConversationActions;
 
 export const createFriendActions = ({
   applyServerMessages,
   dispatch,
-  getSession,
+  getState,
+  getWorkspace,
   openOrSelectQueryBuffer,
   updateBanner,
 }: FriendActionParams) => {
@@ -31,7 +36,8 @@ export const createFriendActions = ({
   };
 
   const selectFriend = async (friend: FriendState) => {
-    const { state, workspace } = getSession();
+    const state = getState();
+    const workspace = readWorkspace(getState, getWorkspace);
     const decision = resolveFriendSelection({
       nick: friend.nick,
       buffers: state.domain.buffers,

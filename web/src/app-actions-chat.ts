@@ -1,6 +1,8 @@
 import type { BufferState } from '../../shared/protocol.js';
 import {
   type AppActionContext,
+  readConversation,
+  readWorkspace,
   selectBuffer,
   selectPendingChannel,
   type ConversationActions,
@@ -15,7 +17,10 @@ type ChatActionParams = Pick<
   AppActionContext,
   | 'applyServerMessages'
   | 'dispatch'
-  | 'getSession'
+  | 'getConversation'
+  | 'getDraft'
+  | 'getState'
+  | 'getWorkspace'
   | 'recordComposerEntry'
   | 'setDraft'
   | 'updateBanner'
@@ -30,7 +35,10 @@ export const createChatActions = ({
   updateBufferSelfNickAliases,
   applyServerMessages,
   dispatch,
-  getSession,
+  getConversation,
+  getDraft,
+  getState,
+  getWorkspace,
   getGatewaySocket,
   joinChannel,
   openChannelListForNetwork,
@@ -50,7 +58,7 @@ export const createChatActions = ({
     selectPendingChannel(dispatch, networkId, channel);
 
   const openMentionedChannel = async (channelName: string) => {
-    const { workspace } = getSession();
+    const workspace = readWorkspace(getState, getWorkspace);
     const network = workspace.selectedNetwork;
     if (!network) {
       return;
@@ -59,7 +67,7 @@ export const createChatActions = ({
   };
 
   const openChannelList = async () => {
-    const { workspace } = getSession();
+    const workspace = readWorkspace(getState, getWorkspace);
     const network = workspace.selectedNetwork;
     if (!network) {
       return;
@@ -68,7 +76,7 @@ export const createChatActions = ({
   };
 
   const closeChannelList = () => {
-    const { state } = getSession();
+    const state = getState();
     const channelList = state.transient.channelList;
     const networkId = channelList.networkId;
     if (networkId) {
@@ -78,7 +86,8 @@ export const createChatActions = ({
   };
 
   const joinChannelFromList = async (channel: string) => {
-    const { conversation, state } = getSession();
+    const state = getState();
+    const conversation = readConversation(getState, getConversation);
     const channelList = state.transient.channelList;
     const networkId = channelList.networkId;
     if (!networkId) {
@@ -96,7 +105,8 @@ export const createChatActions = ({
     if (!socket) {
       return;
     }
-    const { conversation, workspace } = getSession();
+    const conversation = readConversation(getState, getConversation);
+    const workspace = readWorkspace(getState, getWorkspace);
     const buffer = conversation.findChannelBuffer(networkId, channel);
     try {
       socket.send({
@@ -119,8 +129,9 @@ export const createChatActions = ({
   };
 
   const sendComposer = async () => {
-    const { draft, workspace } = getSession();
+    const workspace = readWorkspace(getState, getWorkspace);
     const draftBufferId = workspace.selectedBuffer?.id ?? null;
+    const draft = getDraft(draftBufferId);
     if (draft.trim() && !getGatewaySocket()) {
       return false;
     }
@@ -137,7 +148,7 @@ export const createChatActions = ({
           },
           onOpenChannelList: openChannelListForNetwork,
           onOpenQuery: async (networkId, nick) => {
-            const { state } = getSession();
+            const state = getState();
             const networks = state.domain.networks;
             const network =
               networks.find((candidate) => candidate.id === networkId) ?? null;

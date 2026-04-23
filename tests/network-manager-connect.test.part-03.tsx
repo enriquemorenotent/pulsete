@@ -112,7 +112,7 @@ const createHarness = (session: AppSessionSnapshot) => {
     dispatch: (action) => {
       dispatched.push(action);
     },
-    getSession: () => session,
+    getState: () => session.state,
     updateBanner: (kind, message) => {
       banners.push({ kind, message });
     },
@@ -239,4 +239,3 @@ test('connectNetwork creates a new hidden instance when no peer exists yet', asy
     globalThis.fetch = originalFetch;
   }
 });
-

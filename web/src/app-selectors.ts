@@ -1,0 +1,226 @@
+import { listSavedNetworks } from '../../shared/network-model.js';
+import type { NetworkProfile } from '../../shared/protocol.js';
+import { buildConnectionSidebarView } from './connection-sidebar-view.js';
+import { buildConversationModel } from './conversation-model.js';
+import { selectConversationMessages } from './conversation-selectors.js';
+import { buildManagedRuntime, buildManagedRuntimeMap } from './network-manager-runtime.js';
+import type { State } from './app-types.js';
+import { deriveWorkspace } from './workspace.js';
+import { getConnectionInstances } from './workspace-helpers.js';
+
+const memoizeLast = <Args extends readonly unknown[], Result>(
+  compute: (...args: Args) => Result,
+) => {
+  let previousArgs: Args | null = null;
+  let previousResult: Result;
+  return (...args: Args) => {
+    const currentArgs = previousArgs;
+    const argsMatch = currentArgs !== null
+      && currentArgs.length === args.length
+      && args.every((value, index) => Object.is(value, currentArgs[index]));
+    if (argsMatch) {
+      return previousResult;
+    }
+    previousArgs = args;
+    previousResult = compute(...args);
+    return previousResult;
+  };
+};
+
+const buildConversation = memoizeLast(
+  (
+    buffers: State['domain']['buffers'],
+    channels: State['domain']['channels'],
+    pendingChannels: State['domain']['pendingChannels'],
+  ) =>
+    buildConversationModel({
+      buffers,
+      channels,
+      pendingChannels,
+    }),
+);
+
+const buildWorkspace = memoizeLast(
+  (
+    networks: State['domain']['networks'],
+    networkStates: State['domain']['networkStates'],
+    selection: State['transient']['selection'],
+    conversation: ReturnType<typeof selectConversation>,
+  ) =>
+    deriveWorkspace({
+      networks,
+      conversation,
+      networkStates,
+      selection,
+    }),
+);
+
+const buildVisibleNetworks = memoizeLast(
+  (savedNetworks: NetworkProfile[], showFavoritesOnly: boolean) =>
+    showFavoritesOnly
+      ? savedNetworks.filter((network) => network.favorite)
+      : savedNetworks,
+);
+
+const buildConnectionInstances = memoizeLast(
+  (networks: State['domain']['networks']) => getConnectionInstances(networks),
+);
+
+const buildSavedNetworks = memoizeLast(
+  (networks: State['domain']['networks']) => listSavedNetworks(networks),
+);
+
+const buildManagedNetworkModel = memoizeLast(
+  (
+    connectionInstances: State['domain']['networks'],
+    managedNetworkId: string | null,
+    networkStates: State['domain']['networkStates'],
+    visibleNetworks: NetworkProfile[],
+  ) => {
+    const visibleManagedNetwork =
+      visibleNetworks.find((network) => network.id === managedNetworkId) ?? null;
+    return {
+      managedRuntime: buildManagedRuntime(
+        visibleManagedNetwork,
+        connectionInstances,
+        networkStates,
+      ),
+      managedRuntimes: buildManagedRuntimeMap(
+        visibleNetworks,
+        connectionInstances,
+        networkStates,
+      ),
+      visibleManagedNetwork,
+    };
+  },
+);
+
+const buildNetworkNamesById = memoizeLast(
+  (networks: State['domain']['networks']) =>
+    new Map(networks.map((network) => [network.id, network.name])),
+);
+
+const buildSelectedMessages = memoizeLast(
+  (
+    messages: State['domain']['messages'],
+    selectedBuffer: ReturnType<typeof selectWorkspace>['selectedBuffer'],
+  ) => selectConversationMessages(messages, selectedBuffer),
+);
+
+const buildSidebarConnections = memoizeLast(
+  (
+    connectionInstances: State['domain']['networks'],
+    conversation: ReturnType<typeof selectConversation>,
+    networkStates: State['domain']['networkStates'],
+    selection: ReturnType<typeof selectWorkspace>['selection'],
+  ) =>
+    buildConnectionSidebarView({
+      networks: connectionInstances,
+      conversation,
+      networkStates,
+      selection,
+    }),
+);
+
+const buildServerProfileNetwork = memoizeLast(
+  (
+    networks: State['domain']['networks'],
+    selectedNetwork: ReturnType<typeof selectWorkspace>['selectedNetwork'],
+  ) => {
+    if (!selectedNetwork) {
+      return null;
+    }
+    const rootId = selectedNetwork.templateId ?? selectedNetwork.id;
+    return (
+      networks.find((network) => network.id === rootId && !network.managerHidden)
+      ?? networks.find((network) => network.id === rootId)
+      ?? null
+    );
+  },
+);
+
+export const selectPhase = (state: State) => state.domain.phase;
+export const selectBanner = (state: State) => state.transient.banner;
+export const selectGatewayStatus = (state: State) => state.domain.gatewayStatus;
+export const selectNetworks = (state: State) => state.domain.networks;
+export const selectBuffers = (state: State) => state.domain.buffers;
+export const selectFriends = (state: State) => state.domain.friends;
+export const selectMutedNicks = (state: State) => state.domain.mutedNicks;
+export const selectFriendPresence = (state: State) => state.domain.friendPresence;
+export const selectQueryPresence = (state: State) => state.domain.queryPresence;
+export const selectChannelList = (state: State) => state.transient.channelList;
+export const selectNetworkManagerState = (state: State) => state.transient.networkManager;
+export const selectHistoryLoadedByBufferId = (state: State) =>
+  state.transient.historyLoadedByBufferId;
+export const selectHistoryHasOlderByBufferId = (state: State) =>
+  state.transient.historyHasOlderByBufferId;
+export const selectHistoryLoadingOlder = (state: State) =>
+  state.transient.historyLoadingOlder;
+
+export const selectConversation = (state: State) =>
+  buildConversation(
+    state.domain.buffers,
+    state.domain.channels,
+    state.domain.pendingChannels,
+  );
+
+export const selectConnectionInstances = (state: State) =>
+  buildConnectionInstances(state.domain.networks);
+
+export const selectWorkspace = (state: State) =>
+  buildWorkspace(
+    state.domain.networks,
+    state.domain.networkStates,
+    state.transient.selection,
+    selectConversation(state),
+  );
+
+export const selectSavedNetworks = (state: State) =>
+  buildSavedNetworks(state.domain.networks);
+
+export const selectVisibleNetworks = (state: State) =>
+  buildVisibleNetworks(
+    selectSavedNetworks(state),
+    state.transient.networkManager.showFavoritesOnly,
+  );
+
+export const selectManagedNetworkModel = (state: State) =>
+  buildManagedNetworkModel(
+    selectConnectionInstances(state),
+    state.transient.networkManager.managedNetworkId,
+    state.domain.networkStates,
+    selectVisibleNetworks(state),
+  );
+
+export const selectChannelListNetwork = (state: State) =>
+  state.domain.networks.find(
+    (network) => network.id === state.transient.channelList.networkId,
+  ) ?? null;
+
+export const selectSelectedMessages = (state: State) =>
+  buildSelectedMessages(state.domain.messages, selectWorkspace(state).selectedBuffer);
+
+export const selectSidebarConnections = (state: State) =>
+  buildSidebarConnections(
+    selectConnectionInstances(state),
+    selectConversation(state),
+    state.domain.networkStates,
+    selectWorkspace(state).selection,
+  );
+
+export const selectSelectedBufferId = (state: State) =>
+  selectWorkspace(state).selectedBuffer?.id ?? null;
+
+export const selectRightSidebarKind = (state: State) => {
+  const kind = selectWorkspace(state).selectedBuffer?.kind;
+  return kind === 'server' ? 'profile' : kind === 'channel' ? 'users' : null;
+};
+
+export const selectNetworkNamesById = (state: State) =>
+  buildNetworkNamesById(state.domain.networks);
+
+export const selectConnectionInstanceCount = (state: State) =>
+  selectConnectionInstances(state).length;
+
+export const selectServerProfileNetwork = (state: State) =>
+  buildServerProfileNetwork(state.domain.networks, selectWorkspace(state).selectedNetwork);

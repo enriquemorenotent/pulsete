@@ -20,7 +20,7 @@ import {
   shouldShowSystemNotification,
 } from './background-dm-audio-browser.js';
 
-type BackgroundDmAudioState = {
+export type BackgroundDmAudioState = {
   settings: BackgroundDmAudioSettings;
   systemPermission: NotificationPermission | 'unsupported';
   setEnabled: (enabled: boolean) => void;

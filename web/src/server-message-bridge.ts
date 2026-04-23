@@ -1,4 +1,5 @@
 import type { ServerMessage } from '../../shared/protocol.js';
+import type { AppStoreApi } from './app-store.js';
 import type { Action } from './app-types.js';
 import { dispatchInboundServerMessage } from './server-message-actions.js';
 
@@ -33,21 +34,41 @@ const consumePendingMutationEcho = (
   return true;
 };
 
-export const createServerMessageBridge = (dispatch: (action: Action) => void) => {
+type DispatchTarget =
+  | ((action: Action) => void)
+  | Pick<AppStoreApi, 'batch' | 'dispatch'>;
+
+const runBatched = (target: DispatchTarget, callback: () => void) => {
+  if (typeof target === 'function') {
+    callback();
+    return;
+  }
+  target.batch(callback);
+};
+
+const readDispatch = (target: DispatchTarget) =>
+  typeof target === 'function' ? target : target.dispatch;
+
+export const createServerMessageBridge = (target: DispatchTarget) => {
   const pendingMutations = new Map<string, number>();
+  const dispatch = readDispatch(target);
 
   const applyMutationMessages = (messages: readonly ServerMessage[]) => {
     trackPendingMutationEchoes(pendingMutations, messages);
-    for (const message of messages) {
-      dispatchInboundServerMessage(message, dispatch);
-    }
+    runBatched(target, () => {
+      for (const message of messages) {
+        dispatchInboundServerMessage(message, dispatch);
+      }
+    });
   };
 
   const applySocketMessage = (message: ServerMessage) => {
     if (consumePendingMutationEcho(pendingMutations, message)) {
       return;
     }
-    dispatchInboundServerMessage(message, dispatch);
+    runBatched(target, () => {
+      dispatchInboundServerMessage(message, dispatch);
+    });
   };
 
   return {
