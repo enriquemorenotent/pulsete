@@ -31,9 +31,7 @@ export const importRuntimeConversationHistory = (
     : options.conversations.upsertBuffer({ ...buffer, unread: buffer.unread, selfNickAliases: persistentSelfNickAliases });
   const selfNickSnapshot = mergeNickAliases([network.nick, ...network.altNicks, ...importSelfNickAliases]);
   const importBatchId = (options.conversations as ImportBatchStore).createHistoryImportBatch?.({
-    networkId: buffer.networkId,
     bufferId: buffer.id,
-    target: buffer.target,
     selfNickSnapshot,
   })?.id ?? null;
   const result = importLogFiles({

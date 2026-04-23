@@ -12,9 +12,7 @@ export type RuntimeConversationServiceOptions = {
 
 export type ImportBatchStore = RuntimeConversationStore & {
   createHistoryImportBatch?: (input: {
-    networkId: string;
     bufferId: string;
-    target: string;
     selfNickSnapshot: string[];
   }) => { id: string } | null;
 };

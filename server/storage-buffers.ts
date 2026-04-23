@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { BufferState, ChannelState, ChannelUserState } from '../shared/protocol.js';
-import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
+import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { listBufferSelfNickAliases, replaceBufferSelfNickAliases } from './storage-owned-lists.js';
 import type { BufferInput, BufferRow, ChannelInput, ChannelRow } from './storage-types.js';
 import { toBufferState, toChannelState } from './storage-utils.js';
 
@@ -19,79 +20,103 @@ const channelSelect = `
   WHERE buffers.kind = 'channel'
 `;
 
+const bufferColumns =
+  'id, networkId, kind, target, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt';
+
 export const listBuffers = (db: DatabaseSync, networkId?: string): BufferState[] => {
   const sql = networkId
-    ? 'SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers WHERE networkId = ? ORDER BY createdAt ASC'
-    : 'SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers ORDER BY createdAt ASC';
+    ? `SELECT ${bufferColumns} FROM buffers WHERE networkId = ? AND isOpen = 1 ORDER BY createdAt ASC`
+    : `SELECT ${bufferColumns} FROM buffers WHERE isOpen = 1 ORDER BY createdAt ASC`;
   const args = networkId ? [networkId] : [];
-  return (db.prepare(sql).all(...args) as BufferRow[]).map(toBufferState);
+  return (db.prepare(sql).all(...args) as BufferRow[]).map((row) => toBufferState(row, listBufferSelfNickAliases(db, row.id)));
 };
 
 export const getBuffer = (db: DatabaseSync, bufferId: string): BufferState | null => {
-  const row = db.prepare('SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers WHERE id = ?')
+  const row = db.prepare(`SELECT ${bufferColumns} FROM buffers WHERE id = ?`)
     .get(bufferId) as BufferRow | undefined;
-  return row ? toBufferState(row) : null;
+  return row ? toBufferState(row, listBufferSelfNickAliases(db, row.id)) : null;
+};
+
+export const getStoredBufferByTarget = (db: DatabaseSync, networkId: string, target: string): BufferState | null => {
+  const row = db.prepare(
+    `SELECT ${bufferColumns} FROM buffers WHERE networkId = ? AND targetKey = ?`
+  ).get(networkId, normalizeIrcIdentifier(target)) as BufferRow | undefined;
+  return row ? toBufferState(row, listBufferSelfNickAliases(db, row.id)) : null;
 };
 
 export const getBufferByTarget = (db: DatabaseSync, networkId: string, target: string): BufferState | null => {
-  const row = db.prepare('SELECT id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt FROM buffers WHERE networkId = ? AND target = ?')
-    .get(networkId, target) as BufferRow | undefined;
-  if (row) {
-    return toBufferState(row);
-  }
-  return listBuffers(db, networkId).find((buffer) => isSameIrcIdentifier(buffer.target, target)) ?? null;
+  const buffer = getStoredBufferByTarget(db, networkId, target);
+  const row = buffer ? (db.prepare('SELECT isOpen FROM buffers WHERE id = ?').get(buffer.id) as { isOpen: number } | undefined) : null;
+  return row?.isOpen ? buffer : null;
 };
 
 export const getServerBuffer = (db: DatabaseSync, networkId: string) =>
-  getBufferByTarget(db, networkId, 'server');
+  getStoredBufferByTarget(db, networkId, 'server');
 
 export const upsertBuffer = (db: DatabaseSync, input: BufferInput) => {
   const existing =
     (input.id ? getBuffer(db, input.id) : null)
-    ?? getBufferByTarget(db, input.networkId, input.target);
+    ?? getStoredBufferByTarget(db, input.networkId, input.target);
   const now = Date.now();
+  const isOpen = input.isOpen ?? true;
   if (existing) {
     db.prepare(
       `UPDATE buffers
-       SET networkId = ?, kind = ?, target = ?, unread = ?, priorityUnread = ?, lastReadTs = ?, lastReadMessageId = ?, selfNickAliases = ?, updatedAt = ?
+       SET networkId = ?, kind = ?, target = ?, targetKey = ?, isOpen = ?, unread = ?, priorityUnread = ?, lastReadTs = ?, lastReadMessageId = ?, updatedAt = ?
        WHERE id = ?`
     ).run(
       input.networkId,
       input.kind,
       input.target,
+      normalizeIrcIdentifier(input.target),
+      isOpen ? 1 : 0,
       input.unread ?? existing.unread ?? 0,
       input.priorityUnread ?? existing.priorityUnread ?? 0,
       input.lastReadTs ?? existing.lastReadTs ?? null,
       input.lastReadMessageId ?? existing.lastReadMessageId ?? null,
-      JSON.stringify(input.selfNickAliases ?? existing.selfNickAliases ?? []),
       now,
       existing.id
     );
+    replaceBufferSelfNickAliases(db, existing.id, input.selfNickAliases ?? existing.selfNickAliases ?? []);
     return getBuffer(db, existing.id)!;
   }
 
   const id = input.id ?? randomUUID();
   db.prepare(
     `INSERT INTO buffers
-       (id, networkId, kind, target, unread, priorityUnread, lastReadTs, lastReadMessageId, selfNickAliases, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, networkId, kind, target, targetKey, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.networkId,
     input.kind,
     input.target,
+    normalizeIrcIdentifier(input.target),
+    isOpen ? 1 : 0,
     input.unread ?? 0,
     input.priorityUnread ?? 0,
     input.lastReadTs ?? null,
     input.lastReadMessageId ?? null,
-    JSON.stringify(input.selfNickAliases ?? []),
     now,
     now
   );
+  replaceBufferSelfNickAliases(db, id, input.selfNickAliases ?? []);
   return getBuffer(db, id)!;
 };
 
 export const removeBuffer = (db: DatabaseSync, bufferId: string) => {
+  const existing = getBuffer(db, bufferId);
+  if (!existing) {
+    return null;
+  }
+  if (existing.kind === 'server') {
+    return existing;
+  }
+  db.prepare('UPDATE buffers SET isOpen = 0, updatedAt = ? WHERE id = ?').run(Date.now(), bufferId);
+  return existing;
+};
+
+export const deleteBuffer = (db: DatabaseSync, bufferId: string) => {
   const existing = getBuffer(db, bufferId);
   if (!existing) {
     return null;
@@ -123,8 +148,8 @@ export const setBufferUnread = (
 
 export const listChannels = (db: DatabaseSync, networkId?: string): ChannelState[] => {
   const sql = networkId
-    ? `${channelSelect} AND buffers.networkId = ? ORDER BY buffers.createdAt ASC`
-    : `${channelSelect} ORDER BY buffers.createdAt ASC`;
+    ? `${channelSelect} AND buffers.isOpen = 1 AND buffers.networkId = ? ORDER BY buffers.createdAt ASC`
+    : `${channelSelect} AND buffers.isOpen = 1 ORDER BY buffers.createdAt ASC`;
   const args = networkId ? [networkId] : [];
   return (db.prepare(sql).all(...args) as Array<ChannelRow & { networkId: string; name: string }>).map(toChannelState);
 };
@@ -136,16 +161,19 @@ export const getChannel = (db: DatabaseSync, channelId: string): ChannelState | 
 };
 
 export const getChannelByName = (db: DatabaseSync, networkId: string, name: string) => {
-  const row = db.prepare(`${channelSelect} AND buffers.networkId = ? AND buffers.target = ?`)
-    .get(networkId, name) as (ChannelRow & { networkId: string; name: string }) | undefined;
-  if (row) {
-    return toChannelState(row);
-  }
-  return listChannels(db, networkId).find((channel) => isSameIrcIdentifier(channel.name, name)) ?? null;
+  const channel = getStoredChannelByName(db, networkId, name);
+  const row = channel ? (db.prepare('SELECT isOpen FROM buffers WHERE id = ?').get(channel.id) as { isOpen: number } | undefined) : null;
+  return row?.isOpen ? channel : null;
+};
+
+export const getStoredChannelByName = (db: DatabaseSync, networkId: string, name: string) => {
+  const row = db.prepare(`${channelSelect} AND buffers.networkId = ? AND buffers.targetKey = ?`)
+    .get(networkId, normalizeIrcIdentifier(name)) as (ChannelRow & { networkId: string; name: string }) | undefined;
+  return row ? toChannelState(row) : null;
 };
 
 export const upsertChannel = (db: DatabaseSync, input: ChannelInput) => {
-  const existing = getChannelByName(db, input.networkId, input.name);
+  const existing = getStoredChannelByName(db, input.networkId, input.name);
   const buffer = upsertBuffer(db, {
     id: input.id ?? existing?.id,
     networkId: input.networkId,
@@ -176,14 +204,14 @@ export const upsertChannel = (db: DatabaseSync, input: ChannelInput) => {
 };
 
 export const deleteChannelByName = (db: DatabaseSync, networkId: string, channelName: string) => {
-  const buffer = getBufferByTarget(db, networkId, channelName);
+  const buffer = getStoredBufferByTarget(db, networkId, channelName);
   if (buffer?.kind === 'channel') {
     removeBuffer(db, buffer.id);
   }
 };
 
 export const updateChannelUsers = (db: DatabaseSync, networkId: string, channelName: string, users: ChannelUserState[]) => {
-  const channel = getChannelByName(db, networkId, channelName);
+  const channel = getStoredChannelByName(db, networkId, channelName);
   if (!channel) {
     return;
   }
@@ -192,7 +220,7 @@ export const updateChannelUsers = (db: DatabaseSync, networkId: string, channelN
 };
 
 export const updateChannelTopic = (db: DatabaseSync, networkId: string, channelName: string, topic: string) => {
-  const channel = getChannelByName(db, networkId, channelName);
+  const channel = getStoredChannelByName(db, networkId, channelName);
   if (!channel) {
     return;
   }

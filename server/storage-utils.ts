@@ -99,7 +99,14 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
   ];
 };
 
-export const toNetworkProfile = (row: NetworkRow): StoredNetworkProfile => {
+export const toNetworkProfile = (
+  row: NetworkRow,
+  lists: {
+    altNicks: string[];
+    historicalSelfNicks: string[];
+    autoJoin: string[];
+  },
+): StoredNetworkProfile => {
   const profile = {
     id: row.id,
     templateId: row.templateId,
@@ -109,8 +116,8 @@ export const toNetworkProfile = (row: NetworkRow): StoredNetworkProfile => {
     port: row.port,
     tls: Boolean(row.tls),
     nick: row.nick,
-    altNicks: parseJson<string[]>(row.altNicks, []),
-    historicalSelfNicks: parseJson<string[]>(row.historicalSelfNicks, []),
+    altNicks: lists.altNicks,
+    historicalSelfNicks: lists.historicalSelfNicks,
     username: row.username,
     realName: row.realName,
     hasPassword: Boolean(row.password),
@@ -118,15 +125,23 @@ export const toNetworkProfile = (row: NetworkRow): StoredNetworkProfile => {
     authTarget: row.authTarget,
     authAccount: row.authAccount,
     favorite: Boolean(row.favorite),
-    autoJoin: parseJson<string[]>(row.autoJoin, []),
+    autoJoin: lists.autoJoin,
   };
   return profile.managerHidden
     ? profile as Extract<StoredNetworkProfile, { managerHidden: true }>
     : profile as Extract<StoredNetworkProfile, { managerHidden: false }>;
 };
 
-export const toRuntimeNetworkProfile = (row: NetworkRow, secretBox: SecretBox): RuntimeNetworkProfile => ({
-  ...toNetworkProfile(row),
+export const toRuntimeNetworkProfile = (
+  row: NetworkRow,
+  secretBox: SecretBox,
+  lists: {
+    altNicks: string[];
+    historicalSelfNicks: string[];
+    autoJoin: string[];
+  },
+): RuntimeNetworkProfile => ({
+  ...toNetworkProfile(row, lists),
   password: decryptNetworkPassword(row.password, secretBox),
 });
 
@@ -136,7 +151,7 @@ export const encryptNetworkPassword = (password: string | undefined, secretBox: 
 export const decryptNetworkPassword = (password: string | null, secretBox: SecretBox) =>
   password ? secretBox.decrypt(password) : undefined;
 
-export const toBufferState = (row: BufferRow): BufferState => ({
+export const toBufferState = (row: BufferRow, selfNickAliases: string[]): BufferState => ({
   id: row.id,
   networkId: row.networkId,
   unread: row.unread,
@@ -145,7 +160,7 @@ export const toBufferState = (row: BufferRow): BufferState => ({
   lastReadMessageId: row.lastReadMessageId,
   kind: row.kind,
   target: row.target,
-  selfNickAliases: parseJson<string[]>(row.selfNickAliases, []),
+  selfNickAliases,
 });
 
 export const toFriendState = (row: FriendRow): FriendState => ({

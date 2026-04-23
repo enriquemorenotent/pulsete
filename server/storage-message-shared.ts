@@ -1,43 +1,45 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { MessageInput, MessagePage, MessageRow } from './storage-types.js';
+import { getStoredBufferByTarget } from './storage-buffers.js';
 import { toMessage } from './storage-utils.js';
 
 export const emptyMessagePage: MessagePage = { messages: [], hasMore: false };
+
 export const messageColumns = [
-  'id',
-  'networkId',
-  'target',
-  'nick',
-  'speakerRole',
-  'speakerNick',
-  'attributionSource',
-  'attributionConfidence',
-  'importBatchId',
-  'body',
-  'kind',
-  'self',
-  'ts',
+  'm.id',
+  'm.bufferId',
+  'b.networkId AS networkId',
+  'b.target AS target',
+  'm.nick',
+  'm.speakerRole',
+  'm.speakerNick',
+  'm.attributionSource',
+  'm.attributionConfidence',
+  'm.importBatchId',
+  'm.body',
+  'm.kind',
+  'm.self',
+  'm.ts',
 ].join(', ');
 
-export type MessageLookup = (messageId: string) => MessageInput | null;
-export type MessageCursor = { networkId: string; rowid: number; target: string; ts: number };
+export const messageJoin = 'FROM messages AS m JOIN buffers AS b ON b.id = m.bufferId';
 
-export const listMatchingTargets = (db: DatabaseSync, networkId: string, target: string) =>
-  (db.prepare('SELECT DISTINCT target FROM messages WHERE networkId = ?').all(networkId) as Array<{ target: string }>)
-    .map((row) => row.target)
-    .filter((candidate) => isSameIrcIdentifier(candidate, target));
+export type MessageLookup = (messageId: string) => MessageInput | null;
+export type MessageCursor = { bufferId: string; rowid: number; ts: number };
+
+export const getMessageBufferId = (db: DatabaseSync, networkId: string, target: string) =>
+  getStoredBufferByTarget(db, networkId, target)?.id ?? null;
 
 export const getMessageCursor = (db: DatabaseSync, messageId: string) =>
-  db.prepare('SELECT networkId, rowid, target, ts FROM messages WHERE id = ?').get(messageId) as MessageCursor | undefined;
+  db.prepare('SELECT bufferId, rowid, ts FROM messages WHERE id = ?').get(messageId) as MessageCursor | undefined;
 
-export const buildIdPrefixWhereClause = (prefixes: string[]) => {
+export const buildIdPrefixWhereClause = (prefixes: string[], column = 'id') => {
   const normalized = [...new Set(prefixes.filter(Boolean))];
   if (normalized.length === 0) {
     return null;
   }
   return {
-    where: normalized.map(() => 'substr(id, 1, ?) = ?').join(' OR '),
+    where: normalized.map(() => `substr(${column}, 1, ?) = ?`).join(' OR '),
     args: normalized.flatMap((prefix) => [prefix.length, prefix]),
   };
 };

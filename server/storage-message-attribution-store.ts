@@ -4,7 +4,7 @@ import {
   resolveImportedChannelAttribution,
   resolveQueryRepairAttribution,
 } from './message-attribution.js';
-import { hydrateMessages, listMatchingTargets, messageColumns } from './storage-message-shared.js';
+import { getMessageBufferId, hydrateMessages, messageColumns, messageJoin } from './storage-message-shared.js';
 import type { MessageAttributionUpdate, MessageRow } from './storage-types.js';
 
 export const updateMessageAttribution = (db: DatabaseSync, input: MessageAttributionUpdate) => {
@@ -33,18 +33,17 @@ export const repairBufferMessageAttributions = (
     selfNickAliases: string[];
   },
 ) => {
-  const matchingTargets = listMatchingTargets(db, input.networkId, input.target);
-  if (matchingTargets.length === 0) {
+  const bufferId = getMessageBufferId(db, input.networkId, input.target);
+  if (!bufferId) {
     return [];
   }
-  const placeholders = matchingTargets.map(() => '?').join(', ');
   const rows = db.prepare(`
     SELECT ${messageColumns}
-    FROM messages
-    WHERE networkId = ? AND target IN (${placeholders})
-      AND coalesce(attributionSource, 'unknown') != 'runtime'
-    ORDER BY ts ASC, rowid ASC
-  `).all(input.networkId, ...matchingTargets) as MessageRow[];
+    ${messageJoin}
+    WHERE m.bufferId = ?
+      AND coalesce(m.attributionSource, 'unknown') != 'runtime'
+    ORDER BY m.ts ASC, m.rowid ASC
+  `).all(bufferId) as MessageRow[];
   if (rows.length === 0) {
     return [];
   }

@@ -5,6 +5,14 @@ import {
   resolveNetworkAuthTarget,
   type StoredNetworkProfile,
 } from '../shared/network-model.js';
+import {
+  listNetworkAltNicks,
+  listNetworkAutoJoinChannels,
+  listNetworkHistoricalSelfNicks,
+  replaceNetworkAltNicks,
+  replaceNetworkAutoJoinChannels,
+  replaceNetworkHistoricalSelfNicks,
+} from './storage-owned-lists.js';
 import { isEncryptedSecret } from './network-secret.js';
 import { badRequest, notFound } from './app-error.js';
 import type { SecretBox } from './network-secret.js';
@@ -17,11 +25,11 @@ import {
 } from './storage-utils.js';
 
 const networkColumns =
-  'id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin';
+  'id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt';
 
 export const listNetworks = (db: DatabaseSync): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
-  return (db.prepare(sql).all() as NetworkRow[]).map(toNetworkProfile);
+  return (db.prepare(sql).all() as NetworkRow[]).map((row) => toNetworkProfile(row, readNetworkLists(db, row.id)));
 };
 
 export const ensureDefaultNetworks = (db: DatabaseSync, saveNetwork: SaveNetwork) => {
@@ -36,7 +44,7 @@ export const ensureDefaultNetworks = (db: DatabaseSync, saveNetwork: SaveNetwork
 
 export const getNetwork = (db: DatabaseSync, networkId: string): StoredNetworkProfile | null => {
   const row = getNetworkRow(db, networkId);
-  return row ? toNetworkProfile(row) : null;
+  return row ? toNetworkProfile(row, readNetworkLists(db, row.id)) : null;
 };
 
 export const getRuntimeNetwork = (
@@ -45,7 +53,7 @@ export const getRuntimeNetwork = (
   secretBox: SecretBox
 ): RuntimeNetworkProfile | null => {
   const row = getNetworkRow(db, networkId);
-  return row ? toRuntimeNetworkProfile(row, secretBox) : null;
+  return row ? toRuntimeNetworkProfile(row, secretBox, readNetworkLists(db, row.id)) : null;
 };
 
 export const upsertNetwork = (
@@ -64,8 +72,8 @@ export const upsertNetwork = (
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
   db.prepare(
     `INSERT INTO networks
-       (id, templateId, managerHidden, name, host, port, tls, nick, altNicks, historicalSelfNicks, username, realName, password, authMethod, authTarget, authAccount, favorite, autoJoin, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        templateId = excluded.templateId,
        managerHidden = excluded.managerHidden,
@@ -74,8 +82,6 @@ export const upsertNetwork = (
        port = excluded.port,
        tls = excluded.tls,
        nick = excluded.nick,
-       altNicks = excluded.altNicks,
-       historicalSelfNicks = excluded.historicalSelfNicks,
        username = excluded.username,
        realName = excluded.realName,
        password = excluded.password,
@@ -83,7 +89,6 @@ export const upsertNetwork = (
        authTarget = excluded.authTarget,
        authAccount = excluded.authAccount,
        favorite = excluded.favorite,
-       autoJoin = excluded.autoJoin,
        updatedAt = excluded.updatedAt`
   ).run(
     id,
@@ -94,8 +99,6 @@ export const upsertNetwork = (
     input.port,
     input.tls ? 1 : 0,
     input.nick,
-    JSON.stringify(input.altNicks ?? []),
-    JSON.stringify(input.historicalSelfNicks ?? []),
     input.username,
     input.realName,
     storedPassword,
@@ -103,10 +106,12 @@ export const upsertNetwork = (
     storedAuthTarget,
     storedAuthAccount,
     input.favorite ? 1 : 0,
-    JSON.stringify(input.autoJoin ?? []),
     now,
     now
   );
+  replaceNetworkAltNicks(db, id, input.altNicks ?? []);
+  replaceNetworkHistoricalSelfNicks(db, id, input.historicalSelfNicks ?? []);
+  replaceNetworkAutoJoinChannels(db, id, input.autoJoin ?? []);
   const profile = getNetwork(db, id);
   if (!profile) {
     throw notFound('Network not found');
@@ -131,6 +136,12 @@ const getTemplateRow = (db: DatabaseSync, templateId: string) => {
   const sql = `SELECT ${networkColumns} FROM networks WHERE id = ?`;
   return db.prepare(sql).get(templateId) as NetworkRow | undefined;
 };
+
+const readNetworkLists = (db: DatabaseSync, networkId: string) => ({
+  altNicks: listNetworkAltNicks(db, networkId),
+  historicalSelfNicks: listNetworkHistoricalSelfNicks(db, networkId),
+  autoJoin: listNetworkAutoJoinChannels(db, networkId),
+});
 
 const validateTemplateRelationship = (
   db: DatabaseSync,

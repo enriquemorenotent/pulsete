@@ -25,8 +25,6 @@ export type NetworkRow = {
   port: number;
   tls: number;
   nick: string;
-  altNicks: string;
-  historicalSelfNicks: string;
   username: string;
   realName: string;
   password: string | null;
@@ -34,7 +32,6 @@ export type NetworkRow = {
   authTarget: string;
   authAccount: string;
   favorite: number;
-  autoJoin: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -44,11 +41,11 @@ export type BufferRow = {
   networkId: string;
   kind: BufferState['kind'];
   target: string;
+  isOpen: number;
   unread: number;
   priorityUnread: number;
   lastReadTs: number | null;
   lastReadMessageId: string | null;
-  selfNickAliases: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -63,6 +60,7 @@ export type ChannelRow = {
 
 export type MessageRow = {
   id: string;
+  bufferId: string;
   networkId: string;
   target: string;
   nick: string | null;
@@ -79,9 +77,7 @@ export type MessageRow = {
 
 export type HistoryImportBatchRow = {
   id: string;
-  networkId: string;
   bufferId: string;
-  target: string;
   selfNickSnapshot: string;
   createdAt: number;
 };
@@ -130,7 +126,9 @@ export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'users'> &
   };
 
 export type BufferInput = Omit<BufferState, 'id' | 'unread' | 'priorityUnread' | 'lastReadTs' | 'lastReadMessageId'> &
-  Partial<Pick<BufferState, 'id' | 'unread' | 'priorityUnread' | 'lastReadTs' | 'lastReadMessageId'>>;
+  Partial<Pick<BufferState, 'id' | 'unread' | 'priorityUnread' | 'lastReadTs' | 'lastReadMessageId'>> & {
+    isOpen?: boolean;
+  };
 
 export type FriendInput = Omit<FriendState, 'id'> & Partial<Pick<FriendState, 'id'>>;
 
@@ -164,9 +162,7 @@ export type MessageAttributionUpdate = {
 
 export type HistoryImportBatchInput = {
   id?: string;
-  networkId: string;
   bufferId: string;
-  target: string;
   selfNickSnapshot: string[];
   createdAt?: number;
 };

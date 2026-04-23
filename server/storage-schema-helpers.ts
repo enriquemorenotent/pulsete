@@ -3,9 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 export const historyImportBatchesSchemaSql = `
   CREATE TABLE IF NOT EXISTS history_import_batches (
     id TEXT PRIMARY KEY,
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
-    bufferId TEXT NOT NULL,
-    target TEXT NOT NULL,
+    bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
     selfNickSnapshot TEXT NOT NULL DEFAULT '[]',
     createdAt INTEGER NOT NULL
   );
@@ -15,8 +13,7 @@ const messagesSearchIndexTableSql = `
   CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
     USING fts5(
       messageId UNINDEXED,
-      networkId UNINDEXED,
-      target UNINDEXED,
+      bufferId UNINDEXED,
       nick,
       body,
       tokenize = 'porter unicode61'
@@ -27,8 +24,8 @@ const messagesSearchIndexTriggersSql = (clause = '') => `
   CREATE TRIGGER ${clause}messages_ai
     AFTER INSERT ON messages
   BEGIN
-    INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-    VALUES (new.rowid, new.id, new.networkId, new.target, coalesce(new.nick, ''), new.body);
+    INSERT INTO messages_fts (rowid, messageId, bufferId, nick, body)
+    VALUES (new.rowid, new.id, new.bufferId, coalesce(new.nick, ''), new.body);
   END;
 
   CREATE TRIGGER ${clause}messages_ad
@@ -41,8 +38,8 @@ const messagesSearchIndexTriggersSql = (clause = '') => `
     AFTER UPDATE ON messages
   BEGIN
     DELETE FROM messages_fts WHERE rowid = old.rowid;
-    INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-    VALUES (new.rowid, new.id, new.networkId, new.target, coalesce(new.nick, ''), new.body);
+    INSERT INTO messages_fts (rowid, messageId, bufferId, nick, body)
+    VALUES (new.rowid, new.id, new.bufferId, coalesce(new.nick, ''), new.body);
   END;
 `;
 
@@ -86,8 +83,8 @@ const messagesSearchIndexNeedsRebuild = (
 const rebuildMessagesSearchIndex = (db: DatabaseSync) => {
   db.exec('DELETE FROM messages_fts');
   db.exec(`
-    INSERT INTO messages_fts (rowid, messageId, networkId, target, nick, body)
-    SELECT rowid, id, networkId, target, coalesce(nick, ''), body
+    INSERT INTO messages_fts (rowid, messageId, bufferId, nick, body)
+    SELECT rowid, id, bufferId, coalesce(nick, ''), body
     FROM messages
   `);
 };

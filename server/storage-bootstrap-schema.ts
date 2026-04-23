@@ -1,6 +1,5 @@
 import {
   historyImportBatchesSchemaSql,
-  messagesSearchIndexSchemaSql,
 } from './storage-schema-helpers.js';
 
 export const storageBootstrapSchemaSql = `
@@ -17,8 +16,6 @@ export const storageBootstrapSchemaSql = `
     port INTEGER NOT NULL,
     tls INTEGER NOT NULL,
     nick TEXT NOT NULL,
-    altNicks TEXT NOT NULL DEFAULT '[]',
-    historicalSelfNicks TEXT NOT NULL DEFAULT '[]',
     username TEXT NOT NULL,
     realName TEXT NOT NULL DEFAULT '',
     password TEXT,
@@ -26,9 +23,35 @@ export const storageBootstrapSchemaSql = `
     authTarget TEXT NOT NULL DEFAULT 'NickServ',
     authAccount TEXT NOT NULL DEFAULT '',
     favorite INTEGER NOT NULL DEFAULT 0,
-    autoJoin TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS network_alt_nicks (
+    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    nick TEXT NOT NULL,
+    nickKey TEXT NOT NULL,
+    PRIMARY KEY (networkId, nickKey),
+    UNIQUE (networkId, position)
+  );
+
+  CREATE TABLE IF NOT EXISTS network_historical_self_nicks (
+    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    nick TEXT NOT NULL,
+    nickKey TEXT NOT NULL,
+    PRIMARY KEY (networkId, nickKey),
+    UNIQUE (networkId, position)
+  );
+
+  CREATE TABLE IF NOT EXISTS network_auto_join_channels (
+    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    channel TEXT NOT NULL,
+    channelKey TEXT NOT NULL,
+    PRIMARY KEY (networkId, channelKey),
+    UNIQUE (networkId, position)
   );
 
   CREATE TABLE IF NOT EXISTS buffers (
@@ -36,14 +59,24 @@ export const storageBootstrapSchemaSql = `
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     kind TEXT NOT NULL,
     target TEXT NOT NULL,
+    targetKey TEXT NOT NULL,
+    isOpen INTEGER NOT NULL DEFAULT 1,
     unread INTEGER NOT NULL DEFAULT 0,
     priorityUnread INTEGER NOT NULL DEFAULT 0,
     lastReadTs INTEGER,
     lastReadMessageId TEXT,
-    selfNickAliases TEXT NOT NULL DEFAULT '[]',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
-    UNIQUE(networkId, target)
+    UNIQUE(networkId, targetKey)
+  );
+
+  CREATE TABLE IF NOT EXISTS buffer_self_nick_aliases (
+    bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    nick TEXT NOT NULL,
+    nickKey TEXT NOT NULL,
+    PRIMARY KEY (bufferId, nickKey),
+    UNIQUE (bufferId, position)
   );
 
   CREATE TABLE IF NOT EXISTS channel_details (
@@ -56,8 +89,7 @@ export const storageBootstrapSchemaSql = `
 
   CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
-    target TEXT NOT NULL,
+    bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
     nick TEXT,
     speakerRole TEXT NOT NULL DEFAULT 'unknown',
     speakerNick TEXT,
@@ -89,12 +121,10 @@ ${historyImportBatchesSchemaSql}
   );
 
   CREATE INDEX IF NOT EXISTS idx_messages_buffer
-    ON messages(networkId, target, ts DESC);
-
-${messagesSearchIndexSchemaSql}
+    ON messages(bufferId, ts DESC);
 
   CREATE INDEX IF NOT EXISTS idx_buffers_network
-    ON buffers(networkId, createdAt ASC);
+    ON buffers(networkId, isOpen, createdAt ASC);
 
   CREATE INDEX IF NOT EXISTS idx_friends_nick
     ON friends(nick COLLATE NOCASE, createdAt ASC);

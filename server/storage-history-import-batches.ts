@@ -8,13 +8,11 @@ export const createHistoryImportBatch = (db: DatabaseSync, input: HistoryImportB
   const createdAt = input.createdAt ?? Date.now();
   db.prepare(`
     INSERT INTO history_import_batches
-      (id, networkId, bufferId, target, selfNickSnapshot, createdAt)
-    VALUES (?, ?, ?, ?, ?, ?)
+      (id, bufferId, selfNickSnapshot, createdAt)
+    VALUES (?, ?, ?, ?)
   `).run(
     id,
-    input.networkId,
     input.bufferId,
-    input.target,
     JSON.stringify(input.selfNickSnapshot),
     createdAt,
   );
@@ -23,7 +21,7 @@ export const createHistoryImportBatch = (db: DatabaseSync, input: HistoryImportB
 
 export const getHistoryImportBatch = (db: DatabaseSync, batchId: string) => {
   const row = db.prepare(`
-    SELECT id, networkId, bufferId, target, selfNickSnapshot, createdAt
+    SELECT id, bufferId, selfNickSnapshot, createdAt
     FROM history_import_batches
     WHERE id = ?
   `).get(batchId) as HistoryImportBatchRow | undefined;

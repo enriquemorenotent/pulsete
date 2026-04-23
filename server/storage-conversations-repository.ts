@@ -17,13 +17,14 @@ import {
   repairBufferMessageAttributions,
   searchMessages,
 } from './storage-messages.js';
-import { listMatchingTargets } from './storage-message-shared.js';
 import {
+  deleteBuffer,
   deleteChannelByName,
   getBuffer,
   getBufferByTarget,
   getChannel,
   getChannelByName,
+  getStoredBufferByTarget,
   getServerBuffer,
   listBuffers,
   listChannels,
@@ -178,41 +179,41 @@ export class StorageConversationsRepository {
 }
 
 const renameQuery = (db: DatabaseSync, networkId: string, fromTarget: string, toTarget: string) => {
-  const source = getBufferByTarget(db, networkId, fromTarget);
+  const source = getStoredBufferByTarget(db, networkId, fromTarget);
   if (source?.kind !== 'query') {
     return null;
   }
 
-  const destination = getBufferByTarget(db, networkId, toTarget);
+  const destination = getStoredBufferByTarget(db, networkId, toTarget);
   const mergedBuffer = destination?.kind === 'query' && destination.id !== source.id ? destination : null;
-  const targets = uniqueTargets([
-    ...listMatchingTargets(db, networkId, source.target),
-    ...listMatchingTargets(db, networkId, toTarget),
-  ]);
-  if (targets.length > 0) {
-    const placeholders = targets.map(() => '?').join(', ');
-    db.prepare(`UPDATE messages SET target = ? WHERE networkId = ? AND target IN (${placeholders})`)
-      .run(toTarget, networkId, ...targets);
+  if (!mergedBuffer) {
+    return {
+      buffer: upsertBuffer(db, {
+        ...source,
+        target: toTarget,
+        isOpen: true,
+      }),
+      removedBufferId: null,
+    };
   }
 
-  if (mergedBuffer) {
-    removeBuffer(db, mergedBuffer.id);
-  }
+  db.prepare('UPDATE messages SET bufferId = ? WHERE bufferId = ?').run(source.id, mergedBuffer.id);
+  db.prepare('UPDATE history_import_batches SET bufferId = ? WHERE bufferId = ?').run(source.id, mergedBuffer.id);
+  deleteBuffer(db, mergedBuffer.id);
 
   return {
     buffer: upsertBuffer(db, {
       ...source,
       target: toTarget,
-      unread: source.unread + (mergedBuffer?.unread ?? 0),
-      priorityUnread: source.priorityUnread + (mergedBuffer?.priorityUnread ?? 0),
+      isOpen: true,
+      unread: source.unread + mergedBuffer.unread,
+      priorityUnread: source.priorityUnread + mergedBuffer.priorityUnread,
       ...pickLatestReadState(source, mergedBuffer),
-      selfNickAliases: mergeNickAliases(source.selfNickAliases ?? [], mergedBuffer?.selfNickAliases ?? []),
+      selfNickAliases: mergeNickAliases(source.selfNickAliases ?? [], mergedBuffer.selfNickAliases ?? []),
     }),
-    removedBufferId: mergedBuffer?.id ?? null,
+    removedBufferId: mergedBuffer.id,
   };
 };
-
-const uniqueTargets = (targets: string[]) => [...new Set(targets)];
 
 const mergeNickAliases = (left: string[], right: string[]) => [...new Set([...left, ...right])];
 

@@ -54,7 +54,7 @@ export const handleRuntimeConversationMessageEvent = (
   const openTargetNotice = event.message.kind === 'notice'
     && event.message.target !== 'server'
     && !isChannelTarget(event.message.target)
-    && !options.conversations.getBufferByTarget(event.message.networkId, event.message.target);
+    && !findOpenBufferByTarget(options, event.message.networkId, event.message.target);
   const message = openTargetNotice ? { ...event.message, target: 'server' } : event.message;
   const messageMuted = isNickMuted(
     options.mutedNicks.list(message.networkId),
@@ -86,7 +86,7 @@ export const handleRuntimeConversationMessageEvent = (
     && event.message.target === 'server'
     && !!event.message.nick
     && isServiceNick(event.message.nick)
-    ? options.conversations.getBufferByTarget(event.message.networkId, event.message.nick)
+    ? findOpenBufferByTarget(options, event.message.networkId, event.message.nick)
     : null;
   if (closedServiceQuery?.kind === 'query') {
     options.conversations.removeBuffer(closedServiceQuery.id);
@@ -110,7 +110,7 @@ export const handleRuntimeConversationPeerQuitEvent = (
   if (event.self) {
     return [];
   }
-  const queryBuffer = options.conversations.getBufferByTarget(event.networkId, event.nick);
+  const queryBuffer = findOpenBufferByTarget(options, event.networkId, event.nick);
   if (queryBuffer?.kind !== 'query') {
     return [];
   }
@@ -219,9 +219,17 @@ const resolveStatusTarget = (
   if (!event.target || event.target === 'server') {
     return 'server';
   }
-  const boundTarget = options.conversations.getBufferByTarget(event.networkId, event.target)?.target;
+  const boundTarget = findOpenBufferByTarget(options, event.networkId, event.target)?.target;
   if (boundTarget) {
     return boundTarget;
   }
   return isChannelTarget(event.target) || event.requireBoundTarget ? 'server' : event.target;
 };
+
+const findOpenBufferByTarget = (
+  options: RuntimeConversationServiceOptions,
+  networkId: string,
+  target: string,
+) => options.conversations
+  .listBuffers(networkId)
+  .find((buffer) => isSameIrcIdentifier(buffer.target, target)) ?? null;

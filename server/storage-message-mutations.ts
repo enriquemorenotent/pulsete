@@ -3,27 +3,32 @@ import {
   normalizeStoredAttribution,
   resolveRuntimeMessageAttribution,
 } from './message-attribution.js';
+import { upsertBuffer } from './storage-buffers.js';
 import {
   buildIdPrefixWhereClause,
+  getMessageBufferId,
   hydrateMessages,
-  listMatchingTargets,
   messageColumns,
+  messageJoin,
   type MessageLookup,
 } from './storage-message-shared.js';
 import type { MessageInput, MessageRow } from './storage-types.js';
 
 export const appendMessage = (db: DatabaseSync, input: MessageInput, lookup: MessageLookup) => {
+  const bufferId = ensureMessageBufferId(db, input);
+  if (!bufferId) {
+    throw new Error(`Buffer not found for message target: ${input.networkId}:${input.target}`);
+  }
   const attribution = shouldRespectInputAttribution(input)
     ? normalizeStoredAttribution(input)
     : resolveRuntimeMessageAttribution(input);
   db.prepare(`
     INSERT INTO messages
-      (id, networkId, target, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, bufferId, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     input.id,
-    input.networkId,
-    input.target,
+    bufferId,
     input.nick,
     attribution.speakerRole,
     attribution.speakerNick ?? input.nick,
@@ -39,39 +44,39 @@ export const appendMessage = (db: DatabaseSync, input: MessageInput, lookup: Mes
 };
 
 export const deleteMessages = (db: DatabaseSync, networkId: string, target: string) => {
-  const matchingTargets = listMatchingTargets(db, networkId, target);
-  if (matchingTargets.length === 0) {
+  const bufferId = getMessageBufferId(db, networkId, target);
+  if (!bufferId) {
     return [];
   }
-  const placeholders = matchingTargets.map(() => '?').join(', ');
   const rows = db.prepare(`
     SELECT ${messageColumns}
-    FROM messages
-    WHERE networkId = ? AND target IN (${placeholders})
-    ORDER BY ts ASC, rowid ASC
-  `).all(networkId, ...matchingTargets) as MessageRow[];
+    ${messageJoin}
+    WHERE m.bufferId = ?
+    ORDER BY m.ts ASC, m.rowid ASC
+  `).all(bufferId) as MessageRow[];
   if (rows.length === 0) {
     return [];
   }
-  db.prepare(`DELETE FROM messages WHERE networkId = ? AND target IN (${placeholders})`).run(networkId, ...matchingTargets);
+  db.prepare('DELETE FROM messages WHERE bufferId = ?').run(bufferId);
   return hydrateMessages(db, rows);
 };
 
 export const deleteMessagesByIdPrefixes = (db: DatabaseSync, prefixes: string[]) => {
-  const clauses = buildIdPrefixWhereClause(prefixes);
+  const clauses = buildIdPrefixWhereClause(prefixes, 'm.id');
   if (!clauses) {
     return [];
   }
   const rows = db.prepare(`
     SELECT ${messageColumns}
-    FROM messages
+    ${messageJoin}
     WHERE ${clauses.where}
-    ORDER BY ts ASC, rowid ASC
+    ORDER BY m.ts ASC, m.rowid ASC
   `).all(...clauses.args) as MessageRow[];
   if (rows.length === 0) {
     return [];
   }
-  db.prepare(`DELETE FROM messages WHERE ${clauses.where}`).run(...clauses.args);
+  const deleteClauses = buildIdPrefixWhereClause(prefixes);
+  db.prepare(`DELETE FROM messages WHERE ${deleteClauses!.where}`).run(...deleteClauses!.args);
   return hydrateMessages(db, rows);
 };
 
@@ -80,3 +85,39 @@ const shouldRespectInputAttribution = (input: MessageInput) =>
   || input.speakerNick !== undefined
   || input.attributionSource !== undefined
   || input.attributionConfidence !== undefined;
+
+const ensureMessageBufferId = (db: DatabaseSync, input: MessageInput) => {
+  const existing = getMessageBufferId(db, input.networkId, input.target);
+  if (existing) {
+    return existing;
+  }
+
+  const kind = resolveMessageBufferKind(input.target);
+  const buffer = upsertBuffer(db, {
+    networkId: input.networkId,
+    kind,
+    target: input.target,
+    isOpen: kind === 'server',
+  });
+  if (kind === 'channel') {
+    ensureChannelDetails(db, buffer.id);
+  }
+  return buffer.id;
+};
+
+const resolveMessageBufferKind = (target: string) =>
+  target === 'server'
+    ? 'server' as const
+    : /^[#&+!]/.test(target)
+      ? 'channel' as const
+      : 'query' as const;
+
+const ensureChannelDetails = (db: DatabaseSync, bufferId: string) => {
+  const now = Date.now();
+  db.prepare(`
+    INSERT INTO channel_details
+      (id, topic, users, createdAt, updatedAt)
+    VALUES (?, '', '[]', ?, ?)
+    ON CONFLICT(id) DO NOTHING
+  `).run(bufferId, now, now);
+};
