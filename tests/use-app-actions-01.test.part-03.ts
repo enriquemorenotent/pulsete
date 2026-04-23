@@ -208,10 +208,9 @@ test('importBufferHistory applies server mutations and shows the import summary 
     }]);
     assert.deepEqual(banners, [{
       kind: 'notice',
-      message: 'Imported 2 messages from hexchat logs (1 duplicates skipped, 3 non-matching lines skipped).',
+      message: 'Imported 2 messages from hexchat logs (1 existing line skipped, 3 non-matching lines skipped).',
     }]);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
-

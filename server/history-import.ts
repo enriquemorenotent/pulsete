@@ -69,7 +69,7 @@ export const importLogFiles = ({
   }
 
   const normalizedSelfNicks = normalizeNickAliases(selfNicks);
-  const existingKeys = new Set(existingMessages.map(toDedupKey));
+  const existingKeyCounts = countDedupKeys(existingMessages);
   const importedMessages: ImportedMessage[] = [];
   let duplicateCount = 0;
 
@@ -80,11 +80,12 @@ export const importLogFiles = ({
       continue;
     }
     const dedupKey = toDedupKey(normalized);
-    if (existingKeys.has(dedupKey)) {
+    const remainingExistingCount = existingKeyCounts.get(dedupKey) ?? 0;
+    if (remainingExistingCount > 0) {
+      existingKeyCounts.set(dedupKey, remainingExistingCount - 1);
       duplicateCount += 1;
       continue;
     }
-    existingKeys.add(dedupKey);
     importedMessages.push(normalized);
   }
 
@@ -158,6 +159,20 @@ const toDedupKey = (
   message.nick ? normalizeIrcIdentifier(message.nick) : null,
   message.body.trim(),
 ]);
+
+const countDedupKeys = (
+  messages: Array<
+    Pick<ChatMessage, 'ts' | 'kind' | 'nick' | 'self' | 'body'>
+    | Pick<MessageInput, 'ts' | 'kind' | 'nick' | 'self' | 'body'>
+  >,
+) => {
+  const counts = new Map<string, number>();
+  for (const message of messages) {
+    const dedupKey = toDedupKey(message);
+    counts.set(dedupKey, (counts.get(dedupKey) ?? 0) + 1);
+  }
+  return counts;
+};
 
 const compareImportedMessages = (left: ParsedLogMessage, right: ParsedLogMessage) =>
   left.ts - right.ts || left.order - right.order;

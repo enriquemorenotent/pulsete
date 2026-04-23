@@ -148,7 +148,7 @@ export const createConversationActions = ({
 const formatHistoryImportNotice = (summary: BufferHistoryImportSummary) => {
   const details = [];
   if (summary.duplicateCount > 0) {
-    details.push(`${summary.duplicateCount} duplicates skipped`);
+    details.push(`${summary.duplicateCount} existing ${summary.duplicateCount === 1 ? 'line' : 'lines'} skipped`);
   }
   if (summary.skippedCount > 0) {
     details.push(`${summary.skippedCount} non-matching lines skipped`);

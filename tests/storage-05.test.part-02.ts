@@ -131,7 +131,7 @@ test('versioned storage migrations rebuild the message search index for existing
     'network-1',
     'MissD',
     'MissD',
-    'Wait for me in the hotel room.',
+    'Wait for me in the c++ room.',
     'line',
     0,
     now,
@@ -139,7 +139,7 @@ test('versioned storage migrations rebuild the message search index for existing
   existing.close();
 
   const storage = new Storage(file);
-  const searchResults = storage.conversations.searchMessages('network-1', 'missd', 'hotel', 10);
+  const searchResults = storage.conversations.searchMessages('network-1', 'missd', 'c++ room', 10);
   const upgraded = openSqliteDatabase(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const indexCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages_fts').get() as { count: number };
@@ -148,4 +148,70 @@ test('versioned storage migrations rebuild the message search index for existing
   assert.equal(version.user_version, 14);
   assert.deepEqual(searchResults.map((result) => result.message.id), ['message-1']);
   assert.equal(indexCount.count, 1);
+});
+
+test('startup repair rebuilds legacy message search tokenizers on current schemas', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const network = storage.networks.upsert({
+    templateId: null,
+    managerHidden: false,
+    name: 'Instance',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: ['tester_', 'tester__'],
+    username: 'tester',
+    realName: 'Tester Example',
+    favorite: false,
+    autoJoin: [],
+  });
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'MissD',
+    body: 'Wait for me in the c++ room.',
+    kind: 'line',
+    self: false,
+    ts: Date.now(),
+  });
+  storage.close();
+
+  const legacy = openSqliteDatabase(file);
+  legacy.exec(`
+    DROP TRIGGER IF EXISTS messages_ai;
+    DROP TRIGGER IF EXISTS messages_ad;
+    DROP TRIGGER IF EXISTS messages_au;
+    DROP TABLE IF EXISTS messages_fts;
+    CREATE VIRTUAL TABLE messages_fts
+      USING fts5(
+        messageId UNINDEXED,
+        bufferId UNINDEXED,
+        nick,
+        body,
+        tokenize = 'porter unicode61'
+      );
+    INSERT INTO messages_fts (rowid, messageId, bufferId, nick, body)
+    SELECT rowid, id, bufferId, coalesce(nick, ''), body
+    FROM messages;
+  `);
+  legacy.close();
+
+  const reopened = new Storage(file);
+  const searchResults = reopened.conversations.searchMessages(network.id, 'missd', 'c++ room', 10);
+  reopened.close();
+
+  const repaired = openSqliteDatabase(file);
+  const indexSql = repaired.prepare(`
+    SELECT sql
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'messages_fts'
+  `).get() as { sql: string };
+  repaired.close();
+
+  assert.deepEqual(searchResults.map((result) => result.message.id), ['message-1']);
+  assert.match(indexSql.sql, /tokenize\s*=\s*'trigram'/i);
 });

@@ -16,7 +16,7 @@ const messagesSearchIndexTableSql = `
       bufferId UNINDEXED,
       nick,
       body,
-      tokenize = 'porter unicode61'
+      tokenize = 'trigram'
     );
 `;
 
@@ -52,13 +52,18 @@ export const ensureMessagesSearchIndex = (
   forceRebuild: boolean,
   tableExists: (db: SqliteDb, table: string) => boolean,
 ) => {
-  const hadIndex = tableExists(db, 'messages_fts');
-  db.exec(messagesSearchIndexTableSql);
   db.exec('DROP TRIGGER IF EXISTS messages_ai');
   db.exec('DROP TRIGGER IF EXISTS messages_ad');
   db.exec('DROP TRIGGER IF EXISTS messages_au');
+  let hadIndex = tableExists(db, 'messages_fts');
+  const needsTokenizerRepair = hadIndex && !messagesSearchIndexHasTokenizer(db, 'trigram');
+  if (needsTokenizerRepair) {
+    db.exec('DROP TABLE IF EXISTS messages_fts');
+    hadIndex = false;
+  }
+  db.exec(messagesSearchIndexTableSql);
   db.exec(messagesSearchIndexTriggersSql());
-  if (forceRebuild || !hadIndex || messagesSearchIndexNeedsRebuild(db, tableExists)) {
+  if (forceRebuild || !hadIndex || needsTokenizerRepair || messagesSearchIndexNeedsRebuild(db, tableExists)) {
     rebuildMessagesSearchIndex(db);
   }
 };
@@ -82,4 +87,16 @@ const rebuildMessagesSearchIndex = (db: SqliteDb) => {
     SELECT rowid, id, bufferId, coalesce(nick, ''), body
     FROM messages
   `);
+};
+
+const messagesSearchIndexHasTokenizer = (
+  db: SqliteDb,
+  tokenizer: string,
+) => {
+  const row = db.prepare(`
+    SELECT sql
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'messages_fts'
+  `).get() as { sql?: string } | undefined;
+  return new RegExp(`tokenize\\s*=\\s*'${tokenizer}'`, 'i').test(row?.sql ?? '');
 };

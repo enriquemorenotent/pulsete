@@ -9,6 +9,7 @@ import {
   messageJoin,
   type MessageCursor,
 } from './storage-message-shared.js';
+import { searchMessageRows } from './storage-message-search.js';
 
 export const getMessageById = (db: SqliteDb, messageId: string) => {
   const row = db.prepare(`SELECT ${messageColumns} ${messageJoin} WHERE m.id = ?`).get(messageId) as MessageRow | undefined;
@@ -85,17 +86,7 @@ export const searchMessages = (db: SqliteDb, networkId: string, target: string, 
   if (!bufferId || query.trim().length === 0) {
     return [];
   }
-  const rows = db.prepare(`
-    SELECT
-      ${messageColumns},
-      bm25(messages_fts, 1.2, 1.0) AS score
-    FROM messages_fts
-    JOIN messages AS m ON m.rowid = messages_fts.rowid
-    JOIN buffers AS b ON b.id = m.bufferId
-    WHERE messages_fts MATCH ? AND m.bufferId = ?
-    ORDER BY score ASC, m.ts ASC, m.rowid ASC
-    LIMIT ?
-  `).all(query, bufferId, limit) as Array<MessageRow & { score: number }>;
+  const rows = searchMessageRows(db, bufferId, query, limit);
   const messages = hydrateMessages(db, rows);
   return messages.map((message, index) => ({ message, score: rows[index]!.score }));
 };

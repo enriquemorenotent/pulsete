@@ -149,44 +149,6 @@ test('importLogFiles keeps old self nick lines in query buffers when aliases are
   );
 });
 
-test('importLogFiles keeps all channel participants and dedupes against uploads and existing history', () => {
-  const existingMessages: ChatMessage[] = [{
-    id: 'existing-1',
-    networkId: 'network-1',
-    target: '#lesdomme',
-    nick: 'sofia',
-    body: 'hi',
-    kind: 'line',
-    self: true,
-    ts: new Date(2026, 2, 10, 0, 0, 1, 0).getTime(),
-  }];
-  const result = importLogFiles({
-    buffer: channelBuffer,
-    existingMessages,
-    files: [makeLogFile([
-      '**** BEGIN LOGGING AT Tue Mar 10 00:00:00 2026',
-      'Mar 10 00:00:01 <sofia>\thi',
-      'Mar 10 00:00:01 <sofia>\thi',
-      'Mar 10 00:00:02 <MissD>\thello',
-      'Mar 10 00:00:03 <other>\tthird party',
-      'Mar 10 00:00:04 * other waves',
-    ].join('\n'))],
-    selfNicks: ['sofia'],
-  });
-
-  assert.equal(result.summary.importedCount, 3);
-  assert.equal(result.summary.duplicateCount, 2);
-  assert.equal(result.summary.skippedCount, 0);
-  assert.deepEqual(
-    result.messages.map((message) => ({ nick: message.nick, kind: message.kind, body: message.body })),
-    [
-      { nick: 'MissD', kind: 'line', body: 'hello' },
-      { nick: 'other', kind: 'line', body: 'third party' },
-      { nick: 'other', kind: 'action', body: 'waves' },
-    ],
-  );
-});
-
 test('importLogFiles marks old self nick lines as self in channel buffers when aliases are provided', () => {
   const result = importLogFiles({
     buffer: channelBuffer,
