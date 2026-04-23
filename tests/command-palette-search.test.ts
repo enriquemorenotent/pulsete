@@ -21,7 +21,6 @@ test('command palette filtering matches labels, subtitles, and keywords case-ins
     actions: {
       canToggleChannelAutoJoin: false,
       channelAutoJoinActive: false,
-      canClearHistory: false,
       canDownloadHistory: false,
       canImportHistory: true,
       canOpenSelfAliases: false,

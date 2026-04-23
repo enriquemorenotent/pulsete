@@ -60,7 +60,6 @@ test('channel headers collapse maintenance actions behind a compact overflow tri
   const markup = renderChatPane([], {
     showChannelAutoJoin: true,
     channelAutoJoinActive: true,
-    canClearHistory: true,
     canImportHistory: true,
     canRepairSelfNickAliases: true,
   });
@@ -68,7 +67,6 @@ test('channel headers collapse maintenance actions behind a compact overflow tri
   assert.match(markup, /aria-label="More actions"/);
   assert.match(markup, />Close</);
   assert.doesNotMatch(markup, /Autojoin On/);
-  assert.doesNotMatch(markup, /Clear history/);
   assert.doesNotMatch(markup, /Import logs/);
   assert.doesNotMatch(markup, /Self aliases/);
 });

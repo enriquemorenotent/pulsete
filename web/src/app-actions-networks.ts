@@ -40,10 +40,11 @@ export const resolveManagedNetworkConnectPlan = ({
   networkStates: State['domain']['networkStates'];
 }): ManagedNetworkConnectPlan => {
   const peers = listConnectionPeers(networks, getNetworkRootId(network));
-  if (peers.some((peer) => networkStates[peer.id]?.phase === 'connected')) {
+  const openPeers = peers.filter((peer) => peer.connectionClosed !== true);
+  if (openPeers.some((peer) => networkStates[peer.id]?.phase === 'connected')) {
     return { kind: 'noop-connected' };
   }
-  if (peers.some((peer) => networkStates[peer.id]?.phase === 'connecting')) {
+  if (openPeers.some((peer) => networkStates[peer.id]?.phase === 'connecting')) {
     return { kind: 'noop-connecting' };
   }
   const existingPeer = peers[0];
@@ -170,8 +171,8 @@ export const createNetworkActions = ({
 
   const closeConnection = async (network: NetworkProfile) => {
     return executeMutation({
-      request: () => api.deleteNetwork(network.id),
-      mapResult: (result) => result.deletedNetworkIds,
+      request: () => api.closeConnection(network.id),
+      mapResult: (result) => result.network,
       successMessage: 'Connection instance closed',
       errorMessage: 'Failed to close connection',
       failureValue: null,

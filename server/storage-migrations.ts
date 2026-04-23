@@ -1,5 +1,5 @@
 import type { SqliteDb } from './storage-sqlite.js';
-import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { backfillQueryBufferSelfNickAliases } from './storage-migration-alias-backfill.js';
 import { migrateNormalizedStorage } from './storage-normalized-migration.js';
 import {
   ensureHistoryImportBatchesTable,
@@ -7,7 +7,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 14;
+export const currentStorageSchemaVersion = 15;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -129,6 +129,12 @@ const storageMigrations: readonly StorageMigration[] = [
       migrateNormalizedStorage(db, { tableExists, tableHasColumn });
     },
   },
+  {
+    version: 15,
+    apply: (db) => {
+      ensureColumn(db, 'networks', 'connectionClosed', 'INTEGER NOT NULL DEFAULT 0');
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => {
@@ -178,6 +184,7 @@ const ensureColumn = (db: SqliteDb, table: string, column: string, definition: s
 const ensureLegacyNetworkColumns = (db: SqliteDb) => {
   ensureColumn(db, 'networks', 'templateId', 'TEXT');
   ensureColumn(db, 'networks', 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'networks', 'connectionClosed', 'INTEGER NOT NULL DEFAULT 0');
 };
 
 const getUserVersion = (db: SqliteDb) =>
@@ -194,63 +201,4 @@ const resetStoredMessageHistory = (db: SqliteDb) => {
   db.exec('DELETE FROM messages');
   db.prepare('UPDATE buffers SET unread = 0, priorityUnread = 0, lastReadTs = NULL, lastReadMessageId = NULL, updatedAt = ?')
     .run(Date.now());
-};
-
-const backfillQueryBufferSelfNickAliases = (db: SqliteDb) => {
-  const queryBuffers = db.prepare(`
-    SELECT buffers.id, networks.nick, networks.altNicks
-    FROM buffers
-    JOIN networks ON networks.id = buffers.networkId
-    WHERE buffers.kind = 'query'
-  `).all() as Array<{ id: string; nick: string; altNicks: string }>;
-  const readSnapshots = db.prepare(`
-    SELECT selfNickSnapshot
-    FROM history_import_batches
-    WHERE bufferId = ?
-    ORDER BY createdAt ASC
-  `);
-  const updateBuffer = db.prepare(`
-    UPDATE buffers
-    SET selfNickAliases = ?
-    WHERE id = ?
-  `);
-  for (const buffer of queryBuffers) {
-    const currentAliases = parseJson<string[]>(
-      (db.prepare('SELECT selfNickAliases FROM buffers WHERE id = ?').get(buffer.id) as { selfNickAliases?: string } | undefined)?.selfNickAliases ?? '[]',
-      [],
-    );
-    if (currentAliases.length > 0) {
-      continue;
-    }
-    const excluded = new Set([
-      normalizeIrcIdentifier(buffer.nick),
-      ...parseJson<string[]>(buffer.altNicks, []).map((nick) => normalizeIrcIdentifier(nick)),
-    ]);
-    const aliases: string[] = [];
-    const seen = new Set<string>();
-    const snapshots = readSnapshots.all(buffer.id) as Array<{ selfNickSnapshot: string }>;
-    for (const snapshot of snapshots) {
-      for (const nick of parseJson<string[]>(snapshot.selfNickSnapshot, [])) {
-        const trimmed = nick.trim();
-        if (!trimmed) {
-          continue;
-        }
-        const key = normalizeIrcIdentifier(trimmed);
-        if (excluded.has(key) || seen.has(key)) {
-          continue;
-        }
-        seen.add(key);
-        aliases.push(trimmed);
-      }
-    }
-    updateBuffer.run(JSON.stringify(aliases), buffer.id);
-  }
-};
-
-const parseJson = <T>(value: string, fallback: T): T => {
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
 };

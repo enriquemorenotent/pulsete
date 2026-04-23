@@ -74,7 +74,6 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   queryNotificationsEnabled: false,
   showChannelAutoJoin: false,
   channelAutoJoinActive: false,
-  canClearHistory: false,
   canDownloadHistory: false,
   canImportHistory: false,
   onAddFriend: async () => true,
@@ -82,7 +81,6 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   onToggleQueryNotifications: () => undefined,
   onWhoisSelectedQuery: () => undefined,
   onToggleChannelAutoJoin: async () => true,
-  onClearHistory: async () => true,
   onDownloadHistory: async () => true,
   onOpenHistoryImport: () => undefined,
   onOpenSelfNickAliases: undefined,
@@ -98,13 +96,12 @@ test('channel header actions keep close primary and move maintenance actions int
     channelAutoJoinActive: true,
     canDownloadHistory: true,
     canImportHistory: true,
-    canClearHistory: true,
     onOpenSelfNickAliases: () => undefined,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close'],
-    overflow: ['Autojoin On', 'Download history', 'Import logs', 'Self aliases', 'Clear history'],
+    overflow: ['Autojoin On', 'Download history', 'Import logs', 'Self aliases'],
   });
 });
 

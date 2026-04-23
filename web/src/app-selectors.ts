@@ -1,4 +1,4 @@
-import { listSavedNetworks } from '../../shared/network-model.js';
+import { listConnectionInstances, listSavedNetworks } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import { buildConnectionSidebarView } from './connection-sidebar-view.js';
 import { buildConversationModel } from './conversation-model.js';
@@ -64,6 +64,10 @@ const buildVisibleNetworks = memoizeLast(
 
 const buildConnectionInstances = memoizeLast(
   (networks: State['domain']['networks']) => getConnectionInstances(networks),
+);
+
+const buildConnectionPeers = memoizeLast(
+  (networks: State['domain']['networks']) => listConnectionInstances(networks),
 );
 
 const buildSavedNetworks = memoizeLast(
@@ -167,6 +171,9 @@ export const selectConversation = (state: State) =>
 export const selectConnectionInstances = (state: State) =>
   buildConnectionInstances(state.domain.networks);
 
+export const selectConnectionPeers = (state: State) =>
+  buildConnectionPeers(state.domain.networks);
+
 export const selectWorkspace = (state: State) =>
   buildWorkspace(
     state.domain.networks,
@@ -186,7 +193,7 @@ export const selectVisibleNetworks = (state: State) =>
 
 export const selectManagedNetworkModel = (state: State) =>
   buildManagedNetworkModel(
-    selectConnectionInstances(state),
+    selectConnectionPeers(state),
     state.transient.networkManager.managedNetworkId,
     state.domain.networkStates,
     selectVisibleNetworks(state),

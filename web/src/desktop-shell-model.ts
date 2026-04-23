@@ -45,7 +45,7 @@ export type DesktopShellNetworkManagerModel = {
   onAdd: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
-  onRemove: () => void;
+  onRemove: (network: NetworkProfile) => void;
   onConnect: () => void;
   onFavorite: () => void;
 };

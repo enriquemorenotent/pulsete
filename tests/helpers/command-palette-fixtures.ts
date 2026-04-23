@@ -118,7 +118,6 @@ export const buildPaletteInput = (
   actions: {
     canToggleChannelAutoJoin: false,
     channelAutoJoinActive: false,
-    canClearHistory: false,
     canDownloadHistory: false,
     canImportHistory: false,
     canOpenSelfAliases: false,

@@ -2,7 +2,6 @@ import { badRequest, notFound } from './app-error.js';
 import { buildHistoryDownloadName, renderBufferHistoryDownload } from './runtime-conversation-download.js';
 import { requireStoredNetwork } from './runtime-network-guard.js';
 import {
-  clearConversationBufferHistory,
   closeConversationQueryBuffer,
   listConversationBufferHistory,
   markConversationBufferRead,
@@ -60,24 +59,4 @@ export const exportRuntimeConversationBufferHistory = (
     fileName: buildHistoryDownloadName(network.name, buffer.target),
     content: renderBufferHistoryDownload({ buffer, messages, networkName: network.name }),
   };
-};
-
-export const clearRuntimeConversationBufferHistory = (
-  options: RuntimeConversationServiceOptions,
-  bufferId: string,
-) => {
-  const { buffer, bufferUpdate, deletedMessages } = clearConversationBufferHistory(options.conversations, bufferId);
-  const messages: ServerMessage[] = [];
-  if (deletedMessages.length > 0) {
-    messages.push({
-      type: 'message.remove',
-      networkId: buffer.networkId,
-      target: buffer.target,
-      messageIds: deletedMessages.map((message) => message.id),
-    });
-  }
-  if (bufferUpdate) {
-    messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
-  }
-  return { buffer: bufferUpdate ?? buffer, messages };
 };

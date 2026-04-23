@@ -1,10 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SqliteDb } from './storage-sqlite.js';
-import {
-  defaultNetworkAuthMethod,
-  resolveNetworkAuthTarget,
-  type StoredNetworkProfile,
-} from '../shared/network-model.js';
+import { defaultNetworkAuthMethod, resolveNetworkAuthTarget, type StoredNetworkProfile } from '../shared/network-model.js';
 import {
   listNetworkAltNicks,
   listNetworkAutoJoinChannels,
@@ -18,15 +14,10 @@ import { badRequest, notFound } from './app-error.js';
 import type { SecretBox } from './network-secret.js';
 import { validatePasswordForAuthMethod } from './network-password.js';
 import type { NetworkCountRow, NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-types.js';
-import {
-  defaultNetworkTemplates,
-  encryptNetworkPassword,
-  toNetworkProfile,
-  toRuntimeNetworkProfile,
-} from './storage-utils.js';
+import { defaultNetworkTemplates, encryptNetworkPassword, toNetworkProfile, toRuntimeNetworkProfile } from './storage-utils.js';
 
 const networkColumns =
-  'id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt';
+  'id, templateId, managerHidden, connectionClosed, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt';
 
 export const listNetworks = (db: SqliteDb): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
@@ -74,11 +65,12 @@ export const upsertNetwork = (
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
   db.prepare(
     `INSERT INTO networks
-       (id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, templateId, managerHidden, connectionClosed, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        templateId = excluded.templateId,
        managerHidden = excluded.managerHidden,
+       connectionClosed = excluded.connectionClosed,
        name = excluded.name,
        host = excluded.host,
        port = excluded.port,
@@ -96,6 +88,7 @@ export const upsertNetwork = (
     id,
     input.templateId ?? null,
     input.managerHidden ? 1 : 0,
+    input.connectionClosed ? 1 : 0,
     input.name,
     input.host,
     input.port,
@@ -123,6 +116,12 @@ export const upsertNetwork = (
 
 export const deleteNetwork = (db: SqliteDb, networkId: string) => {
   db.prepare('DELETE FROM networks WHERE id = ? OR templateId = ?').run(networkId, networkId);
+};
+
+export const setConnectionClosed = (db: SqliteDb, networkId: string, connectionClosed: boolean) => {
+  db.prepare('UPDATE networks SET connectionClosed = ?, updatedAt = ? WHERE id = ?')
+    .run(connectionClosed ? 1 : 0, Date.now(), networkId);
+  return getNetwork(db, networkId);
 };
 
 export const hasEncryptedNetworkPasswords = (db: SqliteDb) =>

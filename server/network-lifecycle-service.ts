@@ -13,7 +13,7 @@ type NetworkLifecycleContext = {
   conversations: Pick<RuntimeConversationStore, 'getServerBuffer'>;
   networks: Pick<
     RuntimeNetworkStore,
-    'list' | 'get' | 'getRuntime' | 'upsert' | 'saveWithRelatedInstances' | 'deleteWithRelated'
+    'list' | 'get' | 'getRuntime' | 'upsert' | 'setConnectionClosed' | 'saveWithRelatedInstances' | 'deleteWithRelated'
   >;
 };
 
@@ -62,6 +62,10 @@ export class NetworkLifecycleService {
   }
 
   deleteNetwork(networkId: string) {
+    const network = requireStoredNetwork(this.context.networks, networkId);
+    if (isConnectionInstance(network)) {
+      throw badRequest('Only saved networks can be removed');
+    }
     const deletedNetworkIds = this.context.networks.deleteWithRelated(networkId);
     if (deletedNetworkIds.length === 0) {
       throw notFound('Network not found');
@@ -71,6 +75,20 @@ export class NetworkLifecycleService {
       ...createNetworkRemoveMessages(deletedNetworkIds),
     ];
     return { deletedNetworkIds, messages };
+  }
+
+  closeConnection(networkId: string) {
+    const network = requireStoredNetwork(this.context.networks, networkId);
+    if (!isConnectionInstance(network)) {
+      throw badRequest('Only connection instances can be closed');
+    }
+    const messages = this.context.connectionManager.removeNetworks([network.id]);
+    const closed = this.context.networks.setConnectionClosed(network.id, true);
+    if (!closed) {
+      throw notFound('Network not found');
+    }
+    messages.push({ type: 'network.upsert', network: closed });
+    return { network: closed, messages };
   }
 
   private applyMutation(updatedProfileIds: readonly string[]) {

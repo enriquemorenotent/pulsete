@@ -6,6 +6,7 @@ import {
   getNetwork,
   getRuntimeNetwork,
   listNetworks,
+  setConnectionClosed,
   upsertNetwork,
 } from './storage-networks.js';
 import { ensureNetworkBuffers } from './storage-network-invariants.js';
@@ -35,6 +36,10 @@ export class StorageNetworksRepository {
     runInTransaction(this.db, () => deleteNetwork(this.db, networkId));
   }
 
+  setConnectionClosed(networkId: string, connectionClosed: boolean) {
+    return runInTransaction(this.db, () => setConnectionClosed(this.db, networkId, connectionClosed));
+  }
+
   upsert(input: NetworkInput) {
     return runInTransaction(this.db, () => {
       const network = upsertNetwork(this.db, input, this.secretBox);
@@ -59,6 +64,7 @@ export class StorageNetworksRepository {
           id: candidate.id,
           templateId: network.id,
           managerHidden: true,
+          connectionClosed: candidate.connectionClosed === true,
           name: network.name,
           host: network.host,
           port: network.port,

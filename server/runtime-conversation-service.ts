@@ -1,7 +1,6 @@
 import type { BufferHistoryImportRequest, BufferSelfNickAliasesRequest } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
 import {
-  clearRuntimeConversationBufferHistory,
   closeRuntimeConversationBuffer,
   exportRuntimeConversationBufferHistory,
   listRuntimeConversationBufferHistory,
@@ -43,10 +42,6 @@ export class RuntimeConversationService {
 
   exportBufferHistory(bufferId: string) {
     return exportRuntimeConversationBufferHistory(this.options, bufferId);
-  }
-
-  clearBufferHistory(bufferId: string) {
-    return clearRuntimeConversationBufferHistory(this.options, bufferId);
   }
 
   importHistory(bufferId: string, input: BufferHistoryImportRequest) {

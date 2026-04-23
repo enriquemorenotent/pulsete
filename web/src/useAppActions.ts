@@ -134,7 +134,6 @@ export type ChatActionSet = Pick<
   | 'addFriend'
   | 'addMutedNick'
   | 'closeBuffer'
-  | 'clearBufferHistory'
   | 'closeChannel'
   | 'closeChannelList'
   | 'downloadBufferHistory'

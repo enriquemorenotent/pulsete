@@ -43,6 +43,9 @@ export type StoredNetworkProfile = SavedNetworkProfile | ConnectionInstanceProfi
 export const isConnectionInstance = (network: NetworkProfile): network is ConnectionInstanceProfile =>
   network.managerHidden;
 
+export const isActiveConnectionInstance = (network: NetworkProfile): network is ConnectionInstanceProfile =>
+  isConnectionInstance(network) && network.connectionClosed !== true;
+
 export const isSavedNetwork = (network: NetworkProfile): network is SavedNetworkProfile =>
   !network.managerHidden && network.templateId === null;
 
@@ -54,6 +57,9 @@ export const listSavedNetworks = (networks: readonly NetworkProfile[]) =>
 
 export const listConnectionInstances = (networks: readonly NetworkProfile[]) =>
   networks.filter(isConnectionInstance);
+
+export const listActiveConnectionInstances = (networks: readonly NetworkProfile[]) =>
+  networks.filter(isActiveConnectionInstance);
 
 export const listConnectionPeers = (
   networks: readonly NetworkProfile[],

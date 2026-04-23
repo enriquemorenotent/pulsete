@@ -86,7 +86,6 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.irc.join(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
   assert.throws(() => runtime.irc.join(network.id, '#help,#ops'), /Channel name must refer to a single channel/);
   assert.throws(() => runtime.irc.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
-  assert.throws(() => runtime.conversations.clearHistory('missing-buffer'), /Buffer not found/);
   assert.throws(() => runtime.conversations.openQuery(network.id, '   '), /Private-message target is required/);
   assert.throws(() => runtime.conversations.openQuery(network.id, '#help'), /Private-message target is required/);
   assert.throws(() => runtime.conversations.openQuery(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
@@ -99,11 +98,6 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.friends.removeFriend('missing-friend'), /Friend not found/);
   assert.throws(() => runtime.mutedNicks.removeMutedNick('missing-muted-nick'), /Muted nick not found/);
   assert.throws(() => runtime.conversations.closeBuffer(channel.id), /Only private message buffers can be closed/);
-  assert.throws(() => runtime.conversations.clearHistory(storage.conversations.upsertBuffer({
-    networkId: network.id,
-    kind: 'server',
-    target: 'server',
-  }).id), /Only channels and private messages can be cleared/);
   assert.throws(() => runtime.irc.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
   assert.throws(() => runtime.irc.sendMessage(network.id, 'alice,bob', 'hello'), /Private-message target must refer to a single nick/);
   assert.throws(() => runtime.irc.sendMessage(network.id, '#help', '   '), /Message body is required/);
@@ -160,56 +154,6 @@ test('muting and unmuting recomputes unread counts for existing buffers immediat
   assert.equal(storage.conversations.getBuffer(channel.id)?.priorityUnread, 1);
   assert.equal(unmuted.messages.some((message) => message.type === 'muted-nick.remove'), true);
   assert.equal(unmuted.messages.some((message) => message.type === 'buffer.upsert'), true);
-});
-
-test('runtime clearHistory removes the selected buffer transcript and resets unread state', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
-  const network = storage.networks.upsert(createNetworkInput());
-  const query = storage.conversations.upsertQuery(network.id, 'Alice');
-  storage.conversations.setBufferUnread(query.id, 2);
-  storage.conversations.appendMessage({
-    id: 'message-1',
-    networkId: network.id,
-    target: 'alice',
-    nick: 'alice',
-    body: 'hello',
-    kind: 'line',
-    self: false,
-    ts: 1,
-  });
-  storage.conversations.appendMessage({
-    id: 'message-2',
-    networkId: network.id,
-    target: 'Alice',
-    nick: 'tester',
-    body: 'hi',
-    kind: 'line',
-    self: true,
-    ts: 2,
-  });
-
-  const result = runtime.conversations.clearHistory(query.id);
-
-  assert.deepEqual(result.messages, [
-    {
-      type: 'message.remove',
-      networkId: network.id,
-      target: 'Alice',
-      messageIds: ['message-1', 'message-2'],
-      mutationId: result.messages[0]?.mutationId,
-    },
-    {
-      type: 'buffer.upsert',
-      buffer: {
-        ...storage.conversations.getBuffer(query.id)!,
-      },
-      mutationId: result.messages[0]?.mutationId,
-    },
-  ]);
-  assert.equal(storage.conversations.getBuffer(query.id)?.unread, 0);
-  assert.deepEqual(storage.conversations.listMessages(network.id, 'alice', 10), []);
 });
 
 test('runtime sendRaw preserves quit commands and exact matching', async () => {

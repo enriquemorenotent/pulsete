@@ -47,35 +47,6 @@ export const listConversationBufferHistory = (
   return store.listMessagePage(buffer.networkId, buffer.target, limit, beforeMessageId);
 };
 
-export const clearConversationBufferHistory = (store: RuntimeConversationStore, bufferId: string) => {
-  const buffer = getRequiredBuffer(store, bufferId);
-  if (buffer.kind === 'server') {
-    throw badRequest('Only channels and private messages can be cleared');
-  }
-  const deletedMessages = store.deleteMessages(buffer.networkId, buffer.target);
-  if (
-    buffer.unread === 0
-    && buffer.priorityUnread === 0
-    && buffer.lastReadTs == null
-    && buffer.lastReadMessageId == null
-  ) {
-    return {
-      buffer,
-      bufferUpdate: null,
-      deletedMessages,
-    };
-  }
-  store.markBufferRead(bufferId, {
-    lastReadTs: null,
-    lastReadMessageId: null,
-  });
-  return {
-    buffer,
-    bufferUpdate: getRequiredBuffer(store, bufferId),
-    deletedMessages,
-  };
-};
-
 export const appendConversationMessage = (
   store: RuntimeConversationStore,
   input: {

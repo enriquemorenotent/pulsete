@@ -16,7 +16,6 @@ test('command palette builds buffers, friends, and current-buffer actions in ord
     actions: {
       canToggleChannelAutoJoin: true,
       channelAutoJoinActive: false,
-      canClearHistory: true,
       canDownloadHistory: true,
       canImportHistory: true,
       canOpenSelfAliases: true,
@@ -35,7 +34,6 @@ test('command palette builds buffers, friends, and current-buffer actions in ord
       'actions:Network Manager',
       'actions:List Channels',
       'actions:Enable Autojoin',
-      'actions:Clear History',
       'actions:Download History',
       'actions:Import Logs',
       'actions:Self Aliases',
@@ -54,7 +52,6 @@ test('command palette action dispatcher routes each action to the matching handl
     openNetworkManager: () => { calls.push('network-manager'); },
     openChannelList: () => { calls.push('channel-list'); },
     toggleCurrentChannelAutoJoin: () => { calls.push('autojoin'); },
-    clearBufferHistory: (bufferId: string) => { calls.push(`clear:${bufferId}`); },
     downloadBufferHistory: (bufferId: string) => { calls.push(`download:${bufferId}`); },
     openHistoryImport: (bufferId: string) => { calls.push(`import:${bufferId}`); },
     openSelfAliases: (bufferId: string) => { calls.push(`aliases:${bufferId}`); },

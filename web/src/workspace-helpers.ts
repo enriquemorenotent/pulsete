@@ -1,5 +1,5 @@
 import type { NetworkProfile } from '../../shared/protocol.js';
-import { getNetworkRootId, listConnectionInstances, listConnectionPeers } from '../../shared/network-model.js';
+import { getNetworkRootId, listActiveConnectionInstances, listConnectionPeers } from '../../shared/network-model.js';
 import type { NetworkRuntimeState } from './workspace-types.js';
 
 type ConnectionStatus = NetworkRuntimeState['phase'];
@@ -12,7 +12,7 @@ export type ConnectionLabelParts = {
 };
 
 export const getConnectionInstances = (networks: NetworkProfile[]) =>
-  listConnectionInstances(networks);
+  listActiveConnectionInstances(networks);
 
 export const getConnectionStatus = (runtime: NetworkRuntimeState | null): ConnectionStatus => {
   return runtime?.phase ?? 'offline';

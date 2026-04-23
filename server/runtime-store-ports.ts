@@ -55,7 +55,6 @@ export type RuntimeConversationStore = {
     query: string,
     limit: number,
   ): Array<{ message: AppSnapshot['messages'][number]; score: number }>;
-  deleteMessages(networkId: string, target: string): AppSnapshot['messages'];
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];
   upsertChannel(input: ChannelInput): ChannelState;
   upsertBuffer(input: BufferInput): BufferState;
@@ -96,6 +95,7 @@ export type RuntimeNetworkStore = {
   get(networkId: string): StoredNetworkProfile | null;
   getRuntime(networkId: string): RuntimeNetworkProfile | null;
   upsert(input: NetworkInput): StoredNetworkProfile;
+  setConnectionClosed(networkId: string, connectionClosed: boolean): StoredNetworkProfile | null;
   saveWithRelatedInstances(input: NetworkInput): NetworkSaveResult;
   deleteWithRelated(networkId: string): string[];
 };

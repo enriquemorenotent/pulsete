@@ -12,7 +12,6 @@ export type CommandPaletteAction =
   | { kind: 'open-network-manager' }
   | { kind: 'open-channel-list' }
   | { kind: 'toggle-current-channel-autojoin' }
-  | { kind: 'clear-buffer-history'; bufferId: string }
   | { kind: 'download-buffer-history'; bufferId: string }
   | { kind: 'open-history-import'; bufferId: string }
   | { kind: 'open-self-aliases'; bufferId: string };
@@ -48,7 +47,6 @@ export type CommandPaletteActionHandlers = {
   openNetworkManager: () => void;
   openChannelList: () => void | Promise<void>;
   toggleCurrentChannelAutoJoin: () => void | Promise<void>;
-  clearBufferHistory: (bufferId: string) => void | Promise<void>;
   downloadBufferHistory: (bufferId: string) => void | Promise<void>;
   openHistoryImport: (bufferId: string) => void;
   openSelfAliases: (bufferId: string) => void;
@@ -69,7 +67,6 @@ export type BuildCommandPaletteEntrySpecsInput = {
   actions: {
     canToggleChannelAutoJoin: boolean;
     channelAutoJoinActive: boolean;
-    canClearHistory: boolean;
     canDownloadHistory: boolean;
     canImportHistory: boolean;
     canOpenSelfAliases: boolean;

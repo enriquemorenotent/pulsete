@@ -15,7 +15,6 @@ type ResolveChatPaneHeaderActionsContext = {
   queryNotificationsEnabled?: boolean;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
-  canClearHistory?: boolean;
   canDownloadHistory?: boolean;
   canImportHistory?: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
@@ -25,7 +24,6 @@ type ResolveChatPaneHeaderActionsContext = {
   onToggleQueryNotifications?: () => void;
   onWhoisSelectedQuery?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
-  onClearHistory?: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
   onOpenHistoryImport?: () => void;
   onOpenSelfNickAliases?: () => void;
@@ -204,17 +202,6 @@ const resolveOverflowActions = (
       id: 'self-aliases',
       label: 'Self aliases',
       onSelect: context.onOpenSelfNickAliases,
-    });
-  }
-
-  if (context.canClearHistory && context.onClearHistory) {
-    overflow.push({
-      id: 'clear-history',
-      label: 'Clear history',
-      tone: 'danger',
-      onSelect: () => {
-        void context.onClearHistory?.();
-      },
     });
   }
 

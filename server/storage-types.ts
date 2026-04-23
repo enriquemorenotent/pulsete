@@ -20,6 +20,7 @@ export type NetworkRow = {
   id: string;
   templateId: string | null;
   managerHidden: number;
+  connectionClosed: number;
   name: string;
   host: string;
   port: number;

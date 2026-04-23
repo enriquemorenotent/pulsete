@@ -136,42 +136,6 @@ const createParams = (options: {
   };
 };
 
-test('clearBufferHistory applies server mutations for the selected transcript', async () => {
-  const { params, actions: dispatched, banners } = createParams();
-  const fetchCalls: Array<{ url: string; method: string }> = [];
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input, init) => {
-    fetchCalls.push({ url: String(input), method: String(init?.method ?? 'GET') });
-    if (String(input) === '/api/buffers/buffer-1/history') {
-      return Response.json({
-        ok: true,
-        buffer: { ...selectedBuffer, unread: 0 },
-        messages: [
-          { type: 'message.remove', networkId: network.id, target: '#general', messageIds: ['message-1'] },
-          { type: 'buffer.upsert', buffer: { ...selectedBuffer, unread: 0 } },
-        ],
-      });
-    }
-    throw new Error(`Unexpected fetch: ${String(input)}`);
-  }) as typeof fetch;
-
-  try {
-    const actions = createAppActions(params);
-    const cleared = await actions.clearBufferHistory(selectedBuffer.id);
-
-    assert.equal(cleared, true);
-    assert.deepEqual(fetchCalls, [{ url: '/api/buffers/buffer-1/history', method: 'DELETE' }]);
-    assert.deepEqual(dispatched, [
-      { type: 'remove-messages', networkId: network.id, target: '#general', messageIds: ['message-1'] },
-      { type: 'upsert-buffer', buffer: { ...selectedBuffer, unread: 0 } },
-      { type: 'history-buffer-loaded', bufferId: selectedBuffer.id, hasOlder: false },
-    ]);
-    assert.deepEqual(banners, []);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
 test('downloadBufferHistory fetches the transcript attachment and triggers a browser download', async () => {
   const { params, banners } = createParams();
   const fetchCalls: Array<{ url: string; method: string }> = [];
@@ -237,4 +201,3 @@ test('downloadBufferHistory fetches the transcript attachment and triggers a bro
     globalThis.URL.revokeObjectURL = originalRevokeObjectURL;
   }
 });
-

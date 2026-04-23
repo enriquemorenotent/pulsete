@@ -29,7 +29,6 @@ type ChatActionParams = Pick<
   GatewayActions;
 
 export const createChatActions = ({
-  clearBufferHistory,
   downloadBufferHistory,
   importBufferHistory,
   updateBufferSelfNickAliases,
@@ -181,7 +180,6 @@ export const createChatActions = ({
     });
 
   return {
-    clearBufferHistory,
     closeBuffer,
     closeChannel,
     closeChannelList,

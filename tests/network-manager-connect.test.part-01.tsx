@@ -120,6 +120,7 @@ test('resolveManagedNetworkConnectPlan returns connected and connecting no-op st
   const saved = makeNetwork();
   const connectedPeer = makePeer(saved, { id: 'instance-connected' });
   const connectingPeer = makePeer(saved, { id: 'instance-connecting' });
+  const closedConnectedPeer = makePeer(saved, { id: 'instance-closed', connectionClosed: true });
 
   assert.deepEqual(
     resolveManagedNetworkConnectPlan({
@@ -136,6 +137,14 @@ test('resolveManagedNetworkConnectPlan returns connected and connecting no-op st
       networkStates: { [connectingPeer.id]: { phase: 'connecting', serverName: null, nick: connectingPeer.nick } },
     }),
     { kind: 'noop-connecting' }
+  );
+  assert.deepEqual(
+    resolveManagedNetworkConnectPlan({
+      network: saved,
+      networks: [saved, closedConnectedPeer],
+      networkStates: { [closedConnectedPeer.id]: { phase: 'connected', serverName: null, nick: closedConnectedPeer.nick } },
+    }),
+    { kind: 'reconnect-existing-peer', peer: closedConnectedPeer }
   );
 });
 
@@ -169,22 +178,26 @@ test('buildManagedRuntimeMap exposes visible row statuses for every saved networ
   const onlineSaved = makeNetwork({ id: 'saved-online', name: 'Online Net' });
   const connectingSaved = makeNetwork({ id: 'saved-connecting', name: 'Connecting Net' });
   const idleSaved = makeNetwork({ id: 'saved-idle', name: 'Idle Net' });
+  const closedSaved = makeNetwork({ id: 'saved-closed', name: 'Closed Net' });
   const onlinePeer = makePeer(onlineSaved, { id: 'instance-online' });
   const connectingPeer = makePeer(connectingSaved, { id: 'instance-connecting' });
+  const closedPeer = makePeer(closedSaved, { id: 'instance-closed', connectionClosed: true });
 
   assert.deepEqual(
     buildManagedRuntimeMap(
-      [onlineSaved, connectingSaved, idleSaved],
-      [onlinePeer, connectingPeer],
+      [onlineSaved, connectingSaved, idleSaved, closedSaved],
+      [onlinePeer, connectingPeer, closedPeer],
       {
         [onlinePeer.id]: { phase: 'connected', serverName: null, nick: onlinePeer.nick },
         [connectingPeer.id]: { phase: 'connecting', serverName: null, nick: connectingPeer.nick },
+        [closedPeer.id]: { phase: 'connected', serverName: null, nick: closedPeer.nick },
       }
     ),
     {
       [onlineSaved.id]: { phase: 'connected', serverName: null, nick: onlineSaved.nick },
       [connectingSaved.id]: { phase: 'connecting', serverName: null, nick: connectingSaved.nick },
       [idleSaved.id]: null,
+      [closedSaved.id]: null,
     }
   );
 });

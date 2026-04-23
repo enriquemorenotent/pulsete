@@ -107,6 +107,7 @@ export const toNetworkProfile = (
     id: row.id,
     templateId: row.templateId,
     managerHidden: Boolean(row.managerHidden),
+    connectionClosed: Boolean(row.connectionClosed),
     name: row.name,
     host: row.host,
     port: row.port,

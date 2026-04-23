@@ -64,10 +64,10 @@ export function useDesktopChatModel({
   const composerContextKey = workspace.selectedBuffer?.id ?? null;
   const draft = useComposerDraft(composer, composerContextKey);
   const composerCompletion = useMemo(() => buildComposerCompletionModel(workspace), [workspace]);
-  const canClearHistory =
+  const canUseBufferHistoryTools =
     workspace.selectedBuffer?.kind === 'channel'
     || workspace.selectedBuffer?.kind === 'query';
-  const selectedBufferId = canClearHistory ? workspace.selectedBuffer?.id ?? null : null;
+  const selectedBufferId = canUseBufferHistoryTools ? workspace.selectedBuffer?.id ?? null : null;
   const selectedQueryNotificationContact = workspace.selectedBuffer?.kind === 'query'
     ? { networkId: workspace.selectedBuffer.networkId, nick: workspace.selectedBuffer.target }
     : null;
@@ -145,11 +145,9 @@ export function useDesktopChatModel({
       showChannelAutoJoin: channelAutoJoin.available,
       channelAutoJoinActive: channelAutoJoin.active,
       onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
-      canClearHistory,
-      onClearHistory: selectedBufferId ? () => actions.clearBufferHistory(selectedBufferId) : undefined,
-      canDownloadHistory: canClearHistory,
+      canDownloadHistory: canUseBufferHistoryTools,
       onDownloadHistory: selectedBufferId ? () => actions.downloadBufferHistory(selectedBufferId) : undefined,
-      canImportHistory: canClearHistory,
+      canImportHistory: canUseBufferHistoryTools,
       historyImportOpen,
       onOpenHistoryImport: selectedBufferId
         ? () => ui.openBufferToolDialog('history-import', selectedBufferId)

@@ -16,7 +16,7 @@ type CreateRuntimeHttpApiParams = {
   mutedNicks: RuntimeMutedNickMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
-  sessions: RuntimeNetworkSessionService;
+  sessions: Pick<RuntimeNetworkSessionService, 'connect' | 'disconnect'>;
 };
 
 export const createRuntimeHttpApi = ({
@@ -33,6 +33,7 @@ export const createRuntimeHttpApi = ({
     save: (data, networkId) => networks.saveNetwork(data, networkId),
     duplicate: (networkId) => networks.duplicateNetwork(networkId),
     remove: (networkId) => networks.deleteNetwork(networkId),
+    close: (networkId) => networks.closeConnection(networkId),
     connect: (networkId) => sessions.connect(networkId),
     disconnect: (networkId) => sessions.disconnect(networkId),
   },
@@ -43,7 +44,6 @@ export const createRuntimeHttpApi = ({
     markRead: (bufferId) => conversations.markBufferRead(bufferId),
     history: (bufferId, limit, beforeMessageId) => conversations.history(bufferId, limit, beforeMessageId),
     exportHistory: (bufferId) => conversations.exportHistory(bufferId),
-    clearHistory: (bufferId) => conversations.clearHistory(bufferId),
     importHistory: (bufferId, input) => conversations.importHistory(bufferId, input),
     updateBufferSelfNickAliases: (bufferId, input) => conversations.updateBufferSelfNickAliases(bufferId, input),
   },

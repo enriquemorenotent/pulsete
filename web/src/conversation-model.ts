@@ -31,14 +31,17 @@ export const buildConversationModel = (state: ConversationState): ConversationMo
     return index.findBufferById(selection.bufferId)?.networkId ?? null;
   };
 
-  const hasSelection = (selection: SelectedBuffer | null) => {
+  const hasSelection = (networks: NetworkProfile[], selection: SelectedBuffer | null) => {
     if (!selection) {
       return false;
     }
+    const activeNetworkIds = new Set(getConnectionInstances(networks).map((network) => network.id));
     if (selection.kind === 'pending-channel') {
-      return Boolean(index.findPendingChannel(selection.networkId, selection.channel));
+      return activeNetworkIds.has(selection.networkId)
+        && Boolean(index.findPendingChannel(selection.networkId, selection.channel));
     }
-    return Boolean(index.findBufferById(selection.bufferId));
+    const buffer = index.findBufferById(selection.bufferId);
+    return Boolean(buffer && activeNetworkIds.has(buffer.networkId));
   };
 
   const selectDefaultBuffer = (networks: NetworkProfile[]) => {
@@ -54,7 +57,7 @@ export const buildConversationModel = (state: ConversationState): ConversationMo
     selection: SelectedBuffer | null,
     preferredNetworkId?: string | null
   ) =>
-    hasSelection(selection)
+    hasSelection(networks, selection)
       ? selection
       : fallbackSelection(networks, preferredNetworkId ?? getSelectionNetworkId(selection));
 

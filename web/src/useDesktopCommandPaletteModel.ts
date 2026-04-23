@@ -16,7 +16,6 @@ import type { WorkspaceView } from './workspace-types.js';
 type DesktopCommandPaletteModelParams = {
   actions: Pick<
     AppActions,
-    | 'clearBufferHistory'
     | 'downloadBufferHistory'
     | 'openChannelList'
     | 'selectFriend'
@@ -98,7 +97,6 @@ export function useDesktopCommandPaletteModel({
       actions: {
         canToggleChannelAutoJoin: channelAutoJoin.available,
         channelAutoJoinActive: channelAutoJoin.active,
-        canClearHistory: canUseBufferHistoryTools,
         canDownloadHistory: canUseBufferHistoryTools,
         canImportHistory: canUseBufferHistoryTools,
         canOpenSelfAliases: canUseBufferHistoryTools,
@@ -144,13 +142,11 @@ export function useDesktopCommandPaletteModel({
       openNetworkManager: () => dispatch({ type: 'open-network-manager' }),
       openChannelList: () => { void actions.openChannelList(); },
       toggleCurrentChannelAutoJoin: () => { void actions.toggleCurrentChannelAutoJoin(); },
-      clearBufferHistory: (bufferId) => { void actions.clearBufferHistory(bufferId); },
       downloadBufferHistory: (bufferId) => { void actions.downloadBufferHistory(bufferId); },
       openHistoryImport: (bufferId) => ui.openBufferToolDialog('history-import', bufferId),
       openSelfAliases: (bufferId) => ui.openBufferToolDialog('self-aliases', bufferId),
     }),
     [
-      actions.clearBufferHistory,
       actions.downloadBufferHistory,
       actions.openChannelList,
       actions.selectFriend,

@@ -44,6 +44,7 @@ export const networkSchema = z.object({
   id: z.string(),
   templateId: z.string().nullable().default(null),
   managerHidden: z.boolean().default(false),
+  connectionClosed: z.boolean().optional(),
   name: z.string(),
   host: z.string(),
   port: z.number().int().positive(),

@@ -8,7 +8,6 @@ export const renderChatPane = (
   overrides: Partial<{
     showChannelAutoJoin: boolean;
     channelAutoJoinActive: boolean;
-    canClearHistory: boolean;
     canImportHistory: boolean;
     canRepairSelfNickAliases: boolean;
     canLoadOlderHistory: boolean;
@@ -36,8 +35,6 @@ export const renderChatPane = (
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
-      canClearHistory={overrides.canClearHistory}
-      onClearHistory={async () => true}
       canImportHistory={overrides.canImportHistory}
       historyImportOpen={false}
       onOpenHistoryImport={overrides.canImportHistory ? () => undefined : undefined}

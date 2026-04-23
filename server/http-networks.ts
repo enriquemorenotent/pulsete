@@ -23,6 +23,12 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
     writeJson(res, 200, { ok: true, ...result });
     return true;
   }
+  const closeMatch = pathname.match(/^\/api\/networks\/([^/]+)\/close$/);
+  if (closeMatch && req.method === 'POST') {
+    const result = context.networks.close(decodeRouteParam(closeMatch[1]));
+    writeJson(res, 200, { ok: true, ...result });
+    return true;
+  }
   const duplicateMatch = pathname.match(/^\/api\/networks\/([^/]+)\/duplicate$/);
   if (duplicateMatch && req.method === 'POST') {
     const result = context.networks.duplicate(decodeRouteParam(duplicateMatch[1]));
@@ -32,10 +38,12 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
   const connectMatch = pathname.match(/^\/api\/networks\/([^/]+)\/(connect|disconnect)$/);
   if (connectMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(connectMatch[1]);
-    connectMatch[2] === 'connect'
-      ? context.networks.connect(networkId)
-      : context.networks.disconnect(networkId);
-    writeJson(res, 200, { ok: true });
+    if (connectMatch[2] === 'connect') {
+      writeJson(res, 200, { ok: true, ...context.networks.connect(networkId) });
+      return true;
+    }
+    context.networks.disconnect(networkId);
+    writeJson(res, 200, { ok: true, messages: [] });
     return true;
   }
   return false;

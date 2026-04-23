@@ -7,10 +7,8 @@ import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import { attachWebSocketServer } from '../server/ws-server.js';
 import { listen,requestJson } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
-import { closeWebSocket,connectWebSocket,waitForWebSocketMessageType } from './helpers/http-websocket-test-helpers.js';
 
 test('history can load older pages before the oldest visible message', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
@@ -120,12 +118,11 @@ test('buffer history download returns a human-readable transcript attachment', a
   }
 });
 
-test('buffer history clear removes channel transcript rows and broadcasts the mutation', async () => {
+test('buffer history delete route is not exposed', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
   const network = storage.networks.upsert(createNetworkInput());
-  const buffer = storage.conversations.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help', unread: 2 });
+  const buffer = storage.conversations.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help' });
   storage.conversations.appendMessage({
     id: 'message-1',
     networkId: network.id,
@@ -136,45 +133,16 @@ test('buffer history clear removes channel transcript rows and broadcasts the mu
     self: false,
     ts: 1,
   });
-  storage.conversations.appendMessage({
-    id: 'message-2',
-    networkId: network.id,
-    target: '#HELP',
-    nick: 'tester',
-    body: 'hi',
-    kind: 'line',
-    self: true,
-    ts: 2,
-  });
-  const server = createServer(createHttpHandler(runtime.http));
-  attachWebSocketServer(server, runtime.ws);
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
   const port = await listen(server);
-  const { socket } = await connectWebSocket(port);
 
   try {
-    const removedPromise = waitForWebSocketMessageType(socket, 'message.remove');
-    const bufferPromise = waitForWebSocketMessageType(socket, 'buffer.upsert');
     const response = await requestJson(port, 'DELETE', `/api/buffers/${buffer.id}/history`, {});
 
-    assert.equal(response.status, 200);
-    assert.equal(response.json.ok, true);
-    assert.deepEqual((response.json.messages as Array<{ type: string }>).map((message) => message.type), [
-      'message.remove',
-      'buffer.upsert',
-    ]);
-
-    const removed = await removedPromise as { networkId: string; target: string; messageIds: string[] };
-    const updatedBuffer = await bufferPromise as { buffer: { id: string; unread: number } };
-
-    assert.equal(removed.networkId, network.id);
-    assert.equal(removed.target, '#help');
-    assert.deepEqual(removed.messageIds, ['message-1', 'message-2']);
-    assert.equal(updatedBuffer.buffer.id, buffer.id);
-    assert.equal(updatedBuffer.buffer.unread, 0);
-    assert.deepEqual(storage.conversations.listMessages(network.id, '#help', 10), []);
+    assert.equal(response.status, 404);
+    assert.equal(response.json.message, 'Not found');
+    assert.equal(storage.conversations.listMessages(network.id, '#help', 10).length, 1);
   } finally {
-    await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
-

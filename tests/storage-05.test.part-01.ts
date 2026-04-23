@@ -114,9 +114,10 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.deepEqual(network?.altNicks, ['tester_', 'tester__']);
   assert.deepEqual(network?.historicalSelfNicks, []);
   assert.deepEqual(network?.autoJoin, []);
-  assert.equal(version.user_version, 14);
+  assert.equal(version.user_version, 15);
   assert.equal(columns.some((column) => column.name === 'templateId'), true);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), true);
+  assert.equal(columns.some((column) => column.name === 'connectionClosed'), true);
   assert.equal(columns.some((column) => column.name === 'authMethod'), true);
   assert.equal(columns.some((column) => column.name === 'authTarget'), true);
   assert.equal(columns.some((column) => column.name === 'authAccount'), true);
@@ -430,7 +431,7 @@ test('normalized storage migration can retry after leftover scratch tables from 
   ).map((row) => row.name);
   upgraded.close();
 
-  assert.equal(version.user_version, 14);
+  assert.equal(version.user_version, 15);
   assert.deepEqual(storage.conversations.listMessages('network-1', 'ALICE', 10).map((message) => message.id), ['message-1']);
   assert.deepEqual(storage.networks.get('network-1')?.autoJoin, ['#help']);
   assert.deepEqual(scratchTables, []);

@@ -52,7 +52,6 @@ export type ConversationActions = {
     channel: string,
     sourceBufferId?: string,
   ) => boolean;
-  clearBufferHistory: (bufferId: string) => Promise<boolean>;
   downloadBufferHistory: (bufferId: string) => Promise<boolean>;
   importBufferHistory: (
     bufferId: string,

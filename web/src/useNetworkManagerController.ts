@@ -65,7 +65,9 @@ export function useNetworkManagerController({
     onAdd: openNewNetworkEditorDialog,
     onEdit: () => visibleManagedNetwork && openExistingNetworkEditorDialog(visibleManagedNetwork),
     onDuplicate: () => visibleManagedNetwork && duplicateNetwork(visibleManagedNetwork),
-    onRemove: () => visibleManagedNetwork && actions.deleteNetwork(visibleManagedNetwork.id),
+    onRemove: (network) => {
+      void actions.deleteNetwork(network.id);
+    },
     onConnect: () => visibleManagedNetwork && connectNetwork(visibleManagedNetwork),
     onFavorite: () =>
       visibleManagedNetwork

@@ -148,7 +148,7 @@ test('existing local databases reset stored messages and unread counts on the fo
   const count = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
   upgraded.close();
 
-  assert.equal(version.user_version, 14);
+  assert.equal(version.user_version, 15);
   assert.equal(count.count, 0);
 });
 
@@ -200,6 +200,28 @@ test('deleting a template removes hidden clones', () => {
   storage.networks.delete(template.id);
   assert.equal(storage.networks.list().some((network) => network.id === template.id), false);
   assert.equal(storage.networks.list().some((network) => network.templateId === template.id), false);
+});
+
+test('connection instances can be closed without deleting stored logs', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: 'server',
+    nick: null,
+    body: 'still here',
+    kind: 'system',
+    self: true,
+    ts: 1,
+  });
+
+  const closed = storage.networks.setConnectionClosed(network.id, true);
+
+  assert.equal(closed?.connectionClosed, true);
+  assert.equal(storage.networks.get(network.id)?.connectionClosed, true);
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10).map((message) => message.body), ['still here']);
 });
 
 test('query buffers persist and can be closed', () => {

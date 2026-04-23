@@ -124,6 +124,7 @@ export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
 export const createConnectionInstancePayload = (network: NetworkProfile) => ({
   templateId: getNetworkRootId(network),
   managerHidden: true,
+  connectionClosed: false,
   name: network.name,
   host: network.host,
   port: network.port,

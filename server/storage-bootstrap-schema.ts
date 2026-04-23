@@ -11,6 +11,7 @@ export const storageBootstrapSchemaSql = `
     id TEXT PRIMARY KEY,
     templateId TEXT,
     managerHidden INTEGER NOT NULL DEFAULT 0,
+    connectionClosed INTEGER NOT NULL DEFAULT 0,
     name TEXT NOT NULL,
     host TEXT NOT NULL,
     port INTEGER NOT NULL,

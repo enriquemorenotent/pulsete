@@ -25,8 +25,6 @@ type ChatPaneHeaderProps = {
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   onToggleChannelAutoJoin: () => Promise<boolean>;
-  canClearHistory?: boolean;
-  onClearHistory?: () => Promise<boolean>;
   canDownloadHistory?: boolean;
   onDownloadHistory?: () => Promise<boolean>;
   canImportHistory?: boolean;
@@ -57,7 +55,6 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     queryNotificationsEnabled: props.queryNotificationsEnabled,
     showChannelAutoJoin: props.showChannelAutoJoin,
     channelAutoJoinActive: props.channelAutoJoinActive,
-    canClearHistory: props.canClearHistory,
     canDownloadHistory: props.canDownloadHistory,
     canImportHistory: props.canImportHistory,
     onAddFriend: props.onAddFriend,
@@ -67,7 +64,6 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     onToggleQueryNotifications: props.onToggleQueryNotifications,
     onWhoisSelectedQuery: props.onWhoisSelectedQuery,
     onToggleChannelAutoJoin: props.onToggleChannelAutoJoin,
-    onClearHistory: props.onClearHistory,
     onDownloadHistory: props.onDownloadHistory,
     onOpenHistoryImport: props.onOpenHistoryImport,
     onOpenSelfNickAliases: props.onOpenSelfNickAliases,

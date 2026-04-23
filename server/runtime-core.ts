@@ -133,7 +133,6 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),
-    clearHistory: (bufferId) => publishMutation(conversationsService.clearBufferHistory(bufferId)),
     importHistory: (bufferId, input) => publishMutation(conversationsService.importHistory(bufferId, input)),
     updateBufferSelfNickAliases: (bufferId, input) => publishMutation(conversationsService.updateBufferSelfNickAliases(bufferId, input)),
   };
@@ -149,6 +148,11 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
     deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
+    closeConnection: (networkId) => publishMutation(networkMutations.closeConnection(networkId)),
+  };
+  const sessionMutations = {
+    connect: (networkId: string) => publishMutation(sessions.connect(networkId)),
+    disconnect: (networkId: string) => sessions.disconnect(networkId),
   };
   const http = createRuntimeHttpApi({
     catalog: store.networks,
@@ -157,7 +161,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     mutedNicks,
     irc,
     networks,
-    sessions,
+    sessions: sessionMutations,
   });
   const ws = createRuntimeWebSocketApi({
     attachSocket: (ws) => gateway.attachSocket(ws),

@@ -48,6 +48,11 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
+  closeConnection: (networkId: string) =>
+    apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; ok: boolean }>(`/api/networks/${networkId}/close`, {
+      method: 'POST',
+      body: '{}',
+    }),
   duplicateNetwork: (networkId: string) =>
     apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(
       `/api/networks/${networkId}/duplicate`,
@@ -57,12 +62,12 @@ export const api = {
       },
     ),
   connectNetwork: (networkId: string) =>
-    apiRequest<{ ok: boolean }>(`/api/networks/${networkId}/connect`, {
+    apiRequest<{ messages: ServerMessage[]; ok: boolean }>(`/api/networks/${networkId}/connect`, {
       method: 'POST',
       body: '{}',
     }),
   disconnectNetwork: (networkId: string) =>
-    apiRequest<{ ok: boolean }>(`/api/networks/${networkId}/disconnect`, {
+    apiRequest<{ messages: ServerMessage[]; ok: boolean }>(`/api/networks/${networkId}/disconnect`, {
       method: 'POST',
       body: '{}',
     }),
@@ -73,11 +78,6 @@ export const api = {
     }
     return apiRequest<BufferHistoryPayload>(`/api/buffers/${bufferId}/history?${searchParams.toString()}`);
   },
-  clearBufferHistory: (bufferId: string) =>
-    apiRequest<{ ok: boolean; buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/history`, {
-      method: 'DELETE',
-      body: '{}',
-    }),
   importBufferHistory: (bufferId: string, payload: BufferHistoryImportRequest) =>
     apiRequest<{ ok: boolean; messages: ServerMessage[]; summary: BufferHistoryImportSummary }>(
       `/api/buffers/${bufferId}/history/import`,

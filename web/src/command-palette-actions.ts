@@ -65,8 +65,6 @@ export const runCommandPaletteAction = (
       return handlers.openChannelList();
     case 'toggle-current-channel-autojoin':
       return handlers.toggleCurrentChannelAutoJoin();
-    case 'clear-buffer-history':
-      return handlers.clearBufferHistory(action.bufferId);
     case 'download-buffer-history':
       return handlers.downloadBufferHistory(action.bufferId);
     case 'open-history-import':
@@ -95,7 +93,6 @@ const appendSelectedBufferActions = (
   if (!bufferId) {
     return;
   }
-  pushBufferAction(entries, input.actions.canClearHistory, bufferId, 'clear-buffer-history', 'Clear History', label ? `For ${label}` : 'For current buffer', ['clear', 'history', 'messages']);
   pushBufferAction(entries, input.actions.canDownloadHistory, bufferId, 'download-buffer-history', 'Download History', label ? `For ${label}` : 'For current buffer', ['download', 'history', 'export']);
   pushBufferAction(entries, input.actions.canImportHistory, bufferId, 'open-history-import', 'Import Logs', label ? `Into ${label}` : 'Into current buffer', ['import', 'logs', 'history', 'hexchat']);
   pushBufferAction(entries, input.actions.canOpenSelfAliases, bufferId, 'open-self-aliases', 'Self Aliases', label ? `Repair self history in ${label}` : 'Repair self history', ['aliases', 'self', 'repair', 'history']);
@@ -105,7 +102,7 @@ const pushBufferAction = (
   entries: CommandPaletteEntrySpec[],
   enabled: boolean,
   bufferId: string,
-  kind: Extract<CommandPaletteAction['kind'], 'clear-buffer-history' | 'download-buffer-history' | 'open-history-import' | 'open-self-aliases'>,
+  kind: Extract<CommandPaletteAction['kind'], 'download-buffer-history' | 'open-history-import' | 'open-self-aliases'>,
   label: string,
   subtitle: string,
   keywords: string[],

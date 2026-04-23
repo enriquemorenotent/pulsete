@@ -36,7 +36,6 @@ export type RuntimeConversationMutations = {
   markBufferRead: RuntimeConversationService['markBufferRead'];
   history: RuntimeConversationService['listBufferHistory'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
-  clearHistory(bufferId: string): ReturnType<RuntimeConversationService['clearBufferHistory']>;
   importHistory(
     bufferId: string,
     input: BufferHistoryImportRequest,
@@ -61,6 +60,7 @@ export type RuntimeNetworkMutations = {
   saveNetwork: NetworkLifecycleService['saveNetwork'];
   duplicateNetwork: NetworkLifecycleService['duplicateNetwork'];
   deleteNetwork: NetworkLifecycleService['deleteNetwork'];
+  closeConnection: NetworkLifecycleService['closeConnection'];
 };
 
 export type RuntimeHttpApi = {
@@ -69,7 +69,8 @@ export type RuntimeHttpApi = {
     save: RuntimeNetworkMutations['saveNetwork'];
     duplicate: RuntimeNetworkMutations['duplicateNetwork'];
     remove: RuntimeNetworkMutations['deleteNetwork'];
-    connect(networkId: string): void;
+    close: RuntimeNetworkMutations['closeConnection'];
+    connect(networkId: string): ReturnType<RuntimeNetworkSessionService['connect']>;
     disconnect(networkId: string): void;
   };
   buffers: {
@@ -79,7 +80,6 @@ export type RuntimeHttpApi = {
     markRead: RuntimeConversationMutations['markBufferRead'];
     history: RuntimeConversationMutations['history'];
     exportHistory: RuntimeConversationMutations['exportHistory'];
-    clearHistory: RuntimeConversationMutations['clearHistory'];
     importHistory: RuntimeConversationMutations['importHistory'];
     updateBufferSelfNickAliases: RuntimeConversationMutations['updateBufferSelfNickAliases'];
   };
