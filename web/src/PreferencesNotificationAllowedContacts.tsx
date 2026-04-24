@@ -14,10 +14,10 @@ export function PreferencesNotificationAllowedContacts(
     <div className="space-y-2">
       <div className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-          Allowed Contacts
+          Notification Contacts
         </p>
         <p className="text-muted-foreground">
-          Add contacts from a private-message header. This list controls which PMs are eligible for any notification method.
+          Contacts with notifications enabled.
         </p>
       </div>
 
@@ -48,7 +48,7 @@ export function PreferencesNotificationAllowedContacts(
         </ul>
       ) : (
         <p className="text-muted-foreground">
-          No contacts selected yet. Use a private-message header to enable notifications for a contact.
+          No notification contacts yet.
         </p>
       )}
     </div>

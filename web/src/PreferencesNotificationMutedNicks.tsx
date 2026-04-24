@@ -48,7 +48,7 @@ export function PreferencesNotificationMutedNicks(
         </ul>
       ) : (
         <p className="text-muted-foreground">
-          No muted nicks yet. Use a query header or nicklist row to mute someone.
+          No muted nicks yet.
         </p>
       )}
     </div>

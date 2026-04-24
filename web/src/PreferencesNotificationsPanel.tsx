@@ -49,7 +49,7 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
           Private Message Notifications
         </h3>
         <p className="text-[13px] text-muted-foreground">
-          Turn notifications on from a private-message header, then choose how they should be delivered here.
+          Turn notifications on from a contact button, then choose how they should be delivered here.
         </p>
       </div>
 
@@ -59,7 +59,7 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
             Delivery Methods
           </p>
           <p className="text-muted-foreground">
-            Contacts selected from a private-message header can use one or both delivery methods below.
+            Notification contacts can use one or both delivery methods below.
           </p>
         </div>
         <PreferencesNotificationSoundSection

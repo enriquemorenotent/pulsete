@@ -61,7 +61,13 @@ export function DesktopShell(props: DesktopShellProps) {
         />
       }
       rightSidebar={
-        rightSidebarKind ? <WorkspaceRightSidebarContainer actions={props.actions} /> : null
+        rightSidebarKind ? (
+          <WorkspaceRightSidebarContainer
+            actions={props.actions}
+            backgroundDmAudio={props.backgroundDmAudio}
+            primeBackgroundDmAudio={props.primeBackgroundDmAudio}
+          />
+        ) : null
       }
       commandPaletteDialog={
         <CommandPaletteDialogContainer actions={props.actions} ui={props.ui} />

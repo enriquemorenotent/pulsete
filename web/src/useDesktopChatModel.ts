@@ -122,7 +122,7 @@ export function useDesktopChatModel({
       onUnmuteSelectedQuery: selectedMutedNick
         ? () => actions.removeMutedNick(selectedMutedNick.id)
         : undefined,
-      onToggleQueryNotifications: selectedQueryNotificationContact && !selectedMutedNick
+      onToggleQueryNotifications: selectedQueryNotificationContact
         ? () => {
             if (queryNotificationsEnabled) {
               backgroundDmAudio.removeContact(selectedQueryNotificationContact);

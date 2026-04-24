@@ -46,6 +46,11 @@ type ChatContainerProps = SharedProps & {
   primeBackgroundDmAudio: () => void;
 };
 
+type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
+  backgroundDmAudio: import('./useBackgroundDmAudio.js').BackgroundDmAudioState;
+  primeBackgroundDmAudio: () => void;
+};
+
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
   actions,
   ui,
@@ -142,13 +147,21 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
 
 export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSidebarContainer({
   actions,
-}: Pick<SharedProps, 'actions'>) {
+  backgroundDmAudio,
+  primeBackgroundDmAudio,
+}: RightSidebarContainerProps) {
   const dispatch = useAppDispatch();
   const friends = useAppSelector(selectFriends);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const serverProfileNetwork = useAppSelector(selectServerProfileNetwork);
   const workspace = useAppSelector(selectWorkspace);
-  const nicklist = useDesktopNicklistModel({ actions, friends, mutedNicks });
+  const nicklist = useDesktopNicklistModel({
+    actions,
+    backgroundDmAudio,
+    friends,
+    mutedNicks,
+    primeBackgroundDmAudio,
+  });
   const serverProfile = useMemo(() => ({
     network: serverProfileNetwork,
     onEdit: () => {

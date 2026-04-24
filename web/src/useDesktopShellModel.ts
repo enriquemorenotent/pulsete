@@ -3,6 +3,7 @@ import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { AppUiState } from './useAppUiState.js';
+import type { BackgroundDmAudioState } from './useBackgroundDmAudio.js';
 import type {
   NicklistActionSet,
   SidebarActionSet,
@@ -28,8 +29,10 @@ type DesktopSidebarModelParams = {
 
 type DesktopNicklistModelParams = {
   actions: NicklistActionSet;
+  backgroundDmAudio: Pick<BackgroundDmAudioState, 'addContact' | 'removeContact' | 'settings'>;
   friends: State['domain']['friends'];
   mutedNicks: State['domain']['mutedNicks'];
+  primeBackgroundDmAudio: () => void;
 };
 
 export function useDesktopHeaderModel({
@@ -105,16 +108,26 @@ export function useDesktopSidebarModel({
 
 export function useDesktopNicklistModel({
   actions,
+  backgroundDmAudio,
   friends,
   mutedNicks,
+  primeBackgroundDmAudio,
 }: DesktopNicklistModelParams): DesktopShellModel['nicklist'] {
   return useMemo(
     () => ({
+      backgroundDmAudio: backgroundDmAudio.settings,
       friends,
       mutedNicks,
       onAddFriend: actions.addFriend,
+      onAddNotificationContact: (contact) => {
+        backgroundDmAudio.addContact(contact);
+        if (backgroundDmAudio.settings.enabled) {
+          primeBackgroundDmAudio();
+        }
+      },
       onAddMutedNick: actions.addMutedNick,
       onRemoveFriend: actions.removeFriend,
+      onRemoveNotificationContact: backgroundDmAudio.removeContact,
       onRemoveMutedNick: actions.removeMutedNick,
       onSelectNick: actions.selectPrivateBuffer,
     }),
@@ -124,8 +137,10 @@ export function useDesktopNicklistModel({
       actions.removeFriend,
       actions.removeMutedNick,
       actions.selectPrivateBuffer,
+      backgroundDmAudio,
       friends,
       mutedNicks,
+      primeBackgroundDmAudio,
     ],
   );
 }

@@ -51,9 +51,12 @@ test('nicklist groups users by privilege level', () => {
       channel={channel}
       friends={[] satisfies FriendState[]}
       mutedNicks={[]}
+      backgroundDmAudio={{ contacts: [] }}
       onAddFriend={async () => true}
+      onAddNotificationContact={() => undefined}
       onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onRemoveNotificationContact={() => undefined}
       onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
@@ -83,7 +86,7 @@ test('nicklist groups users by privilege level', () => {
   assert.match(markup, /aria-label="Away"/);
 });
 
-test('nicklist renders the away icon alongside the friend star for away users', () => {
+test('nicklist renders one-click contact controls beside away users', () => {
   const channel: ChannelState = {
     id: 'channel-1',
     networkId: network.id,
@@ -98,18 +101,23 @@ test('nicklist renders the away icon alongside the friend star for away users', 
       channel={channel}
       friends={[{ id: 'friend-1', nick: 'alice' }] satisfies FriendState[]}
       mutedNicks={[]}
+      backgroundDmAudio={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
       onAddFriend={async () => true}
+      onAddNotificationContact={() => undefined}
       onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onRemoveNotificationContact={() => undefined}
       onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
   );
 
   assert.match(markup, /aria-label="Away"/);
-  assert.match(markup, /aria-label="Remove friend"/);
-  assert.match(markup, /aria-label="Mute nick"/);
-  assert.match(markup, /aria-label="Away"[\s\S]*aria-label="Remove friend"/);
+  assert.match(markup, /aria-label="Remove alice from friends"/);
+  assert.match(markup, /aria-label="Disable notifications for alice"/);
+  assert.match(markup, /aria-label="Mute alice"/);
+  assert.match(markup, /aria-label="Contact settings for alice"/);
+  assert.match(markup, /aria-label="Away"[\s\S]*aria-label="Contact settings for alice"/);
 });
 
 test('nicklist shows the unmute control for muted users', () => {
@@ -127,15 +135,21 @@ test('nicklist shows the unmute control for muted users', () => {
       channel={channel}
       friends={[] satisfies FriendState[]}
       mutedNicks={[{ id: 'mute-1', networkId: network.id, nick: 'Alice' }]}
+      backgroundDmAudio={{ contacts: [] }}
       onAddFriend={async () => true}
+      onAddNotificationContact={() => undefined}
       onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onRemoveNotificationContact={() => undefined}
       onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
   );
 
-  assert.match(markup, /aria-label="Unmute nick"/);
+  assert.match(markup, /aria-label="Add alice as friend"/);
+  assert.match(markup, /aria-label="Enable notifications for alice"/);
+  assert.match(markup, /aria-label="Unmute alice"/);
+  assert.match(markup, /aria-label="Contact settings for alice"/);
 });
 
 test('nicklist filtering promotes exact matches and friends before broader matches', () => {

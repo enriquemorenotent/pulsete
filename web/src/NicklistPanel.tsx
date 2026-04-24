@@ -5,11 +5,14 @@ import { cn } from '@/lib/utils.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { channelUserModeTone } from './channel-user-tone.js';
-import { findFriendByNick } from './friend-utils.js';
-import { FriendToggleButton } from './FriendToggleButton.js';
+import { ContactRuleIconButton, ContactSettingsIconButton } from './ContactRuleButtons.js';
+import { ContactSettingsDialog } from './ContactSettingsDialog.js';
+import { resolveContactRuleState } from './contact-rules.js';
+import type {
+  BackgroundDmAudioContact,
+  BackgroundDmAudioSettings,
+} from './background-dm-audio.js';
 import { buildNicklistGroups } from './nicklist-groups.js';
-import { findMutedNick } from './muted-nick-utils.js';
-import { MuteToggleButton } from './MuteToggleButton.js';
 import { SidebarWidget } from './SidebarWidget.js';
 
 type NicklistPanelProps = {
@@ -17,15 +20,19 @@ type NicklistPanelProps = {
   channel: ChannelState;
   friends: FriendState[];
   mutedNicks: MutedNickState[];
+  backgroundDmAudio: Pick<BackgroundDmAudioSettings, 'contacts'>;
   onAddFriend: (nick: string) => Promise<boolean>;
+  onAddNotificationContact: (contact: BackgroundDmAudioContact) => void;
   onAddMutedNick: (networkId: string, nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onRemoveNotificationContact: (contact: BackgroundDmAudioContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };
 
 export function NicklistPanel(props: NicklistPanelProps) {
   const [query, setQuery] = useState('');
+  const [contactNick, setContactNick] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query);
   const groups = useMemo(
     () => buildNicklistGroups(props.channel.users, props.friends, deferredQuery),
@@ -34,7 +41,18 @@ export function NicklistPanel(props: NicklistPanelProps) {
 
   useEffect(() => {
     setQuery('');
+    setContactNick(null);
   }, [props.channel.id]);
+
+  const contactState = props.network && contactNick
+    ? resolveContactRuleState({
+        networkId: props.network.id,
+        nick: contactNick,
+        friends: props.friends,
+        mutedNicks: props.mutedNicks,
+        backgroundDmAudio: props.backgroundDmAudio,
+      })
+    : null;
 
   return (
     <aside className="h-full min-h-0 overflow-hidden">
@@ -70,8 +88,15 @@ export function NicklistPanel(props: NicklistPanelProps) {
                         {group.label}
                       </div>
                       {group.users.map((user) => {
-                        const friend = findFriendByNick(props.friends, user.nick);
-                        const mutedNick = props.network ? findMutedNick(props.mutedNicks, props.network.id, user.nick) : null;
+                        const userContactState = props.network
+                          ? resolveContactRuleState({
+                              networkId: props.network.id,
+                              nick: user.nick,
+                              friends: props.friends,
+                              mutedNicks: props.mutedNicks,
+                              backgroundDmAudio: props.backgroundDmAudio,
+                            })
+                          : null;
                         return (
                           <div key={user.nick} className="flex items-center rounded-sm">
                             <button
@@ -91,18 +116,20 @@ export function NicklistPanel(props: NicklistPanelProps) {
                                 <Moon className="size-4" />
                               </span>
                             ) : null}
-                            <FriendToggleButton
-                              active={Boolean(friend)}
-                              onClick={() => void (friend ? props.onRemoveFriend(friend.id) : props.onAddFriend(user.nick))}
-                            />
-                            {props.network ? (
-                              <MuteToggleButton
-                                active={Boolean(mutedNick)}
-                                onClick={() => void (
-                                  mutedNick
-                                    ? props.onRemoveMutedNick(mutedNick.id)
-                                    : props.onAddMutedNick(props.network!.id, user.nick)
-                                )}
+                            {userContactState ? (
+                              <NickContactControls
+                                contact={userContactState.contact}
+                                friend={userContactState.friend}
+                                mutedNick={userContactState.mutedNick}
+                                nick={user.nick}
+                                notifications={userContactState.notificationsEnabled}
+                                onAddFriend={props.onAddFriend}
+                                onAddNotificationContact={props.onAddNotificationContact}
+                                onAddMutedNick={props.onAddMutedNick}
+                                onOpenSettings={() => setContactNick(user.nick)}
+                                onRemoveFriend={props.onRemoveFriend}
+                                onRemoveNotificationContact={props.onRemoveNotificationContact}
+                                onRemoveMutedNick={props.onRemoveMutedNick}
                               />
                             ) : null}
                           </div>
@@ -116,6 +143,103 @@ export function NicklistPanel(props: NicklistPanelProps) {
           </>
         )}
       </SidebarWidget>
+      {props.network && contactState && contactNick ? (
+        <ContactSettingsDialog
+          open={Boolean(contactNick)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setContactNick(null);
+            }
+          }}
+          networkName={props.network.name}
+          nick={contactNick}
+          friend={Boolean(contactState.friend)}
+          notifications={contactState.notificationsEnabled}
+          muted={Boolean(contactState.mutedNick)}
+          onFriendChange={(active) => {
+            void (active
+              ? props.onAddFriend(contactNick)
+              : contactState.friend && props.onRemoveFriend(contactState.friend.id));
+          }}
+          onNotificationsChange={(active) => {
+            if (active) {
+              props.onAddNotificationContact(contactState.contact);
+              return;
+            }
+            props.onRemoveNotificationContact(contactState.contact);
+          }}
+          onMutedChange={(active) => {
+            void (active
+              ? props.onAddMutedNick(props.network!.id, contactNick)
+              : contactState.mutedNick && props.onRemoveMutedNick(contactState.mutedNick.id));
+          }}
+        />
+      ) : null}
     </aside>
+  );
+}
+
+function NickContactControls(props: {
+  contact: BackgroundDmAudioContact;
+  friend: FriendState | null;
+  mutedNick: MutedNickState | null;
+  nick: string;
+  notifications: boolean;
+  onAddFriend: (nick: string) => Promise<boolean>;
+  onAddNotificationContact: (contact: BackgroundDmAudioContact) => void;
+  onAddMutedNick: (networkId: string, nick: string) => Promise<boolean>;
+  onOpenSettings: () => void;
+  onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onRemoveNotificationContact: (contact: BackgroundDmAudioContact) => void;
+  onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-0.5">
+      <ContactRuleIconButton
+        kind="friend"
+        active={Boolean(props.friend)}
+        label={
+          props.friend
+            ? `Remove ${props.nick} from friends`
+            : `Add ${props.nick} as friend`
+        }
+        onClick={() => {
+          void (props.friend
+            ? props.onRemoveFriend(props.friend.id)
+            : props.onAddFriend(props.nick));
+        }}
+      />
+      <ContactRuleIconButton
+        kind="notifications"
+        active={props.notifications}
+        label={
+          props.notifications
+            ? `Disable notifications for ${props.nick}`
+            : `Enable notifications for ${props.nick}`
+        }
+        onClick={() => {
+          if (props.notifications) {
+            props.onRemoveNotificationContact(props.contact);
+            return;
+          }
+          props.onAddNotificationContact(props.contact);
+        }}
+      />
+      <ContactRuleIconButton
+        kind="muted"
+        active={Boolean(props.mutedNick)}
+        label={props.mutedNick ? `Unmute ${props.nick}` : `Mute ${props.nick}`}
+        onClick={() => {
+          void (props.mutedNick
+            ? props.onRemoveMutedNick(props.mutedNick.id)
+            : props.onAddMutedNick(props.contact.networkId, props.nick));
+        }}
+      />
+      <ContactSettingsIconButton
+        label={`Contact settings for ${props.nick}`}
+        active={Boolean(props.friend) || props.notifications || Boolean(props.mutedNick)}
+        onClick={props.onOpenSettings}
+      />
+    </div>
   );
 }

@@ -129,33 +129,35 @@ test('server composers render command mode cues instead of a generic send box', 
   assert.doesNotMatch(markup, />Enter runs on Cuff-Link</);
 });
 
-test('query headers keep add friend visible instead of hiding it in overflow', () => {
+test('query headers expose one-click contact controls', () => {
   const markup = renderQueryPane([]);
 
   assert.match(markup, /aria-label="Close MissD"/);
   assert.doesNotMatch(markup, />Close</);
-  assert.match(markup, />Enable Notifications</);
-  assert.match(markup, />Add friend</);
+  assert.match(markup, /aria-label="Add MissD as friend"/);
+  assert.match(markup, /aria-label="Enable notifications for MissD"/);
+  assert.match(markup, /aria-label="Mute MissD"/);
+  assert.match(markup, /aria-label="Contact settings for MissD"/);
   assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
 
-test('query headers show when notifications are already enabled for the active PM', () => {
+test('query headers expose the active notification toggle state', () => {
   const markup = renderQueryPane([], {
     queryNotificationsEnabled: true,
   });
 
-  assert.match(markup, />Disable Notifications</);
+  assert.match(markup, /aria-label="Disable notifications for MissD"/);
+  assert.doesNotMatch(markup, /aria-label="Enable notifications for MissD"/);
 });
 
-test('muted query headers hide notification actions and show the muted banner', () => {
+test('muted query headers expose unmute and show the muted banner', () => {
   const markup = renderQueryPane([], {
     selectedQueryMuted: true,
     mutedQueryNick: 'MissD',
   });
 
-  assert.match(markup, />Unmute</);
-  assert.doesNotMatch(markup, /Enable Notifications/);
-  assert.doesNotMatch(markup, /Disable Notifications/);
+  assert.match(markup, /aria-label="Unmute MissD"/);
+  assert.match(markup, /aria-label="Enable notifications for MissD"/);
   assert.match(markup, />Muted</);
   assert.match(markup, /Messages from MissD are hidden here and won’t create unread or notification activity\./);
 });

@@ -57,7 +57,8 @@ test('preferences dialog renders notification controls and muted nick management
   assert.match(markup, /aria-label="Notification sound"/);
   assert.match(markup, /Preview notification sound/);
   assert.match(markup, />Preview</);
-  assert.match(markup, /Add contacts from a private-message header/);
+  assert.match(markup, /Notification Contacts/);
+  assert.match(markup, /Notification contacts can use one or both delivery methods below/);
   assert.match(markup, />Alice</);
   assert.match(markup, />TestNet</);
   assert.match(markup, /Muted Nicks/);

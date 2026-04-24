@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../shared/protocol.js';
 import { resolveChatPaneHeaderActions } from '../web/src/chat-pane-header-actions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
@@ -69,15 +69,10 @@ const resolveActionLabels = (actions: ReturnType<typeof resolveChatPaneHeaderAct
 
 const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeaderActions>[0]> = {}) => ({
   workspace: makeWorkspace(),
-  selectedFriend: null as FriendState | null,
-  queryNotificationsEnabled: false,
   showChannelAutoJoin: false,
   channelAutoJoinActive: false,
   canDownloadHistory: false,
   canImportHistory: false,
-  onAddFriend: async () => true,
-  onRemoveFriend: async () => true,
-  onToggleQueryNotifications: () => undefined,
   onWhoisSelectedQuery: () => undefined,
   onToggleChannelAutoJoin: async () => true,
   onDownloadHistory: async () => true,
@@ -104,11 +99,7 @@ test('channel header actions keep close primary and move maintenance actions int
   });
 });
 
-test('query header actions keep friend controls visible and leave utilities in overflow', () => {
-  const selectedFriend: FriendState = {
-    id: 'friend-1',
-    nick: 'MissD',
-  };
+test('query header actions keep close visible and leave utilities in overflow', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -122,18 +113,17 @@ test('query header actions keep friend controls visible and leave utilities in o
       composerPlaceholder: 'Message MissD',
       showNicklist: false,
     }),
-    selectedFriend,
     canDownloadHistory: true,
     onOpenSelfNickAliases: () => undefined,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close', 'Enable Notifications', 'Remove friend'],
+    primary: ['Close'],
     overflow: ['WHOIS', 'Download history', 'Self aliases'],
   });
 });
 
-test('query header notification action reflects enabled state', () => {
+test('query header actions are stable when notifications are enabled', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -147,17 +137,15 @@ test('query header notification action reflects enabled state', () => {
       composerPlaceholder: 'Message MissD',
       showNicklist: false,
     }),
-    queryNotificationsEnabled: true,
-    selectedFriend: null,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close', 'Disable Notifications', 'Add friend'],
+    primary: ['Close'],
     overflow: ['WHOIS'],
   });
 });
 
-test('query header actions expose mute while the query is still active', () => {
+test('query header actions stay stable while the query is still active', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -171,16 +159,15 @@ test('query header actions expose mute while the query is still active', () => {
       composerPlaceholder: 'Message MissD',
       showNicklist: false,
     }),
-    onMuteSelectedQuery: async () => true,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close', 'Mute', 'Enable Notifications', 'Add friend'],
+    primary: ['Close'],
     overflow: ['WHOIS'],
   });
 });
 
-test('muted query header actions hide notifications and offer unmute', () => {
+test('muted query header actions keep utilities available', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -194,13 +181,10 @@ test('muted query header actions hide notifications and offer unmute', () => {
       composerPlaceholder: 'Message MissD',
       showNicklist: false,
     }),
-    selectedQueryMuted: true,
-    onMuteSelectedQuery: async () => true,
-    onUnmuteSelectedQuery: async () => true,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close', 'Unmute', 'Add friend'],
+    primary: ['Close'],
     overflow: ['WHOIS'],
   });
 });
