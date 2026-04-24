@@ -12,5 +12,6 @@ recovery/
 coverage
 playwright-report
 test-results
+output/
 current-ui.png
 main-space-fixed.png
