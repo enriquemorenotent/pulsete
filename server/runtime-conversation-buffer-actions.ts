@@ -2,7 +2,7 @@ import { badRequest, notFound } from './app-error.js';
 import { buildHistoryDownloadName, renderBufferHistoryDownload } from './runtime-conversation-download.js';
 import { requireStoredNetwork } from './runtime-network-guard.js';
 import {
-  closeConversationQueryBuffer,
+  closeConversationBuffer,
   listConversationBufferHistory,
   markConversationBufferRead,
   openConversationQuery,
@@ -22,7 +22,7 @@ export const openRuntimeConversationQuery = (
 };
 
 export const closeRuntimeConversationBuffer = (options: RuntimeConversationServiceOptions, bufferId: string) => {
-  const buffer = closeConversationQueryBuffer(options.conversations, bufferId);
+  const buffer = closeConversationBuffer(options.conversations, bufferId);
   return {
     buffer,
     messages: [{ type: 'buffer.remove', networkId: buffer.networkId, bufferId: buffer.id } satisfies ServerMessage],

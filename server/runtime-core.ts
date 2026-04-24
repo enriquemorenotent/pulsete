@@ -119,7 +119,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       });
     },
     closeBuffer: (bufferId) => {
-      const result = conversationsService.closeQueryBuffer(bufferId);
+      const result = conversationsService.closeBuffer(bufferId);
+      if (result.buffer.kind === 'channel') {
+        connectionManager.closeChannelBuffer(result.buffer.networkId, result.buffer.target);
+      }
       connectionManager.syncPresenceTracking(result.buffer.networkId);
       const messages: ServerMessage[] = [
         ...connectionManager.collectFriendPresenceDiffs(),

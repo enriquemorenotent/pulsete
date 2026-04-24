@@ -11,7 +11,7 @@ import {
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
-import { gatewayReconnectMessage, toGatewayErrorMessage } from './gateway.js';
+import { toGatewayErrorMessage } from './gateway.js';
 
 type ChatActionParams = Pick<
   AppActionContext,
@@ -97,39 +97,32 @@ export const createChatActions = ({
     );
   };
 
-  const closeChannel = (networkId: string, channel: string) => {
-    const socket = getGatewaySocket();
-    if (!socket) {
+  const closeConversationBuffer = async (buffer: BufferState, errorMessage: string) => {
+    await executeMutation({
+      request: () => api.closeBuffer(buffer.id),
+      errorMessage,
+      failureValue: undefined,
+    });
+  };
+
+  const closeChannel = async (networkId: string, channel: string) => {
+    const conversation = readConversation(getState, getConversation);
+    const buffer = conversation.findChannelBuffer(networkId, channel);
+    if (!buffer) {
       return;
     }
-    const conversation = readConversation(getState, getConversation);
-    const workspace = readWorkspace(getState, getWorkspace);
-    const buffer = conversation.findChannelBuffer(networkId, channel);
-    try {
-      socket.send({
-        type: 'channel.part',
-        networkId,
-        channel,
-        sourceBufferId: buffer?.id ?? workspace.selectedBuffer?.id,
-      });
-    } catch {
-      updateBanner('error', gatewayReconnectMessage);
-    }
+    await closeConversationBuffer(buffer, 'Failed to close channel');
   };
 
   const closeBuffer = async (buffer: BufferState) => {
-    await executeMutation({
-      request: () => api.closeBuffer(buffer.id),
-      errorMessage: 'Failed to close private message',
-      failureValue: undefined,
-    });
+    await closeConversationBuffer(buffer, 'Failed to close private message');
   };
 
   const sendComposer = async () => {
     const workspace = readWorkspace(getState, getWorkspace);
     const draftBufferId = workspace.selectedBuffer?.id ?? null;
     const draft = getDraft(draftBufferId);
-    if (draft.trim() && !getGatewaySocket()) {
+    if (draft.trim() && !isLocalCloseCommand(draft) && !getGatewaySocket()) {
       return false;
     }
     return executeMutation({
@@ -191,3 +184,5 @@ export const createChatActions = ({
     sendComposer,
   };
 };
+
+const isLocalCloseCommand = (draft: string) => /^\/close(?:\s|$)/i.test(draft.trim());

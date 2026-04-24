@@ -71,7 +71,7 @@ test('runtime validation rejects missing networks and invalid targets before tou
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
-  const network = storage.networks.upsert(createNetworkInput());
+  const network = storage.networks.upsert(createNetworkInput({ workspaceOpen: true }));
   const query = storage.conversations.upsertQuery(network.id, 'helper');
   const channel = storage.conversations.upsertChannel({
     networkId: network.id,
@@ -96,7 +96,19 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.mutedNicks.upsertMutedNick(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
   assert.throws(() => runtime.friends.removeFriend('missing-friend'), /Friend not found/);
   assert.throws(() => runtime.mutedNicks.removeMutedNick('missing-muted-nick'), /Muted nick not found/);
-  assert.throws(() => runtime.conversations.closeBuffer(channel.id), /Only private message buffers can be closed/);
+  const [removeMessage] = runtime.conversations.closeBuffer(channel.id).messages;
+  assert.ok(removeMessage);
+  if (removeMessage.type !== 'buffer.remove') {
+    assert.fail(`Expected buffer.remove, received ${removeMessage.type}`);
+  }
+  assert.equal(removeMessage.networkId, network.id);
+  assert.equal(removeMessage.bufferId, channel.id);
+  assert.equal(storage.conversations.getChannelByName(network.id, '#help'), null);
+  assert.equal(runtime.connections.has(network.id), false);
+  assert.throws(
+    () => runtime.conversations.closeBuffer(storage.conversations.getServerBuffer(network.id)!.id),
+    /Only channels and private messages can be closed/
+  );
   assert.throws(() => runtime.irc.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
   assert.throws(() => runtime.irc.sendMessage(network.id, 'alice,bob', 'hello'), /Private-message target must refer to a single nick/);
   assert.throws(() => runtime.irc.sendMessage(network.id, '#help', '   '), /Message body is required/);
@@ -110,7 +122,7 @@ test('runtime validation rejects missing networks and invalid targets before tou
     /Raw command cannot contain carriage returns or line feeds/
   );
 
-  assert.deepEqual(storage.conversations.listChannels(network.id), [channel]);
+  assert.deepEqual(storage.conversations.listChannels(network.id), []);
   assert.equal(storage.conversations.getBuffer(query.id)?.target, 'helper');
   assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10), []);
 });

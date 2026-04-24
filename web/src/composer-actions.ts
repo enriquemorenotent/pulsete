@@ -14,14 +14,14 @@ type ComposerParams = {
   onJoinChannel: (networkId: string, channel: string, sourceBufferId?: string) => Promise<void>;
   onOpenChannelList: (networkId: string) => Promise<void>;
   onOpenQuery: (networkId: string, nick: string) => Promise<void>;
-  onCloseChannel: (networkId: string, channel: string) => void;
+  onCloseChannel: (networkId: string, channel: string) => void | Promise<void>;
   onCloseBuffer: (buffer: BufferState) => Promise<void>;
 };
 
 export async function sendComposerMessage(params: ComposerParams) {
   const text = params.draft.trim();
   const selection = params.workspace.selectedBuffer;
-  if (!text || !params.socket || !selection) {
+  if (!text || !selection) {
     return null;
   }
   if (params.workspace.composerMode === 'hidden') {
@@ -33,6 +33,9 @@ export async function sendComposerMessage(params: ComposerParams) {
   }
   if (text.startsWith('/')) {
     return runSlashCommand(text, params);
+  }
+  if (!params.socket) {
+    return null;
   }
   if (selection.kind === 'server') {
     params.updateBanner('error', 'Select a channel or use /join first');
@@ -52,15 +55,36 @@ export async function sendComposerMessage(params: ComposerParams) {
 
 async function runSlashCommand(text: string, params: ComposerParams) {
   const selection = params.workspace.selectedBuffer;
-  const socket = params.socket;
-  if (!selection || !socket) {
-    return;
+  if (!selection) {
+    return null;
   }
   const parsed = parseSlashIrcClientCommand(text);
   if (!parsed) {
     return null;
   }
   const { name: command, args, remainder } = parsed;
+
+  if (command === 'close') {
+    if (remainder) {
+      params.updateBanner('error', 'Usage: /close');
+      return null;
+    }
+    if (selection.kind === 'channel') {
+      await params.onCloseChannel(selection.networkId, selection.target);
+    } else if (selection.kind === 'query') {
+      await params.onCloseBuffer(selection);
+    } else {
+      params.updateBanner('error', 'Only channels and private messages can be closed with /close');
+      return null;
+    }
+    params.setDraft('');
+    return text;
+  }
+
+  const socket = params.socket;
+  if (!socket) {
+    return null;
+  }
 
   switch (command) {
     case 'join':
@@ -114,21 +138,6 @@ async function runSlashCommand(text: string, params: ComposerParams) {
       }
       await params.onOpenChannelList(selection.networkId);
       break;
-    case 'close':
-      if (remainder) {
-        params.updateBanner('error', 'Usage: /close');
-        return null;
-      }
-      if (selection.kind === 'channel') {
-        params.onCloseChannel(selection.networkId, selection.target);
-        break;
-      }
-      if (selection.kind === 'query') {
-        await params.onCloseBuffer(selection);
-        break;
-      }
-      params.updateBanner('error', 'Only channels and private messages can be closed with /close');
-      return null;
     case 'whois':
       if (!remainder) {
         params.updateBanner('error', 'Usage: /whois nick');

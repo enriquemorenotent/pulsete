@@ -151,7 +151,7 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
 test('query routes validate missing networks and invalid targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = storage.networks.upsert(createNetworkInput());
+  const network = storage.networks.upsert(createNetworkInput({ workspaceOpen: true }));
   const query = storage.conversations.upsertQuery(network.id, 'helper');
   const channel = storage.conversations.upsertChannel({
     networkId: network.id,
@@ -181,9 +181,24 @@ test('query routes validate missing networks and invalid targets', async () => {
     assert.equal(invalidPayload.status, 400);
     assert.equal(invalidPayload.json.message, 'Invalid query payload');
 
-    const invalidClose = await requestJson(port, 'DELETE', `/api/buffers/${channel.id}`);
+    const channelClose = await requestJson(port, 'DELETE', `/api/buffers/${channel.id}`);
+    assert.equal(channelClose.status, 200);
+    const channelCloseMessages = channelClose.json.messages as Array<{
+      bufferId: string;
+      mutationId?: string;
+      networkId: string;
+      type: string;
+    }>;
+    assert.deepEqual(channelCloseMessages, [{
+      type: 'buffer.remove',
+      networkId: network.id,
+      bufferId: channel.id,
+      mutationId: channelCloseMessages[0]?.mutationId,
+    }]);
+
+    const invalidClose = await requestJson(port, 'DELETE', `/api/buffers/${storage.conversations.getServerBuffer(network.id)!.id}`);
     assert.equal(invalidClose.status, 400);
-    assert.equal(invalidClose.json.message, 'Only private message buffers can be closed');
+    assert.equal(invalidClose.json.message, 'Only channels and private messages can be closed');
     assert.equal(storage.conversations.getBuffer(query.id)?.target, 'helper');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));

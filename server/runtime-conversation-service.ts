@@ -23,7 +23,7 @@ export class RuntimeConversationService {
     return openRuntimeConversationQuery(this.options, networkId, target);
   }
 
-  closeQueryBuffer(bufferId: string) {
+  closeBuffer(bufferId: string) {
     return closeRuntimeConversationBuffer(this.options, bufferId);
   }
 

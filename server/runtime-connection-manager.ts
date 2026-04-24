@@ -82,6 +82,17 @@ export class RuntimeConnectionManager {
     this.eventRouter.clearNetwork(networkId);
   }
 
+  closeChannelBuffer(networkId: string, channel: string) {
+    const connection = this.connections.get(networkId);
+    if (!connection) {
+      return;
+    }
+    connection.untrackChannel(channel);
+    if (connection.lifecycle.connected) {
+      connection.part(channel, 'Leaving', 'server');
+    }
+  }
+
   requestChannelList(networkId: string, requester?: WebSocket) {
     return this.eventRouter.requestChannelList(networkId, this.getConnection(networkId), randomUUID(), requester);
   }

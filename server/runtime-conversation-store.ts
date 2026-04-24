@@ -9,10 +9,10 @@ import type { MessageInput } from './storage-types.js';
 export const openConversationQuery = (store: RuntimeConversationStore, networkId: string, target: string) =>
   store.upsertQuery(networkId, target);
 
-export const closeConversationQueryBuffer = (store: RuntimeConversationStore, bufferId: string) => {
+export const closeConversationBuffer = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
-  if (buffer.kind !== 'query') {
-    throw badRequest('Only private message buffers can be closed');
+  if (buffer.kind === 'server') {
+    throw badRequest('Only channels and private messages can be closed');
   }
   return store.removeBuffer(bufferId) ?? buffer;
 };
