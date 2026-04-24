@@ -146,3 +146,40 @@ test('buffer history delete route is not exposed', async () => {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
+
+test('buffer import and self-alias repair routes are not exposed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const buffer = storage.conversations.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help' });
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: '#help',
+    nick: 'alice',
+    body: 'hello',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const port = await listen(server);
+
+  try {
+    const importResponse = await requestJson(port, 'POST', `/api/buffers/${buffer.id}/history/import`, {
+      files: [],
+      selfNicks: [],
+    });
+    const aliasResponse = await requestJson(port, 'PUT', `/api/buffers/${buffer.id}/self-nick-aliases`, {
+      selfNickAliases: ['oldnick'],
+    });
+
+    assert.equal(importResponse.status, 404);
+    assert.equal(importResponse.json.message, 'Not found');
+    assert.equal(aliasResponse.status, 404);
+    assert.equal(aliasResponse.json.message, 'Not found');
+    assert.equal(storage.conversations.listMessages(network.id, '#help', 10).length, 1);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});

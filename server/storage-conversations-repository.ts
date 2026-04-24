@@ -2,10 +2,8 @@ import type { SqliteDb } from './storage-sqlite.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 import {
   appendMessage,
-  createHistoryImportBatch,
   deleteMessages,
   deleteMessagesByIdPrefixes,
-  getHistoryImportBatch,
   getMessageWindow,
   getMessageById,
   listAllMessages,
@@ -14,7 +12,6 @@ import {
   listMessages,
   listRecentMessagesForBuffer,
   listRecentMessages,
-  repairBufferMessageAttributions,
   searchMessages,
 } from './storage-messages.js';
 import {
@@ -36,7 +33,7 @@ import {
 } from './storage-buffers.js';
 import { runInTransaction } from './storage-db.js';
 import { renameQueryBuffer, upsertQueryBuffer } from './storage-query-aliases.js';
-import type { BufferInput, ChannelInput, HistoryImportBatchInput, MessageInput } from './storage-types.js';
+import type { BufferInput, ChannelInput, MessageInput } from './storage-types.js';
 
 export class StorageConversationsRepository {
   constructor(private readonly db: SqliteDb) {}
@@ -158,24 +155,5 @@ export class StorageConversationsRepository {
 
   appendMessage(input: MessageInput) {
     return appendMessage(this.db, input, (messageId) => this.getMessageById(messageId));
-  }
-
-  repairBufferMessageAttributions(input: {
-    bufferKind: 'channel' | 'query';
-    networkId: string;
-    target: string;
-    nick: string;
-    altNicks: string[];
-    selfNickAliases: string[];
-  }) {
-    return runInTransaction(this.db, () => repairBufferMessageAttributions(this.db, input));
-  }
-
-  createHistoryImportBatch(input: HistoryImportBatchInput) {
-    return runInTransaction(this.db, () => createHistoryImportBatch(this.db, input));
-  }
-
-  getHistoryImportBatch(batchId: string) {
-    return getHistoryImportBatch(this.db, batchId);
   }
 }

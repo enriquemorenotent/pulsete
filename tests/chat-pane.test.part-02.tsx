@@ -33,10 +33,6 @@ test('channel transcripts keep the unread divider anchored after a day divider',
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
-      historyImportOpen={false}
-      onCloseHistoryImport={() => undefined}
-      selfNickAliasesOpen={false}
-      onCloseSelfNickAliases={() => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -60,15 +56,11 @@ test('channel headers collapse maintenance actions behind a compact overflow tri
   const markup = renderChatPane([], {
     showChannelAutoJoin: true,
     channelAutoJoinActive: true,
-    canImportHistory: true,
-    canRepairSelfNickAliases: true,
   });
 
   assert.match(markup, /aria-label="More actions"/);
   assert.match(markup, />Close</);
   assert.doesNotMatch(markup, /Autojoin On/);
-  assert.doesNotMatch(markup, /Import logs/);
-  assert.doesNotMatch(markup, /Self aliases/);
 });
 
 test('channel composers render the active target as a prompt cue', () => {
@@ -205,10 +197,6 @@ test('reconnecting channels rely on the inline status banner instead of header m
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
-      historyImportOpen={false}
-      onCloseHistoryImport={() => undefined}
-      selfNickAliasesOpen={false}
-      onCloseSelfNickAliases={() => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}

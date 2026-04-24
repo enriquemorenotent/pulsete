@@ -1,9 +1,4 @@
 import { z } from 'zod';
-import {
-  bufferHistoryImportRequestSchema,
-  bufferSelfNickAliasesRequestSchema,
-  historyImportRequestBodyLimitBytes,
-} from '../shared/protocol.js';
 import { badRequest } from './app-error.js';
 import { historyWindowLimit } from '../shared/protocol.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
@@ -60,22 +55,6 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
     return true;
   }
 
-  const importMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/import$/);
-  if (importMatch && req.method === 'POST') {
-    const bufferId = decodeRouteParam(importMatch[1]);
-    const input = readHistoryImportInput(await readJson(req, historyImportRequestBodyLimitBytes));
-    writeJson(res, 200, { ok: true, ...context.buffers.importHistory(bufferId, input) });
-    return true;
-  }
-
-  const selfNickAliasesMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/self-nick-aliases$/);
-  if (selfNickAliasesMatch && req.method === 'PUT') {
-    const bufferId = decodeRouteParam(selfNickAliasesMatch[1]);
-    const input = readBufferSelfNickAliasesInput(await readJson(req));
-    writeJson(res, 200, { ok: true, ...context.buffers.updateBufferSelfNickAliases(bufferId, input) });
-    return true;
-  }
-
   if (historyMatch && req.method === 'GET') {
     const bufferId = decodeRouteParam(historyMatch[1]);
     const limit = normalizeHistoryLimit(url.searchParams.get('limit'));
@@ -114,22 +93,6 @@ const readQueryTarget = (body: unknown) => {
     throw badRequest('Invalid query payload');
   }
   return result.data.target;
-};
-
-const readHistoryImportInput = (body: unknown) => {
-  const result = bufferHistoryImportRequestSchema.safeParse(body);
-  if (!result.success) {
-    throw badRequest(result.error.issues[0]?.message ?? 'Invalid history import payload');
-  }
-  return result.data;
-};
-
-const readBufferSelfNickAliasesInput = (body: unknown) => {
-  const result = bufferSelfNickAliasesRequestSchema.safeParse(body);
-  if (!result.success) {
-    throw badRequest(result.error.issues[0]?.message ?? 'Invalid self alias payload');
-  }
-  return result.data;
 };
 
 const writeTextDownload = (res: ServerResponse, fileName: string, content: string) => {

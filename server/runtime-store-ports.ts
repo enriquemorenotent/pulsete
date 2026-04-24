@@ -64,14 +64,6 @@ export type RuntimeConversationStore = {
     toTarget: string,
   ): { buffer: BufferState; removedBufferId: string | null } | null;
   appendMessage(input: MessageInput): AppSnapshot['messages'][number];
-  repairBufferMessageAttributions(input: {
-    bufferKind: 'channel' | 'query';
-    networkId: string;
-    target: string;
-    nick: string;
-    altNicks: string[];
-    selfNickAliases: string[];
-  }): AppSnapshot['messages'];
 };
 
 export type RuntimeFriendStore = {

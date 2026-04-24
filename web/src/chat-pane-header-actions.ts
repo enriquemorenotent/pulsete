@@ -13,12 +13,9 @@ type ResolveChatPaneHeaderActionsContext = {
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   canDownloadHistory?: boolean;
-  canImportHistory?: boolean;
   onWhoisSelectedQuery?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
-  onOpenHistoryImport?: () => void;
-  onOpenSelfNickAliases?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -110,22 +107,6 @@ const resolveOverflowActions = (
       onSelect: () => {
         void context.onDownloadHistory?.();
       },
-    });
-  }
-
-  if (context.canImportHistory && context.onOpenHistoryImport) {
-    overflow.push({
-      id: 'import-history',
-      label: 'Import logs',
-      onSelect: context.onOpenHistoryImport,
-    });
-  }
-
-  if ((selectedBuffer?.kind === 'channel' || selectedBuffer?.kind === 'query') && context.onOpenSelfNickAliases) {
-    overflow.push({
-      id: 'self-aliases',
-      label: 'Self aliases',
-      onSelect: context.onOpenSelfNickAliases,
     });
   }
 

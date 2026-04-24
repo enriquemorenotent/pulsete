@@ -133,8 +133,6 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),
-    importHistory: (bufferId, input) => publishMutation(conversationsService.importHistory(bufferId, input)),
-    updateBufferSelfNickAliases: (bufferId, input) => publishMutation(conversationsService.updateBufferSelfNickAliases(bufferId, input)),
   };
   const friends: RuntimeFriendMutations = {
     upsertFriend: (nick) => publishMutation(friendMutations.upsertFriend(nick)),

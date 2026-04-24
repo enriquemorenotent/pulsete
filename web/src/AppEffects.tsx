@@ -36,8 +36,6 @@ type AppEffectsProps = {
   primeBackgroundDmAudioRef: MutableRefObject<() => void>;
   ui: Pick<
     AppUiState,
-    | 'bufferToolDialog'
-    | 'closeBufferToolDialog'
     | 'didAutoOpenManagerRef'
     | 'socketRef'
   >;
@@ -87,20 +85,6 @@ export function AppEffects(props: AppEffectsProps) {
     dispatch,
     socketRef: props.ui.socketRef,
   });
-
-  useEffect(() => {
-    if (!props.ui.bufferToolDialog) {
-      return;
-    }
-    if (props.ui.bufferToolDialog.bufferId === selectedBufferId) {
-      return;
-    }
-    props.ui.closeBufferToolDialog();
-  }, [
-    props.ui.bufferToolDialog,
-    props.ui.closeBufferToolDialog,
-    selectedBufferId,
-  ]);
 
   const { prime, preview } = useBackgroundDmAudioCue({
     buffers,

@@ -49,10 +49,6 @@ test('offline channels surface an inline reconnect action', () => {
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
-      historyImportOpen={false}
-      onCloseHistoryImport={() => undefined}
-      selfNickAliasesOpen={false}
-      onCloseSelfNickAliases={() => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}
@@ -111,10 +107,6 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
-      historyImportOpen={false}
-      onCloseHistoryImport={() => undefined}
-      selfNickAliasesOpen={false}
-      onCloseSelfNickAliases={() => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}

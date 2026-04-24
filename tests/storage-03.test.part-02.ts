@@ -132,7 +132,7 @@ test('search helpers stay scoped to the selected transcript and expose stable ev
   assert.deepEqual(storage.conversations.getMessageWindow(second.id, 1, 1), [first, second, third]);
 });
 
-test('deleteMessagesByIdPrefixes removes imported logs without touching normal messages', () => {
+test('deleteMessagesByIdPrefixes removes matching rows without touching normal messages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
@@ -146,8 +146,8 @@ test('deleteMessagesByIdPrefixes removes imported logs without touching normal m
     self: false,
     ts: 1,
   });
-  const imported = storage.conversations.appendMessage({
-    id: 'import:turn-1:0',
+  const matched = storage.conversations.appendMessage({
+    id: 'rollback:turn-1:0',
     networkId: network.id,
     target: '#help',
     nick: 'bob',
@@ -157,7 +157,7 @@ test('deleteMessagesByIdPrefixes removes imported logs without touching normal m
     ts: 2,
   });
   storage.conversations.appendMessage({
-    id: 'import:turn-2:0',
+    id: 'rollback:turn-2:0',
     networkId: network.id,
     target: '#help',
     nick: 'charlie',
@@ -167,11 +167,11 @@ test('deleteMessagesByIdPrefixes removes imported logs without touching normal m
     ts: 3,
   });
 
-  const deleted = storage.conversations.deleteMessagesByIdPrefixes(['import:turn-1:', 'import:turn-2:']);
+  const deleted = storage.conversations.deleteMessagesByIdPrefixes(['rollback:turn-1:', 'rollback:turn-2:']);
 
-  assert.deepEqual(deleted.map((message) => message.id), ['import:turn-1:0', 'import:turn-2:0']);
+  assert.deepEqual(deleted.map((message) => message.id), ['rollback:turn-1:0', 'rollback:turn-2:0']);
   assert.deepEqual(storage.conversations.listMessages(network.id, '#help', 10), [preserved]);
-  assert.equal(storage.conversations.getMessageById(imported.id), null);
+  assert.equal(storage.conversations.getMessageById(matched.id), null);
 });
 
 test('searchMessages stays in sync when transcript rows are deleted', () => {
@@ -179,7 +179,7 @@ test('searchMessages stays in sync when transcript rows are deleted', () => {
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
   storage.conversations.appendMessage({
-    id: 'import:turn-1:0',
+    id: 'rollback:turn-1:0',
     networkId: network.id,
     target: 'Alice',
     nick: 'alice',
@@ -201,10 +201,10 @@ test('searchMessages stays in sync when transcript rows are deleted', () => {
 
   assert.deepEqual(
     storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10).map((match) => match.message.id),
-    ['import:turn-1:0'],
+    ['rollback:turn-1:0'],
   );
 
-  storage.conversations.deleteMessagesByIdPrefixes(['import:turn-1:']);
+  storage.conversations.deleteMessagesByIdPrefixes(['rollback:turn-1:']);
 
   assert.deepEqual(storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10), []);
 
@@ -227,4 +227,3 @@ test('searchMessages stays in sync when transcript rows are deleted', () => {
 
   assert.deepEqual(storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10), []);
 });
-

@@ -1,19 +1,16 @@
 import { memo, useCallback, useReducer } from 'react';
 import type {
-  BufferHistoryImportRequest,
   BufferState,
   ChatMessage,
   FriendState,
   NetworkProfile,
 } from '../../shared/protocol.js';
 import type { ChannelListState } from './app-types.js';
-import { BufferSelfNickAliasesDialog } from './BufferSelfNickAliasesDialog.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
-import { HistoryImportDialog } from './HistoryImportDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -45,15 +42,6 @@ export type ChatPaneProps = {
   onToggleChannelAutoJoin: () => Promise<boolean>;
   canDownloadHistory?: boolean;
   onDownloadHistory?: () => Promise<boolean>;
-  canImportHistory?: boolean;
-  historyImportOpen?: boolean;
-  onOpenHistoryImport?: () => void;
-  onCloseHistoryImport?: () => void;
-  onImportHistory?: (input: BufferHistoryImportRequest) => Promise<boolean>;
-  selfNickAliasesOpen?: boolean;
-  onOpenSelfNickAliases?: () => void;
-  onCloseSelfNickAliases?: () => void;
-  onUpdateSelfNickAliases?: (input: { selfNickAliases: string[] }) => Promise<boolean>;
   canLoadOlderHistory?: boolean;
   initialHistoryPending?: boolean;
   loadingOlderHistory?: boolean;
@@ -75,11 +63,6 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     (value: number) => value + 1,
     0,
   );
-  const selectedBuffer = props.workspace.selectedBuffer;
-  const selectedChatBuffer: (BufferState & { kind: 'channel' | 'query' }) | null =
-    selectedBuffer && (selectedBuffer.kind === 'channel' || selectedBuffer.kind === 'query')
-      ? selectedBuffer as BufferState & { kind: 'channel' | 'query' }
-    : null;
   const isServerBuffer =
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
@@ -111,9 +94,6 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}
         canDownloadHistory={props.canDownloadHistory}
         onDownloadHistory={props.onDownloadHistory}
-        canImportHistory={props.canImportHistory}
-        onOpenHistoryImport={props.onOpenHistoryImport}
-        onOpenSelfNickAliases={props.onOpenSelfNickAliases}
         onCloseChannel={props.onCloseChannel}
         onCloseBuffer={props.onCloseBuffer}
         onOpenChannelList={props.onOpenChannelList}
@@ -160,25 +140,6 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onClose={props.onCloseChannelList}
         onJoin={props.onJoinChannelFromList}
       />
-      {props.onImportHistory ? (
-        <HistoryImportDialog
-          open={props.historyImportOpen ?? false}
-          targetLabel={props.workspace.headerTitle}
-          targetKind={selectedChatBuffer?.kind ?? 'query'}
-          onClose={() => props.onCloseHistoryImport?.()}
-          onImport={props.onImportHistory}
-        />
-      ) : null}
-      {selectedChatBuffer && props.onUpdateSelfNickAliases ? (
-        <BufferSelfNickAliasesDialog
-          open={props.selfNickAliasesOpen ?? false}
-          targetLabel={props.workspace.headerTitle}
-          bufferKind={selectedChatBuffer.kind}
-          currentAliases={selectedChatBuffer.selfNickAliases ?? []}
-          onClose={() => props.onCloseSelfNickAliases?.()}
-          onSave={props.onUpdateSelfNickAliases}
-        />
-      ) : null}
     </section>
   );
 });

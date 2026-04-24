@@ -22,8 +22,6 @@ test('command palette filtering matches labels, subtitles, and keywords case-ins
       canToggleChannelAutoJoin: false,
       channelAutoJoinActive: false,
       canDownloadHistory: false,
-      canImportHistory: true,
-      canOpenSelfAliases: false,
     },
   }));
 
@@ -33,7 +31,7 @@ test('command palette filtering matches labels, subtitles, and keywords case-ins
   );
   assert.deepEqual(
     filterCommandPaletteEntries(entries, 'hexchat').map((entry) => entry.label),
-    ['Import Logs'],
+    [],
   );
   assert.deepEqual(
     filterCommandPaletteEntries(entries, 'SOFIA').map((entry) => entry.label),

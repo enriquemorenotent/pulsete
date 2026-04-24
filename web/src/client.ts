@@ -1,7 +1,4 @@
 import {
-  type BufferHistoryImportSummary,
-  type BufferHistoryImportRequest,
-  type BufferSelfNickAliasesRequest,
   historyWindowLimit,
   type ServerMessage,
   type BufferState,
@@ -81,22 +78,6 @@ export const api = {
     }
     return apiRequest<BufferHistoryPayload>(`/api/buffers/${bufferId}/history?${searchParams.toString()}`);
   },
-  importBufferHistory: (bufferId: string, payload: BufferHistoryImportRequest) =>
-    apiRequest<{ ok: boolean; messages: ServerMessage[]; summary: BufferHistoryImportSummary }>(
-      `/api/buffers/${bufferId}/history/import`,
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      },
-    ),
-  updateBufferSelfNickAliases: (bufferId: string, payload: BufferSelfNickAliasesRequest) =>
-    apiRequest<{ ok: boolean; buffer: BufferState; repairedCount: number; messages: ServerMessage[] }>(
-      `/api/buffers/${bufferId}/self-nick-aliases`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      },
-    ),
   downloadBufferHistory: async (bufferId: string) => {
     const response = await fetch(`/api/buffers/${bufferId}/history/download`);
     if (!response.ok) {

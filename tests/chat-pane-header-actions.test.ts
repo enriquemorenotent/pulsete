@@ -72,12 +72,9 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   showChannelAutoJoin: false,
   channelAutoJoinActive: false,
   canDownloadHistory: false,
-  canImportHistory: false,
   onWhoisSelectedQuery: () => undefined,
   onToggleChannelAutoJoin: async () => true,
   onDownloadHistory: async () => true,
-  onOpenHistoryImport: () => undefined,
-  onOpenSelfNickAliases: undefined,
   onCloseChannel: () => undefined,
   onCloseBuffer: () => undefined,
   onOpenChannelList: () => undefined,
@@ -89,13 +86,11 @@ test('channel header actions keep close primary and move maintenance actions int
     showChannelAutoJoin: true,
     channelAutoJoinActive: true,
     canDownloadHistory: true,
-    canImportHistory: true,
-    onOpenSelfNickAliases: () => undefined,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close'],
-    overflow: ['Autojoin On', 'Download history', 'Import logs', 'Self aliases'],
+    overflow: ['Autojoin On', 'Download history'],
   });
 });
 
@@ -114,12 +109,11 @@ test('query header actions keep close visible and leave utilities in overflow', 
       showNicklist: false,
     }),
     canDownloadHistory: true,
-    onOpenSelfNickAliases: () => undefined,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close'],
-    overflow: ['WHOIS', 'Download history', 'Self aliases'],
+    overflow: ['WHOIS', 'Download history'],
   });
 });
 

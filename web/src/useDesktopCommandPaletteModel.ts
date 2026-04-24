@@ -32,7 +32,6 @@ type DesktopCommandPaletteModelParams = {
     AppUiState,
     | 'closeCommandPalette'
     | 'commandPaletteOpen'
-    | 'openBufferToolDialog'
     | 'openCommandPalette'
     | 'openPreferences'
   >;
@@ -98,8 +97,6 @@ export function useDesktopCommandPaletteModel({
         canToggleChannelAutoJoin: channelAutoJoin.available,
         channelAutoJoinActive: channelAutoJoin.active,
         canDownloadHistory: canUseBufferHistoryTools,
-        canImportHistory: canUseBufferHistoryTools,
-        canOpenSelfAliases: canUseBufferHistoryTools,
       },
     }),
     [
@@ -143,8 +140,6 @@ export function useDesktopCommandPaletteModel({
       openChannelList: () => { void actions.openChannelList(); },
       toggleCurrentChannelAutoJoin: () => { void actions.toggleCurrentChannelAutoJoin(); },
       downloadBufferHistory: (bufferId) => { void actions.downloadBufferHistory(bufferId); },
-      openHistoryImport: (bufferId) => ui.openBufferToolDialog('history-import', bufferId),
-      openSelfAliases: (bufferId) => ui.openBufferToolDialog('self-aliases', bufferId),
     }),
     [
       actions.downloadBufferHistory,
@@ -158,7 +153,6 @@ export function useDesktopCommandPaletteModel({
       friendsById,
       selectableBuffersById,
       selectableNetworksById,
-      ui.openBufferToolDialog,
       ui.openPreferences,
     ],
   );

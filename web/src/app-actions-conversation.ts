@@ -1,12 +1,8 @@
 import type {
-  BufferHistoryImportRequest,
-  BufferHistoryImportSummary,
-  BufferSelfNickAliasesRequest,
   BufferState,
   NetworkProfile,
 } from '../../shared/protocol.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
-import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import {
   type AppActionContext,
@@ -30,8 +26,6 @@ export const createConversationActions = ({
   getGatewaySocket,
   sendGatewayMessage,
 }: ConversationActionParams): ConversationActions => {
-  const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
-
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
     const state = getState();
     const conversation = getConversation(getState);
@@ -103,45 +97,10 @@ export const createConversationActions = ({
     }
   };
 
-  const importBufferHistory = async (bufferId: string, input: BufferHistoryImportRequest) =>
-    executeMutation({
-      request: () => api.importBufferHistory(bufferId, input),
-      mapResult: () => true,
-      successMessage: ({ summary }) => formatHistoryImportNotice(summary),
-      errorMessage: 'Failed to import chat history',
-      failureValue: false,
-    });
-
-  const updateBufferSelfNickAliases = async (bufferId: string, input: BufferSelfNickAliasesRequest) =>
-    executeMutation({
-      request: () => api.updateBufferSelfNickAliases(bufferId, input),
-      mapResult: () => true,
-      successMessage: ({ repairedCount }) =>
-        repairedCount > 0
-          ? `Updated self aliases and repaired ${repairedCount} ${repairedCount === 1 ? 'message' : 'messages'}.`
-          : 'Updated self aliases.',
-      errorMessage: 'Failed to update self aliases',
-      failureValue: false,
-    });
-
   return {
     downloadBufferHistory,
-    importBufferHistory,
-    updateBufferSelfNickAliases,
     joinChannel,
     openOrSelectQueryBuffer,
     openChannelListForNetwork,
   };
-};
-
-const formatHistoryImportNotice = (summary: BufferHistoryImportSummary) => {
-  const details = [];
-  if (summary.duplicateCount > 0) {
-    details.push(`${summary.duplicateCount} existing ${summary.duplicateCount === 1 ? 'line' : 'lines'} skipped`);
-  }
-  if (summary.skippedCount > 0) {
-    details.push(`${summary.skippedCount} non-matching lines skipped`);
-  }
-  const suffix = details.length > 0 ? ` (${details.join(', ')})` : '';
-  return `Imported ${summary.importedCount} ${summary.importedCount === 1 ? 'message' : 'messages'} from ${summary.format} logs${suffix}.`;
 };

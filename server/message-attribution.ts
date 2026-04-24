@@ -1,6 +1,5 @@
-import { isSameIrcIdentifier, normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import type {
-  NetworkProfile,
   SpeakerAttributionConfidence,
   SpeakerAttributionSource,
   SpeakerRole,
@@ -9,98 +8,7 @@ import type { MessageAttributionUpdate, MessageInput } from './storage-types.js'
 
 export type SpeakerAttribution = Omit<MessageAttributionUpdate, 'id' | 'importBatchId'>;
 
-type QuerySpeakerAttributionInput = {
-  nick: string | null;
-  target: string;
-  selfNickKeys: Set<string>;
-  selfSource: SpeakerAttributionSource;
-};
-
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
-
-export const buildSelfNickKeys = (
-  network: Pick<NetworkProfile, 'nick' | 'altNicks'>,
-  extraNicks: string[] = [],
-) => normalizeNickAliases([
-  network.nick,
-  ...(network.altNicks ?? []),
-  ...extraNicks,
-]);
-
-export const normalizeNickAliases = (nicks: string[]) => {
-  const keys = new Set<string>();
-  for (const nick of nicks) {
-    const trimmed = nick.trim();
-    if (!trimmed) {
-      continue;
-    }
-    keys.add(normalizeIrcIdentifier(trimmed));
-  }
-  return keys;
-};
-
-export const mergeNickAliases = (nicks: string[], excludedNicks: string[] = []) => {
-  const excluded = normalizeNickAliases(excludedNicks);
-  const merged: string[] = [];
-  const seen = new Set<string>();
-  for (const nick of nicks) {
-    const trimmed = nick.trim();
-    if (!trimmed) {
-      continue;
-    }
-    const key = normalizeIrcIdentifier(trimmed);
-    if (excluded.has(key) || seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    merged.push(trimmed);
-  }
-  return merged;
-};
-
-export const matchesNickAlias = (nick: string | null, keys: Set<string>) =>
-  !!nick && keys.has(normalizeIrcIdentifier(nick));
-
-export const resolveImportedSpeakerAttribution = (
-  input: Omit<QuerySpeakerAttributionInput, 'selfSource'>,
-): SpeakerAttribution => resolveQuerySpeakerAttribution({ ...input, selfSource: 'query-alias' });
-
-export const resolveImportedChannelAttribution = (
-  input: Pick<QuerySpeakerAttributionInput, 'nick' | 'selfNickKeys'>,
-): SpeakerAttribution => {
-  if (!input.nick) {
-    return createUnknownAttribution(null, 'unknown', 'low');
-  }
-  if (matchesNickAlias(input.nick, input.selfNickKeys)) {
-    return {
-      speakerRole: 'self',
-      speakerNick: input.nick,
-      attributionSource: 'import-alias',
-      attributionConfidence: 'high',
-      self: true,
-    };
-  }
-  return {
-    speakerRole: 'other',
-    speakerNick: input.nick,
-    attributionSource: 'unknown',
-    attributionConfidence: 'low',
-    self: false,
-  };
-};
-
-export const resolveQueryRepairAttribution = (
-  input: Omit<QuerySpeakerAttributionInput, 'selfSource'>,
-): SpeakerAttribution => {
-  const attribution = resolveQuerySpeakerAttribution({ ...input, selfSource: 'query-alias' });
-  if (attribution.speakerRole !== 'unknown') {
-    return attribution;
-  }
-  return {
-    ...attribution,
-    speakerNick: input.nick,
-  };
-};
 
 export const resolveRuntimeMessageAttribution = (
   message: Pick<MessageInput, 'nick' | 'self' | 'target'>,
@@ -139,41 +47,6 @@ export const resolveRuntimeMessageAttribution = (
     attributionConfidence: 'high',
     self: false,
   };
-};
-
-const resolveQuerySpeakerAttribution = ({
-  nick,
-  target,
-  selfNickKeys,
-  selfSource,
-}: QuerySpeakerAttributionInput): SpeakerAttribution => {
-  if (!nick) {
-    return createUnknownAttribution(null, 'unknown', 'low');
-  }
-  const isSelf = matchesNickAlias(nick, selfNickKeys);
-  const isPeer = isSameIrcIdentifier(nick, target);
-  if (isSelf && isPeer) {
-    return createUnknownAttribution(nick, 'unknown', 'low');
-  }
-  if (isSelf) {
-    return {
-      speakerRole: 'self',
-      speakerNick: nick,
-      attributionSource: selfSource,
-      attributionConfidence: 'high',
-      self: true,
-    };
-  }
-  if (isPeer) {
-    return {
-      speakerRole: 'peer',
-      speakerNick: nick,
-      attributionSource: 'query-target',
-      attributionConfidence: 'high',
-      self: false,
-    };
-  }
-  return createUnknownAttribution(nick, 'unknown', 'low');
 };
 
 const createUnknownAttribution = (

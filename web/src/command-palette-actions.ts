@@ -67,10 +67,6 @@ export const runCommandPaletteAction = (
       return handlers.toggleCurrentChannelAutoJoin();
     case 'download-buffer-history':
       return handlers.downloadBufferHistory(action.bufferId);
-    case 'open-history-import':
-      return handlers.openHistoryImport(action.bufferId);
-    case 'open-self-aliases':
-      return handlers.openSelfAliases(action.bufferId);
   }
 };
 
@@ -93,24 +89,18 @@ const appendSelectedBufferActions = (
   if (!bufferId) {
     return;
   }
-  pushBufferAction(entries, input.actions.canDownloadHistory, bufferId, 'download-buffer-history', 'Download History', label ? `For ${label}` : 'For current buffer', ['download', 'history', 'export']);
-  pushBufferAction(entries, input.actions.canImportHistory, bufferId, 'open-history-import', 'Import Logs', label ? `Into ${label}` : 'Into current buffer', ['import', 'logs', 'history', 'hexchat']);
-  pushBufferAction(entries, input.actions.canOpenSelfAliases, bufferId, 'open-self-aliases', 'Self Aliases', label ? `Repair self history in ${label}` : 'Repair self history', ['aliases', 'self', 'repair', 'history']);
-};
-
-const pushBufferAction = (
-  entries: CommandPaletteEntrySpec[],
-  enabled: boolean,
-  bufferId: string,
-  kind: Extract<CommandPaletteAction['kind'], 'download-buffer-history' | 'open-history-import' | 'open-self-aliases'>,
-  label: string,
-  subtitle: string,
-  keywords: string[],
-) => {
-  if (!enabled) {
-    return;
+  if (input.actions.canDownloadHistory) {
+    entries.push(
+      createActionEntry(
+        'download-buffer-history',
+        'Download History',
+        label ? `For ${label}` : 'For current buffer',
+        ['download', 'history', 'export'],
+        true,
+        { bufferId },
+      ),
+    );
   }
-  entries.push(createActionEntry(kind, label, subtitle, keywords, true, { bufferId }));
 };
 
 const createActionEntry = (

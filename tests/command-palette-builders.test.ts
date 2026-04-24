@@ -17,8 +17,6 @@ test('command palette builds buffers, friends, and current-buffer actions in ord
       canToggleChannelAutoJoin: true,
       channelAutoJoinActive: false,
       canDownloadHistory: true,
-      canImportHistory: true,
-      canOpenSelfAliases: true,
     },
   }));
 
@@ -35,8 +33,6 @@ test('command palette builds buffers, friends, and current-buffer actions in ord
       'actions:List Channels',
       'actions:Enable Autojoin',
       'actions:Download History',
-      'actions:Import Logs',
-      'actions:Self Aliases',
     ],
   );
 });
@@ -53,8 +49,6 @@ test('command palette action dispatcher routes each action to the matching handl
     openChannelList: () => { calls.push('channel-list'); },
     toggleCurrentChannelAutoJoin: () => { calls.push('autojoin'); },
     downloadBufferHistory: (bufferId: string) => { calls.push(`download:${bufferId}`); },
-    openHistoryImport: (bufferId: string) => { calls.push(`import:${bufferId}`); },
-    openSelfAliases: (bufferId: string) => { calls.push(`aliases:${bufferId}`); },
   };
 
   await runCommandPaletteAction(
@@ -62,7 +56,7 @@ test('command palette action dispatcher routes each action to the matching handl
     handlers,
   );
   await runCommandPaletteAction(
-    { kind: 'open-history-import', bufferId: channelBuffer.id },
+    { kind: 'download-buffer-history', bufferId: channelBuffer.id },
     handlers,
   );
   await runCommandPaletteAction({ kind: 'open-preferences' }, handlers);
@@ -70,7 +64,7 @@ test('command palette action dispatcher routes each action to the matching handl
 
   assert.deepEqual(calls, [
     `pending:${network.id}:#pending`,
-    `import:${channelBuffer.id}`,
+    `download:${channelBuffer.id}`,
     'preferences',
     `friend:${friend.id}`,
   ]);

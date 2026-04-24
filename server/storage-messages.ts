@@ -14,10 +14,3 @@ export {
   deleteMessages,
   deleteMessagesByIdPrefixes,
 } from './storage-message-mutations.js';
-export {
-  repairBufferMessageAttributions,
-} from './storage-message-attribution-store.js';
-export {
-  createHistoryImportBatch,
-  getHistoryImportBatch,
-} from './storage-history-import-batches.js';

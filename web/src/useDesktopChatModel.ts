@@ -38,10 +38,7 @@ export type DesktopChatModelParams = {
   workspace: WorkspaceView;
   ui: Pick<
     AppUiState,
-    | 'bufferToolDialog'
-    | 'closeBufferToolDialog'
-    | 'messageDisplayMode'
-    | 'openBufferToolDialog'
+    'messageDisplayMode'
   >;
 };
 
@@ -89,12 +86,6 @@ export function useDesktopChatModel({
     ? workspace.selectedNetwork
     : null;
   const selectedNetwork = workspace.selectedNetwork;
-  const historyImportOpen =
-    ui.bufferToolDialog?.kind === 'history-import'
-    && ui.bufferToolDialog.bufferId === selectedBufferId;
-  const selfNickAliasesOpen =
-    ui.bufferToolDialog?.kind === 'self-aliases'
-    && ui.bufferToolDialog.bufferId === selectedBufferId;
 
   return useMemo(
     () => ({
@@ -147,23 +138,6 @@ export function useDesktopChatModel({
       onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
       canDownloadHistory: canUseBufferHistoryTools,
       onDownloadHistory: selectedBufferId ? () => actions.downloadBufferHistory(selectedBufferId) : undefined,
-      canImportHistory: canUseBufferHistoryTools,
-      historyImportOpen,
-      onOpenHistoryImport: selectedBufferId
-        ? () => ui.openBufferToolDialog('history-import', selectedBufferId)
-        : undefined,
-      onCloseHistoryImport: ui.closeBufferToolDialog,
-      onImportHistory: selectedBufferId
-        ? (input) => actions.importBufferHistory(selectedBufferId, input)
-        : undefined,
-      selfNickAliasesOpen,
-      onOpenSelfNickAliases: selectedBufferId
-        ? () => ui.openBufferToolDialog('self-aliases', selectedBufferId)
-        : undefined,
-      onCloseSelfNickAliases: ui.closeBufferToolDialog,
-      onUpdateSelfNickAliases: selectedBufferId
-        ? (input) => actions.updateBufferSelfNickAliases(selectedBufferId, input)
-        : undefined,
       canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
       initialHistoryPending: selectedBufferHistory.initialHistoryPending,
       loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
@@ -193,7 +167,6 @@ export function useDesktopChatModel({
       draft,
       friends,
       mutedNicks,
-      historyImportOpen,
       participantQueryNetwork,
       primeBackgroundDmAudio,
       queryNotificationsEnabled,
@@ -203,7 +176,6 @@ export function useDesktopChatModel({
       visibleSelectedMessages,
       selectedNetwork,
       selectedQueryNotificationContact,
-      selfNickAliasesOpen,
       ui,
       workspace,
     ],

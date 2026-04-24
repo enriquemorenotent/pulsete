@@ -2,23 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SocketHandle } from './client.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
-export type BufferToolDialogKind = 'history-import' | 'self-aliases';
-
-export type BufferToolDialogState = {
-  kind: BufferToolDialogKind;
-  bufferId: string;
-} | null;
-
 export type AppUiState = {
-  bufferToolDialog: BufferToolDialogState;
-  closeBufferToolDialog: () => void;
   closeCommandPalette: () => void;
   closePreferences: () => void;
   commandPaletteOpen: boolean;
   didAutoOpenManagerRef: { current: boolean };
   hideOfflineFriends: boolean;
   messageDisplayMode: MessageDisplayMode;
-  openBufferToolDialog: (kind: BufferToolDialogKind, bufferId: string) => void;
   openCommandPalette: () => void;
   openPreferences: () => void;
   preferencesOpen: boolean;
@@ -62,7 +52,6 @@ export const persistHideOfflineFriendsPreference = (value: boolean) => {
 };
 
 export function useAppUiState(): AppUiState {
-  const [bufferToolDialog, setBufferToolDialog] = useState<BufferToolDialogState>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [hideOfflineFriends, setHideOfflineFriends] = useState(
     readStoredHideOfflineFriendsPreference,
@@ -76,12 +65,8 @@ export function useAppUiState(): AppUiState {
     persistHideOfflineFriendsPreference(hideOfflineFriends);
   }, [hideOfflineFriends]);
 
-  const closeBufferToolDialog = useCallback(() => setBufferToolDialog(null), []);
   const closeCommandPalette = useCallback(() => setCommandPaletteOpen(false), []);
   const closePreferences = useCallback(() => setPreferencesOpen(false), []);
-  const openBufferToolDialog = useCallback((kind: BufferToolDialogKind, bufferId: string) => {
-    setBufferToolDialog({ kind, bufferId });
-  }, []);
   const openCommandPalette = useCallback(() => setCommandPaletteOpen(true), []);
   const openPreferences = useCallback(() => setPreferencesOpen(true), []);
   const toggleHideOfflineFriends = useCallback(
@@ -90,15 +75,12 @@ export function useAppUiState(): AppUiState {
   );
 
   return {
-    bufferToolDialog,
-    closeBufferToolDialog,
     closeCommandPalette,
     closePreferences,
     commandPaletteOpen,
     didAutoOpenManagerRef,
     hideOfflineFriends,
     messageDisplayMode,
-    openBufferToolDialog,
     openCommandPalette,
     openPreferences,
     preferencesOpen,

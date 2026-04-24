@@ -71,13 +71,6 @@ export type MessageRow = {
   ts: number;
 };
 
-export type HistoryImportBatchRow = {
-  id: string;
-  bufferId: string;
-  selfNickSnapshot: string;
-  createdAt: number;
-};
-
 export type FriendRow = {
   id: string;
   nick: string;
@@ -145,13 +138,6 @@ export type MessageAttributionUpdate = {
   attributionConfidence: SpeakerAttributionConfidence;
   importBatchId?: string | null;
   self: boolean;
-};
-
-export type HistoryImportBatchInput = {
-  id?: string;
-  bufferId: string;
-  selfNickSnapshot: string[];
-  createdAt?: number;
 };
 
 export type MessagePage = {

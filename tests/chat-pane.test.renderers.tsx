@@ -8,8 +8,6 @@ export const renderChatPane = (
   overrides: Partial<{
     showChannelAutoJoin: boolean;
     channelAutoJoinActive: boolean;
-    canImportHistory: boolean;
-    canRepairSelfNickAliases: boolean;
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     channelUsers: ChannelUserState[];
@@ -35,15 +33,6 @@ export const renderChatPane = (
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
-      canImportHistory={overrides.canImportHistory}
-      historyImportOpen={false}
-      onOpenHistoryImport={overrides.canImportHistory ? () => undefined : undefined}
-      onCloseHistoryImport={() => undefined}
-      onImportHistory={async () => true}
-      selfNickAliasesOpen={false}
-      onOpenSelfNickAliases={overrides.canRepairSelfNickAliases ? () => undefined : undefined}
-      onCloseSelfNickAliases={() => undefined}
-      onUpdateSelfNickAliases={overrides.canRepairSelfNickAliases ? async () => true : undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
       onLoadOlderHistory={async () => 0}
@@ -92,10 +81,6 @@ export const renderQueryPane = (
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
-      historyImportOpen={false}
-      onCloseHistoryImport={() => undefined}
-      selfNickAliasesOpen={false}
-      onCloseSelfNickAliases={() => undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       loadingOlderHistory={overrides.loadingOlderHistory}
       onLoadOlderHistory={async () => 0}
@@ -128,10 +113,6 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
-      historyImportOpen={false}
-      onCloseHistoryImport={() => undefined}
-      selfNickAliasesOpen={false}
-      onCloseSelfNickAliases={() => undefined}
       onCloseChannel={() => undefined}
       onCloseBuffer={() => undefined}
       channelList={closedChannelList}

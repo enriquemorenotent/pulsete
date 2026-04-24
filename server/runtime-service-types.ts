@@ -1,8 +1,5 @@
 import type WebSocket from 'ws';
 import type {
-  BufferHistoryImportSummary,
-  BufferHistoryImportRequest,
-  BufferSelfNickAliasesRequest,
   BufferState,
   ClientMessage,
   NetworkProfile,
@@ -37,14 +34,6 @@ export type RuntimeConversationMutations = {
   markBufferRead: RuntimeConversationService['markBufferRead'];
   history: RuntimeConversationService['listBufferHistory'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
-  importHistory(
-    bufferId: string,
-    input: BufferHistoryImportRequest,
-  ): { messages: readonly ServerMessage[]; summary: BufferHistoryImportSummary };
-  updateBufferSelfNickAliases(
-    bufferId: string,
-    input: BufferSelfNickAliasesRequest,
-  ): { buffer: BufferState; repairedCount: number; messages: readonly ServerMessage[] };
 };
 
 export type RuntimeFriendMutations = {
@@ -82,8 +71,6 @@ export type RuntimeHttpApi = {
     markRead: RuntimeConversationMutations['markBufferRead'];
     history: RuntimeConversationMutations['history'];
     exportHistory: RuntimeConversationMutations['exportHistory'];
-    importHistory: RuntimeConversationMutations['importHistory'];
-    updateBufferSelfNickAliases: RuntimeConversationMutations['updateBufferSelfNickAliases'];
   };
   friends: {
     add: RuntimeFriendMutations['upsertFriend'];

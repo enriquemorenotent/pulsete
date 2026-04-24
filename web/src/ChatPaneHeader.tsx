@@ -29,9 +29,6 @@ type ChatPaneHeaderProps = {
   onToggleChannelAutoJoin: () => Promise<boolean>;
   canDownloadHistory?: boolean;
   onDownloadHistory?: () => Promise<boolean>;
-  canImportHistory?: boolean;
-  onOpenHistoryImport?: () => void;
-  onOpenSelfNickAliases?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -63,12 +60,9 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     showChannelAutoJoin: props.showChannelAutoJoin,
     channelAutoJoinActive: props.channelAutoJoinActive,
     canDownloadHistory: props.canDownloadHistory,
-    canImportHistory: props.canImportHistory,
     onWhoisSelectedQuery: props.onWhoisSelectedQuery,
     onToggleChannelAutoJoin: props.onToggleChannelAutoJoin,
     onDownloadHistory: props.onDownloadHistory,
-    onOpenHistoryImport: props.onOpenHistoryImport,
-    onOpenSelfNickAliases: props.onOpenSelfNickAliases,
     onCloseChannel: props.onCloseChannel,
     onCloseBuffer: props.onCloseBuffer,
     onOpenChannelList: props.onOpenChannelList,

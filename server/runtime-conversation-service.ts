@@ -1,4 +1,3 @@
-import type { BufferHistoryImportRequest, BufferSelfNickAliasesRequest } from '../shared/protocol.js';
 import type { RuntimeEvent } from './irc-types.js';
 import {
   closeRuntimeConversationBuffer,
@@ -15,10 +14,6 @@ import {
   handleRuntimeConversationSendFailure,
   handleRuntimeConversationStatusEvent,
 } from './runtime-conversation-event-actions.js';
-import {
-  importRuntimeConversationHistory,
-  updateRuntimeConversationSelfNickAliases,
-} from './runtime-conversation-history-actions.js';
 import type { RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 
 export class RuntimeConversationService {
@@ -42,14 +37,6 @@ export class RuntimeConversationService {
 
   exportBufferHistory(bufferId: string) {
     return exportRuntimeConversationBufferHistory(this.options, bufferId);
-  }
-
-  importHistory(bufferId: string, input: BufferHistoryImportRequest) {
-    return importRuntimeConversationHistory(this.options, bufferId, input);
-  }
-
-  updateBufferSelfNickAliases(bufferId: string, input: BufferSelfNickAliasesRequest) {
-    return updateRuntimeConversationSelfNickAliases(this.options, bufferId, input);
   }
 
   handleStatusEvent(event: Extract<RuntimeEvent, { type: 'status' }>) {

@@ -10,15 +10,4 @@ export type RuntimeConversationServiceOptions = {
   networks: Pick<RuntimeNetworkStore, 'get'>;
 };
 
-export type ImportBatchStore = RuntimeConversationStore & {
-  createHistoryImportBatch?: (input: {
-    bufferId: string;
-    selfNickSnapshot: string[];
-  }) => { id: string } | null;
-};
-
 export const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
-
-export const haveSameNickAliases = (left: string[], right: string[]) =>
-  left.length === right.length
-  && left.every((entry, index) => entry === right[index]);
