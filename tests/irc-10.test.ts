@@ -10,8 +10,7 @@ test('irc connection clears raw MODE contexts after untargeted mode errors', () 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -78,8 +77,7 @@ test('irc connection clears duplicate raw MODE contexts after untargeted mode er
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -138,8 +136,7 @@ test('irc connection clears duplicate raw MODE contexts after targeted mode erro
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,

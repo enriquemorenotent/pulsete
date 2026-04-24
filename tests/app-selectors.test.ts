@@ -10,8 +10,7 @@ import type { State } from '../web/src/app-types.js';
 
 const network: NetworkProfile = {
   id: 'network-1',
-  templateId: null,
-  managerHidden: true,
+  workspaceOpen: true,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6667,

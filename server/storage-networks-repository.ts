@@ -1,18 +1,16 @@
 import type { SecretBox } from './network-secret.js';
-import type { ConnectionInstanceProfile } from '../shared/network-model.js';
-import { isConnectionInstance } from '../shared/network-model.js';
 import {
   deleteNetwork,
   getNetwork,
   getRuntimeNetwork,
   listNetworks,
-  setConnectionClosed,
+  setWorkspaceOpen,
   upsertNetwork,
 } from './storage-networks.js';
 import { ensureNetworkBuffers } from './storage-network-invariants.js';
 import { runInTransaction } from './storage-db.js';
 import type { SqliteDb } from './storage-sqlite.js';
-import type { NetworkInput, NetworkSaveResult } from './storage-types.js';
+import type { NetworkInput } from './storage-types.js';
 
 export class StorageNetworksRepository {
   constructor(
@@ -33,11 +31,24 @@ export class StorageNetworksRepository {
   }
 
   delete(networkId: string) {
-    runInTransaction(this.db, () => deleteNetwork(this.db, networkId));
+    return runInTransaction(this.db, () => {
+      const existing = getNetwork(this.db, networkId);
+      if (!existing) {
+        return [];
+      }
+      deleteNetwork(this.db, networkId);
+      return [networkId];
+    });
   }
 
-  setConnectionClosed(networkId: string, connectionClosed: boolean) {
-    return runInTransaction(this.db, () => setConnectionClosed(this.db, networkId, connectionClosed));
+  setWorkspaceOpen(networkId: string, workspaceOpen: boolean) {
+    return runInTransaction(this.db, () => {
+      const network = setWorkspaceOpen(this.db, networkId, workspaceOpen);
+      if (network?.workspaceOpen) {
+        ensureNetworkBuffers(this.db, network);
+      }
+      return network;
+    });
   }
 
   upsert(input: NetworkInput) {
@@ -48,60 +59,11 @@ export class StorageNetworksRepository {
     });
   }
 
-  saveWithRelatedInstances(input: NetworkInput): NetworkSaveResult {
+  save(input: NetworkInput) {
     return runInTransaction(this.db, () => {
       const network = upsertNetwork(this.db, input, this.secretBox);
       ensureNetworkBuffers(this.db, network);
-      if (isConnectionInstance(network)) {
-        return { requested: network, relatedInstances: [] };
-      }
-      const relatedInstances: ConnectionInstanceProfile[] = [];
-      for (const candidate of listNetworks(this.db)) {
-        if (!isConnectionInstance(candidate) || candidate.templateId !== network.id) {
-          continue;
-        }
-        const updated = upsertNetwork(this.db, {
-          id: candidate.id,
-          templateId: network.id,
-          managerHidden: true,
-          connectionClosed: candidate.connectionClosed === true,
-          name: network.name,
-          host: network.host,
-          port: network.port,
-          tls: network.tls,
-          nick: network.nick,
-          altNicks: network.altNicks,
-          historicalSelfNicks: network.historicalSelfNicks ?? [],
-          username: network.username,
-          realName: network.realName,
-          authMethod: network.authMethod,
-          authTarget: network.authTarget,
-          authAccount: network.authAccount,
-          favorite: network.favorite,
-          autoJoin: network.autoJoin,
-          ...(input.password !== undefined ? { password: input.password } : {}),
-          ...(input.clearPassword ? { clearPassword: true } : {}),
-        }, this.secretBox);
-        if (!isConnectionInstance(updated)) {
-          throw new Error('Expected related connection instance update');
-        }
-        ensureNetworkBuffers(this.db, updated);
-        relatedInstances.push(updated);
-      }
-      return { requested: network, relatedInstances };
-    });
-  }
-
-  deleteWithRelated(networkId: string) {
-    return runInTransaction(this.db, () => {
-      const relatedNetworkIds = listNetworks(this.db)
-        .filter((candidate) => candidate.id === networkId || (isConnectionInstance(candidate) && candidate.templateId === networkId))
-        .map((candidate) => candidate.id);
-      if (relatedNetworkIds.length === 0) {
-        return [];
-      }
-      deleteNetwork(this.db, networkId);
-      return relatedNetworkIds;
+      return network;
     });
   }
 }

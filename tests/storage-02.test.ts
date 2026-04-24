@@ -6,8 +6,7 @@ import test from 'node:test';
 import { Storage,type NetworkInput } from '../server/storage.js';
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
-  templateId: null,
-  managerHidden: false,
+  workspaceOpen: false,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6667,
@@ -29,8 +28,7 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
     tls: overrides.tls ?? false,
   }));
   return storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
+    workspaceOpen: true,
     name: overrides.name ?? template.name,
     host: overrides.host ?? template.host,
     port: overrides.port ?? template.port,
@@ -64,10 +62,10 @@ test('friends persist and deduplicate case-insensitively', () => {
   assert.deepEqual(reopened.friends.list(), []);
 });
 
-test('deleting a template removes hidden clones', () => {
+test('deleting a network leaves other saved networks alone', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.networks.upsert(createNetworkInput({
+  const first = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
     nick: 'templated',
     altNicks: ['templated_', 'templated__'],
@@ -75,9 +73,8 @@ test('deleting a template removes hidden clones', () => {
     realName: 'templated',
   }));
 
-  storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
+  const second = storage.networks.upsert(createNetworkInput({
+    workspaceOpen: true,
     name: 'TemplateNet clone',
     nick: 'templated',
     altNicks: ['templated_', 'templated__'],
@@ -86,15 +83,15 @@ test('deleting a template removes hidden clones', () => {
   }));
 
   assert.equal(
-    storage.networks.list().filter((network) => network.id === template.id || network.templateId === template.id).length,
-    2
+    storage.networks.list().filter((network) => network.id === first.id || network.id === second.id).length,
+    2,
   );
-  storage.networks.delete(template.id);
-  assert.equal(storage.networks.list().some((network) => network.id === template.id), false);
-  assert.equal(storage.networks.list().some((network) => network.templateId === template.id), false);
+  storage.networks.delete(first.id);
+  assert.equal(storage.networks.list().some((network) => network.id === first.id), false);
+  assert.equal(storage.networks.list().some((network) => network.id === second.id), true);
 });
 
-test('connection instances can be closed without deleting stored logs', () => {
+test('workspace networks can be closed without deleting stored logs', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
@@ -109,10 +106,10 @@ test('connection instances can be closed without deleting stored logs', () => {
     ts: 1,
   });
 
-  const closed = storage.networks.setConnectionClosed(network.id, true);
+  const closed = storage.networks.setWorkspaceOpen(network.id, false);
 
-  assert.equal(closed?.connectionClosed, true);
-  assert.equal(storage.networks.get(network.id)?.connectionClosed, true);
+  assert.equal(closed?.workspaceOpen, false);
+  assert.equal(storage.networks.get(network.id)?.workspaceOpen, false);
   assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10).map((message) => message.body), ['still here']);
 });
 

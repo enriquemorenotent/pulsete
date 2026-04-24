@@ -105,8 +105,7 @@ export const createWelcomeServer = async (closeDelayMs = 0) => {
 export const createConnection = (onEvent: (event: Record<string, unknown>) => void = () => {}) => new IrcConnection(
   {
     id: randomUUID(),
-    templateId: null,
-    managerHidden: false,
+    workspaceOpen: false,
     name: 'TestNet',
     host: '127.0.0.1',
     port: 6667,

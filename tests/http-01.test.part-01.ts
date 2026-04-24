@@ -106,52 +106,25 @@ test('network save rejects invalid payloads and IRC-unsafe fields', async () => 
   }
 });
 
-test('network save rejects invalid and immutable template relationships', async () => {
+test('network save preserves workspace state on ordinary profile edits', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
-  const template = storage.networks.upsert(createNetworkInput({
-    name: 'TemplateNet',
-  }));
-  const otherTemplate = storage.networks.upsert(createNetworkInput({
-    name: 'OtherTemplateNet',
-    host: 'irc2.example.test',
-    port: 6697,
-    tls: true,
-  }));
-  const clone = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
-    name: 'Connection instance',
+  const network = storage.networks.upsert(createNetworkInput({
+    workspaceOpen: true,
+    name: 'Open network',
   }));
   const server = createServer(createHttpHandler(runtime.http));
   const port = await listen(server);
 
   try {
-    const visibleClone = await requestJson(port, 'POST', '/api/networks', {
-      ...template,
-      templateId: template.id,
-      managerHidden: false,
-      name: 'Visible clone',
+    const response = await requestJson(port, 'PUT', `/api/networks/${network.id}`, {
+      ...network,
+      name: 'Renamed network',
     });
-    assert.equal(visibleClone.status, 400);
-    assert.equal(visibleClone.json.message, 'Saved networks cannot reference a template');
-
-    const orphanInstance = await requestJson(port, 'POST', '/api/networks', {
-      ...template,
-      templateId: null,
-      managerHidden: true,
-      name: 'Orphan instance',
-    });
-    assert.equal(orphanInstance.status, 400);
-    assert.equal(orphanInstance.json.message, 'Connection instances must reference an existing saved network');
-
-    const reparentClone = await requestJson(port, 'PUT', `/api/networks/${clone.id}`, {
-      ...clone,
-      templateId: otherTemplate.id,
-    });
-    assert.equal(reparentClone.status, 400);
-    assert.equal(reparentClone.json.message, 'Network template relationship cannot be changed after creation');
+    assert.equal(response.status, 200);
+    assert.equal((response.json.network as { workspaceOpen: boolean }).workspaceOpen, true);
+    assert.equal(storage.networks.get(network.id)?.name, 'Renamed network');
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

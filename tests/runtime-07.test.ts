@@ -76,22 +76,14 @@ test('runtime close disconnects active connections without appending shutdown no
   }
 });
 
-test('deleteNetwork removes hidden clone connections when deleting a template', async () => {
+test('deleteNetwork removes open network connections', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
-  const template = storage.networks.upsert(createNetworkInput({
-    name: 'TemplateNet',
-    nick: 'template',
-    altNicks: ['template_', 'template__'],
-    username: 'template',
-    realName: 'template',
-  }));
-  const clone = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
+  const network = storage.networks.upsert(createNetworkInput({
+    workspaceOpen: true,
     host: '127.0.0.1',
     port: handshake.port,
     nick: 'template',
@@ -107,15 +99,14 @@ test('deleteNetwork removes hidden clone connections when deleting a template', 
   process.once('uncaughtException', onUncaught);
 
   try {
-    runtime.sessions.connect(clone.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => received.includes('NICK template'));
 
-    runtime.networks.deleteNetwork(template.id);
+    runtime.networks.deleteNetwork(network.id);
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    assert.equal(storage.networks.get(template.id), null);
-    assert.equal(storage.networks.get(clone.id), null);
-    assert.equal(state.connections.has(clone.id), false);
+    assert.equal(storage.networks.get(network.id), null);
+    assert.equal(state.connections.has(network.id), false);
     assert.equal(uncaught, null);
   } finally {
     process.removeListener('uncaughtException', onUncaught);

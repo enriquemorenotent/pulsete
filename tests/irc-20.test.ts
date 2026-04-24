@@ -11,8 +11,7 @@ test('irc connection keeps an already joined channel after a retry JOIN times ou
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -115,8 +114,7 @@ test('irc connection surfaces private-message delivery errors from the server', 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,

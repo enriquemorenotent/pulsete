@@ -10,8 +10,7 @@ import {
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? true,
+  workspaceOpen: overrides.workspaceOpen ?? true,
   name: overrides.name ?? 'OFTC',
   host: overrides.host ?? 'irc.oftc.net',
   port: overrides.port ?? 6697,
@@ -119,7 +118,7 @@ test('connected private message hides the nicklist but keeps the composer', () =
 });
 
 test('connections without a server buffer stay in transitional server mode', () => {
-  const network = makeNetwork({ id: 'network-1', managerHidden: true });
+  const network = makeNetwork({ id: 'network-1', workspaceOpen: true });
   const workspace = derive({
     networks: [network],
     buffers: [],

@@ -11,8 +11,7 @@ test('irc connection ignores stale ISON replies after friend tracking is cleared
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -52,8 +51,7 @@ test('irc connection skips oversized friend nicks when snapshotting presence', (
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -101,8 +99,7 @@ test('irc connection times out stalled logins instead of hanging forever', async
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,
@@ -172,8 +169,7 @@ test('irc connection times out stalled logins even when the server stays chatty'
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,

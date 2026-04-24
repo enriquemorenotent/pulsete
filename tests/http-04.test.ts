@@ -99,7 +99,7 @@ test('http connect and disconnect routes drive the IRC connection lifecycle', as
     assert.equal(connectResponse.status, 200);
     assert.equal(connectResponse.json.ok, true);
     const connectionId = (connectResponse.json.network as { id: string }).id;
-    assert.notEqual(connectionId, network.id);
+    assert.equal(connectionId, network.id);
     await waitFor(() => ircReceived.includes('NICK tester'));
     assert.equal((await connectedStatePromise as { networkId: string }).networkId, connectionId);
 

@@ -19,7 +19,7 @@ test('offline channels surface an inline reconnect action', () => {
       workspace={{
         mode: 'channel-offline',
         selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-        connectionInstances: [network],
+        workspaceNetworks: [network],
         selectedNetwork: network,
         selectedRuntime: {
           phase: 'offline',
@@ -81,7 +81,7 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
       workspace={{
         mode: 'channel-offline',
         selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-        connectionInstances: [network],
+        workspaceNetworks: [network],
         selectedNetwork: network,
         selectedRuntime: {
           phase: 'connected',

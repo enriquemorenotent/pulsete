@@ -1,7 +1,7 @@
 import { buildConversationModel } from './conversation-model.js';
 import type { ConversationIndex } from './conversation-selectors.js';
 import type { AppSnapshot, NetworkProfile } from '../../shared/protocol.js';
-import { getConnectionInstances } from './workspace-helpers.js';
+import { getWorkspaceNetworks } from './workspace-helpers.js';
 import { buildEmptyWorkspace, buildResolvedWorkspace } from './workspace-builders.js';
 import { resolveWorkspace, type WorkspaceInput } from './workspace-resolve.js';
 import type { WorkspaceView } from './workspace-types.js';
@@ -22,7 +22,7 @@ export const selectDefaultBuffer = (snapshot: Pick<AppSnapshot, 'networks' | 'bu
 
 export const deriveWorkspace = (input: WorkspaceInput): WorkspaceView => {
   const resolved = resolveWorkspace(input);
-  return resolved ? buildResolvedWorkspace(resolved) : buildEmptyWorkspace(getConnectionInstances(input.networks));
+  return resolved ? buildResolvedWorkspace(resolved) : buildEmptyWorkspace(getWorkspaceNetworks(input.networks));
 };
 
 export type { ConversationIndex, NetworkProfile };

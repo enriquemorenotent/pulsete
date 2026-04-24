@@ -111,7 +111,7 @@ test('versioned storage migrations rebuild the message search index for existing
   const indexCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages_fts').get() as { count: number };
   upgraded.close();
 
-  assert.equal(version.user_version, 16);
+  assert.equal(version.user_version, 17);
   assert.deepEqual(searchResults.map((result) => result.message.id), ['message-1']);
   assert.equal(indexCount.count, 1);
 });
@@ -120,8 +120,7 @@ test('startup repair rebuilds legacy message search tokenizers on current schema
   const file = makeStorageFile();
   const storage = new Storage(file);
   const network = storage.networks.upsert({
-    templateId: null,
-    managerHidden: false,
+    workspaceOpen: false,
     name: 'Instance',
     host: 'irc.example.test',
     port: 6667,

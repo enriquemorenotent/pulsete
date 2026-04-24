@@ -11,8 +11,7 @@ test('older nick conflicts do not overwrite a newer pending nick request', () =>
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -57,8 +56,7 @@ test('profile updates retry a rejected connected nick change when the desired ni
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -94,8 +92,7 @@ test('connected profiles do not reconnect when only an unused password changes',
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -142,8 +139,7 @@ test('connecting connections reject client commands before registration complete
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,

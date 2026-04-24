@@ -10,8 +10,7 @@ test('irc connection surfaces raw NAMES payloads for unjoined channels', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -69,8 +68,7 @@ test('irc connection surfaces raw TOPIC payloads for unjoined channels', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -128,8 +126,7 @@ test('irc connection routes rejected joins through the pending session target', 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -176,8 +173,7 @@ test('irc connection routes 437 rejected joins through the pending session targe
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,

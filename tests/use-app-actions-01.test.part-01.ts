@@ -17,8 +17,7 @@ import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const network: NetworkProfile = {
   id: 'network-1',
-  templateId: null,
-  managerHidden: true,
+  workspaceOpen: true,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6667,
@@ -54,7 +53,7 @@ const selectedChannel: ChannelState = {
 const workspace: WorkspaceView = {
   mode: 'channel-connected',
   selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-  connectionInstances: [network],
+  workspaceNetworks: [network],
   selectedNetwork: network,
   selectedRuntime: { phase: 'connected', serverName: 'irc.example.test', nick: 'tester' },
   selectedBuffer,

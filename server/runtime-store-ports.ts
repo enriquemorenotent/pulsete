@@ -17,7 +17,6 @@ import type {
   MessageInput,
   MutedNickInput,
   NetworkInput,
-  NetworkSaveResult,
   RuntimeNetworkProfile,
 } from './storage-types.js';
 
@@ -95,9 +94,8 @@ export type RuntimeNetworkStore = {
   get(networkId: string): StoredNetworkProfile | null;
   getRuntime(networkId: string): RuntimeNetworkProfile | null;
   upsert(input: NetworkInput): StoredNetworkProfile;
-  setConnectionClosed(networkId: string, connectionClosed: boolean): StoredNetworkProfile | null;
-  saveWithRelatedInstances(input: NetworkInput): NetworkSaveResult;
-  deleteWithRelated(networkId: string): string[];
+  setWorkspaceOpen(networkId: string, workspaceOpen: boolean): StoredNetworkProfile | null;
+  delete(networkId: string): string[];
 };
 
 export type RuntimeNetworkCatalog = Pick<RuntimeNetworkStore, 'list'>;

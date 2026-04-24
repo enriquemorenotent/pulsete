@@ -55,8 +55,7 @@ test('irc connection maps direct messages to sender buffer', async () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,
@@ -153,8 +152,7 @@ test('irc connection can identify through NickServ before autojoin', async () =>
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,

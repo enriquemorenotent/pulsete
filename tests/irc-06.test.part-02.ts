@@ -10,8 +10,7 @@ test('irc connection routes labeled WHOIS replies to the matching buffer even wh
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,

@@ -17,8 +17,7 @@ test('sasl plain connections negotiate capabilities before completing registrati
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'SaslNet',
       host: 'irc.example.test',
       port: 6667,
@@ -89,8 +88,7 @@ test('sasl plain connections complete negotiation on numeric 900 success', () =>
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'SaslNet',
       host: 'irc.example.test',
       port: 6667,
@@ -141,8 +139,7 @@ test('numeric 900 releases deferred NickServ autojoin after identify', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'NickServNet',
       host: 'irc.example.test',
       port: 6667,
@@ -182,8 +179,7 @@ test('nickserv identify success accepts configured service targets and notice st
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'NickServNet',
       host: 'irc.example.test',
       port: 6667,

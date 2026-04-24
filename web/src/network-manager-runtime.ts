@@ -1,32 +1,28 @@
-import { listConnectionPeers } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
 export function buildManagedRuntime(
   managedNetwork: NetworkProfile | null,
-  connectionInstances: NetworkProfile[],
   networkStates: Record<string, NetworkRuntimeState>
 ) {
   if (!managedNetwork) {
     return null;
   }
-  const instances = listConnectionPeers(connectionInstances, managedNetwork.id);
-  const openInstances = instances.filter((network) => network.connectionClosed !== true);
-  if (openInstances.some((network) => networkStates[network.id]?.phase === 'connected')) {
-    return { phase: 'connected' as const, serverName: null, nick: managedNetwork.nick };
+  if (!managedNetwork.workspaceOpen) {
+    return null;
   }
-  if (openInstances.some((network) => networkStates[network.id]?.phase === 'connecting')) {
-    return { phase: 'connecting' as const, serverName: null, nick: managedNetwork.nick };
-  }
-  return openInstances.length > 0 ? { phase: 'offline' as const, serverName: null, nick: managedNetwork.nick } : null;
+  return networkStates[managedNetwork.id] ?? {
+    phase: 'offline',
+    serverName: null,
+    nick: managedNetwork.nick,
+  };
 }
 
 export const buildManagedRuntimeMap = (
   managedNetworks: readonly NetworkProfile[],
-  connectionInstances: NetworkProfile[],
   networkStates: Record<string, NetworkRuntimeState>,
 ) =>
   managedNetworks.reduce<Record<string, NetworkRuntimeState | null>>((runtimes, network) => {
-    runtimes[network.id] = buildManagedRuntime(network, connectionInstances, networkStates);
+    runtimes[network.id] = buildManagedRuntime(network, networkStates);
     return runtimes;
   }, {});

@@ -17,10 +17,10 @@ import type { NetworkCountRow, NetworkInput, NetworkRow, RuntimeNetworkProfile }
 import { defaultNetworkTemplates, encryptNetworkPassword, toNetworkProfile, toRuntimeNetworkProfile } from './storage-utils.js';
 
 const networkColumns =
-  'id, templateId, managerHidden, connectionClosed, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt';
+  'id, workspaceOpen, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt';
 
 export const listNetworks = (db: SqliteDb): StoredNetworkProfile[] => {
-  const sql = `SELECT ${networkColumns} FROM networks ORDER BY managerHidden ASC, favorite DESC, createdAt ASC`;
+  const sql = `SELECT ${networkColumns} FROM networks ORDER BY favorite DESC, createdAt ASC`;
   return (db.prepare(sql).all() as NetworkRow[]).map((row) => toNetworkProfile(row, readNetworkLists(db, row.id)));
 };
 
@@ -56,21 +56,18 @@ export const upsertNetwork = (
   const id = input.id ?? randomUUID();
   const now = Date.now();
   const existing = input.id ? (getNetworkRow(db, input.id) ?? null) : null;
-  const template = validateTemplateRelationship(db, input, existing);
-  const storedAuthMethod = resolveStoredAuthMethod(input, existing, template);
+  const storedAuthMethod = resolveStoredAuthMethod(input, existing);
   validatePasswordForAuthMethod(input.password, storedAuthMethod);
-  const storedPassword = resolveStoredPassword(input, secretBox, existing, template);
-  const storedAuthTarget = resolveStoredAuthTarget(input, existing, template);
-  const storedAuthAccount = resolveStoredAuthAccount(input, existing, template);
+  const storedPassword = resolveStoredPassword(input, secretBox, existing);
+  const storedAuthTarget = resolveStoredAuthTarget(input, existing);
+  const storedAuthAccount = resolveStoredAuthAccount(input, existing);
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
   db.prepare(
     `INSERT INTO networks
-       (id, templateId, managerHidden, connectionClosed, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, workspaceOpen, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
-       templateId = excluded.templateId,
-       managerHidden = excluded.managerHidden,
-       connectionClosed = excluded.connectionClosed,
+       workspaceOpen = excluded.workspaceOpen,
        name = excluded.name,
        host = excluded.host,
        port = excluded.port,
@@ -86,9 +83,7 @@ export const upsertNetwork = (
        updatedAt = excluded.updatedAt`
   ).run(
     id,
-    input.templateId ?? null,
-    input.managerHidden ? 1 : 0,
-    input.connectionClosed ? 1 : 0,
+    (input.workspaceOpen ?? Boolean(existing?.workspaceOpen)) ? 1 : 0,
     input.name,
     input.host,
     input.port,
@@ -115,12 +110,12 @@ export const upsertNetwork = (
 };
 
 export const deleteNetwork = (db: SqliteDb, networkId: string) => {
-  db.prepare('DELETE FROM networks WHERE id = ? OR templateId = ?').run(networkId, networkId);
+  db.prepare('DELETE FROM networks WHERE id = ?').run(networkId);
 };
 
-export const setConnectionClosed = (db: SqliteDb, networkId: string, connectionClosed: boolean) => {
-  db.prepare('UPDATE networks SET connectionClosed = ?, updatedAt = ? WHERE id = ?')
-    .run(connectionClosed ? 1 : 0, Date.now(), networkId);
+export const setWorkspaceOpen = (db: SqliteDb, networkId: string, workspaceOpen: boolean) => {
+  db.prepare('UPDATE networks SET workspaceOpen = ?, updatedAt = ? WHERE id = ?')
+    .run(workspaceOpen ? 1 : 0, Date.now(), networkId);
   return getNetwork(db, networkId);
 };
 
@@ -131,86 +126,54 @@ export const hasEncryptedNetworkPasswords = (db: SqliteDb) =>
 const getNetworkRow = (db: SqliteDb, networkId: string) =>
   db.prepare(`SELECT ${networkColumns} FROM networks WHERE id = ?`).get(networkId) as NetworkRow | undefined;
 
-const getTemplateRow = (db: SqliteDb, templateId: string) =>
-  db.prepare(`SELECT ${networkColumns} FROM networks WHERE id = ?`).get(templateId) as NetworkRow | undefined;
-
 const readNetworkLists = (db: SqliteDb, networkId: string) => ({
   altNicks: listNetworkAltNicks(db, networkId),
   historicalSelfNicks: listNetworkHistoricalSelfNicks(db, networkId),
   autoJoin: listNetworkAutoJoinChannels(db, networkId),
 });
 
-const validateTemplateRelationship = (
-  db: SqliteDb,
-  input: NetworkInput,
-  existing: NetworkRow | null
-) => {
-  const templateId = input.templateId ?? null;
-  const template = templateId ? getTemplateRow(db, templateId) : null;
-  if (existing && (existing.managerHidden !== (input.managerHidden ? 1 : 0) || existing.templateId !== templateId)) {
-    throw badRequest('Network template relationship cannot be changed after creation');
-  }
-  if (input.managerHidden) {
-    if (!template || template.managerHidden) {
-      throw badRequest('Connection instances must reference an existing saved network');
-    }
-    return template;
-  }
-  if (templateId) {
-    throw badRequest('Saved networks cannot reference a template');
-  }
-  return null;
-};
-
 const resolveStoredPassword = (
   input: NetworkInput,
   secretBox: SecretBox,
   existing: NetworkRow | null,
-  template: NetworkRow | null
 ) => {
   if (input.clearPassword) {
     return null;
   }
   if (input.password !== undefined) {
     if (input.password.length === 0) {
-      return existing?.password ?? template?.password ?? null;
+      return existing?.password ?? null;
     }
     return encryptNetworkPassword(input.password, secretBox);
   }
   if (existing?.password) {
     return existing.password;
   }
-  return template?.password ?? null;
+  return null;
 };
 
 const resolveStoredAuthMethod = (
   input: NetworkInput,
   existing: NetworkRow | null,
-  template: NetworkRow | null
 ) => {
   if (input.authMethod !== undefined) {
     return input.authMethod;
   }
-  const inheritedAuthMethod = existing?.authMethod ?? template?.authMethod;
-  if (input.password !== undefined && input.password.length > 0 && (!inheritedAuthMethod || inheritedAuthMethod === 'none')) {
+  if (input.password !== undefined && input.password.length > 0 && (!existing?.authMethod || existing.authMethod === 'none')) {
     return defaultNetworkAuthMethod(true);
   }
   if (existing?.authMethod) {
     return existing.authMethod;
   }
-  if (template?.authMethod) {
-    return template.authMethod;
-  }
   const hasSecret = input.password !== undefined
     ? input.password.length > 0
-    : Boolean(existing?.password ?? template?.password);
+    : Boolean(existing?.password);
   return defaultNetworkAuthMethod(hasSecret);
 };
 
 const resolveStoredAuthTarget = (
   input: NetworkInput,
   existing: NetworkRow | null,
-  template: NetworkRow | null
 ) => {
   if (input.authTarget !== undefined) {
     return resolveNetworkAuthTarget(input.authTarget);
@@ -218,22 +181,18 @@ const resolveStoredAuthTarget = (
   if (existing?.authTarget) {
     return resolveNetworkAuthTarget(existing.authTarget);
   }
-  return resolveNetworkAuthTarget(template?.authTarget);
+  return resolveNetworkAuthTarget();
 };
 
 const resolveStoredAuthAccount = (
   input: NetworkInput,
   existing: NetworkRow | null,
-  template: NetworkRow | null
 ) => {
   if (input.authAccount !== undefined) {
     return input.authAccount.trim();
   }
   if (existing) {
     return existing.authAccount;
-  }
-  if (template) {
-    return template.authAccount;
   }
   return '';
 };

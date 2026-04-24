@@ -57,7 +57,7 @@ test('command palette scoring promotes exact matches, then current-network unrea
     ],
     pendingChannels: [],
     label: 'OtherNet (lyra)',
-    labelParts: { name: 'OtherNet', nick: 'lyra', instanceIndex: null },
+    labelParts: { name: 'OtherNet', nick: 'lyra' },
   };
 
   const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({

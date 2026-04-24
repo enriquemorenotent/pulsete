@@ -12,8 +12,7 @@ test('nick fallback keeps the attempted nick when the retry write fails', () => 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: 6667,
@@ -67,8 +66,7 @@ test('connected nick changes wait for server confirmation before mutating curren
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -124,8 +122,7 @@ test('pending nick self events are handled before the nick echo arrives', () => 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -172,8 +169,7 @@ test('rejected connected nick changes keep the last accepted nick', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,

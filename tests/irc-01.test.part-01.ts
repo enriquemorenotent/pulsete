@@ -73,8 +73,7 @@ test('irc connection negotiates, joins, and parses messages', async () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,

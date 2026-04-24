@@ -66,8 +66,7 @@ test('irc connection routes whois replies to the originating buffer', async () =
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,
@@ -167,8 +166,7 @@ test('irc connection routes duplicate WHOIS replies for the same nick in request
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,

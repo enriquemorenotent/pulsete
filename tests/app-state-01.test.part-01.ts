@@ -28,7 +28,7 @@ test('snapshot enters the ready phase and clears any banner', () => {
 });
 
 test('snapshot selects the first instance server buffer', () => {
-  const network = makeNetwork({ managerHidden: true });
+  const network = makeNetwork({ workspaceOpen: true });
   const buffer = makeBuffer({ networkId: network.id });
 
   const nextState = reducer(initialState, {
@@ -62,7 +62,7 @@ test('snapshot selects the first instance server buffer', () => {
 });
 
 test('snapshot replaces stale runtime messages and invalid pending selections', () => {
-  const network = makeNetwork({ managerHidden: true });
+  const network = makeNetwork({ workspaceOpen: true });
   const serverBuffer = makeBuffer({ id: 'server-1', networkId: network.id });
   const staleMessage = makeMessage({ id: 'stale', body: 'stale', ts: 1 });
   const freshMessage = makeMessage({ id: 'fresh', body: 'fresh', ts: 2 });
@@ -152,7 +152,7 @@ test('query presence updates track status by buffer id and clear on buffer remov
 });
 
 test('gateway transitions reset transport state and clear the reconnect banner once ready', () => {
-  const network = makeNetwork({ id: 'network-1', managerHidden: true, nick: 'tester' });
+  const network = makeNetwork({ id: 'network-1', workspaceOpen: true, nick: 'tester' });
   const loadingState = makeState({
     domain: {
       phase: 'ready',

@@ -18,8 +18,7 @@ const makeUser = (
 });
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
-  templateId: null,
-  managerHidden: false,
+  workspaceOpen: false,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6667,
@@ -41,8 +40,7 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
     tls: overrides.tls ?? false,
   }));
   return storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
+    workspaceOpen: true,
     name: overrides.name ?? template.name,
     host: overrides.host ?? template.host,
     port: overrides.port ?? template.port,

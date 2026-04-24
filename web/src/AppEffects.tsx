@@ -4,13 +4,13 @@ import type { BackgroundDmAudioSettings } from './background-dm-audio.js';
 import {
   selectBanner,
   selectBuffers,
-  selectConnectionInstanceCount,
   selectNetworkManagerState,
   selectNetworkNamesById,
   selectNetworks,
   selectPhase,
   selectSelectedBufferId,
   selectVisibleNetworks,
+  selectWorkspaceNetworkCount,
 } from './app-selectors.js';
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { AppActions } from './useAppActions.js';
@@ -47,7 +47,7 @@ export function AppEffects(props: AppEffectsProps) {
   const dispatch = useAppDispatch();
   const banner = useAppSelector(selectBanner);
   const buffers = useAppSelector(selectBuffers);
-  const connectionInstanceCount = useAppSelector(selectConnectionInstanceCount);
+  const workspaceNetworkCount = useAppSelector(selectWorkspaceNetworkCount);
   const networkManager = useAppSelector(selectNetworkManagerState);
   const networkNamesById = useAppSelector(selectNetworkNamesById);
   const networks = useAppSelector(selectNetworks);
@@ -58,7 +58,7 @@ export function AppEffects(props: AppEffectsProps) {
   useAutoOpenNetworkManager({
     phase,
     networkManagerMode: networkManager.mode,
-    connectionInstanceCount,
+    workspaceNetworkCount,
     didAutoOpenManagerRef: props.ui.didAutoOpenManagerRef,
     dispatch,
   });

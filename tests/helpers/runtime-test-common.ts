@@ -19,8 +19,7 @@ export const makeUser = (
 });
 
 export const createNetworkInput = (overrides: Partial<NetworkInput> = {}): NetworkInput => ({
-  templateId: null,
-  managerHidden: false,
+  workspaceOpen: false,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6667,

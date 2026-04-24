@@ -33,8 +33,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
   const identity = getLocalIrcIdentity();
   return [
     {
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'Libera.Chat',
       host: 'irc.libera.chat',
       port: 6697,
@@ -48,8 +47,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       autoJoin: [],
     },
     {
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'OFTC',
       host: 'irc.oftc.net',
       port: 6697,
@@ -63,8 +61,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       autoJoin: [],
     },
     {
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'Snoonet',
       host: 'irc.snoonet.org',
       port: 6697,
@@ -78,8 +75,7 @@ export const defaultNetworkTemplates = (): NetworkInput[] => {
       autoJoin: [],
     },
     {
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'IRCnet',
       host: 'irc.ircnet.com',
       port: 6667,
@@ -105,9 +101,7 @@ export const toNetworkProfile = (
 ): StoredNetworkProfile => {
   const profile = {
     id: row.id,
-    templateId: row.templateId,
-    managerHidden: Boolean(row.managerHidden),
-    connectionClosed: Boolean(row.connectionClosed),
+    workspaceOpen: Boolean(row.workspaceOpen),
     name: row.name,
     host: row.host,
     port: row.port,
@@ -124,9 +118,7 @@ export const toNetworkProfile = (
     favorite: Boolean(row.favorite),
     autoJoin: lists.autoJoin,
   };
-  return profile.managerHidden
-    ? profile as Extract<StoredNetworkProfile, { managerHidden: true }>
-    : profile as Extract<StoredNetworkProfile, { managerHidden: false }>;
+  return profile;
 };
 
 export const toRuntimeNetworkProfile = (

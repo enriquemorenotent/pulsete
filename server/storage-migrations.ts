@@ -2,13 +2,14 @@ import type { SqliteDb } from './storage-sqlite.js';
 import { backfillQueryBufferSelfNickAliases } from './storage-migration-alias-backfill.js';
 import { migrateNormalizedStorage } from './storage-normalized-migration.js';
 import { migrateQueryNickAliases } from './storage-query-alias-migration.js';
+import { migrateWorkspaceNetworks } from './storage-workspace-migration.js';
 import {
   ensureHistoryImportBatchesTable,
   ensureMessagesSearchIndex,
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 16;
+export const currentStorageSchemaVersion = 17;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -139,6 +140,12 @@ const storageMigrations: readonly StorageMigration[] = [
       migrateQueryNickAliases(db);
     },
   },
+  {
+    version: 17,
+    apply: (db) => {
+      migrateWorkspaceNetworks(db, tableExists);
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => {
@@ -160,7 +167,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
       version = migration.version;
     }
   }
-  ensureLegacyNetworkColumns(db);
+  ensureCurrentNetworkColumns(db);
   if (tableHasColumn(db, 'messages', 'bufferId')) {
     ensureMessagesSearchIndex(db, false, tableExists);
   }
@@ -185,10 +192,8 @@ const ensureColumn = (db: SqliteDb, table: string, column: string, definition: s
   return false;
 };
 
-const ensureLegacyNetworkColumns = (db: SqliteDb) => {
-  ensureColumn(db, 'networks', 'templateId', 'TEXT');
-  ensureColumn(db, 'networks', 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'networks', 'connectionClosed', 'INTEGER NOT NULL DEFAULT 0');
+const ensureCurrentNetworkColumns = (db: SqliteDb) => {
+  ensureColumn(db, 'networks', 'workspaceOpen', 'INTEGER NOT NULL DEFAULT 0');
 };
 
 const getUserVersion = (db: SqliteDb) =>

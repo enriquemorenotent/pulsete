@@ -1,5 +1,5 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
-import { getConnectionInstances } from './workspace-helpers.js';
+import { getWorkspaceNetworks } from './workspace-helpers.js';
 import { buildConversationIndex, type ConversationIndex } from './conversation-selectors.js';
 import type { SelectedBuffer } from './workspace-types.js';
 
@@ -35,7 +35,7 @@ export const buildConversationModel = (state: ConversationState): ConversationMo
     if (!selection) {
       return false;
     }
-    const activeNetworkIds = new Set(getConnectionInstances(networks).map((network) => network.id));
+    const activeNetworkIds = new Set(getWorkspaceNetworks(networks).map((network) => network.id));
     if (selection.kind === 'pending-channel') {
       return activeNetworkIds.has(selection.networkId)
         && Boolean(index.findPendingChannel(selection.networkId, selection.channel));
@@ -45,8 +45,8 @@ export const buildConversationModel = (state: ConversationState): ConversationMo
   };
 
   const selectDefaultBuffer = (networks: NetworkProfile[]) => {
-    const instance = getConnectionInstances(networks)[0];
-    return selectionFor(instance ? index.findServerBuffer(instance.id) : null);
+    const network = getWorkspaceNetworks(networks)[0];
+    return selectionFor(network ? index.findServerBuffer(network.id) : null);
   };
 
   const fallbackSelection = (networks: NetworkProfile[], preferredNetworkId?: string | null) =>

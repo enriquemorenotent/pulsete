@@ -7,8 +7,7 @@ import type { BackgroundDmAudioSettings } from '../web/src/background-dm-audio.j
 
 const networks: NetworkProfile[] = [{
   id: 'network-1',
-  templateId: null,
-  managerHidden: true,
+  workspaceOpen: true,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6697,

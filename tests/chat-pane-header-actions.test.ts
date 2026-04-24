@@ -6,8 +6,7 @@ import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const network: NetworkProfile = {
   id: 'network-1',
-  templateId: null,
-  managerHidden: true,
+  workspaceOpen: true,
   name: 'Cuff-Link',
   host: 'irc.example.test',
   port: 6697,
@@ -38,7 +37,7 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 const makeWorkspace = (overrides: Partial<WorkspaceView> = {}): WorkspaceView => ({
   mode: 'channel-connected',
   selection: { kind: 'buffer', bufferId: 'buffer-1' },
-  connectionInstances: [network],
+  workspaceNetworks: [network],
   selectedNetwork: network,
   selectedRuntime: {
     phase: 'connected',

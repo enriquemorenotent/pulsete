@@ -9,8 +9,7 @@ import type { BuildCommandPaletteEntrySpecsInput } from '../../web/src/command-p
 
 export const network: NetworkProfile = {
   id: 'network-1',
-  templateId: null,
-  managerHidden: true,
+  workspaceOpen: true,
   name: 'Cuff-Link',
   host: 'irc.cuff-link.test',
   port: 6697,
@@ -84,7 +83,6 @@ export const connection: SidebarConnectionView = {
   labelParts: {
     name: 'Cuff-Link',
     nick: 'sofia',
-    instanceIndex: null,
   },
 };
 

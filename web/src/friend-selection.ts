@@ -6,7 +6,7 @@ import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 type FriendSelectionInput = {
   nick: string;
   buffers: AppDomainState['buffers'];
-  workspace: Pick<WorkspaceView, 'connectionInstances' | 'selectedNetwork'>;
+  workspace: Pick<WorkspaceView, 'workspaceNetworks' | 'selectedNetwork'>;
   networkStates: Record<string, NetworkRuntimeState>;
 };
 
@@ -30,7 +30,7 @@ export const resolveFriendSelection = (input: FriendSelectionInput): FriendSelec
     return { type: 'open', network: selectedNetwork };
   }
 
-  for (const network of input.workspace.connectionInstances) {
+  for (const network of input.workspace.workspaceNetworks) {
     if (!isConnected(input.networkStates[network.id])) {
       continue;
     }
@@ -40,7 +40,7 @@ export const resolveFriendSelection = (input: FriendSelectionInput): FriendSelec
     }
   }
 
-  for (const network of input.workspace.connectionInstances) {
+  for (const network of input.workspace.workspaceNetworks) {
     if (isConnected(input.networkStates[network.id])) {
       return { type: 'open', network };
     }

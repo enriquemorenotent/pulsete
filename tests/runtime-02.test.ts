@@ -9,7 +9,7 @@ import { Storage } from '../server/storage.js';
 import { createNetworkInput,makeUser,waitFor } from './helpers/runtime-test-common.js';
 import { createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
 
-test('saving a template network updates live hidden instances', async () => {
+test('saving a connected network updates the live connection profile', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
@@ -17,19 +17,9 @@ test('saving a template network updates live hidden instances', async () => {
   const secondReceived: string[] = [];
   const first = await createRegisteredServer(firstReceived);
   const second = await createRegisteredServer(secondReceived);
-  const template = storage.networks.upsert(createNetworkInput({
-    name: 'TemplateNet',
-    host: 'irc.example.test',
-    port: 6667,
-    nick: 'oldnick',
-    altNicks: ['oldnick_', 'oldnick__'],
-    username: 'olduser',
-    realName: 'Old User',
-  }));
-  const clone = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
-    name: 'Connection instance',
+  const network = storage.networks.upsert(createNetworkInput({
+    workspaceOpen: true,
+    name: 'Open network',
     host: '127.0.0.1',
     port: first.port,
     nick: 'oldnick',
@@ -39,12 +29,12 @@ test('saving a template network updates live hidden instances', async () => {
   }));
 
   try {
-    runtime.sessions.connect(clone.id);
+    runtime.sessions.connect(network.id);
     await waitFor(() => firstReceived.includes('NICK oldnick'));
     await waitFor(() => firstReceived.includes('USER olduser 0 * :Old User'));
 
     runtime.networks.saveNetwork({
-      ...template,
+      ...network,
       host: '127.0.0.1',
       port: second.port,
       nick: 'newnick',
@@ -56,11 +46,11 @@ test('saving a template network updates live hidden instances', async () => {
     await waitFor(() => secondReceived.includes('NICK newnick'));
     await waitFor(() => secondReceived.includes('USER newuser 0 * :New User'));
     await waitFor(() => !first.hasConnections());
-    assert.equal(storage.networks.get(clone.id)?.host, '127.0.0.1');
-    assert.equal(storage.networks.get(clone.id)?.port, second.port);
-    assert.equal(storage.networks.get(clone.id)?.nick, 'newnick');
+    assert.equal(storage.networks.get(network.id)?.host, '127.0.0.1');
+    assert.equal(storage.networks.get(network.id)?.port, second.port);
+    assert.equal(storage.networks.get(network.id)?.nick, 'newnick');
   } finally {
-    runtime.sessions.disconnect(clone.id);
+    runtime.sessions.disconnect(network.id);
     first.closeConnections();
     second.closeConnections();
     await new Promise<void>((resolve, reject) => first.server.close((error) => (error ? reject(error) : resolve())));

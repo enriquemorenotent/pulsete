@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { isSavedNetwork } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type { Action, AppDomainState, NetworkManagerState } from './app-types.js';
 import { resolveManagedNetworkId } from './network-manager-state.js';
@@ -9,7 +8,7 @@ type MutableRef<T> = { current: T };
 type UseAutoOpenNetworkManagerParams = {
   phase: AppDomainState['phase'];
   networkManagerMode: NetworkManagerState['mode'];
-  connectionInstanceCount: number;
+  workspaceNetworkCount: number;
   didAutoOpenManagerRef: MutableRef<boolean>;
   dispatch: (action: Action) => void;
 };
@@ -35,15 +34,15 @@ export function useAutoOpenNetworkManager(params: UseAutoOpenNetworkManagerParam
       return;
     }
     params.didAutoOpenManagerRef.current = true;
-    if (params.connectionInstanceCount === 0) {
+    if (params.workspaceNetworkCount === 0) {
       params.dispatch({ type: 'open-network-manager' });
     }
   }, [
-    params.connectionInstanceCount,
     params.dispatch,
     params.didAutoOpenManagerRef,
     params.networkManagerMode,
     params.phase,
+    params.workspaceNetworkCount,
   ]);
 }
 
@@ -51,7 +50,7 @@ export function useManagedNetworkSelection(params: UseManagedNetworkSelectionPar
   useEffect(() => {
     const nextManagedNetworkId = resolveManagedNetworkId({
       phase: params.phase,
-      managerNetworks: params.networks.filter(isSavedNetwork),
+      managerNetworks: params.networks,
       visibleNetworks: params.visibleNetworks,
       managedNetworkId: params.managedNetworkId,
     });

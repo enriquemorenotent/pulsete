@@ -1,5 +1,4 @@
 import { findIrcCaseMatch, isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
-import { getNetworkRootId, isSavedNetwork } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type { WorkspaceView } from './workspace-types.js';
 
@@ -19,8 +18,7 @@ const getSavedAutoJoinNetwork = (networks: readonly NetworkProfile[], workspace:
   if (!workspace.selectedNetwork) {
     return null;
   }
-  const rootId = getNetworkRootId(workspace.selectedNetwork);
-  return networks.find((network) => isSavedNetwork(network) && network.id === rootId) ?? null;
+  return networks.find((network) => network.id === workspace.selectedNetwork?.id) ?? null;
 };
 
 export const resolveCurrentChannelAutoJoinState = (

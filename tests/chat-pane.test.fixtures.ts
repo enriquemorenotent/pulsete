@@ -4,8 +4,7 @@ import type { WorkspaceView } from '../web/src/workspace.js';
 
 export const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? true,
+  workspaceOpen: overrides.workspaceOpen ?? true,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -75,7 +74,7 @@ export const makeWorkspace = (
   return {
     mode: 'channel-connected',
     selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-    connectionInstances: [network],
+    workspaceNetworks: [network],
     selectedNetwork: network,
     selectedRuntime: {
       phase: 'connected',
@@ -100,7 +99,7 @@ export const makeQueryWorkspace = (): WorkspaceView => {
   return {
     mode: 'query-connected',
     selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-    connectionInstances: [network],
+    workspaceNetworks: [network],
     selectedNetwork: network,
     selectedRuntime: {
       phase: 'connected',
@@ -125,7 +124,7 @@ export const makeServerWorkspace = (): WorkspaceView => {
   return {
     mode: 'server-connected',
     selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-    connectionInstances: [network],
+    workspaceNetworks: [network],
     selectedNetwork: network,
     selectedRuntime: {
       phase: 'connected',

@@ -86,8 +86,7 @@ test('irc connection can authenticate through SASL before autojoin', async () =>
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,

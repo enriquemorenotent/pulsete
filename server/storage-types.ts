@@ -1,7 +1,4 @@
-import type {
-  ConnectionInstanceProfile,
-  StoredNetworkProfile,
-} from '../shared/network-model.js';
+import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type {
   SpeakerAttributionConfidence,
   SpeakerAttributionSource,
@@ -18,9 +15,7 @@ import type {
 
 export type NetworkRow = {
   id: string;
-  templateId: string | null;
-  managerHidden: number;
-  connectionClosed: number;
+  workspaceOpen: number;
   name: string;
   host: string;
   port: number;
@@ -108,18 +103,9 @@ type NetworkWriteInput = {
   clearPassword?: boolean;
 };
 
-export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword'> & {
-} & NetworkWriteInput;
-
-export type NetworkSaveResult =
-  | {
-      requested: Extract<StoredNetworkProfile, { managerHidden: false }>;
-      relatedInstances: ConnectionInstanceProfile[];
-    }
-  | {
-      requested: ConnectionInstanceProfile;
-      relatedInstances: [];
-    };
+export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword' | 'workspaceOpen'> &
+  Partial<Pick<NetworkProfile, 'workspaceOpen'>> &
+  NetworkWriteInput;
 
 export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'users'> &
   Partial<Pick<ChannelState, 'id' | 'topic' | 'users'>> & {

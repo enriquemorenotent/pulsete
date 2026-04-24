@@ -30,7 +30,7 @@ export type ComposerMode = 'hidden' | 'commands' | 'normal';
 export type WorkspaceView = {
   mode: WorkspaceMode;
   selection: SelectedBuffer | null;
-  connectionInstances: NetworkProfile[];
+  workspaceNetworks: NetworkProfile[];
   selectedNetwork: NetworkProfile | null;
   selectedRuntime: NetworkRuntimeState | null;
   selectedBuffer: BufferState | null;

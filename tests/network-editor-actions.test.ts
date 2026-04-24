@@ -5,8 +5,7 @@ import { openExistingNetworkEditor } from '../web/src/network-editor-actions.js'
 
 const network: AppDomainState['networks'][number] = {
   id: 'saved-network-1',
-  templateId: null,
-  managerHidden: false,
+  workspaceOpen: false,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6697,

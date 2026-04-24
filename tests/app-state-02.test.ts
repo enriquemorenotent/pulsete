@@ -9,7 +9,7 @@ test('removing a pending channel falls back to the same network server buffer', 
   const serverBuffer = makeBuffer({ id: 'server-1', kind: 'server' });
   const state = makeState({
     domain: {
-      networks: [makeNetwork({ id: 'network-1', managerHidden: true })],
+      networks: [makeNetwork({ id: 'network-1', workspaceOpen: true })],
       buffers: [serverBuffer],
       pendingChannels: [makePendingChannel({ networkId: 'network-1', channel: '#help' })],
     },
@@ -31,7 +31,7 @@ test('channel list resets when the gateway drops, its network disconnects, or th
   const connectedState = makeState({
     domain: {
       phase: 'ready',
-      networks: [makeNetwork({ id: 'network-1', managerHidden: true })],
+      networks: [makeNetwork({ id: 'network-1', workspaceOpen: true })],
       buffers: [makeBuffer({ networkId: 'network-1' })],
     },
     transient: {

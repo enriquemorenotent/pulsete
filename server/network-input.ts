@@ -5,8 +5,7 @@ import { normalizeAuthTarget, normalizeChannelTarget, requireIrcToken, requireSi
 import type { NetworkInput } from './storage-types.js';
 
 const networkInputSchema = z.object({
-  templateId: z.string().nullable().optional().default(null),
-  managerHidden: z.boolean().optional().default(false),
+  workspaceOpen: z.boolean().optional(),
   name: z.string().trim().min(1, 'Network name is required'),
   host: z.string().trim().min(1, 'Server address is required'),
   port: z.number().int().positive('Port must be a positive integer'),

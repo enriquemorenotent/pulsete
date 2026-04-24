@@ -14,8 +14,7 @@ test('channel mode changes keep user updates aligned after unknown arg-taking mo
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -44,8 +43,7 @@ test('self kicks emit a self part message and remove channel membership', () => 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'irc.example.test',
       port: 6667,
@@ -87,8 +85,7 @@ test('self part removes local channel state without emitting a replacement chann
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: 6667,
@@ -136,8 +133,7 @@ test('late channel events and messages do not recreate a self-parted channel', (
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: 6667,
@@ -184,8 +180,7 @@ test('socket close clears parser buffers and nick tracking', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: 'close.example.test',
       port: 6667,

@@ -1,4 +1,3 @@
-import { getNetworkRootId, listConnectionPeers } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import type {
   AppActionContext,
@@ -8,7 +7,6 @@ import {
   readWorkspace,
   selectBuffer,
 } from './app-actions-types.js';
-import type { State } from './app-types.js';
 import { api } from './client.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { resolveCurrentChannelAutoJoinState, toggleChannelAutoJoin } from './channel-autojoin.js';
@@ -23,35 +21,6 @@ type NetworkActionParams = Pick<
   | 'getWorkspace'
   | 'updateBanner'
 >;
-
-export type ManagedNetworkConnectPlan =
-  | { kind: 'noop-connected' }
-  | { kind: 'noop-connecting' }
-  | { kind: 'reconnect-existing-peer'; peer: NetworkProfile }
-  | { kind: 'create-new-peer' };
-
-export const resolveManagedNetworkConnectPlan = ({
-  network,
-  networks,
-  networkStates,
-}: {
-  network: NetworkProfile;
-  networks: readonly NetworkProfile[];
-  networkStates: State['domain']['networkStates'];
-}): ManagedNetworkConnectPlan => {
-  const peers = listConnectionPeers(networks, getNetworkRootId(network));
-  const openPeers = peers.filter((peer) => peer.connectionClosed !== true);
-  if (openPeers.some((peer) => networkStates[peer.id]?.phase === 'connected')) {
-    return { kind: 'noop-connected' };
-  }
-  if (openPeers.some((peer) => networkStates[peer.id]?.phase === 'connecting')) {
-    return { kind: 'noop-connecting' };
-  }
-  const existingPeer = peers[0];
-  return existingPeer
-    ? { kind: 'reconnect-existing-peer', peer: existingPeer }
-    : { kind: 'create-new-peer' };
-};
 
 export const createNetworkActions = ({
   applyServerMessages,
@@ -107,27 +76,9 @@ export const createNetworkActions = ({
 
   const connectNetwork = async (network: NetworkProfile) => {
     const state = getState();
-    const plan = resolveManagedNetworkConnectPlan({
-      network,
-      networks: state.domain.networks,
-      networkStates: state.domain.networkStates,
-    });
-    if (plan.kind === 'noop-connected' || plan.kind === 'noop-connecting') {
+    const phase = state.domain.networkStates[network.id]?.phase;
+    if (network.workspaceOpen && (phase === 'connected' || phase === 'connecting')) {
       return false;
-    }
-    if (plan.kind === 'reconnect-existing-peer') {
-      return executeMutation({
-        request: () => api.connectNetwork(plan.peer.id),
-        onSuccess: (result) => {
-          if (result.serverBuffer) {
-            selectBuffer(dispatch, result.serverBuffer);
-          }
-        },
-        mapResult: () => true,
-        successMessage: 'Reconnect requested',
-        errorMessage: 'Failed to reconnect',
-        failureValue: false,
-      });
     }
     return executeMutation({
       request: () => api.connectNetwork(network.id),
@@ -137,7 +88,7 @@ export const createNetworkActions = ({
         }
       },
       mapResult: () => true,
-      successMessage: 'Opened connection instance',
+      successMessage: 'Network opened',
       errorMessage: 'Failed to connect',
       failureValue: false,
     });
@@ -172,7 +123,7 @@ export const createNetworkActions = ({
     return executeMutation({
       request: () => api.closeConnection(network.id),
       mapResult: (result) => result.network,
-      successMessage: 'Connection instance closed',
+      successMessage: 'Network closed',
       errorMessage: 'Failed to close connection',
       failureValue: null,
     });

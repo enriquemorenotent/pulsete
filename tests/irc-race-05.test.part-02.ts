@@ -17,8 +17,7 @@ test('updating a profile while connecting restarts the handshake with the new se
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'OldNet',
       host: 'old.example.test',
       port: 6667,

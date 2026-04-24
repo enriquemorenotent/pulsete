@@ -33,8 +33,8 @@ test('websocket join, message, and part commands reach the live IRC connection',
       socket,
       (message) =>
         message.type === 'network.upsert'
-        && (message.network as { templateId?: string } | undefined)?.templateId === network.id,
-      'connection instance network.upsert'
+        && (message.network as { id?: string } | undefined)?.id === network.id,
+      'network.upsert'
     );
     socket.send(JSON.stringify({ type: 'network.connect', networkId: network.id }));
     const connectionId = ((await instancePromise) as { network: { id: string } }).network.id;

@@ -1,4 +1,4 @@
-import { isConnectionInstance, type StoredNetworkProfile } from '../shared/network-model.js';
+import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { ServerMessage } from '../shared/protocol.js';
 import type { RuntimeConversationStore } from './runtime-store-ports.js';
 
@@ -6,7 +6,7 @@ export const collectRequestedServerBuffer = (
   conversations: Pick<RuntimeConversationStore, 'getServerBuffer'>,
   profile: StoredNetworkProfile
 ) => {
-  if (isConnectionInstance(profile)) {
+  if (profile.workspaceOpen) {
     return conversations.getServerBuffer(profile.id);
   }
   return null;
@@ -18,7 +18,7 @@ export const createNetworkUpsertMessages = (
 ) => {
   const messages: ServerMessage[] = [];
   for (const profile of profiles) {
-    if (isConnectionInstance(profile)) {
+    if (profile.workspaceOpen) {
       const serverBuffer = conversations.getServerBuffer(profile.id);
       if (serverBuffer) {
         messages.push({ type: 'buffer.upsert', buffer: serverBuffer });

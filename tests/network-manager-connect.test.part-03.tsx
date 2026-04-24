@@ -10,9 +10,7 @@ import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'saved-network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? false,
-  connectionClosed: overrides.connectionClosed,
+  workspaceOpen: overrides.workspaceOpen ?? false,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -33,8 +31,7 @@ const makePeer = (root: NetworkProfile, overrides: Partial<NetworkProfile> = {})
   makeNetwork({
     ...root,
     id: overrides.id ?? 'instance-1',
-    templateId: overrides.templateId ?? root.id,
-    managerHidden: overrides.managerHidden ?? true,
+    workspaceOpen: overrides.workspaceOpen ?? true,
     ...overrides,
   });
 
@@ -52,7 +49,7 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 const emptyWorkspace: WorkspaceView = {
   mode: 'empty',
   selection: null,
-  connectionInstances: [],
+  workspaceNetworks: [],
   selectedNetwork: null,
   selectedRuntime: null,
   selectedBuffer: null,
@@ -130,15 +127,13 @@ const okJson = (body: unknown) => ({
 test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insensitively', async () => {
   const saved = makeNetwork({
     id: 'saved-1',
-    managerHidden: false,
-    templateId: null,
+    workspaceOpen: true,
     autoJoin: ['#Help', '#help', '#ops'],
   });
-  const peer = makePeer(saved, { id: 'instance-1' });
-  const channelBuffer = makeBuffer({ id: 'buffer-1', networkId: peer.id, kind: 'channel', target: '#help' });
+  const channelBuffer = makeBuffer({ id: 'buffer-1', networkId: saved.id, kind: 'channel', target: '#help' });
   const selectedChannel: ChannelState = {
     id: channelBuffer.id,
-    networkId: peer.id,
+    networkId: saved.id,
     name: '#help',
     topic: '',
     users: [],
@@ -146,9 +141,9 @@ test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insen
   const workspace: WorkspaceView = {
     mode: 'channel-connected',
     selection: { kind: 'buffer', bufferId: channelBuffer.id },
-    connectionInstances: [peer],
-    selectedNetwork: peer,
-    selectedRuntime: { phase: 'connected', serverName: null, nick: peer.nick },
+    workspaceNetworks: [saved],
+    selectedNetwork: saved,
+    selectedRuntime: { phase: 'connected', serverName: null, nick: saved.nick },
     selectedBuffer: channelBuffer,
     selectedChannel,
     selectedPendingChannel: null,
@@ -160,7 +155,7 @@ test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insen
     showNicklist: true,
   };
   const session = makeSession({
-    networks: [saved, peer],
+    networks: [saved],
     buffers: [channelBuffer],
     workspace,
   });
@@ -195,10 +190,10 @@ test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insen
   }
 });
 
-test('connectNetwork creates a new hidden instance when no peer exists yet', async () => {
+test('connectNetwork opens a saved network when it is not already open', async () => {
   const saved = makeNetwork();
-  const instance = makePeer(saved, { id: 'instance-new' });
-  const serverBuffer = makeBuffer({ id: 'server-buffer-new', networkId: instance.id });
+  const opened = { ...saved, workspaceOpen: true };
+  const serverBuffer = makeBuffer({ id: 'server-buffer-new', networkId: saved.id });
   const session = makeSession({ networks: [saved] });
   const { actions, banners, dispatched } = createHarness(session);
   const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
@@ -210,7 +205,7 @@ test('connectNetwork creates a new hidden instance when no peer exists yet', asy
       body: String(init?.body ?? ''),
     });
     if (String(input) === `/api/networks/${saved.id}/connect`) {
-      return okJson({ ok: true, network: instance, serverBuffer, messages: [] });
+      return okJson({ ok: true, network: opened, serverBuffer, messages: [] });
     }
     throw new Error(`Unexpected fetch: ${String(input)}`);
   }) as typeof fetch;
@@ -226,7 +221,7 @@ test('connectNetwork creates a new hidden instance when no peer exists yet', asy
         body: '{}',
       },
     ]);
-    assert.deepEqual(banners, [{ kind: 'notice', message: 'Opened connection instance' }]);
+    assert.deepEqual(banners, [{ kind: 'notice', message: 'Network opened' }]);
     assert.deepEqual(dispatched, [{ type: 'select', selection: { kind: 'buffer', bufferId: serverBuffer.id } }]);
   } finally {
     globalThis.fetch = originalFetch;

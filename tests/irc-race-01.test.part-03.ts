@@ -16,8 +16,7 @@ test('sasl plain falls back cleanly when the server does not advertise sasl', ()
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'SaslNet',
       host: 'irc.example.test',
       port: 6667,
@@ -72,8 +71,7 @@ test('sasl plain aborts cleanly when the server welcomes before replying to CAP 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'SaslNet',
       host: 'irc.example.test',
       port: 6667,

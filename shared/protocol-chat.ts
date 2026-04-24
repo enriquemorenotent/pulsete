@@ -42,9 +42,7 @@ export type NetworkAuthMethod = z.infer<typeof networkAuthMethodSchema>;
 
 export const networkSchema = z.object({
   id: z.string(),
-  templateId: z.string().nullable().default(null),
-  managerHidden: z.boolean().default(false),
-  connectionClosed: z.boolean().optional(),
+  workspaceOpen: z.boolean().default(false),
   name: z.string(),
   host: z.string(),
   port: z.number().int().positive(),

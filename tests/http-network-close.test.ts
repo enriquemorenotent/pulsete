@@ -11,18 +11,16 @@ import type { NetworkProfile } from '../shared/protocol.js';
 import { listen, requestJson } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
 
-test('close marks hidden connection instances closed without deleting them', async () => {
+test('close marks workspace networks closed without deleting stored logs', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.networks.upsert(createNetworkInput({ name: 'TemplateNet' }));
-  const instance = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
-    name: 'TemplateNet instance',
+  const network = storage.networks.upsert(createNetworkInput({
+    workspaceOpen: true,
+    name: 'TemplateNet',
   }));
   storage.conversations.appendMessage({
     id: 'message-1',
-    networkId: instance.id,
+    networkId: network.id,
     target: 'server',
     nick: null,
     body: 'stored history',
@@ -34,14 +32,14 @@ test('close marks hidden connection instances closed without deleting them', asy
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'POST', `/api/networks/${instance.id}/close`, {});
+    const response = await requestJson(port, 'POST', `/api/networks/${network.id}/close`, {});
 
     assert.equal(response.status, 200);
     assert.equal(response.json.ok, true);
-    assert.equal((response.json.network as NetworkProfile).connectionClosed, true);
-    assert.equal(storage.networks.get(instance.id)?.connectionClosed, true);
+    assert.equal((response.json.network as NetworkProfile).workspaceOpen, false);
+    assert.equal(storage.networks.get(network.id)?.workspaceOpen, false);
     assert.deepEqual(
-      storage.conversations.listMessages(instance.id, 'server', 10).map((message) => message.id),
+      storage.conversations.listMessages(network.id, 'server', 10).map((message) => message.id),
       ['message-1']
     );
   } finally {
@@ -49,24 +47,19 @@ test('close marks hidden connection instances closed without deleting them', asy
   }
 });
 
-test('delete rejects hidden connection instances', async () => {
+test('delete removes saved networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.networks.upsert(createNetworkInput({ name: 'TemplateNet' }));
-  const instance = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
-    name: 'TemplateNet clone',
-  }));
+  const network = storage.networks.upsert(createNetworkInput({ name: 'TemplateNet' }));
   const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'DELETE', `/api/networks/${instance.id}`);
+    const response = await requestJson(port, 'DELETE', `/api/networks/${network.id}`);
 
-    assert.equal(response.status, 400);
-    assert.equal(response.json.message, 'Only saved networks can be removed');
-    assert.equal(storage.networks.get(instance.id)?.id, instance.id);
+    assert.equal(response.status, 200);
+    assert.equal(response.json.ok, true);
+    assert.equal(storage.networks.get(network.id), null);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

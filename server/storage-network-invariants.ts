@@ -1,4 +1,3 @@
-import { isConnectionInstance, listConnectionInstances } from '../shared/network-model.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import type { NetworkProfile } from '../shared/protocol.js';
 import { upsertBuffer } from './storage-buffers.js';
@@ -13,13 +12,13 @@ export const ensureServerBuffer = (db: SqliteDb, networkId: string) => {
 };
 
 export const ensureNetworkBuffers = (db: SqliteDb, network: NetworkProfile) => {
-  if (isConnectionInstance(network)) {
+  if (network.workspaceOpen) {
     ensureServerBuffer(db, network.id);
   }
 };
 
 export const ensureAllNetworkBuffers = (db: SqliteDb) => {
-  for (const network of listConnectionInstances(listNetworks(db))) {
+  for (const network of listNetworks(db).filter((item) => item.workspaceOpen)) {
     ensureServerBuffer(db, network.id);
   }
 };

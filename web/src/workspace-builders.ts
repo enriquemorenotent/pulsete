@@ -7,10 +7,10 @@ import {
   type ResolvedWorkspace,
 } from './workspace-resolve.js';
 
-export const buildEmptyWorkspace = (connectionInstances: NetworkProfile[]): WorkspaceView => ({
+export const buildEmptyWorkspace = (workspaceNetworks: NetworkProfile[]): WorkspaceView => ({
   mode: 'empty',
   selection: null,
-  connectionInstances,
+  workspaceNetworks,
   selectedNetwork: null,
   selectedRuntime: null,
   selectedBuffer: null,
@@ -20,7 +20,7 @@ export const buildEmptyWorkspace = (connectionInstances: NetworkProfile[]): Work
   headerSubtitle: '',
   composerMode: 'hidden',
   composerPlaceholder: '',
-  emptyBody: 'Open Network Manager to create or connect an instance.',
+  emptyBody: 'Open Network Manager to connect a network.',
   showNicklist: false,
 });
 
@@ -45,7 +45,7 @@ const createWorkspace = (
   overrides: Partial<WorkspaceView> & Pick<WorkspaceView, 'mode'>
 ): WorkspaceView => ({
   selection: resolved.activeSelection,
-  connectionInstances: resolved.connectionInstances,
+  workspaceNetworks: resolved.workspaceNetworks,
   selectedNetwork: resolved.selectedNetwork,
   selectedRuntime: resolved.selectedRuntime,
   selectedBuffer: resolved.activeBuffer,

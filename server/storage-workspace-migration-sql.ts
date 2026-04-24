@@ -1,14 +1,5 @@
-import {
-  historyImportBatchesSchemaSql,
-  queryNickAliasesSchemaSql,
-} from './storage-schema-helpers.js';
-
-export const storageBootstrapSchemaSql = `
-  PRAGMA journal_mode = WAL;
-  PRAGMA foreign_keys = ON;
-  PRAGMA busy_timeout = 5000;
-
-  CREATE TABLE IF NOT EXISTS networks (
+export const createWorkspaceMigrationTablesSql = `
+  CREATE TABLE networks_next (
     id TEXT PRIMARY KEY,
     workspaceOpen INTEGER NOT NULL DEFAULT 0,
     name TEXT NOT NULL,
@@ -26,37 +17,33 @@ export const storageBootstrapSchemaSql = `
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
   );
-
-  CREATE TABLE IF NOT EXISTS network_alt_nicks (
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+  CREATE TABLE network_alt_nicks_next (
+    networkId TEXT NOT NULL REFERENCES networks_next(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     nick TEXT NOT NULL,
     nickKey TEXT NOT NULL,
     PRIMARY KEY (networkId, nickKey),
     UNIQUE (networkId, position)
   );
-
-  CREATE TABLE IF NOT EXISTS network_historical_self_nicks (
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+  CREATE TABLE network_historical_self_nicks_next (
+    networkId TEXT NOT NULL REFERENCES networks_next(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     nick TEXT NOT NULL,
     nickKey TEXT NOT NULL,
     PRIMARY KEY (networkId, nickKey),
     UNIQUE (networkId, position)
   );
-
-  CREATE TABLE IF NOT EXISTS network_auto_join_channels (
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+  CREATE TABLE network_auto_join_channels_next (
+    networkId TEXT NOT NULL REFERENCES networks_next(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     channel TEXT NOT NULL,
     channelKey TEXT NOT NULL,
     PRIMARY KEY (networkId, channelKey),
     UNIQUE (networkId, position)
   );
-
-  CREATE TABLE IF NOT EXISTS buffers (
+  CREATE TABLE buffers_next (
     id TEXT PRIMARY KEY,
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+    networkId TEXT NOT NULL REFERENCES networks_next(id) ON DELETE CASCADE,
     kind TEXT NOT NULL,
     target TEXT NOT NULL,
     targetKey TEXT NOT NULL,
@@ -69,27 +56,24 @@ export const storageBootstrapSchemaSql = `
     updatedAt INTEGER NOT NULL,
     UNIQUE(networkId, targetKey)
   );
-
-  CREATE TABLE IF NOT EXISTS buffer_self_nick_aliases (
-    bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
+  CREATE TABLE buffer_self_nick_aliases_next (
+    bufferId TEXT NOT NULL REFERENCES buffers_next(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     nick TEXT NOT NULL,
     nickKey TEXT NOT NULL,
     PRIMARY KEY (bufferId, nickKey),
     UNIQUE (bufferId, position)
   );
-
-  CREATE TABLE IF NOT EXISTS channel_details (
-    id TEXT PRIMARY KEY REFERENCES buffers(id) ON DELETE CASCADE,
+  CREATE TABLE channel_details_next (
+    id TEXT PRIMARY KEY REFERENCES buffers_next(id) ON DELETE CASCADE,
     topic TEXT NOT NULL DEFAULT '',
     users TEXT NOT NULL DEFAULT '[]',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
   );
-
-  CREATE TABLE IF NOT EXISTS messages (
+  CREATE TABLE messages_next (
     id TEXT PRIMARY KEY,
-    bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
+    bufferId TEXT NOT NULL REFERENCES buffers_next(id) ON DELETE CASCADE,
     nick TEXT,
     speakerRole TEXT NOT NULL DEFAULT 'unknown',
     speakerNick TEXT,
@@ -101,36 +85,28 @@ export const storageBootstrapSchemaSql = `
     self INTEGER NOT NULL,
     ts INTEGER NOT NULL
   );
-
-${historyImportBatchesSchemaSql}
-
-${queryNickAliasesSchemaSql}
-
-  CREATE TABLE IF NOT EXISTS friends (
+  CREATE TABLE history_import_batches_next (
     id TEXT PRIMARY KEY,
-    nick TEXT NOT NULL COLLATE NOCASE UNIQUE,
-    createdAt INTEGER NOT NULL,
-    updatedAt INTEGER NOT NULL
+    bufferId TEXT NOT NULL REFERENCES buffers_next(id) ON DELETE CASCADE,
+    selfNickSnapshot TEXT NOT NULL DEFAULT '[]',
+    createdAt INTEGER NOT NULL
   );
-
-  CREATE TABLE IF NOT EXISTS muted_nicks (
+  CREATE TABLE query_nick_aliases_next (
+    bufferId TEXT NOT NULL REFERENCES buffers_next(id) ON DELETE CASCADE,
+    networkId TEXT NOT NULL,
+    nick TEXT NOT NULL,
+    nickKey TEXT NOT NULL,
+    firstSeenAt INTEGER NOT NULL,
+    lastSeenAt INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    PRIMARY KEY (bufferId, nickKey)
+  );
+  CREATE TABLE muted_nicks_next (
     id TEXT PRIMARY KEY,
-    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+    networkId TEXT NOT NULL REFERENCES networks_next(id) ON DELETE CASCADE,
     nick TEXT NOT NULL COLLATE NOCASE,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
     UNIQUE(networkId, nick)
   );
-
-  CREATE INDEX IF NOT EXISTS idx_messages_buffer
-    ON messages(bufferId, ts DESC);
-
-  CREATE INDEX IF NOT EXISTS idx_buffers_network
-    ON buffers(networkId, isOpen, createdAt ASC);
-
-  CREATE INDEX IF NOT EXISTS idx_friends_nick
-    ON friends(nick COLLATE NOCASE, createdAt ASC);
-
-  CREATE INDEX IF NOT EXISTS idx_muted_nicks_network_nick
-    ON muted_nicks(networkId, nick COLLATE NOCASE, createdAt ASC);
 `;

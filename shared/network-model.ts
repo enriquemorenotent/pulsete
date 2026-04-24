@@ -28,40 +28,10 @@ export const resolveNetworkAuthTarget = (authTarget?: string | null) =>
 export const resolveNetworkAuthAccount = (network: Pick<NetworkAuthConfig, 'authAccount' | 'nick'>) =>
   network.authAccount?.trim() || network.nick?.trim() || '';
 
-export type SavedNetworkProfile = NetworkProfile & {
-  managerHidden: false;
-  templateId: null;
-};
-
-export type ConnectionInstanceProfile = NetworkProfile & {
-  managerHidden: true;
-  templateId: string;
-};
-
-export type StoredNetworkProfile = SavedNetworkProfile | ConnectionInstanceProfile;
-
-export const isConnectionInstance = (network: NetworkProfile): network is ConnectionInstanceProfile =>
-  network.managerHidden;
-
-export const isActiveConnectionInstance = (network: NetworkProfile): network is ConnectionInstanceProfile =>
-  isConnectionInstance(network) && network.connectionClosed !== true;
-
-export const isSavedNetwork = (network: NetworkProfile): network is SavedNetworkProfile =>
-  !network.managerHidden && network.templateId === null;
-
-export const getNetworkRootId = (network: Pick<NetworkProfile, 'id' | 'templateId'>) =>
-  network.templateId ?? network.id;
+export type StoredNetworkProfile = NetworkProfile;
 
 export const listSavedNetworks = (networks: readonly NetworkProfile[]) =>
-  networks.filter(isSavedNetwork);
+  [...networks];
 
-export const listConnectionInstances = (networks: readonly NetworkProfile[]) =>
-  networks.filter(isConnectionInstance);
-
-export const listActiveConnectionInstances = (networks: readonly NetworkProfile[]) =>
-  networks.filter(isActiveConnectionInstance);
-
-export const listConnectionPeers = (
-  networks: readonly NetworkProfile[],
-  rootId: string
-) => listConnectionInstances(networks).filter((network) => getNetworkRootId(network) === rootId);
+export const listWorkspaceNetworks = (networks: readonly NetworkProfile[]) =>
+  networks.filter((network) => network.workspaceOpen);

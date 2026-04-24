@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { makeStorageFile, openSqliteDatabase, Storage } from './helpers/storage-test-helpers.js';
 
-test('versioned storage migrations add template metadata columns incrementally', () => {
+test('versioned storage migrations rebuild networks as workspace-owned rows', () => {
   const file = makeStorageFile();
   const existing = openSqliteDatabase(file);
   const now = Date.now();
@@ -100,8 +100,7 @@ test('versioned storage migrations add template metadata columns incrementally',
   ).map((row) => row.name);
   upgraded.close();
 
-  assert.equal(network?.templateId, null);
-  assert.equal(network?.managerHidden, false);
+  assert.equal(network?.workspaceOpen, false);
   assert.equal(network?.hasPassword, true);
   assert.equal(network?.authMethod, 'server-pass');
   assert.equal(network?.authTarget, 'NickServ');
@@ -109,10 +108,11 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.deepEqual(network?.altNicks, ['tester_', 'tester__']);
   assert.deepEqual(network?.historicalSelfNicks, []);
   assert.deepEqual(network?.autoJoin, []);
-  assert.equal(version.user_version, 16);
-  assert.equal(columns.some((column) => column.name === 'templateId'), true);
-  assert.equal(columns.some((column) => column.name === 'managerHidden'), true);
-  assert.equal(columns.some((column) => column.name === 'connectionClosed'), true);
+  assert.equal(version.user_version, 17);
+  assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
+  assert.equal(columns.some((column) => column.name === 'templateId'), false);
+  assert.equal(columns.some((column) => column.name === 'managerHidden'), false);
+  assert.equal(columns.some((column) => column.name === 'connectionClosed'), false);
   assert.equal(columns.some((column) => column.name === 'authMethod'), true);
   assert.equal(columns.some((column) => column.name === 'authTarget'), true);
   assert.equal(columns.some((column) => column.name === 'authAccount'), true);

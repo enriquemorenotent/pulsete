@@ -14,8 +14,7 @@ import {
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? true,
+  workspaceOpen: overrides.workspaceOpen ?? true,
   name: overrides.name ?? 'OFTC',
   host: overrides.host ?? 'irc.oftc.net',
   port: overrides.port ?? 6697,
@@ -86,16 +85,16 @@ const derive = ({
     networkStates: runtime ? { [networks[0].id]: runtime } : {},
   });
 
-test('default buffer picks the first open connection instance server', () => {
-  const instance = makeNetwork({ id: 'instance-1' });
+test('default buffer picks the first open workspace network server', () => {
+  const network = makeNetwork({ id: 'network-open' });
   const selection = selectDefaultBuffer({
-    networks: [makeNetwork({ id: 'saved-template', managerHidden: false }), instance],
-    buffers: [makeBuffer({ id: 'server-instance', networkId: instance.id })],
+    networks: [makeNetwork({ id: 'network-closed', workspaceOpen: false }), network],
+    buffers: [makeBuffer({ id: 'server-network', networkId: network.id })],
   });
 
   assert.deepEqual(selection, {
     kind: 'buffer',
-    bufferId: 'server-instance',
+    bufferId: 'server-network',
   });
 });
 
@@ -105,26 +104,24 @@ test('connection labels include the live runtime nick', () => {
   assert.deepEqual(getConnectionLabelParts([network], network, makeRuntime({ nick: 'sofiaa' })), {
     name: 'Cuff-Link',
     nick: 'sofiaa',
-    instanceIndex: null,
   });
   assert.equal(getConnectionLabel([network], network, makeRuntime({ nick: 'sofiaa' })), 'Cuff-Link (sofiaa)');
 });
 
-test('connection labels preserve an instance index when several peers share one template', () => {
-  const first = makeNetwork({ id: 'instance-1', templateId: 'template-1', name: 'Cuff-Link', nick: 'sofia' });
-  const second = makeNetwork({ id: 'instance-2', templateId: 'template-1', name: 'Cuff-Link', nick: 'sofia' });
+test('connection labels do not add synthetic instance suffixes', () => {
+  const first = makeNetwork({ id: 'network-1', name: 'Cuff-Link', nick: 'sofia' });
+  const second = makeNetwork({ id: 'network-2', name: 'Cuff-Link', nick: 'sofia' });
 
   assert.deepEqual(getConnectionLabelParts([first, second], second, makeRuntime({ nick: 'sofiaa' })), {
     name: 'Cuff-Link',
     nick: 'sofiaa',
-    instanceIndex: 2,
   });
-  assert.equal(getConnectionLabel([first, second], second, makeRuntime({ nick: 'sofiaa' })), 'Cuff-Link (sofiaa, 2)');
+  assert.equal(getConnectionLabel([first, second], second, makeRuntime({ nick: 'sofiaa' })), 'Cuff-Link (sofiaa)');
 });
 
-test('empty workspace hides message-oriented UI when no connection instance exists', () => {
+test('empty workspace hides message-oriented UI when no workspace network exists', () => {
   const workspace = derive({
-    networks: [makeNetwork({ id: 'saved-template', managerHidden: false })],
+    networks: [makeNetwork({ id: 'saved-template', workspaceOpen: false })],
     buffers: [],
   });
 

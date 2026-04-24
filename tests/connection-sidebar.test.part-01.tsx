@@ -15,8 +15,7 @@ const makeNetwork = (
   overrides: Partial<NetworkProfile> = {},
 ): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? true,
+  workspaceOpen: overrides.workspaceOpen ?? true,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,

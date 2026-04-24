@@ -8,8 +8,7 @@ import type { WorkspaceView } from '../web/src/workspace.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? true,
+  workspaceOpen: overrides.workspaceOpen ?? true,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -75,7 +74,7 @@ const makeWorkspace = (): WorkspaceView => {
   return {
     mode: 'channel-connected',
     selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-    connectionInstances: [network],
+    workspaceNetworks: [network],
     selectedNetwork: network,
     selectedRuntime: { phase: 'connected', serverName: 'irc.example.test', nick: network.nick },
     selectedBuffer,

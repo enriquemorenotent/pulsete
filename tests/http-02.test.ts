@@ -14,21 +14,13 @@ import { listen,requestJson } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
 import { closeWebSocket,connectWebSocket,waitForWebSocketMessageType } from './helpers/http-websocket-test-helpers.js';
 
-test('saving a hidden connection instance broadcasts its server buffer before the network update', async () => {
+test('saving an open workspace network broadcasts its server buffer before the network update', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
-  const template = storage.networks.upsert(createNetworkInput({
-    name: 'TemplateNet',
-    nick: 'oldnick',
-    altNicks: ['oldnick_'],
-    username: 'olduser',
-    realName: 'Old User',
-  }));
-  const instance = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
-    name: 'Connection instance',
+  const network = storage.networks.upsert(createNetworkInput({
+    workspaceOpen: true,
+    name: 'Open network',
     nick: 'oldnick',
     altNicks: ['oldnick_'],
     username: 'olduser',
@@ -44,8 +36,8 @@ test('saving a hidden connection instance broadcasts its server buffer before th
   });
 
   try {
-    const response = await requestJson(port, 'PUT', `/api/networks/${instance.id}`, {
-      ...instance,
+    const response = await requestJson(port, 'PUT', `/api/networks/${network.id}`, {
+      ...network,
       nick: 'newnick',
       altNicks: ['newnick_'],
       username: 'newuser',
@@ -55,15 +47,15 @@ test('saving a hidden connection instance broadcasts its server buffer before th
 
     await waitFor(() => {
       const relevant = messages.filter((message) =>
-        (message.type === 'buffer.upsert' && (message.buffer as { networkId: string }).networkId === instance.id)
-        || (message.type === 'network.upsert' && (message.network as { id: string }).id === instance.id)
+        (message.type === 'buffer.upsert' && (message.buffer as { networkId: string }).networkId === network.id)
+        || (message.type === 'network.upsert' && (message.network as { id: string }).id === network.id)
       );
       return relevant.length >= 2;
     });
 
     const relevant = messages.filter((message) =>
-      (message.type === 'buffer.upsert' && (message.buffer as { networkId: string }).networkId === instance.id)
-      || (message.type === 'network.upsert' && (message.network as { id: string }).id === instance.id)
+      (message.type === 'buffer.upsert' && (message.buffer as { networkId: string }).networkId === network.id)
+      || (message.type === 'network.upsert' && (message.network as { id: string }).id === network.id)
     );
     assert.deepEqual(relevant.slice(0, 2).map((message) => message.type), ['buffer.upsert', 'network.upsert']);
   } finally {
@@ -72,15 +64,14 @@ test('saving a hidden connection instance broadcasts its server buffer before th
   }
 });
 
-test('delete returns all deleted network ids when removing a template', async () => {
+test('delete returns the deleted saved network id', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const template = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
   }));
   const clone = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
+    workspaceOpen: true,
     name: 'TemplateNet clone',
   }));
   const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
@@ -89,10 +80,8 @@ test('delete returns all deleted network ids when removing a template', async ()
   try {
     const response = await requestJson(port, 'DELETE', `/api/networks/${template.id}`);
     assert.equal(response.status, 200);
-    assert.deepEqual(
-      [...(response.json.deletedNetworkIds as string[])].sort(),
-      [clone.id, template.id].sort()
-    );
+    assert.deepEqual(response.json.deletedNetworkIds, [template.id]);
+    assert.equal(storage.networks.get(clone.id)?.id, clone.id);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
@@ -143,8 +132,7 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     assert.equal(duplicate.authAccount, 'sofia-account');
     assert.equal(duplicate.favorite, true);
     assert.deepEqual(duplicate.autoJoin, ['#help']);
-    assert.equal(duplicate.managerHidden, false);
-    assert.equal(duplicate.templateId, null);
+    assert.equal(duplicate.workspaceOpen, false);
     assert.equal(duplicate.hasPassword, true);
     assert.equal(storage.networks.getRuntime(duplicate.id)?.password, 'hunter2');
 

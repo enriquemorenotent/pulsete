@@ -1,7 +1,7 @@
 import type { BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
 import { selectionFor } from './conversation-model.js';
 import type { ConversationIndex } from './conversation-selectors.js';
-import { getConnectionInstances, getConnectionStatus } from './workspace-helpers.js';
+import { getConnectionStatus, getWorkspaceNetworks } from './workspace-helpers.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
 
 export type WorkspaceInput = {
@@ -12,7 +12,7 @@ export type WorkspaceInput = {
 };
 
 export type ResolvedWorkspace = {
-  connectionInstances: NetworkProfile[];
+  workspaceNetworks: NetworkProfile[];
   selectedNetwork: NetworkProfile;
   selectedRuntime: NetworkRuntimeState | null;
   selectedBuffer: BufferState | null;
@@ -46,17 +46,17 @@ export const getReadOnlyEmptyBody = (
 };
 
 export const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | null => {
-  const connectionInstances = getConnectionInstances(input.networks);
-  if (connectionInstances.length === 0) {
+  const workspaceNetworks = getWorkspaceNetworks(input.networks);
+  if (workspaceNetworks.length === 0) {
     return null;
   }
 
   const selectedBuffer = input.conversation.findSelectedBuffer(input.selection);
   const selectedPendingChannel = input.conversation.findSelectedPendingChannel(input.selection);
   const selectedNetwork =
-    connectionInstances.find(
+    workspaceNetworks.find(
       (network) => network.id === selectedBuffer?.networkId || network.id === selectedPendingChannel?.networkId
-    ) ?? connectionInstances[0];
+    ) ?? workspaceNetworks[0];
   const selectedRuntime = input.networkStates[selectedNetwork.id] ?? null;
   const serverBuffer = input.conversation.findServerBuffer(selectedNetwork.id);
   const activeBuffer =
@@ -65,7 +65,7 @@ export const resolveWorkspace = (input: WorkspaceInput): ResolvedWorkspace | nul
     selectedPendingChannel && selectedPendingChannel.networkId === selectedNetwork.id ? selectedPendingChannel : null;
 
   return {
-    connectionInstances,
+    workspaceNetworks,
     selectedNetwork,
     selectedRuntime,
     selectedBuffer,

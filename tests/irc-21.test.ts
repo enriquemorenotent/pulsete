@@ -55,8 +55,7 @@ test('irc connection keeps direct service messages on the server buffer', async 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: address.port,
@@ -120,8 +119,7 @@ test('irc connection reports failed connects without a generic closed notice', a
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'BrokenNet',
       host: '127.0.0.1',
       port,

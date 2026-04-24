@@ -6,8 +6,7 @@ import type { NetworkRuntimeState } from '../web/src/workspace.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? true,
+  workspaceOpen: overrides.workspaceOpen ?? true,
   name: overrides.name ?? 'Libera.Chat',
   host: overrides.host ?? 'irc.libera.chat',
   port: overrides.port ?? 6697,
@@ -51,7 +50,7 @@ test('friend selection prefers the selected connected network', () => {
     nick: 'alice',
     buffers: [],
     workspace: {
-      connectionInstances: [network],
+      workspaceNetworks: [network],
       selectedNetwork: network,
     },
     networkStates: { [network.id]: connected },
@@ -68,7 +67,7 @@ test('friend selection prefers an existing pm on the selected connected network'
     nick: 'alice',
     buffers: [buffer],
     workspace: {
-      connectionInstances: [network],
+      workspaceNetworks: [network],
       selectedNetwork: network,
     },
     networkStates: { [network.id]: connected },
@@ -86,7 +85,7 @@ test('friend selection falls back to an existing pm on another connected network
     nick: 'alice',
     buffers: [buffer],
     workspace: {
-      connectionInstances: [selected, fallback],
+      workspaceNetworks: [selected, fallback],
       selectedNetwork: selected,
     },
     networkStates: { [selected.id]: offline, [fallback.id]: connected },
@@ -103,7 +102,7 @@ test('friend selection falls back to the first connected instance when no pm is 
     nick: 'alice',
     buffers: [],
     workspace: {
-      connectionInstances: [selected, fallback],
+      workspaceNetworks: [selected, fallback],
       selectedNetwork: selected,
     },
     networkStates: { [selected.id]: offline, [fallback.id]: connected },
@@ -119,7 +118,7 @@ test('friend selection errors when no network is connected', () => {
     nick: 'alice',
     buffers: [],
     workspace: {
-      connectionInstances: [network],
+      workspaceNetworks: [network],
       selectedNetwork: network,
     },
     networkStates: { [network.id]: offline },

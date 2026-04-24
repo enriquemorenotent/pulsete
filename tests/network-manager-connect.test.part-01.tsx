@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, NetworkProfile } from '../shared/protocol.js';
 import { initialState } from '../web/src/app-state.js';
-import { createNetworkActions, resolveManagedNetworkConnectPlan } from '../web/src/app-actions-networks.js';
+import { createNetworkActions } from '../web/src/app-actions-networks.js';
 import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
@@ -11,9 +11,7 @@ import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'saved-network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? false,
-  connectionClosed: overrides.connectionClosed,
+  workspaceOpen: overrides.workspaceOpen ?? false,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -30,20 +28,10 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   autoJoin: overrides.autoJoin ?? [],
 });
 
-const makePeer = (root: NetworkProfile, overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
-  makeNetwork({
-    ...root,
-    id: overrides.id ?? 'instance-1',
-    templateId: overrides.templateId ?? root.id,
-    managerHidden: overrides.managerHidden ?? true,
-    ...overrides,
-  });
-
-
 const emptyWorkspace: WorkspaceView = {
   mode: 'empty',
   selection: null,
-  connectionInstances: [],
+  workspaceNetworks: [],
   selectedNetwork: null,
   selectedRuntime: null,
   selectedBuffer: null,
@@ -118,81 +106,19 @@ const okJson = (body: unknown) => ({
   json: async () => body,
 }) as Response;
 
-test('resolveManagedNetworkConnectPlan returns connected and connecting no-op states', () => {
-  const saved = makeNetwork();
-  const connectedPeer = makePeer(saved, { id: 'instance-connected' });
-  const connectingPeer = makePeer(saved, { id: 'instance-connecting' });
-  const closedConnectedPeer = makePeer(saved, { id: 'instance-closed', connectionClosed: true });
-
-  assert.deepEqual(
-    resolveManagedNetworkConnectPlan({
-      network: saved,
-      networks: [saved, connectedPeer],
-      networkStates: { [connectedPeer.id]: { phase: 'connected', serverName: null, nick: connectedPeer.nick } },
-    }),
-    { kind: 'noop-connected' }
-  );
-  assert.deepEqual(
-    resolveManagedNetworkConnectPlan({
-      network: saved,
-      networks: [saved, connectingPeer],
-      networkStates: { [connectingPeer.id]: { phase: 'connecting', serverName: null, nick: connectingPeer.nick } },
-    }),
-    { kind: 'noop-connecting' }
-  );
-  assert.deepEqual(
-    resolveManagedNetworkConnectPlan({
-      network: saved,
-      networks: [saved, closedConnectedPeer],
-      networkStates: { [closedConnectedPeer.id]: { phase: 'connected', serverName: null, nick: closedConnectedPeer.nick } },
-    }),
-    { kind: 'reconnect-existing-peer', peer: closedConnectedPeer }
-  );
-});
-
-test('resolveManagedNetworkConnectPlan reuses the first offline peer before creating a new instance', () => {
-  const saved = makeNetwork();
-  const firstPeer = makePeer(saved, { id: 'instance-1' });
-  const secondPeer = makePeer(saved, { id: 'instance-2' });
-
-  assert.deepEqual(
-    resolveManagedNetworkConnectPlan({
-      network: saved,
-      networks: [saved, firstPeer, secondPeer],
-      networkStates: {
-        [firstPeer.id]: { phase: 'offline', serverName: null, nick: firstPeer.nick },
-        [secondPeer.id]: { phase: 'offline', serverName: null, nick: secondPeer.nick },
-      },
-    }),
-    { kind: 'reconnect-existing-peer', peer: firstPeer }
-  );
-  assert.deepEqual(
-    resolveManagedNetworkConnectPlan({
-      network: saved,
-      networks: [saved],
-      networkStates: {},
-    }),
-    { kind: 'create-new-peer' }
-  );
-});
-
 test('buildManagedRuntimeMap exposes visible row statuses for every saved network', () => {
-  const onlineSaved = makeNetwork({ id: 'saved-online', name: 'Online Net' });
-  const connectingSaved = makeNetwork({ id: 'saved-connecting', name: 'Connecting Net' });
+  const onlineSaved = makeNetwork({ id: 'saved-online', name: 'Online Net', workspaceOpen: true });
+  const connectingSaved = makeNetwork({ id: 'saved-connecting', name: 'Connecting Net', workspaceOpen: true });
   const idleSaved = makeNetwork({ id: 'saved-idle', name: 'Idle Net' });
   const closedSaved = makeNetwork({ id: 'saved-closed', name: 'Closed Net' });
-  const onlinePeer = makePeer(onlineSaved, { id: 'instance-online' });
-  const connectingPeer = makePeer(connectingSaved, { id: 'instance-connecting' });
-  const closedPeer = makePeer(closedSaved, { id: 'instance-closed', connectionClosed: true });
 
   assert.deepEqual(
     buildManagedRuntimeMap(
       [onlineSaved, connectingSaved, idleSaved, closedSaved],
-      [onlinePeer, connectingPeer, closedPeer],
       {
-        [onlinePeer.id]: { phase: 'connected', serverName: null, nick: onlinePeer.nick },
-        [connectingPeer.id]: { phase: 'connecting', serverName: null, nick: connectingPeer.nick },
-        [closedPeer.id]: { phase: 'connected', serverName: null, nick: closedPeer.nick },
+        [onlineSaved.id]: { phase: 'connected', serverName: null, nick: onlineSaved.nick },
+        [connectingSaved.id]: { phase: 'connecting', serverName: null, nick: connectingSaved.nick },
+        [closedSaved.id]: { phase: 'connected', serverName: null, nick: closedSaved.nick },
       }
     ),
     {
@@ -204,12 +130,11 @@ test('buildManagedRuntimeMap exposes visible row statuses for every saved networ
   );
 });
 
-test('connectNetwork is a silent no-op when a saved network already has a connected peer', async () => {
-  const saved = makeNetwork();
-  const peer = makePeer(saved);
+test('connectNetwork is a silent no-op when the network is already connected', async () => {
+  const saved = makeNetwork({ workspaceOpen: true });
   const session = makeSession({
-    networks: [saved, peer],
-    networkStates: { [peer.id]: { phase: 'connected', serverName: null, nick: peer.nick } },
+    networks: [saved],
+    networkStates: { [saved.id]: { phase: 'connected', serverName: null, nick: saved.nick } },
   });
   const { actions, banners, dispatched } = createHarness(session);
   const originalFetch = globalThis.fetch;

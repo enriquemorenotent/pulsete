@@ -143,8 +143,7 @@ test('late close from an old socket does not disconnect the new connection', asy
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: first.port,
@@ -202,8 +201,7 @@ test('tls connections wait for secureConnect before sending credentials', () => 
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TlsNet',
       host: 'tls.example.test',
       port: 6697,

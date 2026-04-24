@@ -12,21 +12,13 @@ import { listen,requestJson } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
 import { closeWebSocket,connectWebSocket,waitForWebSocketMessages } from './helpers/http-websocket-test-helpers.js';
 
-test('network save broadcasts template and instance updates over websocket', async () => {
+test('network save broadcasts the updated workspace network over websocket', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
-  const template = storage.networks.upsert(createNetworkInput({
-    name: 'TemplateNet',
-    nick: 'oldnick',
-    altNicks: ['oldnick_'],
-    username: 'olduser',
-    realName: 'Old User',
-  }));
-  const clone = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
-    name: 'Connection instance',
+  const network = storage.networks.upsert(createNetworkInput({
+    workspaceOpen: true,
+    name: 'Open network',
     nick: 'oldnick',
     altNicks: ['oldnick_'],
     username: 'olduser',
@@ -38,9 +30,9 @@ test('network save broadcasts template and instance updates over websocket', asy
   const { socket } = await connectWebSocket(port);
 
   try {
-    const updatesPromise = waitForWebSocketMessages(socket, 'network.upsert', 2);
-    const response = await requestJson(port, 'PUT', `/api/networks/${template.id}`, {
-      ...template,
+    const updatesPromise = waitForWebSocketMessages(socket, 'network.upsert', 1);
+    const response = await requestJson(port, 'PUT', `/api/networks/${network.id}`, {
+      ...network,
       nick: 'newnick',
       altNicks: ['newnick_'],
       username: 'newuser',
@@ -49,15 +41,11 @@ test('network save broadcasts template and instance updates over websocket', asy
     assert.equal(response.status, 200);
 
     const updates = await updatesPromise;
-    assert.deepEqual(
-      updates.map((message) => (message.network as { id: string }).id).sort(),
-      [clone.id, template.id].sort()
-    );
-    assert.equal(storage.networks.get(clone.id)?.nick, 'newnick');
-    assert.equal(storage.networks.get(clone.id)?.username, 'newuser');
+    assert.deepEqual(updates.map((message) => (message.network as { id: string }).id), [network.id]);
+    assert.equal(storage.networks.get(network.id)?.nick, 'newnick');
+    assert.equal(storage.networks.get(network.id)?.username, 'newuser');
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 });
-

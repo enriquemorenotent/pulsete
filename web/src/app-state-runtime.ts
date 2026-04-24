@@ -39,20 +39,44 @@ export const reduceRuntimeDomain = (
       const networks = domain.networks.filter((network) => network.id !== action.network.id);
       networks.push(action.network);
       const runtime = domain.networkStates[action.network.id] ?? null;
+      const networkStates =
+        runtime?.phase === 'connected'
+          ? domain.networkStates
+          : {
+              ...domain.networkStates,
+              [action.network.id]: {
+                phase: runtime?.phase ?? 'offline',
+                serverName: runtime?.serverName ?? null,
+                nick: action.network.nick,
+              },
+            };
+      if (!action.network.workspaceOpen) {
+        const removedBufferIds = new Set(
+          domain.buffers
+            .filter((buffer) => buffer.networkId === action.network.id)
+            .map((buffer) => buffer.id),
+        );
+        const queryPresence = { ...domain.queryPresence };
+        for (const bufferId of removedBufferIds) {
+          delete queryPresence[bufferId];
+        }
+        return {
+          ...domain,
+          networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
+          buffers: domain.buffers.filter((buffer) => buffer.networkId !== action.network.id),
+          channels: domain.channels.filter((channel) => channel.networkId !== action.network.id),
+          pendingChannels: domain.pendingChannels.filter(
+            (pendingChannel) => pendingChannel.networkId !== action.network.id,
+          ),
+          messages: removeNetworkMessages(domain.messages, action.network.id),
+          networkStates,
+          queryPresence,
+        };
+      }
       return {
         ...domain,
         networks: networks.sort((left, right) => left.name.localeCompare(right.name)),
-        networkStates:
-          runtime?.phase === 'connected'
-            ? domain.networkStates
-            : {
-                ...domain.networkStates,
-                [action.network.id]: {
-                  phase: runtime?.phase ?? 'offline',
-                  serverName: runtime?.serverName ?? null,
-                  nick: action.network.nick,
-                },
-              },
+        networkStates,
       };
     }
     case 'network-state':

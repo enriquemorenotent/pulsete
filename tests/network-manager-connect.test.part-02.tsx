@@ -10,9 +10,7 @@ import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'saved-network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? false,
-  connectionClosed: overrides.connectionClosed,
+  workspaceOpen: overrides.workspaceOpen ?? false,
   name: overrides.name ?? 'Cuff-Link',
   host: overrides.host ?? 'irc.example.test',
   port: overrides.port ?? 6697,
@@ -33,8 +31,7 @@ const makePeer = (root: NetworkProfile, overrides: Partial<NetworkProfile> = {})
   makeNetwork({
     ...root,
     id: overrides.id ?? 'instance-1',
-    templateId: overrides.templateId ?? root.id,
-    managerHidden: overrides.managerHidden ?? true,
+    workspaceOpen: overrides.workspaceOpen ?? true,
     ...overrides,
   });
 
@@ -52,7 +49,7 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 const emptyWorkspace: WorkspaceView = {
   mode: 'empty',
   selection: null,
-  connectionInstances: [],
+  workspaceNetworks: [],
   selectedNetwork: null,
   selectedRuntime: null,
   selectedBuffer: null,
@@ -127,14 +124,13 @@ const okJson = (body: unknown) => ({
   json: async () => body,
 }) as Response;
 
-test('connectNetwork reconnects an existing offline peer instead of creating a duplicate instance', async () => {
+test('connectNetwork opens an offline saved network directly', async () => {
   const saved = makeNetwork();
-  const peer = makePeer(saved, { id: 'instance-offline' });
-  const serverBuffer = makeBuffer({ id: 'server-buffer-offline', networkId: peer.id });
+  const serverBuffer = makeBuffer({ id: 'server-buffer-offline', networkId: saved.id });
   const session = makeSession({
-    networks: [saved, peer],
+    networks: [saved],
     buffers: [serverBuffer],
-    networkStates: { [peer.id]: { phase: 'offline', serverName: null, nick: peer.nick } },
+    networkStates: { [saved.id]: { phase: 'offline', serverName: null, nick: saved.nick } },
   });
   const { actions, banners, dispatched } = createHarness(session);
   const fetchCalls: Array<{ url: string; method: string; body: string }> = [];
@@ -145,8 +141,8 @@ test('connectNetwork reconnects an existing offline peer instead of creating a d
       method: String(init?.method ?? 'GET'),
       body: String(init?.body ?? ''),
     });
-    if (String(input) === `/api/networks/${peer.id}/connect`) {
-      return okJson({ ok: true, network: peer, serverBuffer, messages: [] });
+    if (String(input) === `/api/networks/${saved.id}/connect`) {
+      return okJson({ ok: true, network: { ...saved, workspaceOpen: true }, serverBuffer, messages: [] });
     }
     throw new Error(`Unexpected fetch: ${String(input)}`);
   }) as typeof fetch;
@@ -156,24 +152,23 @@ test('connectNetwork reconnects an existing offline peer instead of creating a d
 
     assert.equal(started, true);
     assert.deepEqual(fetchCalls, [{
-      url: `/api/networks/${peer.id}/connect`,
+      url: `/api/networks/${saved.id}/connect`,
       method: 'POST',
       body: '{}',
     }]);
-    assert.deepEqual(banners, [{ kind: 'notice', message: 'Reconnect requested' }]);
+    assert.deepEqual(banners, [{ kind: 'notice', message: 'Network opened' }]);
     assert.deepEqual(dispatched, [{ type: 'select', selection: { kind: 'buffer', bufferId: serverBuffer.id } }]);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test('toggleCurrentChannelAutoJoin updates the saved network behind the selected connection instance', async () => {
-  const saved = makeNetwork({ id: 'saved-1', managerHidden: false, templateId: null, autoJoin: ['#ops'] });
-  const peer = makePeer(saved, { id: 'instance-1' });
-  const channelBuffer = makeBuffer({ id: 'buffer-1', networkId: peer.id, kind: 'channel', target: '#help' });
+test('toggleCurrentChannelAutoJoin updates the selected saved network', async () => {
+  const saved = makeNetwork({ id: 'saved-1', workspaceOpen: true, autoJoin: ['#ops'] });
+  const channelBuffer = makeBuffer({ id: 'buffer-1', networkId: saved.id, kind: 'channel', target: '#help' });
   const selectedChannel: ChannelState = {
     id: channelBuffer.id,
-    networkId: peer.id,
+    networkId: saved.id,
     name: '#help',
     topic: '',
     users: [],
@@ -181,9 +176,9 @@ test('toggleCurrentChannelAutoJoin updates the saved network behind the selected
   const workspace: WorkspaceView = {
     mode: 'channel-connected',
     selection: { kind: 'buffer', bufferId: channelBuffer.id },
-    connectionInstances: [peer],
-    selectedNetwork: peer,
-    selectedRuntime: { phase: 'connected', serverName: null, nick: peer.nick },
+    workspaceNetworks: [saved],
+    selectedNetwork: saved,
+    selectedRuntime: { phase: 'connected', serverName: null, nick: saved.nick },
     selectedBuffer: channelBuffer,
     selectedChannel,
     selectedPendingChannel: null,
@@ -195,7 +190,7 @@ test('toggleCurrentChannelAutoJoin updates the saved network behind the selected
     showNicklist: true,
   };
   const session = makeSession({
-    networks: [saved, peer],
+    networks: [saved],
     buffers: [channelBuffer],
     workspace,
   });

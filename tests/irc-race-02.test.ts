@@ -14,8 +14,7 @@ test('reconnect timers are unrefd and cleared on manual disconnect', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'RetryNet',
       host: 'retry.example.test',
       port: 6667,
@@ -81,8 +80,7 @@ test('manual reconnect resets the exhausted retry budget', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'RetryNet',
       host: 'retry.example.test',
       port: 6667,
@@ -146,8 +144,7 @@ test('nick fallback uses the updated profile nick after reconnecting', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: 6667,
@@ -191,8 +188,7 @@ test('nick conflicts use configured alternate nicknames before suffix fallback',
   const connection = new IrcConnection(
     {
       id: randomUUID(),
-      templateId: null,
-      managerHidden: false,
+      workspaceOpen: false,
       name: 'TestNet',
       host: '127.0.0.1',
       port: 6667,

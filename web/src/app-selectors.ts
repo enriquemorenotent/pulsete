@@ -1,4 +1,4 @@
-import { listConnectionInstances, listSavedNetworks } from '../../shared/network-model.js';
+import { listSavedNetworks, listWorkspaceNetworks } from '../../shared/network-model.js';
 import type { NetworkProfile } from '../../shared/protocol.js';
 import { buildConnectionSidebarView } from './connection-sidebar-view.js';
 import { buildConversationModel } from './conversation-model.js';
@@ -6,7 +6,6 @@ import { selectConversationMessages } from './conversation-selectors.js';
 import { buildManagedRuntime, buildManagedRuntimeMap } from './network-manager-runtime.js';
 import type { State } from './app-types.js';
 import { deriveWorkspace } from './workspace.js';
-import { getConnectionInstances } from './workspace-helpers.js';
 
 const memoizeLast = <Args extends readonly unknown[], Result>(
   compute: (...args: Args) => Result,
@@ -62,12 +61,8 @@ const buildVisibleNetworks = memoizeLast(
       : savedNetworks,
 );
 
-const buildConnectionInstances = memoizeLast(
-  (networks: State['domain']['networks']) => getConnectionInstances(networks),
-);
-
-const buildConnectionPeers = memoizeLast(
-  (networks: State['domain']['networks']) => listConnectionInstances(networks),
+const buildWorkspaceNetworks = memoizeLast(
+  (networks: State['domain']['networks']) => listWorkspaceNetworks(networks),
 );
 
 const buildSavedNetworks = memoizeLast(
@@ -76,7 +71,6 @@ const buildSavedNetworks = memoizeLast(
 
 const buildManagedNetworkModel = memoizeLast(
   (
-    connectionInstances: State['domain']['networks'],
     managedNetworkId: string | null,
     networkStates: State['domain']['networkStates'],
     visibleNetworks: NetworkProfile[],
@@ -84,16 +78,8 @@ const buildManagedNetworkModel = memoizeLast(
     const visibleManagedNetwork =
       visibleNetworks.find((network) => network.id === managedNetworkId) ?? null;
     return {
-      managedRuntime: buildManagedRuntime(
-        visibleManagedNetwork,
-        connectionInstances,
-        networkStates,
-      ),
-      managedRuntimes: buildManagedRuntimeMap(
-        visibleNetworks,
-        connectionInstances,
-        networkStates,
-      ),
+      managedRuntime: buildManagedRuntime(visibleManagedNetwork, networkStates),
+      managedRuntimes: buildManagedRuntimeMap(visibleNetworks, networkStates),
       visibleManagedNetwork,
     };
   },
@@ -113,13 +99,13 @@ const buildSelectedMessages = memoizeLast(
 
 const buildSidebarConnections = memoizeLast(
   (
-    connectionInstances: State['domain']['networks'],
+    workspaceNetworks: State['domain']['networks'],
     conversation: ReturnType<typeof selectConversation>,
     networkStates: State['domain']['networkStates'],
     selection: ReturnType<typeof selectWorkspace>['selection'],
   ) =>
     buildConnectionSidebarView({
-      networks: connectionInstances,
+      networks: workspaceNetworks,
       conversation,
       networkStates,
       selection,
@@ -128,18 +114,9 @@ const buildSidebarConnections = memoizeLast(
 
 const buildServerProfileNetwork = memoizeLast(
   (
-    networks: State['domain']['networks'],
     selectedNetwork: ReturnType<typeof selectWorkspace>['selectedNetwork'],
   ) => {
-    if (!selectedNetwork) {
-      return null;
-    }
-    const rootId = selectedNetwork.templateId ?? selectedNetwork.id;
-    return (
-      networks.find((network) => network.id === rootId && !network.managerHidden)
-      ?? networks.find((network) => network.id === rootId)
-      ?? null
-    );
+    return selectedNetwork;
   },
 );
 
@@ -168,11 +145,8 @@ export const selectConversation = (state: State) =>
     state.domain.pendingChannels,
   );
 
-export const selectConnectionInstances = (state: State) =>
-  buildConnectionInstances(state.domain.networks);
-
-export const selectConnectionPeers = (state: State) =>
-  buildConnectionPeers(state.domain.networks);
+export const selectWorkspaceNetworks = (state: State) =>
+  buildWorkspaceNetworks(state.domain.networks);
 
 export const selectWorkspace = (state: State) =>
   buildWorkspace(
@@ -193,7 +167,6 @@ export const selectVisibleNetworks = (state: State) =>
 
 export const selectManagedNetworkModel = (state: State) =>
   buildManagedNetworkModel(
-    selectConnectionPeers(state),
     state.transient.networkManager.managedNetworkId,
     state.domain.networkStates,
     selectVisibleNetworks(state),
@@ -209,7 +182,7 @@ export const selectSelectedMessages = (state: State) =>
 
 export const selectSidebarConnections = (state: State) =>
   buildSidebarConnections(
-    selectConnectionInstances(state),
+    selectWorkspaceNetworks(state),
     selectConversation(state),
     state.domain.networkStates,
     selectWorkspace(state).selection,
@@ -226,8 +199,8 @@ export const selectRightSidebarKind = (state: State) => {
 export const selectNetworkNamesById = (state: State) =>
   buildNetworkNamesById(state.domain.networks);
 
-export const selectConnectionInstanceCount = (state: State) =>
-  selectConnectionInstances(state).length;
+export const selectWorkspaceNetworkCount = (state: State) =>
+  selectWorkspaceNetworks(state).length;
 
 export const selectServerProfileNetwork = (state: State) =>
-  buildServerProfileNetwork(state.domain.networks, selectWorkspace(state).selectedNetwork);
+  buildServerProfileNetwork(selectWorkspace(state).selectedNetwork);

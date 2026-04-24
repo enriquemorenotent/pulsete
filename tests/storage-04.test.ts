@@ -7,8 +7,7 @@ import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage,type NetworkInput } from '../server/storage.js';
 
 const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
-  templateId: null,
-  managerHidden: false,
+  workspaceOpen: false,
   name: 'TestNet',
   host: 'irc.example.test',
   port: 6667,
@@ -22,53 +21,21 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
   ...overrides,
 });
 
-test('storage rejects changing a template relationship after creation', () => {
+test('storage can toggle workspace state after creation', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const template = storage.networks.upsert(createNetworkInput({
+  const network = storage.networks.upsert(createNetworkInput({
     name: 'TemplateNet',
   }));
-  const otherTemplate = storage.networks.upsert(createNetworkInput({
-    name: 'OtherTemplateNet',
-    host: 'irc2.example.test',
-    port: 6697,
-    tls: true,
-  }));
-  const clone = storage.networks.upsert(createNetworkInput({
-    templateId: template.id,
-    managerHidden: true,
-    name: 'Connection instance',
-  }));
 
-  assert.throws(
-    () =>
-      storage.networks.upsert({
-        ...template,
-        templateId: otherTemplate.id,
-        managerHidden: true,
-      }),
-    /Network template relationship cannot be changed after creation/
-  );
-  assert.throws(
-    () =>
-      storage.networks.upsert({
-        ...clone,
-        templateId: null,
-        managerHidden: false,
-      }),
-    /Network template relationship cannot be changed after creation/
-  );
-  assert.throws(
-    () =>
-      storage.networks.upsert({
-        ...clone,
-        templateId: otherTemplate.id,
-      }),
-    /Network template relationship cannot be changed after creation/
-  );
+  const opened = storage.networks.upsert({ ...network, workspaceOpen: true });
+  const closed = storage.networks.upsert({ ...opened, workspaceOpen: false });
+
+  assert.equal(opened.workspaceOpen, true);
+  assert.equal(closed.workspaceOpen, false);
 });
 
-test('network passwords stay encrypted at rest, inherit on hidden clones, and can be cleared', () => {
+test('network passwords stay encrypted at rest and can be cleared', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
   const storage = new Storage(file);
@@ -92,19 +59,6 @@ test('network passwords stay encrypted at rest, inherit on hidden clones, and ca
   db.close();
   assert.notEqual(row.password, 'server-secret');
   assert.match(row.password, /^enc-v1:/);
-
-  const clone = storage.networks.upsert(createNetworkInput({
-    templateId: network.id,
-    managerHidden: true,
-    name: 'SecretNet clone',
-    port: 6697,
-    tls: true,
-  }));
-  assert.equal(clone.hasPassword, true);
-  assert.equal(clone.authMethod, 'nickserv');
-  assert.equal(clone.authTarget, 'AuthServ');
-  assert.equal(clone.authAccount, 'sofia-account');
-  assert.equal(storage.networks.getRuntime(clone.id)?.password, 'server-secret');
 
   storage.networks.upsert({
     ...network,

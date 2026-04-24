@@ -173,7 +173,7 @@ test('reconnecting channels rely on the inline status banner instead of header m
       workspace={{
         mode: 'channel-connecting',
         selection: { kind: 'buffer', bufferId: selectedBuffer.id },
-        connectionInstances: [network],
+        workspaceNetworks: [network],
         selectedNetwork: network,
         selectedRuntime: {
           phase: 'connecting',

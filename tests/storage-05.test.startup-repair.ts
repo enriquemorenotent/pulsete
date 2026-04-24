@@ -6,8 +6,7 @@ test('startup repair preserves explicit none auth methods on current schemas', (
   const file = makeStorageFile();
   const storage = new Storage(file);
   const network = storage.networks.upsert({
-    templateId: null,
-    managerHidden: false,
+    workspaceOpen: false,
     name: 'StoredSecretNet',
     host: 'irc.example.test',
     port: 6667,
@@ -30,7 +29,7 @@ test('startup repair preserves explicit none auth methods on current schemas', (
   assert.equal(reopenedNetwork?.hasPassword, true);
 });
 
-test('startup repair backfills legacy template columns for newer local schemas', () => {
+test('startup repair migrates newer local schemas to workspace networks', () => {
   const file = makeStorageFile();
   const existing = openSqliteDatabase(file);
   const now = Date.now();
@@ -180,9 +179,9 @@ test('startup repair backfills legacy template columns for newer local schemas',
   const columns = upgraded.prepare('PRAGMA table_info(networks)').all() as Array<{ name: string }>;
   upgraded.close();
 
-  assert.equal(network?.templateId, null);
-  assert.equal(network?.managerHidden, false);
+  assert.equal(network?.workspaceOpen, false);
   assert.deepEqual(network?.altNicks, ['tester_']);
-  assert.equal(columns.some((column) => column.name === 'templateId'), true);
-  assert.equal(columns.some((column) => column.name === 'managerHidden'), true);
+  assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
+  assert.equal(columns.some((column) => column.name === 'templateId'), false);
+  assert.equal(columns.some((column) => column.name === 'managerHidden'), false);
 });

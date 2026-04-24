@@ -4,8 +4,7 @@ import type { State } from '../../web/src/app-types.js';
 
 export const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
-  templateId: overrides.templateId ?? null,
-  managerHidden: overrides.managerHidden ?? false,
+  workspaceOpen: overrides.workspaceOpen ?? false,
   name: overrides.name ?? 'Libera.Chat',
   host: overrides.host ?? 'irc.libera.chat',
   port: overrides.port ?? 6697,

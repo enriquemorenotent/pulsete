@@ -4,16 +4,18 @@ import type { StorageSnapshotSource } from './storage-types.js';
 
 export const createStorageSnapshot = (store: StorageSnapshotSource): AppSnapshot => {
   const networks = store.listNetworks();
+  const workspaceNetworkIds = new Set(networks.filter((network) => network.workspaceOpen).map((network) => network.id));
+  const isWorkspaceItem = (item: { networkId: string }) => workspaceNetworkIds.has(item.networkId);
   return {
     networks,
     friends: store.listFriends(),
     mutedNicks: store.listMutedNicks(),
     friendPresence: {},
     queryPresence: {},
-    buffers: store.listBuffers(),
-    channels: store.listChannels(),
+    buffers: store.listBuffers().filter(isWorkspaceItem),
+    channels: store.listChannels().filter(isWorkspaceItem),
     pendingChannels: [],
-    messages: store.listRecentMessages(historyWindowLimit),
+    messages: store.listRecentMessages(historyWindowLimit).filter(isWorkspaceItem),
     networkStates: {},
   };
 };
