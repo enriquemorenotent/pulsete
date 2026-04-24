@@ -2,9 +2,15 @@ node_modules
 dist
 .vite
 *.sqlite
+*.sqlite.*
 *.sqlite-wal
+*.sqlite-wal.*
 *.sqlite-shm
+*.sqlite-shm.*
 data
+recovery/
 coverage
 playwright-report
 test-results
+current-ui.png
+main-space-fixed.png
