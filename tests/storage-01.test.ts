@@ -54,43 +54,26 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
   }));
 };
 
-test('snapshot seeds fixed local networks and no open buffers', () => {
+test('snapshot starts with no saved networks or open buffers', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
 
   const snapshot = storage.snapshot();
 
-  assert.deepEqual(
-    snapshot.networks.map((network) => [network.name, network.host, network.port, network.tls]),
-    [
-      ['Libera.Chat', 'irc.libera.chat', 6697, true],
-      ['OFTC', 'irc.oftc.net', 6697, true],
-      ['Snoonet', 'irc.snoonet.org', 6697, true],
-      ['IRCnet', 'irc.ircnet.com', 6667, false],
-    ]
-  );
-  assert.equal(snapshot.networks[0]?.nick, 'pulsete');
-  assert.deepEqual(snapshot.networks[0]?.altNicks, ['pulsete_', 'pulsete__']);
-  assert.deepEqual(snapshot.networks[0]?.historicalSelfNicks, []);
-  assert.equal(snapshot.networks[0]?.username, 'pulsete');
-  assert.equal(snapshot.networks[0]?.realName, 'Pulsete');
+  assert.deepEqual(snapshot.networks, []);
   assert.deepEqual(snapshot.buffers, []);
   assert.deepEqual(snapshot.friends, []);
   assert.deepEqual(snapshot.channels, []);
   assert.deepEqual(snapshot.messages, []);
 });
 
-test('listNetworks seeds fixed local networks without requiring a snapshot first', () => {
+test('listNetworks does not create saved networks implicitly', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
 
   const networks = storage.networks.list();
 
-  assert.equal(networks.length, 4);
-  assert.deepEqual(
-    networks.map((network) => network.name),
-    ['Libera.Chat', 'OFTC', 'Snoonet', 'IRCnet']
-  );
+  assert.deepEqual(networks, []);
 });
 
 test('storage persists local workspace buffers and messages', () => {

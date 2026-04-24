@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Action, AppDomainState } from '../web/src/app-types.js';
-import { openExistingNetworkEditor } from '../web/src/network-editor-actions.js';
+import { emptyNetworkForm } from '../web/src/network-form.js';
+import { openExistingNetworkEditor, openNewNetworkEditor } from '../web/src/network-editor-actions.js';
 
 const network: AppDomainState['networks'][number] = {
   id: 'saved-network-1',
@@ -22,6 +23,29 @@ const network: AppDomainState['networks'][number] = {
   favorite: false,
   autoJoin: [],
 };
+
+test('openNewNetworkEditor starts with an empty form instead of a placeholder identity', () => {
+  const actions: Action[] = [];
+
+  openNewNetworkEditor({
+    dispatch: (action) => {
+      actions.push(action);
+    },
+  });
+
+  assert.deepEqual(actions, [
+    {
+      type: 'open-network-editor',
+      managedNetworkId: null,
+      editor: {
+        kind: 'new',
+        tab: 'servers',
+        returnMode: 'manager',
+        form: emptyNetworkForm(),
+      },
+    },
+  ]);
+});
 
 test('openExistingNetworkEditor can target the servers tab and return to the closed state', () => {
   const actions: Action[] = [];

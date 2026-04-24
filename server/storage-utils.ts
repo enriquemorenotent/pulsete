@@ -2,7 +2,6 @@ import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRol
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState } from '../shared/protocol.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
-import { getLocalIrcIdentity } from '../shared/local-defaults.js';
 import type { SecretBox } from './network-secret.js';
 import type {
   BufferRow,
@@ -11,7 +10,6 @@ import type {
   MessageInput,
   MessageRow,
   MutedNickRow,
-  NetworkInput,
   NetworkRow,
   RuntimeNetworkProfile,
 } from './storage-types.js';
@@ -27,68 +25,6 @@ export const parseJson = <T>(value: string, fallback: T): T => {
 const parseChannelUsers = (value: string) => {
   const parsed = parseJson<Array<string | ChannelUserState>>(value, []);
   return sortChannelUsers(parsed.map(parseChannelUser).filter((user): user is ChannelUserState => user !== null));
-};
-
-export const defaultNetworkTemplates = (): NetworkInput[] => {
-  const identity = getLocalIrcIdentity();
-  return [
-    {
-      workspaceOpen: false,
-      name: 'Libera.Chat',
-      host: 'irc.libera.chat',
-      port: 6697,
-      tls: true,
-      nick: identity.nick,
-      altNicks: [...identity.altNicks],
-      historicalSelfNicks: [],
-      username: identity.username,
-      realName: identity.realName,
-      favorite: true,
-      autoJoin: [],
-    },
-    {
-      workspaceOpen: false,
-      name: 'OFTC',
-      host: 'irc.oftc.net',
-      port: 6697,
-      tls: true,
-      nick: identity.nick,
-      altNicks: [...identity.altNicks],
-      historicalSelfNicks: [],
-      username: identity.username,
-      realName: identity.realName,
-      favorite: true,
-      autoJoin: [],
-    },
-    {
-      workspaceOpen: false,
-      name: 'Snoonet',
-      host: 'irc.snoonet.org',
-      port: 6697,
-      tls: true,
-      nick: identity.nick,
-      altNicks: [...identity.altNicks],
-      historicalSelfNicks: [],
-      username: identity.username,
-      realName: identity.realName,
-      favorite: false,
-      autoJoin: [],
-    },
-    {
-      workspaceOpen: false,
-      name: 'IRCnet',
-      host: 'irc.ircnet.com',
-      port: 6667,
-      tls: false,
-      nick: identity.nick,
-      altNicks: [...identity.altNicks],
-      historicalSelfNicks: [],
-      username: identity.username,
-      realName: identity.realName,
-      favorite: false,
-      autoJoin: [],
-    },
-  ];
 };
 
 export const toNetworkProfile = (

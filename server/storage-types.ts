@@ -154,8 +154,4 @@ export type StorageSnapshotSource = {
   listRecentMessages(limit?: number): AppSnapshot['messages'];
 };
 
-export type CountRow = { count: number };
-
-export type NetworkCountRow = CountRow;
-
 export type ChannelUsers = ChannelUserState[];

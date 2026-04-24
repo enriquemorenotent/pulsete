@@ -10,7 +10,7 @@ import { Storage } from '../server/storage.js';
 import { listen,requestJson } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
 
-test('network routes are available without cookies', async () => {
+test('network routes start with no saved networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
@@ -19,7 +19,7 @@ test('network routes are available without cookies', async () => {
   try {
     const response = await requestJson(port, 'GET', '/api/networks');
     assert.equal(response.status, 200);
-    assert.equal((response.json.networks as unknown[]).length, 4);
+    assert.deepEqual(response.json.networks, []);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

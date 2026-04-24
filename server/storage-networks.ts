@@ -13,8 +13,8 @@ import { isEncryptedSecret } from './network-secret.js';
 import { badRequest, notFound } from './app-error.js';
 import type { SecretBox } from './network-secret.js';
 import { validatePasswordForAuthMethod } from './network-password.js';
-import type { NetworkCountRow, NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-types.js';
-import { defaultNetworkTemplates, encryptNetworkPassword, toNetworkProfile, toRuntimeNetworkProfile } from './storage-utils.js';
+import type { NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-types.js';
+import { encryptNetworkPassword, toNetworkProfile, toRuntimeNetworkProfile } from './storage-utils.js';
 
 const networkColumns =
   'id, workspaceOpen, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt';
@@ -22,16 +22,6 @@ const networkColumns =
 export const listNetworks = (db: SqliteDb): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY favorite DESC, createdAt ASC`;
   return (db.prepare(sql).all() as NetworkRow[]).map((row) => toNetworkProfile(row, readNetworkLists(db, row.id)));
-};
-
-export const ensureDefaultNetworks = (db: SqliteDb, saveNetwork: SaveNetwork) => {
-  const existing = db.prepare('SELECT COUNT(*) AS count FROM networks').get() as NetworkCountRow;
-  if (existing.count > 0) {
-    return;
-  }
-  for (const network of defaultNetworkTemplates()) {
-    saveNetwork(network);
-  }
 };
 
 export const getNetwork = (db: SqliteDb, networkId: string): StoredNetworkProfile | null => {
@@ -202,5 +192,3 @@ const requireStoredPasswordForAuthMethod = (authMethod: NetworkRow['authMethod']
     throw badRequest('Selected authentication method requires a saved password');
   }
 };
-
-type SaveNetwork = (input: NetworkInput) => StoredNetworkProfile;
