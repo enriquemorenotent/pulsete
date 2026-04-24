@@ -1,15 +1,20 @@
-import { Fragment, memo, useMemo, useState, type CSSProperties } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from './components/ui/dialog.js';
-import { tokenizeFormattedMessage, tokenizeStrippedMessage, type MessageTextPart } from './formatted-message.js';
-import { escapeIrcTextForDebug } from './irc-format.js';
+import { Fragment, memo, useMemo } from 'react';
+import {
+  parseFormattedMessageContent,
+  type ParsedFormattedMessageContent,
+} from './formatted-message-content.js';
+import { isInlineImageHref } from './formatted-message-inline-images.js';
+import { renderFormattedMessageParts } from './formatted-message-render-parts.js';
+import { FormattedMessageInlinePreviews } from './FormattedMessageInlinePreviews.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
-export type ParsedFormattedMessageContent = {
-  inlineImageHrefs: string[];
-  rawMode: boolean;
-  rawText: string;
-  tokens: ReturnType<typeof tokenizeFormattedMessage>;
-};
+export {
+  hasVisibleFormattedMessageText,
+  parseFormattedMessageContent,
+} from './formatted-message-content.js';
+export type { ParsedFormattedMessageContent } from './formatted-message-content.js';
+export { FormattedMessageInlinePreviews } from './FormattedMessageInlinePreviews.js';
+export { InlineImagePreviewDialogBody } from './InlineImagePreviewDialogBody.js';
 
 type FormattedMessageTextProps = {
   onInlinePreviewLoad?: () => void;
@@ -19,113 +24,6 @@ type FormattedMessageTextProps = {
   onOpenChannel: (channel: string) => void;
   mode?: MessageDisplayMode;
 };
-
-export const parseFormattedMessageContent = (
-  text: string,
-  mode: MessageDisplayMode | undefined,
-): ParsedFormattedMessageContent => {
-  if (mode === 'raw') {
-    return {
-      inlineImageHrefs: [],
-      rawMode: true,
-      rawText: escapeIrcTextForDebug(text),
-      tokens: [],
-    };
-  }
-  const tokens = mode === 'stripped'
-    ? tokenizeStrippedMessage(text)
-    : tokenizeFormattedMessage(text);
-  return {
-    inlineImageHrefs: collectInlineImageHrefs(tokens),
-    rawMode: false,
-    rawText: '',
-    tokens,
-  };
-};
-
-export const hasVisibleFormattedMessageText = (content: ParsedFormattedMessageContent) => {
-  if (content.rawMode) {
-    return content.rawText.trim().length > 0;
-  }
-  return content.tokens.some((token) => {
-    if (token.type === 'text' || token.type === 'channel') {
-      return token.parts.some((part) => part.text.trim().length > 0);
-    }
-    return !isInlineImageHref(token.href) && token.parts.some((part) => part.text.trim().length > 0);
-  });
-};
-
-export const FormattedMessageInlinePreviews = memo(function FormattedMessageInlinePreviews(
-  props: { hrefs: string[]; onInlinePreviewLoad?: () => void },
-) {
-  const [activeHref, setActiveHref] = useState<string | null>(null);
-
-  if (props.hrefs.length === 0) {
-    return null;
-  }
-
-  return (
-    <Dialog open={activeHref !== null} onOpenChange={(open) => !open && setActiveHref(null)}>
-      <span className="mt-2 flex flex-wrap gap-2">
-        {props.hrefs.map((href) => (
-          <button
-            key={href}
-            type="button"
-            onClick={() => setActiveHref(href)}
-            className="block max-w-full cursor-zoom-in overflow-hidden rounded-sm border border-border/80 bg-card/70 p-1 transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-          >
-            <img
-              src={href}
-              alt={buildImageAltText(href)}
-              loading="lazy"
-              decoding="async"
-              onError={props.onInlinePreviewLoad}
-              onLoad={props.onInlinePreviewLoad}
-              referrerPolicy="no-referrer"
-              className="block max-h-80 max-w-full rounded-sm object-contain"
-            />
-          </button>
-        ))}
-      </span>
-      {activeHref ? (
-        <DialogContent className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0">
-          <DialogTitle className="sr-only">{buildImageAltText(activeHref)}</DialogTitle>
-          <DialogDescription className="sr-only">Expanded inline image preview.</DialogDescription>
-          <InlineImagePreviewDialogBody href={activeHref} />
-        </DialogContent>
-      ) : null}
-    </Dialog>
-  );
-});
-
-export function InlineImagePreviewDialogBody(props: { href: string }) {
-  const altText = buildImageAltText(props.href);
-
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-0 flex-1 items-center justify-center bg-black/40 p-3 sm:p-4">
-        <img
-          src={props.href}
-          alt={altText}
-          decoding="async"
-          referrerPolicy="no-referrer"
-          className="block max-h-[calc(90dvh-5.5rem)] max-w-full object-contain"
-        />
-      </div>
-      <DialogFooter className="shrink-0 border-t border-white/8 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="min-w-0 truncate text-sm text-muted-foreground">{altText}</span>
-        <a
-          href={props.href}
-          target="_blank"
-          rel="noreferrer"
-          className="font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
-        >
-          Open original
-        </a>
-      </DialogFooter>
-    </div>
-  );
-}
 
 export const FormattedMessageText = memo(function FormattedMessageText(props: FormattedMessageTextProps) {
   const memoizedContent = useMemo(
@@ -141,9 +39,13 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
   return (
     <>
       {content.tokens.map((token, tokenIndex) => {
-        const content = renderParts(token.parts, token.type !== 'text', tokenIndex);
+        const renderedContent = renderFormattedMessageParts(
+          token.parts,
+          token.type !== 'text',
+          tokenIndex,
+        );
         if (token.type === 'text') {
-          return <Fragment key={`text-${tokenIndex}`}>{content}</Fragment>;
+          return <Fragment key={`text-${tokenIndex}`}>{renderedContent}</Fragment>;
         }
         if (token.type === 'channel') {
           return (
@@ -153,7 +55,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
               onClick={() => props.onOpenChannel(token.channel)}
               className="cursor-pointer appearance-none border-0 bg-transparent p-0 align-baseline font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
             >
-              {content}
+              {renderedContent}
             </button>
           );
         }
@@ -168,7 +70,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
             rel={token.external ? 'noreferrer' : undefined}
             className="font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
           >
-            {content}
+            {renderedContent}
           </a>
         );
       })}
@@ -181,116 +83,3 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
     </>
   );
 });
-
-const renderParts = (parts: MessageTextPart[], insideLink: boolean, tokenIndex: number) =>
-  parts.map((part, partIndex) => {
-    const style = resolveSpanStyle(part.style, insideLink);
-    if (!style) {
-      return part.text;
-    }
-    return (
-      <span key={`part-${tokenIndex}-${partIndex}`} style={style}>
-        {part.text}
-      </span>
-    );
-  });
-
-const resolveSpanStyle = (style: MessageTextPart['style'], insideLink: boolean): CSSProperties | null => {
-  const colors = resolveColors(style);
-  const decoration = [
-    !insideLink && style.underline ? 'underline' : null,
-    style.strikethrough ? 'line-through' : null,
-  ].filter(Boolean);
-
-  const spanStyle: CSSProperties = {
-    color: colors.foregroundColor ?? undefined,
-    backgroundColor: colors.backgroundColor ?? undefined,
-    fontWeight: style.bold ? 700 : undefined,
-    fontStyle: style.italic ? 'italic' : undefined,
-    fontFamily: style.monospace ? 'var(--font-mono)' : undefined,
-    textDecorationLine: decoration.length > 0 ? decoration.join(' ') : undefined,
-  };
-
-  return hasResolvedStyle(spanStyle) ? spanStyle : null;
-};
-
-const resolveColors = (style: MessageTextPart['style']) => {
-  if (!style.reverse) {
-    return {
-      foregroundColor: style.foregroundColor,
-      backgroundColor: style.backgroundColor,
-    };
-  }
-  return {
-    foregroundColor: style.backgroundColor ?? 'var(--background)',
-    backgroundColor: style.foregroundColor ?? 'var(--foreground)',
-  };
-};
-
-const hasResolvedStyle = (style: CSSProperties) =>
-  style.color !== undefined ||
-  style.backgroundColor !== undefined ||
-  style.fontWeight !== undefined ||
-  style.fontStyle !== undefined ||
-  style.fontFamily !== undefined ||
-  style.textDecorationLine !== undefined;
-
-const inlineImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp'];
-const inlineImageFormats = new Set(inlineImageExtensions.map((extension) => extension.slice(1)));
-const inlineImageFormatQueryKeys = new Set(['ext', 'fm', 'format']);
-
-const collectInlineImageHrefs = (tokens: ReturnType<typeof tokenizeFormattedMessage>) => {
-  const hrefs: string[] = [];
-  const seen = new Set<string>();
-  for (const token of tokens) {
-    if (token.type !== 'link' || !isInlineImageHref(token.href) || seen.has(token.href)) {
-      continue;
-    }
-    seen.add(token.href);
-    hrefs.push(token.href);
-  }
-  return hrefs;
-};
-
-const isInlineImageHref = (href: string) => {
-  try {
-    const url = new URL(href);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      return false;
-    }
-    const pathname = url.pathname.toLowerCase();
-    if (inlineImageExtensions.some((extension) => pathname.endsWith(extension))) {
-      return true;
-    }
-    return hasInlineImageFormatQuery(url);
-  } catch {
-    return false;
-  }
-};
-
-const hasInlineImageFormatQuery = (url: URL) => {
-  for (const [key, value] of url.searchParams) {
-    if (!inlineImageFormatQueryKeys.has(key.toLowerCase())) {
-      continue;
-    }
-    if (inlineImageFormats.has(normalizeInlineImageFormat(value))) {
-      return true;
-    }
-  }
-  return false;
-};
-
-const normalizeInlineImageFormat = (value: string) => {
-  const normalized = value.trim().toLowerCase().replace(/^image\//, '');
-  return normalized.startsWith('.') ? normalized.slice(1) : normalized;
-};
-
-const buildImageAltText = (href: string) => {
-  try {
-    const pathname = new URL(href).pathname;
-    const name = pathname.split('/').at(-1)?.trim();
-    return name ? `Inline image preview: ${name}` : 'Inline image preview';
-  } catch {
-    return 'Inline image preview';
-  }
-};
