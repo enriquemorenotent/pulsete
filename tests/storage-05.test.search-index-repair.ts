@@ -111,7 +111,7 @@ test('versioned storage migrations rebuild the message search index for existing
   const indexCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages_fts').get() as { count: number };
   upgraded.close();
 
-  assert.equal(version.user_version, 15);
+  assert.equal(version.user_version, 16);
   assert.deepEqual(searchResults.map((result) => result.message.id), ['message-1']);
   assert.equal(indexCount.count, 1);
 });

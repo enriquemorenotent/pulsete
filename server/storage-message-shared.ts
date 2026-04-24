@@ -1,6 +1,6 @@
 import type { SqliteDb } from './storage-sqlite.js';
 import type { MessageInput, MessagePage, MessageRow } from './storage-types.js';
-import { getStoredBufferByTarget } from './storage-buffers.js';
+import { resolveMessageBufferId } from './storage-query-aliases.js';
 import { toMessage } from './storage-utils.js';
 
 export const emptyMessagePage: MessagePage = { messages: [], hasMore: false };
@@ -28,7 +28,7 @@ export type MessageLookup = (messageId: string) => MessageInput | null;
 export type MessageCursor = { bufferId: string; rowid: number; ts: number };
 
 export const getMessageBufferId = (db: SqliteDb, networkId: string, target: string) =>
-  getStoredBufferByTarget(db, networkId, target)?.id ?? null;
+  resolveMessageBufferId(db, networkId, target);
 
 export const getMessageCursor = (db: SqliteDb, messageId: string) =>
   db.prepare('SELECT bufferId, rowid, ts FROM messages WHERE id = ?').get(messageId) as MessageCursor | undefined;

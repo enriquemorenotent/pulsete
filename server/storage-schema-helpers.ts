@@ -9,6 +9,22 @@ export const historyImportBatchesSchemaSql = `
   );
 `;
 
+export const queryNickAliasesSchemaSql = `
+  CREATE TABLE IF NOT EXISTS query_nick_aliases (
+    bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
+    networkId TEXT NOT NULL,
+    nick TEXT NOT NULL,
+    nickKey TEXT NOT NULL,
+    firstSeenAt INTEGER NOT NULL,
+    lastSeenAt INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    PRIMARY KEY (bufferId, nickKey)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_query_nick_aliases_network_nick
+    ON query_nick_aliases(networkId, nickKey, bufferId);
+`;
+
 const messagesSearchIndexTableSql = `
   CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
     USING fts5(
@@ -45,6 +61,10 @@ const messagesSearchIndexTriggersSql = (clause = '') => `
 
 export const ensureHistoryImportBatchesTable = (db: SqliteDb) => {
   db.exec(historyImportBatchesSchemaSql);
+};
+
+export const ensureQueryNickAliasesTable = (db: SqliteDb) => {
+  db.exec(queryNickAliasesSchemaSql);
 };
 
 export const ensureMessagesSearchIndex = (

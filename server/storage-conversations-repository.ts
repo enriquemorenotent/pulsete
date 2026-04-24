@@ -1,5 +1,5 @@
 import type { SqliteDb } from './storage-sqlite.js';
-import type { BufferState, ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState } from '../shared/protocol.js';
 import {
   appendMessage,
   createHistoryImportBatch,
@@ -18,13 +18,11 @@ import {
   searchMessages,
 } from './storage-messages.js';
 import {
-  deleteBuffer,
   deleteChannelByName,
   getBuffer,
   getBufferByTarget,
   getChannel,
   getChannelByName,
-  getStoredBufferByTarget,
   getServerBuffer,
   listBuffers,
   listChannels,
@@ -37,6 +35,7 @@ import {
   upsertChannel,
 } from './storage-buffers.js';
 import { runInTransaction } from './storage-db.js';
+import { renameQueryBuffer, upsertQueryBuffer } from './storage-query-aliases.js';
 import type { BufferInput, ChannelInput, HistoryImportBatchInput, MessageInput } from './storage-types.js';
 
 export class StorageConversationsRepository {
@@ -143,15 +142,18 @@ export class StorageConversationsRepository {
   }
 
   upsertBuffer(input: BufferInput) {
+    if (input.kind === 'query') {
+      return runInTransaction(this.db, () => upsertQueryBuffer(this.db, { ...input, kind: 'query' }));
+    }
     return upsertBuffer(this.db, input);
   }
 
   upsertQuery(networkId: string, target: string) {
-    return upsertBuffer(this.db, { networkId, kind: 'query', target });
+    return runInTransaction(this.db, () => upsertQueryBuffer(this.db, { networkId, kind: 'query', target }));
   }
 
   renameQuery(networkId: string, fromTarget: string, toTarget: string) {
-    return runInTransaction(this.db, () => renameQuery(this.db, networkId, fromTarget, toTarget));
+    return runInTransaction(this.db, () => renameQueryBuffer(this.db, networkId, fromTarget, toTarget));
   }
 
   appendMessage(input: MessageInput) {
@@ -177,64 +179,3 @@ export class StorageConversationsRepository {
     return getHistoryImportBatch(this.db, batchId);
   }
 }
-
-const renameQuery = (db: SqliteDb, networkId: string, fromTarget: string, toTarget: string) => {
-  const source = getStoredBufferByTarget(db, networkId, fromTarget);
-  if (source?.kind !== 'query') {
-    return null;
-  }
-
-  const destination = getStoredBufferByTarget(db, networkId, toTarget);
-  const mergedBuffer = destination?.kind === 'query' && destination.id !== source.id ? destination : null;
-  if (!mergedBuffer) {
-    return {
-      buffer: upsertBuffer(db, {
-        ...source,
-        target: toTarget,
-        isOpen: true,
-      }),
-      removedBufferId: null,
-    };
-  }
-
-  db.prepare('UPDATE messages SET bufferId = ? WHERE bufferId = ?').run(source.id, mergedBuffer.id);
-  db.prepare('UPDATE history_import_batches SET bufferId = ? WHERE bufferId = ?').run(source.id, mergedBuffer.id);
-  deleteBuffer(db, mergedBuffer.id);
-
-  return {
-    buffer: upsertBuffer(db, {
-      ...source,
-      target: toTarget,
-      isOpen: true,
-      unread: source.unread + mergedBuffer.unread,
-      priorityUnread: source.priorityUnread + mergedBuffer.priorityUnread,
-      ...pickLatestReadState(source, mergedBuffer),
-      selfNickAliases: mergeNickAliases(source.selfNickAliases ?? [], mergedBuffer.selfNickAliases ?? []),
-    }),
-    removedBufferId: mergedBuffer.id,
-  };
-};
-
-const mergeNickAliases = (left: string[], right: string[]) => [...new Set([...left, ...right])];
-
-const pickLatestReadState = (
-  source: BufferState,
-  merged: BufferState | null,
-) => {
-  if (!merged || merged.lastReadTs == null) {
-    return {
-      lastReadTs: source.lastReadTs,
-      lastReadMessageId: source.lastReadMessageId,
-    };
-  }
-  if (source.lastReadTs == null || merged.lastReadTs > source.lastReadTs) {
-    return {
-      lastReadTs: merged.lastReadTs,
-      lastReadMessageId: merged.lastReadMessageId,
-    };
-  }
-  return {
-    lastReadTs: source.lastReadTs,
-    lastReadMessageId: source.lastReadMessageId,
-  };
-};

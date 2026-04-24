@@ -1,13 +1,14 @@
 import type { SqliteDb } from './storage-sqlite.js';
 import { backfillQueryBufferSelfNickAliases } from './storage-migration-alias-backfill.js';
 import { migrateNormalizedStorage } from './storage-normalized-migration.js';
+import { migrateQueryNickAliases } from './storage-query-alias-migration.js';
 import {
   ensureHistoryImportBatchesTable,
   ensureMessagesSearchIndex,
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 15;
+export const currentStorageSchemaVersion = 16;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -130,6 +131,12 @@ const storageMigrations: readonly StorageMigration[] = [
     version: 15,
     apply: (db) => {
       ensureColumn(db, 'networks', 'connectionClosed', 'INTEGER NOT NULL DEFAULT 0');
+    },
+  },
+  {
+    version: 16,
+    apply: (db) => {
+      migrateQueryNickAliases(db);
     },
   },
 ];

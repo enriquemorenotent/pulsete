@@ -3,6 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage,type NetworkInput } from '../server/storage.js';
 import type { ChannelUserState } from '../shared/protocol.js';
 
@@ -127,6 +128,50 @@ test('buffer upserts reuse case-insensitive query and channel ids', () => {
   assert.equal(storage.conversations.listChannels(network.id).length, 1);
 });
 
+test('query alias resolution does not merge message-bearing exact nick conflicts', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  let storage = new Storage(file);
+  const network = createConnectionInstance(storage);
+  const original = storage.conversations.upsertQuery(network.id, 'Rust');
+  storage.conversations.appendMessage({
+    id: 'old-rust-message',
+    networkId: network.id,
+    target: 'Rust',
+    nick: 'Rust',
+    body: 'old identity',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.renameQuery(network.id, 'Rust', 'Rust-AFK');
+  const exact = storage.conversations.upsertBuffer({
+    id: 'exact-rust-buffer',
+    networkId: network.id,
+    kind: 'query',
+    target: 'Rust',
+  });
+  storage.close();
+
+  const db = openSqliteDatabase(file);
+  db.prepare(`
+    INSERT INTO messages
+      (id, bufferId, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, body, kind, self, ts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run('new-rust-message', exact.id, 'Rust', 'peer', 'Rust', 'runtime', 'high', 'new identity', 'line', 0, 2);
+  db.close();
+
+  storage = new Storage(file);
+  const opened = storage.conversations.upsertQuery(network.id, 'Rust');
+  const exactBodies = storage.conversations.listMessages(network.id, 'Rust', 10).map((message) => message.body);
+  const aliasBodies = storage.conversations.listMessages(network.id, 'Rust-AFK', 10).map((message) => message.body);
+
+  assert.equal(opened.id, exact.id);
+  assert.equal(opened.id !== original.id, true);
+  assert.deepEqual(exactBodies, ['new identity']);
+  assert.deepEqual(aliasBodies, ['old identity']);
+});
+
 test('storage rejects invalid template relationships', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -168,4 +213,3 @@ test('storage rejects invalid template relationships', () => {
     /Connection instances must reference an existing saved network/
   );
 });
-

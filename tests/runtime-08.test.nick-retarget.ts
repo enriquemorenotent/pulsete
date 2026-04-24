@@ -62,6 +62,39 @@ test('peer nick events retarget an open private message buffer and preserve tran
   ));
 });
 
+test('query opens reuse observed nick-change aliases after the current nick changes', () => {
+  const harness = createRuntimeEventHarness();
+  const query = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
+  harness.storage.conversations.appendMessage({
+    id: 'before-alias-open',
+    networkId: harness.network.id,
+    target: 'helper',
+    nick: 'helper',
+    body: 'before rename',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+
+  harness.publishEvent({
+    type: 'peer-nick',
+    networkId: harness.network.id,
+    oldNick: 'helper',
+    newNick: 'guide',
+    self: false,
+  });
+
+  const reopened = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
+  const messages = harness.storage.conversations.listMessages(harness.network.id, 'helper', 10);
+
+  assert.equal(reopened.id, query.id);
+  assert.equal(reopened.target, 'helper');
+  assert.deepEqual(messages.map((message) => message.body), [
+    'before rename',
+    'helper is now known as guide',
+  ]);
+});
+
 test('peer nick events merge an existing destination query buffer into the original private message', () => {
   const harness = createRuntimeEventHarness();
   const originalQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');

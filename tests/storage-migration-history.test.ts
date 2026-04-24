@@ -38,7 +38,7 @@ test('legacy formatting upgrade preserves messages, unread counts, and a backup'
   `).get() as { id: string; bufferId: string; networkId: string; target: string; body: string } | undefined;
   upgraded.close();
 
-  assert.equal(version.user_version, 15);
+  assert.equal(version.user_version, 16);
   assert.equal(count.count, 1);
   assert.deepEqual(migrated, {
     id: 'message-1',
@@ -132,7 +132,7 @@ const createLegacyFormattingDatabase = (file: string, now: number) => {
 const readBackupMessageCount = (dir: string) => {
   const backupDir = join(dir, 'backups');
   const backupFiles = readdirSync(backupDir)
-    .filter((name) => name.includes('pre-migration-v0-to-v15') && name.endsWith('.sqlite'));
+    .filter((name) => name.includes('pre-migration-v0-to-v16') && name.endsWith('.sqlite'));
   assert.equal(backupFiles.length, 1);
 
   const backup = openSqliteDatabase(join(backupDir, backupFiles[0]!));

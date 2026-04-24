@@ -109,7 +109,7 @@ test('versioned storage migrations add template metadata columns incrementally',
   assert.deepEqual(network?.altNicks, ['tester_', 'tester__']);
   assert.deepEqual(network?.historicalSelfNicks, []);
   assert.deepEqual(network?.autoJoin, []);
-  assert.equal(version.user_version, 15);
+  assert.equal(version.user_version, 16);
   assert.equal(columns.some((column) => column.name === 'templateId'), true);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), true);
   assert.equal(columns.some((column) => column.name === 'connectionClosed'), true);

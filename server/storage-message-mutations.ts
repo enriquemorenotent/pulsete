@@ -4,6 +4,7 @@ import {
   resolveRuntimeMessageAttribution,
 } from './message-attribution.js';
 import { upsertBuffer } from './storage-buffers.js';
+import { upsertQueryBuffer } from './storage-query-aliases.js';
 import {
   buildIdPrefixWhereClause,
   getMessageBufferId,
@@ -93,12 +94,14 @@ const ensureMessageBufferId = (db: SqliteDb, input: MessageInput) => {
   }
 
   const kind = resolveMessageBufferKind(input.target);
-  const buffer = upsertBuffer(db, {
-    networkId: input.networkId,
-    kind,
-    target: input.target,
-    isOpen: kind === 'server',
-  });
+  const buffer = kind === 'query'
+    ? upsertQueryBuffer(db, { networkId: input.networkId, kind, target: input.target, isOpen: false })
+    : upsertBuffer(db, {
+        networkId: input.networkId,
+        kind,
+        target: input.target,
+        isOpen: kind === 'server',
+      });
   if (kind === 'channel') {
     ensureChannelDetails(db, buffer.id);
   }

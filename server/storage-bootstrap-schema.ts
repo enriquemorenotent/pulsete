@@ -1,5 +1,6 @@
 import {
   historyImportBatchesSchemaSql,
+  queryNickAliasesSchemaSql,
 } from './storage-schema-helpers.js';
 
 export const storageBootstrapSchemaSql = `
@@ -104,6 +105,8 @@ export const storageBootstrapSchemaSql = `
   );
 
 ${historyImportBatchesSchemaSql}
+
+${queryNickAliasesSchemaSql}
 
   CREATE TABLE IF NOT EXISTS friends (
     id TEXT PRIMARY KEY,
