@@ -142,7 +142,7 @@ test('query alias resolution does not merge message-bearing exact nick conflicts
     self: false,
     ts: 1,
   });
-  storage.conversations.renameQuery(network.id, 'Rust', 'Rust-AFK');
+  storage.conversations.recordObservedQueryNickChange(network.id, 'Rust', 'Rust-AFK');
   const exact = storage.conversations.upsertBuffer({
     id: 'exact-rust-buffer',
     networkId: network.id,

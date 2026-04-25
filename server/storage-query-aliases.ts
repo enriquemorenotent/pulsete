@@ -97,7 +97,12 @@ export const upsertQueryBuffer = (db: SqliteDb, input: QueryBufferInput) => {
   return buffer;
 };
 
-export const renameQueryBuffer = (db: SqliteDb, networkId: string, fromTarget: string, toTarget: string) => {
+export const recordObservedQueryNickChange = (
+  db: SqliteDb,
+  networkId: string,
+  fromTarget: string,
+  toTarget: string,
+) => {
   const sourceId = resolveQueryBufferId(db, networkId, fromTarget);
   const source = sourceId ? getBuffer(db, sourceId) : null;
   if (source?.kind !== 'query') {

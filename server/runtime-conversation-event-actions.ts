@@ -133,7 +133,11 @@ export const handleRuntimeConversationPeerNickEvent = (
   const messages: ServerMessage[] = [];
   let queryTarget: string | null = null;
   if (!event.self) {
-    const renamed = options.conversations.renameQuery(event.networkId, event.oldNick, event.newNick);
+    const renamed = options.conversations.recordObservedQueryNickChange(
+      event.networkId,
+      event.oldNick,
+      event.newNick,
+    );
     if (renamed) {
       queryTarget = renamed.buffer.target;
       messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });

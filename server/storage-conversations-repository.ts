@@ -32,7 +32,7 @@ import {
   upsertChannel,
 } from './storage-buffers.js';
 import { runInTransaction } from './storage-db.js';
-import { renameQueryBuffer, upsertQueryBuffer } from './storage-query-aliases.js';
+import { recordObservedQueryNickChange, upsertQueryBuffer } from './storage-query-aliases.js';
 import type { BufferInput, ChannelInput, MessageInput } from './storage-types.js';
 
 export class StorageConversationsRepository {
@@ -149,8 +149,10 @@ export class StorageConversationsRepository {
     return runInTransaction(this.db, () => upsertQueryBuffer(this.db, { networkId, kind: 'query', target }));
   }
 
-  renameQuery(networkId: string, fromTarget: string, toTarget: string) {
-    return runInTransaction(this.db, () => renameQueryBuffer(this.db, networkId, fromTarget, toTarget));
+  recordObservedQueryNickChange(networkId: string, fromTarget: string, toTarget: string) {
+    return runInTransaction(this.db, () =>
+      recordObservedQueryNickChange(this.db, networkId, fromTarget, toTarget)
+    );
   }
 
   appendMessage(input: MessageInput) {

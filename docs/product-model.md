@@ -90,6 +90,11 @@ migration or repair, but message-bearing conflicts should not be rewritten into
 one transcript unless the app has strong evidence they represent the same
 conversation.
 
+Nick-change continuity is convenience from directly observed IRC events, not
+proof of a stable person identity. The app may retarget or merge private-message
+buffers when it saw the nick change happen, but ambiguous alias matches should
+stay separate.
+
 `selfNickAliases` records the user's historical self nicks for a query buffer.
 This supports old imported or migrated history where "me" was known by a
 different nick at the time.

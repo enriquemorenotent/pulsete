@@ -54,7 +54,7 @@ export type RuntimeConversationStore = {
   upsertChannel(input: ChannelInput): ChannelState;
   upsertBuffer(input: BufferInput): BufferState;
   upsertQuery(networkId: string, target: string): BufferState;
-  renameQuery(
+  recordObservedQueryNickChange(
     networkId: string,
     fromTarget: string,
     toTarget: string,

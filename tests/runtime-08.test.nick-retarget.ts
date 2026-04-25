@@ -148,3 +148,54 @@ test('peer nick events merge an existing destination query buffer into the origi
     bufferId: renamedQuery.id,
   });
 });
+
+test('self nick events do not retarget peer private messages', () => {
+  const harness = createRuntimeEventHarness();
+  const query = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
+  harness.storage.conversations.appendMessage({
+    id: 'peer-message-before-self-nick',
+    networkId: harness.network.id,
+    target: 'helper',
+    nick: 'helper',
+    body: 'peer message',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+
+  harness.publishEvent({
+    type: 'peer-nick',
+    networkId: harness.network.id,
+    oldNick: 'tester',
+    newNick: 'tester_',
+    self: true,
+  });
+
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'helper')?.id, query.id);
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'tester_'), null);
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'helper', 10).map((message) => message.body),
+    ['peer message'],
+  );
+});
+
+test('peer nick events without an existing query do not create a private message buffer', () => {
+  const harness = createRuntimeEventHarness();
+
+  harness.publishEvent({
+    type: 'peer-nick',
+    networkId: harness.network.id,
+    oldNick: 'helper',
+    newNick: 'guide',
+    self: false,
+  });
+
+  const queryBuffers = harness.storage.conversations
+    .listBuffers(harness.network.id)
+    .filter((buffer) => buffer.kind === 'query');
+  assert.deepEqual(queryBuffers, []);
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'server', 10).map((message) => message.body),
+    ['helper is now known as guide'],
+  );
+});
