@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { connectSocket } from '../web/src/client.js';
+import { api, connectSocket } from '../web/src/client.js';
 import { gatewaySocketClosedMessage,getGatewayReconnectDelayMs } from '../web/src/gateway.js';
 
 class FakeWebSocket {
@@ -173,4 +173,29 @@ test('gateway reconnect backoff caps after the second retry', () => {
   assert.equal(getGatewayReconnectDelayMs(2), 5_000);
   assert.equal(getGatewayReconnectDelayMs(5), 5_000);
   assert.equal(gatewaySocketClosedMessage, 'Gateway socket is not open');
+});
+
+test('searchBufferHistory calls the buffer-scoped history search endpoint', async () => {
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: string[] = [];
+  globalThis.fetch = (async (input) => {
+    fetchCalls.push(String(input));
+    return new Response(JSON.stringify({
+      query: 'needle',
+      results: [],
+      hasMore: false,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  try {
+    const payload = await api.searchBufferHistory('buffer-1', 'needle', 7);
+
+    assert.deepEqual(fetchCalls, ['/api/buffers/buffer-1/history/search?q=needle&limit=7']);
+    assert.deepEqual(payload, { query: 'needle', results: [], hasMore: false });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

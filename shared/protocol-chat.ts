@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
 export const historyWindowLimit = 250;
+export const historySearchLimit = 50;
+export const historySearchContextBefore = 2;
+export const historySearchContextAfter = 2;
 
 export const messageKindSchema = z.enum(['line', 'action', 'join', 'part', 'quit', 'notice', 'error', 'system']);
 export type MessageKind = z.infer<typeof messageKindSchema>;
@@ -36,6 +39,17 @@ export const chatMessageSchema = z.object({
   ts: z.number(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+export type BufferHistorySearchResult = {
+  message: ChatMessage;
+  context: ChatMessage[];
+};
+
+export type BufferHistorySearchPayload = {
+  query: string;
+  results: BufferHistorySearchResult[];
+  hasMore: boolean;
+};
 
 export const networkAuthMethodSchema = z.enum(['none', 'server-pass', 'nickserv', 'sasl-plain']);
 export type NetworkAuthMethod = z.infer<typeof networkAuthMethodSchema>;

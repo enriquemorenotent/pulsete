@@ -20,7 +20,7 @@ import {
   insertLegacyBufferMapSql,
   messageConversationsSql,
 } from './storage-normalized-migration-sql.js';
-import { ensureMessagesSearchIndex } from './storage-schema-helpers.js';
+import { dropLegacyMessageSearchArtifacts } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 import type { SqliteDb, SqliteStatement } from './storage-sqlite.js';
 
@@ -84,10 +84,7 @@ export const migrateNormalizedStorage = (db: SqliteDb, helpers: MigrationHelpers
   db.exec('BEGIN IMMEDIATE');
   try {
     dropNormalizedStorageScratchTables(db);
-    db.exec('DROP TRIGGER IF EXISTS messages_ai');
-    db.exec('DROP TRIGGER IF EXISTS messages_ad');
-    db.exec('DROP TRIGGER IF EXISTS messages_au');
-    db.exec('DROP TABLE IF EXISTS messages_fts');
+    dropLegacyMessageSearchArtifacts(db);
     db.exec('DROP TABLE IF EXISTS network_alt_nicks');
     db.exec('DROP TABLE IF EXISTS network_historical_self_nicks');
     db.exec('DROP TABLE IF EXISTS network_auto_join_channels');
@@ -157,7 +154,6 @@ export const migrateNormalizedStorage = (db: SqliteDb, helpers: MigrationHelpers
     db.exec(storageBootstrapSchemaSql);
     applyOwnedLists(db, networkLists, bufferAliases);
     dropNormalizedStorageScratchTables(db);
-    ensureMessagesSearchIndex(db, true, helpers.tableExists);
     db.exec('COMMIT');
   } catch (error) {
     try {

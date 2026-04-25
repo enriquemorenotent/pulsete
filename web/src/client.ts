@@ -1,7 +1,9 @@
 import {
+  historySearchLimit,
   historyWindowLimit,
   type ServerMessage,
   type BufferState,
+  type BufferHistorySearchPayload,
   type FriendState,
   type MutedNickState,
   type NetworkProfile,
@@ -77,6 +79,12 @@ export const api = {
       searchParams.set('before', beforeMessageId);
     }
     return apiRequest<BufferHistoryPayload>(`/api/buffers/${bufferId}/history?${searchParams.toString()}`);
+  },
+  searchBufferHistory: (bufferId: string, query: string, limit = historySearchLimit) => {
+    const searchParams = new URLSearchParams({ q: query, limit: String(limit) });
+    return apiRequest<BufferHistorySearchPayload>(
+      `/api/buffers/${bufferId}/history/search?${searchParams.toString()}`,
+    );
   },
   downloadBufferHistory: async (bufferId: string) => {
     const response = await fetch(`/api/buffers/${bufferId}/history/download`);

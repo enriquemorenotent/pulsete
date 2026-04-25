@@ -5,8 +5,8 @@ export {
   listAllMessages,
   listOpeningMessages,
   listRecentMessagesForBuffer,
+  searchMessagesByBufferId,
   getMessageWindow,
-  searchMessages,
   listRecentMessages,
 } from './storage-message-queries.js';
 export {

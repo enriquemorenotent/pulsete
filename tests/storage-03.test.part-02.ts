@@ -80,7 +80,7 @@ test('message history preserves insertion order when timestamps match', () => {
   );
 });
 
-test('search helpers stay scoped to the selected transcript and expose stable evidence windows', () => {
+test('message window helpers stay scoped to the selected transcript', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = createConnectionInstance(storage);
@@ -125,11 +125,62 @@ test('search helpers stay scoped to the selected transcript and expose stable ev
     ts: 4,
   });
 
-  const matches = storage.conversations.searchMessages(network.id, 'missd', 'hotel', 10);
-
-  assert.deepEqual(matches.map((match) => match.message.id).sort(), ['missd-1', 'missd-2', 'missd-3']);
   assert.deepEqual(storage.conversations.listOpeningMessages(network.id, 'MISSD', 2), [first, second]);
   assert.deepEqual(storage.conversations.getMessageWindow(second.id, 1, 1), [first, second, third]);
+});
+
+test('message history search stays literal and scoped to the selected buffer', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+  const buffer = storage.conversations.upsertQuery(network.id, 'MissD');
+  const append = (id: string, body: string, ts: number, target = 'MissD', nick: string | null = 'MissD') =>
+    storage.conversations.appendMessage({
+      id,
+      networkId: network.id,
+      target,
+      nick,
+      body,
+      kind: 'line',
+      self: false,
+      ts,
+    });
+  append('message-cpp', 'c++ topic', 1);
+  append('message-csharp', 'literal C# room', 2);
+  append('message-hotel-room', 'room in hotel', 3);
+  append('message-unicode', 'MÄR example', 4);
+  append('message-nick', 'plain body', 5, 'MissD', 'Alice');
+  storage.conversations.appendMessage({
+    id: 'message-speaker',
+    networkId: network.id,
+    target: 'MissD',
+    nick: null,
+    speakerRole: 'self',
+    speakerNick: 'Sofia',
+    attributionSource: 'runtime',
+    attributionConfidence: 'high',
+    body: 'speaker only',
+    kind: 'line',
+    self: true,
+    ts: 6,
+  });
+  append('message-cap-new', 'cap me', 8);
+  append('message-cap-old', 'cap me', 0);
+  append('other-buffer', 'c++ topic in another query', 7, 'MissProxima');
+
+  const searchIds = (query: string, limit = 10) =>
+    storage.conversations.searchMessagesByBufferId(buffer.id, query, limit).messages.map((message) => message.id);
+
+  assert.deepEqual(searchIds('c++'), ['message-cpp']);
+  assert.deepEqual(searchIds('C# room'), ['message-csharp']);
+  assert.deepEqual(searchIds('hotel room'), ['message-hotel-room']);
+  assert.deepEqual(searchIds('mÄr'), ['message-unicode']);
+  assert.deepEqual(searchIds('alice'), ['message-nick']);
+  assert.deepEqual(searchIds('sofia'), ['message-speaker']);
+
+  const capped = storage.conversations.searchMessagesByBufferId(buffer.id, 'cap', 1);
+  assert.deepEqual(capped.messages.map((message) => message.id), ['message-cap-new']);
+  assert.equal(capped.hasMore, true);
 });
 
 test('deleteMessagesByIdPrefixes removes matching rows without touching normal messages', () => {
@@ -172,58 +223,4 @@ test('deleteMessagesByIdPrefixes removes matching rows without touching normal m
   assert.deepEqual(deleted.map((message) => message.id), ['rollback:turn-1:0', 'rollback:turn-2:0']);
   assert.deepEqual(storage.conversations.listMessages(network.id, '#help', 10), [preserved]);
   assert.equal(storage.conversations.getMessageById(matched.id), null);
-});
-
-test('searchMessages stays in sync when transcript rows are deleted', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
-  const storage = new Storage(join(dir, 'db.sqlite'));
-  const network = createConnectionInstance(storage);
-  storage.conversations.appendMessage({
-    id: 'rollback:turn-1:0',
-    networkId: network.id,
-    target: 'Alice',
-    nick: 'alice',
-    body: 'The hotel fantasy starts here.',
-    kind: 'line',
-    self: false,
-    ts: 1,
-  });
-  storage.conversations.appendMessage({
-    id: 'message-keep',
-    networkId: network.id,
-    target: 'Alice',
-    nick: 'tester',
-    body: 'ordinary follow-up',
-    kind: 'line',
-    self: true,
-    ts: 2,
-  });
-
-  assert.deepEqual(
-    storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10).map((match) => match.message.id),
-    ['rollback:turn-1:0'],
-  );
-
-  storage.conversations.deleteMessagesByIdPrefixes(['rollback:turn-1:']);
-
-  assert.deepEqual(storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10), []);
-
-  storage.conversations.appendMessage({
-    id: 'message-2',
-    networkId: network.id,
-    target: 'alice',
-    nick: 'alice',
-    body: 'Another hotel clue appears later.',
-    kind: 'line',
-    self: false,
-    ts: 3,
-  });
-  assert.deepEqual(
-    storage.conversations.searchMessages(network.id, 'ALICE', 'hotel', 10).map((match) => match.message.id),
-    ['message-2'],
-  );
-
-  storage.conversations.deleteMessages(network.id, 'Alice');
-
-  assert.deepEqual(storage.conversations.searchMessages(network.id, 'alice', 'hotel', 10), []);
 });

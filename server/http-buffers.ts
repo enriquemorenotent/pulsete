@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { badRequest } from './app-error.js';
-import { historyWindowLimit } from '../shared/protocol.js';
+import { historySearchLimit, historyWindowLimit } from '../shared/protocol.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import { normalizeChannelTarget } from './irc-validate.js';
 import type { RouteArgs } from './http-types.js';
@@ -47,7 +47,16 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   }
 
   const historyMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history$/);
+  const historySearchMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/search$/);
   const downloadMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/download$/);
+  if (historySearchMatch && req.method === 'GET') {
+    const bufferId = decodeRouteParam(historySearchMatch[1]);
+    const query = normalizeHistorySearchQuery(url.searchParams.get('q'));
+    const limit = normalizeHistorySearchLimit(url.searchParams.get('limit'));
+    writeJson(res, 200, context.buffers.searchHistory(bufferId, query, limit));
+    return true;
+  }
+
   if (downloadMatch && req.method === 'GET') {
     const bufferId = decodeRouteParam(downloadMatch[1]);
     const download = context.buffers.exportHistory(bufferId);
@@ -74,6 +83,13 @@ const normalizeHistoryLimit = (value: string | null) => {
 const normalizeHistoryBefore = (value: string | null) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+};
+
+const normalizeHistorySearchQuery = (value: string | null) => value?.trim() ?? '';
+
+const normalizeHistorySearchLimit = (value: string | null) => {
+  const limit = Number(value ?? historySearchLimit);
+  return Number.isInteger(limit) && limit > 0 ? Math.min(limit, historySearchLimit) : historySearchLimit;
 };
 
 const readChannelTarget = (body: unknown) => {

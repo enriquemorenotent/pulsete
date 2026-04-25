@@ -97,10 +97,14 @@ export const createConversationActions = ({
     }
   };
 
+  const searchBufferHistory = (bufferId: string, query: string) =>
+    api.searchBufferHistory(bufferId, query);
+
   return {
     downloadBufferHistory,
     joinChannel,
     openOrSelectQueryBuffer,
     openChannelListForNetwork,
+    searchBufferHistory,
   };
 };

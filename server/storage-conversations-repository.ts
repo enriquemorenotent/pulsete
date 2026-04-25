@@ -12,7 +12,7 @@ import {
   listMessages,
   listRecentMessagesForBuffer,
   listRecentMessages,
-  searchMessages,
+  searchMessagesByBufferId,
 } from './storage-messages.js';
 import {
   deleteChannelByName,
@@ -114,12 +114,12 @@ export class StorageConversationsRepository {
     return listRecentMessagesForBuffer(this.db, networkId, target, limit);
   }
 
-  getMessageWindow(messageId: string, before: number, after: number) {
-    return getMessageWindow(this.db, messageId, before, after);
+  searchMessagesByBufferId(bufferId: string, query: string, limit: number) {
+    return searchMessagesByBufferId(this.db, bufferId, query, limit);
   }
 
-  searchMessages(networkId: string, target: string, query: string, limit: number) {
-    return searchMessages(this.db, networkId, target, query, limit);
+  getMessageWindow(messageId: string, before: number, after: number) {
+    return getMessageWindow(this.db, messageId, before, after);
   }
 
   listRecentMessages(limit = 200) {

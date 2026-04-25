@@ -1,5 +1,6 @@
 import { memo, useCallback, useReducer } from 'react';
 import type {
+  BufferHistorySearchPayload,
   BufferState,
   ChatMessage,
   FriendState,
@@ -11,6 +12,7 @@ import { ChatPaneComposer } from './ChatPaneComposer.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
+import { HistorySearchDialog } from './HistorySearchDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -42,6 +44,8 @@ export type ChatPaneProps = {
   onToggleChannelAutoJoin: () => Promise<boolean>;
   canDownloadHistory?: boolean;
   onDownloadHistory?: () => Promise<boolean>;
+  canSearchHistory?: boolean;
+  onSearchHistory?: (bufferId: string, query: string) => Promise<BufferHistorySearchPayload>;
   canLoadOlderHistory?: boolean;
   initialHistoryPending?: boolean;
   loadingOlderHistory?: boolean;
@@ -67,6 +71,11 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
     props.workspace.mode === 'server-offline';
+  const [historySearchOpen, setHistorySearchOpen] = useReducer(
+    (_open: boolean, nextOpen: boolean) => nextOpen,
+    false,
+  );
+  const searchableBuffer = props.canSearchHistory ? props.workspace.selectedBuffer : null;
   const handleSend = useCallback(async () => {
     const submitted = await props.onSend();
     if (submitted) {
@@ -94,6 +103,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}
         canDownloadHistory={props.canDownloadHistory}
         onDownloadHistory={props.onDownloadHistory}
+        canSearchHistory={props.canSearchHistory}
+        onOpenHistorySearch={() => setHistorySearchOpen(true)}
         onCloseChannel={props.onCloseChannel}
         onCloseBuffer={props.onCloseBuffer}
         onOpenChannelList={props.onOpenChannelList}
@@ -139,6 +150,14 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         state={props.channelList}
         onClose={props.onCloseChannelList}
         onJoin={props.onJoinChannelFromList}
+      />
+      <HistorySearchDialog
+        open={historySearchOpen && Boolean(searchableBuffer && props.onSearchHistory)}
+        buffer={searchableBuffer}
+        mode={props.messageDisplayMode}
+        onOpenChange={setHistorySearchOpen}
+        onOpenChannel={props.onOpenMentionedChannel}
+        onSearch={props.onSearchHistory}
       />
     </section>
   );

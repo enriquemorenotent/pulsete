@@ -13,9 +13,11 @@ type ResolveChatPaneHeaderActionsContext = {
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   canDownloadHistory?: boolean;
+  canSearchHistory?: boolean;
   onWhoisSelectedQuery?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
+  onOpenHistorySearch?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -97,6 +99,14 @@ const resolveOverflowActions = (
       onSelect: () => {
         void context.onToggleChannelAutoJoin();
       },
+    });
+  }
+
+  if (context.canSearchHistory && context.onOpenHistorySearch) {
+    overflow.push({
+      id: 'search-history',
+      label: 'Search history',
+      onSelect: context.onOpenHistorySearch,
     });
   }
 

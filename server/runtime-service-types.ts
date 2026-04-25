@@ -33,6 +33,7 @@ export type RuntimeConversationMutations = {
   closeBuffer(bufferId: string): { buffer: BufferState; messages: readonly ServerMessage[] };
   markBufferRead: RuntimeConversationService['markBufferRead'];
   history: RuntimeConversationService['listBufferHistory'];
+  searchHistory: RuntimeConversationService['searchBufferHistory'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
 };
 
@@ -70,6 +71,7 @@ export type RuntimeHttpApi = {
     close: RuntimeConversationMutations['closeBuffer'];
     markRead: RuntimeConversationMutations['markBufferRead'];
     history: RuntimeConversationMutations['history'];
+    searchHistory: RuntimeConversationMutations['searchHistory'];
     exportHistory: RuntimeConversationMutations['exportHistory'];
   };
   friends: {

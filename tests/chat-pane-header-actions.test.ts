@@ -72,9 +72,11 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   showChannelAutoJoin: false,
   channelAutoJoinActive: false,
   canDownloadHistory: false,
+  canSearchHistory: false,
   onWhoisSelectedQuery: () => undefined,
   onToggleChannelAutoJoin: async () => true,
   onDownloadHistory: async () => true,
+  onOpenHistorySearch: () => undefined,
   onCloseChannel: () => undefined,
   onCloseBuffer: () => undefined,
   onOpenChannelList: () => undefined,
@@ -91,6 +93,18 @@ test('channel header actions keep close primary and move maintenance actions int
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close'],
     overflow: ['Autojoin On', 'Download history'],
+  });
+});
+
+test('channel header actions expose history search when the selected buffer supports it', () => {
+  const actions = resolveChatPaneHeaderActions(createContext({
+    canSearchHistory: true,
+    canDownloadHistory: true,
+  }));
+
+  assert.deepEqual(resolveActionLabels(actions), {
+    primary: ['Close'],
+    overflow: ['Search history', 'Download history'],
   });
 });
 

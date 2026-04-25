@@ -4,12 +4,12 @@ import { migrateNormalizedStorage } from './storage-normalized-migration.js';
 import { migrateQueryNickAliases } from './storage-query-alias-migration.js';
 import { migrateWorkspaceNetworks } from './storage-workspace-migration.js';
 import {
+  dropLegacyMessageSearchArtifacts,
   ensureHistoryImportBatchesTable,
-  ensureMessagesSearchIndex,
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 17;
+export const currentStorageSchemaVersion = 18;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -66,11 +66,7 @@ const storageMigrations: readonly StorageMigration[] = [
   },
   {
     version: 8,
-    apply: (db) => {
-      if (tableHasColumn(db, 'messages', 'bufferId')) {
-        ensureMessagesSearchIndex(db, true, tableExists);
-      }
-    },
+    apply: () => {},
   },
   {
     version: 9,
@@ -143,7 +139,13 @@ const storageMigrations: readonly StorageMigration[] = [
   {
     version: 17,
     apply: (db) => {
-      migrateWorkspaceNetworks(db, tableExists);
+      migrateWorkspaceNetworks(db);
+    },
+  },
+  {
+    version: 18,
+    apply: (db) => {
+      dropLegacyMessageSearchArtifacts(db);
     },
   },
 ];
@@ -168,9 +170,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
     }
   }
   ensureCurrentNetworkColumns(db);
-  if (tableHasColumn(db, 'messages', 'bufferId')) {
-    ensureMessagesSearchIndex(db, false, tableExists);
-  }
+  dropLegacyMessageSearchArtifacts(db);
 };
 
 export const tableExists = (db: SqliteDb, table: string) =>

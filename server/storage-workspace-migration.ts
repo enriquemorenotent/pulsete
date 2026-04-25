@@ -1,24 +1,21 @@
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
-import { ensureMessagesSearchIndex } from './storage-schema-helpers.js';
+import { dropLegacyMessageSearchArtifacts } from './storage-schema-helpers.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import { migrateWorkspaceData } from './storage-workspace-migration-core.js';
 import { createWorkspaceMigrationTablesSql } from './storage-workspace-migration-sql.js';
 
-export const migrateWorkspaceNetworks = (
-  db: SqliteDb,
-  tableExists: (db: SqliteDb, table: string) => boolean,
-) => {
+export const migrateWorkspaceNetworks = (db: SqliteDb) => {
   db.exec('PRAGMA foreign_keys = OFF');
   db.exec('BEGIN IMMEDIATE');
   try {
     dropScratch(db);
-    dropMessageSearch(db);
+    dropLegacyMessageSearchArtifacts(db);
     ensureLegacyWorkspaceColumns(db);
     db.exec(createWorkspaceMigrationTablesSql);
     migrateWorkspaceData(db);
     swapTables(db);
     db.exec(storageBootstrapSchemaSql);
-    ensureMessagesSearchIndex(db, true, tableExists);
+    dropLegacyMessageSearchArtifacts(db);
     db.exec('COMMIT');
   } catch (error) {
     try {
@@ -30,15 +27,6 @@ export const migrateWorkspaceNetworks = (
   } finally {
     db.exec('PRAGMA foreign_keys = ON');
   }
-};
-
-const dropMessageSearch = (db: SqliteDb) => {
-  db.exec(`
-    DROP TRIGGER IF EXISTS messages_ai;
-    DROP TRIGGER IF EXISTS messages_ad;
-    DROP TRIGGER IF EXISTS messages_au;
-    DROP TABLE IF EXISTS messages_fts;
-  `);
 };
 
 const ensureLegacyWorkspaceColumns = (db: SqliteDb) => {

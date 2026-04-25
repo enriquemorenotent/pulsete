@@ -1,4 +1,5 @@
 import type {
+  BufferHistorySearchPayload,
   BufferState,
   ClientMessage,
   NetworkProfile,
@@ -51,6 +52,7 @@ export type ConversationActions = {
     sourceBufferId?: string,
   ) => boolean;
   downloadBufferHistory: (bufferId: string) => Promise<boolean>;
+  searchBufferHistory: (bufferId: string, query: string) => Promise<BufferHistorySearchPayload>;
   openOrSelectQueryBuffer: (
     network: NetworkProfile,
     nick: string,

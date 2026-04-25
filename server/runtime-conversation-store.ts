@@ -47,6 +47,19 @@ export const listConversationBufferHistory = (
   return store.listMessagePage(buffer.networkId, buffer.target, limit, beforeMessageId);
 };
 
+export const searchConversationBufferHistory = (
+  store: RuntimeConversationStore,
+  bufferId: string,
+  query: string,
+  limit: number,
+) => {
+  const buffer = getRequiredBuffer(store, bufferId);
+  if (buffer.kind === 'server') {
+    throw badRequest('Only channels and private messages can search history');
+  }
+  return store.searchMessagesByBufferId(buffer.id, query, limit);
+};
+
 export const appendConversationMessage = (
   store: RuntimeConversationStore,
   input: {

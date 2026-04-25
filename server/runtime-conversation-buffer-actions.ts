@@ -6,9 +6,15 @@ import {
   listConversationBufferHistory,
   markConversationBufferRead,
   openConversationQuery,
+  searchConversationBufferHistory,
 } from './runtime-conversation-store.js';
 import { normalizeQueryTarget } from './irc-validate.js';
-import type { ServerMessage } from '../shared/protocol.js';
+import {
+  historySearchContextAfter,
+  historySearchContextBefore,
+  type BufferHistorySearchPayload,
+  type ServerMessage,
+} from '../shared/protocol.js';
 import type { RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 
 export const openRuntimeConversationQuery = (
@@ -40,6 +46,28 @@ export const listRuntimeConversationBufferHistory = (
   limit: number,
   beforeMessageId?: string,
 ) => listConversationBufferHistory(options.conversations, bufferId, limit, beforeMessageId);
+
+export const searchRuntimeConversationBufferHistory = (
+  options: RuntimeConversationServiceOptions,
+  bufferId: string,
+  query: string,
+  limit: number,
+): BufferHistorySearchPayload => {
+  const trimmedQuery = query.trim();
+  const page = searchConversationBufferHistory(options.conversations, bufferId, trimmedQuery, limit);
+  return {
+    query: trimmedQuery,
+    results: page.messages.map((message) => ({
+      message,
+      context: options.conversations.getMessageWindow(
+        message.id,
+        historySearchContextBefore,
+        historySearchContextAfter,
+      ),
+    })),
+    hasMore: page.hasMore,
+  };
+};
 
 export const exportRuntimeConversationBufferHistory = (
   options: RuntimeConversationServiceOptions,

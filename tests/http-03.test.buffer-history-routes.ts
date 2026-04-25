@@ -90,3 +90,103 @@ test('history clamps invalid and oversized limits to the default window', async 
     await context.close();
   }
 });
+
+test('buffer history search returns scoped hits with nearby context', async () => {
+  const context = await createHttpRuntimeContext();
+  const network = context.storage.networks.upsert(createNetworkInput());
+  const buffer = context.storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'channel',
+    target: '#help',
+  });
+  for (let index = 0; index < 5; index += 1) {
+    context.storage.conversations.appendMessage({
+      id: `m${index}`,
+      networkId: network.id,
+      target: '#help',
+      nick: 'alice',
+      body: index === 2 ? 'needle line' : `context line ${index}`,
+      kind: 'line',
+      self: false,
+      ts: Date.now() + index,
+    });
+  }
+  context.storage.conversations.appendMessage({
+    id: 'other-buffer',
+    networkId: network.id,
+    target: '#other',
+    nick: 'alice',
+    body: 'needle line elsewhere',
+    kind: 'line',
+    self: false,
+    ts: Date.now() + 10,
+  });
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${context.port}/api/buffers/${buffer.id}/history/search?q=needle&limit=10`,
+    );
+    const body = await response.json() as {
+      query: string;
+      hasMore: boolean;
+      results: Array<{ message: { id: string }; context: Array<{ id: string }> }>;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.query, 'needle');
+    assert.equal(body.hasMore, false);
+    assert.deepEqual(body.results.map((result) => result.message.id), ['m2']);
+    assert.deepEqual(body.results[0]?.context.map((message) => message.id), ['m0', 'm1', 'm2', 'm3', 'm4']);
+  } finally {
+    await context.close();
+  }
+});
+
+test('buffer history search handles empty, capped, missing, and server-buffer searches', async () => {
+  const context = await createHttpRuntimeContext();
+  const network = context.storage.networks.upsert(createNetworkInput());
+  const channelBuffer = context.storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'channel',
+    target: '#help',
+  });
+  const serverBuffer = context.storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'server',
+    target: 'server',
+  });
+  for (let index = 0; index < 3; index += 1) {
+    context.storage.conversations.appendMessage({
+      id: `hit-${index}`,
+      networkId: network.id,
+      target: '#help',
+      nick: 'alice',
+      body: 'needle',
+      kind: 'line',
+      self: false,
+      ts: Date.now() + index,
+    });
+  }
+
+  try {
+    const empty = await fetch(`http://127.0.0.1:${context.port}/api/buffers/${channelBuffer.id}/history/search?q=`);
+    assert.equal(empty.status, 200);
+    assert.deepEqual(await empty.json(), { query: '', results: [], hasMore: false });
+
+    const capped = await fetch(
+      `http://127.0.0.1:${context.port}/api/buffers/${channelBuffer.id}/history/search?q=needle&limit=1`,
+    );
+    const cappedBody = await capped.json() as { hasMore: boolean; results: Array<{ message: { id: string } }> };
+    assert.equal(capped.status, 200);
+    assert.deepEqual(cappedBody.results.map((result) => result.message.id), ['hit-2']);
+    assert.equal(cappedBody.hasMore, true);
+
+    const missing = await fetch(`http://127.0.0.1:${context.port}/api/buffers/missing/history/search?q=needle`);
+    assert.equal(missing.status, 404);
+
+    const server = await fetch(`http://127.0.0.1:${context.port}/api/buffers/${serverBuffer.id}/history/search?q=needle`);
+    assert.equal(server.status, 400);
+  } finally {
+    await context.close();
+  }
+});

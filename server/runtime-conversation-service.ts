@@ -5,6 +5,7 @@ import {
   listRuntimeConversationBufferHistory,
   markRuntimeConversationBufferRead,
   openRuntimeConversationQuery,
+  searchRuntimeConversationBufferHistory,
 } from './runtime-conversation-buffer-actions.js';
 import {
   handleRuntimeConversationChannelEvent,
@@ -33,6 +34,10 @@ export class RuntimeConversationService {
 
   listBufferHistory(bufferId: string, limit: number, beforeMessageId?: string) {
     return listRuntimeConversationBufferHistory(this.options, bufferId, limit, beforeMessageId);
+  }
+
+  searchBufferHistory(bufferId: string, query: string, limit: number) {
+    return searchRuntimeConversationBufferHistory(this.options, bufferId, query, limit);
   }
 
   exportBufferHistory(bufferId: string) {

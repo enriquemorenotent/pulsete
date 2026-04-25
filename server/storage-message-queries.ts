@@ -1,5 +1,5 @@
 import type { SqliteDb } from './storage-sqlite.js';
-import type { MessagePage, MessageRow } from './storage-types.js';
+import type { MessagePage, MessageRow, MessageSearchPage } from './storage-types.js';
 import {
   emptyMessagePage,
   getMessageBufferId,
@@ -9,7 +9,6 @@ import {
   messageJoin,
   type MessageCursor,
 } from './storage-message-shared.js';
-import { searchMessageRows } from './storage-message-search.js';
 
 export const getMessageById = (db: SqliteDb, messageId: string) => {
   const row = db.prepare(`SELECT ${messageColumns} ${messageJoin} WHERE m.id = ?`).get(messageId) as MessageRow | undefined;
@@ -61,6 +60,38 @@ export const listOpeningMessages = (db: SqliteDb, networkId: string, target: str
 export const listRecentMessagesForBuffer = (db: SqliteDb, networkId: string, target: string, limit = 200) =>
   listMessages(db, networkId, target, limit);
 
+export const searchMessagesByBufferId = (
+  db: SqliteDb,
+  bufferId: string,
+  query: string,
+  limit: number,
+): MessageSearchPage => {
+  const terms = parseSearchTerms(query);
+  if (limit <= 0 || terms.length === 0) {
+    return { messages: [], hasMore: false };
+  }
+  const rows = db.prepare(`
+    SELECT ${messageColumns}
+    ${messageJoin}
+    WHERE m.bufferId = ?
+    ORDER BY m.ts DESC, m.rowid DESC
+  `).iterate(bufferId) as IterableIterator<MessageRow>;
+  const matches: MessageRow[] = [];
+  for (const row of rows) {
+    if (!matchesSearchTerms(row, terms)) {
+      continue;
+    }
+    matches.push(row);
+    if (matches.length > limit) {
+      break;
+    }
+  }
+  return {
+    messages: hydrateMessages(db, matches.slice(0, limit)),
+    hasMore: matches.length > limit,
+  };
+};
+
 export const getMessageWindow = (db: SqliteDb, messageId: string, before: number, after: number) => {
   const cursor = getMessageCursor(db, messageId);
   if (!cursor) {
@@ -79,16 +110,6 @@ export const getMessageWindow = (db: SqliteDb, messageId: string, before: number
     ORDER BY m.ts ASC, m.rowid ASC LIMIT ?
   `).all(cursor.bufferId, cursor.ts, cursor.ts, cursor.rowid, after) as MessageRow[];
   return hydrateMessages(db, [...beforeRows.reverse(), ...afterRows]);
-};
-
-export const searchMessages = (db: SqliteDb, networkId: string, target: string, query: string, limit = 10) => {
-  const bufferId = getMessageBufferId(db, networkId, target);
-  if (!bufferId || query.trim().length === 0) {
-    return [];
-  }
-  const rows = searchMessageRows(db, bufferId, query, limit);
-  const messages = hydrateMessages(db, rows);
-  return messages.map((message, index) => ({ message, score: rows[index]!.score }));
 };
 
 export const listRecentMessages = (db: SqliteDb, limit = 200) => {
@@ -135,3 +156,31 @@ const selectMessagePage = (
     hasMore: rows.length > limit,
   };
 };
+
+const parseSearchTerms = (query: string) => {
+  const terms: string[] = [];
+  const seen = new Set<string>();
+  for (const rawTerm of query.trim().split(/\s+/)) {
+    const term = normalizeSearchText(rawTerm);
+    if (!term || seen.has(term)) {
+      continue;
+    }
+    seen.add(term);
+    terms.push(term);
+  }
+  return terms;
+};
+
+const matchesSearchTerms = (
+  row: Pick<MessageRow, 'body' | 'nick' | 'speakerNick'>,
+  terms: readonly string[],
+) => {
+  const searchable = [
+    row.body,
+    row.nick ?? '',
+    row.speakerNick ?? '',
+  ].map(normalizeSearchText);
+  return terms.every((term) => searchable.some((value) => value.includes(term)));
+};
+
+const normalizeSearchText = (value: string) => value.toLocaleLowerCase();

@@ -166,7 +166,6 @@ test('normalized storage migration preserves large transcripts and backfills mis
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const messageCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
   const batchCount = upgraded.prepare('SELECT COUNT(*) AS count FROM history_import_batches').get() as { count: number };
-  const ftsCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages_fts').get() as { count: number };
   const migratedBuffers = upgraded.prepare(`
     SELECT buffers.target, buffers.targetKey, buffers.kind, buffers.isOpen, COUNT(messages.id) AS messageCount
     FROM buffers
@@ -193,10 +192,9 @@ test('normalized storage migration preserves large transcripts and backfills mis
   `).all('network-1') as Array<{ target: string; batchCount: number }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 17);
+  assert.equal(version.user_version, 18);
   assert.equal(messageCount.count, 1_200);
   assert.equal(batchCount.count, 3);
-  assert.equal(ftsCount.count, 1_200);
   assert.deepEqual(migratedBuffers, [
     { target: '#Logs', targetKey: '#logs', kind: 'channel', isOpen: 0, messageCount: 200 },
     { target: '#help', targetKey: '#help', kind: 'channel', isOpen: 1, messageCount: 600 },

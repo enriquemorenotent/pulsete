@@ -144,6 +144,7 @@ export type ChatActionSet = Pick<
   | 'removeFriend'
   | 'removeMutedNick'
   | 'requestWhois'
+  | 'searchBufferHistory'
   | 'selectPrivateBuffer'
   | 'sendComposer'
   | 'toggleCurrentChannelAutoJoin'

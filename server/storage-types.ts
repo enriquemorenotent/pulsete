@@ -145,6 +145,8 @@ export type MessagePage = {
   hasMore: boolean;
 };
 
+export type MessageSearchPage = MessagePage;
+
 export type StorageSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];

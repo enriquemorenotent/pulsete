@@ -138,6 +138,10 @@ export function useDesktopChatModel({
       onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
       canDownloadHistory: canUseBufferHistoryTools,
       onDownloadHistory: selectedBufferId ? () => actions.downloadBufferHistory(selectedBufferId) : undefined,
+      canSearchHistory: canUseBufferHistoryTools,
+      onSearchHistory: selectedBufferId
+        ? (bufferId, query) => actions.searchBufferHistory(bufferId, query)
+        : undefined,
       canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
       initialHistoryPending: selectedBufferHistory.initialHistoryPending,
       loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
