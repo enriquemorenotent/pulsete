@@ -1,6 +1,7 @@
 import {
   forwardRef,
   memo,
+  useCallback,
   useMemo,
   type ComponentPropsWithoutRef,
 } from 'react';
@@ -45,8 +46,37 @@ const TranscriptList = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<'div'
 
 export const resolveTranscriptVirtuosoItemKey = (
   index: number,
-  row: ChatTranscriptModel['flatRows'][number] | undefined,
-) => row?.key ?? `group:${index}`;
+  model: Pick<ChatTranscriptModel, 'flatRows' | 'groupCounts' | 'groups'>,
+  firstItemIndex: number,
+) => {
+  const groupedIndex = index - firstItemIndex;
+  if (groupedIndex < 0) {
+    return `transcript:${index}`;
+  }
+
+  let rowOffset = 0;
+  let groupedOffset = 0;
+  for (let groupIndex = 0; groupIndex < model.groupCounts.length; groupIndex += 1) {
+    if (groupedIndex === groupedOffset) {
+      return model.groups[groupIndex]?.key ?? `group:${index}`;
+    }
+    groupedOffset += 1;
+
+    const rowCount = model.groupCounts[groupIndex] ?? 0;
+    if (groupedIndex < groupedOffset + rowCount) {
+      return model.flatRows[rowOffset + groupedIndex - groupedOffset]?.key ?? `transcript:${index}`;
+    }
+    groupedOffset += rowCount;
+    rowOffset += rowCount;
+  }
+  return `transcript:${index}`;
+};
+
+export const resolveTranscriptVirtuosoRow = (
+  itemIndex: number,
+  model: Pick<ChatTranscriptModel, 'flatRows'>,
+  firstItemIndex: number,
+) => model.flatRows[itemIndex - firstItemIndex] ?? null;
 
 export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
   props: ChatTranscriptVirtuosoProps,
@@ -82,6 +112,50 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     }),
     [props.loadingOlderHistory, props.onLoadOlderHistory, viewport],
   );
+  const computeItemKey = useCallback(
+    (index: number) =>
+      resolveTranscriptVirtuosoItemKey(
+        index,
+        props.model,
+        viewport.firstItemIndex,
+      ),
+    [props.model, viewport.firstItemIndex],
+  );
+  const renderItemContent = useCallback(
+    (index: number) => {
+      const row = resolveTranscriptVirtuosoRow(
+        index,
+        props.model,
+        viewport.firstItemIndex,
+      );
+      if (!row) {
+        return null;
+      }
+      return (
+        <ChatTranscriptRow
+          row={row}
+          channelUserModesByNick={props.channelUserModesByNick}
+          listKind={props.listKind}
+          mode={props.mode}
+          onInlinePreviewLoad={viewport.handleInlinePreviewLoad}
+          onOpenChannel={props.onOpenChannel}
+          onOpenParticipantQuery={props.onOpenParticipantQuery}
+          participantHighlightMode={props.participantHighlightMode}
+        />
+      );
+    },
+    [
+      props.channelUserModesByNick,
+      props.listKind,
+      props.mode,
+      props.model,
+      props.onOpenChannel,
+      props.onOpenParticipantQuery,
+      props.participantHighlightMode,
+      viewport.firstItemIndex,
+      viewport.handleInlinePreviewLoad,
+    ],
+  );
 
   if (props.model.flatRows.length === 0) {
     return (
@@ -99,8 +173,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         alignToBottom
         atBottomStateChange={viewport.handleAtBottomStateChange}
         components={components}
-        computeItemKey={resolveTranscriptVirtuosoItemKey}
-        data={props.model.flatRows}
+        computeItemKey={computeItemKey}
         firstItemIndex={viewport.firstItemIndex}
         followOutput={viewport.followOutput}
         groupContent={(groupIndex) => (
@@ -108,18 +181,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         )}
         groupCounts={props.model.groupCounts}
         increaseViewportBy={{ bottom: 320, top: 160 }}
-        itemContent={(_index, _groupIndex, row) => (
-          <ChatTranscriptRow
-            row={row}
-            channelUserModesByNick={props.channelUserModesByNick}
-            listKind={props.listKind}
-            mode={props.mode}
-            onInlinePreviewLoad={viewport.handleInlinePreviewLoad}
-            onOpenChannel={props.onOpenChannel}
-            onOpenParticipantQuery={props.onOpenParticipantQuery}
-            participantHighlightMode={props.participantHighlightMode}
-          />
-        )}
+        itemContent={renderItemContent}
         scrollerRef={viewport.scrollerRef}
         startReached={viewport.startReached}
       />

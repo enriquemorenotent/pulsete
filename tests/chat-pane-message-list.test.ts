@@ -5,6 +5,7 @@ import {
 } from '../web/src/chat-transcript-model.js';
 import {
   resolveTranscriptVirtuosoItemKey,
+  resolveTranscriptVirtuosoRow,
 } from '../web/src/ChatTranscriptVirtuoso.js';
 import {
   resolveNextFirstItemIndex,
@@ -91,15 +92,43 @@ test('follow output autoscrolls while pinned or when a send-follow request is pe
   );
 });
 
-test('transcript virtuoso falls back to an index key for group headers', () => {
-  assert.equal(resolveTranscriptVirtuosoItemKey(17, undefined), 'group:17');
+test('transcript virtuoso maps grouped header and item indexes to stable keys', () => {
+  const firstItemIndex = 1_000_000;
+  const model = buildChatTranscriptModel({
+    firstUnreadDividerIndex: null,
+    listKind: 'chat',
+    messages: [
+      { id: 'message-1', networkId: 'network-1', target: 'MissD', nick: 'sofia', body: 'How are you?', kind: 'line', self: true, ts: new Date(2026, 2, 11, 2, 57, 0, 0).getTime() },
+    ],
+    unreadDividerKey: 'unused',
+  });
+
+  assert.deepEqual(model.groupCounts, [1]);
   assert.equal(
-    resolveTranscriptVirtuosoItemKey(18, {
-      kind: 'unread-divider',
-      key: 'unread-divider:buffer-1',
-    }),
-    'unread-divider:buffer-1',
+    resolveTranscriptVirtuosoItemKey(firstItemIndex, model, firstItemIndex),
+    model.groups[0]?.key,
   );
+  assert.equal(
+    resolveTranscriptVirtuosoItemKey(firstItemIndex + 1, model, firstItemIndex),
+    'message:message-1',
+  );
+});
+
+test('transcript virtuoso resolves the first item row after a day header', () => {
+  const firstItemIndex = 1_000_000;
+  const model = buildChatTranscriptModel({
+    firstUnreadDividerIndex: null,
+    listKind: 'chat',
+    messages: [
+      { id: 'message-1', networkId: 'network-1', target: 'MissD', nick: 'sofia', body: 'How are you?', kind: 'line', self: true, ts: new Date(2026, 2, 11, 2, 57, 0, 0).getTime() },
+    ],
+    unreadDividerKey: 'unused',
+  });
+
+  const row = resolveTranscriptVirtuosoRow(firstItemIndex, model, firstItemIndex);
+
+  assert.equal(row?.kind, 'message');
+  assert.equal(row?.kind === 'message' ? row.message.body : null, 'How are you?');
 });
 
 test('first item index moves upward by the number of prepended transcript rows', () => {
