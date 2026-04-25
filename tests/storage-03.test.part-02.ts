@@ -174,13 +174,18 @@ test('message history search stays literal and scoped to the selected buffer', (
   assert.deepEqual(searchIds('c++'), ['message-cpp']);
   assert.deepEqual(searchIds('C# room'), ['message-csharp']);
   assert.deepEqual(searchIds('hotel room'), ['message-hotel-room']);
+  assert.deepEqual(searchIds('ote'), ['message-hotel-room']);
   assert.deepEqual(searchIds('mÄr'), ['message-unicode']);
   assert.deepEqual(searchIds('alice'), ['message-nick']);
+  assert.deepEqual(searchIds('alice plain'), ['message-nick']);
   assert.deepEqual(searchIds('sofia'), ['message-speaker']);
 
   const capped = storage.conversations.searchMessagesByBufferId(buffer.id, 'cap', 1);
   assert.deepEqual(capped.messages.map((message) => message.id), ['message-cap-new']);
   assert.equal(capped.hasMore, true);
+
+  storage.conversations.deleteMessagesByIdPrefixes(['message-hotel']);
+  assert.deepEqual(searchIds('hotel'), []);
 });
 
 test('deleteMessagesByIdPrefixes removes matching rows without touching normal messages', () => {

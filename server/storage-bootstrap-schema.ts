@@ -1,5 +1,6 @@
 import {
   historyImportBatchesSchemaSql,
+  messageSearchSchemaSql,
   queryNickAliasesSchemaSql,
 } from './storage-schema-helpers.js';
 
@@ -124,6 +125,8 @@ ${queryNickAliasesSchemaSql}
 
   CREATE INDEX IF NOT EXISTS idx_messages_buffer
     ON messages(bufferId, ts DESC);
+
+${messageSearchSchemaSql}
 
   CREATE INDEX IF NOT EXISTS idx_buffers_network
     ON buffers(networkId, isOpen, createdAt ASC);

@@ -6,10 +6,11 @@ import { migrateWorkspaceNetworks } from './storage-workspace-migration.js';
 import {
   dropLegacyMessageSearchArtifacts,
   ensureHistoryImportBatchesTable,
+  ensureMessageSearchArtifacts,
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 18;
+export const currentStorageSchemaVersion = 19;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -148,6 +149,12 @@ const storageMigrations: readonly StorageMigration[] = [
       dropLegacyMessageSearchArtifacts(db);
     },
   },
+  {
+    version: 19,
+    apply: (db) => {
+      ensureMessageSearchArtifacts(db, { backfill: true });
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => {
@@ -171,6 +178,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
   }
   ensureCurrentNetworkColumns(db);
   dropLegacyMessageSearchArtifacts(db);
+  ensureMessageSearchArtifacts(db);
 };
 
 export const tableExists = (db: SqliteDb, table: string) =>

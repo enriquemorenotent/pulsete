@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { makeStorageFile, openSqliteDatabase, Storage } from './helpers/storage-test-helpers.js';
 
 test('startup repair preserves explicit none auth methods on current schemas', () => {
@@ -27,6 +28,57 @@ test('startup repair preserves explicit none auth methods on current schemas', (
 
   assert.equal(reopenedNetwork?.authMethod, 'none');
   assert.equal(reopenedNetwork?.hasPassword, true);
+});
+
+test('startup repair rebuilds missing current message search artifacts', () => {
+  const file = makeStorageFile();
+  const storage = new Storage(file);
+  const network = storage.networks.upsert({
+    workspaceOpen: true,
+    name: 'SearchRepairNet',
+    host: 'irc.example.test',
+    port: 6667,
+    tls: false,
+    nick: 'tester',
+    altNicks: [],
+    username: 'tester',
+    realName: 'Tester Example',
+    authMethod: 'none',
+    favorite: false,
+    autoJoin: [],
+  });
+  const buffer = storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'channel',
+    target: '#help',
+  });
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: '#help',
+    nick: 'alice',
+    body: 'repairable search payload',
+    kind: 'line',
+    self: false,
+    ts: Date.now(),
+  });
+  storage.close();
+
+  const broken = openSqliteDatabase(file);
+  broken.exec(`
+    DROP TRIGGER IF EXISTS message_search_ai;
+    DROP TRIGGER IF EXISTS message_search_ad;
+    DROP TRIGGER IF EXISTS message_search_au;
+    DROP TABLE IF EXISTS message_search_fts;
+    PRAGMA user_version = ${currentStorageSchemaVersion};
+  `);
+  broken.close();
+
+  const repaired = new Storage(file);
+  const results = repaired.conversations.searchMessagesByBufferId(buffer.id, 'payload', 10);
+  repaired.close();
+
+  assert.deepEqual(results.messages.map((message) => message.id), ['message-1']);
 });
 
 test('startup repair migrates newer local schemas to workspace networks', () => {

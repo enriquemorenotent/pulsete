@@ -71,10 +71,29 @@ test('versioned storage migrations remove legacy message search artifacts', () =
     WHERE name IN ('messages_fts', 'messages_ai', 'messages_ad', 'messages_au')
     ORDER BY name ASC
   `).all() as Array<{ name: string }>;
+  const newArtifacts = upgraded.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE name IN ('message_search_fts', 'message_search_ai', 'message_search_ad', 'message_search_au')
+    ORDER BY name ASC
+  `).all() as Array<{ name: string }>;
   const messageCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
+  const searchHits = upgraded.prepare(`
+    SELECT m.id
+    FROM message_search_fts AS search
+    JOIN messages AS m ON m.rowid = search.rowid
+    WHERE message_search_fts MATCH ?
+  `).all('payload') as Array<{ id: string }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 18);
+  assert.equal(version.user_version, 19);
   assert.deepEqual(artifacts, []);
+  assert.deepEqual(newArtifacts.map((artifact) => artifact.name), [
+    'message_search_ad',
+    'message_search_ai',
+    'message_search_au',
+    'message_search_fts',
+  ]);
   assert.equal(messageCount.count, 1);
+  assert.deepEqual(searchHits.map((hit) => hit.id), ['message-1']);
 });

@@ -39,7 +39,7 @@ test('legacy formatting upgrade preserves messages, unread counts, and a backup'
   `).get() as { id: string; bufferId: string; networkId: string; target: string; body: string } | undefined;
   upgraded.close();
 
-  assert.equal(version.user_version, 18);
+  assert.equal(version.user_version, currentStorageSchemaVersion);
   assert.equal(count.count, 1);
   assert.deepEqual(migrated, {
     id: 'message-1',

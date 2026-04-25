@@ -25,12 +25,77 @@ export const queryNickAliasesSchemaSql = `
     ON query_nick_aliases(networkId, nickKey, bufferId);
 `;
 
+export const messageSearchSchemaSql = `
+  CREATE VIRTUAL TABLE IF NOT EXISTS message_search_fts USING fts5(
+    messageId UNINDEXED,
+    bufferId UNINDEXED,
+    body,
+    nick,
+    speakerNick,
+    tokenize='trigram'
+  );
+
+  CREATE TRIGGER IF NOT EXISTS message_search_ai AFTER INSERT ON messages BEGIN
+    INSERT OR REPLACE INTO message_search_fts
+      (rowid, messageId, bufferId, body, nick, speakerNick)
+    VALUES (
+      new.rowid,
+      new.id,
+      new.bufferId,
+      coalesce(new.body, ''),
+      coalesce(new.nick, ''),
+      coalesce(new.speakerNick, '')
+    );
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS message_search_ad AFTER DELETE ON messages BEGIN
+    DELETE FROM message_search_fts WHERE rowid = old.rowid;
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS message_search_au AFTER UPDATE ON messages BEGIN
+    DELETE FROM message_search_fts WHERE rowid = old.rowid;
+    INSERT OR REPLACE INTO message_search_fts
+      (rowid, messageId, bufferId, body, nick, speakerNick)
+    VALUES (
+      new.rowid,
+      new.id,
+      new.bufferId,
+      coalesce(new.body, ''),
+      coalesce(new.nick, ''),
+      coalesce(new.speakerNick, '')
+    );
+  END;
+`;
+
 export const ensureHistoryImportBatchesTable = (db: SqliteDb) => {
   db.exec(historyImportBatchesSchemaSql);
 };
 
 export const ensureQueryNickAliasesTable = (db: SqliteDb) => {
   db.exec(queryNickAliasesSchemaSql);
+};
+
+export const ensureMessageSearchArtifacts = (db: SqliteDb, options: { backfill?: boolean } = {}) => {
+  const hadSearchIndex = messageSearchIndexExists(db);
+  db.exec(messageSearchSchemaSql);
+  if (options.backfill || !hadSearchIndex) {
+    backfillMessageSearchIndex(db);
+  }
+};
+
+export const backfillMessageSearchIndex = (db: SqliteDb) => {
+  db.exec(`
+    INSERT OR REPLACE INTO message_search_fts
+      (rowid, messageId, bufferId, body, nick, speakerNick)
+    SELECT
+      rowid,
+      id,
+      bufferId,
+      coalesce(body, ''),
+      coalesce(nick, ''),
+      coalesce(speakerNick, '')
+    FROM messages;
+  `);
 };
 
 export const dropLegacyMessageSearchArtifacts = (db: SqliteDb) => {
@@ -41,3 +106,9 @@ export const dropLegacyMessageSearchArtifacts = (db: SqliteDb) => {
     DROP TABLE IF EXISTS messages_fts;
   `);
 };
+
+const messageSearchIndexExists = (db: SqliteDb) =>
+  Boolean(
+    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'message_search_fts'")
+      .get()
+  );

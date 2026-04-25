@@ -70,6 +70,40 @@ export const searchMessagesByBufferId = (
   if (limit <= 0 || terms.length === 0) {
     return { messages: [], hasMore: false };
   }
+  if (terms.some((term) => term.length < minimumFtsTermLength)) {
+    return searchMessagesByBufferIdWithScan(db, bufferId, terms, limit);
+  }
+  return searchMessagesByBufferIdWithFts(db, bufferId, terms, limit);
+};
+
+const searchMessagesByBufferIdWithFts = (
+  db: SqliteDb,
+  bufferId: string,
+  terms: readonly string[],
+  limit: number,
+): MessageSearchPage => {
+  const rows = db.prepare(`
+    SELECT ${messageColumns}
+    FROM message_search_fts AS search
+    JOIN messages AS m ON m.rowid = search.rowid
+    JOIN buffers AS b ON b.id = m.bufferId
+    WHERE message_search_fts MATCH ?
+      AND m.bufferId = ?
+    ORDER BY m.ts DESC, m.rowid DESC
+    LIMIT ?
+  `).all(toFtsMatchQuery(terms), bufferId, limit + 1) as MessageRow[];
+  return {
+    messages: hydrateMessages(db, rows.length > limit ? rows.slice(0, limit) : rows),
+    hasMore: rows.length > limit,
+  };
+};
+
+const searchMessagesByBufferIdWithScan = (
+  db: SqliteDb,
+  bufferId: string,
+  terms: readonly string[],
+  limit: number,
+): MessageSearchPage => {
   const rows = db.prepare(`
     SELECT ${messageColumns}
     ${messageJoin}
@@ -170,6 +204,11 @@ const parseSearchTerms = (query: string) => {
   }
   return terms;
 };
+
+const minimumFtsTermLength = 3;
+
+const toFtsMatchQuery = (terms: readonly string[]) =>
+  terms.map((term) => `"${term.replace(/"/g, '""')}"`).join(' ');
 
 const matchesSearchTerms = (
   row: Pick<MessageRow, 'body' | 'nick' | 'speakerNick'>,
