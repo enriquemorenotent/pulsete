@@ -26,7 +26,7 @@ test('command palette filtering matches labels, subtitles, and keywords case-ins
   }));
 
   assert.deepEqual(
-    filterCommandPaletteEntries(entries, 'saved friend').map((entry) => entry.label),
+    filterCommandPaletteEntries(entries, 'watched nick').map((entry) => entry.label),
     ['Joby'],
   );
   assert.deepEqual(

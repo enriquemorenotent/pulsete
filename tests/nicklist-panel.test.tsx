@@ -113,7 +113,7 @@ test('nicklist renders one-click contact controls beside away users', () => {
   );
 
   assert.match(markup, /aria-label="Away"/);
-  assert.match(markup, /aria-label="Remove alice from friends"/);
+  assert.match(markup, /aria-label="Remove alice from watchlist"/);
   assert.match(markup, /aria-label="Disable notifications for alice"/);
   assert.match(markup, /aria-label="Mute alice"/);
   assert.match(markup, /aria-label="Contact settings for alice"/);
@@ -146,7 +146,7 @@ test('nicklist shows the unmute control for muted users', () => {
     />
   );
 
-  assert.match(markup, /aria-label="Add alice as friend"/);
+  assert.match(markup, /aria-label="Add alice to watchlist"/);
   assert.match(markup, /aria-label="Enable notifications for alice"/);
   assert.match(markup, /aria-label="Unmute alice"/);
   assert.match(markup, /aria-label="Contact settings for alice"/);

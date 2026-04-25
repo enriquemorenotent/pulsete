@@ -1,6 +1,5 @@
 import { Bell, Check, Star, VolumeX } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
   DialogContent,
@@ -55,7 +54,7 @@ export function ContactSettingsDialogBody(props: ContactSettingsDialogBodyProps)
       <ContactRuleToggle
         active={props.friend}
         icon={<Star className={cn('size-4', props.friend && 'fill-current')} />}
-        label="Friend"
+        label="Watchlist"
         onChange={props.onFriendChange}
       />
       <ContactRuleToggle

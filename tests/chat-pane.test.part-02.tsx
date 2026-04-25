@@ -21,6 +21,7 @@ test('channel transcripts keep the unread divider anchored after a day divider',
         }),
       }}
       friends={[] satisfies FriendState[]}
+      mutedNicks={[]}
       selectedMessages={messages}
       draft=""
       messageDisplayMode="colors"
@@ -126,7 +127,7 @@ test('query headers expose one-click contact controls', () => {
 
   assert.match(markup, /aria-label="Close MissD"/);
   assert.doesNotMatch(markup, />Close</);
-  assert.match(markup, /aria-label="Add MissD as friend"/);
+  assert.match(markup, /aria-label="Add MissD to watchlist"/);
   assert.match(markup, /aria-label="Enable notifications for MissD"/);
   assert.match(markup, /aria-label="Mute MissD"/);
   assert.match(markup, /aria-label="Contact settings for MissD"/);
@@ -151,7 +152,7 @@ test('muted query headers expose unmute and show the muted banner', () => {
   assert.match(markup, /aria-label="Unmute MissD"/);
   assert.match(markup, /aria-label="Enable notifications for MissD"/);
   assert.match(markup, />Muted</);
-  assert.match(markup, /Messages from MissD are hidden here and won’t create unread or notification activity\./);
+  assert.match(markup, /Messages from MissD are collapsed here and won’t create unread or notification activity\./);
 });
 
 test('reconnecting channels rely on the inline status banner instead of header metadata', () => {
@@ -185,6 +186,7 @@ test('reconnecting channels rely on the inline status banner instead of header m
         showNicklist: false,
       }}
       friends={[] satisfies FriendState[]}
+      mutedNicks={[]}
       selectedMessages={[]}
       draft=""
       messageDisplayMode="colors"

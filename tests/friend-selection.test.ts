@@ -126,6 +126,6 @@ test('friend selection errors when no network is connected', () => {
 
   assert.deepEqual(decision, {
     type: 'error',
-    message: 'Connect a network before opening a friend conversation',
+    message: 'Connect a network before opening a watchlist conversation',
   });
 });

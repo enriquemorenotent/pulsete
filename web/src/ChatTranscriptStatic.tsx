@@ -9,6 +9,7 @@ import type { ParticipantHighlightMode } from './message-participant-presentatio
 type ChatTranscriptStaticProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   emptyBody: string;
+  expandedMutedGroupKeys: ReadonlySet<string>;
   listKind: 'chat' | 'server';
   loadingOlderHistory?: boolean;
   mode: MessageDisplayMode;
@@ -16,6 +17,7 @@ type ChatTranscriptStaticProps = {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string) => void;
   onLoadOlderHistory?: () => Promise<number>;
+  onToggleMutedGroup: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;
 };
 
@@ -53,10 +55,12 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
                 key={row.key}
                 row={row}
                 channelUserModesByNick={props.channelUserModesByNick}
+                expandedMutedGroupKeys={props.expandedMutedGroupKeys}
                 listKind={props.listKind}
                 mode={props.mode}
                 onOpenChannel={props.onOpenChannel}
                 onOpenParticipantQuery={props.onOpenParticipantQuery}
+                onToggleMutedGroup={props.onToggleMutedGroup}
                 participantHighlightMode={props.participantHighlightMode}
               />
             ))}

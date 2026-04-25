@@ -46,7 +46,7 @@ export const resolveFriendSelection = (input: FriendSelectionInput): FriendSelec
     }
   }
 
-  return { type: 'error', message: 'Connect a network before opening a friend conversation' };
+  return { type: 'error', message: 'Connect a network before opening a watchlist conversation' };
 };
 
 const isConnected = (runtime: NetworkRuntimeState | null | undefined) => runtime?.phase === 'connected';

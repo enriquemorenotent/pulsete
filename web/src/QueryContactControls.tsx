@@ -25,8 +25,8 @@ export function QueryContactControls(props: QueryContactControlsProps) {
         active={Boolean(props.friend)}
         label={
           props.friend
-            ? `Remove ${props.nick} from friends`
-            : `Add ${props.nick} as friend`
+            ? `Remove ${props.nick} from watchlist`
+            : `Add ${props.nick} to watchlist`
         }
         onClick={() => {
           void (props.friend

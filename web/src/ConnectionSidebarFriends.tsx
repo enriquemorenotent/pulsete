@@ -67,7 +67,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 				<div className="flex items-center justify-between gap-3 px-2 py-1">
 					<div className="min-w-0">
 						<h2 className="text-[13px] font-semibold tracking-tight text-foreground">
-							Friends
+							Watchlist
 						</h2>
 					</div>
 					<div ref={menuRef} className="relative shrink-0">
@@ -76,7 +76,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 							variant="ghost"
 							size="icon"
 							className="size-7 text-muted-foreground hover:text-foreground"
-							aria-label="Friends options"
+							aria-label="Watchlist options"
 							aria-expanded={menuOpen}
 							aria-haspopup="menu"
 							onClick={() => setMenuOpen((current) => !current)}
@@ -110,11 +110,11 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 				<div className="mt-1 max-h-[min(32dvh,16rem)] overflow-y-auto overscroll-contain pr-0.5">
 					{props.friends.length === 0 ? (
 						<div className="px-2.5 py-1.5 text-[13px] text-muted-foreground">
-							No friends saved yet.
+							No watched nicks yet.
 						</div>
 					) : visibleFriends.length === 0 ? (
 						<div className="px-2.5 py-1.5 text-[13px] text-muted-foreground">
-							No friends are online right now.
+							No watched nicks are online right now.
 						</div>
 					) : (
 						<div className="space-y-px border-white/6">
@@ -176,7 +176,7 @@ function FriendRow(props: {
 			<button
 				type="button"
 				className="px-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
-				aria-label={`Remove ${props.friend.nick}`}
+				aria-label={`Remove ${props.friend.nick} from watchlist`}
 				onClick={props.onRemove}
 			>
 				<X className="size-3" />

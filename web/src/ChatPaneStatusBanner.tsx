@@ -22,7 +22,7 @@ export function ChatPaneStatusBanner(props: ChatPaneStatusBannerProps) {
         <BannerCard
           tone="muted"
           title="Muted"
-          body={`Messages from ${props.mutedQueryNick} are hidden here and won’t create unread or notification activity.`}
+          body={`Messages from ${props.mutedQueryNick} are collapsed here and won’t create unread or notification activity.`}
         />
       ) : null}
       {banner ? (

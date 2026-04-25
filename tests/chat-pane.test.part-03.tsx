@@ -37,6 +37,7 @@ test('offline channels surface an inline reconnect action', () => {
         showNicklist: false,
       }}
       friends={[] satisfies FriendState[]}
+      mutedNicks={[]}
       selectedMessages={[]}
       draft=""
       messageDisplayMode="colors"
@@ -95,6 +96,7 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
         showNicklist: false,
       }}
       friends={[] satisfies FriendState[]}
+      mutedNicks={[]}
       selectedMessages={[]}
       draft=""
       messageDisplayMode="colors"

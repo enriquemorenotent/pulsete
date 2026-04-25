@@ -12,7 +12,13 @@ export const isMessageMuted = (
   message: Pick<ChatMessage, 'networkId' | 'nick' | 'speakerNick'>,
 ) => isNickMuted(mutedNicks, message.networkId, message.nick ?? message.speakerNick ?? null);
 
-export const filterMutedMessages = (
-  messages: readonly ChatMessage[],
+export const resolveMutedMessageNick = (
   mutedNicks: readonly MutedNickState[],
-) => messages.filter((message) => !isMessageMuted(mutedNicks, message));
+  message: Pick<ChatMessage, 'networkId' | 'nick' | 'speakerNick'>,
+) => {
+  const nick = message.nick ?? message.speakerNick ?? null;
+  if (!isNickMuted(mutedNicks, message.networkId, nick)) {
+    return null;
+  }
+  return findMutedNick(mutedNicks, message.networkId, nick ?? '')?.nick ?? nick;
+};

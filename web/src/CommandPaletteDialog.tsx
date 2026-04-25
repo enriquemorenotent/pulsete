@@ -43,7 +43,7 @@ export type CommandPaletteDialogBodyProps = {
 
 const sectionLabels: Record<CommandPaletteEntrySection, string> = {
   buffers: 'Buffers',
-  friends: 'Friends',
+  friends: 'Watchlist',
   actions: 'Actions',
 };
 
@@ -131,7 +131,7 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
       <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
         <DialogTitle>Go to…</DialogTitle>
         <DialogDescription>
-          Jump between buffers, friends, and common actions with Ctrl/Cmd+K.
+          Jump between buffers, watched nicks, and common actions with Ctrl/Cmd+K.
         </DialogDescription>
       </DialogHeader>
       <div className="shrink-0 border-b border-border px-4 py-3">
@@ -140,7 +140,7 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
           value={props.query}
           onChange={props.onQueryChange}
           onKeyDown={props.onQueryKeyDown}
-          placeholder="Search buffers, friends, and actions"
+          placeholder="Search buffers, watchlist, and actions"
           aria-label="Search command palette"
         />
       </div>

@@ -1,8 +1,9 @@
-import { memo, useMemo, useRef } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import type {
   BufferState,
   ChannelUserState,
   ChatMessage,
+  MutedNickState,
 } from '../../shared/protocol.js';
 import {
   captureUnreadDividerAnchor,
@@ -15,12 +16,14 @@ import { buildChatTranscriptModel } from './chat-transcript-model.js';
 import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
 import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
+import { isMessageMuted } from './muted-nick-utils.js';
 
 type ChatPaneMessageListProps = {
   selectedBuffer: BufferState | null;
   channelUsers?: ChannelUserState[];
   followOutputRequestId?: number;
   messages: ChatMessage[];
+  mutedNicks: MutedNickState[];
   emptyBody: string;
   mode: MessageDisplayMode;
   listKind: 'chat' | 'server';
@@ -44,15 +47,35 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
     unreadDividerAnchorRef.current,
   );
   unreadDividerAnchorRef.current = unreadDividerAnchor;
+  const [expandedMutedGroupKeys, setExpandedMutedGroupKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const toggleMutedGroup = useCallback((key: string) => {
+    setExpandedMutedGroupKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
 
   const firstUnreadDividerIndex = useMemo(
-    () =>
-      resolveVisibleUnreadDividerIndex(
+    () => {
+      const unreadDividerIndex = resolveVisibleUnreadDividerIndex(
         props.messages,
         props.selectedBuffer,
         unreadDividerAnchor,
-      ),
-    [props.messages, props.selectedBuffer, unreadDividerAnchor],
+      );
+      return resolveMutedAwareUnreadDividerIndex(
+        unreadDividerIndex,
+        props.messages,
+        props.mutedNicks,
+      );
+    },
+    [props.messages, props.mutedNicks, props.selectedBuffer, unreadDividerAnchor],
   );
   const transcriptModel = useMemo(
     () =>
@@ -60,9 +83,10 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
         firstUnreadDividerIndex,
         listKind: props.listKind,
         messages: props.messages,
+        mutedNicks: props.mutedNicks,
         unreadDividerKey: `unread-divider:${props.selectedBuffer?.id ?? 'none'}`,
       }),
-    [firstUnreadDividerIndex, props.listKind, props.messages, props.selectedBuffer?.id],
+    [firstUnreadDividerIndex, props.listKind, props.messages, props.mutedNicks, props.selectedBuffer?.id],
   );
   const initialScrollTarget = resolveInitialTranscriptScrollTarget({
     buffer: props.selectedBuffer,
@@ -88,7 +112,9 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
         loadingOlderHistory={props.loadingOlderHistory}
         mode={props.mode}
         model={transcriptModel}
+        expandedMutedGroupKeys={expandedMutedGroupKeys}
         onLoadOlderHistory={loadOlderHistory}
+        onToggleMutedGroup={toggleMutedGroup}
         onOpenChannel={props.onOpenChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
         participantHighlightMode={participantHighlightMode}
@@ -108,10 +134,29 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       loadingOlderHistory={props.loadingOlderHistory}
       mode={props.mode}
       model={transcriptModel}
+      expandedMutedGroupKeys={expandedMutedGroupKeys}
       onLoadOlderHistory={loadOlderHistory}
+      onToggleMutedGroup={toggleMutedGroup}
       onOpenChannel={props.onOpenChannel}
       onOpenParticipantQuery={props.onOpenParticipantQuery}
       participantHighlightMode={participantHighlightMode}
     />
   );
 });
+
+export const resolveMutedAwareUnreadDividerIndex = (
+  unreadDividerIndex: number | null,
+  messages: readonly ChatMessage[],
+  mutedNicks: readonly MutedNickState[],
+) => {
+  if (unreadDividerIndex === null) {
+    return null;
+  }
+  for (let index = unreadDividerIndex; index < messages.length; index += 1) {
+    const message = messages[index]!;
+    if (!message.self && !isMessageMuted(mutedNicks, message)) {
+      return index;
+    }
+  }
+  return null;
+};

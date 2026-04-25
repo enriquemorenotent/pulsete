@@ -19,6 +19,7 @@ type ChatTranscriptVirtuosoProps = {
   bufferId: string | null;
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   emptyBody: string;
+  expandedMutedGroupKeys: ReadonlySet<string>;
   followOutputRequestId: number;
   initialHistoryPending?: boolean;
   initialScrollTarget: 'bottom' | 'first-unread' | 'wait';
@@ -29,6 +30,7 @@ type ChatTranscriptVirtuosoProps = {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string) => void;
   onLoadOlderHistory?: () => Promise<number>;
+  onToggleMutedGroup: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;
 };
 
@@ -135,22 +137,26 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         <ChatTranscriptRow
           row={row}
           channelUserModesByNick={props.channelUserModesByNick}
+          expandedMutedGroupKeys={props.expandedMutedGroupKeys}
           listKind={props.listKind}
           mode={props.mode}
           onInlinePreviewLoad={viewport.handleInlinePreviewLoad}
           onOpenChannel={props.onOpenChannel}
           onOpenParticipantQuery={props.onOpenParticipantQuery}
+          onToggleMutedGroup={props.onToggleMutedGroup}
           participantHighlightMode={props.participantHighlightMode}
         />
       );
     },
     [
       props.channelUserModesByNick,
+      props.expandedMutedGroupKeys,
       props.listKind,
       props.mode,
       props.model,
       props.onOpenChannel,
       props.onOpenParticipantQuery,
+      props.onToggleMutedGroup,
       props.participantHighlightMode,
       viewport.firstItemIndex,
       viewport.handleInlinePreviewLoad,

@@ -66,8 +66,8 @@ export const createFriendActions = ({
     return executeMutation({
       request: () => api.addFriend(nick),
       mapResult: () => true,
-      successMessage: 'Friend saved',
-      errorMessage: 'Failed to save friend',
+      successMessage: 'Added to watchlist',
+      errorMessage: 'Failed to update watchlist',
       failureValue: false,
     });
   };
@@ -76,8 +76,8 @@ export const createFriendActions = ({
     return executeMutation({
       request: () => api.removeFriend(friendId),
       mapResult: () => true,
-      successMessage: 'Friend removed',
-      errorMessage: 'Failed to remove friend',
+      successMessage: 'Removed from watchlist',
+      errorMessage: 'Failed to update watchlist',
       failureValue: false,
     });
   };

@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { ChannelUserState, ChatMessage, FriendState } from '../shared/protocol.js';
+import type { ChannelUserState, ChatMessage, FriendState, MutedNickState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import { closedChannelList, makeQueryWorkspace, makeServerWorkspace, makeWorkspace } from './chat-pane.test.fixtures.js';
 
@@ -11,6 +11,7 @@ export const renderChatPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     channelUsers: ChannelUserState[];
+    mutedNicks: MutedNickState[];
     topic: string;
   }> = {},
 ) =>
@@ -21,6 +22,7 @@ export const renderChatPane = (
         topic: overrides.topic,
       })}
       friends={[] satisfies FriendState[]}
+      mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"
@@ -57,12 +59,14 @@ export const renderQueryPane = (
     queryNotificationsEnabled: boolean;
     selectedQueryMuted: boolean;
     mutedQueryNick: string;
+    mutedNicks: MutedNickState[];
   }> = {},
 ) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeQueryWorkspace()}
       friends={overrides.friends ?? ([] satisfies FriendState[])}
+      mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"
@@ -101,6 +105,7 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
     <ChatPane
       workspace={makeServerWorkspace()}
       friends={[] satisfies FriendState[]}
+      mutedNicks={[]}
       selectedMessages={selectedMessages}
       draft=""
       messageDisplayMode="colors"

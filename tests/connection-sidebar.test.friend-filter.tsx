@@ -32,7 +32,7 @@ test('friends section shows an empty state when offline friends are hidden and n
     hideOfflineFriends: true,
   });
 
-  assert.match(markup, /No friends are online right now\./);
+  assert.match(markup, /No watched nicks are online right now\./);
   assert.doesNotMatch(markup, /aria-label="Open Alice \(offline\)"/);
   assert.doesNotMatch(markup, /aria-label="Open Bob \(offline\)"/);
 });

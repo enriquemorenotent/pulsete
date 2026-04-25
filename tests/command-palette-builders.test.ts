@@ -11,7 +11,7 @@ import {
   network,
 } from './helpers/command-palette-fixtures.js';
 
-test('command palette builds buffers, friends, and current-buffer actions in order', () => {
+test('command palette builds buffers, watchlist entries, and current-buffer actions in order', () => {
   const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
     actions: {
       canToggleChannelAutoJoin: true,

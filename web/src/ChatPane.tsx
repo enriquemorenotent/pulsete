@@ -4,6 +4,7 @@ import type {
   BufferState,
   ChatMessage,
   FriendState,
+  MutedNickState,
   NetworkProfile,
 } from '../../shared/protocol.js';
 import type { ChannelListState } from './app-types.js';
@@ -19,6 +20,7 @@ import type { WorkspaceView } from './workspace.js';
 export type ChatPaneProps = {
   workspace: WorkspaceView;
   friends: FriendState[];
+  mutedNicks: MutedNickState[];
   selectedMessages: ChatMessage[];
   draft: string;
   focusContextKey?: string | null;
@@ -120,6 +122,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         channelUsers={props.workspace.selectedChannel?.users ?? []}
         followOutputRequestId={followOutputRequestId}
         messages={props.selectedMessages}
+        mutedNicks={props.mutedNicks}
         emptyBody={props.workspace.emptyBody}
         mode={props.messageDisplayMode}
         listKind={isServerBuffer ? 'server' : 'chat'}

@@ -15,10 +15,10 @@ test('contact settings body renders the combined contact rule toggles', () => {
     />,
   );
 
-  assert.match(markup, />Friend</);
+  assert.match(markup, />Watchlist</);
   assert.match(markup, />Notifications</);
   assert.match(markup, />Muted</);
-  assert.match(markup, /aria-checked="true"[\s\S]*>Friend</);
+  assert.match(markup, /aria-checked="true"[\s\S]*>Watchlist</);
   assert.match(markup, /aria-checked="false"[\s\S]*>Notifications</);
   assert.match(markup, /aria-checked="true"[\s\S]*>Muted</);
 });

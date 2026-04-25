@@ -13,7 +13,7 @@ import {
 import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
-import { filterMutedMessages, findMutedNick } from './muted-nick-utils.js';
+import { findMutedNick } from './muted-nick-utils.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { ChatActionSet } from './useAppActions.js';
 import type { SelectedBufferHistoryControls } from './useSelectedBufferEffects.js';
@@ -78,10 +78,6 @@ export function useDesktopChatModel({
         target: selectedQueryNotificationContact.nick,
       })
     : false;
-  const visibleSelectedMessages = useMemo(
-    () => filterMutedMessages(selectedMessages, mutedNicks),
-    [mutedNicks, selectedMessages],
-  );
   const participantQueryNetwork = workspace.selectedBuffer?.kind === 'channel'
     ? workspace.selectedNetwork
     : null;
@@ -91,7 +87,8 @@ export function useDesktopChatModel({
     () => ({
       workspace,
       friends,
-      selectedMessages: visibleSelectedMessages,
+      selectedMessages,
+      mutedNicks,
       draft,
       focusContextKey: composerContextKey,
       completionEnabled: composerCompletion.enabled,
@@ -177,7 +174,7 @@ export function useDesktopChatModel({
       selectedMutedNick,
       selectedBufferHistory,
       selectedBufferId,
-      visibleSelectedMessages,
+      selectedMessages,
       selectedNetwork,
       selectedQueryNotificationContact,
       ui,

@@ -1,25 +1,20 @@
 import type { ChannelUserMode } from '../../shared/protocol.js';
-import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
-import { ChatPaneExpandedMessageRow } from './ChatPaneExpandedMessageRow.js';
+import { ChatPaneMutedMessageGroupRow } from './ChatPaneMutedMessageGroupRow.js';
 import { UnreadDivider } from './ChatPaneTranscriptDecorations.js';
-import {
-  getServerMessageSourceLabel,
-  isCompactMessage,
-} from './chat-pane-message-utils.js';
 import type { ChatTranscriptRow as TranscriptRow } from './chat-transcript-model.js';
+import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
-import {
-  resolveMessageParticipantPresentation,
-  type ParticipantHighlightMode,
-} from './message-participant-presentation.js';
+import type { ParticipantHighlightMode } from './message-participant-presentation.js';
 
 type ChatTranscriptRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
+  expandedMutedGroupKeys: ReadonlySet<string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string) => void;
+  onToggleMutedGroup: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;
   row: TranscriptRow;
 };
@@ -29,44 +24,33 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
     return <UnreadDivider />;
   }
 
-  const serverSourceLabel =
-    props.listKind === 'server'
-      ? getServerMessageSourceLabel(props.row.message)
-      : null;
-  const shouldUseCompactRow =
-    props.listKind === 'server' || isCompactMessage(props.row.message);
-  const participant = resolveMessageParticipantPresentation({
-    allowParticipantQuery: !!props.onOpenParticipantQuery,
-    channelUserModesByNick: props.channelUserModesByNick,
-    highlightMode: props.participantHighlightMode,
-    listKind: props.listKind,
-    message: props.row.message,
-    rowVariant: shouldUseCompactRow ? 'compact' : 'full',
-    senderLabel: serverSourceLabel,
-  });
-
-  if (shouldUseCompactRow) {
+  if (props.row.kind === 'muted-group') {
     return (
-      <ChatPaneCompactMessageRow
-        message={props.row.message}
-        participant={participant}
-        hideTimestamp={props.row.hideTimestamp}
+      <ChatPaneMutedMessageGroupRow
+        row={props.row}
+        channelUserModesByNick={props.channelUserModesByNick}
+        expanded={props.expandedMutedGroupKeys.has(props.row.key)}
+        listKind={props.listKind}
         mode={props.mode}
         onInlinePreviewLoad={props.onInlinePreviewLoad}
         onOpenChannel={props.onOpenChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
+        onToggle={props.onToggleMutedGroup}
+        participantHighlightMode={props.participantHighlightMode}
       />
     );
   }
 
   return (
-    <ChatPaneExpandedMessageRow
-      message={props.row.message}
+    <ChatTranscriptMessageRow
+      row={props.row}
+      channelUserModesByNick={props.channelUserModesByNick}
+      listKind={props.listKind}
       mode={props.mode}
       onInlinePreviewLoad={props.onInlinePreviewLoad}
       onOpenChannel={props.onOpenChannel}
       onOpenParticipantQuery={props.onOpenParticipantQuery}
-      participant={participant}
+      participantHighlightMode={props.participantHighlightMode}
     />
   );
 }

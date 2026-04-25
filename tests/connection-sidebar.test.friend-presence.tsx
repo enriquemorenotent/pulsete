@@ -9,7 +9,7 @@ test('friend rows expose online and away cues when the rail defaults open', () =
     friendPresence: { [friend.id]: 'away' },
   });
 
-  assert.match(markup, /Friends<\/h2>/);
+  assert.match(markup, /Watchlist<\/h2>/);
   assert.doesNotMatch(markup, />1 online</);
   assert.match(markup, /aria-label="Open Alice \(away\)"/);
   assert.match(markup, /bg-yellow-400/);
@@ -48,7 +48,7 @@ test('friends header includes an overflow menu button', () => {
     ],
   });
 
-  assert.match(markup, /Friends<\/h2>/);
-  assert.match(markup, /aria-label="Friends options"/);
+  assert.match(markup, /Watchlist<\/h2>/);
+  assert.match(markup, /aria-label="Watchlist options"/);
   assert.match(markup, /aria-haspopup="menu"/);
 });

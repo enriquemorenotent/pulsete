@@ -96,9 +96,9 @@ const buildFriendEntries = (
     id: `friend:${friend.id}`,
     section: 'friends',
     label: friend.nick,
-    subtitle: 'Saved friend',
-    keywords: ['friend', 'private message', 'pm'],
-    badge: 'friend',
+    subtitle: 'Watched nick',
+    keywords: ['watchlist', 'watched nick', 'private message', 'pm'],
+    badge: 'watchlist',
     ranking: {
       currentNetwork: false,
       priorityUnread: 0,

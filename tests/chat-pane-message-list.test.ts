@@ -21,6 +21,7 @@ test('transcript model inserts an unread divider row before the first unread mes
       { id: 'message-1', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'older', kind: 'line', self: false, ts: 1 },
       { id: 'message-2', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'newer', kind: 'line', self: false, ts: 2 },
     ],
+    mutedNicks: [],
     unreadDividerKey: 'unread-divider:buffer-1',
   });
 
@@ -39,6 +40,7 @@ test('transcript model groups rows by local calendar day', () => {
       { id: 'message-1', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'late', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 57, 0, 0).getTime() },
       { id: 'message-2', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'next day', kind: 'line', self: false, ts: new Date(2026, 2, 12, 0, 5, 0, 0).getTime() },
     ],
+    mutedNicks: [],
     unreadDividerKey: 'unused',
   });
 
@@ -61,6 +63,7 @@ test('transcript model hides compact timestamps only for consecutive rows from t
       { id: 'message-3', networkId: 'network-1', target: '#help', nick: 'Joby', body: 'third', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 58, 1, 0).getTime() },
       { id: 'message-4', networkId: 'network-1', target: '#help', nick: 'Ava', body: 'fourth', kind: 'line', self: false, ts: new Date(2026, 2, 11, 2, 58, 20, 0).getTime() },
     ],
+    mutedNicks: [],
     unreadDividerKey: 'unused',
   });
 
@@ -100,6 +103,7 @@ test('transcript virtuoso maps grouped header and item indexes to stable keys', 
     messages: [
       { id: 'message-1', networkId: 'network-1', target: 'MissD', nick: 'sofia', body: 'How are you?', kind: 'line', self: true, ts: new Date(2026, 2, 11, 2, 57, 0, 0).getTime() },
     ],
+    mutedNicks: [],
     unreadDividerKey: 'unused',
   });
 
@@ -122,6 +126,7 @@ test('transcript virtuoso resolves the first item row after a day header', () =>
     messages: [
       { id: 'message-1', networkId: 'network-1', target: 'MissD', nick: 'sofia', body: 'How are you?', kind: 'line', self: true, ts: new Date(2026, 2, 11, 2, 57, 0, 0).getTime() },
     ],
+    mutedNicks: [],
     unreadDividerKey: 'unused',
   });
 
