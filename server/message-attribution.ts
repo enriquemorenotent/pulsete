@@ -11,7 +11,7 @@ export type SpeakerAttribution = Omit<MessageAttributionUpdate, 'id' | 'importBa
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
 
 export const resolveRuntimeMessageAttribution = (
-  message: Pick<MessageInput, 'nick' | 'self' | 'target'>,
+  message: Pick<MessageInput, 'kind' | 'nick' | 'self' | 'target'>,
 ): SpeakerAttribution => {
   if (message.self) {
     return {
@@ -22,10 +22,10 @@ export const resolveRuntimeMessageAttribution = (
       self: true,
     };
   }
-  if (!message.nick) {
+  if (isAmbiguousRuntimeSpeaker(message)) {
     return {
       speakerRole: 'unknown',
-      speakerNick: null,
+      speakerNick: message.nick,
       attributionSource: 'runtime',
       attributionConfidence: 'low',
       self: false,
@@ -49,33 +49,32 @@ export const resolveRuntimeMessageAttribution = (
   };
 };
 
-const createUnknownAttribution = (
-  speakerNick: string | null,
-  attributionSource: SpeakerAttributionSource,
-  attributionConfidence: SpeakerAttributionConfidence,
-): SpeakerAttribution => ({
-  speakerRole: 'unknown',
-  speakerNick,
-  attributionSource,
-  attributionConfidence,
-  self: false,
-});
-
 export const normalizeStoredAttribution = (
   message: Pick<
     MessageInput,
     'nick' | 'self' | 'speakerRole' | 'speakerNick' | 'attributionSource' | 'attributionConfidence'
   >,
-): SpeakerAttribution => ({
-  speakerRole: normalizeSpeakerRole(message.speakerRole, message.self),
-  speakerNick: message.speakerNick ?? message.nick,
-  attributionSource: normalizeAttributionSource(message.attributionSource),
-  attributionConfidence: normalizeAttributionConfidence(message.attributionConfidence),
-  self: Boolean(message.self),
-});
+): SpeakerAttribution => {
+  const speakerRole = normalizeSpeakerRole(message.speakerRole, message.self);
+  const attributionConfidence = normalizeAttributionConfidence(message.attributionConfidence);
+  return {
+    speakerRole,
+    speakerNick: message.speakerNick ?? message.nick,
+    attributionSource: normalizeAttributionSource(message.attributionSource),
+    attributionConfidence,
+    self: resolveStoredSelfFlag(message.self, speakerRole, attributionConfidence),
+  };
+};
+
+const isAmbiguousRuntimeSpeaker = (
+  message: Pick<MessageInput, 'kind' | 'nick' | 'target'>,
+) => !message.nick
+  || message.kind === 'system'
+  || message.kind === 'error'
+  || message.target === 'server';
 
 const normalizeSpeakerRole = (value: SpeakerRole | undefined, self: boolean): SpeakerRole =>
-  value ?? (self ? 'self' : 'unknown');
+  self ? 'self' : value ?? 'unknown';
 
 const normalizeAttributionSource = (value: SpeakerAttributionSource | undefined): SpeakerAttributionSource =>
   value ?? 'unknown';
@@ -83,3 +82,9 @@ const normalizeAttributionSource = (value: SpeakerAttributionSource | undefined)
 const normalizeAttributionConfidence = (
   value: SpeakerAttributionConfidence | undefined,
 ): SpeakerAttributionConfidence => value ?? 'low';
+
+const resolveStoredSelfFlag = (
+  self: boolean,
+  speakerRole: SpeakerRole,
+  attributionConfidence: SpeakerAttributionConfidence,
+) => self || (speakerRole === 'self' && attributionConfidence === 'high');

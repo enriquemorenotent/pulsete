@@ -114,6 +114,11 @@ Runtime attribution can use current connection context, but stored attribution
 must be good enough for history rendering after reconnects, imports, and app
 restarts.
 
+Stored authorship beats live context. If a row already carries attribution, the
+app should render from that stored role and confidence instead of guessing from
+the current nick or target. Ambiguous rows should remain unknown rather than
+confidently wrong.
+
 ## Read State And Unread Counts
 
 Unread state belongs to a buffer. Marking a buffer read clears generic and

@@ -112,21 +112,25 @@ export const toChannelState = (
   users: parseChannelUsers(row.users),
 });
 
-export const toMessage = (row: MessageRow): MessageInput => ({
-  id: row.id,
-  networkId: row.networkId,
-  target: row.target,
-  nick: row.nick,
-  speakerRole: normalizeSpeakerRole(row.speakerRole, row.self),
-  speakerNick: row.speakerNick ?? row.nick,
-  attributionSource: normalizeAttributionSource(row.attributionSource),
-  attributionConfidence: normalizeAttributionConfidence(row.attributionConfidence),
-  importBatchId: row.importBatchId,
-  body: row.body,
-  kind: row.kind as MessageInput['kind'],
-  self: Boolean(row.self),
-  ts: row.ts,
-});
+export const toMessage = (row: MessageRow): MessageInput => {
+  const speakerRole = normalizeSpeakerRole(row.speakerRole, row.self);
+  const attributionConfidence = normalizeAttributionConfidence(row.attributionConfidence);
+  return {
+    id: row.id,
+    networkId: row.networkId,
+    target: row.target,
+    nick: row.nick,
+    speakerRole,
+    speakerNick: row.speakerNick ?? row.nick,
+    attributionSource: normalizeAttributionSource(row.attributionSource),
+    attributionConfidence,
+    importBatchId: row.importBatchId,
+    body: row.body,
+    kind: row.kind as MessageInput['kind'],
+    self: Boolean(row.self) || (speakerRole === 'self' && attributionConfidence === 'high'),
+    ts: row.ts,
+  };
+};
 
 const normalizeSpeakerRole = (value: string | null, self: number): SpeakerRole =>
   value === 'self' || value === 'peer' || value === 'other' || value === 'unknown'
