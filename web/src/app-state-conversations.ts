@@ -3,6 +3,7 @@ import type { BufferState, FriendState, MutedNickState, PendingChannelState } fr
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
   appendConversationMessages,
+  liveConversationMessageLimit,
   prependConversationMessages,
   removeBufferMessages,
   removeConversationMessages,
@@ -119,7 +120,11 @@ export const reduceConversationDomain = (
     case 'upsert-message':
       return {
         ...domain,
-        messages: appendConversationMessages(domain.messages, [action.message]),
+        messages: appendConversationMessages(
+          domain.messages,
+          [action.message],
+          { maxMessagesPerConversation: liveConversationMessageLimit },
+        ),
       };
     case 'append-messages':
       return {

@@ -1,7 +1,9 @@
 import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
-import type { BufferState, ChatMessage } from '../../shared/protocol.js';
+import { historyWindowLimit, type BufferState, type ChatMessage } from '../../shared/protocol.js';
 
 export type ConversationMessages = Record<string, ChatMessage[]>;
+
+export const liveConversationMessageLimit = historyWindowLimit * 4;
 
 export const toConversationMessageKey = (networkId: string, target: string) =>
   `${networkId}:${normalizeIrcIdentifier(target)}`;
@@ -17,13 +19,17 @@ export const indexConversationMessages = (messages: ChatMessage[]): Conversation
 export const appendConversationMessages = (
   current: ConversationMessages,
   incoming: ChatMessage[],
+  options: { maxMessagesPerConversation?: number } = {},
 ): ConversationMessages => {
   if (incoming.length === 0) {
     return current;
   }
   const next = { ...current };
   for (const [key, bucket] of groupMessagesByConversation(incoming)) {
-    next[key] = appendMessageBucket(next[key] ?? [], bucket);
+    next[key] = limitMessageBucket(
+      appendMessageBucket(next[key] ?? [], bucket),
+      options.maxMessagesPerConversation,
+    );
   }
   return next;
 };
@@ -184,3 +190,8 @@ const hasDuplicateMessageIds = (current: ChatMessage[], incoming: ChatMessage[])
   }
   return false;
 };
+
+const limitMessageBucket = (bucket: ChatMessage[], maxMessages: number | undefined) =>
+  typeof maxMessages === 'number' && maxMessages > 0 && bucket.length > maxMessages
+    ? bucket.slice(-maxMessages)
+    : bucket;

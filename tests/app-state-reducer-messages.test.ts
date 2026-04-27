@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { reducer } from '../web/src/app-state.js';
-import { indexConversationMessages,toConversationMessageKey } from '../web/src/conversation-message-state.js';
+import {
+  indexConversationMessages,
+  liveConversationMessageLimit,
+  toConversationMessageKey,
+} from '../web/src/conversation-message-state.js';
 import { makeBuffer, makeMessage, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
 test('pending selections promote to the confirmed channel buffer', () => {
@@ -47,6 +51,46 @@ test('append-messages merges batched updates in timestamp order per conversation
       { id: 'message-3', body: 'updated hello', ts: 20 },
     ]
   );
+});
+
+test('live message appends retain only the newest browser message window', () => {
+  const existingMessages = Array.from({ length: liveConversationMessageLimit }, (_, index) =>
+    makeMessage({ id: `message-${index}`, ts: index })
+  );
+  const state = makeState({
+    domain: {
+      messages: indexConversationMessages(existingMessages),
+    },
+  });
+  const nextLiveMessage = makeMessage({
+    id: 'message-live-new',
+    ts: liveConversationMessageLimit,
+  });
+
+  const nextState = reducer(state, {
+    type: 'append-message',
+    message: nextLiveMessage,
+  });
+  const key = toConversationMessageKey(nextLiveMessage.networkId, nextLiveMessage.target);
+  const retained = nextState.domain.messages[key];
+
+  assert.equal(retained.length, liveConversationMessageLimit);
+  assert.equal(retained[0]?.id, 'message-1');
+  assert.equal(retained.at(-1)?.id, nextLiveMessage.id);
+});
+
+test('manual history batches are not capped by the live message window', () => {
+  const historyMessages = Array.from({ length: liveConversationMessageLimit + 1 }, (_, index) =>
+    makeMessage({ id: `history-message-${index}`, ts: index })
+  );
+
+  const nextState = reducer(makeState(), {
+    type: 'append-messages',
+    messages: historyMessages,
+  });
+  const key = toConversationMessageKey(historyMessages[0]!.networkId, historyMessages[0]!.target);
+
+  assert.equal(nextState.domain.messages[key].length, liveConversationMessageLimit + 1);
 });
 
 test('remove-messages deletes only the requested conversation entries', () => {
@@ -95,4 +139,3 @@ test('removing a buffer also removes its indexed messages', () => {
 
   assert.deepEqual(nextState.domain.messages, {});
 });
-
