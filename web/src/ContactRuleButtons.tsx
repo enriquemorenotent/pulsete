@@ -1,4 +1,4 @@
-import { Bell, Settings, Star, VolumeX } from 'lucide-react';
+import { Bell, Star, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 
@@ -36,29 +36,6 @@ export function ContactRuleIconButton(props: {
       onClick={props.onClick}
     >
       <Icon className={cn('size-4', props.active && 'fill-current')} />
-    </Button>
-  );
-}
-
-export function ContactSettingsIconButton(props: {
-  label: string;
-  onClick: () => void;
-  active?: boolean;
-}) {
-  return (
-    <Button
-      type="button"
-      size="icon"
-      variant="ghost"
-      className={cn(
-        'size-7 text-muted-foreground hover:text-foreground',
-        props.active && 'text-primary hover:text-primary',
-      )}
-      aria-label={props.label}
-      title={props.label}
-      onClick={props.onClick}
-    >
-      <Settings className="size-4" />
     </Button>
   );
 }

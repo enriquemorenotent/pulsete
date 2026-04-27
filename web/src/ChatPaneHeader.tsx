@@ -1,11 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import type { BufferState, FriendState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
 import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
-import { ContactSettingsDialog } from './ContactSettingsDialog.js';
 import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
 import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import { findFriendByNick } from './friend-utils.js';
@@ -37,7 +36,6 @@ type ChatPaneHeaderProps = {
 };
 
 export function ChatPaneHeader(props: ChatPaneHeaderProps) {
-  const [contactSettingsOpen, setContactSettingsOpen] = useState(false);
   const { selectedBuffer } = props.workspace;
   const selectedFriend =
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
@@ -92,62 +90,33 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     return null;
   }
   return (
-    <>
-      <PaneHeader
-        title={props.workspace.headerTitle}
-        subtitle={subtitle}
-        topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
-        actions={(
-          <PaneHeaderActions
-            title={props.workspace.headerTitle}
-            primary={actions.primary}
-            contactControls={
-              selectedQuery ? (
-                <QueryContactControls
-                  nick={selectedQuery.nick}
-                  friend={selectedFriend}
-                  notifications={props.queryNotificationsEnabled ?? false}
-                  muted={props.selectedQueryMuted ?? false}
-                  onAddFriend={props.onAddFriend}
-                  onRemoveFriend={props.onRemoveFriend}
-                  onToggleNotifications={props.onToggleQueryNotifications}
-                  onMute={props.onMuteSelectedQuery}
-                  onUnmute={props.onUnmuteSelectedQuery}
-                  onOpenSettings={() => setContactSettingsOpen(true)}
-                />
-              ) : null
-            }
-            overflow={actions.overflow}
-          />
-        )}
-      />
-      {selectedQuery ? (
-        <ContactSettingsDialog
-          open={contactSettingsOpen}
-          onOpenChange={setContactSettingsOpen}
-          networkName={selectedQuery.network.name}
-          nick={selectedQuery.nick}
-          friend={Boolean(selectedFriend)}
-          notifications={props.queryNotificationsEnabled ?? false}
-          muted={props.selectedQueryMuted ?? false}
-          onFriendChange={(active) => {
-            void (active
-              ? props.onAddFriend(selectedQuery.nick)
-              : selectedFriend && props.onRemoveFriend(selectedFriend.id));
-          }}
-          onNotificationsChange={(active) => {
-            if (active !== Boolean(props.queryNotificationsEnabled)) {
-              props.onToggleQueryNotifications?.();
-            }
-          }}
-          onMutedChange={(active) => {
-            void (active
-              ? props.onMuteSelectedQuery?.()
-              : props.onUnmuteSelectedQuery?.());
-          }}
+    <PaneHeader
+      title={props.workspace.headerTitle}
+      subtitle={subtitle}
+      topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
+      actions={(
+        <PaneHeaderActions
+          title={props.workspace.headerTitle}
+          primary={actions.primary}
+          contactControls={
+            selectedQuery ? (
+              <QueryContactControls
+                nick={selectedQuery.nick}
+                friend={selectedFriend}
+                notifications={props.queryNotificationsEnabled ?? false}
+                muted={props.selectedQueryMuted ?? false}
+                onAddFriend={props.onAddFriend}
+                onRemoveFriend={props.onRemoveFriend}
+                onToggleNotifications={props.onToggleQueryNotifications}
+                onMute={props.onMuteSelectedQuery}
+                onUnmute={props.onUnmuteSelectedQuery}
+              />
+            ) : null
+          }
+          overflow={actions.overflow}
         />
-      ) : null}
-    </>
+      )}
+    />
   );
 }
 

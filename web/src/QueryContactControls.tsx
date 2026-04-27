@@ -1,8 +1,5 @@
 import type { FriendState } from '../../shared/protocol.js';
-import {
-  ContactRuleIconButton,
-  ContactSettingsIconButton,
-} from './ContactRuleButtons.js';
+import { ContactRuleIconButton } from './ContactRuleButtons.js';
 
 type QueryContactControlsProps = {
   nick: string;
@@ -14,7 +11,6 @@ type QueryContactControlsProps = {
   onToggleNotifications?: () => void;
   onMute?: () => Promise<boolean>;
   onUnmute?: () => Promise<boolean>;
-  onOpenSettings: () => void;
 };
 
 export function QueryContactControls(props: QueryContactControlsProps) {
@@ -51,11 +47,6 @@ export function QueryContactControls(props: QueryContactControlsProps) {
         onClick={() => {
           void (props.muted ? props.onUnmute?.() : props.onMute?.());
         }}
-      />
-      <ContactSettingsIconButton
-        label={`Contact settings for ${props.nick}`}
-        active={Boolean(props.friend) || props.notifications || props.muted}
-        onClick={props.onOpenSettings}
       />
     </div>
   );
