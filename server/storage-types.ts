@@ -28,6 +28,7 @@ export type NetworkRow = {
   authTarget: string;
   authAccount: string;
   favorite: number;
+  notes: string;
   createdAt: number;
   updatedAt: number;
 };

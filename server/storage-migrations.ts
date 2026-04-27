@@ -10,7 +10,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 19;
+export const currentStorageSchemaVersion = 20;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -155,6 +155,12 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureMessageSearchArtifacts(db, { backfill: true });
     },
   },
+  {
+    version: 20,
+    apply: (db) => {
+      ensureColumn(db, 'networks', 'notes', "TEXT NOT NULL DEFAULT ''");
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => {
@@ -202,6 +208,7 @@ const ensureColumn = (db: SqliteDb, table: string, column: string, definition: s
 
 const ensureCurrentNetworkColumns = (db: SqliteDb) => {
   ensureColumn(db, 'networks', 'workspaceOpen', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'networks', 'notes', "TEXT NOT NULL DEFAULT ''");
 };
 
 const getUserVersion = (db: SqliteDb) =>

@@ -108,7 +108,8 @@ test('versioned storage migrations rebuild networks as workspace-owned rows', ()
   assert.deepEqual(network?.altNicks, ['tester_', 'tester__']);
   assert.deepEqual(network?.historicalSelfNicks, []);
   assert.deepEqual(network?.autoJoin, []);
-  assert.equal(version.user_version, 19);
+  assert.equal(network?.notes, '');
+  assert.equal(version.user_version, 20);
   assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
   assert.equal(columns.some((column) => column.name === 'templateId'), false);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), false);
@@ -116,6 +117,7 @@ test('versioned storage migrations rebuild networks as workspace-owned rows', ()
   assert.equal(columns.some((column) => column.name === 'authMethod'), true);
   assert.equal(columns.some((column) => column.name === 'authTarget'), true);
   assert.equal(columns.some((column) => column.name === 'authAccount'), true);
+  assert.equal(columns.some((column) => column.name === 'notes'), true);
   assert.equal(columns.some((column) => column.name === 'historicalSelfNicks'), false);
   assert.equal(columns.some((column) => column.name === 'altNicks'), false);
   assert.equal(columns.some((column) => column.name === 'autoJoin'), false);

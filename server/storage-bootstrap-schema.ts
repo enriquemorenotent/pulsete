@@ -24,6 +24,7 @@ export const storageBootstrapSchemaSql = `
     authTarget TEXT NOT NULL DEFAULT 'NickServ',
     authAccount TEXT NOT NULL DEFAULT '',
     favorite INTEGER NOT NULL DEFAULT 0,
+    notes TEXT NOT NULL DEFAULT '',
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
   );

@@ -22,6 +22,7 @@ const network: AppDomainState['networks'][number] = {
   authAccount: '',
   favorite: false,
   autoJoin: [],
+  notes: 'Character: Sofia',
 };
 
 test('openNewNetworkEditor starts with an empty form instead of a placeholder identity', () => {
@@ -85,6 +86,7 @@ test('openExistingNetworkEditor can target the servers tab and return to the clo
         hasSavedPassword: false,
         favorite: false,
         autoJoin: '',
+        notes: 'Character: Sofia',
       },
     },
   });

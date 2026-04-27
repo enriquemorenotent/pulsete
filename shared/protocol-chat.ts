@@ -72,6 +72,7 @@ export const networkSchema = z.object({
   authAccount: z.string().optional(),
   favorite: z.boolean().default(false),
   autoJoin: z.array(z.string()),
+  notes: z.string().optional(),
 });
 export type NetworkProfile = z.infer<typeof networkSchema>;
 

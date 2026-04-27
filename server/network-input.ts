@@ -22,6 +22,7 @@ const networkInputSchema = z.object({
   clearPassword: z.boolean().optional().default(false),
   favorite: z.boolean().optional().default(false),
   autoJoin: z.array(z.string()).optional().default([]),
+  notes: z.string().optional(),
 }).refine((input) => input.password === undefined || input.password.length > 0, {
   message: 'Password cannot be empty',
   path: ['password'],

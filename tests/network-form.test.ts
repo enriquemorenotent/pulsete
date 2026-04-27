@@ -22,12 +22,14 @@ test('network form omits hidden passwords when auth is set to none', () => {
     hasSavedPassword: true,
     favorite: false,
     autoJoin: '#chat',
+    notes: 'Character: Mira',
   });
 
   assert.equal(payload.password, undefined);
   assert.equal(payload.clearPassword, undefined);
   assert.equal(payload.authMethod, 'none');
   assert.equal(payload.authAccount, '');
+  assert.equal(payload.notes, 'Character: Mira');
 });
 
 test('network form includes the explicit auth account for sasl', () => {
@@ -50,6 +52,7 @@ test('network form includes the explicit auth account for sasl', () => {
     hasSavedPassword: false,
     favorite: false,
     autoJoin: '#chat',
+    notes: '',
   });
 
   assert.equal(payload.authMethod, 'sasl-plain');
@@ -76,6 +79,7 @@ test('network form preserves exact passwords for password-based auth methods', (
     hasSavedPassword: false,
     favorite: false,
     autoJoin: '#chat',
+    notes: '',
   });
 
   assert.equal(payload.password, ' secret pass ');

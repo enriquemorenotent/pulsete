@@ -139,6 +139,16 @@ export const createNetworkActions = ({
     });
   };
 
+  const saveNetworkNotes = async (network: NetworkProfile, notes: string) => {
+    return executeMutation({
+      request: () => api.saveNetwork({ ...network, notes }),
+      mapResult: (result) => result.network,
+      successMessage: 'Notes saved',
+      errorMessage: 'Failed to save notes',
+      failureValue: null,
+    });
+  };
+
   const selectNetworkBuffer = (network: NetworkProfile) => {
     const conversation = readConversation(getState, getConversation);
     const buffer = conversation.findServerBuffer(network.id);
@@ -175,6 +185,7 @@ export const createNetworkActions = ({
     duplicateNetwork,
     reconnectNetwork,
     saveFavorite,
+    saveNetworkNotes,
     selectNetworkBuffer,
     submitNetwork,
     toggleCurrentChannelAutoJoin,

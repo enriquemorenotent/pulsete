@@ -173,7 +173,8 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
         });
       }
     },
-  }), [dispatch, serverProfileNetwork]);
+    onSaveNotes: actions.saveNetworkNotes,
+  }), [actions.saveNetworkNotes, dispatch, serverProfileNetwork]);
   return <WorkspaceRightSidebar workspace={workspace} nicklist={nicklist} serverProfile={serverProfile} />;
 });
 

@@ -26,6 +26,7 @@ export type NetworkForm = {
   hasSavedPassword: boolean;
   favorite: boolean;
   autoJoin: string;
+  notes: string;
 };
 
 export type SaveNetworkPayload = {
@@ -45,6 +46,7 @@ export type SaveNetworkPayload = {
   clearPassword?: boolean;
   favorite: boolean;
   autoJoin: string[];
+  notes?: string;
 };
 
 export const emptyNetworkForm = (): NetworkForm => ({
@@ -65,6 +67,7 @@ export const emptyNetworkForm = (): NetworkForm => ({
   hasSavedPassword: false,
   favorite: false,
   autoJoin: '',
+  notes: '',
 });
 
 export const parseAutoJoin = (text: string) =>
@@ -92,6 +95,7 @@ export const toForm = (network: NetworkProfile): NetworkForm => ({
   hasSavedPassword: network.hasPassword,
   favorite: network.favorite,
   autoJoin: network.autoJoin.join(', '),
+  notes: network.notes ?? '',
 });
 
 export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
@@ -117,5 +121,6 @@ export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
     clearPassword: password ? false : form.clearPassword || undefined,
     favorite: form.favorite,
     autoJoin: parseAutoJoin(form.autoJoin),
+    notes: form.notes,
   };
 };

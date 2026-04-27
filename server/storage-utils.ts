@@ -53,6 +53,7 @@ export const toNetworkProfile = (
     authAccount: row.authAccount,
     favorite: Boolean(row.favorite),
     autoJoin: lists.autoJoin,
+    notes: row.notes,
   };
   return profile;
 };

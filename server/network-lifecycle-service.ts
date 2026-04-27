@@ -44,6 +44,7 @@ export class NetworkLifecycleService {
       password: runtimeProfile.password,
       favorite: network.favorite,
       autoJoin: network.autoJoin,
+      notes: network.notes ?? '',
     });
     const messages = [{ type: 'network.upsert', network: duplicate } satisfies ServerMessage];
     return { network: duplicate, serverBuffer: null, messages };

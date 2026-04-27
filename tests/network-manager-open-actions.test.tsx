@@ -25,6 +25,7 @@ const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile =>
   authAccount: overrides.authAccount,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
+  notes: overrides.notes ?? '',
 });
 
 const makePeer = (root: NetworkProfile, overrides: Partial<NetworkProfile> = {}): NetworkProfile =>

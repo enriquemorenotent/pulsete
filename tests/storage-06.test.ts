@@ -192,7 +192,7 @@ test('normalized storage migration preserves large transcripts and backfills mis
   `).all('network-1') as Array<{ target: string; batchCount: number }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 19);
+  assert.equal(version.user_version, 20);
   assert.equal(messageCount.count, 1_200);
   assert.equal(batchCount.count, 3);
   assert.deepEqual(migratedBuffers, [

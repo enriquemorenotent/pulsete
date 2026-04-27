@@ -51,6 +51,7 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
     realName: overrides.realName ?? template.realName,
     favorite: overrides.favorite ?? template.favorite,
     autoJoin: overrides.autoJoin ?? template.autoJoin,
+    notes: overrides.notes ?? template.notes,
   }));
 };
 
@@ -86,6 +87,7 @@ test('storage persists local workspace buffers and messages', () => {
     tls: true,
     favorite: true,
     autoJoin: ['#archlinux'],
+    notes: 'Character: Mira\nCurrent plot: bridge watch',
   });
 
   const channel = storage.conversations.upsertChannel({
@@ -115,6 +117,7 @@ test('storage persists local workspace buffers and messages', () => {
     favorite: true,
     autoJoin: ['#archlinux'],
     hasPassword: false,
+    notes: 'Character: Mira\nCurrent plot: bridge watch',
   });
   assert.deepEqual(storage.conversations.getChannel(channel.id), channel);
   assert.equal(storage.conversations.getBufferByTarget(network.id, 'helper')?.id, query.id);
@@ -133,6 +136,23 @@ test('storage persists local workspace buffers and messages', () => {
   assert.equal(snapshot.buffers.some((buffer) => buffer.id === channel.id && buffer.unread === 2), true);
   assert.equal(snapshot.buffers.some((buffer) => buffer.id === query.id && buffer.kind === 'query'), true);
   assert.equal(snapshot.messages.at(-1)?.id, message.id);
+});
+
+test('storage preserves network notes when an update omits notes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput({
+    name: 'RoleplayNet',
+    notes: 'Character: Mira',
+  }));
+
+  const updated = storage.networks.upsert(createNetworkInput({
+    id: network.id,
+    name: 'RoleplayNet Renamed',
+  }));
+
+  assert.equal(updated.name, 'RoleplayNet Renamed');
+  assert.equal(updated.notes, 'Character: Mira');
 });
 
 test('muted nick storage dedupes case-insensitively per network while allowing other networks', () => {
