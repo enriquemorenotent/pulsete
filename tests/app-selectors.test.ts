@@ -91,3 +91,26 @@ test('sidebar selector keeps the same reference across unrelated UI-only changes
 
   assert.equal(nextSidebar, initialSidebar);
 });
+
+test('sidebar connections use favorite-first workspace network ordering', () => {
+  const networks: NetworkProfile[] = [
+    { ...network, id: 'zeta', name: 'Zeta', favorite: false },
+    { ...network, id: 'closed', name: 'A Closed', workspaceOpen: false, favorite: true },
+    { ...network, id: 'beta-favorite', name: 'beta', favorite: true },
+    { ...network, id: 'alpha', name: 'Alpha', favorite: false },
+    { ...network, id: 'alpha-favorite', name: 'alpha', favorite: true },
+  ];
+  const state: State = {
+    ...initialState,
+    domain: {
+      ...initialState.domain,
+      phase: 'ready',
+      networks,
+    },
+  };
+
+  assert.deepEqual(
+    selectSidebarConnections(state).map((connection) => connection.network.id),
+    ['alpha-favorite', 'beta-favorite', 'alpha', 'zeta'],
+  );
+});
