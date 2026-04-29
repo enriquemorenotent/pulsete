@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { channelUserModeTone } from './channel-user-tone.js';
 import { ContactRuleIconButton } from './ContactRuleButtons.js';
+import {
+  enableContactNotificationsAndUnmute,
+  muteContactAndDisableNotifications,
+} from './contact-rule-actions.js';
 import { resolveContactRuleState } from './contact-rules.js';
 import type {
   BackgroundDmAudioContact,
@@ -175,7 +179,12 @@ function NickContactControls(props: {
             props.onRemoveNotificationContact(props.contact);
             return;
           }
-          props.onAddNotificationContact(props.contact);
+          void enableContactNotificationsAndUnmute({
+            contact: props.contact,
+            mutedNick: props.mutedNick,
+            removeMutedNick: props.onRemoveMutedNick,
+            addNotificationContact: props.onAddNotificationContact,
+          });
         }}
       />
       <ContactRuleIconButton
@@ -183,9 +192,15 @@ function NickContactControls(props: {
         active={Boolean(props.mutedNick)}
         label={props.mutedNick ? `Unmute ${props.nick}` : `Mute ${props.nick}`}
         onClick={() => {
-          void (props.mutedNick
-            ? props.onRemoveMutedNick(props.mutedNick.id)
-            : props.onAddMutedNick(props.contact.networkId, props.nick));
+          if (props.mutedNick) {
+            void props.onRemoveMutedNick(props.mutedNick.id);
+            return;
+          }
+          void muteContactAndDisableNotifications({
+            contact: props.contact,
+            addMutedNick: props.onAddMutedNick,
+            removeNotificationContact: props.onRemoveNotificationContact,
+          });
         }}
       />
     </div>

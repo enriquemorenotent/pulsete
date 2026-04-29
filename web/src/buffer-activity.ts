@@ -120,7 +120,7 @@ export const resolveInitialTranscriptScrollTarget = (input: {
   messagesLength: number;
 }) => {
   if (input.listKind === 'server') {
-    return 'bottom' as const;
+    return 'latest' as const;
   }
   if (input.firstUnreadDividerIndex !== null) {
     return 'first-unread' as const;
@@ -128,5 +128,5 @@ export const resolveInitialTranscriptScrollTarget = (input: {
   if (hasUnreadBufferActivity(input.buffer) && input.messagesLength === 0) {
     return 'wait' as const;
   }
-  return 'bottom' as const;
+  return 'latest' as const;
 };

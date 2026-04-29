@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveContactRuleState } from '../web/src/contact-rules.js';
 
-test('contact rule state combines friend, notification, and muted nick lists', () => {
+test('contact rule state masks notification contacts while the nick is muted', () => {
   const state = resolveContactRuleState({
     networkId: 'network-1',
     nick: 'Alice',
@@ -16,6 +16,23 @@ test('contact rule state combines friend, notification, and muted nick lists', (
   assert.deepEqual(state.contact, { networkId: 'network-1', nick: 'Alice' });
   assert.equal(state.friend?.id, 'friend-1');
   assert.equal(state.mutedNick?.id, 'mute-1');
+  assert.equal(state.notificationsEnabled, false);
+});
+
+test('contact rule state combines friend and notification lists when the nick is not muted', () => {
+  const state = resolveContactRuleState({
+    networkId: 'network-1',
+    nick: 'Alice',
+    friends: [{ id: 'friend-1', nick: 'alice' }],
+    mutedNicks: [],
+    backgroundDmAudio: {
+      contacts: [{ networkId: 'network-1', nick: 'aLiCe' }],
+    },
+  });
+
+  assert.deepEqual(state.contact, { networkId: 'network-1', nick: 'Alice' });
+  assert.equal(state.friend?.id, 'friend-1');
+  assert.equal(state.mutedNick, null);
   assert.equal(state.notificationsEnabled, true);
 });
 

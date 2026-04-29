@@ -221,7 +221,7 @@ test('resolveInitialTranscriptScrollTarget waits for unread history to load befo
   );
 });
 
-test('resolveInitialTranscriptScrollTarget falls back to bottom for server transcripts', () => {
+test('resolveInitialTranscriptScrollTarget falls back to latest for server transcripts', () => {
   assert.equal(
     resolveInitialTranscriptScrollTarget({
       buffer: makeBuffer({ unread: 4 }),
@@ -229,6 +229,6 @@ test('resolveInitialTranscriptScrollTarget falls back to bottom for server trans
       listKind: 'server',
       messagesLength: 9,
     }),
-    'bottom'
+    'latest'
   );
 });

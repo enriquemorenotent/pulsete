@@ -13,7 +13,10 @@ import type { ChatTranscriptModel } from './chat-transcript-model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
-import { useChatTranscriptViewport } from './useChatTranscriptViewport.js';
+import {
+  useChatTranscriptViewport,
+  type TranscriptInitialScrollTarget,
+} from './useChatTranscriptViewport.js';
 
 type ChatTranscriptVirtuosoProps = {
   bufferId: string | null;
@@ -22,7 +25,7 @@ type ChatTranscriptVirtuosoProps = {
   expandedMutedGroupKeys: ReadonlySet<string>;
   followOutputRequestId: number;
   initialHistoryPending?: boolean;
-  initialScrollTarget: 'bottom' | 'first-unread' | 'wait';
+  initialScrollTarget: TranscriptInitialScrollTarget;
   listKind: 'chat' | 'server';
   loadingOlderHistory?: boolean;
   mode: MessageDisplayMode;
@@ -83,6 +86,10 @@ export const resolveTranscriptVirtuosoRow = (
 export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
   props: ChatTranscriptVirtuosoProps,
 ) {
+  const rowKeys = useMemo(
+    () => props.model.flatRows.map((row) => row.key),
+    [props.model.flatRows],
+  );
   const viewport = useChatTranscriptViewport({
     bufferId: props.bufferId,
     followOutputRequestId: props.followOutputRequestId,
@@ -90,12 +97,12 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     initialScrollTarget: props.initialScrollTarget,
     loadingOlderHistory: props.loadingOlderHistory ?? false,
     onLoadOlderHistory: props.onLoadOlderHistory,
+    rowKeys,
     totalItemCount: props.model.flatRows.length,
     unreadRowIndex: props.model.unreadRowIndex,
   });
   const components = useMemo(
     () => ({
-      Footer: () => <div aria-hidden className="h-px w-full" data-scroll-anchor-end />,
       Header: props.onLoadOlderHistory
         ? () => (
             <div className="mb-2 flex justify-center">
@@ -103,7 +110,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
                 variant="outline"
                 size="sm"
                 disabled={props.loadingOlderHistory}
-                onClick={() => void viewport.loadOlderHistory()}
+                onClick={() => void viewport.handleLoadOlderHistory()}
               >
                 {props.loadingOlderHistory ? 'Loading older...' : 'Load older'}
               </Button>
@@ -112,7 +119,11 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         : undefined,
       List: TranscriptList,
     }),
-    [props.loadingOlderHistory, props.onLoadOlderHistory, viewport],
+    [
+      props.loadingOlderHistory,
+      props.onLoadOlderHistory,
+      viewport.handleLoadOlderHistory,
+    ],
   );
   const computeItemKey = useCallback(
     (index: number) =>
@@ -189,7 +200,6 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         increaseViewportBy={{ bottom: 320, top: 160 }}
         itemContent={renderItemContent}
         scrollerRef={viewport.scrollerRef}
-        startReached={viewport.startReached}
       />
       {viewport.showJumpToLatest ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">

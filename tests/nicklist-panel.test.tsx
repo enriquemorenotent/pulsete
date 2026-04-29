@@ -135,7 +135,7 @@ test('nicklist shows the unmute control for muted users', () => {
       channel={channel}
       friends={[] satisfies FriendState[]}
       mutedNicks={[{ id: 'mute-1', networkId: network.id, nick: 'Alice' }]}
-      backgroundDmAudio={{ contacts: [] }}
+      backgroundDmAudio={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
       onAddFriend={async () => true}
       onAddNotificationContact={() => undefined}
       onAddMutedNick={async () => true}

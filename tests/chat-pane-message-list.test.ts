@@ -8,9 +8,10 @@ import {
   resolveTranscriptVirtuosoRow,
 } from '../web/src/ChatTranscriptVirtuoso.js';
 import {
+  resolveFirstUnreadScrollLocation,
+  resolveLatestFollowBehavior,
   resolveNextFirstItemIndex,
-  resolveTranscriptFollowOutput,
-  resolveUnreadScrollLocation,
+  resolvePrependedRowCountFromAnchor,
 } from '../web/src/useChatTranscriptViewport.js';
 
 test('transcript model inserts an unread divider row before the first unread message', () => {
@@ -80,17 +81,17 @@ test('transcript model hides compact timestamps only for consecutive rows from t
   );
 });
 
-test('follow output autoscrolls while pinned or when a send-follow request is pending', () => {
+test('latest follow behavior autoscrolls only while pinned or after sending', () => {
   assert.equal(
-    resolveTranscriptFollowOutput({ isAtBottom: true, pendingSendFollow: false }),
+    resolveLatestFollowBehavior({ atLatest: true, pendingSendToLatest: false }),
     'auto',
   );
   assert.equal(
-    resolveTranscriptFollowOutput({ isAtBottom: false, pendingSendFollow: true }),
+    resolveLatestFollowBehavior({ atLatest: false, pendingSendToLatest: true }),
     'auto',
   );
   assert.equal(
-    resolveTranscriptFollowOutput({ isAtBottom: false, pendingSendFollow: false }),
+    resolveLatestFollowBehavior({ atLatest: false, pendingSendToLatest: false }),
     false,
   );
 });
@@ -141,9 +142,25 @@ test('first item index moves upward by the number of prepended transcript rows',
   assert.equal(resolveNextFirstItemIndex(8, 20), 1);
 });
 
-test('unread scroll location targets the upper quarter of the viewport', () => {
+test('prepended transcript row count is resolved from the previous first row anchor', () => {
+  assert.equal(
+    resolvePrependedRowCountFromAnchor('message:message-3', [
+      'message:message-1',
+      'unread-divider:buffer-1',
+      'message:message-2',
+      'message:message-3',
+    ]),
+    3,
+  );
+  assert.equal(
+    resolvePrependedRowCountFromAnchor('message:missing', ['message:message-1']),
+    null,
+  );
+});
+
+test('first unread scroll location targets the upper quarter of the viewport', () => {
   assert.deepEqual(
-    resolveUnreadScrollLocation(12, 200),
+    resolveFirstUnreadScrollLocation(12, 200),
     {
       align: 'start',
       behavior: 'auto',

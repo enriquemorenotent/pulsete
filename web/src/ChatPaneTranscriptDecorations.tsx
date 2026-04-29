@@ -1,7 +1,7 @@
 import { Plug2 } from 'lucide-react';
 
 export const TranscriptEmptyState = (props: { body: string }) => (
-  <div className="flex h-full items-center justify-center" data-scroll-anchor-item>
+  <div className="flex h-full items-center justify-center">
     <div className="w-full max-w-md rounded-[1.25rem] bg-white/[0.03] px-5 py-6 text-center ring-1 ring-white/[0.06]">
       <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-white/[0.05] text-muted-foreground">
         <Plug2 className="size-4 text-muted-foreground" />

@@ -10,6 +10,11 @@ import {
   useComposerDraft,
   type ComposerStoreApi,
 } from './composer-store.js';
+import {
+  enableContactNotificationsAndUnmute,
+  muteContactAndDisableNotifications,
+  type ContactRuleMutedState,
+} from './contact-rule-actions.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
@@ -35,6 +40,21 @@ export type DesktopChatModelParams = {
   selectedBufferHistory: SelectedBufferHistoryControls;
   selectedMessages: ChatPaneProps['selectedMessages'];
   workspace: WorkspaceView;
+};
+
+export const resolveQueryNotificationsEnabled = (input: {
+  contact: BackgroundDmAudioContact | null;
+  mutedNick: ContactRuleMutedState;
+  settings: BackgroundDmAudioSettings;
+}) => {
+  if (!input.contact || input.mutedNick) {
+    return false;
+  }
+  return isBackgroundDmAudioContactAllowed(input.settings, {
+    kind: 'query',
+    networkId: input.contact.networkId,
+    target: input.contact.nick,
+  });
 };
 
 export function useDesktopChatModel({
@@ -65,13 +85,11 @@ export function useDesktopChatModel({
   const selectedMutedNick = workspace.selectedBuffer?.kind === 'query'
     ? findMutedNick(mutedNicks, workspace.selectedBuffer.networkId, workspace.selectedBuffer.target)
     : null;
-  const queryNotificationsEnabled = selectedQueryNotificationContact
-    ? isBackgroundDmAudioContactAllowed(backgroundDmAudio.settings, {
-        kind: 'query',
-        networkId: selectedQueryNotificationContact.networkId,
-        target: selectedQueryNotificationContact.nick,
-      })
-    : false;
+  const queryNotificationsEnabled = resolveQueryNotificationsEnabled({
+    contact: selectedQueryNotificationContact,
+    mutedNick: selectedMutedNick,
+    settings: backgroundDmAudio.settings,
+  });
   const participantQueryNetwork = workspace.selectedBuffer?.kind === 'channel'
     ? workspace.selectedNetwork
     : null;
@@ -99,7 +117,11 @@ export function useDesktopChatModel({
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
       onMuteSelectedQuery: selectedQueryNotificationContact
-        ? () => actions.addMutedNick(selectedQueryNotificationContact.networkId, selectedQueryNotificationContact.nick)
+        ? () => muteContactAndDisableNotifications({
+            contact: selectedQueryNotificationContact,
+            addMutedNick: actions.addMutedNick,
+            removeNotificationContact: backgroundDmAudio.removeContact,
+          })
         : undefined,
       onUnmuteSelectedQuery: selectedMutedNick
         ? () => actions.removeMutedNick(selectedMutedNick.id)
@@ -110,10 +132,15 @@ export function useDesktopChatModel({
               backgroundDmAudio.removeContact(selectedQueryNotificationContact);
               return;
             }
-            backgroundDmAudio.addContact(selectedQueryNotificationContact);
-            if (backgroundDmAudio.settings.enabled) {
-              primeBackgroundDmAudio();
-            }
+            void enableContactNotificationsAndUnmute({
+              contact: selectedQueryNotificationContact,
+              mutedNick: selectedMutedNick,
+              removeMutedNick: actions.removeMutedNick,
+              addNotificationContact: backgroundDmAudio.addContact,
+              onNotificationsEnabled: backgroundDmAudio.settings.enabled
+                ? primeBackgroundDmAudio
+                : undefined,
+            });
           }
         : undefined,
       onWhoisSelectedQuery: selectedQueryNotificationContact

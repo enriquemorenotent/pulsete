@@ -106,22 +106,6 @@ button {
   color: white;
 }
 
-[data-scroll-anchor-item] {
-  overflow-anchor: auto;
-}
-
-[data-scroll-anchor-end] {
-  overflow-anchor: none;
-}
-
-[data-sticky-scroll="pinned"] [data-scroll-anchor-item] {
-  overflow-anchor: none;
-}
-
-[data-sticky-scroll="pinned"] [data-scroll-anchor-end] {
-  overflow-anchor: auto;
-}
-
 [data-unread-divider] {
   scroll-margin-top: 16px;
 }
