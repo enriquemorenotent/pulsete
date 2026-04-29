@@ -61,6 +61,7 @@ function App() {
         actions={actions}
         applySocketMessage={serverMessages.applySocketMessage}
         backgroundDmAudio={backgroundDmAudio}
+        composer={composerRef.current}
         previewBackgroundDmAudioRef={previewBackgroundDmAudioRef}
         primeBackgroundDmAudioRef={primeBackgroundDmAudioRef}
         ui={ui}

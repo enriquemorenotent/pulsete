@@ -7,7 +7,6 @@ import {
 } from 'react';
 import { Search } from 'lucide-react';
 import type {
-  BufferHistorySearchPayload,
   BufferHistorySearchResult,
   BufferState,
 } from '../../shared/protocol.js';
@@ -22,6 +21,8 @@ import {
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { HistorySearchResults } from './HistorySearchDialogResults.js';
+import { scheduleAnimationFrameFocus } from './animation-frame-focus.js';
+import { runHistorySearchRequest, type SearchBufferHistory } from './history-search-request.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
 type HistorySearchDialogProps = {
@@ -30,7 +31,7 @@ type HistorySearchDialogProps = {
   mode: MessageDisplayMode;
   onOpenChange: (open: boolean) => void;
   onOpenChannel: (channel: string) => void;
-  onSearch?: (bufferId: string, query: string) => Promise<BufferHistorySearchPayload>;
+  onSearch?: SearchBufferHistory;
 };
 
 export type HistorySearchState = {
@@ -64,6 +65,7 @@ const initialSearchState: HistorySearchState = {
 
 export function HistorySearchDialog(props: HistorySearchDialogProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const requestAbortRef = useRef<AbortController | null>(null);
   const requestRef = useRef(0);
   const [query, setQuery] = useState('');
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
@@ -71,23 +73,37 @@ export function HistorySearchDialog(props: HistorySearchDialogProps) {
 
   useEffect(() => {
     requestRef.current += 1;
+    requestAbortRef.current?.abort();
+    requestAbortRef.current = null;
     setQuery('');
     setExpandedMessageId(null);
     setSearchState(initialSearchState);
-    if (props.open) {
-      window.requestAnimationFrame(() => inputRef.current?.focus());
-    }
+    const cancelFocus = props.open
+      ? scheduleAnimationFrameFocus(window, inputRef)
+      : undefined;
+    return () => {
+      requestRef.current += 1;
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
+      cancelFocus?.();
+    };
   }, [props.open, props.buffer?.id]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedQuery = query.trim();
     if (!props.buffer || !props.onSearch || !trimmedQuery) {
+      requestRef.current += 1;
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
       setSearchState(initialSearchState);
       return;
     }
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     setExpandedMessageId(null);
     setSearchState({
       status: 'loading',
@@ -96,30 +112,38 @@ export function HistorySearchDialog(props: HistorySearchDialogProps) {
       hasMore: false,
       error: null,
     });
-    try {
-      const payload = await props.onSearch(props.buffer.id, trimmedQuery);
-      if (requestRef.current !== requestId) {
-        return;
-      }
-      setSearchState({
-        status: 'loaded',
-        query: payload.query,
-        results: payload.results,
-        hasMore: payload.hasMore,
-        error: null,
-      });
-    } catch (error) {
-      if (requestRef.current !== requestId) {
-        return;
-      }
-      setSearchState({
-        status: 'error',
-        query: trimmedQuery,
-        results: [],
-        hasMore: false,
-        error: error instanceof Error ? error.message : 'Failed to search history',
-      });
-    }
+    await runHistorySearchRequest({
+      bufferId: props.buffer.id,
+      query: trimmedQuery,
+      signal: controller.signal,
+      search: props.onSearch,
+      isCurrentRequest: () =>
+        requestRef.current === requestId
+        && requestAbortRef.current === controller,
+      onLoaded: (payload) => {
+        setSearchState({
+          status: 'loaded',
+          query: payload.query,
+          results: payload.results,
+          hasMore: payload.hasMore,
+          error: null,
+        });
+      },
+      onError: (message) => {
+        setSearchState({
+          status: 'error',
+          query: trimmedQuery,
+          results: [],
+          hasMore: false,
+          error: message,
+        });
+      },
+      onSettled: () => {
+        if (requestAbortRef.current === controller) {
+          requestAbortRef.current = null;
+        }
+      },
+    });
   };
 
   const title = props.buffer?.target ?? 'History';

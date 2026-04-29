@@ -1,6 +1,6 @@
 import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
-import type { FriendState, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, FriendState, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
@@ -69,6 +69,12 @@ export type DesktopShellServerProfileModel = {
   onSaveNotes: (network: NetworkProfile, notes: string) => Promise<unknown>;
 };
 
+export type DesktopShellQueryProfileModel = {
+  buffer: BufferState | null;
+  network: NetworkProfile | null;
+  onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
+};
+
 export type DesktopShellModel = {
   workspace: WorkspaceView;
   header: DesktopShellHeaderModel;
@@ -77,6 +83,7 @@ export type DesktopShellModel = {
   chat: ChatPaneProps;
   nicklist: DesktopShellNicklistModel;
   serverProfile?: DesktopShellServerProfileModel;
+  queryProfile?: DesktopShellQueryProfileModel;
   preferences: PreferencesDialogProps;
   networkManager: DesktopShellNetworkManagerModel;
   networkEditor: DesktopShellNetworkEditorModel;

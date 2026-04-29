@@ -39,6 +39,7 @@ export type RuntimeConversationStore = {
   getChannelByName(networkId: string, name: string): ChannelState | null;
   markBufferRead(bufferId: string, input: { lastReadTs: number | null; lastReadMessageId: string | null }): void;
   setBufferUnread(bufferId: string, unread: number, priorityUnread?: number): void;
+  setBufferNotes(bufferId: string, notes: string): BufferState | null;
   removeBuffer(bufferId: string): BufferState | null;
   deleteChannelByName(networkId: string, channelName: string): void;
   updateChannelUsers(networkId: string, channelName: string, users: ChannelUserState[]): void;

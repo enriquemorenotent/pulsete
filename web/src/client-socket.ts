@@ -35,12 +35,29 @@ export const connectSocket = ({
   const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
   let closed = false;
 
-  socket.addEventListener('open', () => {
+  const cleanup = () => {
+    socket.removeEventListener('open', handleOpen);
+    socket.removeEventListener('message', handleMessage);
+    socket.removeEventListener('close', handleClose);
+  };
+  const retireSocket = () => {
+    if (closed) {
+      return;
+    }
+    closed = true;
+    cleanup();
+    onClose?.();
+  };
+  const closeAndRetireSocket = () => {
+    closeSocket(socket);
+    retireSocket();
+  };
+  function handleOpen() {
     if (!closed) {
       onOpen?.();
     }
-  });
-  socket.addEventListener('message', (event) => {
+  }
+  function handleMessage(event: MessageEvent) {
     if (closed) {
       return;
     }
@@ -48,33 +65,33 @@ export const connectSocket = ({
       onMessage(decodeServer(String(event.data)));
     } catch (error) {
       console.error('Invalid websocket payload', error);
-      closeSocket(socket);
+      closeAndRetireSocket();
     }
-  });
-  socket.addEventListener('close', () => {
-    if (closed) {
-      return;
-    }
-    closed = true;
-    onClose?.();
-  });
+  }
+  function handleClose() {
+    retireSocket();
+  }
+
+  socket.addEventListener('open', handleOpen);
+  socket.addEventListener('message', handleMessage);
+  socket.addEventListener('close', handleClose);
 
   return {
     send(message) {
       const parsed = clientMessageSchema.parse(message);
       if (socket.readyState !== WebSocket.OPEN) {
-        closeSocket(socket);
+        closeAndRetireSocket();
         throw new Error(gatewaySocketClosedMessage);
       }
       try {
         socket.send(encode(parsed));
       } catch {
-        closeSocket(socket);
+        closeAndRetireSocket();
         throw new Error(gatewaySocketClosedMessage);
       }
     },
     close() {
-      closeSocket(socket);
+      closeAndRetireSocket();
     },
   };
 };

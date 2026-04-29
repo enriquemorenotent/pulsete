@@ -112,6 +112,7 @@ export const bufferSchema = z.object({
   networkId: z.string(),
   kind: bufferKindSchema,
   target: z.string(),
+  notes: z.string().optional(),
   unread: z.number().int().nonnegative().default(0),
   priorityUnread: z.number().int().nonnegative().default(0),
   lastReadTs: z.number().int().nonnegative().nullable().default(null),

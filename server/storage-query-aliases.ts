@@ -127,6 +127,7 @@ export const recordObservedQueryNickChange = (
     unread: source.unread + (mergedBuffer?.unread ?? 0),
     priorityUnread: source.priorityUnread + (mergedBuffer?.priorityUnread ?? 0),
     ...pickLatestReadState(source, mergedBuffer),
+    notes: pickQueryNotes(source, mergedBuffer),
     selfNickAliases: mergeNickAliases(source.selfNickAliases ?? [], mergedBuffer?.selfNickAliases ?? []),
   });
   upsertQueryNickAlias(db, { bufferId: updated.id, networkId, nick: toTarget, source: 'nick-change' });
@@ -209,6 +210,9 @@ const countBufferMessages = (db: SqliteDb, bufferId: string) =>
   Number((db.prepare('SELECT COUNT(*) AS count FROM messages WHERE bufferId = ?').get(bufferId) as { count?: number } | undefined)?.count ?? 0);
 
 const mergeNickAliases = (left: string[], right: string[]) => [...new Set([...left, ...right])];
+
+const pickQueryNotes = (source: BufferState, merged: BufferState | null) =>
+  source.notes && source.notes.length > 0 ? source.notes : merged?.notes ?? source.notes ?? '';
 
 const pickLatestReadState = (source: BufferState, merged: BufferState | null) => {
   if (!merged || merged.lastReadTs == null) {

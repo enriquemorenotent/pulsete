@@ -134,6 +134,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       });
     },
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
+    saveBufferNotes: (bufferId, notes) => publishMutation(conversationsService.saveBufferNotes(bufferId, notes)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     searchHistory: (bufferId, query, limit) => conversationsService.searchBufferHistory(bufferId, query, limit),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),

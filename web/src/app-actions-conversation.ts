@@ -4,6 +4,7 @@ import type {
 } from '../../shared/protocol.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
+import { createAppMutationExecutor } from './app-mutation.js';
 import {
   type AppActionContext,
   getConversation,
@@ -26,6 +27,8 @@ export const createConversationActions = ({
   getGatewaySocket,
   sendGatewayMessage,
 }: ConversationActionParams): ConversationActions => {
+  const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
+
   const joinChannel = (networkId: string, channel: string, sourceBufferId?: string) => {
     const state = getState();
     const conversation = getConversation(getState);
@@ -97,14 +100,27 @@ export const createConversationActions = ({
     }
   };
 
-  const searchBufferHistory = (bufferId: string, query: string) =>
-    api.searchBufferHistory(bufferId, query);
+  const searchBufferHistory = (
+    bufferId: string,
+    query: string,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => api.searchBufferHistory(bufferId, query, undefined, init);
+
+  const saveBufferNotes = async (buffer: BufferState, notes: string) =>
+    executeMutation({
+      request: () => api.saveBufferNotes(buffer.id, notes),
+      mapResult: (result) => result.buffer,
+      successMessage: null,
+      errorMessage: 'Failed to save notes',
+      failureValue: null,
+    });
 
   return {
     downloadBufferHistory,
     joinChannel,
     openOrSelectQueryBuffer,
     openChannelListForNetwork,
+    saveBufferNotes,
     searchBufferHistory,
   };
 };

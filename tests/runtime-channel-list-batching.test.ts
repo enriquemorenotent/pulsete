@@ -3,10 +3,13 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import type WebSocket from 'ws';
 import { channelListBatchSize } from '../shared/channel-list.js';
 import type { ServerMessage } from '../shared/protocol.js';
 import { createRuntime } from '../server/runtime.js';
+import { RuntimeChannelListService } from '../server/runtime-channel-lists.js';
 import { Storage } from '../server/storage.js';
+import type { IrcRuntimeChannelListConnection } from '../server/irc-types.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import { createBulkListServer } from './helpers/runtime-test-list-servers.js';
 import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
@@ -55,5 +58,85 @@ test('runtime sends large LIST replies in channel-list batches', async () => {
     runtime.sessions.disconnect(network.id);
     listServer.closeConnections();
     await new Promise<void>((resolve, reject) => listServer.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('runtime clears pending channel-list batches when replacing a stale session', () => {
+  const originalSetTimeout = global.setTimeout;
+  const originalClearTimeout = global.clearTimeout;
+  const scheduled: Array<{ callback: () => void; delay: number; cancelled: boolean }> = [];
+  global.setTimeout = (((callback: () => void, delay?: number) => {
+    const entry = {
+      callback,
+      delay: Number(delay ?? 0),
+      cancelled: false,
+    };
+    scheduled.push(entry);
+    return {
+      __entry: entry,
+      unref() {
+        return this;
+      },
+    } as unknown as ReturnType<typeof setTimeout>;
+  }) as typeof setTimeout);
+  global.clearTimeout = (((handle?: ReturnType<typeof setTimeout>) => {
+    const entry = (handle as (ReturnType<typeof setTimeout> & { __entry?: typeof scheduled[number] }) | undefined)?.__entry;
+    if (entry) {
+      entry.cancelled = true;
+    }
+  }) as typeof clearTimeout);
+
+  try {
+    const networkId = 'network-1';
+    const socket = {} as WebSocket;
+    const sent: ServerMessage[] = [];
+    const service = new RuntimeChannelListService((_ws, message) => {
+      sent.push(message);
+    });
+    const startingConnection: IrcRuntimeChannelListConnection = {
+      getActiveChannelListSnapshot: () => null,
+      getChannelListRequestFailureMessage: () => 'Not connected',
+      requestChannelList: () => true,
+    };
+
+    service.request(networkId, startingConnection, 'old-request', socket);
+    service.handle({
+      type: 'channel-list-entry',
+      networkId,
+      requestId: 'old-request',
+      entry: { name: '#old', users: 1, topic: '' },
+    });
+
+    assert.equal(scheduled.length, 1);
+    assert.equal(scheduled[0]?.cancelled, false);
+
+    const activeConnection: IrcRuntimeChannelListConnection = {
+      getActiveChannelListSnapshot: () => ({
+        requestId: 'new-request',
+        entries: [],
+        totalEntries: 0,
+        truncated: false,
+      }),
+      getChannelListRequestFailureMessage: () => 'Not connected',
+      requestChannelList: () => {
+        throw new Error('active channel-list snapshots should be reused');
+      },
+    };
+
+    service.request(networkId, activeConnection, 'client-request', socket);
+
+    assert.equal(scheduled[0]?.cancelled, true);
+    scheduled[0]?.callback();
+    assert.equal(
+      sent.some(
+        (message) =>
+          message.type === 'channel.list.entries'
+          && message.requestId === 'old-request'
+      ),
+      false
+    );
+  } finally {
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
   }
 });

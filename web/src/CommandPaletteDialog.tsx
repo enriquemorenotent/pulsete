@@ -23,6 +23,7 @@ import {
   type CommandPaletteEntry,
   type CommandPaletteEntrySection,
 } from './command-palette.js';
+import { scheduleAnimationFrameFocus } from './animation-frame-focus.js';
 
 type CommandPaletteDialogProps = {
   open: boolean;
@@ -62,7 +63,7 @@ export function CommandPaletteDialog(props: CommandPaletteDialogProps) {
     }
     setQuery('');
     setActiveIndex(0);
-    window.requestAnimationFrame(() => inputRef.current?.focus());
+    return scheduleAnimationFrameFocus(window, inputRef);
   }, [props.open]);
 
   useEffect(() => {

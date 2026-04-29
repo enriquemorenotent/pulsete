@@ -86,6 +86,7 @@ export const toBufferState = (row: BufferRow, selfNickAliases: string[]): Buffer
   lastReadMessageId: row.lastReadMessageId,
   kind: row.kind,
   target: row.target,
+  notes: row.notes,
   selfNickAliases,
 });
 

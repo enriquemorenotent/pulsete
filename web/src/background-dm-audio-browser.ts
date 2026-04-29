@@ -47,6 +47,14 @@ export const shouldShowSystemNotification = () => {
 export const getBufferMap = (buffers: readonly BufferState[]) =>
   new Map(buffers.map((buffer) => [buffer.id, { unread: buffer.unread }]));
 
+const disconnectAudioNode = (node: AudioNode) => {
+  try {
+    node.disconnect();
+  } catch {
+    // Ignore disconnect failures while releasing a partially scheduled cue.
+  }
+};
+
 const scheduleOscillator = (input: {
   audioContext: AudioContext;
   startAt: number;
@@ -59,22 +67,33 @@ const scheduleOscillator = (input: {
 }) => {
   const oscillator = input.audioContext.createOscillator();
   const gain = input.audioContext.createGain();
-  oscillator.type = input.type;
-  oscillator.frequency.setValueAtTime(input.startFrequency, input.startAt);
-  oscillator.frequency.exponentialRampToValueAtTime(
-    input.endFrequency,
-    input.releaseAt,
-  );
-  gain.gain.setValueAtTime(0.0001, input.startAt);
-  gain.gain.exponentialRampToValueAtTime(
-    input.attackGain,
-    input.startAt + input.attackDuration,
-  );
-  gain.gain.exponentialRampToValueAtTime(0.0001, input.releaseAt);
-  oscillator.connect(gain);
-  gain.connect(input.audioContext.destination);
-  oscillator.start(input.startAt);
-  oscillator.stop(input.releaseAt + 0.02);
+  const cleanup = () => {
+    oscillator.onended = null;
+    disconnectAudioNode(oscillator);
+    disconnectAudioNode(gain);
+  };
+  try {
+    oscillator.type = input.type;
+    oscillator.frequency.setValueAtTime(input.startFrequency, input.startAt);
+    oscillator.frequency.exponentialRampToValueAtTime(
+      input.endFrequency,
+      input.releaseAt,
+    );
+    gain.gain.setValueAtTime(0.0001, input.startAt);
+    gain.gain.exponentialRampToValueAtTime(
+      input.attackGain,
+      input.startAt + input.attackDuration,
+    );
+    gain.gain.exponentialRampToValueAtTime(0.0001, input.releaseAt);
+    oscillator.connect(gain);
+    gain.connect(input.audioContext.destination);
+    oscillator.onended = cleanup;
+    oscillator.start(input.startAt);
+    oscillator.stop(input.releaseAt + 0.02);
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
 };
 
 const scheduleCue = (audioContext: AudioContext, sound: BackgroundDmAudioSound) => {

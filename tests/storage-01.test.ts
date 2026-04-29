@@ -155,6 +155,26 @@ test('storage preserves network notes when an update omits notes', () => {
   assert.equal(updated.notes, 'Character: Mira');
 });
 
+test('storage preserves query buffer notes when later upserts omit notes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput({ name: 'RoleplayNet' }));
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+
+  const saved = storage.conversations.setBufferNotes(query.id, 'Met near the docks');
+  const updated = storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'query',
+    target: 'helper',
+    unread: 2,
+  });
+
+  assert.equal(saved?.notes, 'Met near the docks');
+  assert.equal(updated.id, query.id);
+  assert.equal(updated.notes, 'Met near the docks');
+  assert.equal(storage.conversations.getBuffer(query.id)?.notes, 'Met near the docks');
+});
+
 test('muted nick storage dedupes case-insensitively per network while allowing other networks', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

@@ -32,6 +32,7 @@ export type RuntimeConversationMutations = {
   ): { buffer: BufferState; messages: readonly ServerMessage[] };
   closeBuffer(bufferId: string): { buffer: BufferState; messages: readonly ServerMessage[] };
   markBufferRead: RuntimeConversationService['markBufferRead'];
+  saveBufferNotes: RuntimeConversationService['saveBufferNotes'];
   history: RuntimeConversationService['listBufferHistory'];
   searchHistory: RuntimeConversationService['searchBufferHistory'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
@@ -70,6 +71,7 @@ export type RuntimeHttpApi = {
     openQuery: RuntimeConversationMutations['openQuery'];
     close: RuntimeConversationMutations['closeBuffer'];
     markRead: RuntimeConversationMutations['markBufferRead'];
+    saveNotes: RuntimeConversationMutations['saveBufferNotes'];
     history: RuntimeConversationMutations['history'];
     searchHistory: RuntimeConversationMutations['searchHistory'];
     exportHistory: RuntimeConversationMutations['exportHistory'];

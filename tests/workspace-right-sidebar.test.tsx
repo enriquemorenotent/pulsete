@@ -34,6 +34,18 @@ const serverBuffer: BufferState = {
   lastReadMessageId: null,
 };
 
+const queryBuffer: BufferState = {
+  id: 'query-buffer-1',
+  networkId: network.id,
+  kind: 'query',
+  target: 'Sofia',
+  notes: 'Prefers encrypted routes',
+  unread: 0,
+  priorityUnread: 0,
+  lastReadTs: null,
+  lastReadMessageId: null,
+};
+
 const workspace: WorkspaceView = {
   mode: 'server-connected',
   selection: { kind: 'buffer', bufferId: serverBuffer.id },
@@ -48,6 +60,18 @@ const workspace: WorkspaceView = {
   composerMode: 'commands',
   composerPlaceholder: 'Send a server command',
   emptyBody: '',
+  showNicklist: false,
+};
+
+const queryWorkspace: WorkspaceView = {
+  ...workspace,
+  mode: 'query-connected',
+  selection: { kind: 'buffer', bufferId: queryBuffer.id },
+  selectedBuffer: queryBuffer,
+  headerTitle: 'Sofia',
+  headerSubtitle: 'Sofia @ RoleplayNet',
+  composerMode: 'normal',
+  composerPlaceholder: 'Message Sofia',
   showNicklist: false,
 };
 
@@ -81,4 +105,24 @@ test('server profile sidebar renders the per-network notes editor', () => {
   assert.match(markup, /server-profile-notes/);
   assert.match(markup, /Character: Mira/);
   assert.match(markup, /Current plot: bridge watch/);
+});
+
+test('query profile sidebar renders the per-DM notes editor', () => {
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={queryWorkspace}
+      nicklist={nicklist}
+      queryProfile={{
+        buffer: queryBuffer,
+        network,
+        onSaveNotes: async () => queryBuffer,
+      }}
+    />,
+  );
+
+  assert.match(markup, /Private message/);
+  assert.match(markup, /Sofia/);
+  assert.match(markup, /query-profile-notes/);
+  assert.match(markup, /Prefers encrypted routes/);
+  assert.match(markup, /Saved/);
 });

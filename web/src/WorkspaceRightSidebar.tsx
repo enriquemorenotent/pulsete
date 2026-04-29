@@ -2,8 +2,10 @@ import { memo, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button.js';
 import { Label } from '@/components/ui/label.js';
 import { NicklistPanel } from './NicklistPanel.js';
+import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import type { WorkspaceView } from './workspace-types.js';
+import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
 
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
@@ -13,10 +15,18 @@ type WorkspaceRightSidebarProps = {
     onEdit: () => void;
     onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<unknown>;
   };
+  queryProfile?: {
+    buffer: BufferState | null;
+    network: NetworkProfile | null;
+    onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
+  };
 };
 
 const isServerProfileWorkspace = (workspace: WorkspaceView) =>
   workspace.selectedBuffer?.kind === 'server';
+
+const isQueryProfileWorkspace = (workspace: WorkspaceView) =>
+  workspace.selectedBuffer?.kind === 'query';
 
 export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   if (isServerProfileWorkspace(props.workspace)) {
@@ -26,6 +36,16 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         fallbackNetwork={props.workspace.selectedNetwork}
         onEdit={props.serverProfile?.onEdit ?? (() => undefined)}
         onSaveNotes={props.serverProfile?.onSaveNotes ?? (async () => null)}
+      />
+    );
+  }
+
+  if (isQueryProfileWorkspace(props.workspace)) {
+    return (
+      <QueryProfileSidebar
+        buffer={props.queryProfile?.buffer ?? props.workspace.selectedBuffer}
+        network={props.queryProfile?.network ?? props.workspace.selectedNetwork}
+        onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
       />
     );
   }

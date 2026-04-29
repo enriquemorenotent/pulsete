@@ -15,6 +15,10 @@ const channelInputSchema = z.object({
   sourceBufferId: z.string().optional(),
 });
 
+const bufferNotesInputSchema = z.object({
+  notes: z.string(),
+});
+
 export const handleBufferRoutes = async ({ req, res, pathname, url, context }: RouteArgs) => {
   const channelMatch = pathname.match(/^\/api\/networks\/([^/]+)\/channels$/);
   if (channelMatch && req.method === 'POST') {
@@ -43,6 +47,14 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   const readMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/read$/);
   if (readMatch && req.method === 'POST') {
     writeJson(res, 200, context.buffers.markRead(decodeRouteParam(readMatch[1])));
+    return true;
+  }
+
+  const notesMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/notes$/);
+  if (notesMatch && req.method === 'PUT') {
+    const bufferId = decodeRouteParam(notesMatch[1]);
+    const { notes } = readBufferNotes(await readJson(req));
+    writeJson(res, 200, context.buffers.saveNotes(bufferId, notes));
     return true;
   }
 
@@ -109,6 +121,14 @@ const readQueryTarget = (body: unknown) => {
     throw badRequest('Invalid query payload');
   }
   return result.data.target;
+};
+
+const readBufferNotes = (body: unknown) => {
+  const result = bufferNotesInputSchema.safeParse(body);
+  if (!result.success) {
+    throw badRequest('Invalid buffer notes payload');
+  }
+  return result.data;
 };
 
 const writeTextDownload = (res: ServerResponse, fileName: string, content: string) => {

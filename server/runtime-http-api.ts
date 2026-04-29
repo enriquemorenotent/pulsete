@@ -42,6 +42,7 @@ export const createRuntimeHttpApi = ({
     openQuery: (networkId, target) => conversations.openQuery(networkId, target),
     close: (bufferId) => conversations.closeBuffer(bufferId),
     markRead: (bufferId) => conversations.markBufferRead(bufferId),
+    saveNotes: (bufferId, notes) => conversations.saveBufferNotes(bufferId, notes),
     history: (bufferId, limit, beforeMessageId) => conversations.history(bufferId, limit, beforeMessageId),
     searchHistory: (bufferId, query, limit) => conversations.searchHistory(bufferId, query, limit),
     exportHistory: (bufferId) => conversations.exportHistory(bufferId),

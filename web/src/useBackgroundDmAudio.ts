@@ -19,6 +19,7 @@ import {
   readStoredSettings,
   shouldShowSystemNotification,
 } from './background-dm-audio-browser.js';
+import { closeBackgroundDmNotification, createBackgroundDmNotification, type BackgroundDmNotificationHandle } from './background-dm-notification.js';
 
 export type BackgroundDmAudioState = {
   settings: BackgroundDmAudioSettings;
@@ -144,6 +145,7 @@ export function useBackgroundDmAudioCue(input: {
   const previousBuffersRef = useRef<ReadonlyMap<string, Pick<BufferState, 'unread'>> | null>(null);
   const lastPlayedAtRef = useRef(-Infinity);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const activeNotificationsRef = useRef(new Set<BackgroundDmNotificationHandle>());
 
   const ensureAudioContext = useCallback(() => {
     const AudioContextClass = getAudioContextConstructor();
@@ -174,6 +176,8 @@ export function useBackgroundDmAudioCue(input: {
     if (audioContextRef.current) {
       void audioContextRef.current.close().catch(() => undefined);
     }
+    activeNotificationsRef.current.forEach(closeBackgroundDmNotification);
+    activeNotificationsRef.current.clear();
   }, []);
 
   useEffect(() => {
@@ -219,15 +223,17 @@ export function useBackgroundDmAudioCue(input: {
       try {
         const networkName =
           input.networkNamesById.get(eligibleBuffer.networkId) ?? eligibleBuffer.networkId;
-        const notification = new window.Notification(eligibleBuffer.target, {
-          body: `New private message on ${networkName}`,
-          tag: `pulsete-dm:${eligibleBuffer.id}`,
+        const notification = createBackgroundDmNotification({
+          buffer: eligibleBuffer,
+          networkName,
+          onRelease: (releasedNotification) => {
+            activeNotificationsRef.current.delete(releasedNotification);
+          },
+          onSelectBuffer: input.onSelectBuffer,
         });
-        notification.onclick = () => {
-          window.focus();
-          input.onSelectBuffer(eligibleBuffer);
-          notification.close();
-        };
+        if (notification) {
+          activeNotificationsRef.current.add(notification);
+        }
       } catch {
         // Browser notification delivery can still fail despite granted permission.
       }

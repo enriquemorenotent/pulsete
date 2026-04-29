@@ -173,7 +173,19 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     },
     onSaveNotes: actions.saveNetworkNotes,
   }), [actions.saveNetworkNotes, dispatch, serverProfileNetwork]);
-  return <WorkspaceRightSidebar workspace={workspace} nicklist={nicklist} serverProfile={serverProfile} />;
+  const queryProfile = useMemo(() => ({
+    buffer: workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null,
+    network: workspace.selectedNetwork,
+    onSaveNotes: actions.saveBufferNotes,
+  }), [actions.saveBufferNotes, workspace.selectedBuffer, workspace.selectedNetwork]);
+  return (
+    <WorkspaceRightSidebar
+      workspace={workspace}
+      nicklist={nicklist}
+      serverProfile={serverProfile}
+      queryProfile={queryProfile}
+    />
+  );
 });
 
 export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogContainer({

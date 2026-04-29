@@ -21,7 +21,7 @@ const channelSelect = `
 `;
 
 const bufferColumns =
-  'id, networkId, kind, target, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt';
+  'id, networkId, kind, target, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt';
 
 export const listBuffers = (db: SqliteDb, networkId?: string): BufferState[] => {
   const sql = networkId
@@ -62,13 +62,14 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
   if (existing) {
     db.prepare(
       `UPDATE buffers
-       SET networkId = ?, kind = ?, target = ?, targetKey = ?, isOpen = ?, unread = ?, priorityUnread = ?, lastReadTs = ?, lastReadMessageId = ?, updatedAt = ?
+       SET networkId = ?, kind = ?, target = ?, targetKey = ?, notes = ?, isOpen = ?, unread = ?, priorityUnread = ?, lastReadTs = ?, lastReadMessageId = ?, updatedAt = ?
        WHERE id = ?`
     ).run(
       input.networkId,
       input.kind,
       input.target,
       normalizeIrcIdentifier(input.target),
+      input.notes ?? existing.notes ?? '',
       isOpen ? 1 : 0,
       input.unread ?? existing.unread ?? 0,
       input.priorityUnread ?? existing.priorityUnread ?? 0,
@@ -84,14 +85,15 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
   const id = input.id ?? randomUUID();
   db.prepare(
     `INSERT INTO buffers
-       (id, networkId, kind, target, targetKey, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, networkId, kind, target, targetKey, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.networkId,
     input.kind,
     input.target,
     normalizeIrcIdentifier(input.target),
+    input.notes ?? '',
     isOpen ? 1 : 0,
     input.unread ?? 0,
     input.priorityUnread ?? 0,
@@ -102,6 +104,16 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
   );
   replaceBufferSelfNickAliases(db, id, input.selfNickAliases ?? []);
   return getBuffer(db, id)!;
+};
+
+export const setBufferNotes = (db: SqliteDb, bufferId: string, notes: string) => {
+  const existing = getBuffer(db, bufferId);
+  if (!existing) {
+    return null;
+  }
+  db.prepare('UPDATE buffers SET notes = ?, updatedAt = ? WHERE id = ?')
+    .run(notes, Date.now(), bufferId);
+  return getBuffer(db, bufferId)!;
 };
 
 export const removeBuffer = (db: SqliteDb, bufferId: string) => {

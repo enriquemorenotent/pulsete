@@ -3,12 +3,18 @@ import { encode, type ServerMessage } from '../shared/protocol.js';
 
 export class RuntimeSocketHub {
   private readonly sockets = new Set<WebSocket>();
+  private readonly closeListeners = new Map<WebSocket, () => void>();
 
   constructor(private readonly onDrop: (ws: WebSocket) => void) {}
 
   attach(ws: WebSocket) {
+    if (this.sockets.has(ws)) {
+      return;
+    }
     this.sockets.add(ws);
-    ws.on('close', () => this.drop(ws));
+    const handleClose = () => this.drop(ws);
+    this.closeListeners.set(ws, handleClose);
+    ws.on('close', handleClose);
   }
 
   detach(ws: WebSocket) {
@@ -31,8 +37,8 @@ export class RuntimeSocketHub {
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close(1001, 'Server shutting down');
       }
+      this.drop(ws);
     }
-    this.sockets.clear();
   }
 
   private sendPayload(ws: WebSocket, payload: string) {
@@ -55,7 +61,14 @@ export class RuntimeSocketHub {
   }
 
   private drop(ws: WebSocket) {
-    this.sockets.delete(ws);
-    this.onDrop(ws);
+    const tracked = this.sockets.delete(ws);
+    const handleClose = this.closeListeners.get(ws);
+    if (handleClose) {
+      this.closeListeners.delete(ws);
+      ws.removeListener('close', handleClose);
+    }
+    if (tracked) {
+      this.onDrop(ws);
+    }
   }
 }

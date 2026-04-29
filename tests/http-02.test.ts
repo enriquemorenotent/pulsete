@@ -181,6 +181,20 @@ test('query routes validate missing networks and invalid targets', async () => {
     assert.equal(invalidPayload.status, 400);
     assert.equal(invalidPayload.json.message, 'Invalid query payload');
 
+    const notesUpdate = await requestJson(port, 'PUT', `/api/buffers/${query.id}/notes`, {
+      notes: 'Ask about the bridge watch',
+    });
+    assert.equal(notesUpdate.status, 200);
+    const notesBuffer = notesUpdate.json.buffer as { notes?: string };
+    assert.equal(notesBuffer.notes, 'Ask about the bridge watch');
+    assert.equal(storage.conversations.getBuffer(query.id)?.notes, 'Ask about the bridge watch');
+
+    const invalidNotesTarget = await requestJson(port, 'PUT', `/api/buffers/${channel.id}/notes`, {
+      notes: 'Channel notes are not supported here',
+    });
+    assert.equal(invalidNotesTarget.status, 400);
+    assert.equal(invalidNotesTarget.json.message, 'Only private messages can have notes');
+
     const channelClose = await requestJson(port, 'DELETE', `/api/buffers/${channel.id}`);
     assert.equal(channelClose.status, 200);
     const channelCloseMessages = channelClose.json.messages as Array<{

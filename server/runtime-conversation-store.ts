@@ -37,6 +37,18 @@ export const markConversationBufferRead = (store: RuntimeConversationStore, buff
   return getRequiredBuffer(store, bufferId);
 };
 
+export const saveConversationBufferNotes = (
+  store: RuntimeConversationStore,
+  bufferId: string,
+  notes: string,
+) => {
+  const buffer = getRequiredBuffer(store, bufferId);
+  if (buffer.kind !== 'query') {
+    throw badRequest('Only private messages can have notes');
+  }
+  return store.setBufferNotes(bufferId, notes) ?? buffer;
+};
+
 export const listConversationBufferHistory = (
   store: RuntimeConversationStore,
   bufferId: string,

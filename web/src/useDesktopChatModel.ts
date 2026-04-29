@@ -130,7 +130,7 @@ export function useDesktopChatModel({
       onDownloadHistory: selectedBufferId ? () => actions.downloadBufferHistory(selectedBufferId) : undefined,
       canSearchHistory: canUseBufferHistoryTools,
       onSearchHistory: selectedBufferId
-        ? (bufferId, query) => actions.searchBufferHistory(bufferId, query)
+        ? (bufferId, query, init) => actions.searchBufferHistory(bufferId, query, init)
         : undefined,
       canLoadOlderHistory: selectedBufferHistory.canLoadOlderHistory,
       initialHistoryPending: selectedBufferHistory.initialHistoryPending,

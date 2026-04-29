@@ -5,6 +5,7 @@ import {
   listRuntimeConversationBufferHistory,
   markRuntimeConversationBufferRead,
   openRuntimeConversationQuery,
+  saveRuntimeConversationBufferNotes,
   searchRuntimeConversationBufferHistory,
 } from './runtime-conversation-buffer-actions.js';
 import {
@@ -30,6 +31,10 @@ export class RuntimeConversationService {
 
   markBufferRead(bufferId: string) {
     return markRuntimeConversationBufferRead(this.options, bufferId);
+  }
+
+  saveBufferNotes(bufferId: string, notes: string) {
+    return saveRuntimeConversationBufferNotes(this.options, bufferId, notes);
   }
 
   listBufferHistory(bufferId: string, limit: number, beforeMessageId?: string) {

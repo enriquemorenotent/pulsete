@@ -4,6 +4,7 @@ import type { ApplyServerMessages } from './app-actions-types.js';
 import type { Action, GatewayStatus } from './app-types.js';
 import { shouldMarkSelectedBufferRead } from './buffer-activity.js';
 import { api, type BufferHistoryPayload } from './client.js';
+import { markSelectedBufferRead } from './selected-buffer-read-receipt.js';
 
 type UseSelectedBufferEffectsParams = {
   applyServerMessages: ApplyServerMessages;
@@ -44,7 +45,10 @@ export type SelectedBufferHistoryControls = {
 
 export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams): SelectedBufferHistoryControls {
   const historyRequestRef = useRef(0);
+  const readRequestAbortRef = useRef<AbortController | null>(null);
   const readRequestBufferIdRef = useRef<string | null>(null);
+  const readRequestRef = useRef(0);
+  const readRequestsMountedRef = useRef(true);
   const selectedBufferId = params.selectedBuffer?.id ?? null;
   const hasLoadedHistory = selectedBufferId
     ? params.historyLoadedByBufferId[selectedBufferId] === true
@@ -56,6 +60,17 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
     !!selectedBufferId &&
     params.gatewayStatus === 'connected' &&
     !hasLoadedHistory;
+
+  useEffect(() => {
+    readRequestsMountedRef.current = true;
+    return () => {
+      readRequestsMountedRef.current = false;
+      readRequestRef.current += 1;
+      readRequestBufferIdRef.current = null;
+      readRequestAbortRef.current?.abort();
+      readRequestAbortRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!params.selectedBuffer) {
@@ -72,15 +87,30 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
       return;
     }
     const requestBufferId = params.selectedBuffer.id;
+    readRequestAbortRef.current?.abort();
+    const controller = new AbortController();
+    const requestId = readRequestRef.current + 1;
+    readRequestRef.current = requestId;
     readRequestBufferIdRef.current = requestBufferId;
-    api.markBufferRead(requestBufferId)
-      .then((payload) => params.applyServerMessages(payload.messages))
-      .catch(() => undefined)
-      .finally(() => {
+    readRequestAbortRef.current = controller;
+    void markSelectedBufferRead({
+      bufferId: requestBufferId,
+      applyServerMessages: params.applyServerMessages,
+      markBufferRead: api.markBufferRead,
+      signal: controller.signal,
+      isCurrentRequest: () =>
+        readRequestsMountedRef.current
+        && readRequestRef.current === requestId
+        && readRequestBufferIdRef.current === requestBufferId,
+      onSettled: () => {
+        if (readRequestAbortRef.current === controller) {
+          readRequestAbortRef.current = null;
+        }
         if (readRequestBufferIdRef.current === requestBufferId) {
           readRequestBufferIdRef.current = null;
         }
-      });
+      },
+    });
   }, [
     params.applyServerMessages,
     params.documentVisible,
@@ -97,7 +127,10 @@ export function useSelectedBufferEffects(params: UseSelectedBufferEffectsParams)
         windowFocused: params.windowFocused,
       })
     ) {
+      readRequestRef.current += 1;
       readRequestBufferIdRef.current = null;
+      readRequestAbortRef.current?.abort();
+      readRequestAbortRef.current = null;
     }
   }, [params.documentVisible, params.selectedBuffer, params.windowFocused]);
 

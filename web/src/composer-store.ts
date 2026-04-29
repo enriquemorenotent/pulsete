@@ -4,6 +4,7 @@ import {
   initialComposerDraftState,
   type ComposerController,
   type ComposerDraftState,
+  pruneComposerDraftContexts,
   pushComposerHistoryEntryForContext,
   readComposerDraft,
   setComposerDraftForContext,
@@ -44,6 +45,9 @@ export const createComposerStore = (
     getDraft: (contextKey) => readComposerDraft(state, contextKey),
     getState: () => state,
     hasDraft: (contextKey) => hasStoredComposerDraft(state, contextKey),
+    pruneContexts: (contextKeys) => {
+      update((current) => pruneComposerDraftContexts(current, contextKeys));
+    },
     recordComposerEntry: (contextKey, entry) => {
       update((current) => pushComposerHistoryEntryForContext(current, contextKey, entry));
     },

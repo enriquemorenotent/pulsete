@@ -6,6 +6,7 @@ import {
   listConversationBufferHistory,
   markConversationBufferRead,
   openConversationQuery,
+  saveConversationBufferNotes,
   searchConversationBufferHistory,
 } from './runtime-conversation-store.js';
 import { normalizeQueryTarget } from './irc-validate.js';
@@ -37,6 +38,15 @@ export const closeRuntimeConversationBuffer = (options: RuntimeConversationServi
 
 export const markRuntimeConversationBufferRead = (options: RuntimeConversationServiceOptions, bufferId: string) => {
   const buffer = markConversationBufferRead(options.conversations, bufferId);
+  return { buffer, messages: [{ type: 'buffer.upsert', buffer } satisfies ServerMessage] };
+};
+
+export const saveRuntimeConversationBufferNotes = (
+  options: RuntimeConversationServiceOptions,
+  bufferId: string,
+  notes: string,
+) => {
+  const buffer = saveConversationBufferNotes(options.conversations, bufferId, notes);
   return { buffer, messages: [{ type: 'buffer.upsert', buffer } satisfies ServerMessage] };
 };
 

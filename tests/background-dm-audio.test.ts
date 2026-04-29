@@ -9,6 +9,7 @@ import {
   parseBackgroundDmAudioSettings,
   serializeBackgroundDmAudioSettings,
 } from '../web/src/background-dm-audio.js';
+import { createBackgroundDmNotification } from '../web/src/background-dm-notification.js';
 
 const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   id: overrides.id ?? 'buffer-1',
@@ -181,4 +182,65 @@ test('selected query buffer still qualifies when the app is not visible and focu
 test('cooldown blocks repeated cues inside the throttle window', () => {
   assert.equal(canPlayBackgroundDmAudioCue(1_500, 500), true);
   assert.equal(canPlayBackgroundDmAudioCue(1_499, 500), false);
+});
+
+test('system notification clears browser-owned handlers after click or close', () => {
+  class FakeNotification {
+    static instances: FakeNotification[] = [];
+    closeCalls = 0;
+    onclick: ((event: Event) => void) | null = null;
+    onclose: ((event: Event) => void) | null = null;
+
+    constructor(
+      readonly title: string,
+      readonly options?: NotificationOptions,
+    ) {
+      FakeNotification.instances.push(this);
+    }
+
+    close() {
+      this.closeCalls += 1;
+      this.onclose?.(new Event('close'));
+    }
+  }
+
+  const buffer = makeBuffer({ id: 'query-alice', target: 'Alice' });
+  let focusCalls = 0;
+  let selectedBuffer: BufferState | null = null;
+  const clicked = createBackgroundDmNotification({
+    buffer,
+    focusWindow: () => {
+      focusCalls += 1;
+    },
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: (nextBuffer) => {
+      selectedBuffer = nextBuffer;
+    },
+  }) as FakeNotification;
+
+  assert.equal(clicked.title, 'Alice');
+  assert.deepEqual(clicked.options, {
+    body: 'New private message on ExampleNet',
+    tag: 'pulsete-dm:query-alice',
+  });
+
+  clicked.onclick?.(new Event('click'));
+
+  assert.equal(focusCalls, 1);
+  assert.equal(selectedBuffer, buffer);
+  assert.equal(clicked.closeCalls, 1);
+  assert.equal(clicked.onclick, null);
+  assert.equal(clicked.onclose, null);
+
+  const closed = createBackgroundDmNotification({
+    buffer,
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: () => undefined,
+  }) as FakeNotification;
+  closed.onclose?.(new Event('close'));
+
+  assert.equal(closed.onclick, null);
+  assert.equal(closed.onclose, null);
 });

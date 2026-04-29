@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { createServer } from 'node:http';
 import test from 'node:test';
 import WebSocket from 'ws';
-import { initializeWebSocketConnection } from '../server/ws-server.js';
+import { attachWebSocketServer, initializeWebSocketConnection } from '../server/ws-server.js';
 import { createFailingWebSocket, createThrowingWebSocket } from './helpers/http-websocket-test-helpers.js';
 
 type WebSocketTestContext = Parameters<typeof initializeWebSocketConnection>[1];
@@ -62,6 +63,9 @@ test('websocket initialization detaches the socket when the first snapshot send 
   assert.equal(initializeWebSocketConnection(socket, context), false);
   assert.deepEqual(calls, ['attach', 'detach']);
   assert.equal(getCloseCalls(), 1);
+  assert.equal(socket.listenerCount('message'), 0);
+  assert.equal(socket.listenerCount('error'), 0);
+  assert.equal(socket.listenerCount('close'), 0);
 });
 
 test('websocket initialization handles frames emitted during the first snapshot send', () => {
@@ -94,4 +98,85 @@ test('websocket initialization handles frames emitted during the first snapshot 
 
   assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), true);
   assert.deepEqual(calls, ['attach', 'snapshot', 'connect:net-1']);
+});
+
+test('websocket initialization detaches listeners when the initial snapshot throws', () => {
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    send(payload: string): boolean;
+    close(code?: number, reason?: string): void;
+  };
+  const calls: string[] = [];
+  socket.readyState = WebSocket.OPEN;
+  socket.send = () => {
+    calls.push('send');
+    return true;
+  };
+  socket.close = (code?: number, reason?: string) => {
+    calls.push(`close:${code}:${reason}`);
+    socket.readyState = WebSocket.CLOSED;
+    socket.emit('close');
+  };
+  const context = createWebSocketTestContext({
+    attachSocket() {
+      calls.push('attach');
+    },
+    detachSocket() {
+      calls.push('detach');
+    },
+    snapshot() {
+      calls.push('snapshot');
+      throw new Error('snapshot failed');
+    },
+  });
+
+  assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), false);
+  assert.deepEqual(calls, [
+    'attach',
+    'snapshot',
+    'detach',
+    'close:1011:WebSocket initialization failed',
+  ]);
+  assert.equal(socket.listenerCount('message'), 0);
+  assert.equal(socket.listenerCount('error'), 0);
+  assert.equal(socket.listenerCount('close'), 0);
+});
+
+test('websocket initialization removes runtime listeners after socket close', () => {
+  const socket = new EventEmitter() as EventEmitter & {
+    readyState: number;
+    send(payload: string): boolean;
+    close(): void;
+  };
+  socket.readyState = WebSocket.OPEN;
+  socket.send = () => true;
+  socket.close = () => {
+    socket.emit('close');
+  };
+  const context = createWebSocketTestContext();
+
+  assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), true);
+  assert.equal(socket.listenerCount('message'), 1);
+  assert.equal(socket.listenerCount('error'), 1);
+  assert.equal(socket.listenerCount('close'), 1);
+
+  socket.emit('close');
+
+  assert.equal(socket.listenerCount('message'), 0);
+  assert.equal(socket.listenerCount('error'), 0);
+  assert.equal(socket.listenerCount('close'), 0);
+});
+
+test('attached websocket server releases upgrade listener on http server close', () => {
+  const server = createServer();
+  const context = createWebSocketTestContext();
+
+  attachWebSocketServer(server, context);
+  assert.equal(server.listenerCount('upgrade'), 1);
+  assert.equal(server.listenerCount('close'), 1);
+
+  server.emit('close');
+
+  assert.equal(server.listenerCount('upgrade'), 0);
+  assert.equal(server.listenerCount('close'), 0);
 });

@@ -1,6 +1,5 @@
 import { memo, useCallback, useReducer } from 'react';
 import type {
-  BufferHistorySearchPayload,
   BufferState,
   ChatMessage,
   FriendState,
@@ -14,6 +13,7 @@ import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
+import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -46,7 +46,7 @@ export type ChatPaneProps = {
   canDownloadHistory?: boolean;
   onDownloadHistory?: () => Promise<boolean>;
   canSearchHistory?: boolean;
-  onSearchHistory?: (bufferId: string, query: string) => Promise<BufferHistorySearchPayload>;
+  onSearchHistory?: SearchBufferHistory;
   canLoadOlderHistory?: boolean;
   initialHistoryPending?: boolean;
   loadingOlderHistory?: boolean;

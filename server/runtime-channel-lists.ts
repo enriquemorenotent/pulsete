@@ -75,7 +75,7 @@ export class RuntimeChannelListService {
     }
 
     if (connection.requestChannelList(requestId)) {
-      this.sessions.set(networkId, {
+      this.replaceSession(networkId, {
         requestId,
         subscribers: requester ? new Set([requester]) : new Set<WebSocket>(),
         pendingEntries: [],
@@ -217,6 +217,14 @@ export class RuntimeChannelListService {
     session.pendingEntries = [];
   }
 
+  private replaceSession(networkId: string, session: ChannelListSession) {
+    const existing = this.sessions.get(networkId);
+    if (existing && existing !== session) {
+      this.clearPendingEntries(existing);
+    }
+    this.sessions.set(networkId, session);
+  }
+
   private getOrCreateSession(networkId: string, requestId: string) {
     const existing = this.sessions.get(networkId);
     if (existing?.requestId === requestId) {
@@ -228,7 +236,7 @@ export class RuntimeChannelListService {
       pendingEntries: [],
       flushTimer: null,
     };
-    this.sessions.set(networkId, created);
+    this.replaceSession(networkId, created);
     return created;
   }
 }

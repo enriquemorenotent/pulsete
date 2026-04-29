@@ -62,6 +62,7 @@ export const storageBootstrapSchemaSql = `
     kind TEXT NOT NULL,
     target TEXT NOT NULL,
     targetKey TEXT NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
     isOpen INTEGER NOT NULL DEFAULT 1,
     unread INTEGER NOT NULL DEFAULT 0,
     priorityUnread INTEGER NOT NULL DEFAULT 0,

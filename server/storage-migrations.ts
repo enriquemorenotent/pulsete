@@ -10,7 +10,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 20;
+export const currentStorageSchemaVersion = 21;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -161,6 +161,12 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureColumn(db, 'networks', 'notes', "TEXT NOT NULL DEFAULT ''");
     },
   },
+  {
+    version: 21,
+    apply: (db) => {
+      ensureColumn(db, 'buffers', 'notes', "TEXT NOT NULL DEFAULT ''");
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => {
@@ -183,6 +189,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
     }
   }
   ensureCurrentNetworkColumns(db);
+  ensureCurrentBufferColumns(db);
   dropLegacyMessageSearchArtifacts(db);
   ensureMessageSearchArtifacts(db);
 };
@@ -209,6 +216,10 @@ const ensureColumn = (db: SqliteDb, table: string, column: string, definition: s
 const ensureCurrentNetworkColumns = (db: SqliteDb) => {
   ensureColumn(db, 'networks', 'workspaceOpen', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'networks', 'notes', "TEXT NOT NULL DEFAULT ''");
+};
+
+const ensureCurrentBufferColumns = (db: SqliteDb) => {
+  ensureColumn(db, 'buffers', 'notes', "TEXT NOT NULL DEFAULT ''");
 };
 
 const getUserVersion = (db: SqliteDb) =>

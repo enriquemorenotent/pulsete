@@ -200,3 +200,50 @@ test('downloadBufferHistory fetches the transcript attachment and triggers a bro
     globalThis.URL.revokeObjectURL = originalRevokeObjectURL;
   }
 });
+
+test('downloadBufferHistory revokes the blob URL when the browser click fails', async () => {
+  const { params, banners } = createParams();
+  const original = {
+    fetch: globalThis.fetch,
+    document: globalThis.document,
+    createObjectURL: globalThis.URL.createObjectURL,
+    revokeObjectURL: globalThis.URL.revokeObjectURL,
+  };
+  const removed: unknown[] = [];
+  const revoked: string[] = [];
+  const link = {
+    download: '',
+    href: '',
+    style: { display: '' },
+    click() { throw new Error('click failed'); },
+    remove() { removed.push(this); },
+  };
+  globalThis.fetch = (async () =>
+    new Response('history body', { status: 200 })) as typeof fetch;
+  globalThis.document = {
+    createElement(tagName: string) {
+      assert.equal(tagName, 'a');
+      return link;
+    },
+    body: { append() {} },
+  } as unknown as Document;
+  globalThis.URL.createObjectURL = () => 'blob:test-history';
+  globalThis.URL.revokeObjectURL = (url) => revoked.push(url);
+
+  try {
+    const actions = createAppActions(params);
+    const downloaded = await actions.downloadBufferHistory(selectedBuffer.id);
+
+    assert.equal(downloaded, false);
+    assert.deepEqual(removed, [link]);
+    assert.deepEqual(revoked, ['blob:test-history']);
+    assert.deepEqual(banners, [
+      { kind: 'error', message: 'click failed' },
+    ]);
+  } finally {
+    globalThis.fetch = original.fetch;
+    globalThis.document = original.document;
+    globalThis.URL.createObjectURL = original.createObjectURL;
+    globalThis.URL.revokeObjectURL = original.revokeObjectURL;
+  }
+});

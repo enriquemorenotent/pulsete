@@ -35,16 +35,22 @@ export class ReplyTracker {
 
   prune() {
     const now = Date.now();
+    let changed = false;
     for (let index = this.contexts.length - 1; index >= 0; index -= 1) {
       const context = this.contexts[index];
       if (!context || context.expiresAt >= now) {
         continue;
       }
       this.contexts.splice(index, 1);
+      changed = true;
+    }
+    if (changed) {
+      this.refreshPendingNick();
     }
   }
 
   queue(context: PendingReplyContext) {
+    this.prune();
     this.contexts.push(context);
     if (context.kind === 'nick') {
       this.pendingNickValue = context.requestedNick;

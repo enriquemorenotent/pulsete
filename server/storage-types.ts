@@ -38,6 +38,7 @@ export type BufferRow = {
   networkId: string;
   kind: BufferState['kind'];
   target: string;
+  notes: string;
   isOpen: number;
   unread: number;
   priorityUnread: number;

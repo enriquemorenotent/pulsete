@@ -1,4 +1,5 @@
-import type { Server } from 'node:http';
+import type { IncomingMessage, Server } from 'node:http';
+import type { Duplex } from 'node:stream';
 import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol.js';
 import type { RuntimeWebSocketApi } from './runtime.js';
@@ -6,35 +7,82 @@ import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
 
 export const attachWebSocketServer = (server: Server, context: RuntimeWebSocketApi) => {
   const wss = new WebSocketServer({ noServer: true, maxPayload: jsonBodyLimitBytes });
-  server.on('upgrade', (req, socket, head) => {
+  const handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = tryParseRequestUrl(req.url);
     if (!url || url.pathname !== '/ws') {
       socket.destroy();
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
-  });
-  wss.on('connection', (ws: WebSocket) => {
+  };
+  const handleConnection = (ws: WebSocket) => {
     if (!initializeWebSocketConnection(ws, context)) {
       return;
     }
-  });
+  };
+  const cleanup = () => {
+    server.removeListener('upgrade', handleUpgrade);
+    wss.removeListener('connection', handleConnection);
+    for (const ws of wss.clients) {
+      context.detachSocket(ws);
+      try {
+        ws.close(1001, 'Server shutting down');
+      } catch {
+        // Ignore close failures during server shutdown cleanup.
+      }
+    }
+    wss.close();
+  };
+  server.on('upgrade', handleUpgrade);
+  server.once('close', cleanup);
+  wss.on('connection', handleConnection);
 };
 
 export const initializeWebSocketConnection = (ws: WebSocket, context: RuntimeWebSocketApi) => {
-  ws.on('error', () => {});
-  ws.on('message', (raw) => handleClientMessage(ws, context, raw.toString()));
-  context.attachSocket(ws);
-  if (!sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.snapshot() }))) {
+  const cleanup = installWebSocketConnectionHandlers(ws, context);
+  let attached = false;
+  try {
+    context.attachSocket(ws);
+    attached = true;
+    if (sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.snapshot() }))) {
+      return true;
+    }
+    cleanup();
+    return false;
+  } catch {
+    if (attached) {
+      context.detachSocket(ws);
+    }
+    cleanup();
+    closeFailedWebSocketInit(ws);
     return false;
   }
-  return true;
+};
+
+const installWebSocketConnectionHandlers = (ws: WebSocket, context: RuntimeWebSocketApi) => {
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) {
+      return;
+    }
+    cleaned = true;
+    ws.removeListener('error', handleError);
+    ws.removeListener('message', handleMessage);
+    ws.removeListener('close', cleanup);
+  };
+  const handleError = () => {};
+  const handleMessage = (raw: WebSocket.RawData) => handleClientMessage(ws, context, raw.toString(), cleanup);
+  ws.on('error', handleError);
+  ws.on('message', handleMessage);
+  ws.on('close', cleanup);
+  return cleanup;
 };
 
 const handleClientMessage = (
   ws: WebSocket,
   context: RuntimeWebSocketApi,
-  raw: string
+  raw: string,
+  cleanup: () => void
 ) => {
   try {
     context.handleMessage(ws, decodeClient(raw));
@@ -42,7 +90,9 @@ const handleClientMessage = (
     if (ws.readyState !== WebSocket.OPEN) {
       return;
     }
-    sendManagedEncoded(ws, context, encode({ type: 'error', networkId: null, message: error instanceof Error ? error.message : 'Invalid websocket payload' }));
+    if (!sendManagedEncoded(ws, context, encode({ type: 'error', networkId: null, message: error instanceof Error ? error.message : 'Invalid websocket payload' }))) {
+      cleanup();
+    }
   }
 };
 
@@ -68,5 +118,16 @@ const sendEncoded = (ws: WebSocket, payload: string) => {
       // Ignore close failures while cleaning up a broken socket.
     }
     return false;
+  }
+};
+
+const closeFailedWebSocketInit = (ws: WebSocket) => {
+  if (ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING) {
+    return;
+  }
+  try {
+    ws.close(1011, 'WebSocket initialization failed');
+  } catch {
+    // Ignore close failures while releasing initialization resources.
   }
 };

@@ -31,7 +31,7 @@ export type DesktopShellLayoutProps = {
   networkManagerDialog: ReactNode;
   preferencesDialog: ReactNode;
   rightSidebar: ReactNode;
-  rightSidebarKind: 'profile' | 'users' | null;
+  rightSidebarKind: 'profile' | 'users' | 'notes' | null;
   selectedBufferId: string | null;
   sidebar: ReactNode;
 };
@@ -131,7 +131,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
               </TabsTrigger>
               {props.rightSidebarKind ? (
                 <TabsTrigger value="details" className="min-w-0">
-                  {props.rightSidebarKind === 'profile' ? 'Profile' : 'Users'}
+                  {rightSidebarLabel(props.rightSidebarKind)}
                 </TabsTrigger>
               ) : null}
             </TabsList>
@@ -187,3 +187,6 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
     </div>
   );
 }
+
+const rightSidebarLabel = (kind: NonNullable<DesktopShellLayoutProps['rightSidebarKind']>) =>
+  kind === 'profile' ? 'Profile' : kind === 'users' ? 'Users' : 'Notes';

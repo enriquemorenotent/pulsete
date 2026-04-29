@@ -193,7 +193,7 @@ export const selectSelectedBufferId = (state: State) =>
 
 export const selectRightSidebarKind = (state: State) => {
   const kind = selectWorkspace(state).selectedBuffer?.kind;
-  return kind === 'server' ? 'profile' : kind === 'channel' ? 'users' : null;
+  return kind === 'server' ? 'profile' : kind === 'channel' ? 'users' : kind === 'query' ? 'notes' : null;
 };
 
 export const selectNetworkNamesById = (state: State) =>

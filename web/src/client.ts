@@ -80,10 +80,16 @@ export const api = {
     }
     return apiRequest<BufferHistoryPayload>(`/api/buffers/${bufferId}/history?${searchParams.toString()}`);
   },
-  searchBufferHistory: (bufferId: string, query: string, limit = historySearchLimit) => {
+  searchBufferHistory: (
+    bufferId: string,
+    query: string,
+    limit = historySearchLimit,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => {
     const searchParams = new URLSearchParams({ q: query, limit: String(limit) });
     return apiRequest<BufferHistorySearchPayload>(
       `/api/buffers/${bufferId}/history/search?${searchParams.toString()}`,
+      { signal: init?.signal },
     );
   },
   downloadBufferHistory: async (bufferId: string) => {
@@ -97,10 +103,16 @@ export const api = {
       ?? `history-${bufferId}.txt`;
     triggerFileDownload(blob, fileName);
   },
-  markBufferRead: (bufferId: string) =>
+  markBufferRead: (bufferId: string, init?: Pick<RequestInit, 'signal'>) =>
     apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',
       body: '{}',
+      signal: init?.signal,
+    }),
+  saveBufferNotes: (bufferId: string, notes: string) =>
+    apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/notes`, {
+      method: 'PUT',
+      body: JSON.stringify({ notes }),
     }),
   addFriend: (nick: string) =>
     apiRequest<{ friend: FriendState; messages: ServerMessage[] }>('/api/friends', {
@@ -145,11 +157,14 @@ const triggerFileDownload = (blob: Blob, fileName: string) => {
   }
   const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = objectUrl;
-  link.download = fileName;
-  link.style.display = 'none';
-  document.body?.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(objectUrl);
+  try {
+    link.href = objectUrl;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body?.append(link);
+    link.click();
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
 };

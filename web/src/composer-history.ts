@@ -21,6 +21,7 @@ export type ComposerDraftState = Record<string, ComposerContextState>;
 export type ComposerController = {
   getDraft: (contextKey: string | null) => string;
   hasDraft: (contextKey: string | null) => boolean;
+  pruneContexts: (contextKeys: Iterable<string>) => void;
   setDraft: (contextKey: string | null, value: string) => void;
   recordComposerEntry: (contextKey: string | null, entry: string) => void;
   recallOlderDraft: (contextKey: string | null) => void;
@@ -175,6 +176,20 @@ export const stepComposerHistoryForContext = (
     draft: result.draft,
     history: result.state,
   });
+};
+
+export const pruneComposerDraftContexts = (
+  state: ComposerDraftState,
+  activeContextKeys: Iterable<string>,
+): ComposerDraftState => {
+  const activeKeys = new Set(activeContextKeys);
+  let changed = false;
+  const entries = Object.entries(state).filter(([contextKey]) => {
+    const keep = activeKeys.has(contextKey);
+    changed ||= !keep;
+    return keep;
+  });
+  return changed ? Object.fromEntries(entries) : state;
 };
 
 const writeComposerContextState = (

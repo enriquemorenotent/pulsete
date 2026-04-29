@@ -4,6 +4,7 @@ import {
   hasStoredComposerDraft,
   initialComposerDraftState,
   initialComposerHistoryState,
+  pruneComposerDraftContexts,
   pushComposerHistoryEntryForContext,
   pushComposerHistoryEntry,
   readComposerDraft,
@@ -101,4 +102,21 @@ test('history recall only updates the active buffer context', () => {
   state = stepComposerHistoryForContext(state, 'buffer-1', 'newer');
   assert.equal(readComposerDraft(state, 'buffer-1'), 'typing one');
   assert.equal(readComposerDraft(state, 'buffer-2'), 'typing two');
+});
+
+test('composer draft contexts are pruned when buffers disappear', () => {
+  let state = setComposerDraftForContext(
+    initialComposerDraftState,
+    'buffer-1',
+    'keep me',
+  );
+  state = pushComposerHistoryEntryForContext(state, 'buffer-2', '/join #stale');
+  state = setComposerDraftForContext(state, 'buffer-3', 'also stale');
+
+  const pruned = pruneComposerDraftContexts(state, ['buffer-1']);
+
+  assert.equal(readComposerDraft(pruned, 'buffer-1'), 'keep me');
+  assert.equal(readComposerDraft(pruned, 'buffer-2'), '');
+  assert.equal(readComposerDraft(pruned, 'buffer-3'), '');
+  assert.deepEqual(Object.keys(pruned), ['buffer-1']);
 });

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
 import {
+  selectRightSidebarKind,
   selectSidebarConnections,
   selectWorkspace,
 } from '../web/src/app-selectors.js';
@@ -113,4 +114,32 @@ test('sidebar connections use favorite-first workspace network ordering', () => 
     selectSidebarConnections(state).map((connection) => connection.network.id),
     ['alpha-favorite', 'beta-favorite', 'alpha', 'zeta'],
   );
+});
+
+test('right sidebar kind uses notes for selected query buffers', () => {
+  const state = createState();
+  const queryBuffer: BufferState = {
+    ...channelBuffer,
+    id: 'query-1',
+    kind: 'query',
+    target: 'Sofia',
+    notes: 'Ask about the bridge watch',
+  };
+  const queryState: State = {
+    ...state,
+    domain: {
+      ...state.domain,
+      buffers: [
+        { ...channelBuffer, id: 'server-1', kind: 'server', target: 'server' },
+        queryBuffer,
+      ],
+      channels: [],
+    },
+    transient: {
+      ...state.transient,
+      selection: { kind: 'buffer', bufferId: queryBuffer.id },
+    },
+  };
+
+  assert.equal(selectRightSidebarKind(queryState), 'notes');
 });

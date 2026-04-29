@@ -21,6 +21,7 @@ import {
 import type { AppUiState } from './useAppUiState.js';
 import { gatewayReconnectMessage } from './gateway.js';
 import { useGatewayConnection } from './useGatewayConnection.js';
+import type { ComposerStoreApi } from './composer-store.js';
 import {
   useAutoOpenNetworkManager,
   useManagedNetworkSelection,
@@ -30,6 +31,7 @@ type AppEffectsProps = {
   actions: Pick<AppActions, 'selectTabBuffer'>;
   applySocketMessage: (message: ServerMessage) => void;
   backgroundDmAudio: Pick<BackgroundDmAudioState, 'settings'>;
+  composer: Pick<ComposerStoreApi, 'pruneContexts'>;
   previewBackgroundDmAudioRef: MutableRefObject<
     (sound: BackgroundDmAudioSettings['sound']) => void
   >;
@@ -85,6 +87,10 @@ export function AppEffects(props: AppEffectsProps) {
     dispatch,
     socketRef: props.ui.socketRef,
   });
+
+  useEffect(() => {
+    props.composer.pruneContexts(buffers.map((buffer) => buffer.id));
+  }, [buffers, props.composer]);
 
   const { prime, preview } = useBackgroundDmAudioCue({
     buffers,

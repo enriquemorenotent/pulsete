@@ -109,7 +109,7 @@ test('versioned storage migrations rebuild networks as workspace-owned rows', ()
   assert.deepEqual(network?.historicalSelfNicks, []);
   assert.deepEqual(network?.autoJoin, []);
   assert.equal(network?.notes, '');
-  assert.equal(version.user_version, 20);
+  assert.equal(version.user_version, 21);
   assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
   assert.equal(columns.some((column) => column.name === 'templateId'), false);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), false);
@@ -127,6 +127,7 @@ test('versioned storage migrations rebuild networks as workspace-owned rows', ()
   assert.equal(bufferColumns.some((column) => column.name === 'priorityUnread'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'lastReadTs'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'lastReadMessageId'), true);
+  assert.equal(bufferColumns.some((column) => column.name === 'notes'), true);
   assert.deepEqual(tableNames, [
     'buffer_self_nick_aliases',
     'network_alt_nicks',

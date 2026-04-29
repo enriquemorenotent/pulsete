@@ -26,6 +26,14 @@ class FakeWebSocket {
     this.listeners[type].push(listener);
   }
 
+  removeEventListener(type: string, listener: (event?: Event | MessageEvent) => void) {
+    this.listeners[type] = (this.listeners[type] ?? []).filter((entry) => entry !== listener);
+  }
+
+  listenerCount(type: string) {
+    return this.listeners[type]?.length ?? 0;
+  }
+
   send(data: string) {
     if (this.readyState !== FakeWebSocket.OPEN) {
       throw new Error('Socket is not open');
@@ -107,6 +115,9 @@ test('connectSocket forwards websocket events through the wrapper', () => {
 
     assert.equal(openCalls, 1);
     assert.equal(closeCalls, 1);
+    assert.equal(socket.listenerCount('open'), 0);
+    assert.equal(socket.listenerCount('message'), 0);
+    assert.equal(socket.listenerCount('close'), 0);
     assert.deepEqual(socket.sent.map((entry) => JSON.parse(entry)), [{ type: 'network.connect', networkId: 'net-1' }]);
     assert.deepEqual(messages, [{ type: 'notice', networkId: null, message: 'hello' }]);
   } finally {
@@ -131,6 +142,9 @@ test('connectSocket throws a stable error and retires the socket when send is at
     assert.equal(socket.closeCalls, 1);
     assert.equal(closeCalls, 1);
     assert.equal(socket.readyState, FakeWebSocket.CLOSED);
+    assert.equal(socket.listenerCount('open'), 0);
+    assert.equal(socket.listenerCount('message'), 0);
+    assert.equal(socket.listenerCount('close'), 0);
   } finally {
     restore();
   }
@@ -161,6 +175,9 @@ test('connectSocket closes the socket when the server payload cannot be decoded'
     assert.equal(socket.closeCalls, 1);
     assert.equal(closeCalls, 1);
     assert.equal(socket.readyState, FakeWebSocket.CLOSED);
+    assert.equal(socket.listenerCount('open'), 0);
+    assert.equal(socket.listenerCount('message'), 0);
+    assert.equal(socket.listenerCount('close'), 0);
   } finally {
     console.error = originalConsoleError;
     restore();
@@ -178,12 +195,43 @@ test('gateway reconnect backoff caps after the second retry', () => {
 test('searchBufferHistory calls the buffer-scoped history search endpoint', async () => {
   const originalFetch = globalThis.fetch;
   const fetchCalls: string[] = [];
-  globalThis.fetch = (async (input) => {
+  const controller = new AbortController();
+  let receivedSignal: AbortSignal | null | undefined;
+  globalThis.fetch = (async (input, init) => {
     fetchCalls.push(String(input));
+    receivedSignal = init?.signal;
     return new Response(JSON.stringify({
       query: 'needle',
       results: [],
       hasMore: false,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+
+  try {
+    const payload = await api.searchBufferHistory('buffer-1', 'needle', 7, {
+      signal: controller.signal,
+    });
+
+    assert.deepEqual(fetchCalls, ['/api/buffers/buffer-1/history/search?q=needle&limit=7']);
+    assert.equal(receivedSignal, controller.signal);
+    assert.deepEqual(payload, { query: 'needle', results: [], hasMore: false });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('saveBufferNotes updates the buffer notes endpoint', async () => {
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: Array<{ url: string; method: string; notes: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({ url: String(input), method: String(init?.method ?? 'GET'), notes: JSON.parse(String(init?.body ?? '{}')).notes });
+    return new Response(JSON.stringify({
+      buffer: {
+        id: 'buffer-1', networkId: 'network-1', kind: 'query', target: 'Sofia',
+        notes: 'Ask about the bridge watch',
+        unread: 0, priorityUnread: 0, lastReadTs: null, lastReadMessageId: null,
+      },
+      messages: [],
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -191,10 +239,9 @@ test('searchBufferHistory calls the buffer-scoped history search endpoint', asyn
   }) as typeof fetch;
 
   try {
-    const payload = await api.searchBufferHistory('buffer-1', 'needle', 7);
-
-    assert.deepEqual(fetchCalls, ['/api/buffers/buffer-1/history/search?q=needle&limit=7']);
-    assert.deepEqual(payload, { query: 'needle', results: [], hasMore: false });
+    const payload = await api.saveBufferNotes('buffer-1', 'Ask about the bridge watch');
+    assert.deepEqual(fetchCalls, [{ url: '/api/buffers/buffer-1/notes', method: 'PUT', notes: 'Ask about the bridge watch' }]);
+    assert.equal(payload.buffer.notes, 'Ask about the bridge watch');
   } finally {
     globalThis.fetch = originalFetch;
   }

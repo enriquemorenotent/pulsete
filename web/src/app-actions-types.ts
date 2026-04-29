@@ -52,7 +52,12 @@ export type ConversationActions = {
     sourceBufferId?: string,
   ) => boolean;
   downloadBufferHistory: (bufferId: string) => Promise<boolean>;
-  searchBufferHistory: (bufferId: string, query: string) => Promise<BufferHistorySearchPayload>;
+  searchBufferHistory: (
+    bufferId: string,
+    query: string,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => Promise<BufferHistorySearchPayload>;
+  saveBufferNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
   openOrSelectQueryBuffer: (
     network: NetworkProfile,
     nick: string,

@@ -1,5 +1,5 @@
 import { useReducer } from 'react';
-import type { AppSnapshot } from '../../shared/protocol.js';
+import type { AppSnapshot, BufferState } from '../../shared/protocol.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
 import {
@@ -84,14 +84,57 @@ export const reducer = (state: State, action: Action): State => {
     : selection === state.transient.selection
       ? state.transient
       : { ...state.transient, selection };
-  const transient = action.type === 'snapshot'
+  const reducedTransient = action.type === 'snapshot'
     ? transientBase
     : reduceTransientAction(transientBase, action) ?? transientBase;
+  const transient =
+    domain.buffers === state.domain.buffers
+      ? reducedTransient
+      : pruneTransientBufferHistory(reducedTransient, domain.buffers);
 
   if (domain === state.domain && transient === state.transient) {
     return state;
   }
   return { domain, transient };
+};
+
+const pruneTransientBufferHistory = (
+  transient: AppTransientState,
+  buffers: readonly BufferState[],
+): AppTransientState => {
+  const activeBufferIds = new Set(buffers.map((buffer) => buffer.id));
+  const historyLoadedByBufferId = retainActiveBufferKeys(
+    transient.historyLoadedByBufferId,
+    activeBufferIds,
+  );
+  const historyHasOlderByBufferId = retainActiveBufferKeys(
+    transient.historyHasOlderByBufferId,
+    activeBufferIds,
+  );
+  if (
+    historyLoadedByBufferId === transient.historyLoadedByBufferId
+    && historyHasOlderByBufferId === transient.historyHasOlderByBufferId
+  ) {
+    return transient;
+  }
+  return {
+    ...transient,
+    historyLoadedByBufferId,
+    historyHasOlderByBufferId,
+  };
+};
+
+const retainActiveBufferKeys = <T extends Record<string, unknown>>(
+  map: T,
+  activeBufferIds: ReadonlySet<string>,
+): T => {
+  let changed = false;
+  const entries = Object.entries(map).filter(([bufferId]) => {
+    const keep = activeBufferIds.has(bufferId);
+    changed ||= !keep;
+    return keep;
+  });
+  return changed ? Object.fromEntries(entries) as T : map;
 };
 
 export function useStateReducer(initialReducer: typeof reducer, state: State) {

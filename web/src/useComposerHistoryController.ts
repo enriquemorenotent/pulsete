@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import {
   hasStoredComposerDraft,
   initialComposerDraftState,
+  pruneComposerDraftContexts,
   pushComposerHistoryEntryForContext,
   readComposerDraft,
   setComposerDraftForContext,
@@ -39,6 +40,14 @@ export const useComposerHistory = (): ComposerController => {
   return {
     getDraft,
     hasDraft,
+    pruneContexts: useCallback(
+      (contextKeys) => {
+        updateDraftState((current) =>
+          pruneComposerDraftContexts(current, contextKeys),
+        );
+      },
+      [updateDraftState],
+    ),
     setDraft: useCallback(
       (contextKey, value) => {
         updateDraftState((current) =>

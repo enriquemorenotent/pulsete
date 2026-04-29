@@ -25,6 +25,7 @@ import {
   listChannels,
   markBufferRead,
   removeBuffer,
+  setBufferNotes,
   setBufferUnread,
   updateChannelTopic,
   updateChannelUsers,
@@ -76,6 +77,10 @@ export class StorageConversationsRepository {
 
   removeBuffer(bufferId: string) {
     return removeBuffer(this.db, bufferId);
+  }
+
+  setBufferNotes(bufferId: string, notes: string) {
+    return setBufferNotes(this.db, bufferId, notes);
   }
 
   deleteChannelByName(networkId: string, channelName: string) {
