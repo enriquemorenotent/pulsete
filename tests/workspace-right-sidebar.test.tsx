@@ -107,6 +107,8 @@ test('server profile sidebar renders the per-network notes editor', () => {
   assert.match(markup, /server-profile-notes/);
   assert.match(markup, /Character: Mira/);
   assert.match(markup, /Current plot: bridge watch/);
+  assert.match(markup, /Saved/);
+  assert.doesNotMatch(markup, />Save<\/button>/);
 });
 
 test('query profile sidebar renders the per-DM notes editor', () => {

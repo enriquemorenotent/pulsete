@@ -163,7 +163,7 @@ test('query rows use the overlaid dot for unread state instead of a trailing mar
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[13px\] text-foreground font-semibold">alice<\/span>/,
+    /class="truncate text-\[12px\] text-foreground font-semibold">alice<\/span>/,
   );
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
 });
@@ -213,7 +213,7 @@ test('query rows use the same blue overlaid dot for non-priority unread state', 
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[13px\] text-foreground font-medium">alice<\/span>/,
+    /class="truncate text-\[12px\] text-foreground font-medium">alice<\/span>/,
   );
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });

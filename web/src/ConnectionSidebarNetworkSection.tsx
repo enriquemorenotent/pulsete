@@ -36,20 +36,20 @@ export function ConnectionSidebarNetworkSection(
 	return (
 		<section
 			className={cn(
-				'space-y-2',
-				props.index > 0 && 'border-t border-white/6 pt-4',
+				'space-y-1',
+				props.index > 0 && 'border-t border-white/6 pt-2',
 			)}
 		>
 			<div
 				className={cn(
-					'group flex items-stretch rounded-md transition-colors',
+					'group flex items-stretch rounded-sm transition-colors',
 					connection.selectedServer
-						? 'bg-white/6 ring-1 ring-inset ring-primary/24 shadow-[0_10px_30px_rgba(0,0,0,0.18)]'
+						? 'bg-white/6 ring-1 ring-inset ring-primary/24'
 						: 'hover:bg-white/3',
 				)}
 			>
 				<button
-					className="flex min-w-0 flex-1 items-center gap-3 p-2 text-left"
+					className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
 					onClick={() => props.onSelectNetwork(connection.network)}
 					aria-label={
 						serverActivity.hasUnread
@@ -83,9 +83,9 @@ export function ConnectionSidebarNetworkSection(
 						</div>
 					</div>
 				</button>
-				<div className="flex shrink-0 items-center gap-1 px-1.5 opacity-70 transition-opacity group-hover:opacity-100">
+				<div className="flex shrink-0 items-center gap-0.5 px-1 opacity-70 transition-opacity group-hover:opacity-100">
 					<button
-						className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
 						onClick={() =>
 							connection.runtime?.phase === 'connected'
 								? props.onDisconnectNetwork(
@@ -97,25 +97,25 @@ export function ConnectionSidebarNetworkSection(
 						disabled={connection.runtime?.phase === 'connecting'}
 					>
 						{connection.runtime?.phase === 'connected' ? (
-							<PowerOff className="size-3.5" />
+							<PowerOff className="size-3" />
 						) : (
-							<RefreshCcw className="size-3.5" />
+							<RefreshCcw className="size-3" />
 						)}
 					</button>
 					<button
-						className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
+						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
 						onClick={() =>
 							props.onCloseConnection(connection.network)
 						}
 						aria-label={`Close ${connection.label}`}
 					>
-						<X className="size-3.5" />
+						<X className="size-3" />
 					</button>
 				</div>
 			</div>
 			{connection.childBuffers.length > 0 ||
 			connection.pendingChannels.length > 0 ? (
-				<div className="space-y-1">
+				<div className="space-y-px">
 					{connection.childBuffers.map(({ buffer, selected }) =>
 						buffer.kind === 'channel' ? (
 							<ConnectionSidebarBufferRow
@@ -145,7 +145,13 @@ export function ConnectionSidebarNetworkSection(
 									props.queryPresence,
 									buffer.id,
 								)}
-								emoji={findNickEmoji(props.nickEmojis, connection.network.id, buffer.target)?.emoji ?? null}
+								emoji={
+									findNickEmoji(
+										props.nickEmojis,
+										connection.network.id,
+										buffer.target,
+									)?.emoji ?? null
+								}
 								onSelect={() => props.onSelectBuffer(buffer)}
 								onClose={() => props.onCloseBuffer(buffer)}
 							/>

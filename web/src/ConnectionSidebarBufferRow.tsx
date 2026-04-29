@@ -27,7 +27,7 @@ export function ConnectionSidebarBufferRow(
 	return (
 		<div
 			className={cn(
-				'group flex items-stretch rounded-lg transition-colors',
+				'group flex items-stretch rounded-sm transition-colors',
 				props.selected
 					? 'bg-white/5 ring-1 ring-inset ring-white/8'
 					: 'hover:bg-white/3',
@@ -35,7 +35,7 @@ export function ConnectionSidebarBufferRow(
 		>
 			<button
 				className={cn(
-					'flex min-w-0 flex-1 items-center gap-2.5 p-2 text-left',
+					'flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left',
 					props.dimmed && 'opacity-70',
 				)}
 				onClick={props.onSelect}
@@ -71,7 +71,7 @@ export function ConnectionSidebarBufferRow(
 					})}
 				>
 					{props.emoji ? (
-						<span className="mr-1.5 text-[13px] leading-none" aria-hidden>
+						<span className="mr-1 text-[12px] leading-none" aria-hidden>
 							{props.emoji}
 						</span>
 					) : null}
@@ -79,7 +79,7 @@ export function ConnectionSidebarBufferRow(
 				</span>
 			</button>
 			<button
-				className="px-3 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
+				className="px-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
 				onClick={props.onClose}
 				aria-label={`Close ${props.buffer.target}`}
 			>

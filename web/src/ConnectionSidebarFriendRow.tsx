@@ -16,7 +16,7 @@ export function FriendRow(props: FriendRowProps) {
 		<div className="group flex items-stretch rounded-sm transition-colors hover:bg-white/3">
 			<button
 				type="button"
-				className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+				className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left"
 				onClick={props.onOpen}
 				aria-label={`Open ${props.friend.nick} (${props.presence})`}
 			>
@@ -28,13 +28,13 @@ export function FriendRow(props: FriendRowProps) {
 					)}
 				/>
 				{props.emoji ? (
-					<span aria-hidden className="shrink-0 text-[13px] leading-none">
+					<span aria-hidden className="shrink-0 text-[12px] leading-none">
 						{props.emoji}
 					</span>
 				) : null}
 				<span
 					className={cn(
-						'truncate text-[13px]',
+						'truncate text-[12px]',
 						props.presence !== 'offline'
 							? 'text-foreground'
 							: 'text-muted-foreground/90',

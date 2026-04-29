@@ -68,7 +68,7 @@ test('saveNetworkNotes sends the sidebar notes update for the selected network',
       notes: 'Character: Mira',
     }]);
     assert.equal(updated?.notes, 'Character: Mira');
-    assert.deepEqual(banners, [{ kind: 'notice', message: 'Notes saved' }]);
+    assert.deepEqual(banners, []);
   } finally {
     globalThis.fetch = originalFetch;
   }

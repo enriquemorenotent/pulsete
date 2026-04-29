@@ -9,7 +9,7 @@ export const ConnectionSidebar = memo(function ConnectionSidebar(
 	props: ConnectionSidebarProps,
 ) {
 	return (
-		<aside className="flex h-full min-h-0 flex-col gap-5 overflow-hidden">
+		<aside className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
 			<ConnectionSidebarConnections
 				connections={props.connections}
 				nickEmojis={props.nickEmojis}

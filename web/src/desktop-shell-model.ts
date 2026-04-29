@@ -68,7 +68,7 @@ export type DesktopShellNetworkEditorModel = {
 export type DesktopShellServerProfileModel = {
   network: NetworkProfile | null;
   onEdit: () => void;
-  onSaveNotes: (network: NetworkProfile, notes: string) => Promise<unknown>;
+  onSaveNotes: (network: NetworkProfile, notes: string) => Promise<NetworkProfile | null>;
 };
 
 export type DesktopShellQueryProfileModel = {

@@ -15,7 +15,7 @@ export const connectionSidebarLabelClass = (
 	options: ConnectionSidebarLabelOptions = {},
 ) =>
 	cn(
-		'truncate text-[13px] text-foreground',
+		'truncate text-[12px] text-foreground',
 		activity.priority
 			? 'font-semibold'
 			: activity.hasUnread

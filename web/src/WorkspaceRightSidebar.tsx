@@ -1,6 +1,6 @@
-import { memo, useEffect, useState } from 'react';
+import { memo } from 'react';
 import { Button } from '@/components/ui/button.js';
-import { Label } from '@/components/ui/label.js';
+import { AutosaveNotesEditor } from './AutosaveNotesEditor.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
@@ -14,7 +14,7 @@ type WorkspaceRightSidebarProps = {
   serverProfile?: {
     network: WorkspaceView['selectedNetwork'];
     onEdit: () => void;
-    onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<unknown>;
+    onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<NetworkProfile | null>;
   };
   queryProfile?: {
     buffer: BufferState | null;
@@ -94,33 +94,13 @@ function ServerProfileSidebar(props: {
   network: WorkspaceView['selectedNetwork'];
   fallbackNetwork: WorkspaceView['selectedNetwork'];
   onEdit: () => void;
-  onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<unknown>;
+  onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<NetworkProfile | null>;
 }) {
   const network = props.network ?? props.fallbackNetwork;
-  const [draftNotes, setDraftNotes] = useState(network?.notes ?? '');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setDraftNotes(network?.notes ?? '');
-  }, [network?.id, network?.notes]);
 
   if (!network) {
     return null;
   }
-
-  const savedNotes = network.notes ?? '';
-  const notesChanged = draftNotes !== savedNotes;
-  const saveNotes = async () => {
-    if (!notesChanged || saving) {
-      return;
-    }
-    setSaving(true);
-    try {
-      await props.onSaveNotes(network, draftNotes);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 px-3 py-4">
@@ -139,26 +119,13 @@ function ServerProfileSidebar(props: {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="server-profile-notes">Notes</Label>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void saveNotes()}
-            disabled={!notesChanged || saving}
-          >
-            {saving ? 'Saving' : 'Save'}
-          </Button>
-        </div>
-        <textarea
-          id="server-profile-notes"
-          value={draftNotes}
-          onChange={(event) => setDraftNotes(event.target.value)}
-          placeholder="Character, aliases, plot hooks..."
-          className="min-h-40 flex-1 resize-none rounded-sm border border-input bg-input px-3 py-2 text-[13px] leading-5 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50"
-        />
-      </div>
+      <AutosaveNotesEditor
+        id="server-profile-notes"
+        notes={network.notes ?? ''}
+        onSave={(notes) => props.onSaveNotes(network, notes).then(Boolean)}
+        placeholder="Character, aliases, plot hooks..."
+        scopeKey={network.id}
+      />
     </div>
   );
 }

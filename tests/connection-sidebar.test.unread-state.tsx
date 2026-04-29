@@ -25,6 +25,6 @@ test('server rows use medium weight for non-priority unread state', () => {
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[13px\] text-foreground font-medium">Cuff-Link<\/span>/,
+    /class="truncate text-\[12px\] text-foreground font-medium">Cuff-Link<\/span>/,
   );
 });

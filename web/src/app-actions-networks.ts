@@ -143,7 +143,7 @@ export const createNetworkActions = ({
     return executeMutation({
       request: () => api.saveNetwork({ ...network, notes }),
       mapResult: (result) => result.network,
-      successMessage: 'Notes saved',
+      successMessage: null,
       errorMessage: 'Failed to save notes',
       failureValue: null,
     });
