@@ -68,6 +68,7 @@ test('friends stay visible when live connections are present', () => {
         { id: 'friend-2', nick: 'Bob' },
       ]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -108,6 +109,7 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -154,6 +156,7 @@ test('priority unread buffers render a stronger unread marker instead of a count
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -202,6 +205,7 @@ test('non-priority unread buffers render the same blue unread marker instead of 
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}

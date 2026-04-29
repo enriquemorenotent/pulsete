@@ -10,6 +10,7 @@ type ChatTranscriptStaticProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   emptyBody: string;
   expandedMutedGroupKeys: ReadonlySet<string>;
+  nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   loadingOlderHistory?: boolean;
   mode: MessageDisplayMode;
@@ -56,6 +57,7 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
                 row={row}
                 channelUserModesByNick={props.channelUserModesByNick}
                 expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+                nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
                 listKind={props.listKind}
                 mode={props.mode}
                 onOpenChannel={props.onOpenChannel}

@@ -88,6 +88,7 @@ test('open query buffers show saved contact presence cues', () => {
         { id: 'friend-2', nick: 'Bob' },
       ]}
       friendPresence={{}}
+      nickEmojis={[{ id: 'nick-emoji-1', networkId: network.id, nick: 'carol', emoji: '🌙' }]}
       queryPresence={{
         [offlineQuery.id]: 'offline',
         [awayQuery.id]: 'away',
@@ -110,6 +111,7 @@ test('open query buffers show saved contact presence cues', () => {
   assert.match(markup, /aria-label="Open alice \(offline\)"/);
   assert.match(markup, /aria-label="Open bob \(away\)"/);
   assert.match(markup, /aria-label="Open carol \(online\)"/);
+  assert.match(markup, /🌙[\s\S]*carol/);
   assert.match(markup, /text-red-400/);
   assert.match(markup, /text-yellow-400/);
   assert.match(markup, /text-emerald-400/);
@@ -140,6 +142,7 @@ test('query rows use the overlaid dot for unread state instead of a trailing mar
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       queryPresence={{ [unreadQuery.id]: 'online' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
@@ -189,6 +192,7 @@ test('query rows use the same blue overlaid dot for non-priority unread state', 
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       queryPresence={{ [unreadQuery.id]: 'away' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
@@ -213,4 +217,3 @@ test('query rows use the same blue overlaid dot for non-priority unread state', 
   );
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });
-

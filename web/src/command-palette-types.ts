@@ -1,4 +1,4 @@
-import type { FriendState } from '../../shared/protocol.js';
+import type { FriendState, NickEmojiState } from '../../shared/protocol.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 
 export type CommandPaletteEntrySection = 'buffers' | 'friends' | 'actions';
@@ -25,6 +25,7 @@ export type CommandPaletteEntrySpec = {
   id: string;
   section: CommandPaletteEntrySection;
   label: string;
+  emoji?: string | null;
   subtitle: string | null;
   keywords: string[];
   badge: string | null;
@@ -51,6 +52,7 @@ export type CommandPaletteActionHandlers = {
 export type BuildCommandPaletteEntrySpecsInput = {
   connections: SidebarConnectionView[];
   friends: FriendState[];
+  nickEmojis: NickEmojiState[];
   selectedBuffer: {
     id: string | null;
     label: string | null;

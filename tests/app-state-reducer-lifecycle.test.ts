@@ -36,6 +36,7 @@ test('snapshot selects the first instance server buffer', () => {
     snapshot: {
       networks: [network],
       friends: [],
+      nickEmojis: [],
       mutedNicks: [],
       friendPresence: {},
       queryPresence: {},
@@ -84,6 +85,7 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
     snapshot: {
       networks: [network],
       friends: [],
+      nickEmojis: [],
       mutedNicks: [],
       friendPresence: {},
       queryPresence: {},

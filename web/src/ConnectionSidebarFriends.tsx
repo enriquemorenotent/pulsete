@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, MoreHorizontal, X } from 'lucide-react';
+import { Check, MoreHorizontal } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
-import { cn } from '@/lib/utils.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
+import { FriendRow } from './ConnectionSidebarFriendRow.js';
+import { resolveUniqueNickEmoji } from './nick-emoji-utils.js';
 
 type ConnectionSidebarFriendsProps = Pick<
 	ConnectionSidebarProps,
 	| 'friends'
 	| 'friendPresence'
 	| 'hideOfflineFriends'
+	| 'nickEmojis'
 	| 'onRemoveFriend'
 	| 'onSelectFriend'
 	| 'onToggleHideOfflineFriends'
@@ -131,6 +133,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 									onRemove={() =>
 										void props.onRemoveFriend(friend.id)
 									}
+									emoji={resolveUniqueNickEmoji(props.nickEmojis, friend.nick)}
 								/>
 							))}
 						</div>
@@ -138,50 +141,6 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 				</div>
 			</section>
 		</>
-	);
-}
-
-function FriendRow(props: {
-	friend: ConnectionSidebarProps['friends'][number];
-	presence: PresenceStatus;
-	onOpen: () => void;
-	onRemove: () => void;
-}) {
-	return (
-		<div className="group flex items-stretch rounded-sm transition-colors hover:bg-white/3">
-			<button
-				type="button"
-				className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
-				onClick={props.onOpen}
-				aria-label={`Open ${props.friend.nick} (${props.presence})`}
-			>
-				<span
-					aria-hidden
-					className={cn(
-						'size-2 shrink-0 rounded-full',
-						friendPresenceTone(props.presence),
-					)}
-				/>
-				<span
-					className={cn(
-						'truncate text-[13px]',
-						props.presence !== 'offline'
-							? 'text-foreground'
-							: 'text-muted-foreground/90',
-					)}
-				>
-					{props.friend.nick}
-				</span>
-			</button>
-			<button
-				type="button"
-				className="px-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
-				aria-label={`Remove ${props.friend.nick} from watchlist`}
-				onClick={props.onRemove}
-			>
-				<X className="size-3" />
-			</button>
-		</div>
 	);
 }
 
@@ -197,14 +156,4 @@ const presenceWeight = (presence: PresenceStatus | undefined) => {
 		return 1;
 	}
 	return 0;
-};
-
-const friendPresenceTone = (presence: PresenceStatus) => {
-	if (presence === 'online') {
-		return 'bg-emerald-400';
-	}
-	if (presence === 'away') {
-		return 'bg-yellow-400';
-	}
-	return 'bg-neutral-700';
 };

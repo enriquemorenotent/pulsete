@@ -10,7 +10,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 21;
+export const currentStorageSchemaVersion = 22;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -167,11 +167,15 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureColumn(db, 'buffers', 'notes', "TEXT NOT NULL DEFAULT ''");
     },
   },
+  {
+    version: 22,
+    apply: (db) => {
+      ensureNickEmojiTable(db);
+    },
+  },
 ];
 
-export const bootstrapStorageSchema = (db: SqliteDb) => {
-  db.exec(storageBootstrapSchemaSql);
-};
+export const bootstrapStorageSchema = (db: SqliteDb) => db.exec(storageBootstrapSchemaSql);
 
 export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationContext) => {
   let version = getUserVersion(db);
@@ -190,6 +194,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
   }
   ensureCurrentNetworkColumns(db);
   ensureCurrentBufferColumns(db);
+  ensureNickEmojiTable(db);
   dropLegacyMessageSearchArtifacts(db);
   ensureMessageSearchArtifacts(db);
 };
@@ -222,9 +227,23 @@ const ensureCurrentBufferColumns = (db: SqliteDb) => {
   ensureColumn(db, 'buffers', 'notes', "TEXT NOT NULL DEFAULT ''");
 };
 
+const ensureNickEmojiTable = (db: SqliteDb) => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS nick_emoji_tags (
+      id TEXT PRIMARY KEY,
+      networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+      nick TEXT NOT NULL COLLATE NOCASE,
+      emoji TEXT NOT NULL,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      UNIQUE(networkId, nick)
+    );
+    CREATE INDEX IF NOT EXISTS idx_nick_emoji_tags_network_nick
+      ON nick_emoji_tags(networkId, nick COLLATE NOCASE, createdAt ASC);
+  `);
+};
+
 const getUserVersion = (db: SqliteDb) =>
   Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
 
-const setUserVersion = (db: SqliteDb, version: number) => {
-  db.exec(`PRAGMA user_version = ${version}`);
-};
+const setUserVersion = (db: SqliteDb, version: number) => db.exec(`PRAGMA user_version = ${version}`);

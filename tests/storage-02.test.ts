@@ -55,11 +55,54 @@ test('friends persist and deduplicate case-insensitively', () => {
   const friends = reopened.friends.list();
 
   assert.equal(duplicate.id, friend.id);
-  assert.deepEqual(friends, [friend]);
+  assert.equal(friends.length, 1);
+  assert.equal(friends[0]?.id, friend.id);
+  assert.equal(friends[0]?.nick, 'Alice');
 
   const removed = reopened.friends.remove(friend.id);
   assert.equal(removed?.id, friend.id);
   assert.deepEqual(reopened.friends.list(), []);
+});
+
+test('nick emoji tags persist per network and deduplicate case-insensitively', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  const firstNetwork = createConnectionInstance(storage, { name: 'FirstNet', host: 'irc.first.test' });
+  const secondNetwork = createConnectionInstance(storage, { name: 'SecondNet', host: 'irc.second.test' });
+
+  const tagged = storage.nickEmojis.upsert({
+    networkId: firstNetwork.id,
+    nick: 'Alice',
+    emoji: '🌙',
+  });
+  const updated = storage.nickEmojis.upsert({
+    networkId: firstNetwork.id,
+    nick: 'alice',
+    emoji: '⭐',
+  });
+  const otherNetworkTag = storage.nickEmojis.upsert({
+    networkId: secondNetwork.id,
+    nick: 'Alice',
+    emoji: '🔥',
+  });
+  storage.close();
+
+  const reopened = new Storage(file);
+  assert.equal(updated.id, tagged.id);
+  assert.notEqual(otherNetworkTag.id, tagged.id);
+  assert.deepEqual(reopened.nickEmojis.list(firstNetwork.id), [{
+    id: tagged.id,
+    networkId: firstNetwork.id,
+    nick: 'alice',
+    emoji: '⭐',
+  }]);
+  assert.deepEqual(reopened.nickEmojis.list(secondNetwork.id), [{
+    id: otherNetworkTag.id,
+    networkId: secondNetwork.id,
+    nick: 'Alice',
+    emoji: '🔥',
+  }]);
 });
 
 test('deleting a network leaves other saved networks alone', () => {

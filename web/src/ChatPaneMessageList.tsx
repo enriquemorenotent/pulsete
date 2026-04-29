@@ -4,6 +4,7 @@ import type {
   ChannelUserState,
   ChatMessage,
   MutedNickState,
+  NickEmojiState,
 } from '../../shared/protocol.js';
 import {
   captureUnreadDividerAnchor,
@@ -17,10 +18,12 @@ import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
 import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import { isMessageMuted } from './muted-nick-utils.js';
+import { buildNickEmojiByNetworkNick } from './nick-emoji-utils.js';
 
 type ChatPaneMessageListProps = {
   selectedBuffer: BufferState | null;
   channelUsers?: ChannelUserState[];
+  nickEmojis?: NickEmojiState[];
   followOutputRequestId?: number;
   messages: ChatMessage[];
   mutedNicks: MutedNickState[];
@@ -103,6 +106,10 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
     () => buildChannelUserModesByNick(props.channelUsers),
     [props.channelUsers],
   );
+  const nickEmojiByNetworkNick = useMemo(
+    () => buildNickEmojiByNetworkNick(props.nickEmojis ?? []),
+    [props.nickEmojis],
+  );
   const loadOlderHistory =
     props.canLoadOlderHistory && props.onLoadOlderHistory
       ? props.onLoadOlderHistory
@@ -113,6 +120,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       <ChatTranscriptStatic
         channelUserModesByNick={channelUserModesByNick}
         emptyBody={props.emptyBody}
+        nickEmojiByNetworkNick={nickEmojiByNetworkNick}
         listKind={props.listKind}
         loadingOlderHistory={props.loadingOlderHistory}
         mode={props.mode}
@@ -132,6 +140,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       bufferId={props.selectedBuffer?.id ?? null}
       channelUserModesByNick={channelUserModesByNick}
       emptyBody={props.emptyBody}
+      nickEmojiByNetworkNick={nickEmojiByNetworkNick}
       followOutputRequestId={props.followOutputRequestId ?? 0}
       initialHistoryPending={props.initialHistoryPending}
       initialScrollTarget={initialScrollTarget}

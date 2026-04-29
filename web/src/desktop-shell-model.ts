@@ -1,6 +1,6 @@
 import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
-import type { BufferState, FriendState, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
@@ -25,6 +25,7 @@ export type DesktopShellCommandPaletteModel = {
 export type DesktopShellNicklistModel = {
   friends: FriendState[];
   mutedNicks: MutedNickState[];
+  nickEmojis: NickEmojiState[];
   backgroundDmAudio: Pick<BackgroundDmAudioSettings, 'contacts'>;
   onAddFriend: (nick: string) => Promise<boolean>;
   onAddNotificationContact: (contact: BackgroundDmAudioContact) => void;
@@ -32,6 +33,7 @@ export type DesktopShellNicklistModel = {
   onRemoveFriend: (friendId: string) => Promise<boolean>;
   onRemoveNotificationContact: (contact: BackgroundDmAudioContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
+  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };
 
@@ -71,8 +73,10 @@ export type DesktopShellServerProfileModel = {
 
 export type DesktopShellQueryProfileModel = {
   buffer: BufferState | null;
+  nickEmoji?: NickEmojiState | null;
   network: NetworkProfile | null;
   onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
+  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
 };
 
 export type DesktopShellModel = {

@@ -86,7 +86,7 @@ test('versioned storage migrations remove legacy message search artifacts', () =
   `).all('payload') as Array<{ id: string }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 21);
+  assert.equal(version.user_version, 22);
   assert.deepEqual(artifacts, []);
   assert.deepEqual(newArtifacts.map((artifact) => artifact.name), [
     'message_search_ad',

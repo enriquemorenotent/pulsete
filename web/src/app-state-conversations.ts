@@ -1,5 +1,5 @@
 import type { AppDomainState, Action } from './app-types.js';
-import type { BufferState, FriendState, MutedNickState, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, FriendState, MutedNickState, NickEmojiState, PendingChannelState } from '../../shared/protocol.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
   appendConversationMessages,
@@ -21,6 +21,13 @@ export const sortFriends = (friends: FriendState[]) =>
 
 export const sortMutedNicks = (mutedNicks: MutedNickState[]) =>
   [...mutedNicks].sort((left, right) =>
+    left.networkId === right.networkId
+      ? left.nick.localeCompare(right.nick, undefined, { sensitivity: 'accent' })
+      : left.networkId.localeCompare(right.networkId)
+  );
+
+export const sortNickEmojis = (nickEmojis: NickEmojiState[]) =>
+  [...nickEmojis].sort((left, right) =>
     left.networkId === right.networkId
       ? left.nick.localeCompare(right.nick, undefined, { sensitivity: 'accent' })
       : left.networkId.localeCompare(right.networkId)
@@ -70,6 +77,16 @@ export const reduceConversationDomain = (
       return {
         ...domain,
         mutedNicks: domain.mutedNicks.filter((mutedNick) => mutedNick.id !== action.mutedNickId),
+      };
+    case 'upsert-nick-emoji': {
+      const nickEmojis = domain.nickEmojis.filter((nickEmoji) => nickEmoji.id !== action.nickEmoji.id);
+      nickEmojis.push(action.nickEmoji);
+      return { ...domain, nickEmojis: sortNickEmojis(nickEmojis) };
+    }
+    case 'remove-nick-emoji':
+      return {
+        ...domain,
+        nickEmojis: domain.nickEmojis.filter((nickEmoji) => nickEmoji.id !== action.nickEmojiId),
       };
     case 'friend-presence':
       return {

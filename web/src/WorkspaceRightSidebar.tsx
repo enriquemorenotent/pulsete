@@ -4,8 +4,9 @@ import { Label } from '@/components/ui/label.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
+import { findNickEmoji } from './nick-emoji-utils.js';
 import type { WorkspaceView } from './workspace-types.js';
-import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile, NickEmojiState } from '../../shared/protocol.js';
 
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
@@ -17,8 +18,10 @@ type WorkspaceRightSidebarProps = {
   };
   queryProfile?: {
     buffer: BufferState | null;
+    nickEmoji?: NickEmojiState | null;
     network: NetworkProfile | null;
     onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
+    onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   };
 };
 
@@ -44,8 +47,19 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     return (
       <QueryProfileSidebar
         buffer={props.queryProfile?.buffer ?? props.workspace.selectedBuffer}
+        nickEmoji={
+          props.queryProfile?.nickEmoji
+          ?? (props.workspace.selectedBuffer
+            ? findNickEmoji(
+                props.nicklist.nickEmojis,
+                props.workspace.selectedBuffer.networkId,
+                props.workspace.selectedBuffer.target,
+              )
+            : null)
+        }
         network={props.queryProfile?.network ?? props.workspace.selectedNetwork}
         onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
+        onSaveNickEmoji={props.queryProfile?.onSaveNickEmoji ?? (async () => false)}
       />
     );
   }
@@ -61,6 +75,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         channel={props.workspace.selectedChannel}
         friends={props.nicklist.friends}
         mutedNicks={props.nicklist.mutedNicks}
+        nickEmojis={props.nicklist.nickEmojis}
         backgroundDmAudio={props.nicklist.backgroundDmAudio}
         onAddFriend={props.nicklist.onAddFriend}
         onAddNotificationContact={props.nicklist.onAddNotificationContact}
@@ -68,6 +83,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         onRemoveFriend={props.nicklist.onRemoveFriend}
         onRemoveNotificationContact={props.nicklist.onRemoveNotificationContact}
         onRemoveMutedNick={props.nicklist.onRemoveMutedNick}
+        onSaveNickEmoji={props.nicklist.onSaveNickEmoji}
         onSelectNick={props.nicklist.onSelectNick}
       />
     </div>

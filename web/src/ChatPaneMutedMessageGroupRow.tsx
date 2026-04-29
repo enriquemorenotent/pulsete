@@ -9,6 +9,7 @@ import type { ParticipantHighlightMode } from './message-participant-presentatio
 type ChatPaneMutedMessageGroupRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   expanded: boolean;
+  nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
@@ -54,6 +55,7 @@ export function ChatPaneMutedMessageGroupRow(props: ChatPaneMutedMessageGroupRow
               key={row.key}
               row={row}
               channelUserModesByNick={props.channelUserModesByNick}
+              nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
               listKind={props.listKind}
               mode={props.mode}
               onInlinePreviewLoad={props.onInlinePreviewLoad}

@@ -5,18 +5,25 @@ import type {
   BuildCommandPaletteEntrySpecsInput,
   CommandPaletteEntrySpec,
 } from './command-palette-types.js';
+import {
+  buildNickEmojiByNetworkNick,
+  resolveNickEmoji,
+  resolveUniqueNickEmoji,
+} from './nick-emoji-utils.js';
 
-export const buildCommandPaletteEntrySpecs = (
-  input: BuildCommandPaletteEntrySpecsInput,
-): CommandPaletteEntrySpec[] => [
-  ...buildBufferEntries(input.connections, input.selectedNetwork.id),
-  ...buildFriendEntries(input.friends),
-  ...buildCommandPaletteActionEntries(input),
-];
+export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpecsInput) => {
+  const nickEmojiByNetworkNick = buildNickEmojiByNetworkNick(input.nickEmojis);
+  return [
+    ...buildBufferEntries(input.connections, input.selectedNetwork.id, nickEmojiByNetworkNick),
+    ...buildFriendEntries(input.friends, input.nickEmojis),
+    ...buildCommandPaletteActionEntries(input),
+  ];
+};
 
 const buildBufferEntries = (
   connections: BuildCommandPaletteEntrySpecsInput['connections'],
   selectedNetworkId: string | null,
+  nickEmojiByNetworkNick: ReadonlyMap<string, string>,
 ): CommandPaletteEntrySpec[] => {
   const entries: CommandPaletteEntrySpec[] = [];
   for (const connection of connections) {
@@ -45,6 +52,9 @@ const buildBufferEntries = (
         id: `buffer:${child.buffer.id}`,
         section: 'buffers',
         label: child.buffer.target,
+        emoji: child.buffer.kind === 'query'
+          ? resolveNickEmoji(nickEmojiByNetworkNick, child.buffer.networkId, child.buffer.target)
+          : null,
         subtitle: connection.label,
         keywords: [
           connection.network.name,
@@ -91,11 +101,13 @@ const buildBufferEntries = (
 
 const buildFriendEntries = (
   friends: BuildCommandPaletteEntrySpecsInput['friends'],
+  nickEmojis: BuildCommandPaletteEntrySpecsInput['nickEmojis'],
 ): CommandPaletteEntrySpec[] =>
   friends.map((friend) => ({
     id: `friend:${friend.id}`,
     section: 'friends',
     label: friend.nick,
+    emoji: resolveUniqueNickEmoji(nickEmojis, friend.nick),
     subtitle: 'Watched nick',
     keywords: ['watchlist', 'watched nick', 'private message', 'pm'],
     badge: 'watchlist',

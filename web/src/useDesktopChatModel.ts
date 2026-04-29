@@ -33,6 +33,7 @@ export type DesktopChatModelParams = {
   composer: ComposerStoreApi;
   friends: State['domain']['friends'];
   mutedNicks: State['domain']['mutedNicks'];
+  nickEmojis: State['domain']['nickEmojis'];
   networks: State['domain']['networks'];
   primeBackgroundDmAudio: () => void;
   channelList: State['transient']['channelList'];
@@ -63,6 +64,7 @@ export function useDesktopChatModel({
   composer,
   friends,
   mutedNicks,
+  nickEmojis,
   networks,
   primeBackgroundDmAudio,
   channelList,
@@ -99,6 +101,7 @@ export function useDesktopChatModel({
     () => ({
       workspace,
       friends,
+      nickEmojis,
       selectedMessages,
       mutedNicks,
       draft,
@@ -116,6 +119,7 @@ export function useDesktopChatModel({
       queryNotificationsEnabled,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
+      onSaveNickEmoji: actions.saveNickEmoji,
       onMuteSelectedQuery: selectedQueryNotificationContact
         ? () => muteContactAndDisableNotifications({
             contact: selectedQueryNotificationContact,
@@ -189,6 +193,7 @@ export function useDesktopChatModel({
       draft,
       friends,
       mutedNicks,
+      nickEmojis,
       participantQueryNetwork,
       primeBackgroundDmAudio,
       queryNotificationsEnabled,

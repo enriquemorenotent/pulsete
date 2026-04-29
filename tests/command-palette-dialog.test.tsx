@@ -8,11 +8,12 @@ import { Dialog } from '../web/src/components/ui/dialog.js';
 
 const entries: CommandPaletteEntry[] = [{
   id: 'buffer-1',
-  section: 'buffers',
-  label: '#School-of-O',
+  section: 'friends',
+  label: 'School-of-O',
+  emoji: '🌙',
   subtitle: 'Cuff-Link (cubanita) (cubanita)',
   keywords: ['school'],
-  badge: 'channel',
+  badge: 'watchlist',
   ranking: {
     currentNetwork: true,
     priorityUnread: 0,
@@ -42,5 +43,6 @@ test('command palette body keeps the top chrome fixed above a flexible results p
   assert.match(markup, /class="shrink-0 border-b border-border px-4 py-3"/);
   assert.match(markup, /aria-label="Search command palette"/);
   assert.match(markup, /class="relative overflow-hidden min-h-0 flex-1"/);
-  assert.match(markup, /#School-of-O/);
+  assert.match(markup, /School-of-O/);
+  assert.match(markup, /🌙[\s\S]*School-of-O/);
 });

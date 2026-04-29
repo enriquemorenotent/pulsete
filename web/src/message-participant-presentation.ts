@@ -2,11 +2,13 @@ import type { BufferState, ChannelUserMode, ChannelUserState, ChatMessage } from
 import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { channelUserModeTone } from './channel-user-tone.js';
 import { showKindLabel } from './chat-pane-message-utils.js';
+import { resolveNickEmoji } from './nick-emoji-utils.js';
 
 export type ParticipantHighlightMode = 'none' | 'channel' | 'query';
 
 export type MessageParticipantPresentation = {
   label: string | null;
+  emoji: string | null;
   toneClassName: string;
   clickable: boolean;
   kindBadgeLabel: string | null;
@@ -19,6 +21,7 @@ type ResolveMessageParticipantPresentationInput = {
   senderLabel?: string | null;
   highlightMode: ParticipantHighlightMode;
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
+  nickEmojiByNetworkNick?: ReadonlyMap<string, string>;
   allowParticipantQuery: boolean;
 };
 
@@ -50,6 +53,9 @@ export const resolveMessageParticipantPresentation = (
   const label = resolveParticipantLabel(input);
   return {
     label,
+    emoji: label && input.nickEmojiByNetworkNick
+      ? resolveNickEmoji(input.nickEmojiByNetworkNick, input.message.networkId, label)
+      : null,
     toneClassName: resolveParticipantTone(input.message, input.highlightMode, input.channelUserModesByNick),
     clickable: label === input.message.nick && canOpenParticipantQuery(input.message, input.highlightMode, input.allowParticipantQuery),
     kindBadgeLabel: resolveKindBadgeLabel(input.message, input.listKind, input.rowVariant),

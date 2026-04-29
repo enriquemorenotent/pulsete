@@ -5,6 +5,7 @@ import type {
   FriendState,
   MutedNickState,
   NetworkProfile,
+  NickEmojiState,
 } from '../../shared/protocol.js';
 import type { ChannelListState } from './app-types.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
@@ -21,6 +22,7 @@ export type ChatPaneProps = {
   workspace: WorkspaceView;
   friends: FriendState[];
   mutedNicks: MutedNickState[];
+  nickEmojis: NickEmojiState[];
   selectedMessages: ChatMessage[];
   draft: string;
   focusContextKey?: string | null;
@@ -37,6 +39,7 @@ export type ChatPaneProps = {
   queryNotificationsEnabled?: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onMuteSelectedQuery?: () => Promise<boolean>;
   onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
@@ -91,11 +94,13 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneHeader
         workspace={props.workspace}
         friends={props.friends}
+        nickEmojis={props.nickEmojis}
         selectedQueryMuted={props.selectedQueryMuted}
         queryNotificationsEnabled={props.queryNotificationsEnabled}
         onOpenMentionedChannel={props.onOpenMentionedChannel}
         onAddFriend={props.onAddFriend}
         onRemoveFriend={props.onRemoveFriend}
+        onSaveNickEmoji={props.onSaveNickEmoji}
         onMuteSelectedQuery={props.onMuteSelectedQuery}
         onUnmuteSelectedQuery={props.onUnmuteSelectedQuery}
         onToggleQueryNotifications={props.onToggleQueryNotifications}
@@ -120,6 +125,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneMessageList
         selectedBuffer={props.workspace.selectedBuffer}
         channelUsers={props.workspace.selectedChannel?.users ?? []}
+        nickEmojis={props.nickEmojis}
         followOutputRequestId={followOutputRequestId}
         messages={props.selectedMessages}
         mutedNicks={props.mutedNicks}

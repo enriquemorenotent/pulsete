@@ -13,6 +13,7 @@ type ConnectionSidebarBufferRowProps = {
 	selected: boolean;
 	icon: ComponentType<{ className?: string }>;
 	presence: BufferPresenceDisplay | null;
+	emoji?: string | null;
 	onSelect: () => void;
 	onClose: () => void;
 };
@@ -69,6 +70,11 @@ export function ConnectionSidebarBufferRow(
 						offline: props.presence === 'offline',
 					})}
 				>
+					{props.emoji ? (
+						<span className="mr-1.5 text-[13px] leading-none" aria-hidden>
+							{props.emoji}
+						</span>
+					) : null}
 					{props.buffer.target}
 				</span>
 			</button>

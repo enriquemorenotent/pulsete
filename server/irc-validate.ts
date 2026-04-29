@@ -1,5 +1,6 @@
 import { badRequest } from './app-error.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { isSingleNickEmojiTag, normalizeNickEmojiTag } from '../shared/nick-emoji.js';
 import { maxIsonNickBytes } from './irc-limits.js';
 
 const lineBreakPattern = /[\r\n]/;
@@ -74,6 +75,25 @@ export const normalizeFriendNick = (value: string) => {
     throw badRequest('Friend nick is too long');
   }
   return nick;
+};
+
+export const normalizeNickEmojiNick = (value: string) => {
+  const nick = normalizeQueryTarget(value);
+  if (Buffer.byteLength(nick, 'utf8') > maxIsonNickBytes) {
+    throw badRequest('Nick is too long');
+  }
+  return nick;
+};
+
+export const normalizeNickEmoji = (value: string | null) => {
+  const emoji = normalizeNickEmojiTag(value);
+  if (!emoji) {
+    return null;
+  }
+  if (!isSingleNickEmojiTag(emoji)) {
+    throw badRequest('Nick emoji must be one emoji');
+  }
+  return emoji;
 };
 
 export const normalizeMutedNick = (value: string) => {

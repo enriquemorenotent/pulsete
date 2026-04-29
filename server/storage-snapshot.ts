@@ -10,6 +10,7 @@ export const createStorageSnapshot = (store: StorageSnapshotSource): AppSnapshot
     networks,
     friends: store.listFriends(),
     mutedNicks: store.listMutedNicks(),
+    nickEmojis: store.listNickEmojis(),
     friendPresence: {},
     queryPresence: {},
     buffers: store.listBuffers().filter(isWorkspaceItem),

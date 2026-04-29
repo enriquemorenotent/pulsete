@@ -14,6 +14,7 @@ import {
 
 type ChatTranscriptMessageRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
+  nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
@@ -33,6 +34,7 @@ export function ChatTranscriptMessageRow(props: ChatTranscriptMessageRowProps) {
   const participant = resolveMessageParticipantPresentation({
     allowParticipantQuery: !!props.onOpenParticipantQuery,
     channelUserModesByNick: props.channelUserModesByNick,
+    nickEmojiByNetworkNick: props.nickEmojiByNetworkNick,
     highlightMode: props.participantHighlightMode,
     listKind: props.listKind,
     message: props.row.message,

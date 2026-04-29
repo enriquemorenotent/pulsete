@@ -15,6 +15,7 @@ import {
   selectHistoryLoadingOlder,
   selectMutedNicks,
   selectNetworks,
+  selectNickEmojis,
   selectQueryPresence,
   selectSelectedMessages,
   selectServerProfileNetwork,
@@ -33,6 +34,7 @@ import {
 import { useSelectedBufferEffects } from './useSelectedBufferEffects.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
+import { findNickEmoji } from './nick-emoji-utils.js';
 
 type SharedProps = {
   actions: AppActions;
@@ -57,12 +59,14 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
 }: SharedProps) {
   const friends = useAppSelector(selectFriends);
   const friendPresence = useAppSelector(selectFriendPresence);
+  const nickEmojis = useAppSelector(selectNickEmojis);
   const queryPresence = useAppSelector(selectQueryPresence);
   const sidebarConnections = useAppSelector(selectSidebarConnections);
   const model = useDesktopSidebarModel({
     actions,
     friends,
     friendPresence,
+    nickEmojis,
     queryPresence,
     sidebarConnections,
     ui,
@@ -80,6 +84,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   const channelList = useAppSelector(selectChannelList);
   const channelListNetwork = useAppSelector(selectChannelListNetwork);
   const friends = useAppSelector(selectFriends);
+  const nickEmojis = useAppSelector(selectNickEmojis);
   const gatewayStatus = useAppSelector(selectGatewayStatus);
   const historyHasOlderByBufferId = useAppSelector(selectHistoryHasOlderByBufferId);
   const historyLoadedByBufferId = useAppSelector(selectHistoryLoadedByBufferId);
@@ -132,6 +137,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     composer,
     friends,
     mutedNicks,
+    nickEmojis,
     networks,
     primeBackgroundDmAudio,
     channelList,
@@ -151,6 +157,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   const dispatch = useAppDispatch();
   const friends = useAppSelector(selectFriends);
   const mutedNicks = useAppSelector(selectMutedNicks);
+  const nickEmojis = useAppSelector(selectNickEmojis);
   const serverProfileNetwork = useAppSelector(selectServerProfileNetwork);
   const workspace = useAppSelector(selectWorkspace);
   const nicklist = useDesktopNicklistModel({
@@ -158,6 +165,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     backgroundDmAudio,
     friends,
     mutedNicks,
+    nickEmojis,
     primeBackgroundDmAudio,
   });
   const serverProfile = useMemo(() => ({
@@ -175,9 +183,13 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   }), [actions.saveNetworkNotes, dispatch, serverProfileNetwork]);
   const queryProfile = useMemo(() => ({
     buffer: workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null,
+    nickEmoji: workspace.selectedBuffer?.kind === 'query'
+      ? findNickEmoji(nickEmojis, workspace.selectedBuffer.networkId, workspace.selectedBuffer.target)
+      : null,
     network: workspace.selectedNetwork,
     onSaveNotes: actions.saveBufferNotes,
-  }), [actions.saveBufferNotes, workspace.selectedBuffer, workspace.selectedNetwork]);
+    onSaveNickEmoji: actions.saveNickEmoji,
+  }), [actions.saveBufferNotes, actions.saveNickEmoji, nickEmojis, workspace.selectedBuffer, workspace.selectedNetwork]);
   return (
     <WorkspaceRightSidebar
       workspace={workspace}
@@ -194,6 +206,7 @@ export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogC
 }: SharedProps) {
   const dispatch = useAppDispatch();
   const friends = useAppSelector(selectFriends);
+  const nickEmojis = useAppSelector(selectNickEmojis);
   const networks = useAppSelector(selectNetworks);
   const sidebarConnections = useAppSelector(selectSidebarConnections);
   const workspace = useAppSelector(selectWorkspace);
@@ -201,6 +214,7 @@ export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogC
     actions,
     dispatch,
     friends,
+    nickEmojis,
     networks,
     sidebarConnections,
     ui,

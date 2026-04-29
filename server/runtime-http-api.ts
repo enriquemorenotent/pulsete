@@ -5,6 +5,7 @@ import type {
   RuntimeFriendMutations,
   RuntimeHttpApi,
   RuntimeMutedNickMutations,
+  RuntimeNickEmojiMutations,
   RuntimeNetworkMutations,
 } from './runtime-service-types.js';
 import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
@@ -14,6 +15,7 @@ type CreateRuntimeHttpApiParams = {
   conversations: RuntimeConversationMutations;
   friends: RuntimeFriendMutations;
   mutedNicks: RuntimeMutedNickMutations;
+  nickEmojis: RuntimeNickEmojiMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
   sessions: Pick<RuntimeNetworkSessionService, 'disconnect'>;
@@ -24,6 +26,7 @@ export const createRuntimeHttpApi = ({
   conversations,
   friends,
   mutedNicks,
+  nickEmojis,
   irc,
   networks,
   sessions,
@@ -50,6 +53,9 @@ export const createRuntimeHttpApi = ({
   friends: {
     add: (nick) => friends.upsertFriend(nick),
     remove: (friendId) => friends.removeFriend(friendId),
+  },
+  nickEmojis: {
+    save: (networkId, nick, emoji) => nickEmojis.saveNickEmoji(networkId, nick, emoji),
   },
   mutedNicks: {
     add: (networkId, nick) => mutedNicks.upsertMutedNick(networkId, nick),

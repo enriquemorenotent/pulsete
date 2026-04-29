@@ -26,6 +26,7 @@ type DesktopCommandPaletteModelParams = {
   >;
   dispatch: (action: Action) => void;
   friends: State['domain']['friends'];
+  nickEmojis: State['domain']['nickEmojis'];
   networks: State['domain']['networks'];
   sidebarConnections: SidebarConnectionView[];
   ui: Pick<
@@ -42,6 +43,7 @@ export function useDesktopCommandPaletteModel({
   actions,
   dispatch,
   friends,
+  nickEmojis,
   networks,
   sidebarConnections,
   ui,
@@ -84,6 +86,7 @@ export function useDesktopCommandPaletteModel({
     () => buildCommandPaletteEntrySpecs({
       connections: sidebarConnections,
       friends,
+      nickEmojis,
       selectedBuffer: {
         id: selectedBufferId,
         label: selectedBufferLabel,
@@ -104,6 +107,7 @@ export function useDesktopCommandPaletteModel({
       channelAutoJoin.active,
       channelAutoJoin.available,
       friends,
+      nickEmojis,
       selectedBufferId,
       selectedBufferKind,
       selectedBufferLabel,

@@ -70,6 +70,7 @@ test('connected query buffers show a gray badge while presence is resolving', ()
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       queryPresence={{}}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
@@ -112,6 +113,7 @@ test('offline query buffers do not show a gray pending badge', () => {
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       queryPresence={{}}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}

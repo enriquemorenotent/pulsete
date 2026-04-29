@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { ChannelUserState, ChatMessage, FriendState, MutedNickState } from '../shared/protocol.js';
+import type { ChannelUserState, ChatMessage, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import { closedChannelList, makeQueryWorkspace, makeServerWorkspace, makeWorkspace } from './chat-pane.test.fixtures.js';
 
@@ -11,6 +11,8 @@ export const renderChatPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     channelUsers: ChannelUserState[];
+    friends: FriendState[];
+    nickEmojis: NickEmojiState[];
     mutedNicks: MutedNickState[];
     topic: string;
   }> = {},
@@ -21,7 +23,8 @@ export const renderChatPane = (
         channelUsers: overrides.channelUsers,
         topic: overrides.topic,
       })}
-      friends={[] satisfies FriendState[]}
+      friends={overrides.friends ?? ([] satisfies FriendState[])}
+      nickEmojis={overrides.nickEmojis ?? []}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
@@ -31,6 +34,7 @@ export const renderChatPane = (
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
@@ -55,6 +59,7 @@ export const renderQueryPane = (
     canLoadOlderHistory: boolean;
     loadingOlderHistory: boolean;
     friends: FriendState[];
+    nickEmojis: NickEmojiState[];
     queryNotificationsEnabled: boolean;
     selectedQueryMuted: boolean;
     mutedQueryNick: string;
@@ -65,6 +70,7 @@ export const renderQueryPane = (
     <ChatPane
       workspace={makeQueryWorkspace()}
       friends={overrides.friends ?? ([] satisfies FriendState[])}
+      nickEmojis={overrides.nickEmojis ?? []}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
@@ -77,6 +83,7 @@ export const renderQueryPane = (
       queryNotificationsEnabled={overrides.queryNotificationsEnabled ?? false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       onMuteSelectedQuery={async () => true}
       onUnmuteSelectedQuery={async () => true}
       onToggleQueryNotifications={() => undefined}
@@ -103,6 +110,7 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
     <ChatPane
       workspace={makeServerWorkspace()}
       friends={[] satisfies FriendState[]}
+      nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={selectedMessages}
       draft=""
@@ -112,6 +120,7 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}

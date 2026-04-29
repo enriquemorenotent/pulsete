@@ -21,6 +21,7 @@ test('channel transcripts keep the unread divider anchored after a day divider',
         }),
       }}
       friends={[] satisfies FriendState[]}
+      nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={messages}
       draft=""
@@ -30,6 +31,7 @@ test('channel transcripts keep the unread divider anchored after a day divider',
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -185,6 +187,7 @@ test('reconnecting channels rely on the inline status banner instead of header m
         showNicklist: false,
       }}
       friends={[] satisfies FriendState[]}
+      nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""
@@ -194,6 +197,7 @@ test('reconnecting channels rely on the inline status banner instead of header m
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}

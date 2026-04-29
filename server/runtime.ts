@@ -7,6 +7,7 @@ export type {
   RuntimeGateway,
   RuntimeHttpApi,
   RuntimeMutedNickMutations,
+  RuntimeNickEmojiMutations,
   RuntimeNetworkCatalog,
   RuntimeNetworkMutations,
   RuntimeServices,

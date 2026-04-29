@@ -7,6 +7,7 @@ import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingCh
 import { connectionSidebarLabelClass } from './connection-sidebar-label-class.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
+import { findNickEmoji } from './nick-emoji-utils.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
 type QueryPresenceDisplay = PresenceStatus | 'pending';
@@ -14,6 +15,7 @@ type QueryPresenceDisplay = PresenceStatus | 'pending';
 type ConnectionSidebarNetworkSectionProps = {
 	connection: SidebarConnectionView;
 	index: number;
+	nickEmojis: ConnectionSidebarProps['nickEmojis'];
 	queryPresence: Record<string, PresenceStatus>;
 	onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
 	onSelectBuffer: ConnectionSidebarProps['onSelectBuffer'];
@@ -143,6 +145,7 @@ export function ConnectionSidebarNetworkSection(
 									props.queryPresence,
 									buffer.id,
 								)}
+								emoji={findNickEmoji(props.nickEmojis, connection.network.id, buffer.target)?.emoji ?? null}
 								onSelect={() => props.onSelectBuffer(buffer)}
 								onClose={() => props.onCloseBuffer(buffer)}
 							/>

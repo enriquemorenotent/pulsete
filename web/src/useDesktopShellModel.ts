@@ -22,6 +22,7 @@ type DesktopSidebarModelParams = {
   actions: SidebarActionSet;
   friends: State['domain']['friends'];
   friendPresence: State['domain']['friendPresence'];
+  nickEmojis: State['domain']['nickEmojis'];
   queryPresence: State['domain']['queryPresence'];
   sidebarConnections: ConnectionSidebarProps['connections'];
   ui: Pick<AppUiState, 'hideOfflineFriends' | 'toggleHideOfflineFriends'>;
@@ -32,6 +33,7 @@ type DesktopNicklistModelParams = {
   backgroundDmAudio: Pick<BackgroundDmAudioState, 'addContact' | 'removeContact' | 'settings'>;
   friends: State['domain']['friends'];
   mutedNicks: State['domain']['mutedNicks'];
+  nickEmojis: State['domain']['nickEmojis'];
   primeBackgroundDmAudio: () => void;
 };
 
@@ -55,6 +57,7 @@ export function useDesktopSidebarModel({
   actions,
   friends,
   friendPresence,
+  nickEmojis,
   queryPresence,
   sidebarConnections,
   ui,
@@ -65,6 +68,7 @@ export function useDesktopSidebarModel({
       friends,
       friendPresence,
       hideOfflineFriends: ui.hideOfflineFriends,
+      nickEmojis,
       queryPresence,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
@@ -93,6 +97,7 @@ export function useDesktopSidebarModel({
       actions.selectTabBuffer,
       friendPresence,
       friends,
+      nickEmojis,
       queryPresence,
       sidebarConnections,
       ui.hideOfflineFriends,
@@ -106,6 +111,7 @@ export function useDesktopNicklistModel({
   backgroundDmAudio,
   friends,
   mutedNicks,
+  nickEmojis,
   primeBackgroundDmAudio,
 }: DesktopNicklistModelParams): DesktopShellModel['nicklist'] {
   return useMemo(
@@ -113,6 +119,7 @@ export function useDesktopNicklistModel({
       backgroundDmAudio: backgroundDmAudio.settings,
       friends,
       mutedNicks,
+      nickEmojis,
       onAddFriend: actions.addFriend,
       onAddNotificationContact: (contact) => {
         backgroundDmAudio.addContact(contact);
@@ -124,6 +131,7 @@ export function useDesktopNicklistModel({
       onRemoveFriend: actions.removeFriend,
       onRemoveNotificationContact: backgroundDmAudio.removeContact,
       onRemoveMutedNick: actions.removeMutedNick,
+      onSaveNickEmoji: actions.saveNickEmoji,
       onSelectNick: actions.selectPrivateBuffer,
     }),
     [
@@ -131,10 +139,12 @@ export function useDesktopNicklistModel({
       actions.addMutedNick,
       actions.removeFriend,
       actions.removeMutedNick,
+      actions.saveNickEmoji,
       actions.selectPrivateBuffer,
       backgroundDmAudio,
       friends,
       mutedNicks,
+      nickEmojis,
       primeBackgroundDmAudio,
     ],
   );

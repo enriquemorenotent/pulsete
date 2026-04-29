@@ -9,6 +9,7 @@ import type { ParticipantHighlightMode } from './message-participant-presentatio
 type ChatTranscriptRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   expandedMutedGroupKeys: ReadonlySet<string>;
+  nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
@@ -30,6 +31,7 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
         row={props.row}
         channelUserModesByNick={props.channelUserModesByNick}
         expanded={props.expandedMutedGroupKeys.has(props.row.key)}
+        nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
         listKind={props.listKind}
         mode={props.mode}
         onInlinePreviewLoad={props.onInlinePreviewLoad}
@@ -45,6 +47,7 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
     <ChatTranscriptMessageRow
       row={props.row}
       channelUserModesByNick={props.channelUserModesByNick}
+      nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
       listKind={props.listKind}
       mode={props.mode}
       onInlinePreviewLoad={props.onInlinePreviewLoad}

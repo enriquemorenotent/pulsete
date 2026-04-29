@@ -116,6 +116,16 @@ ${queryNickAliasesSchemaSql}
     updatedAt INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS nick_emoji_tags (
+    id TEXT PRIMARY KEY,
+    networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+    nick TEXT NOT NULL COLLATE NOCASE,
+    emoji TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    UNIQUE(networkId, nick)
+  );
+
   CREATE TABLE IF NOT EXISTS muted_nicks (
     id TEXT PRIMARY KEY,
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
@@ -135,6 +145,9 @@ ${messageSearchSchemaSql}
 
   CREATE INDEX IF NOT EXISTS idx_friends_nick
     ON friends(nick COLLATE NOCASE, createdAt ASC);
+
+  CREATE INDEX IF NOT EXISTS idx_nick_emoji_tags_network_nick
+    ON nick_emoji_tags(networkId, nick COLLATE NOCASE, createdAt ASC);
 
   CREATE INDEX IF NOT EXISTS idx_muted_nicks_network_nick
     ON muted_nicks(networkId, nick COLLATE NOCASE, createdAt ASC);

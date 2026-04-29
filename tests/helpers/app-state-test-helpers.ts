@@ -56,6 +56,7 @@ export const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =
 export const emptySnapshot = (): AppSnapshot => ({
   networks: [],
   friends: [],
+  nickEmojis: [],
   mutedNicks: [],
   friendPresence: {},
   queryPresence: {},

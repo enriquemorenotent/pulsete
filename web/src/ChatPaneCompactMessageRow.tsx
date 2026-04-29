@@ -62,6 +62,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
       {props.participant.label ? (
         <ParticipantNickLabel
           nick={props.participant.label}
+          emoji={props.participant.emoji}
           clickable={props.participant.clickable}
           onOpenParticipantQuery={props.onOpenParticipantQuery}
           className={cn('mr-2 font-sans font-semibold', props.participant.toneClassName)}

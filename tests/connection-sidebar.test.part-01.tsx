@@ -71,6 +71,7 @@ test('offline connections keep channel and query rows visible and selectable', (
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -112,6 +113,7 @@ test('connected rows rely on the status dot instead of repeating a connected lab
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -153,6 +155,7 @@ test('connecting rows rely on the status dot instead of repeating a connecting l
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -194,6 +197,7 @@ test('server rows use the overlaid dot for unread state instead of a trailing ma
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
+      nickEmojis={[]}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}

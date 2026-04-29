@@ -103,6 +103,7 @@ export const reduceRuntimeDomain = (
         networks: domain.networks.filter((network) => network.id !== action.networkId),
         buffers: domain.buffers.filter((buffer) => buffer.networkId !== action.networkId),
         channels: domain.channels.filter((channel) => channel.networkId !== action.networkId),
+        nickEmojis: domain.nickEmojis.filter((nickEmoji) => nickEmoji.networkId !== action.networkId),
         pendingChannels: domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
         messages: removeNetworkMessages(domain.messages, action.networkId),
         networkStates,

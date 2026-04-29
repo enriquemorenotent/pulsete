@@ -12,6 +12,7 @@ export const ConnectionSidebar = memo(function ConnectionSidebar(
 		<aside className="flex h-full min-h-0 flex-col gap-5 overflow-hidden">
 			<ConnectionSidebarConnections
 				connections={props.connections}
+				nickEmojis={props.nickEmojis}
 				queryPresence={props.queryPresence ?? {}}
 				onSelectNetwork={props.onSelectNetwork}
 				onSelectBuffer={props.onSelectBuffer}
@@ -26,6 +27,7 @@ export const ConnectionSidebar = memo(function ConnectionSidebar(
 				friends={props.friends}
 				friendPresence={props.friendPresence}
 				hideOfflineFriends={props.hideOfflineFriends}
+				nickEmojis={props.nickEmojis}
 				onRemoveFriend={props.onRemoveFriend}
 				onSelectFriend={props.onSelectFriend}
 				onToggleHideOfflineFriends={props.onToggleHideOfflineFriends}

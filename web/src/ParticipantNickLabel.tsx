@@ -2,10 +2,22 @@ import { cn } from '@/lib/utils.js';
 
 type ParticipantNickLabelProps = {
   nick: string;
+  emoji?: string | null;
   className?: string;
   clickable?: boolean;
   onOpenParticipantQuery?: (nick: string) => void;
 };
+
+const renderNickContent = (nick: string, emoji?: string | null) => (
+  <>
+    {emoji ? (
+      <span aria-hidden className="mr-1 font-sans normal-case tracking-normal">
+        {emoji}
+      </span>
+    ) : null}
+    {nick}
+  </>
+);
 
 export function ParticipantNickLabel(props: ParticipantNickLabelProps) {
   if (props.clickable && props.onOpenParticipantQuery) {
@@ -19,10 +31,10 @@ export function ParticipantNickLabel(props: ParticipantNickLabelProps) {
         )}
         onClick={() => props.onOpenParticipantQuery?.(props.nick)}
       >
-        {props.nick}
+        {renderNickContent(props.nick, props.emoji)}
       </button>
     );
   }
 
-  return <span className={props.className}>{props.nick}</span>;
+  return <span className={props.className}>{renderNickContent(props.nick, props.emoji)}</span>;
 }

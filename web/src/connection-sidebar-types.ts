@@ -2,6 +2,7 @@ import type {
   BufferState,
   FriendState,
   NetworkProfile,
+  NickEmojiState,
   PresenceStatus,
 } from '../../shared/protocol.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
@@ -11,6 +12,7 @@ export type ConnectionSidebarProps = {
   friends: FriendState[];
   friendPresence: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;
+  nickEmojis: NickEmojiState[];
   queryPresence?: Record<string, PresenceStatus>;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;

@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { BufferState, FriendState, NetworkProfile, PresenceStatus } from '../../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile, NickEmojiState, PresenceStatus } from '../../shared/protocol.js';
 import { ConnectionSidebar } from '../../web/src/ConnectionSidebar.js';
 import { buildConnectionSidebarView } from '../../web/src/connection-sidebar-view.js';
 import { buildConversationIndex } from '../../web/src/conversation-selectors.js';
@@ -12,6 +12,7 @@ type RenderConnectionSidebarOptions = {
   friends?: FriendState[];
   friendPresence?: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;
+  nickEmojis?: NickEmojiState[];
   networks?: NetworkProfile[];
   networkStates?: Record<string, NetworkRuntimeState>;
   selection?: SidebarViewInput['selection'];
@@ -71,6 +72,7 @@ export const renderConnectionSidebar = (options: RenderConnectionSidebarOptions 
       friends={options.friends ?? []}
       friendPresence={options.friendPresence ?? {}}
       hideOfflineFriends={options.hideOfflineFriends}
+      nickEmojis={options.nickEmojis ?? []}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}

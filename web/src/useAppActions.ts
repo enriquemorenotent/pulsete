@@ -4,6 +4,7 @@ import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
 import { createMutedNickActions } from './app-actions-muted-nicks.js';
 import { createNetworkActions } from './app-actions-networks.js';
+import { createNickEmojiActions } from './app-actions-nick-emojis.js';
 import {
   type AppActionContext,
   type ApplyServerMessages,
@@ -75,6 +76,9 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
       ...actionContext,
       ...conversation,
     }),
+    ...createNickEmojiActions({
+      ...actionContext,
+    }),
     ...mutedNickActions,
     ...createChatActions({
       ...actionContext,
@@ -145,6 +149,7 @@ export type ChatActionSet = Pick<
   | 'removeFriend'
   | 'removeMutedNick'
   | 'requestWhois'
+  | 'saveNickEmoji'
   | 'searchBufferHistory'
   | 'selectPrivateBuffer'
   | 'sendComposer'
@@ -166,7 +171,7 @@ export type SidebarActionSet = Pick<
 >;
 export type NicklistActionSet = Pick<
   AppActions,
-  'addFriend' | 'addMutedNick' | 'removeFriend' | 'removeMutedNick' | 'selectPrivateBuffer'
+  'addFriend' | 'addMutedNick' | 'removeFriend' | 'removeMutedNick' | 'saveNickEmoji' | 'selectPrivateBuffer'
 >;
 export type NetworkManagerActionSet = Pick<
   AppActions,

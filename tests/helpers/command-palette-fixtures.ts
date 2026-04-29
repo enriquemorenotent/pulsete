@@ -104,6 +104,7 @@ export const buildPaletteInput = (
 ): BuildCommandPaletteEntrySpecsInput => ({
   connections: [connection],
   friends: [friend],
+  nickEmojis: [],
   selectedBuffer: {
     id: channelBuffer.id,
     label: channelBuffer.target,

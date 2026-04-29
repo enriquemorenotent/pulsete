@@ -28,10 +28,13 @@ test('websocket error replies detach the socket when a later send fails', () => 
       return {
         networks: [],
         friends: [],
+        nickEmojis: [],
+        mutedNicks: [],
         friendPresence: {},
         queryPresence: {},
         buffers: [],
         channels: [],
+        pendingChannels: [],
         messages: [],
         networkStates: {},
       };

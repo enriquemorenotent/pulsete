@@ -15,6 +15,18 @@ test('friend rows expose online and away cues when the rail defaults open', () =
   assert.match(markup, /bg-yellow-400/);
 });
 
+test('friend rows render a globally unambiguous saved nick emoji tag', () => {
+  const friend = { id: 'friend-1', nick: 'Alice' };
+  const markup = renderConnectionSidebar({
+    friends: [friend],
+    friendPresence: { [friend.id]: 'online' },
+    nickEmojis: [{ id: 'nick-emoji-1', networkId: 'network-1', nick: 'Alice', emoji: '🌙' }],
+  });
+
+  assert.match(markup, /🌙[\s\S]*Alice/);
+  assert.doesNotMatch(markup, /aria-label="Edit emoji tag for Alice"/);
+});
+
 test('friends sort online contacts above away, then offline', () => {
   const markup = renderConnectionSidebar({
     friends: [

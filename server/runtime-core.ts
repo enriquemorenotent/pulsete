@@ -8,6 +8,7 @@ import { RuntimeFriendService } from './runtime-friend-service.js';
 import { createRuntimeHttpApi } from './runtime-http-api.js';
 import { RuntimeIrcService } from './runtime-irc-service.js';
 import { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
+import { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
 import { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import { RuntimePublisher } from './runtime-publisher.js';
 import { createRuntimeSnapshot } from './runtime-snapshot.js';
@@ -16,6 +17,7 @@ import type {
   RuntimeFriendMutations,
   RuntimeGateway,
   RuntimeMutedNickMutations,
+  RuntimeNickEmojiMutations,
   RuntimeNetworkMutations,
   RuntimeServices,
   RuntimeStore,
@@ -77,6 +79,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     conversations: store.conversations,
     mutedNicks: store.mutedNicks,
     networks: store.networks,
+  });
+  const nickEmojiMutations = new RuntimeNickEmojiService({
+    networks: store.networks,
+    nickEmojis: store.nickEmojis,
   });
   const irc = new RuntimeIrcService({
     connectionManager,
@@ -147,6 +153,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     upsertMutedNick: (networkId, nick) => publishMutation(mutedNickMutations.upsertMutedNick(networkId, nick)),
     removeMutedNick: (mutedNickId) => publishMutation(mutedNickMutations.removeMutedNick(mutedNickId)),
   };
+  const nickEmojis: RuntimeNickEmojiMutations = {
+    saveNickEmoji: (networkId, nick, emoji) =>
+      publishMutation(nickEmojiMutations.saveNickEmoji(networkId, nick, emoji)),
+  };
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
@@ -173,6 +183,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     conversations,
     friends,
     mutedNicks,
+    nickEmojis,
     irc,
     networks,
     sessions: sessionMutations,
@@ -193,6 +204,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     conversations,
     friends,
     mutedNicks,
+    nickEmojis,
     irc,
     networks,
     http,

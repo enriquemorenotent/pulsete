@@ -94,6 +94,7 @@ test('chat transcripts render sender notices inline without a notice badge', () 
     <ChatPane
       workspace={makeWorkspace()}
       friends={[]}
+      nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={[makeMessage()]}
       draft=""
@@ -103,6 +104,7 @@ test('chat transcripts render sender notices inline without a notice badge', () 
       onSend={async () => false}
       onAddFriend={async () => false}
       onRemoveFriend={async () => false}
+      onSaveNickEmoji={async () => false}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => false}

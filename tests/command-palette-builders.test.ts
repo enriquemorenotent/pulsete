@@ -37,6 +37,25 @@ test('command palette builds buffers, watchlist entries, and current-buffer acti
   );
 });
 
+test('command palette keeps watchlist nick emoji separate from searchable labels', () => {
+  const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
+    nickEmojis: [{ id: 'nick-emoji-1', networkId: network.id, nick: friend.nick, emoji: '🌙' }],
+  }));
+  const friendEntry = entries.find((entry) => entry.id === `friend:${friend.id}`);
+
+  assert.equal(friendEntry?.label, friend.nick);
+  assert.equal(friendEntry?.emoji, '🌙');
+
+  const ambiguousEntries = buildCommandPaletteEntrySpecs(buildPaletteInput({
+    nickEmojis: [
+      { id: 'nick-emoji-1', networkId: network.id, nick: friend.nick, emoji: '🌙' },
+      { id: 'nick-emoji-2', networkId: 'network-2', nick: friend.nick, emoji: '⭐' },
+    ],
+  }));
+  const ambiguousFriendEntry = ambiguousEntries.find((entry) => entry.id === `friend:${friend.id}`);
+  assert.equal(ambiguousFriendEntry?.emoji, null);
+});
+
 test('command palette action dispatcher routes each action to the matching handler', async () => {
   const calls: string[] = [];
   const handlers = {

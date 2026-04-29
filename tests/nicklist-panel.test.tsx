@@ -50,12 +50,14 @@ test('nicklist groups users by privilege level', () => {
       network={network}
       channel={channel}
       friends={[] satisfies FriendState[]}
+      nickEmojis={[]}
       mutedNicks={[]}
       backgroundDmAudio={{ contacts: [] }}
       onAddFriend={async () => true}
       onAddNotificationContact={() => undefined}
       onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       onRemoveNotificationContact={() => undefined}
       onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
@@ -100,12 +102,14 @@ test('nicklist renders one-click contact controls beside away users', () => {
       network={network}
       channel={channel}
       friends={[{ id: 'friend-1', nick: 'alice' }] satisfies FriendState[]}
+      nickEmojis={[{ id: 'nick-emoji-1', networkId: network.id, nick: 'alice', emoji: '🌙' }]}
       mutedNicks={[]}
       backgroundDmAudio={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
       onAddFriend={async () => true}
       onAddNotificationContact={() => undefined}
       onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       onRemoveNotificationContact={() => undefined}
       onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
@@ -113,6 +117,7 @@ test('nicklist renders one-click contact controls beside away users', () => {
   );
 
   assert.match(markup, /aria-label="Away"/);
+  assert.match(markup, /🌙[\s\S]*alice/);
   assert.match(markup, /aria-label="Remove alice from watchlist"/);
   assert.match(markup, /aria-label="Disable notifications for alice"/);
   assert.match(markup, /aria-label="Mute alice"/);
@@ -134,12 +139,14 @@ test('nicklist shows the unmute control for muted users', () => {
       network={network}
       channel={channel}
       friends={[] satisfies FriendState[]}
+      nickEmojis={[]}
       mutedNicks={[{ id: 'mute-1', networkId: network.id, nick: 'Alice' }]}
       backgroundDmAudio={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
       onAddFriend={async () => true}
       onAddNotificationContact={() => undefined}
       onAddMutedNick={async () => true}
       onRemoveFriend={async () => true}
+      onSaveNickEmoji={async () => true}
       onRemoveNotificationContact={() => undefined}
       onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}

@@ -36,6 +36,7 @@ export const ChatPaneExpandedMessageRow = (props: {
         {props.participant.label ? (
           <ParticipantNickLabel
             nick={props.participant.label}
+            emoji={props.participant.emoji}
             clickable={props.participant.clickable}
             onOpenParticipantQuery={props.onOpenParticipantQuery}
             className={cn('font-medium', props.participant.toneClassName)}

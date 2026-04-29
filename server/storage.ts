@@ -3,6 +3,7 @@ import { StorageConversationsRepository } from './storage-conversations-reposito
 import { StorageFriendsRepository } from './storage-friends-repository.js';
 import { StorageMutedNicksRepository } from './storage-muted-nicks-repository.js';
 import { StorageNetworksRepository } from './storage-networks-repository.js';
+import { StorageNickEmojisRepository } from './storage-nick-emojis-repository.js';
 import { createStorageViews } from './storage-runtime-store.js';
 import { createStorageSnapshot } from './storage-snapshot.js';
 import type { RuntimeStore } from './runtime-service-types.js';
@@ -20,6 +21,7 @@ export class Storage {
   readonly friends: StorageFriendsRepository;
   readonly mutedNicks: StorageMutedNicksRepository;
   readonly snapshotSource: StorageSnapshotSource;
+  readonly nickEmojis: StorageNickEmojisRepository;
   readonly runtimeStore: RuntimeStore;
 
   constructor(filePath?: string) {
@@ -31,11 +33,13 @@ export class Storage {
     this.conversations = new StorageConversationsRepository(this.db);
     this.friends = new StorageFriendsRepository(this.db);
     this.mutedNicks = new StorageMutedNicksRepository(this.db);
+    this.nickEmojis = new StorageNickEmojisRepository(this.db);
     const views = createStorageViews({
       conversations: this.conversations,
       friends: this.friends,
       mutedNicks: this.mutedNicks,
       networks: this.networks,
+      nickEmojis: this.nickEmojis,
     });
     this.snapshotSource = views.snapshotSource;
     this.runtimeStore = views.runtimeStore;

@@ -3,8 +3,6 @@ import test from 'node:test';
 import { makeMessage } from './chat-pane.test.fixtures.js';
 import { renderChatPane, renderQueryPane, renderServerPane } from './chat-pane.test.renderers.js';
 
-
-
 test('consecutive sender messages repeat the same inline nick label in chat mode', () => {
   const markup = renderChatPane([
     makeMessage({ id: 'message-1', nick: 'Joby', body: 'first', ts: 1 }),

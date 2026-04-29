@@ -7,6 +7,7 @@ import {
   type FriendState,
   type MutedNickState,
   type NetworkProfile,
+  type NickEmojiState,
   type ChatMessage,
 } from '../../shared/protocol.js';
 
@@ -124,6 +125,14 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
+  saveNickEmoji: (networkId: string, nick: string, emoji: string | null) =>
+    apiRequest<{ nickEmoji: NickEmojiState | null; messages: ServerMessage[] }>(
+      `/api/networks/${encodeURIComponent(networkId)}/nick-emojis/${encodeURIComponent(nick)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ emoji }),
+      },
+    ),
   addMutedNick: (networkId: string, nick: string) =>
     apiRequest<{ mutedNick: MutedNickState; messages: ServerMessage[] }>('/api/muted-nicks', {
       method: 'POST',

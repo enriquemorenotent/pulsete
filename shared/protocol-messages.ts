@@ -10,6 +10,7 @@ import {
   mutedNickSchema,
   networkRuntimePhaseSchema,
   networkSchema,
+  nickEmojiSchema,
   pendingChannelSchema,
   presenceStatusSchema,
 } from './protocol-chat.js';
@@ -72,6 +73,8 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseServerSchema.extend({ type: z.literal('friend.remove'), friendId: z.string() }),
   baseServerSchema.extend({ type: z.literal('muted-nick.upsert'), mutedNick: mutedNickSchema }),
   baseServerSchema.extend({ type: z.literal('muted-nick.remove'), mutedNickId: z.string() }),
+  baseServerSchema.extend({ type: z.literal('nick-emoji.upsert'), nickEmoji: nickEmojiSchema }),
+  baseServerSchema.extend({ type: z.literal('nick-emoji.remove'), nickEmojiId: z.string() }),
   baseServerSchema.extend({
     type: z.literal('friend.presence'),
     friendId: z.string(),

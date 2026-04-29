@@ -8,6 +8,7 @@ import type {
   ChannelUserState,
   FriendState,
   MutedNickState,
+  NickEmojiState,
 } from '../shared/protocol.js';
 import type {
   BufferInput,
@@ -18,6 +19,7 @@ import type {
   MessageInput,
   MutedNickInput,
   NetworkInput,
+  NickEmojiInput,
   RuntimeNetworkProfile,
 } from './storage-types.js';
 
@@ -26,6 +28,7 @@ export type RuntimeSnapshotSource = {
   listChannels(networkId?: string): ChannelState[];
   listFriends(): FriendState[];
   listMutedNicks(networkId?: string): MutedNickState[];
+  listNickEmojis(networkId?: string): NickEmojiState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
 };
@@ -78,6 +81,15 @@ export type RuntimeMutedNickStore = {
   remove(mutedNickId: string): MutedNickState | null;
 };
 
+export type RuntimeNickEmojiStore = {
+  list(networkId?: string): NickEmojiState[];
+  get(nickEmojiId: string): NickEmojiState | null;
+  findByNick(networkId: string, nick: string): NickEmojiState | null;
+  upsert(input: NickEmojiInput): NickEmojiState;
+  remove(nickEmojiId: string): NickEmojiState | null;
+  removeByNick(networkId: string, nick: string): NickEmojiState | null;
+};
+
 export type RuntimeNetworkStore = {
   list(): StoredNetworkProfile[];
   get(networkId: string): StoredNetworkProfile | null;
@@ -95,4 +107,5 @@ export type RuntimeStore = {
   friends: RuntimeFriendStore;
   mutedNicks: RuntimeMutedNickStore;
   networks: RuntimeNetworkStore;
+  nickEmojis: RuntimeNickEmojiStore;
 };

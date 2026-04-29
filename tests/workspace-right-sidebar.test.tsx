@@ -77,12 +77,14 @@ const queryWorkspace: WorkspaceView = {
 
 const nicklist: DesktopShellNicklistModel = {
   friends: [],
+  nickEmojis: [],
   mutedNicks: [],
   backgroundDmAudio: { contacts: [] },
   onAddFriend: async () => true,
   onAddNotificationContact: () => undefined,
   onAddMutedNick: async () => true,
   onRemoveFriend: async () => true,
+  onSaveNickEmoji: async () => true,
   onRemoveNotificationContact: () => undefined,
   onRemoveMutedNick: async () => true,
   onSelectNick: () => undefined,
@@ -114,13 +116,16 @@ test('query profile sidebar renders the per-DM notes editor', () => {
       nicklist={nicklist}
       queryProfile={{
         buffer: queryBuffer,
+        nickEmoji: { id: 'nick-emoji-1', networkId: network.id, nick: 'sofia', emoji: '🌙' },
         network,
         onSaveNotes: async () => queryBuffer,
+        onSaveNickEmoji: async () => true,
       }}
     />,
   );
 
   assert.match(markup, /Private message/);
+  assert.match(markup, /🌙[\s\S]*Sofia/);
   assert.match(markup, /Sofia/);
   assert.match(markup, /query-profile-notes/);
   assert.match(markup, /Prefers encrypted routes/);

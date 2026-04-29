@@ -1,6 +1,6 @@
 import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
-import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
 import type { SecretBox } from './network-secret.js';
 import type {
@@ -11,6 +11,7 @@ import type {
   MessageRow,
   MutedNickRow,
   NetworkRow,
+  NickEmojiRow,
   RuntimeNetworkProfile,
 } from './storage-types.js';
 
@@ -99,6 +100,13 @@ export const toMutedNickState = (row: MutedNickRow): MutedNickState => ({
   id: row.id,
   networkId: row.networkId,
   nick: row.nick,
+});
+
+export const toNickEmojiState = (row: NickEmojiRow): NickEmojiState => ({
+  id: row.id,
+  networkId: row.networkId,
+  nick: row.nick,
+  emoji: row.emoji,
 });
 
 export const toChannelState = (

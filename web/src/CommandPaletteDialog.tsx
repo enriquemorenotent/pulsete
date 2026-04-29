@@ -175,6 +175,11 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
                           void entry.onSelect();
                         }}
                       >
+                        {entry.emoji ? (
+                          <span aria-hidden className="shrink-0 text-[15px] leading-5">
+                            {entry.emoji}
+                          </span>
+                        ) : null}
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[13px] font-medium">{entry.label}</div>
                           {entry.subtitle ? (

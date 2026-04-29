@@ -23,6 +23,7 @@ type ChatTranscriptVirtuosoProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   emptyBody: string;
   expandedMutedGroupKeys: ReadonlySet<string>;
+  nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   followOutputRequestId: number;
   initialHistoryPending?: boolean;
   initialScrollTarget: TranscriptInitialScrollTarget;
@@ -149,6 +150,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
           row={row}
           channelUserModesByNick={props.channelUserModesByNick}
           expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+          nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
           listKind={props.listKind}
           mode={props.mode}
           onInlinePreviewLoad={viewport.handleInlinePreviewLoad}
@@ -162,6 +164,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     [
       props.channelUserModesByNick,
       props.expandedMutedGroupKeys,
+      props.nickEmojiByNetworkNick,
       props.listKind,
       props.mode,
       props.model,

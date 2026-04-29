@@ -7,6 +7,7 @@ import {
   mutedNickSchema,
   networkRuntimeStateSchema,
   networkSchema,
+  nickEmojiSchema,
   pendingChannelSchema,
   presenceStatusSchema,
 } from './protocol-chat.js';
@@ -15,6 +16,7 @@ export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
   mutedNicks: z.array(mutedNickSchema).default([]),
+  nickEmojis: z.array(nickEmojiSchema).default([]),
   friendPresence: z.record(presenceStatusSchema),
   queryPresence: z.record(presenceStatusSchema).default({}),
   buffers: z.array(bufferSchema),

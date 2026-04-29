@@ -6,6 +6,7 @@ import {
   resolveMessageParticipantPresentation,
   resolveParticipantHighlightMode,
 } from '../web/src/message-participant-presentation.js';
+import { buildNickEmojiKey } from '../web/src/nick-emoji-utils.js';
 
 const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: overrides.id ?? 'message-1',
@@ -32,6 +33,7 @@ test('channel peer presentation uses IRC-case nicklist modes and opens PMs', () 
 
   assert.deepEqual(participant, {
     label: 'OPAL',
+    emoji: null,
     toneClassName: 'text-amber-300',
     clickable: true,
     kindBadgeLabel: null,
@@ -50,6 +52,7 @@ test('channel self presentation stays primary and non-clickable', () => {
 
   assert.deepEqual(participant, {
     label: 'sofia',
+    emoji: null,
     toneClassName: 'text-primary',
     clickable: false,
     kindBadgeLabel: null,
@@ -68,6 +71,7 @@ test('query presentation keeps peer coloring without PM click affordance', () =>
 
   assert.deepEqual(participant, {
     label: 'MissD',
+    emoji: null,
     toneClassName: 'text-success',
     clickable: false,
     kindBadgeLabel: null,
@@ -87,8 +91,23 @@ test('server compact presentation resolves source labels and kind badges togethe
 
   assert.deepEqual(participant, {
     label: 'OperServ',
+    emoji: null,
     toneClassName: 'text-inherit',
     clickable: false,
     kindBadgeLabel: 'notice',
   });
+});
+
+test('participant presentation includes network-scoped nick emoji tags', () => {
+  const participant = resolveMessageParticipantPresentation({
+    message: makeMessage({ nick: 'opal' }),
+    listKind: 'chat',
+    rowVariant: 'full',
+    highlightMode: resolveParticipantHighlightMode('channel'),
+    channelUserModesByNick: buildModes([]),
+    nickEmojiByNetworkNick: new Map([[buildNickEmojiKey('network-1', 'opal'), '🌙']]),
+    allowParticipantQuery: true,
+  });
+
+  assert.equal(participant.emoji, '🌙');
 });

@@ -11,6 +11,7 @@ import type {
   MutedNickState,
   NetworkAuthMethod,
   NetworkProfile,
+  NickEmojiState,
 } from '../shared/protocol.js';
 
 export type NetworkRow = {
@@ -88,6 +89,15 @@ export type MutedNickRow = {
   updatedAt: number;
 };
 
+export type NickEmojiRow = {
+  id: string;
+  networkId: string;
+  nick: string;
+  emoji: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type RuntimeNetworkProfile = StoredNetworkProfile & {
   password?: string;
 };
@@ -115,6 +125,8 @@ export type BufferInput = Omit<BufferState, 'id' | 'unread' | 'priorityUnread' |
 export type FriendInput = Omit<FriendState, 'id'> & Partial<Pick<FriendState, 'id'>>;
 
 export type MutedNickInput = Omit<MutedNickState, 'id'> & Partial<Pick<MutedNickState, 'id'>>;
+
+export type NickEmojiInput = Omit<NickEmojiState, 'id'> & Partial<Pick<NickEmojiState, 'id'>>;
 
 export type MessageInput = {
   id: string;
@@ -155,6 +167,7 @@ export type StorageSnapshotSource = {
   listFriends(): FriendState[];
   listMutedNicks(networkId?: string): MutedNickState[];
   listNetworks(): StoredNetworkProfile[];
+  listNickEmojis(networkId?: string): NickEmojiState[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
 };
 

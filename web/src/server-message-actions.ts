@@ -36,6 +36,10 @@ const toActions = (message: ServerMessage): Action[] => {
       return [{ type: 'upsert-muted-nick', mutedNick: message.mutedNick }];
     case 'muted-nick.remove':
       return [{ type: 'remove-muted-nick', mutedNickId: message.mutedNickId }];
+    case 'nick-emoji.upsert':
+      return [{ type: 'upsert-nick-emoji', nickEmoji: message.nickEmoji }];
+    case 'nick-emoji.remove':
+      return [{ type: 'remove-nick-emoji', nickEmojiId: message.nickEmojiId }];
     case 'friend.presence':
       return [{
         type: 'friend-presence',

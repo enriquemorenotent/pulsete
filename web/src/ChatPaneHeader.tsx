@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
-import type { BufferState, FriendState } from '../../shared/protocol.js';
+import type { BufferState, FriendState, NickEmojiState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
@@ -8,17 +8,20 @@ import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
 import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
 import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import { findFriendByNick } from './friend-utils.js';
+import { findNickEmoji } from './nick-emoji-utils.js';
 import { QueryContactControls } from './QueryContactControls.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
   friends: FriendState[];
+  nickEmojis: NickEmojiState[];
   selectedQueryMuted?: boolean;
   queryNotificationsEnabled?: boolean;
   onOpenMentionedChannel: (channel: string) => void;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onMuteSelectedQuery?: () => Promise<boolean>;
   onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
@@ -39,6 +42,10 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const { selectedBuffer } = props.workspace;
   const selectedFriend =
     selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
+  const selectedNickEmoji =
+    selectedBuffer?.kind === 'query'
+      ? findNickEmoji(props.nickEmojis, selectedBuffer.networkId, selectedBuffer.target)
+      : null;
   const selectedQuery =
     selectedBuffer?.kind === 'query' && props.workspace.selectedNetwork
       ? {
@@ -92,6 +99,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   return (
     <PaneHeader
       title={props.workspace.headerTitle}
+      emoji={selectedNickEmoji?.emoji ?? null}
       subtitle={subtitle}
       topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
       actions={(
@@ -102,11 +110,15 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
             selectedQuery ? (
               <QueryContactControls
                 nick={selectedQuery.nick}
+                emoji={selectedNickEmoji?.emoji ?? null}
                 friend={selectedFriend}
                 notifications={props.queryNotificationsEnabled ?? false}
                 muted={props.selectedQueryMuted ?? false}
                 onAddFriend={props.onAddFriend}
                 onRemoveFriend={props.onRemoveFriend}
+                onSaveEmoji={(emoji) =>
+                  props.onSaveNickEmoji(selectedQuery.network.id, selectedQuery.nick, emoji)
+                }
                 onToggleNotifications={props.onToggleQueryNotifications}
                 onMute={props.onMuteSelectedQuery}
                 onUnmute={props.onUnmuteSelectedQuery}
@@ -159,6 +171,7 @@ function PaneHeaderActions(props: {
 
 function PaneHeader(props: {
   title: string;
+  emoji?: string | null;
   subtitle: string;
   actions: ReactNode;
   topicBar?: ReactNode;
@@ -170,11 +183,16 @@ function PaneHeader(props: {
           {props.title ? (
             <h2
               className={cn(
-                'truncate text-lg font-semibold tracking-tight text-foreground',
+                'flex min-w-0 items-center gap-2 truncate text-lg font-semibold tracking-tight text-foreground',
                 props.subtitle && 'mb-1',
               )}
             >
-              {props.title}
+              {props.emoji ? (
+                <span aria-hidden className="shrink-0 leading-none">
+                  {props.emoji}
+                </span>
+              ) : null}
+              <span className="truncate">{props.title}</span>
             </h2>
           ) : null}
           {props.subtitle ? (

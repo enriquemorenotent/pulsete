@@ -8,6 +8,7 @@ import type {
   FriendState,
   MutedNickState,
   NetworkProfile,
+  NickEmojiState,
   PendingChannelState,
   PresenceStatus,
 } from '../../shared/protocol.js';
@@ -49,6 +50,7 @@ export type AppDomainState = {
   networks: NetworkProfile[];
   friends: FriendState[];
   mutedNicks: MutedNickState[];
+  nickEmojis: NickEmojiState[];
   friendPresence: Record<string, PresenceStatus>;
   queryPresence: Record<string, PresenceStatus>;
   buffers: BufferState[];
@@ -84,6 +86,8 @@ export type Action =
   | { type: 'remove-friend'; friendId: string }
   | { type: 'upsert-muted-nick'; mutedNick: MutedNickState }
   | { type: 'remove-muted-nick'; mutedNickId: string }
+  | { type: 'upsert-nick-emoji'; nickEmoji: NickEmojiState }
+  | { type: 'remove-nick-emoji'; nickEmojiId: string }
   | { type: 'friend-presence'; friendId: string; presence: PresenceStatus }
   | { type: 'query-presence'; bufferId: string; presence: PresenceStatus }
   | { type: 'upsert-buffer'; buffer: BufferState }

@@ -89,6 +89,14 @@ export const mutedNickSchema = z.object({
 });
 export type MutedNickState = z.infer<typeof mutedNickSchema>;
 
+export const nickEmojiSchema = z.object({
+  id: z.string(),
+  networkId: z.string(),
+  nick: z.string(),
+  emoji: z.string(),
+});
+export type NickEmojiState = z.infer<typeof nickEmojiSchema>;
+
 export const presenceStatusSchema = z.enum(['online', 'away', 'offline']);
 export type PresenceStatus = z.infer<typeof presenceStatusSchema>;
 
