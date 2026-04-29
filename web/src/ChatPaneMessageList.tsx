@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   BufferState,
   ChannelUserState,
@@ -88,6 +88,11 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       }),
     [firstUnreadDividerIndex, props.listKind, props.messages, props.mutedNicks, props.selectedBuffer?.id],
   );
+  useEffect(() => {
+    setExpandedMutedGroupKeys((current) =>
+      pruneExpandedMutedGroupKeys(current, transcriptModel),
+    );
+  }, [transcriptModel]);
   const initialScrollTarget = resolveInitialTranscriptScrollTarget({
     buffer: props.selectedBuffer,
     firstUnreadDividerIndex,
@@ -159,4 +164,28 @@ export const resolveMutedAwareUnreadDividerIndex = (
     }
   }
   return null;
+};
+
+export const pruneExpandedMutedGroupKeys = (
+  current: ReadonlySet<string>,
+  model: Pick<ReturnType<typeof buildChatTranscriptModel>, 'flatRows'>,
+) => {
+  if (current.size === 0) {
+    return current;
+  }
+  const visibleKeys = new Set(
+    model.flatRows.flatMap((row) =>
+      row.kind === 'muted-group' ? [row.key] : [],
+    ),
+  );
+  let changed = false;
+  const next = new Set<string>();
+  for (const key of current) {
+    if (visibleKeys.has(key)) {
+      next.add(key);
+      continue;
+    }
+    changed = true;
+  }
+  return changed ? next : current;
 };

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ChatMessage, MutedNickState } from '../shared/protocol.js';
 import { buildChatTranscriptModel } from '../web/src/chat-transcript-model.js';
-import { resolveMutedAwareUnreadDividerIndex } from '../web/src/ChatPaneMessageList.js';
+import {
+  pruneExpandedMutedGroupKeys,
+  resolveMutedAwareUnreadDividerIndex,
+} from '../web/src/ChatPaneMessageList.js';
 
 const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: overrides.id ?? 'message-1',
@@ -123,4 +126,41 @@ test('muted messages do not become the unread divider target', () => {
     resolveMutedAwareUnreadDividerIndex(2, messages, [mutedNick('MissD')]),
     null,
   );
+});
+
+test('expanded muted group keys are pruned to visible transcript groups', () => {
+  const model = buildChatTranscriptModel({
+    firstUnreadDividerIndex: null,
+    listKind: 'chat',
+    messages: [
+      makeMessage({ id: 'message-1', nick: 'MissD' }),
+      makeMessage({ id: 'message-2', nick: 'Joby', ts: 2 }),
+    ],
+    mutedNicks: [mutedNick('MissD')],
+    unreadDividerKey: 'unused',
+  });
+  const visibleMutedGroupKey = model.flatRows.find((row) => row.kind === 'muted-group')?.key;
+  assert.ok(visibleMutedGroupKey);
+
+  const pruned = pruneExpandedMutedGroupKeys(
+    new Set([visibleMutedGroupKey, 'muted-group:stale']),
+    model,
+  );
+
+  assert.deepEqual([...pruned], [visibleMutedGroupKey]);
+});
+
+test('expanded muted group pruning preserves the same set when nothing changed', () => {
+  const model = buildChatTranscriptModel({
+    firstUnreadDividerIndex: null,
+    listKind: 'chat',
+    messages: [makeMessage({ id: 'message-1', nick: 'MissD' })],
+    mutedNicks: [mutedNick('MissD')],
+    unreadDividerKey: 'unused',
+  });
+  const visibleMutedGroupKey = model.flatRows.find((row) => row.kind === 'muted-group')?.key;
+  assert.ok(visibleMutedGroupKey);
+  const current = new Set([visibleMutedGroupKey]);
+
+  assert.equal(pruneExpandedMutedGroupKeys(current, model), current);
 });
