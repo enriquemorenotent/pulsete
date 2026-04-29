@@ -25,7 +25,6 @@ export const renderChatPane = (
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
@@ -69,7 +68,6 @@ export const renderQueryPane = (
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
@@ -108,7 +106,6 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       mutedNicks={[]}
       selectedMessages={selectedMessages}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}

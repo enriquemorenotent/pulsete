@@ -3,7 +3,6 @@ import type { PreferencesDialogProps } from './PreferencesDialog.js';
 import type { FriendState, MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
-import type { MessageDisplayMode } from './message-display-mode.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 import type {
   BackgroundDmAudioContact,
@@ -12,9 +11,6 @@ import type {
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 
 export type DesktopShellHeaderModel = {
-  messageDisplayMode: MessageDisplayMode;
-  showMessageDisplayModeToggle: boolean;
-  onMessageDisplayModeChange: (mode: MessageDisplayMode) => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
 };

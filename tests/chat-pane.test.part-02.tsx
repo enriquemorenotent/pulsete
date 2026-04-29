@@ -24,7 +24,6 @@ test('channel transcripts keep the unread divider anchored after a day divider',
       mutedNicks={[]}
       selectedMessages={messages}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
@@ -189,7 +188,6 @@ test('reconnecting channels rely on the inline status banner instead of header m
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}

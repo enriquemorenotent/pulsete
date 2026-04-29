@@ -14,7 +14,7 @@ type DesktopHeaderModelParams = {
   dispatch: (action: Action) => void;
   ui: Pick<
     AppUiState,
-    'messageDisplayMode' | 'openPreferences' | 'setMessageDisplayMode'
+    'openPreferences'
   >;
 };
 
@@ -41,17 +41,12 @@ export function useDesktopHeaderModel({
 }: DesktopHeaderModelParams): DesktopShellModel['header'] {
   return useMemo(
     () => ({
-      messageDisplayMode: ui.messageDisplayMode,
-      showMessageDisplayModeToggle: import.meta.env.DEV,
-      onMessageDisplayModeChange: ui.setMessageDisplayMode,
       onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
       onOpenPreferences: ui.openPreferences,
     }),
     [
       dispatch,
-      ui.messageDisplayMode,
       ui.openPreferences,
-      ui.setMessageDisplayMode,
     ],
   );
 }

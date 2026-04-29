@@ -57,7 +57,6 @@ export function DesktopShell(props: DesktopShellProps) {
           backgroundDmAudio={props.backgroundDmAudio}
           composer={props.composer}
           primeBackgroundDmAudio={props.primeBackgroundDmAudio}
-          ui={props.ui}
         />
       }
       rightSidebar={

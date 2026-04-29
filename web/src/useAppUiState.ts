@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SocketHandle } from './client.js';
-import type { MessageDisplayMode } from './message-display-mode.js';
 
 export type AppUiState = {
   closeCommandPalette: () => void;
@@ -8,11 +7,9 @@ export type AppUiState = {
   commandPaletteOpen: boolean;
   didAutoOpenManagerRef: { current: boolean };
   hideOfflineFriends: boolean;
-  messageDisplayMode: MessageDisplayMode;
   openCommandPalette: () => void;
   openPreferences: () => void;
   preferencesOpen: boolean;
-  setMessageDisplayMode: (mode: MessageDisplayMode) => void;
   socketRef: { current: SocketHandle | null };
   toggleHideOfflineFriends: () => void;
 };
@@ -56,7 +53,6 @@ export function useAppUiState(): AppUiState {
   const [hideOfflineFriends, setHideOfflineFriends] = useState(
     readStoredHideOfflineFriendsPreference,
   );
-  const [messageDisplayMode, setMessageDisplayMode] = useState<MessageDisplayMode>('colors');
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const socketRef = useRef<SocketHandle | null>(null);
   const didAutoOpenManagerRef = useRef(false);
@@ -80,11 +76,9 @@ export function useAppUiState(): AppUiState {
     commandPaletteOpen,
     didAutoOpenManagerRef,
     hideOfflineFriends,
-    messageDisplayMode,
     openCommandPalette,
     openPreferences,
     preferencesOpen,
-    setMessageDisplayMode,
     socketRef,
     toggleHideOfflineFriends,
   };

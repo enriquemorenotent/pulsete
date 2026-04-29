@@ -50,3 +50,37 @@ test('server message bridge forwards distinct websocket messages after a mutatio
     { type: 'remove-network', networkId: 'network-1' },
   ]);
 });
+
+test('server message bridge suppresses mutation responses after websocket echoes arrive first', () => {
+  const dispatched: Action[] = [];
+  const bridge = createServerMessageBridge((action) => {
+    dispatched.push(action);
+  });
+  const message = { type: 'network.remove', networkId: 'network-1', mutationId: 'mutation-1' } as const;
+
+  bridge.applySocketMessage(message);
+  bridge.applyMutationMessages([message]);
+
+  assert.deepEqual(dispatched, [{ type: 'remove-network', networkId: 'network-1' }]);
+});
+
+test('server message bridge expires unmatched pending mutation echoes', () => {
+  let now = 0;
+  const dispatched: Action[] = [];
+  const bridge = createServerMessageBridge((action) => {
+    dispatched.push(action);
+  }, {
+    mutationEchoTtlMs: 10,
+    now: () => now,
+  });
+  const message = { type: 'network.remove', networkId: 'network-1', mutationId: 'mutation-1' } as const;
+
+  bridge.applyMutationMessages([message]);
+  now = 11;
+  bridge.applySocketMessage(message);
+
+  assert.deepEqual(dispatched, [
+    { type: 'remove-network', networkId: 'network-1' },
+    { type: 'remove-network', networkId: 'network-1' },
+  ]);
+});

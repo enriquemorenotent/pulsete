@@ -4,9 +4,6 @@ export const createDesktopShellLayoutProps = (
   overrides: Partial<DesktopShellLayoutProps> = {},
 ): DesktopShellLayoutProps => ({
   header: {
-    messageDisplayMode: 'colors',
-    showMessageDisplayModeToggle: true,
-    onMessageDisplayModeChange: () => undefined,
     onOpenNetworkManager: () => undefined,
     onOpenPreferences: () => undefined,
   },

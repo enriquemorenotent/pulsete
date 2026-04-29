@@ -1,0 +1,103 @@
+[ 1405332ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 1405391ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 1408335ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:18473/@vite/client:864
+[ 1409316ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 1411325ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 3006102ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5449251ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5449335ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5452900ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5453005ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5457619ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5457714ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5470299ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5470349ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5482452ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5491384ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5561014ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5638649ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:18473/@vite/client:864
+[ 5639626ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5642827ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5736762ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5736839ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5739837ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5739907ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5740911ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5758825ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[ 5824954ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:18473/@vite/client:864
+[ 5825919ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[ 5828003ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[10718076ms] [ERROR] [vite] SyntaxError: The requested module '/web/src/muted-nick-utils.ts?t=1777104728139' does not provide an export named 'filterMutedMessages' @ http://127.0.0.1:18473/@vite/client:808
+[10718086ms] [ERROR] [vite] Failed to reload /web/src/DesktopShellContainers.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:18473/@vite/client:808
+[10718088ms] [ERROR] [vite] SyntaxError: The requested module '/web/src/muted-nick-utils.ts?t=1777104728139' does not provide an export named 'filterMutedMessages' @ http://127.0.0.1:18473/@vite/client:808
+[10718088ms] [ERROR] [vite] Failed to reload /web/src/DesktopShell.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:18473/@vite/client:808
+[10726360ms] Error: Rendered fewer hooks than expected. This may be caused by an accidental early return statement.
+    at finishRenderingHooks (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:5697:17)
+    at renderWithHooks (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:5675:9)
+    at updateFunctionComponent (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:7475:21)
+    at updateSimpleMemoComponent (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:7264:16)
+    at beginWork (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:8794:20)
+    at runWithFiberInDEV (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:997:72)
+    at performUnitOfWork (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:12561:98)
+    at workLoopSync (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:12424:43)
+    at renderRootSync (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:12408:13)
+    at performWorkOnRoot (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:11827:37)
+[10726358ms] [WARNING] %s
+
+%s
+ An error occurred in the <ChatPaneContainer2> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:6965
+[10758704ms] TypeError: Cannot read properties of undefined (reading 'find')
+    at findMutedNickByNick (http://127.0.0.1:18473/shared/muted-nicks.ts:2:80)
+    at isNickMuted (http://127.0.0.1:18473/shared/muted-nicks.ts:3:73)
+    at resolveMutedMessageNick (http://127.0.0.1:18473/web/src/muted-nick-utils.ts?t=1777104728139:6:8)
+    at http://127.0.0.1:18473/web/src/chat-transcript-model.ts?t=1777104768959:66:23
+    at Array.forEach (<anonymous>)
+    at buildChatTranscriptModel (http://127.0.0.1:18473/web/src/chat-transcript-model.ts?t=1777104768959:39:18)
+    at http://127.0.0.1:18473/web/src/ChatPaneMessageList.tsx?t=1777104768959:33:11
+    at updateMemo (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:6545:21)
+    at Object.useMemo (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:18969:20)
+    at exports.useMemo (http://127.0.0.1:18473/node_modules/.vite/deps/chunk-RY7GF66K.js?v=b767b57c:947:36)
+[10758704ms] [WARNING] %s
+
+%s
+ An error occurred in the <ChatPaneMessageList2> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:6965
+[10767398ms] TypeError: Cannot read properties of undefined (reading 'find')
+    at findMutedNickByNick (http://127.0.0.1:18473/shared/muted-nicks.ts:2:80)
+    at isNickMuted (http://127.0.0.1:18473/shared/muted-nicks.ts:3:73)
+    at resolveMutedMessageNick (http://127.0.0.1:18473/web/src/muted-nick-utils.ts?t=1777104728139:6:8)
+    at http://127.0.0.1:18473/web/src/chat-transcript-model.ts?t=1777104777566:66:23
+    at Array.forEach (<anonymous>)
+    at buildChatTranscriptModel (http://127.0.0.1:18473/web/src/chat-transcript-model.ts?t=1777104777566:39:18)
+    at http://127.0.0.1:18473/web/src/ChatPaneMessageList.tsx?t=1777104777566:33:11
+    at mountMemo (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:6527:25)
+    at Object.useMemo (http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:18709:20)
+    at exports.useMemo (http://127.0.0.1:18473/node_modules/.vite/deps/chunk-RY7GF66K.js?v=b767b57c:947:36)
+[10767397ms] [WARNING] %s
+
+%s
+ An error occurred in the <ChatPaneMessageList2> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:6965
+[10873186ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[10879159ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[10882898ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[10886430ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[10908786ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[10933224ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[10964306ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[11024620ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[11269129ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[12765514ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[12947557ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[14248268ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[14248340ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[14303365ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[14323164ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[14399541ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[73101553ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[73101645ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Connection closed before receiving a handshake response @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[73266556ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:18473/@vite/client:864
+[73267531ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:18473/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:18473/web/src/client-socket.ts:18
+[73269758ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:18473/node_modules/.vite/deps/react-dom_client.js?v=b767b57c:20102
+[73492662ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:18473/@vite/client:864

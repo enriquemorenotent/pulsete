@@ -40,7 +40,6 @@ test('offline channels surface an inline reconnect action', () => {
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
@@ -99,7 +98,6 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}

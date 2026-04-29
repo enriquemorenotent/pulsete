@@ -97,7 +97,6 @@ test('chat transcripts render sender notices inline without a notice badge', () 
       mutedNicks={[]}
       selectedMessages={[makeMessage()]}
       draft=""
-      messageDisplayMode="colors"
       onDraftChange={() => {}}
       onRecallOlderDraft={() => {}}
       onRecallNewerDraft={() => {}}
@@ -119,7 +118,7 @@ test('chat transcripts render sender notices inline without a notice badge', () 
     />,
   );
 
-  assert.match(markup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(markup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
   assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-inherit[^"]*">Data</);
   assert.doesNotMatch(markup, />notice</i);
   assert.doesNotMatch(markup, /mb-1 flex flex-wrap items-center gap-2 text-\[11px\] uppercase/);

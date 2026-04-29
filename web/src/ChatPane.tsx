@@ -14,7 +14,7 @@ import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
-import type { MessageDisplayMode } from './message-display-mode.js';
+import { defaultMessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
 
 export type ChatPaneProps = {
@@ -27,7 +27,6 @@ export type ChatPaneProps = {
   completionEnabled?: boolean;
   completionContextKey?: string | null;
   completionCandidates?: string[];
-  messageDisplayMode: MessageDisplayMode;
   onDraftChange: (value: string) => void;
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
@@ -124,7 +123,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         messages={props.selectedMessages}
         mutedNicks={props.mutedNicks}
         emptyBody={props.workspace.emptyBody}
-        mode={props.messageDisplayMode}
+        mode={defaultMessageDisplayMode}
         listKind={isServerBuffer ? 'server' : 'chat'}
         canLoadOlderHistory={props.canLoadOlderHistory}
         initialHistoryPending={props.initialHistoryPending}
@@ -157,7 +156,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <HistorySearchDialog
         open={historySearchOpen && Boolean(searchableBuffer && props.onSearchHistory)}
         buffer={searchableBuffer}
-        mode={props.messageDisplayMode}
+        mode={defaultMessageDisplayMode}
         onOpenChange={setHistorySearchOpen}
         onOpenChannel={props.onOpenMentionedChannel}
         onSearch={props.onSearchHistory}

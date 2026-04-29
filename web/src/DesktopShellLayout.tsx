@@ -12,7 +12,6 @@ import type {
   DesktopShellCommandPaletteModel,
   DesktopShellHeaderModel,
 } from './desktop-shell-model.js';
-import { MessageDisplayModeToggle } from './MessageDisplayModeToggle.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
 import {
   RIGHT_SIDEBAR_WIDTH_STORAGE_KEY,
@@ -102,12 +101,6 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-          {props.header.showMessageDisplayModeToggle ? (
-            <MessageDisplayModeToggle
-              value={props.header.messageDisplayMode}
-              onChange={props.header.onMessageDisplayModeChange}
-            />
-          ) : null}
           <Button variant="secondary" size="sm" onClick={props.commandPalette.onOpen}>
             <Search />
             Go to…

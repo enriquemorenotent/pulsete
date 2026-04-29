@@ -14,7 +14,6 @@ import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import { findMutedNick } from './muted-nick-utils.js';
-import type { AppUiState } from './useAppUiState.js';
 import type { ChatActionSet } from './useAppActions.js';
 import type { SelectedBufferHistoryControls } from './useSelectedBufferEffects.js';
 import type { WorkspaceView } from './workspace-types.js';
@@ -36,10 +35,6 @@ export type DesktopChatModelParams = {
   selectedBufferHistory: SelectedBufferHistoryControls;
   selectedMessages: ChatPaneProps['selectedMessages'];
   workspace: WorkspaceView;
-  ui: Pick<
-    AppUiState,
-    'messageDisplayMode'
-  >;
 };
 
 export function useDesktopChatModel({
@@ -55,7 +50,6 @@ export function useDesktopChatModel({
   selectedBufferHistory,
   selectedMessages,
   workspace,
-  ui,
 }: DesktopChatModelParams): DesktopShellModel['chat'] {
   const channelAutoJoin = resolveCurrentChannelAutoJoinState(networks, workspace);
   const composerContextKey = workspace.selectedBuffer?.id ?? null;
@@ -94,7 +88,6 @@ export function useDesktopChatModel({
       completionEnabled: composerCompletion.enabled,
       completionContextKey: composerCompletion.contextKey,
       completionCandidates: composerCompletion.candidates,
-      messageDisplayMode: ui.messageDisplayMode,
       onDraftChange: (value) => composer.setDraft(composerContextKey, value),
       onRecallOlderDraft: () => composer.recallOlderDraft(composerContextKey),
       onRecallNewerDraft: () => composer.recallNewerDraft(composerContextKey),
@@ -177,7 +170,6 @@ export function useDesktopChatModel({
       selectedMessages,
       selectedNetwork,
       selectedQueryNotificationContact,
-      ui,
       workspace,
     ],
   );

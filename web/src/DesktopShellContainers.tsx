@@ -39,7 +39,7 @@ type SharedProps = {
   ui: AppUiState;
 };
 
-type ChatContainerProps = SharedProps & {
+type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   applyServerMessages: ApplyServerMessages;
   backgroundDmAudio: import('./useBackgroundDmAudio.js').BackgroundDmAudioState;
   composer: ComposerStoreApi;
@@ -76,7 +76,6 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   backgroundDmAudio,
   composer,
   primeBackgroundDmAudio,
-  ui,
 }: ChatContainerProps) {
   const channelList = useAppSelector(selectChannelList);
   const channelListNetwork = useAppSelector(selectChannelListNetwork);
@@ -140,7 +139,6 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     selectedBufferHistory,
     selectedMessages,
     workspace,
-    ui,
   });
   return <ChatPane {...model} />;
 });
