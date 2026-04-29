@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { slashIrcClientCommandCompletionCandidates } from '../shared/irc-client-command.js';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
 import {
   buildComposerCompletionModel,
@@ -83,6 +84,7 @@ test('channel completion follows nicklist order and dedupes IRC-case aliases', (
   });
 
   assert.deepEqual(buildComposerCompletionModel(workspace), {
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     enabled: true,
     contextKey: 'channel-1',
     candidates: ['Alice', 'anna', 'avery'],
@@ -103,15 +105,35 @@ test('query completion includes the peer nick and current live nick', () => {
   });
 
   assert.deepEqual(buildComposerCompletionModel(workspace), {
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     enabled: true,
     contextKey: 'query-1',
     candidates: ['MissD', 'sofiaNow'],
   });
 });
 
+test('server command mode completion only exposes slash commands', () => {
+  const workspace = makeWorkspace({
+    mode: 'server-connected',
+    selectedBuffer: makeBuffer({ id: 'server-1', kind: 'server', target: 'TestNet' }),
+    selectedChannel: null,
+    composerMode: 'commands',
+    composerPlaceholder: 'Use /join #channel or another /command',
+    showNicklist: false,
+  });
+
+  assert.deepEqual(buildComposerCompletionModel(workspace), {
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
+    enabled: true,
+    contextKey: 'server-1',
+    candidates: [],
+  });
+});
+
 test('completion replaces the word at the caret and cycles forward and backward', () => {
   const initial = getComposerCompletionResult({
     candidates: ['alice', 'anna', 'avery'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     contextKey: 'channel-1',
     direction: 'forward',
     draft: 'hello a world',
@@ -132,6 +154,7 @@ test('completion replaces the word at the caret and cycles forward and backward'
 
   const next = getComposerCompletionResult({
     candidates: ['alice', 'anna', 'avery'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     contextKey: 'channel-1',
     direction: 'forward',
     draft: initial?.draft ?? '',
@@ -144,6 +167,7 @@ test('completion replaces the word at the caret and cycles forward and backward'
 
   const previous = getComposerCompletionResult({
     candidates: ['alice', 'anna', 'avery'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     contextKey: 'channel-1',
     direction: 'backward',
     draft: next?.draft ?? '',
@@ -158,6 +182,7 @@ test('completion replaces the word at the caret and cycles forward and backward'
 test('backward completion starts from the last matching nick', () => {
   const result = getComposerCompletionResult({
     candidates: ['alice', 'anna', 'avery'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     contextKey: 'channel-1',
     direction: 'backward',
     draft: 'hello a world',
@@ -169,9 +194,67 @@ test('backward completion starts from the last matching nick', () => {
   assert.equal(result?.draft, 'hello avery world');
 });
 
+test('command completion expands the first slash token to canonical command names', () => {
+  const query = getComposerCompletionResult({
+    candidates: ['alice'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
+    contextKey: 'channel-1',
+    direction: 'forward',
+    draft: '/q',
+    selectionStart: '/q'.length,
+    selectionEnd: '/q'.length,
+    session: null,
+  });
+
+  assert.equal(query?.draft, '/query');
+
+  const join = getComposerCompletionResult({
+    candidates: ['alice'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
+    contextKey: 'channel-1',
+    direction: 'forward',
+    draft: '/jo #help',
+    selectionStart: '/jo'.length,
+    selectionEnd: '/jo'.length,
+    session: null,
+  });
+
+  assert.equal(join?.draft, '/join #help');
+});
+
+test('command completion stays on the first token while command arguments complete nicks', () => {
+  const argument = getComposerCompletionResult({
+    candidates: ['alice'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
+    contextKey: 'channel-1',
+    direction: 'forward',
+    draft: '/query al',
+    selectionStart: '/query al'.length,
+    selectionEnd: '/query al'.length,
+    session: null,
+  });
+
+  assert.equal(argument?.draft, '/query alice');
+
+  assert.equal(
+    getComposerCompletionResult({
+      candidates: ['alice'],
+      commandCandidates: slashIrcClientCommandCompletionCandidates,
+      contextKey: 'channel-1',
+      direction: 'forward',
+      draft: 'say /q',
+      selectionStart: 'say /q'.length,
+      selectionEnd: 'say /q'.length,
+      session: null,
+    }),
+    null,
+  );
+});
+
 test('completion sessions reset when the caret moves or candidates change', () => {
   const initial = getComposerCompletionResult({
     candidates: ['alice', 'anna'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     contextKey: 'channel-1',
     direction: 'forward',
     draft: 'hello a world',
@@ -182,6 +265,7 @@ test('completion sessions reset when the caret moves or candidates change', () =
 
   const caretMoved = getComposerCompletionResult({
     candidates: ['alice', 'anna'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     contextKey: 'channel-1',
     direction: 'forward',
     draft: initial?.draft ?? '',
@@ -194,6 +278,7 @@ test('completion sessions reset when the caret moves or candidates change', () =
 
   const candidatesChanged = getComposerCompletionResult({
     candidates: ['anna', 'alice'],
+    commandCandidates: slashIrcClientCommandCompletionCandidates,
     contextKey: 'channel-1',
     direction: 'forward',
     draft: initial?.draft ?? '',
@@ -209,6 +294,7 @@ test('completion is a no-op when there is no fragment or no matching candidate',
   assert.equal(
     getComposerCompletionResult({
       candidates: ['alice'],
+      commandCandidates: slashIrcClientCommandCompletionCandidates,
       contextKey: 'channel-1',
       direction: 'forward',
       draft: 'hello alice world',
@@ -222,6 +308,7 @@ test('completion is a no-op when there is no fragment or no matching candidate',
   assert.equal(
     getComposerCompletionResult({
       candidates: ['alice'],
+      commandCandidates: slashIrcClientCommandCompletionCandidates,
       contextKey: 'channel-1',
       direction: 'forward',
       draft: 'hello z world',

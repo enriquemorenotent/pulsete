@@ -2,7 +2,7 @@ const commandDefinitions = [
   { name: 'join', slash: ['join', 'j'], raw: ['JOIN'] },
   { name: 'part', slash: ['part', 'p'], raw: ['PART'] },
   { name: 'msg', slash: ['msg', 'm'], raw: ['PRIVMSG'] },
-  { name: 'query', slash: ['query'], raw: [] },
+  { name: 'query', slash: ['query', 'q'], raw: [] },
   { name: 'list', slash: ['list'], raw: ['LIST'] },
   { name: 'whois', slash: ['whois', 'w'], raw: ['WHOIS'] },
   { name: 'nickserv', slash: ['nickserv', 'ns'], raw: [] },
@@ -20,6 +20,12 @@ const commandDefinitions = [
 
 const slashCommandNames = new Map<string, string>();
 const rawCommandNames = new Map<string, string>();
+type SlashCommandCompletionName = NonNullable<(typeof commandDefinitions)[number]['slash'][0]>;
+
+export const slashIrcClientCommandCompletionCandidates = commandDefinitions
+  .map((definition) => definition.slash[0])
+  .filter((command): command is SlashCommandCompletionName => Boolean(command))
+  .map((command) => `/${command}`);
 
 for (const definition of commandDefinitions) {
   for (const alias of definition.slash) {

@@ -1,9 +1,11 @@
+import { slashIrcClientCommandCompletionCandidates } from '../../shared/irc-client-command.js';
 import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 export type ComposerCompletionDirection = 'forward' | 'backward';
 
 export type ComposerCompletionModel = {
+  commandCandidates: string[];
   enabled: boolean;
   contextKey: string | null;
   candidates: string[];
@@ -24,6 +26,7 @@ export type ComposerCompletionSession = {
 
 type ComposerCompletionRequest = {
   candidates: string[];
+  commandCandidates: string[];
   contextKey: string;
   direction: ComposerCompletionDirection;
   draft: string;
@@ -40,6 +43,7 @@ export type ComposerCompletionResult = {
 };
 
 const disabledCompletionModel: ComposerCompletionModel = {
+  commandCandidates: [],
   enabled: false,
   contextKey: null,
   candidates: [],
@@ -67,12 +71,23 @@ export const dedupeIrcCompletionCandidates = (candidates: string[]) => {
 
 export const buildComposerCompletionModel = (workspace: WorkspaceView): ComposerCompletionModel => {
   const selectedBuffer = workspace.selectedBuffer;
-  if (workspace.composerMode !== 'normal' || !selectedBuffer) {
+  if (!selectedBuffer || workspace.composerMode === 'hidden') {
     return disabledCompletionModel;
+  }
+  const commandCandidates = slashIrcClientCommandCompletionCandidates;
+
+  if (workspace.composerMode === 'commands') {
+    return {
+      commandCandidates,
+      enabled: true,
+      contextKey: selectedBuffer.id,
+      candidates: [],
+    };
   }
 
   if (selectedBuffer.kind === 'channel' && workspace.selectedChannel) {
     return {
+      commandCandidates,
       enabled: true,
       contextKey: selectedBuffer.id,
       candidates: dedupeIrcCompletionCandidates(
@@ -83,6 +98,7 @@ export const buildComposerCompletionModel = (workspace: WorkspaceView): Composer
 
   if (selectedBuffer.kind === 'query' && workspace.selectedNetwork) {
     return {
+      commandCandidates,
       enabled: true,
       contextKey: selectedBuffer.id,
       candidates: dedupeIrcCompletionCandidates([
@@ -103,7 +119,7 @@ export const getComposerCompletionResult = (
     return null;
   }
 
-  const candidatesKey = buildComposerCompletionCandidatesKey(request.candidates);
+  const candidatesKey = buildComposerCompletionCandidatesKey(request.commandCandidates, request.candidates);
   if (isContinuationSession(request, candidatesKey)) {
     return applyComposerCompletionMatch({
       draft: request.draft,
@@ -125,7 +141,10 @@ export const getComposerCompletionResult = (
     return null;
   }
 
-  const matches = getMatchingComposerCandidates(request.candidates, target.fragment);
+  const matches = getMatchingComposerCandidates(
+    getComposerCompletionCandidatesForTarget(request, target),
+    target.fragment,
+  );
   if (matches.length === 0) {
     return null;
   }
@@ -145,8 +164,11 @@ export const getComposerCompletionResult = (
   });
 };
 
-const buildComposerCompletionCandidatesKey = (candidates: string[]) =>
-  candidates.map((candidate) => normalizeIrcIdentifier(candidate)).join('\u001f');
+const buildComposerCompletionCandidatesKey = (commandCandidates: string[], candidates: string[]) =>
+  [
+    commandCandidates.map((candidate) => normalizeIrcIdentifier(candidate)).join('\u001f'),
+    candidates.map((candidate) => normalizeIrcIdentifier(candidate)).join('\u001f'),
+  ].join('\u001e');
 
 const isContinuationSession = (
   request: ComposerCompletionRequest,
@@ -189,6 +211,16 @@ const getComposerCompletionTarget = (
     tokenEnd,
     tokenStart,
   };
+};
+
+const getComposerCompletionCandidatesForTarget = (
+  request: Pick<ComposerCompletionRequest, 'candidates' | 'commandCandidates' | 'draft'>,
+  target: { fragment: string; tokenStart: number },
+) => {
+  if (target.fragment.startsWith('/') && request.draft.slice(0, target.tokenStart).trim() === '') {
+    return request.commandCandidates;
+  }
+  return request.candidates;
 };
 
 export const getMatchingComposerCandidates = (candidates: string[], fragment: string) => {

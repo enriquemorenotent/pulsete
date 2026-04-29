@@ -17,3 +17,11 @@ test('/hostserv keeps the canonical hostserv command name', () => {
     remainder: 'vhost',
   });
 });
+
+test('/q normalizes to the query command', () => {
+  assert.deepEqual(parseSlashIrcClientCommand('/q alice'), {
+    name: 'query',
+    args: ['alice'],
+    remainder: 'alice',
+  });
+});

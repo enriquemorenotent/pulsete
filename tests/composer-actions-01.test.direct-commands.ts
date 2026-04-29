@@ -43,3 +43,14 @@ test('/query opens or selects a private-message buffer', async () => {
   assert.deepEqual(result.listedNetworks, []);
   assert.deepEqual(result.openedQueries, [{ networkId: 'network-1', nick: 'alice' }]);
 });
+
+test('/q opens or selects a private-message buffer', async () => {
+  const result = await runComposerDraft('/q alice');
+
+  assert.deepEqual(result.sent, []);
+  assert.deepEqual(result.drafts, ['']);
+  assert.deepEqual(result.banners, []);
+  assert.deepEqual(result.openedChannels, []);
+  assert.deepEqual(result.listedNetworks, []);
+  assert.deepEqual(result.openedQueries, [{ networkId: 'network-1', nick: 'alice' }]);
+});

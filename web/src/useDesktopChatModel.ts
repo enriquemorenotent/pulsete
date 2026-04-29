@@ -88,6 +88,7 @@ export function useDesktopChatModel({
       completionEnabled: composerCompletion.enabled,
       completionContextKey: composerCompletion.contextKey,
       completionCandidates: composerCompletion.candidates,
+      completionCommandCandidates: composerCompletion.commandCandidates,
       onDraftChange: (value) => composer.setDraft(composerContextKey, value),
       onRecallOlderDraft: () => composer.recallOlderDraft(composerContextKey),
       onRecallNewerDraft: () => composer.recallNewerDraft(composerContextKey),

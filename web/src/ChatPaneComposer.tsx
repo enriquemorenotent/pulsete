@@ -54,6 +54,7 @@ type ChatPaneComposerProps = {
   completionEnabled?: boolean;
   completionContextKey?: string | null;
   completionCandidates?: string[];
+  completionCommandCandidates?: string[];
   onDraftChange: (value: string) => void;
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
@@ -72,7 +73,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
 
   useEffect(() => {
     completionSessionRef.current = null;
-  }, [props.completionCandidates, props.completionContextKey]);
+  }, [props.completionCandidates, props.completionCommandCandidates, props.completionContextKey]);
 
   useEffect(() => {
     const nextFocusContextKey = props.focusContextKey ?? null;
@@ -111,6 +112,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
     }
     const result = getComposerCompletionResult({
       candidates: props.completionCandidates ?? [],
+      commandCandidates: props.completionCommandCandidates ?? [],
       contextKey: completionContextKey,
       direction,
       draft: props.draft,

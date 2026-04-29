@@ -27,6 +27,7 @@ export type ChatPaneProps = {
   completionEnabled?: boolean;
   completionContextKey?: string | null;
   completionCandidates?: string[];
+  completionCommandCandidates?: string[];
   onDraftChange: (value: string) => void;
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
@@ -141,6 +142,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           completionEnabled={props.completionEnabled}
           completionContextKey={props.completionContextKey}
           completionCandidates={props.completionCandidates}
+          completionCommandCandidates={props.completionCommandCandidates}
           onDraftChange={props.onDraftChange}
           onRecallOlderDraft={props.onRecallOlderDraft}
           onRecallNewerDraft={props.onRecallNewerDraft}
