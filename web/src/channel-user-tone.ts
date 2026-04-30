@@ -16,5 +16,5 @@ export const channelUserModeTone = (mode: ChannelUserMode) => {
   if (mode === 'voice') {
     return 'text-emerald-300';
   }
-  return 'text-inherit';
+  return 'text-fuchsia-300';
 };

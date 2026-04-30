@@ -124,7 +124,7 @@ test('private-message rows color self and peer nick labels differently', () => {
   assert.match(markup, /class="mr-2 font-sans font-semibold text-success">MissD</);
 });
 
-test('channel rows highlight self nick labels without tinting normal participants', () => {
+test('channel rows highlight self and color normal participant nick labels', () => {
   const markup = renderChatPane([
     makeMessage({ id: 'message-1', nick: 'sofia', self: true, body: 'my line', ts: 1 }),
     makeMessage({ id: 'message-2', nick: 'Joby', body: 'plain line', ts: 2 }),
@@ -132,7 +132,7 @@ test('channel rows highlight self nick labels without tinting normal participant
 
   assert.match(markup, /class="mr-2 font-sans font-semibold text-primary">sofia</);
   assert.match(markup, /aria-label="Open private message with Joby"/);
-  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-inherit[^"]*">Joby</);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-fuchsia-300[^"]*">Joby/);
   assert.doesNotMatch(markup, /aria-label="Open private message with sofia"/);
 });
 
@@ -155,7 +155,7 @@ test('channel rows tint peer nick labels by their channel mode', () => {
   assert.match(markup, /aria-label="Open private message with Opal"/);
   assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-amber-300[^"]*">Opal</);
   assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-emerald-300[^"]*">Vox</);
-  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-inherit[^"]*">Guest</);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-fuchsia-300[^"]*">Guest/);
 });
 
 test('query and server transcripts keep participant labels non-clickable', () => {
