@@ -66,6 +66,46 @@ export const isCompactMessage = (message: ChatMessage) =>
 
 export const isActionMessage = (message: ChatMessage) => message.kind === 'action';
 
+export const getLifecycleEventLabel = (message: ChatMessage) => {
+  if (message.kind === 'join') {
+    return 'JOIN';
+  }
+  if (message.kind === 'part') {
+    return 'PART';
+  }
+  if (message.kind === 'quit') {
+    return 'QUIT';
+  }
+  return null;
+};
+
+export const getLifecycleEventTone = (message: ChatMessage) => {
+  if (message.kind === 'join') {
+    return 'border-emerald-300/25 bg-emerald-300/10 text-emerald-300';
+  }
+  if (message.kind === 'part') {
+    return 'border-amber-300/25 bg-amber-300/10 text-amber-300';
+  }
+  if (message.kind === 'quit') {
+    return 'border-red-500/25 bg-red-500/10 text-red-500';
+  }
+  return 'border-white/10 bg-white/[0.04] text-muted-foreground';
+};
+
+export const getLifecycleEventSummary = (message: ChatMessage) => {
+  if (!isLifecycleEventMessage(message)) {
+    return null;
+  }
+  const nick = message.nick ?? 'Someone';
+  if (message.kind === 'part' && message.body.includes(' was kicked from ')) {
+    return getKickEventSummary(message, nick);
+  }
+  const reason = getLifecycleReason(message.body, message.kind);
+  return reason ? `${nick} (${reason})` : nick;
+};
+
+export const isLifecycleEventMessage = (message: ChatMessage) => getLifecycleEventLabel(message) !== null;
+
 export const showKindLabel = (message: ChatMessage) =>
   message.kind === 'notice' || message.kind === 'error';
 
@@ -76,22 +116,38 @@ export const messageTone = (message: ChatMessage) => {
   if (message.kind === 'notice') {
     return 'text-primary';
   }
-  if (message.kind === 'join') {
-    return 'text-emerald-300';
-  }
-  if (message.kind === 'part') {
-    return 'text-amber-300';
-  }
-  if (message.kind === 'quit') {
-    return 'text-red-500';
-  }
-  if (message.kind === 'system') {
+  if (message.kind === 'system' || isLifecycleEventMessage(message)) {
     return 'text-muted-foreground';
   }
   return '';
 };
 
 const padDatePart = (value: number) => String(value).padStart(2, '0');
+
+const getKickEventSummary = (message: ChatMessage, nick: string) => {
+  const match = message.body.match(/^.+? was kicked from \S+ by (.+?)(?: \((.*)\))?$/);
+  const actor = match?.[1]?.trim();
+  const reason = getLifecycleReason(message.body, message.kind);
+  const detail = actor ? `${nick} kicked by ${actor}` : `${nick} kicked`;
+  return reason ? `${detail} (${reason})` : detail;
+};
+
+const getLifecycleReason = (body: string, kind: ChatMessage['kind']) => {
+  const match = body.match(/\s\((.*)\)$/);
+  const reason = match?.[1]?.trim();
+  if (!reason || isDefaultLifecycleReason(reason, kind)) {
+    return null;
+  }
+  return reason;
+};
+
+const isDefaultLifecycleReason = (reason: string, kind: ChatMessage['kind']) => {
+  const normalizedReason = reason.toLowerCase();
+  return (
+    (kind === 'part' && (normalizedReason === 'left' || normalizedReason === 'kicked'))
+    || (kind === 'quit' && normalizedReason === 'quit')
+  );
+};
 
 const resolveTimestampGroupKey = (
   message: ChatMessage,

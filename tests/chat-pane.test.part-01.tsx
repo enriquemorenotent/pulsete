@@ -34,14 +34,27 @@ test('transcript rows render without boxed message chrome', () => {
   assert.doesNotMatch(markup, /border px-2 py-1\.5/);
 });
 
-test('part and quit rows render with distinct tones', () => {
+test('join part and quit rows render as aligned boxed event labels', () => {
   const markup = renderChatPane([
-    makeMessage({ id: 'message-1', nick: 'Joby', body: 'left', kind: 'part', ts: 1 }),
-    makeMessage({ id: 'message-2', nick: 'Joby', body: 'quit', kind: 'quit', ts: 2 }),
+    makeMessage({ id: 'message-1', nick: 'Joby', body: 'Joby joined #help', kind: 'join', ts: 1 }),
+    makeMessage({ id: 'message-2', nick: 'Joby', body: 'Joby left #help (bye)', kind: 'part', ts: 2 }),
+    makeMessage({ id: 'message-3', nick: 'Joby', body: 'Joby quit (Ping timeout)', kind: 'quit', ts: 3 }),
+    makeMessage({ id: 'message-4', nick: 'Joby', body: 'Joby was kicked from #help by Opal (bye)', kind: 'part', ts: 4 }),
   ]);
 
-  assert.match(markup, /text-amber-300/);
-  assert.match(markup, /text-red-500/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-emerald-300\/25[^"]*text-emerald-300[^"]*">JOIN<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-amber-300\/25[^"]*text-amber-300[^"]*">PART<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-red-500\/25[^"]*text-red-500[^"]*">QUIT<\/span>/);
+  assert.match(markup, /JOIN<\/span><span class="">Joby<\/span>/);
+  assert.match(markup, /PART<\/span><span class="">Joby \(bye\)<\/span>/);
+  assert.match(markup, /QUIT<\/span><span class="">Joby \(Ping timeout\)<\/span>/);
+  assert.match(markup, /PART<\/span><span class="">Joby kicked by Opal \(bye\)<\/span>/);
+  assert.doesNotMatch(markup, /Joby joined #help/);
+  assert.doesNotMatch(markup, /Joby left #help/);
+  assert.doesNotMatch(markup, /Joby quit/);
+  assert.doesNotMatch(markup, /was kicked from #help/);
+  assert.doesNotMatch(markup, /border-l border-white\/12/);
+  assert.doesNotMatch(markup, /bg-white\/\[0\.025\]/);
 });
 
 test('compact chat rows use one grid skeleton for plain text and inline previews', () => {

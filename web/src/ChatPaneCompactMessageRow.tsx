@@ -14,6 +14,9 @@ import {
   formatMessageTime,
   formatMessageTimestampDateTime,
   formatMessageTimestampTitle,
+  getLifecycleEventLabel,
+  getLifecycleEventSummary,
+  getLifecycleEventTone,
   isActionMessage,
   messageTone,
 } from './chat-pane-message-utils.js';
@@ -31,11 +34,14 @@ type ChatPaneCompactMessageRowProps = {
 export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps) {
   const { message } = props;
   const isAction = isActionMessage(message);
+  const lifecycleEventSummary = getLifecycleEventSummary(message);
+  const displayText = lifecycleEventSummary ?? message.body;
   const parsedContent = useMemo(
-    () => parseFormattedMessageContent(message.body, props.mode),
-    [message.body, props.mode]
+    () => parseFormattedMessageContent(displayText, props.mode),
+    [displayText, props.mode]
   );
   const hasVisibleText = hasVisibleFormattedMessageText(parsedContent);
+  const lifecycleEventLabel = getLifecycleEventLabel(message);
   const bodyClassName = cn(isAction && 'italic');
   const timeLabel = (
     props.hideTimestamp
@@ -73,6 +79,16 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
           {props.participant.kindBadgeLabel}
         </span>
       ) : null}
+      {lifecycleEventLabel ? (
+        <span
+          className={cn(
+            'mr-2 inline-flex h-4 min-w-10 items-center justify-center rounded-sm border px-1 font-mono text-[10px] font-semibold uppercase tracking-[0.08em]',
+            getLifecycleEventTone(message),
+          )}
+        >
+          {lifecycleEventLabel}
+        </span>
+      ) : null}
     </>
   );
 
@@ -89,7 +105,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
             {hasVisibleText ? (
               <span className={bodyClassName}>
                 <FormattedMessageText
-                  text={message.body}
+                  text={displayText}
                   mode={props.mode}
                   onInlinePreviewLoad={props.onInlinePreviewLoad}
                   onOpenChannel={props.onOpenChannel}
