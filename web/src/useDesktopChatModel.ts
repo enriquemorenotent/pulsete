@@ -20,7 +20,7 @@ import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import { findMutedNick } from './muted-nick-utils.js';
 import type { ChatActionSet } from './useAppActions.js';
-import type { SelectedBufferHistoryControls } from './useSelectedBufferEffects.js';
+import type { SelectedBufferHistoryControls } from './transcript/history.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 export type DesktopChatModelParams = {

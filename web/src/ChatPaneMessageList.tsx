@@ -9,15 +9,15 @@ import type {
 import {
   captureUnreadDividerAnchor,
   resolveInitialTranscriptScrollTarget,
+  resolveMutedAwareUnreadDividerIndex,
   resolveVisibleUnreadDividerIndex,
   type UnreadDividerAnchor,
-} from './buffer-activity.js';
+} from './transcript/unread-state.js';
 import { buildChannelUserModesByNick, resolveParticipantHighlightMode } from './message-participant-presentation.js';
-import { buildChatTranscriptModel } from './chat-transcript-model.js';
+import { buildChatTranscriptModel, pruneExpandedMutedGroupKeys } from './transcript/model.js';
 import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
 import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
-import { isMessageMuted } from './muted-nick-utils.js';
 import { buildNickEmojiByNetworkNick } from './nick-emoji-utils.js';
 
 type ChatPaneMessageListProps = {
@@ -157,44 +157,3 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
     />
   );
 });
-
-export const resolveMutedAwareUnreadDividerIndex = (
-  unreadDividerIndex: number | null,
-  messages: readonly ChatMessage[],
-  mutedNicks: readonly MutedNickState[],
-) => {
-  if (unreadDividerIndex === null) {
-    return null;
-  }
-  for (let index = unreadDividerIndex; index < messages.length; index += 1) {
-    const message = messages[index]!;
-    if (!message.self && !isMessageMuted(mutedNicks, message)) {
-      return index;
-    }
-  }
-  return null;
-};
-
-export const pruneExpandedMutedGroupKeys = (
-  current: ReadonlySet<string>,
-  model: Pick<ReturnType<typeof buildChatTranscriptModel>, 'flatRows'>,
-) => {
-  if (current.size === 0) {
-    return current;
-  }
-  const visibleKeys = new Set(
-    model.flatRows.flatMap((row) =>
-      row.kind === 'muted-group' ? [row.key] : [],
-    ),
-  );
-  let changed = false;
-  const next = new Set<string>();
-  for (const key of current) {
-    if (visibleKeys.has(key)) {
-      next.add(key);
-      continue;
-    }
-    changed = true;
-  }
-  return changed ? next : current;
-};

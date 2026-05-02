@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ChatMessage, MutedNickState } from '../shared/protocol.js';
-import { buildChatTranscriptModel } from '../web/src/chat-transcript-model.js';
+import { buildChatTranscriptModel, pruneExpandedMutedGroupKeys } from '../web/src/transcript/model.js';
 import {
-  pruneExpandedMutedGroupKeys,
   resolveMutedAwareUnreadDividerIndex,
-} from '../web/src/ChatPaneMessageList.js';
+} from '../web/src/transcript/unread-state.js';
 
 const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: overrides.id ?? 'message-1',

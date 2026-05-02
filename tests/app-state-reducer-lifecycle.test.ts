@@ -9,7 +9,6 @@ test('snapshot enters the ready phase and clears any banner', () => {
   const dirtyState = makeState({
     transient: {
       banner: { kind: 'notice', message: 'Stale banner' },
-      historyLoading: true,
     },
   });
 
@@ -20,8 +19,6 @@ test('snapshot enters the ready phase and clears any banner', () => {
 
   assert.equal(nextState.domain.phase, 'ready');
   assert.equal(nextState.transient.banner, null);
-  assert.equal(nextState.transient.historyLoading, false);
-  assert.equal(nextState.transient.historyLoadingOlder, false);
   assert.deepEqual(nextState.transient.historyLoadedByBufferId, {});
   assert.deepEqual(nextState.transient.historyHasOlderByBufferId, {});
   assert.equal(nextState.transient.selection, null);
@@ -196,8 +193,6 @@ test('gateway transitions reset transport state and clear the reconnect banner o
     serverName: null,
     nick: network.nick,
   });
-  assert.equal(disconnected.transient.historyLoading, false);
-  assert.equal(disconnected.transient.historyLoadingOlder, false);
   assert.deepEqual(disconnected.transient.historyLoadedByBufferId, {});
   assert.deepEqual(disconnected.transient.historyHasOlderByBufferId, {});
   assert.equal(reconnecting.domain.gatewayStatus, 'connecting');

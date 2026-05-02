@@ -8,7 +8,7 @@ import {
   resolveInitialTranscriptScrollTarget,
   resolveVisibleUnreadDividerIndex,
   shouldMarkSelectedBufferRead,
-} from '../web/src/buffer-activity.js';
+} from '../web/src/transcript/unread-state.js';
 
 const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   id: overrides.id ?? 'buffer-1',

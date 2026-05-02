@@ -136,8 +136,6 @@ export const selectHistoryLoadedByBufferId = (state: State) =>
   state.transient.historyLoadedByBufferId;
 export const selectHistoryHasOlderByBufferId = (state: State) =>
   state.transient.historyHasOlderByBufferId;
-export const selectHistoryLoadingOlder = (state: State) =>
-  state.transient.historyLoadingOlder;
 
 export const selectConversation = (state: State) =>
   buildConversation(

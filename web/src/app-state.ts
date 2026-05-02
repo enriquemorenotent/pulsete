@@ -38,8 +38,6 @@ const initialTransientState: AppTransientState = {
   selection: null,
   banner: null,
   channelList: initialChannelListState,
-  historyLoading: false,
-  historyLoadingOlder: false,
   historyLoadedByBufferId: {},
   historyHasOlderByBufferId: {},
   networkManager: initialNetworkManagerState,
@@ -76,14 +74,12 @@ export const reducer = (state: State, action: Action): State => {
   const transientBase = action.type === 'snapshot'
     ? {
         ...state.transient,
-        selection,
-        banner: null,
-        channelList: initialChannelListState,
-        historyLoading: false,
-        historyLoadingOlder: false,
-        historyLoadedByBufferId: {},
-        historyHasOlderByBufferId: {},
-      }
+	        selection,
+	        banner: null,
+	        channelList: initialChannelListState,
+	        historyLoadedByBufferId: {},
+	        historyHasOlderByBufferId: {},
+	      }
     : selection === state.transient.selection
       ? state.transient
       : { ...state.transient, selection };

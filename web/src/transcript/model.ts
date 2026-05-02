@@ -1,11 +1,11 @@
-import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
-import type { ChatMessage, MutedNickState } from '../../shared/protocol.js';
+import { normalizeIrcIdentifier } from '../../../shared/irc-identifiers.js';
+import type { ChatMessage, MutedNickState } from '../../../shared/protocol.js';
 import {
   formatDayDividerLabel,
   getServerMessageSourceLabel,
   isCompactMessage,
-} from './chat-pane-message-utils.js';
-import { resolveMutedMessageNick } from './muted-nick-utils.js';
+} from '../chat-pane-message-utils.js';
+import { resolveMutedMessageNick } from '../muted-nick-utils.js';
 
 export type ChatTranscriptMessageRow = {
   kind: 'message';
@@ -177,6 +177,30 @@ export const buildChatTranscriptModel = (
     groups,
     unreadRowIndex,
   };
+};
+
+export const pruneExpandedMutedGroupKeys = (
+  current: ReadonlySet<string>,
+  model: Pick<ChatTranscriptModel, 'flatRows'>,
+) => {
+  if (current.size === 0) {
+    return current;
+  }
+  const visibleKeys = new Set(
+    model.flatRows.flatMap((row) =>
+      row.kind === 'muted-group' ? [row.key] : [],
+    ),
+  );
+  let changed = false;
+  const next = new Set<string>();
+  for (const key of current) {
+    if (visibleKeys.has(key)) {
+      next.add(key);
+      continue;
+    }
+    changed = true;
+  }
+  return changed ? next : current;
 };
 
 const appendMutedMessageRow = (input: {

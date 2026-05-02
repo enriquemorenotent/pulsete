@@ -1,7 +1,7 @@
 import type { ChannelUserMode } from '../../shared/protocol.js';
 import { ChatPaneMutedMessageGroupRow } from './ChatPaneMutedMessageGroupRow.js';
 import { UnreadDivider } from './ChatPaneTranscriptDecorations.js';
-import type { ChatTranscriptRow as TranscriptRow } from './chat-transcript-model.js';
+import type { ChatTranscriptRow as TranscriptRow } from './transcript/model.js';
 import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';

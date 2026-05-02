@@ -21,15 +21,13 @@ export const reduceTransientAction = (
 
   switch (action.type) {
     case 'select':
-      return withChannelList({ banner: null, historyLoading: false, historyLoadingOlder: false });
+      return withChannelList({ banner: null });
     case 'set-banner':
       return withChannelList({ banner: action.banner });
     case 'gateway-connected':
       return withChannelList({ banner: clearReconnectBanner(transient.banner) });
     case 'gateway-disconnected':
       return withChannelList({
-        historyLoading: false,
-        historyLoadingOlder: false,
         historyLoadedByBufferId: {},
         historyHasOlderByBufferId: {},
       });
@@ -117,16 +115,6 @@ export const reduceTransientAction = (
           },
         },
       };
-    case 'set-history-loading':
-      return {
-        ...transient,
-        historyLoading: action.value,
-      };
-    case 'set-history-loading-older':
-      return {
-        ...transient,
-        historyLoadingOlder: action.value,
-      };
     case 'history-buffer-loaded':
       return {
         ...transient,
@@ -149,15 +137,11 @@ export const reduceTransientAction = (
       if (channelList === transient.channelList) {
         return {
           ...transient,
-          historyLoading: false,
-          historyLoadingOlder: false,
           historyLoadedByBufferId: {},
           historyHasOlderByBufferId: {},
         };
       }
       return withChannelList({
-        historyLoading: false,
-        historyLoadingOlder: false,
         historyLoadedByBufferId: {},
         historyHasOlderByBufferId: {},
       });

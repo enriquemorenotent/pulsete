@@ -9,14 +9,14 @@ import { GroupedVirtuoso } from 'react-virtuoso';
 import type { ChannelUserMode } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { DayDivider, TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
-import type { ChatTranscriptModel } from './chat-transcript-model.js';
+import type { ChatTranscriptModel } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
 import {
-  useChatTranscriptViewport,
+  useTranscriptViewport,
   type TranscriptInitialScrollTarget,
-} from './useChatTranscriptViewport.js';
+} from './transcript/viewport.js';
 
 type ChatTranscriptVirtuosoProps = {
   bufferId: string | null;
@@ -91,7 +91,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     () => props.model.flatRows.map((row) => row.key),
     [props.model.flatRows],
   );
-  const viewport = useChatTranscriptViewport({
+  const viewport = useTranscriptViewport({
     bufferId: props.bufferId,
     followOutputRequestId: props.followOutputRequestId,
     initialHistoryPending: props.initialHistoryPending ?? false,
@@ -192,6 +192,8 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         style={{ height: '100%' }}
         alignToBottom
         atBottomStateChange={viewport.handleAtBottomStateChange}
+        atTopStateChange={viewport.handleAtTopStateChange}
+        atTopThreshold={viewport.atTopThreshold}
         components={components}
         computeItemKey={computeItemKey}
         firstItemIndex={viewport.firstItemIndex}
@@ -202,7 +204,9 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         groupCounts={props.model.groupCounts}
         increaseViewportBy={{ bottom: 320, top: 160 }}
         itemContent={renderItemContent}
+        itemsRendered={viewport.handleItemsRendered}
         scrollerRef={viewport.scrollerRef}
+        startReached={viewport.handleStartReached}
       />
       {viewport.showJumpToLatest ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">

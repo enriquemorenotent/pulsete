@@ -35,8 +35,6 @@ test('channel list resets when the gateway drops, its network disconnects, or th
       buffers: [makeBuffer({ networkId: 'network-1' })],
     },
     transient: {
-      historyLoading: true,
-      historyLoadingOlder: true,
       historyLoadedByBufferId: { 'buffer-1': true },
       historyHasOlderByBufferId: { 'buffer-1': true },
       channelList: {
@@ -65,12 +63,8 @@ test('channel list resets when the gateway drops, its network disconnects, or th
   assert.deepEqual(gatewayDisconnected.transient.channelList, initialChannelListState);
   assert.deepEqual(disconnected.transient.channelList, initialChannelListState);
   assert.deepEqual(removed.transient.channelList, initialChannelListState);
-  assert.equal(gatewayDisconnected.transient.historyLoading, false);
-  assert.equal(gatewayDisconnected.transient.historyLoadingOlder, false);
   assert.deepEqual(gatewayDisconnected.transient.historyLoadedByBufferId, {});
   assert.deepEqual(gatewayDisconnected.transient.historyHasOlderByBufferId, {});
-  assert.equal(removed.transient.historyLoading, false);
-  assert.equal(removed.transient.historyLoadingOlder, false);
   assert.deepEqual(removed.transient.historyLoadedByBufferId, {});
   assert.deepEqual(removed.transient.historyHasOlderByBufferId, {});
 });

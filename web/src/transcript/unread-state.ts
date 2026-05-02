@@ -1,7 +1,9 @@
-import type { BufferState, ChatMessage } from '../../shared/protocol.js';
+import type { BufferState, ChatMessage, MutedNickState } from '../../../shared/protocol.js';
+import { isMessageMuted } from '../muted-nick-utils.js';
 
 type BufferActivityFields = Pick<BufferState, 'unread' | 'priorityUnread'>;
 type BufferReadCursorFields = Pick<BufferState, 'unread' | 'lastReadTs' | 'lastReadMessageId'>;
+
 export type UnreadDividerAnchor = {
   bufferId: string;
   lastReadTs: number | null;
@@ -49,16 +51,64 @@ export const captureUnreadDividerAnchor = (
   return null;
 };
 
-const skipSelfAuthoredUnreadMessages = (
+export const resolveVisibleUnreadDividerIndex = (
   messages: readonly ChatMessage[],
-  startIndex: number,
+  buffer: (BufferActivityFields & Pick<BufferState, 'id' | 'lastReadTs' | 'lastReadMessageId'>) | null | undefined,
+  anchor: UnreadDividerAnchor | null,
 ) => {
-  for (let index = startIndex; index < messages.length; index += 1) {
-    if (!messages[index]!.self) {
+  if (!buffer) {
+    return null;
+  }
+  if (anchor?.bufferId === buffer.id) {
+    return resolveFirstUnreadDividerIndex(messages, {
+      unread: 1,
+      lastReadTs: anchor.lastReadTs,
+      lastReadMessageId: anchor.lastReadMessageId,
+    });
+  }
+  if (hasUnreadBufferActivity(buffer)) {
+    return resolveFirstUnreadDividerIndex(messages, {
+      unread: buffer.unread,
+      lastReadTs: buffer.lastReadTs,
+      lastReadMessageId: buffer.lastReadMessageId,
+    });
+  }
+  return null;
+};
+
+export const resolveMutedAwareUnreadDividerIndex = (
+  unreadDividerIndex: number | null,
+  messages: readonly ChatMessage[],
+  mutedNicks: readonly MutedNickState[],
+) => {
+  if (unreadDividerIndex === null) {
+    return null;
+  }
+  for (let index = unreadDividerIndex; index < messages.length; index += 1) {
+    const message = messages[index]!;
+    if (!message.self && !isMessageMuted(mutedNicks, message)) {
       return index;
     }
   }
   return null;
+};
+
+export const resolveInitialTranscriptScrollTarget = (input: {
+  buffer: BufferActivityFields | null | undefined;
+  firstUnreadDividerIndex: number | null;
+  listKind: 'chat' | 'server';
+  messagesLength: number;
+}) => {
+  if (input.listKind === 'server') {
+    return 'latest' as const;
+  }
+  if (input.firstUnreadDividerIndex !== null) {
+    return 'first-unread' as const;
+  }
+  if (hasUnreadBufferActivity(input.buffer) && input.messagesLength === 0) {
+    return 'wait' as const;
+  }
+  return 'latest' as const;
 };
 
 export const resolveFirstUnreadDividerIndex = (
@@ -88,45 +138,14 @@ export const resolveFirstUnreadDividerIndex = (
   return skipSelfAuthoredUnreadMessages(messages, dividerIndex < messages.length ? dividerIndex : 0);
 };
 
-export const resolveVisibleUnreadDividerIndex = (
+const skipSelfAuthoredUnreadMessages = (
   messages: readonly ChatMessage[],
-  buffer: (BufferActivityFields & Pick<BufferState, 'id' | 'lastReadTs' | 'lastReadMessageId'>) | null | undefined,
-  anchor: UnreadDividerAnchor | null,
+  startIndex: number,
 ) => {
-  if (!buffer) {
-    return null;
-  }
-  if (anchor?.bufferId === buffer.id) {
-    return resolveFirstUnreadDividerIndex(messages, {
-      unread: 1,
-      lastReadTs: anchor.lastReadTs,
-      lastReadMessageId: anchor.lastReadMessageId,
-    });
-  }
-  if (hasUnreadBufferActivity(buffer)) {
-    return resolveFirstUnreadDividerIndex(messages, {
-      unread: buffer.unread,
-      lastReadTs: buffer.lastReadTs,
-      lastReadMessageId: buffer.lastReadMessageId,
-    });
+  for (let index = startIndex; index < messages.length; index += 1) {
+    if (!messages[index]!.self) {
+      return index;
+    }
   }
   return null;
-};
-
-export const resolveInitialTranscriptScrollTarget = (input: {
-  buffer: BufferActivityFields | null | undefined;
-  firstUnreadDividerIndex: number | null;
-  listKind: 'chat' | 'server';
-  messagesLength: number;
-}) => {
-  if (input.listKind === 'server') {
-    return 'latest' as const;
-  }
-  if (input.firstUnreadDividerIndex !== null) {
-    return 'first-unread' as const;
-  }
-  if (hasUnreadBufferActivity(input.buffer) && input.messagesLength === 0) {
-    return 'wait' as const;
-  }
-  return 'latest' as const;
 };

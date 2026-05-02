@@ -8,7 +8,7 @@ import {
 import {
   loadOlderBufferHistory,
   loadSelectedBufferHistory,
-} from '../web/src/useSelectedBufferEffects.js';
+} from '../web/src/transcript/history.js';
 
 const createSocket = (): SocketHandle => ({
   send() {},
@@ -152,10 +152,8 @@ test('loadSelectedBufferHistory appends messages for the current request', async
   });
 
   assert.deepEqual(dispatched, [
-    { type: 'set-history-loading', value: true },
     { type: 'append-messages', messages: [message] },
     { type: 'history-buffer-loaded', bufferId: 'buffer-1', hasOlder: true },
-    { type: 'set-history-loading', value: false },
   ]);
 });
 
@@ -173,7 +171,7 @@ test('loadSelectedBufferHistory skips buffers that already loaded history', asyn
     isCurrentRequest: () => true,
   });
 
-  assert.deepEqual(dispatched, [{ type: 'set-history-loading', value: false }]);
+  assert.deepEqual(dispatched, []);
 });
 
 test('loadSelectedBufferHistory ignores stale completions', async () => {
@@ -199,7 +197,7 @@ test('loadSelectedBufferHistory ignores stale completions', async () => {
   resolveHistory({ messages: [message], hasMore: false });
   await loading;
 
-  assert.deepEqual(dispatched, [{ type: 'set-history-loading', value: true }]);
+  assert.deepEqual(dispatched, []);
 });
 
 test('loadSelectedBufferHistory reports failures only for the current request', async () => {
@@ -219,8 +217,6 @@ test('loadSelectedBufferHistory reports failures only for the current request', 
   });
 
   assert.deepEqual(dispatched, [
-    { type: 'set-history-loading', value: true },
-    { type: 'set-history-loading', value: false },
     { type: 'set-banner', banner: { kind: 'error', message: 'Failed to load history' } },
   ]);
 });
@@ -241,9 +237,7 @@ test('loadOlderBufferHistory prepends older messages and updates hasOlder state'
 
   assert.equal(prependedCount, 1);
   assert.deepEqual(dispatched, [
-    { type: 'set-history-loading-older', value: true },
     { type: 'prepend-messages', messages: [olderMessage] },
     { type: 'history-buffer-loaded', bufferId: 'buffer-1', hasOlder: false },
-    { type: 'set-history-loading-older', value: false },
   ]);
 });

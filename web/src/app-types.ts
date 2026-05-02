@@ -64,8 +64,6 @@ export type AppTransientState = {
   selection: SelectedBuffer | null;
   banner: Banner;
   channelList: ChannelListState;
-  historyLoading: boolean;
-  historyLoadingOlder: boolean;
   historyLoadedByBufferId: Record<string, true>;
   historyHasOlderByBufferId: Record<string, boolean>;
   networkManager: NetworkManagerState;
@@ -120,7 +118,5 @@ export type Action =
   | { type: 'close-network-editor' }
   | { type: 'set-network-editor-tab'; tab: EditorTab }
   | { type: 'update-network-editor-form'; form: Partial<NetworkForm> }
-  | { type: 'set-history-loading'; value: boolean }
-  | { type: 'set-history-loading-older'; value: boolean }
   | { type: 'history-buffer-loaded'; bufferId: string; hasOlder: boolean }
   | { type: 'remove-network'; networkId: string };

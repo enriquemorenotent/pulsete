@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { GroupedVirtuosoHandle } from 'react-virtuoso';
+import type { GroupedVirtuosoHandle, ListItem } from 'react-virtuoso';
 
 const firstItemIndexBase = 1_000_000;
+const topAutoLoadThreshold = 240;
 const unreadViewportOffsetRatio = 0.25;
 
 type ScrollBehavior = 'auto' | false;
 export type TranscriptInitialScrollTarget = 'latest' | 'first-unread' | 'wait';
 
-type UseChatTranscriptViewportParams = {
+export type TranscriptScrollSnapshot =
+  | { kind: 'latest' }
+  | { kind: 'anchor'; rowKey: string };
+
+type UseTranscriptViewportParams = {
   bufferId: string | null;
   followOutputRequestId: number;
-  initialScrollTarget: TranscriptInitialScrollTarget;
   initialHistoryPending: boolean;
+  initialScrollTarget: TranscriptInitialScrollTarget;
   loadingOlderHistory: boolean;
   onLoadOlderHistory?: () => Promise<number>;
   rowKeys: readonly string[];
@@ -19,17 +24,44 @@ type UseChatTranscriptViewportParams = {
   unreadRowIndex: number | null;
 };
 
-export function useChatTranscriptViewport(params: UseChatTranscriptViewportParams) {
+export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const virtuosoRef = useRef<GroupedVirtuosoHandle | null>(null);
   const scrollerRef = useRef<HTMLElement | null>(null);
+  const currentBufferIdRef = useRef<string | null>(null);
+  const firstItemIndexRef = useRef(firstItemIndexBase);
+  const isPinnedToLatestRef = useRef(true);
   const loadingOlderRef = useRef(false);
   const pendingSendToLatestRef = useRef(false);
   const pendingOlderHistoryAnchorKeyRef = useRef<string | null>(null);
-  const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
   const positionedBufferIdRef = useRef<string | null>(null);
-  const [firstItemIndex, setFirstItemIndex] = useState(firstItemIndexBase);
+  const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
+  const scrollSnapshotsRef = useRef(new Map<string, TranscriptScrollSnapshot>());
+  const visibleAnchorRowKeyRef = useRef<string | null>(null);
+  const [firstItemIndex, setFirstItemIndexValue] = useState(firstItemIndexBase);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [isPinnedToLatest, setIsPinnedToLatest] = useState(true);
+
+  const setFirstItemIndex = useCallback((value: number | ((current: number) => number)) => {
+    setFirstItemIndexValue((current) => {
+      const next = typeof value === 'function' ? value(current) : value;
+      firstItemIndexRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const saveBufferScrollSnapshot = useCallback((bufferId: string | null) => {
+    if (!bufferId || positionedBufferIdRef.current !== bufferId) {
+      return;
+    }
+    if (isPinnedToLatestRef.current) {
+      scrollSnapshotsRef.current.set(bufferId, { kind: 'latest' });
+      return;
+    }
+    const rowKey = visibleAnchorRowKeyRef.current;
+    if (rowKey) {
+      scrollSnapshotsRef.current.set(bufferId, { kind: 'anchor', rowKey });
+    }
+  }, []);
 
   useEffect(() => {
     if (params.followOutputRequestId === previousFollowOutputRequestIdRef.current) {
@@ -39,15 +71,28 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
     pendingSendToLatestRef.current = true;
   }, [params.followOutputRequestId]);
 
-  useEffect(() => {
-    positionedBufferIdRef.current = null;
+  useLayoutEffect(() => {
+    if (currentBufferIdRef.current === params.bufferId) {
+      return;
+    }
+    saveBufferScrollSnapshot(currentBufferIdRef.current);
+    currentBufferIdRef.current = params.bufferId;
+    firstItemIndexRef.current = firstItemIndexBase;
+    isPinnedToLatestRef.current = true;
     loadingOlderRef.current = false;
     pendingOlderHistoryAnchorKeyRef.current = null;
     pendingSendToLatestRef.current = false;
-    setIsPinnedToLatest(true);
+    positionedBufferIdRef.current = null;
+    visibleAnchorRowKeyRef.current = null;
     setFirstItemIndex(firstItemIndexBase);
+    setIsPinnedToLatest(true);
     setShowJumpToLatest(false);
-  }, [params.bufferId]);
+  }, [params.bufferId, saveBufferScrollSnapshot, setFirstItemIndex]);
+
+  useEffect(
+    () => () => saveBufferScrollSnapshot(currentBufferIdRef.current),
+    [saveBufferScrollSnapshot],
+  );
 
   useLayoutEffect(() => {
     if (
@@ -63,19 +108,26 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
       return;
     }
 
+    const restored = resolveRestoredTranscriptScrollIndex({
+      firstItemIndex: firstItemIndexRef.current,
+      rowKeys: params.rowKeys,
+      snapshot: scrollSnapshotsRef.current.get(params.bufferId) ?? null,
+    });
+    if (restored !== null) {
+      virtuosoRef.current?.scrollToIndex(restored);
+      positionedBufferIdRef.current = params.bufferId;
+      return;
+    }
+
     if (params.initialScrollTarget === 'first-unread' && params.unreadRowIndex !== null) {
       virtuosoRef.current?.scrollToIndex(
         resolveFirstUnreadScrollLocation(
-          params.unreadRowIndex,
+          firstItemIndexRef.current + params.unreadRowIndex,
           scrollerRef.current?.clientHeight ?? 0,
         ),
       );
     } else {
-      virtuosoRef.current?.scrollToIndex({
-        align: 'end',
-        behavior: 'auto',
-        index: 'LAST',
-      });
+      scrollToLatest(virtuosoRef.current);
     }
 
     positionedBufferIdRef.current = params.bufferId;
@@ -83,6 +135,7 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
     params.bufferId,
     params.initialHistoryPending,
     params.initialScrollTarget,
+    params.rowKeys,
     params.totalItemCount,
     params.unreadRowIndex,
   ]);
@@ -108,15 +161,16 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
     if (!params.loadingOlderHistory) {
       pendingOlderHistoryAnchorKeyRef.current = null;
     }
-  }, [params.loadingOlderHistory, params.rowKeys]);
+  }, [params.loadingOlderHistory, params.rowKeys, setFirstItemIndex]);
 
   const handleLoadOlderHistory = useCallback(async () => {
     if (
       !params.onLoadOlderHistory
       || loadingOlderRef.current
       || params.loadingOlderHistory
+      || pendingOlderHistoryAnchorKeyRef.current
     ) {
-      return;
+      return 0;
     }
 
     loadingOlderRef.current = true;
@@ -135,6 +189,33 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
     }
   }, [params.loadingOlderHistory, params.onLoadOlderHistory, params.rowKeys]);
 
+  const handleAtTopStateChange = useCallback(
+    (atTop: boolean) => {
+      if (
+        atTop
+        && params.bufferId
+        && positionedBufferIdRef.current === params.bufferId
+        && !params.initialHistoryPending
+      ) {
+        void handleLoadOlderHistory();
+      }
+    },
+    [handleLoadOlderHistory, params.bufferId, params.initialHistoryPending],
+  );
+
+  const handleStartReached = useCallback(
+    () => {
+      if (
+        params.bufferId
+        && positionedBufferIdRef.current === params.bufferId
+        && !params.initialHistoryPending
+      ) {
+        void handleLoadOlderHistory();
+      }
+    },
+    [handleLoadOlderHistory, params.bufferId, params.initialHistoryPending],
+  );
+
   const followOutput = useCallback(
     (atLatest: boolean): ScrollBehavior => {
       const behavior = resolveLatestFollowBehavior({
@@ -151,6 +232,7 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
 
   const handleAtBottomStateChange = useCallback(
     (nextAtBottom: boolean) => {
+      isPinnedToLatestRef.current = nextAtBottom;
       setIsPinnedToLatest(nextAtBottom);
       setShowJumpToLatest(params.totalItemCount > 0 && !nextAtBottom);
     },
@@ -163,13 +245,22 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
     }
   }, [isPinnedToLatest]);
 
+  const handleItemsRendered = useCallback(
+    (items: ListItem<unknown>[]) => {
+      const firstRecordItem = items.find((item) => item.type !== 'group') ?? null;
+      visibleAnchorRowKeyRef.current = firstRecordItem
+        ? resolveRowKeyFromItemIndex(firstRecordItem.index, params.rowKeys, firstItemIndexRef.current)
+        : null;
+    },
+    [params.rowKeys],
+  );
+
   const handleJumpToLatest = useCallback(() => {
     pendingSendToLatestRef.current = false;
-    virtuosoRef.current?.scrollToIndex({
-      align: 'end',
-      behavior: 'auto',
-      index: 'LAST',
-    });
+    isPinnedToLatestRef.current = true;
+    setIsPinnedToLatest(true);
+    setShowJumpToLatest(false);
+    scrollToLatest(virtuosoRef.current);
   }, []);
 
   const setScrollerNode = useCallback((node: HTMLElement | null | Window) => {
@@ -177,12 +268,16 @@ export function useChatTranscriptViewport(params: UseChatTranscriptViewportParam
   }, []);
 
   return {
+    atTopThreshold: topAutoLoadThreshold,
     firstItemIndex,
     followOutput,
     handleAtBottomStateChange,
+    handleAtTopStateChange,
     handleInlinePreviewLoad,
+    handleItemsRendered,
     handleJumpToLatest,
     handleLoadOlderHistory,
+    handleStartReached,
     scrollerRef: setScrollerNode,
     showJumpToLatest,
     virtuosoRef,
@@ -208,6 +303,23 @@ export const resolvePrependedRowCountFromAnchor = (
   return anchorIndex >= 0 ? anchorIndex : null;
 };
 
+export const resolveRestoredTranscriptScrollIndex = (input: {
+  firstItemIndex: number;
+  rowKeys: readonly string[];
+  snapshot: TranscriptScrollSnapshot | null;
+}) => {
+  if (!input.snapshot) {
+    return null;
+  }
+  if (input.snapshot.kind === 'latest') {
+    return { align: 'end' as const, behavior: 'auto' as const, index: 'LAST' as const };
+  }
+  const rowIndex = input.rowKeys.indexOf(input.snapshot.rowKey);
+  return rowIndex >= 0
+    ? { align: 'start' as const, behavior: 'auto' as const, index: input.firstItemIndex + rowIndex }
+    : null;
+};
+
 export const resolveFirstUnreadScrollLocation = (
   unreadRowIndex: number,
   scrollerHeight: number,
@@ -217,3 +329,17 @@ export const resolveFirstUnreadScrollLocation = (
   index: unreadRowIndex,
   offset: -Math.round(scrollerHeight * unreadViewportOffsetRatio),
 });
+
+const resolveRowKeyFromItemIndex = (
+  itemIndex: number,
+  rowKeys: readonly string[],
+  firstItemIndex: number,
+) => rowKeys[itemIndex - firstItemIndex] ?? null;
+
+const scrollToLatest = (virtuoso: GroupedVirtuosoHandle | null) => {
+  virtuoso?.scrollToIndex({
+    align: 'end',
+    behavior: 'auto',
+    index: 'LAST',
+  });
+};

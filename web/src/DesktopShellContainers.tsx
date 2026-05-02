@@ -12,7 +12,6 @@ import {
   selectGatewayStatus,
   selectHistoryHasOlderByBufferId,
   selectHistoryLoadedByBufferId,
-  selectHistoryLoadingOlder,
   selectMutedNicks,
   selectNetworks,
   selectNickEmojis,
@@ -31,7 +30,8 @@ import {
   useDesktopNicklistModel,
   useDesktopSidebarModel,
 } from './useDesktopShellModel.js';
-import { useSelectedBufferEffects } from './useSelectedBufferEffects.js';
+import { useSelectedBufferHistory } from './transcript/history.js';
+import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
@@ -88,7 +88,6 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   const gatewayStatus = useAppSelector(selectGatewayStatus);
   const historyHasOlderByBufferId = useAppSelector(selectHistoryHasOlderByBufferId);
   const historyLoadedByBufferId = useAppSelector(selectHistoryLoadedByBufferId);
-  const historyLoadingOlder = useAppSelector(selectHistoryLoadingOlder);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const networks = useAppSelector(selectNetworks);
   const selectedMessages = useAppSelector(selectSelectedMessages);
@@ -119,17 +118,19 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     };
   }, []);
 
-  const selectedBufferHistory = useSelectedBufferEffects({
+  useSelectedBufferReadReceipt({
     applyServerMessages,
-    dispatch,
     documentVisible,
+    selectedBuffer: workspace.selectedBuffer,
+    windowFocused,
+  });
+  const selectedBufferHistory = useSelectedBufferHistory({
+    dispatch,
     gatewayStatus,
     historyHasOlderByBufferId,
     historyLoadedByBufferId,
-    historyLoadingOlder,
     selectedBuffer: workspace.selectedBuffer,
     selectedMessages,
-    windowFocused,
   });
   const model = useDesktopChatModel({
     actions,

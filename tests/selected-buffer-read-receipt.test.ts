@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, ServerMessage } from '../shared/protocol.js';
-import { markSelectedBufferRead } from '../web/src/selected-buffer-read-receipt.js';
+import { markSelectedBufferRead } from '../web/src/transcript/read-receipt.js';
 
 const buffer: BufferState = {
   id: 'buffer-1',

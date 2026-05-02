@@ -5,7 +5,7 @@ import {
   getServerMessageSourceLabel,
   isCompactMessage,
 } from './chat-pane-message-utils.js';
-import type { ChatTranscriptMessageRow as TranscriptMessageRow } from './chat-transcript-model.js';
+import type { ChatTranscriptMessageRow as TranscriptMessageRow } from './transcript/model.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import {
   resolveMessageParticipantPresentation,

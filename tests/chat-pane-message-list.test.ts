@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildChatTranscriptModel,
-} from '../web/src/chat-transcript-model.js';
+} from '../web/src/transcript/model.js';
 import {
   resolveTranscriptVirtuosoItemKey,
   resolveTranscriptVirtuosoRow,
@@ -12,7 +12,8 @@ import {
   resolveLatestFollowBehavior,
   resolveNextFirstItemIndex,
   resolvePrependedRowCountFromAnchor,
-} from '../web/src/useChatTranscriptViewport.js';
+  resolveRestoredTranscriptScrollIndex,
+} from '../web/src/transcript/viewport.js';
 
 test('transcript model inserts an unread divider row before the first unread message', () => {
   const model = buildChatTranscriptModel({
@@ -167,5 +168,28 @@ test('first unread scroll location targets the upper quarter of the viewport', (
       index: 12,
       offset: -50,
     },
+  );
+});
+
+test('saved transcript scroll anchors restore by row key when still visible', () => {
+  assert.deepEqual(
+    resolveRestoredTranscriptScrollIndex({
+      firstItemIndex: 1_000_000,
+      rowKeys: ['message:message-1', 'message:message-2'],
+      snapshot: { kind: 'anchor', rowKey: 'message:message-2' },
+    }),
+    {
+      align: 'start',
+      behavior: 'auto',
+      index: 1_000_001,
+    },
+  );
+  assert.equal(
+    resolveRestoredTranscriptScrollIndex({
+      firstItemIndex: 1_000_000,
+      rowKeys: ['message:message-1'],
+      snapshot: { kind: 'anchor', rowKey: 'message:missing' },
+    }),
+    null,
   );
 });

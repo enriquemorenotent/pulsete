@@ -1,7 +1,7 @@
 import { Hash, MessageSquareMore, PowerOff, RefreshCcw, Server, X } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol.js';
 import { cn } from '@/lib/utils.js';
-import { resolveBufferActivityState } from './buffer-activity.js';
+import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
 import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingChannelRow.js';
 import { connectionSidebarLabelClass } from './connection-sidebar-label-class.js';

@@ -1,7 +1,7 @@
 import type { ChannelUserMode } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { DayDivider, TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
-import type { ChatTranscriptModel } from './chat-transcript-model.js';
+import type { ChatTranscriptModel } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
