@@ -1,6 +1,7 @@
 import { emitChannel, emitMessage, emitPeerNick, emitPeerQuit, emitStatus } from './irc-emit.js';
 import {
   renameChannelUser,
+  updateChannelUserDetails,
   updateChannelUserAway,
   upsertChannelUser,
 } from '../shared/channel-users.js';
@@ -218,13 +219,20 @@ export const handleNamesNumeric = (connection: IrcChannelEventContext, params: s
 
 export const handleWhoNumeric = (connection: IrcChannelEventContext, params: string[]) => {
   const channel = connection.resolveTrackedChannel(params[1] ?? '');
+  const username = params[2]?.trim() || null;
+  const host = params[3]?.trim() || null;
   const nick = params[5] ?? '';
   const flags = params[6] ?? '';
   if (!channel || !nick || !flags) {
     return;
   }
   const currentUsers = connection.getTrackedChannelUsers(channel);
-  const users = updateChannelUserAway(currentUsers, nick, flags.includes('G'));
+  const awayUsers = updateChannelUserAway(currentUsers, nick, flags.includes('G'));
+  const users = updateChannelUserDetails(awayUsers, nick, {
+    username,
+    host,
+    realname: parseWhoRealname(params[7] ?? null),
+  });
   if (users === currentUsers) {
     return;
   }
@@ -236,3 +244,6 @@ const normalizeAccountName = (value: string | null) => {
   const account = value?.trim();
   return account && account !== '*' ? account : null;
 };
+
+const parseWhoRealname = (value: string | null) =>
+  value?.replace(/^\d+\s+/, '').trim() || null;

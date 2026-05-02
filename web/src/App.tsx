@@ -11,6 +11,7 @@ import { createComposerStore } from './composer-store.js';
 import { useContactNotifications } from './contact-notifications/controller.js';
 import { DesktopShell } from './DesktopShell.js';
 import { ToastContainer } from './ToastContainer.js';
+import { useUserAvatarSettings } from './user-avatars/settings.js';
 import { createLiveAppActions } from './useAppActions.js';
 import { useAppUiState } from './useAppUiState.js';
 import { createServerMessageBridge } from './server-message-bridge.js';
@@ -71,7 +72,10 @@ function App() {
   );
 }
 
-type AppBodyProps = Omit<Parameters<typeof DesktopShell>[0], 'contactNotifications'>;
+type AppBodyProps = Omit<
+  Parameters<typeof DesktopShell>[0],
+  'contactNotifications' | 'userAvatarSettings'
+>;
 
 function AppBody(props: AppBodyProps) {
   const phase = useAppSelector(selectPhase);
@@ -84,6 +88,7 @@ function AppBody(props: AppBodyProps) {
     onSelectBuffer: props.actions.selectTabBuffer,
     selectedBufferId,
   });
+  const userAvatarSettings = useUserAvatarSettings();
 
   if (phase === 'loading') {
     return (
@@ -95,7 +100,11 @@ function AppBody(props: AppBodyProps) {
 
   return (
     <>
-      <DesktopShell {...props} contactNotifications={contactNotifications} />
+      <DesktopShell
+        {...props}
+        contactNotifications={contactNotifications}
+        userAvatarSettings={userAvatarSettings}
+      />
       <ToastContainer />
     </>
   );

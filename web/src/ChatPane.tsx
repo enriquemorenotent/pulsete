@@ -1,6 +1,7 @@
 import { memo, useCallback, useReducer } from 'react';
 import type {
   BufferState,
+  ChannelUserState,
   ChatMessage,
   MutedNickState,
   NetworkProfile,
@@ -22,6 +23,8 @@ export type ChatPaneProps = {
   workspace: WorkspaceView;
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
+  externalAvatarsEnabled: boolean;
+  selectedQueryAvatarUser?: Pick<ChannelUserState, 'host' | 'nick' | 'username'> | null;
   selectedMessages: ChatMessage[];
   draft: string;
   focusContextKey?: string | null;
@@ -88,6 +91,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         workspace={props.workspace}
         nickEmojis={props.nickEmojis}
         contactRuleHandlers={props.contactRuleHandlers}
+        externalAvatarsEnabled={props.externalAvatarsEnabled}
+        selectedQueryAvatarUser={props.selectedQueryAvatarUser}
         selectedQueryContactRule={props.selectedQueryContactRule}
         onOpenMentionedChannel={props.onOpenMentionedChannel}
         onWhoisSelectedQuery={props.onWhoisSelectedQuery}

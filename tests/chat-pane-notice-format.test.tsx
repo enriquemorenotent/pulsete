@@ -95,6 +95,7 @@ test('chat transcripts render sender notices inline without a notice badge', () 
     <ChatPane
       workspace={makeWorkspace()}
       nickEmojis={[]}
+      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={[makeMessage()]}
       draft=""

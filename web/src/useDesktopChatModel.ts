@@ -13,6 +13,7 @@ import type { ContactNotificationsController } from './contact-notifications/con
 import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 import type { ChatActionSet } from './useAppActions.js';
 import type { SelectedBufferHistoryControls } from './transcript/history.js';
 import type { WorkspaceView } from './workspace-types.js';
@@ -22,6 +23,8 @@ export type DesktopChatModelParams = {
   composer: ComposerStoreApi;
   contactNotifications: Pick<ContactNotificationsController, 'settings'>;
   contactRuleHandlers: ContactRuleHandlers;
+  channels: State['domain']['channels'];
+  externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
   mutedNicks: State['domain']['mutedNicks'];
   nickEmojis: State['domain']['nickEmojis'];
@@ -38,6 +41,8 @@ export function useDesktopChatModel({
   composer,
   contactNotifications,
   contactRuleHandlers,
+  channels,
+  externalAvatarsEnabled,
   friends,
   mutedNicks,
   nickEmojis,
@@ -65,6 +70,12 @@ export function useDesktopChatModel({
         contactNotifications: contactNotifications.settings,
       })
     : null;
+  const selectedQueryAvatarUser = useMemo(() => {
+    const selectedBuffer = workspace.selectedBuffer;
+    return selectedBuffer?.kind === 'query'
+      ? resolveUserAvatarCandidate(channels, selectedBuffer.networkId, selectedBuffer.target)
+      : null;
+  }, [channels, workspace.selectedBuffer]);
   const participantQueryNetwork = workspace.selectedBuffer?.kind === 'channel'
     ? workspace.selectedNetwork
     : null;
@@ -74,6 +85,8 @@ export function useDesktopChatModel({
     () => ({
       workspace,
       nickEmojis,
+      externalAvatarsEnabled,
+      selectedQueryAvatarUser,
       selectedMessages,
       mutedNicks,
       contactRuleHandlers,
@@ -134,11 +147,13 @@ export function useDesktopChatModel({
       composerContextKey,
       contactNotifications.settings,
       draft,
+      externalAvatarsEnabled,
       friends,
       mutedNicks,
       nickEmojis,
       participantQueryNetwork,
       selectedQueryContactRule,
+      selectedQueryAvatarUser,
       selectedBufferHistory,
       selectedBufferId,
       selectedMessages,

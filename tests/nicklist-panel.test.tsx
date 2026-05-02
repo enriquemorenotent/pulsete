@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { ChannelState, ChannelUserState, NetworkProfile } from '../shared/protocol.js';
 import { NicklistPanel } from '../web/src/NicklistPanel.js';
 import { buildNicklistGroups } from '../web/src/nicklist-groups.js';
 import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
@@ -10,10 +10,12 @@ const makeUser = (
   nick: string,
   mode: ChannelUserState['mode'] = 'normal',
   away = false,
+  details: Partial<Pick<ChannelUserState, 'host' | 'username'>> = {},
 ): ChannelUserState => ({
   nick,
   mode,
   away,
+  ...details,
 });
 
 const network: NetworkProfile = {
@@ -32,33 +34,49 @@ const network: NetworkProfile = {
   autoJoin: [],
 };
 
-test('nicklist groups users by privilege level', () => {
-  const channel: ChannelState = {
-    id: 'channel-1',
-    networkId: network.id,
-    name: '#help',
-    topic: '',
-    users: [
-      makeUser('zoe'),
-      makeUser('alice', 'op', true),
-      makeUser('bob', 'voice'),
-      makeUser('owner', 'owner'),
-    ],
-  };
+type NicklistRenderOptions = Partial<Pick<
+  Parameters<typeof NicklistPanel>[0],
+  'contactNotificationSettings'
+  | 'externalAvatarsEnabled'
+  | 'friends'
+  | 'mutedNicks'
+  | 'nickEmojis'
+>>;
 
-  const markup = renderToStaticMarkup(
-    <NicklistPanel
-      network={network}
-      channel={channel}
-      friends={[] satisfies FriendState[]}
-      nickEmojis={[]}
-      mutedNicks={[]}
-      contactNotificationSettings={{ contacts: [] }}
-      contactRuleHandlers={noopContactRuleHandlers}
-      onSaveNickEmoji={async () => true}
-      onSelectNick={() => undefined}
-    />
-  );
+const makeChannel = (users: ChannelUserState[]): ChannelState => ({
+  id: 'channel-1',
+  networkId: network.id,
+  name: '#help',
+  topic: '',
+  users,
+});
+
+const renderNicklist = (
+  channel: ChannelState,
+  options: NicklistRenderOptions = {},
+) => renderToStaticMarkup(
+  <NicklistPanel
+    network={network}
+    channel={channel}
+    friends={options.friends ?? []}
+    nickEmojis={options.nickEmojis ?? []}
+    mutedNicks={options.mutedNicks ?? []}
+    contactNotificationSettings={options.contactNotificationSettings ?? { contacts: [] }}
+    contactRuleHandlers={noopContactRuleHandlers}
+    externalAvatarsEnabled={options.externalAvatarsEnabled ?? false}
+    onSaveNickEmoji={async () => true}
+    onSelectNick={() => undefined}
+  />
+);
+
+test('nicklist groups users by privilege level', () => {
+  const channel = makeChannel([
+    makeUser('zoe'),
+    makeUser('alice', 'op', true),
+    makeUser('bob', 'voice'),
+    makeUser('owner', 'owner'),
+  ]);
+  const markup = renderNicklist(channel);
 
   const ownersIndex = markup.indexOf('Owners');
   const operatorsIndex = markup.indexOf('Operators');
@@ -85,27 +103,12 @@ test('nicklist groups users by privilege level', () => {
 });
 
 test('nicklist renders one-click contact controls beside away users', () => {
-  const channel: ChannelState = {
-    id: 'channel-1',
-    networkId: network.id,
-    name: '#help',
-    topic: '',
-    users: [makeUser('alice', 'normal', true)],
-  };
-
-  const markup = renderToStaticMarkup(
-    <NicklistPanel
-      network={network}
-      channel={channel}
-      friends={[{ id: 'friend-1', nick: 'alice' }] satisfies FriendState[]}
-      nickEmojis={[{ id: 'nick-emoji-1', networkId: network.id, nick: 'alice', emoji: '🌙' }]}
-      mutedNicks={[]}
-      contactNotificationSettings={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
-      contactRuleHandlers={noopContactRuleHandlers}
-      onSaveNickEmoji={async () => true}
-      onSelectNick={() => undefined}
-    />
-  );
+  const channel = makeChannel([makeUser('alice', 'normal', true)]);
+  const markup = renderNicklist(channel, {
+    friends: [{ id: 'friend-1', nick: 'alice' }],
+    nickEmojis: [{ id: 'nick-emoji-1', networkId: network.id, nick: 'alice', emoji: '🌙' }],
+    contactNotificationSettings: { contacts: [{ networkId: network.id, nick: 'alice' }] },
+  });
 
   assert.match(markup, /aria-label="Away"/);
   assert.match(
@@ -120,32 +123,37 @@ test('nicklist renders one-click contact controls beside away users', () => {
 });
 
 test('nicklist shows the unmute control for muted users', () => {
-  const channel: ChannelState = {
-    id: 'channel-1',
-    networkId: network.id,
-    name: '#help',
-    topic: '',
-    users: [makeUser('alice')],
-  };
-
-  const markup = renderToStaticMarkup(
-    <NicklistPanel
-      network={network}
-      channel={channel}
-      friends={[] satisfies FriendState[]}
-      nickEmojis={[]}
-      mutedNicks={[{ id: 'mute-1', networkId: network.id, nick: 'Alice' }]}
-      contactNotificationSettings={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
-      contactRuleHandlers={noopContactRuleHandlers}
-      onSaveNickEmoji={async () => true}
-      onSelectNick={() => undefined}
-    />
-  );
+  const channel = makeChannel([makeUser('alice')]);
+  const markup = renderNicklist(channel, {
+    mutedNicks: [{ id: 'mute-1', networkId: network.id, nick: 'Alice' }],
+    contactNotificationSettings: { contacts: [{ networkId: network.id, nick: 'alice' }] },
+  });
 
   assert.match(markup, /aria-label="Add alice to watchlist"/);
   assert.match(markup, /aria-label="Enable notifications for alice"/);
   assert.match(markup, /aria-label="Unmute alice"/);
   assert.doesNotMatch(markup, /aria-label="Contact settings for alice"/);
+});
+
+test('nicklist renders IRCCloud avatars only when external avatars are enabled', () => {
+  const channel = makeChannel([
+    makeUser('alice', 'normal', false, { username: 'uid7' }),
+  ]);
+  const disabledMarkup = renderNicklist(channel);
+  const enabledMarkup = renderNicklist(channel, { externalAvatarsEnabled: true });
+
+  assert.doesNotMatch(disabledMarkup, /avatar-redirect/);
+  assert.match(enabledMarkup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+});
+
+test('nicklist reserves avatar slots for users without IRCCloud avatar identity', () => {
+  const channel = makeChannel([makeUser('Brute')]);
+  const disabledMarkup = renderNicklist(channel);
+  const enabledMarkup = renderNicklist(channel, { externalAvatarsEnabled: true });
+
+  assert.doesNotMatch(disabledMarkup, /font-medium leading-none">B</);
+  assert.match(enabledMarkup, /font-medium leading-none">B</);
+  assert.doesNotMatch(enabledMarkup, /avatar-redirect/);
 });
 
 test('nicklist filtering promotes exact matches and friends before broader matches', () => {
@@ -156,7 +164,7 @@ test('nicklist filtering promotes exact matches and friends before broader match
       makeUser('annette'),
       makeUser('joann'),
     ],
-    [{ id: 'friend-1', nick: 'anna' }] satisfies FriendState[],
+    [{ id: 'friend-1', nick: 'anna' }],
     'ANN',
   );
 
@@ -171,7 +179,7 @@ test('nicklist filtering keeps privilege groups intact while narrowing results',
       makeUser('anna'),
       makeUser('zoe', 'voice'),
     ],
-    [] satisfies FriendState[],
+    [],
     'ann',
   );
 

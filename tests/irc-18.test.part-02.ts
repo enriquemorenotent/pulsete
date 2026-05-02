@@ -46,10 +46,28 @@ test('irc connection refreshes away status from WHO after joining a tracked chan
   assert.deepEqual(writes, ['JOIN #help\r\n', 'WHO #help\r\n']);
   assert.deepEqual(
     (events.filter((event) => event.type === 'channel').at(-1)?.users as Array<Record<string, unknown>> | undefined)
-      ?.map((user) => ({ nick: user.nick, away: user.away })),
+      ?.map((user) => ({
+        nick: user.nick,
+        away: user.away,
+        username: user.username,
+        host: user.host,
+        realname: user.realname,
+      })),
     [
-      { nick: 'alice', away: true },
-      { nick: 'tester', away: false },
+      {
+        nick: 'alice',
+        away: true,
+        username: 'user',
+        host: 'host',
+        realname: 'Alice Example',
+      },
+      {
+        nick: 'tester',
+        away: false,
+        username: 'user',
+        host: 'example',
+        realname: null,
+      },
     ],
   );
 });
@@ -137,4 +155,3 @@ test('irc connection updates channel roster details from modern server events wi
     },
   ]);
 });
-

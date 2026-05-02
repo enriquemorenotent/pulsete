@@ -33,6 +33,7 @@ type DesktopNicklistModelParams = {
   actions: NicklistActionSet;
   contactNotifications: Pick<ContactNotificationsController, 'settings'>;
   contactRuleHandlers: ContactRuleHandlers;
+  externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
   mutedNicks: State['domain']['mutedNicks'];
   nickEmojis: State['domain']['nickEmojis'];
@@ -111,6 +112,7 @@ export function useDesktopNicklistModel({
   actions,
   contactNotifications,
   contactRuleHandlers,
+  externalAvatarsEnabled,
   friends,
   mutedNicks,
   nickEmojis,
@@ -119,6 +121,7 @@ export function useDesktopNicklistModel({
     () => ({
       contactNotificationSettings: contactNotifications.settings,
       contactRuleHandlers,
+      externalAvatarsEnabled,
       friends,
       mutedNicks,
       nickEmojis,
@@ -130,6 +133,7 @@ export function useDesktopNicklistModel({
       actions.selectPrivateBuffer,
       contactNotifications.settings,
       contactRuleHandlers,
+      externalAvatarsEnabled,
       friends,
       mutedNicks,
       nickEmojis,

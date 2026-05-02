@@ -28,6 +28,7 @@ export type DesktopShellNicklistModel = {
   nickEmojis: NickEmojiState[];
   contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
   contactRuleHandlers: ContactRuleHandlers;
+  externalAvatarsEnabled: boolean;
   onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };

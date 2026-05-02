@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
+import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 
@@ -9,6 +10,7 @@ type PreferencesControllerParams = {
   contactNotifications: ContactNotificationsController;
   mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
+  userAvatarSettings: UserAvatarSettingsController;
   ui: Pick<AppUiState, 'closePreferences' | 'openPreferences' | 'preferencesOpen'>;
 };
 
@@ -17,11 +19,13 @@ export function usePreferencesController({
   contactNotifications,
   mutedNicks,
   networks,
+  userAvatarSettings,
   ui,
 }: PreferencesControllerParams): DesktopShellModel['preferences'] {
   return useMemo(() => ({
     open: ui.preferencesOpen,
     contactNotifications: contactNotifications.settings,
+    userAvatarSettings: userAvatarSettings.settings,
     mutedNicks,
     networks,
     onClose: ui.closePreferences,
@@ -38,6 +42,7 @@ export function usePreferencesController({
     onPreviewContactNotificationSound: contactNotifications.preview,
     onRemoveContactNotificationContact: contactNotifications.removeContact,
     onRemoveMutedNick: actions.removeMutedNick,
+    onSetExternalAvatarsEnabled: userAvatarSettings.setExternalAvatarsEnabled,
   }), [
     contactNotifications.removeContact,
     contactNotifications.setEnabled,
@@ -51,6 +56,8 @@ export function usePreferencesController({
     mutedNicks,
     networks,
     actions.removeMutedNick,
+    userAvatarSettings.settings,
+    userAvatarSettings.setExternalAvatarsEnabled,
     ui.closePreferences,
     ui.preferencesOpen,
   ]);

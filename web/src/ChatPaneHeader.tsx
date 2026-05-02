@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
-import type { BufferState, NickEmojiState } from '../../shared/protocol.js';
+import type { BufferState, ChannelUserState, NickEmojiState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
@@ -10,12 +10,15 @@ import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import { ContactRuleControls } from './contact-notifications/ContactRuleControls.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
+import { UserAvatar } from './user-avatars/UserAvatar.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
   nickEmojis: NickEmojiState[];
   contactRuleHandlers: ContactRuleHandlers;
+  externalAvatarsEnabled: boolean;
+  selectedQueryAvatarUser?: Pick<ChannelUserState, 'host' | 'nick' | 'username'> | null;
   selectedQueryContactRule?: ContactRuleState | null;
   onOpenMentionedChannel: (channel: string) => void;
   onWhoisSelectedQuery?: () => void;
@@ -84,6 +87,12 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     <PaneHeader
       title={props.workspace.headerTitle}
       emoji={selectedNickEmoji?.emoji ?? null}
+      externalAvatarsEnabled={props.externalAvatarsEnabled}
+      avatarUser={
+        selectedBuffer?.kind === 'query'
+          ? props.selectedQueryAvatarUser ?? null
+          : null
+      }
       subtitle={subtitle}
       topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
       actions={(
@@ -144,7 +153,9 @@ function PaneHeaderActions(props: {
 
 function PaneHeader(props: {
   title: string;
+  avatarUser?: Pick<ChannelUserState, 'host' | 'nick' | 'username'> | null;
   emoji?: string | null;
+  externalAvatarsEnabled?: boolean;
   subtitle: string;
   actions: ReactNode;
   topicBar?: ReactNode;
@@ -160,6 +171,13 @@ function PaneHeader(props: {
                 props.subtitle && 'mb-1',
               )}
             >
+              <UserAvatar
+                enabled={props.externalAvatarsEnabled === true}
+                placeholder="initial"
+                preview
+                size="md"
+                user={props.avatarUser}
+              />
               <span className="truncate">{props.title}</span>
               {props.emoji ? (
                 <span aria-hidden className="shrink-0 leading-none">

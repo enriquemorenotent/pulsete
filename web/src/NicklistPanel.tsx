@@ -15,6 +15,7 @@ import { buildNicklistGroups } from './nicklist-groups.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import { NickEmojiEditorControl } from './NickEmojiEditorControl.js';
 import { SidebarWidget } from './SidebarWidget.js';
+import { UserAvatar } from './user-avatars/UserAvatar.js';
 
 type NicklistPanelProps = {
   network: NetworkProfile | null;
@@ -24,6 +25,7 @@ type NicklistPanelProps = {
   nickEmojis: NickEmojiState[];
   contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
   contactRuleHandlers: ContactRuleHandlers;
+  externalAvatarsEnabled: boolean;
   onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };
@@ -93,6 +95,11 @@ export function NicklistPanel(props: NicklistPanelProps) {
                               className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
                               onClick={() => props.network && props.onSelectNick(props.network, user.nick)}
                             >
+                              <UserAvatar
+                                enabled={props.externalAvatarsEnabled}
+                                placeholder="initial"
+                                user={user}
+                              />
                               <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
                               {userNickEmoji?.emoji ? (
                                 <span aria-hidden className="shrink-0 leading-none">

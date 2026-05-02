@@ -23,6 +23,8 @@ export const renderChatPane = (
     friends: FriendState[];
     nickEmojis: NickEmojiState[];
     mutedNicks: MutedNickState[];
+    externalAvatarsEnabled: boolean;
+    selectedQueryAvatarUser: ChannelUserState | null;
     topic: string;
   }> = {},
 ) =>
@@ -33,6 +35,8 @@ export const renderChatPane = (
         topic: overrides.topic,
       })}
       nickEmojis={overrides.nickEmojis ?? []}
+      externalAvatarsEnabled={overrides.externalAvatarsEnabled ?? false}
+      selectedQueryAvatarUser={overrides.selectedQueryAvatarUser}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
@@ -70,12 +74,16 @@ export const renderQueryPane = (
     selectedQueryMuted: boolean;
     mutedQueryNick: string;
     mutedNicks: MutedNickState[];
+    externalAvatarsEnabled: boolean;
+    selectedQueryAvatarUser: ChannelUserState | null;
   }> = {},
 ) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeQueryWorkspace()}
       nickEmojis={overrides.nickEmojis ?? []}
+      externalAvatarsEnabled={overrides.externalAvatarsEnabled ?? false}
+      selectedQueryAvatarUser={overrides.selectedQueryAvatarUser}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft=""
@@ -113,6 +121,7 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
     <ChatPane
       workspace={makeServerWorkspace()}
       nickEmojis={[]}
+      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={selectedMessages}
       draft=""

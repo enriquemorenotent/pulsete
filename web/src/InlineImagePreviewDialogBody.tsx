@@ -1,8 +1,8 @@
 import { DialogFooter } from './components/ui/dialog.js';
 import { buildImageAltText } from './formatted-message-inline-images.js';
 
-export function InlineImagePreviewDialogBody(props: { href: string }) {
-  const altText = buildImageAltText(props.href);
+export function InlineImagePreviewDialogBody(props: { altText?: string; href: string }) {
+  const altText = props.altText ?? buildImageAltText(props.href);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

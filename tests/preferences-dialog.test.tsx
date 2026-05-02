@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { NetworkProfile } from '../shared/protocol.js';
 import { PreferencesDialogBody } from '../web/src/PreferencesDialogBody.js';
 import type { ContactNotificationSettings } from '../web/src/contact-notifications/settings.js';
+import type { UserAvatarSettings } from '../web/src/user-avatars/settings.js';
 
 const networks: NetworkProfile[] = [{
   id: 'network-1',
@@ -28,10 +29,15 @@ const contactNotifications: ContactNotificationSettings = {
   contacts: [{ networkId: 'network-1', nick: 'Alice' }],
 };
 
+const userAvatarSettings: UserAvatarSettings = {
+  externalAvatarsEnabled: false,
+};
+
 test('preferences dialog renders notification controls and muted nick management', () => {
   const markup = renderToStaticMarkup(
     <PreferencesDialogBody
       contactNotifications={contactNotifications}
+      userAvatarSettings={userAvatarSettings}
       mutedNicks={[{ id: 'mute-1', networkId: 'network-1', nick: 'MissD' }]}
       networks={networks}
       onSetContactNotificationSoundEnabled={() => {}}
@@ -42,9 +48,13 @@ test('preferences dialog renders notification controls and muted nick management
       onPreviewContactNotificationSound={() => {}}
       onRemoveContactNotificationContact={() => {}}
       onRemoveMutedNick={async () => true}
+      onSetExternalAvatarsEnabled={() => {}}
     />
   );
 
+  assert.match(markup, /Avatars/);
+  assert.match(markup, /Show external avatars/);
+  assert.match(markup, /IRCCloud/);
   assert.match(markup, /Notifications/);
   assert.match(markup, /Private Message Notifications/);
   assert.match(markup, /Delivery Methods/);

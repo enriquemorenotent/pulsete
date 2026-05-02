@@ -18,6 +18,7 @@ import {
 } from './DesktopShellDialogContainers.js';
 import { DesktopShellLayout } from './DesktopShellLayout.js';
 import { useDesktopHeaderModel } from './useDesktopShellModel.js';
+import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 
@@ -26,6 +27,7 @@ type DesktopShellProps = {
   applyServerMessages: ApplyServerMessages;
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
+  userAvatarSettings: UserAvatarSettingsController;
   ui: AppUiState;
 };
 
@@ -79,6 +81,7 @@ export function DesktopShell(props: DesktopShellProps) {
           composer={props.composer}
           contactNotifications={props.contactNotifications}
           contactRuleHandlers={contactRuleHandlers}
+          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
         />
       }
       rightSidebar={
@@ -87,6 +90,7 @@ export function DesktopShell(props: DesktopShellProps) {
             actions={props.actions}
             contactNotifications={props.contactNotifications}
             contactRuleHandlers={contactRuleHandlers}
+            externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
           />
         ) : null
       }
@@ -97,6 +101,7 @@ export function DesktopShell(props: DesktopShellProps) {
         <PreferencesDialogContainer
           actions={props.actions}
           contactNotifications={props.contactNotifications}
+          userAvatarSettings={props.userAvatarSettings}
           ui={props.ui}
         />
       }

@@ -82,6 +82,7 @@ const nicklist: DesktopShellNicklistModel = {
   mutedNicks: [],
   contactNotificationSettings: { contacts: [] },
   contactRuleHandlers: noopContactRuleHandlers,
+  externalAvatarsEnabled: false,
   onSaveNickEmoji: async () => true,
   onSelectNick: () => undefined,
 };

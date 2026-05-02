@@ -125,6 +125,7 @@ export const selectBanner = (state: State) => state.transient.banner;
 export const selectGatewayStatus = (state: State) => state.domain.gatewayStatus;
 export const selectNetworks = (state: State) => state.domain.networks;
 export const selectBuffers = (state: State) => state.domain.buffers;
+export const selectChannels = (state: State) => state.domain.channels;
 export const selectFriends = (state: State) => state.domain.friends;
 export const selectMutedNicks = (state: State) => state.domain.mutedNicks;
 export const selectNickEmojis = (state: State) => state.domain.nickEmojis;

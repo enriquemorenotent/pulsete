@@ -5,6 +5,7 @@ import { CommandPaletteDialog } from './CommandPaletteDialog.js';
 import { openExistingNetworkEditor } from './network-editor-actions.js';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import {
+  selectChannels,
   selectChannelList,
   selectChannelListNetwork,
   selectFriendPresence,
@@ -48,11 +49,13 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
+  externalAvatarsEnabled: boolean;
 };
 
 type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
+  externalAvatarsEnabled: boolean;
 };
 
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
@@ -82,7 +85,9 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   composer,
   contactNotifications,
   contactRuleHandlers,
+  externalAvatarsEnabled,
 }: ChatContainerProps) {
+  const channels = useAppSelector(selectChannels);
   const channelList = useAppSelector(selectChannelList);
   const channelListNetwork = useAppSelector(selectChannelListNetwork);
   const friends = useAppSelector(selectFriends);
@@ -139,6 +144,8 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     composer,
     contactNotifications,
     contactRuleHandlers,
+    channels,
+    externalAvatarsEnabled,
     friends,
     mutedNicks,
     nickEmojis,
@@ -156,6 +163,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   actions,
   contactNotifications,
   contactRuleHandlers,
+  externalAvatarsEnabled,
 }: RightSidebarContainerProps) {
   const dispatch = useAppDispatch();
   const friends = useAppSelector(selectFriends);
@@ -167,6 +175,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     actions,
     contactNotifications,
     contactRuleHandlers,
+    externalAvatarsEnabled,
     friends,
     mutedNicks,
     nickEmojis,

@@ -159,6 +159,18 @@ test('inline image preview dialog exposes the full-size image and original link'
   assert.match(html, />Open original</);
 });
 
+test('inline image preview dialog can render an avatar-specific caption', () => {
+  const html = renderToStaticMarkup(
+    createElement(InlineImagePreviewDialogBody, {
+      altText: 'Avatar for MissD',
+      href: 'https://static.irccloud-cdn.com/avatar-redirect/7',
+    })
+  );
+
+  assert.match(html, /alt="Avatar for MissD"/);
+  assert.match(html, />Avatar for MissD</);
+});
+
 test('does not render inline previews for non-image links or raw mode', () => {
   const normalHtml = renderToStaticMarkup(
     createElement(FormattedMessageText, {

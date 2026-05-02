@@ -15,17 +15,20 @@ import { useNetworkManagerController } from './useNetworkManagerController.js';
 import { usePreferencesController } from './usePreferencesController.js';
 import type { AppActions } from './useAppActions.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
+import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppUiState } from './useAppUiState.js';
 
 type PreferencesDialogContainerProps = {
   actions: AppActions;
   contactNotifications: ContactNotificationsController;
+  userAvatarSettings: UserAvatarSettingsController;
   ui: AppUiState;
 };
 
 export const PreferencesDialogContainer = memo(function PreferencesDialogContainer({
   actions,
   contactNotifications,
+  userAvatarSettings,
   ui,
 }: PreferencesDialogContainerProps) {
   const mutedNicks = useAppSelector(selectMutedNicks);
@@ -35,6 +38,7 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
     contactNotifications,
     mutedNicks,
     networks,
+    userAvatarSettings,
     ui,
   });
   return <PreferencesDialog {...model} />;
