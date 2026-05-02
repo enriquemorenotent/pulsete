@@ -5,6 +5,7 @@ import type { BufferState, NetworkProfile } from '../shared/protocol.js';
 import { WorkspaceRightSidebar } from '../web/src/WorkspaceRightSidebar.js';
 import type { DesktopShellNicklistModel } from '../web/src/desktop-shell-model.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
+import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
 
 const network: NetworkProfile = {
   id: 'network-1',
@@ -79,14 +80,9 @@ const nicklist: DesktopShellNicklistModel = {
   friends: [],
   nickEmojis: [],
   mutedNicks: [],
-  backgroundDmAudio: { contacts: [] },
-  onAddFriend: async () => true,
-  onAddNotificationContact: () => undefined,
-  onAddMutedNick: async () => true,
-  onRemoveFriend: async () => true,
+  contactNotificationSettings: { contacts: [] },
+  contactRuleHandlers: noopContactRuleHandlers,
   onSaveNickEmoji: async () => true,
-  onRemoveNotificationContact: () => undefined,
-  onRemoveMutedNick: async () => true,
   onSelectNick: () => undefined,
 };
 

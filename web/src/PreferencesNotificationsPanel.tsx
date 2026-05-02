@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 import type {
-  BackgroundDmAudioContact,
-  BackgroundDmAudioSettings,
-} from './background-dm-audio.js';
+  ContactNotificationContact,
+  ContactNotificationSettings,
+} from './contact-notifications/settings.js';
 import { PreferencesNotificationAllowedContacts } from './PreferencesNotificationAllowedContacts.js';
 import { PreferencesNotificationMutedNicks } from './PreferencesNotificationMutedNicks.js';
 import { PreferencesNotificationSoundSection } from './PreferencesNotificationSoundSection.js';
@@ -13,17 +13,17 @@ import {
 } from './PreferencesNotificationSystemSection.js';
 
 type PreferencesNotificationsPanelProps = {
-  backgroundDmAudio: BackgroundDmAudioSettings;
-  backgroundDmAudioSystemPermission: NotificationPermissionState;
+  contactNotifications: ContactNotificationSettings;
+  contactNotificationSystemPermission: NotificationPermissionState;
   mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
-  onPreviewBackgroundDmAudioSound: (sound: BackgroundDmAudioSettings['sound']) => void;
-  onRemoveBackgroundDmAudioContact: (contact: BackgroundDmAudioContact) => void;
+  onPreviewContactNotificationSound: (sound: ContactNotificationSettings['sound']) => void;
+  onRemoveContactNotificationContact: (contact: ContactNotificationContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
-  onRequestBackgroundDmAudioSystemPermission: () => Promise<NotificationPermissionState>;
-  onSetBackgroundDmAudioEnabled: (enabled: boolean) => void;
-  onSetBackgroundDmAudioSound: (sound: BackgroundDmAudioSettings['sound']) => void;
-  onSetBackgroundDmAudioSystemEnabled: (enabled: boolean) => void;
+  onRequestContactNotificationSystemPermission: () => Promise<NotificationPermissionState>;
+  onSetContactNotificationSoundEnabled: (enabled: boolean) => void;
+  onSetContactNotificationSound: (sound: ContactNotificationSettings['sound']) => void;
+  onSetContactNotificationSystemEnabled: (enabled: boolean) => void;
 };
 
 export function PreferencesNotificationsPanel(props: PreferencesNotificationsPanelProps) {
@@ -32,9 +32,9 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
     [props.networks],
   );
   const sortedAudioContacts = useMemo(
-    () => [...props.backgroundDmAudio.contacts].sort((left, right) =>
+    () => [...props.contactNotifications.contacts].sort((left, right) =>
       compareNetworkNicks(left, right, networkNameById)),
-    [networkNameById, props.backgroundDmAudio.contacts],
+    [networkNameById, props.contactNotifications.contacts],
   );
   const sortedMutedNicks = useMemo(
     () => [...props.mutedNicks].sort((left, right) =>
@@ -63,22 +63,22 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
           </p>
         </div>
         <PreferencesNotificationSoundSection
-          enabled={props.backgroundDmAudio.enabled}
-          sound={props.backgroundDmAudio.sound}
-          onPreviewSound={props.onPreviewBackgroundDmAudioSound}
-          onSetEnabled={props.onSetBackgroundDmAudioEnabled}
-          onSetSound={props.onSetBackgroundDmAudioSound}
+          enabled={props.contactNotifications.enabled}
+          sound={props.contactNotifications.sound}
+          onPreviewSound={props.onPreviewContactNotificationSound}
+          onSetEnabled={props.onSetContactNotificationSoundEnabled}
+          onSetSound={props.onSetContactNotificationSound}
         />
         <PreferencesNotificationSystemSection
-          enabled={props.backgroundDmAudio.systemEnabled}
-          permission={props.backgroundDmAudioSystemPermission}
-          onRequestPermission={props.onRequestBackgroundDmAudioSystemPermission}
-          onSetEnabled={props.onSetBackgroundDmAudioSystemEnabled}
+          enabled={props.contactNotifications.systemEnabled}
+          permission={props.contactNotificationSystemPermission}
+          onRequestPermission={props.onRequestContactNotificationSystemPermission}
+          onSetEnabled={props.onSetContactNotificationSystemEnabled}
         />
         <PreferencesNotificationAllowedContacts
           contacts={sortedAudioContacts}
           networkNameById={networkNameById}
-          onRemoveContact={props.onRemoveBackgroundDmAudioContact}
+          onRemoveContact={props.onRemoveContactNotificationContact}
         />
         <PreferencesNotificationMutedNicks
           mutedNicks={sortedMutedNicks}
@@ -91,8 +91,8 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
 }
 
 const compareNetworkNicks = (
-  left: Pick<BackgroundDmAudioContact | MutedNickState, 'networkId' | 'nick'>,
-  right: Pick<BackgroundDmAudioContact | MutedNickState, 'networkId' | 'nick'>,
+  left: Pick<ContactNotificationContact | MutedNickState, 'networkId' | 'nick'>,
+  right: Pick<ContactNotificationContact | MutedNickState, 'networkId' | 'nick'>,
   networkNameById: Map<string, string>,
 ) => {
   const leftNetwork = networkNameById.get(left.networkId) ?? left.networkId;

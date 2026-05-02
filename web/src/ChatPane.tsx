@@ -2,7 +2,6 @@ import { memo, useCallback, useReducer } from 'react';
 import type {
   BufferState,
   ChatMessage,
-  FriendState,
   MutedNickState,
   NetworkProfile,
   NickEmojiState,
@@ -13,6 +12,7 @@ import { ChatPaneComposer } from './ChatPaneComposer.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
+import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
 import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
@@ -20,7 +20,6 @@ import type { WorkspaceView } from './workspace.js';
 
 export type ChatPaneProps = {
   workspace: WorkspaceView;
-  friends: FriendState[];
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
   selectedMessages: ChatMessage[];
@@ -34,14 +33,9 @@ export type ChatPaneProps = {
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
   onSend: () => Promise<boolean>;
-  selectedQueryMuted?: boolean;
+  contactRuleHandlers: ContactRuleHandlers;
+  selectedQueryContactRule?: ContactRuleState | null;
   mutedQueryNick?: string | null;
-  queryNotificationsEnabled?: boolean;
-  onAddFriend: (nick: string) => Promise<boolean>;
-  onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onMuteSelectedQuery?: () => Promise<boolean>;
-  onUnmuteSelectedQuery?: () => Promise<boolean>;
-  onToggleQueryNotifications?: () => void;
   onWhoisSelectedQuery?: () => void;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
@@ -92,16 +86,10 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <ChatPaneHeader
         workspace={props.workspace}
-        friends={props.friends}
         nickEmojis={props.nickEmojis}
-        selectedQueryMuted={props.selectedQueryMuted}
-        queryNotificationsEnabled={props.queryNotificationsEnabled}
+        contactRuleHandlers={props.contactRuleHandlers}
+        selectedQueryContactRule={props.selectedQueryContactRule}
         onOpenMentionedChannel={props.onOpenMentionedChannel}
-        onAddFriend={props.onAddFriend}
-        onRemoveFriend={props.onRemoveFriend}
-        onMuteSelectedQuery={props.onMuteSelectedQuery}
-        onUnmuteSelectedQuery={props.onUnmuteSelectedQuery}
-        onToggleQueryNotifications={props.onToggleQueryNotifications}
         onWhoisSelectedQuery={props.onWhoisSelectedQuery}
         showChannelAutoJoin={props.showChannelAutoJoin}
         channelAutoJoinActive={props.channelAutoJoinActive}

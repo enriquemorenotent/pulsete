@@ -1,60 +1,66 @@
-import type { BufferState } from '../../shared/protocol.js';
-import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
+import type { BufferState } from '../../../shared/protocol.js';
+import { isSameIrcIdentifier } from '../../../shared/irc-identifiers.js';
 
-export const BACKGROUND_DM_AUDIO_SETTINGS_STORAGE_KEY =
-  'pulsete.preferences.backgroundDmAudio.v1';
-export const BACKGROUND_DM_AUDIO_COOLDOWN_MS = 1_000;
-export const BACKGROUND_DM_AUDIO_SOUND_OPTIONS = [
+export const CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY =
+  'pulsete.preferences.contactNotifications.v1';
+const LEGACY_CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY =
+  ['pulsete.preferences', 'background' + 'DmAudio.v1'].join('.');
+export const CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS = [
+  CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
+  LEGACY_CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
+] as const;
+export const CONTACT_NOTIFICATION_COOLDOWN_MS = 1_000;
+export const CONTACT_NOTIFICATION_SOUND_OPTIONS = [
   { id: 'chirp', label: 'Chirp' },
   { id: 'bell', label: 'Bell' },
   { id: 'glass', label: 'Glass' },
 ] as const;
-export const DEFAULT_BACKGROUND_DM_AUDIO_SOUND =
-  BACKGROUND_DM_AUDIO_SOUND_OPTIONS[0].id;
+export const DEFAULT_CONTACT_NOTIFICATION_SOUND =
+  CONTACT_NOTIFICATION_SOUND_OPTIONS[0].id;
 
-export type BackgroundDmAudioContact = {
+export type ContactNotificationContact = {
   networkId: string;
   nick: string;
 };
 
-export type BackgroundDmAudioSound =
-  typeof BACKGROUND_DM_AUDIO_SOUND_OPTIONS[number]['id'];
+export type ContactNotificationSound =
+  typeof CONTACT_NOTIFICATION_SOUND_OPTIONS[number]['id'];
 
-export type BackgroundDmAudioSettings = {
+export type ContactNotificationSettings = {
   enabled: boolean;
   systemEnabled: boolean;
-  sound: BackgroundDmAudioSound;
-  contacts: BackgroundDmAudioContact[];
+  sound: ContactNotificationSound;
+  contacts: ContactNotificationContact[];
 };
 
-const defaultSettings: BackgroundDmAudioSettings = {
+const defaultSettings: ContactNotificationSettings = {
   enabled: false,
   systemEnabled: false,
-  sound: DEFAULT_BACKGROUND_DM_AUDIO_SOUND,
+  sound: DEFAULT_CONTACT_NOTIFICATION_SOUND,
   contacts: [],
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
-const isValidContact = (value: unknown): value is BackgroundDmAudioContact =>
+const isValidContact = (value: unknown): value is ContactNotificationContact =>
   isRecord(value)
   && typeof value.networkId === 'string'
   && typeof value.nick === 'string'
   && value.networkId.length > 0
   && value.nick.trim().length > 0;
 
-const isValidSound = (value: unknown): value is BackgroundDmAudioSound =>
+const isValidSound = (value: unknown): value is ContactNotificationSound =>
   typeof value === 'string'
-  && BACKGROUND_DM_AUDIO_SOUND_OPTIONS.some((option) => option.id === value);
+  && CONTACT_NOTIFICATION_SOUND_OPTIONS.some((option) => option.id === value);
 
-const normalizeContact = (contact: BackgroundDmAudioContact): BackgroundDmAudioContact => ({
+const normalizeContact = (contact: ContactNotificationContact): ContactNotificationContact => ({
   networkId: contact.networkId,
   nick: contact.nick.trim(),
 });
 
-const dedupeContacts = (contacts: readonly BackgroundDmAudioContact[]) => {
-  const deduped: BackgroundDmAudioContact[] = [];
+const dedupeContacts = (contacts: readonly ContactNotificationContact[]) => {
+  const deduped: ContactNotificationContact[] = [];
   for (const contact of contacts) {
     const normalized = normalizeContact(contact);
     if (deduped.some((candidate) =>
@@ -68,9 +74,9 @@ const dedupeContacts = (contacts: readonly BackgroundDmAudioContact[]) => {
   return deduped;
 };
 
-export const parseBackgroundDmAudioSettings = (
+export const parseContactNotificationSettings = (
   value: string | null | undefined,
-): BackgroundDmAudioSettings => {
+): ContactNotificationSettings => {
   if (!value) {
     return defaultSettings;
   }
@@ -84,7 +90,7 @@ export const parseBackgroundDmAudioSettings = (
       systemEnabled: parsed.systemEnabled === true,
       sound: isValidSound(parsed.sound)
         ? parsed.sound
-        : DEFAULT_BACKGROUND_DM_AUDIO_SOUND,
+        : DEFAULT_CONTACT_NOTIFICATION_SOUND,
       contacts: dedupeContacts(
         Array.isArray(parsed.contacts)
           ? parsed.contacts.filter(isValidContact)
@@ -96,8 +102,8 @@ export const parseBackgroundDmAudioSettings = (
   }
 };
 
-export const serializeBackgroundDmAudioSettings = (
-  settings: BackgroundDmAudioSettings,
+export const serializeContactNotificationSettings = (
+  settings: ContactNotificationSettings,
 ) => JSON.stringify({
   enabled: settings.enabled,
   systemEnabled: settings.systemEnabled,
@@ -105,26 +111,26 @@ export const serializeBackgroundDmAudioSettings = (
   contacts: dedupeContacts(settings.contacts),
 });
 
-export const addBackgroundDmAudioContact = (
-  settings: BackgroundDmAudioSettings,
-  contact: BackgroundDmAudioContact,
-): BackgroundDmAudioSettings => ({
+export const addContactNotificationContact = (
+  settings: ContactNotificationSettings,
+  contact: ContactNotificationContact,
+): ContactNotificationSettings => ({
   ...settings,
   contacts: dedupeContacts([...settings.contacts, contact]),
 });
 
-export const removeBackgroundDmAudioContact = (
-  settings: BackgroundDmAudioSettings,
-  contact: BackgroundDmAudioContact,
-): BackgroundDmAudioSettings => ({
+export const removeContactNotificationContact = (
+  settings: ContactNotificationSettings,
+  contact: ContactNotificationContact,
+): ContactNotificationSettings => ({
   ...settings,
   contacts: settings.contacts.filter((candidate) =>
     !(candidate.networkId === contact.networkId && isSameIrcIdentifier(candidate.nick, contact.nick))
   ),
 });
 
-export const isBackgroundDmAudioContactAllowed = (
-  settings: BackgroundDmAudioSettings,
+export const isContactNotificationAllowed = (
+  settings: ContactNotificationSettings,
   buffer: Pick<BufferState, 'kind' | 'networkId' | 'target'>,
 ) =>
   buffer.kind === 'query'
@@ -133,25 +139,25 @@ export const isBackgroundDmAudioContactAllowed = (
     && isSameIrcIdentifier(contact.nick, buffer.target)
   );
 
-export const findEligibleBackgroundDmAudioBuffer = (input: {
+export const findEligibleContactNotificationSoundBuffer = (input: {
   previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
   nextBuffers: readonly BufferState[];
   appVisibleAndFocused: boolean;
   selectedBufferId: string | null;
-  settings: BackgroundDmAudioSettings;
+  settings: ContactNotificationSettings;
 }) => {
   if (!input.settings.enabled) {
     return null;
   }
-  return findEligibleBackgroundDmNotificationBuffer(input);
+  return findEligibleContactNotificationBuffer(input);
 };
 
-export const findEligibleBackgroundDmNotificationBuffer = (input: {
+export const findEligibleContactNotificationBuffer = (input: {
   previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
   nextBuffers: readonly BufferState[];
   appVisibleAndFocused: boolean;
   selectedBufferId: string | null;
-  settings: BackgroundDmAudioSettings;
+  settings: ContactNotificationSettings;
 }) => {
   if (input.settings.contacts.length === 0) {
     return null;
@@ -163,7 +169,7 @@ export const findEligibleBackgroundDmNotificationBuffer = (input: {
     ) {
       continue;
     }
-    if (!isBackgroundDmAudioContactAllowed(input.settings, buffer)) {
+    if (!isContactNotificationAllowed(input.settings, buffer)) {
       continue;
     }
     const previousUnread = input.previousBuffers.get(buffer.id)?.unread ?? 0;
@@ -174,8 +180,8 @@ export const findEligibleBackgroundDmNotificationBuffer = (input: {
   return null;
 };
 
-export const canPlayBackgroundDmAudioCue = (
+export const canPlayContactNotificationCue = (
   now: number,
   lastPlayedAt: number,
-  cooldownMs = BACKGROUND_DM_AUDIO_COOLDOWN_MS,
+  cooldownMs = CONTACT_NOTIFICATION_COOLDOWN_MS,
 ) => now - lastPlayedAt >= cooldownMs;

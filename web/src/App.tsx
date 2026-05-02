@@ -1,25 +1,24 @@
 import { useCallback, useMemo, useRef } from 'react';
-import type { BackgroundDmAudioSettings } from './background-dm-audio.js';
 import { AppEffects } from './AppEffects.js';
-import { selectSelectedBufferId, selectPhase } from './app-selectors.js';
+import {
+  selectBuffers,
+  selectNetworkNamesById,
+  selectPhase,
+  selectSelectedBufferId,
+} from './app-selectors.js';
 import { AppStoreProvider, createAppStore, useAppSelector } from './app-store.js';
 import { createComposerStore } from './composer-store.js';
+import { useContactNotifications } from './contact-notifications/controller.js';
 import { DesktopShell } from './DesktopShell.js';
 import { ToastContainer } from './ToastContainer.js';
 import { createLiveAppActions } from './useAppActions.js';
-import { useBackgroundDmAudioSettings } from './useBackgroundDmAudio.js';
 import { useAppUiState } from './useAppUiState.js';
 import { createServerMessageBridge } from './server-message-bridge.js';
 
 function App() {
-  const backgroundDmAudio = useBackgroundDmAudioSettings();
   const ui = useAppUiState();
   const storeRef = useRef(createAppStore());
   const composerRef = useRef(createComposerStore());
-  const primeBackgroundDmAudioRef = useRef<() => void>(() => undefined);
-  const previewBackgroundDmAudioRef = useRef<
-    (sound: BackgroundDmAudioSettings['sound']) => void
-  >(() => undefined);
   const updateBanner = useCallback(
     (kind: 'notice' | 'error', message: string) =>
       storeRef.current.dispatch({
@@ -58,31 +57,33 @@ function App() {
   return (
     <AppStoreProvider store={storeRef.current}>
       <AppEffects
-        actions={actions}
         applySocketMessage={serverMessages.applySocketMessage}
-        backgroundDmAudio={backgroundDmAudio}
         composer={composerRef.current}
-        previewBackgroundDmAudioRef={previewBackgroundDmAudioRef}
-        primeBackgroundDmAudioRef={primeBackgroundDmAudioRef}
         ui={ui}
       />
       <AppBody
         actions={actions}
         applyServerMessages={serverMessages.applyMutationMessages}
-        backgroundDmAudio={backgroundDmAudio}
         composer={composerRef.current}
-        previewBackgroundDmAudio={(sound) =>
-          previewBackgroundDmAudioRef.current(sound)
-        }
-        primeBackgroundDmAudio={() => primeBackgroundDmAudioRef.current()}
         ui={ui}
       />
     </AppStoreProvider>
   );
 }
 
-function AppBody(props: Parameters<typeof DesktopShell>[0]) {
+type AppBodyProps = Omit<Parameters<typeof DesktopShell>[0], 'contactNotifications'>;
+
+function AppBody(props: AppBodyProps) {
   const phase = useAppSelector(selectPhase);
+  const buffers = useAppSelector(selectBuffers);
+  const networkNamesById = useAppSelector(selectNetworkNamesById);
+  const selectedBufferId = useAppSelector(selectSelectedBufferId);
+  const contactNotifications = useContactNotifications({
+    buffers,
+    networkNamesById,
+    onSelectBuffer: props.actions.selectTabBuffer,
+    selectedBufferId,
+  });
 
   if (phase === 'loading') {
     return (
@@ -94,7 +95,7 @@ function AppBody(props: Parameters<typeof DesktopShell>[0]) {
 
   return (
     <>
-      <DesktopShell {...props} />
+      <DesktopShell {...props} contactNotifications={contactNotifications} />
       <ToastContainer />
     </>
   );

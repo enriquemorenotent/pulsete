@@ -136,8 +136,6 @@ export const createLiveAppActions = (params: CreateAppActionsParams) =>
 export type AppActions = ReturnType<typeof createAppActions>;
 export type ChatActionSet = Pick<
   AppActions,
-  | 'addFriend'
-  | 'addMutedNick'
   | 'closeBuffer'
   | 'closeChannel'
   | 'closeChannelList'
@@ -146,10 +144,7 @@ export type ChatActionSet = Pick<
   | 'openChannelList'
   | 'openMentionedChannel'
   | 'reconnectNetwork'
-  | 'removeFriend'
-  | 'removeMutedNick'
   | 'requestWhois'
-  | 'saveNickEmoji'
   | 'searchBufferHistory'
   | 'selectPrivateBuffer'
   | 'sendComposer'
@@ -171,7 +166,7 @@ export type SidebarActionSet = Pick<
 >;
 export type NicklistActionSet = Pick<
   AppActions,
-  'addFriend' | 'addMutedNick' | 'removeFriend' | 'removeMutedNick' | 'saveNickEmoji' | 'selectPrivateBuffer'
+  'saveNickEmoji' | 'selectPrivateBuffer'
 >;
 export type NetworkManagerActionSet = Pick<
   AppActions,

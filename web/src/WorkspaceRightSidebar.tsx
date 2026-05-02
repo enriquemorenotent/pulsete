@@ -76,13 +76,8 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         friends={props.nicklist.friends}
         mutedNicks={props.nicklist.mutedNicks}
         nickEmojis={props.nicklist.nickEmojis}
-        backgroundDmAudio={props.nicklist.backgroundDmAudio}
-        onAddFriend={props.nicklist.onAddFriend}
-        onAddNotificationContact={props.nicklist.onAddNotificationContact}
-        onAddMutedNick={props.nicklist.onAddMutedNick}
-        onRemoveFriend={props.nicklist.onRemoveFriend}
-        onRemoveNotificationContact={props.nicklist.onRemoveNotificationContact}
-        onRemoveMutedNick={props.nicklist.onRemoveMutedNick}
+        contactNotificationSettings={props.nicklist.contactNotificationSettings}
+        contactRuleHandlers={props.nicklist.contactRuleHandlers}
         onSaveNickEmoji={props.nicklist.onSaveNickEmoji}
         onSelectNick={props.nicklist.onSelectNick}
       />

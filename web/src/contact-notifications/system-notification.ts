@@ -1,36 +1,36 @@
-import type { BufferState } from '../../shared/protocol.js';
+import type { BufferState } from '../../../shared/protocol.js';
 
-export type BackgroundDmNotificationHandle = {
+export type ContactSystemNotificationHandle = {
   close: () => void;
   onclick: ((event: Event) => void) | null;
   onclose: ((event: Event) => void) | null;
 };
 
-type BackgroundDmNotificationConstructor = new (
+type ContactSystemNotificationConstructor = new (
   title: string,
   options?: NotificationOptions,
-) => BackgroundDmNotificationHandle;
+) => ContactSystemNotificationHandle;
 
-type BackgroundDmNotificationInput = {
+type ContactSystemNotificationInput = {
   buffer: BufferState;
   focusWindow?: () => void;
   networkName: string;
-  notificationConstructor?: BackgroundDmNotificationConstructor;
-  onRelease?: (notification: BackgroundDmNotificationHandle) => void;
+  notificationConstructor?: ContactSystemNotificationConstructor;
+  onRelease?: (notification: ContactSystemNotificationHandle) => void;
   onSelectBuffer: (buffer: BufferState) => void;
 };
 
-const clearBackgroundDmNotificationHandlers = (
-  notification: BackgroundDmNotificationHandle,
+const clearContactSystemNotificationHandlers = (
+  notification: ContactSystemNotificationHandle,
 ) => {
   notification.onclick = null;
   notification.onclose = null;
 };
 
-export const closeBackgroundDmNotification = (
-  notification: BackgroundDmNotificationHandle,
+export const closeContactSystemNotification = (
+  notification: ContactSystemNotificationHandle,
 ) => {
-  clearBackgroundDmNotificationHandlers(notification);
+  clearContactSystemNotificationHandlers(notification);
   try {
     notification.close();
   } catch {
@@ -38,8 +38,8 @@ export const closeBackgroundDmNotification = (
   }
 };
 
-export const createBackgroundDmNotification = (
-  input: BackgroundDmNotificationInput,
+export const createContactSystemNotification = (
+  input: ContactSystemNotificationInput,
 ) => {
   const NotificationClass =
     input.notificationConstructor ?? resolveNotificationConstructor();
@@ -56,7 +56,7 @@ export const createBackgroundDmNotification = (
       return;
     }
     released = true;
-    clearBackgroundDmNotificationHandlers(notification);
+    clearContactSystemNotificationHandlers(notification);
     input.onRelease?.(notification);
   };
   notification.onclick = () => {
@@ -76,5 +76,5 @@ const resolveNotificationConstructor = () => {
   if (typeof window === 'undefined' || typeof window.Notification === 'undefined') {
     return null;
   }
-  return window.Notification as unknown as BackgroundDmNotificationConstructor;
+  return window.Notification as unknown as ContactSystemNotificationConstructor;
 };

@@ -1,42 +1,57 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BufferState } from '../../shared/protocol.js';
+import type { BufferState } from '../../../shared/protocol.js';
 import {
-  BACKGROUND_DM_AUDIO_SETTINGS_STORAGE_KEY,
-  addBackgroundDmAudioContact,
-  canPlayBackgroundDmAudioCue,
-  findEligibleBackgroundDmNotificationBuffer,
-  removeBackgroundDmAudioContact,
-  serializeBackgroundDmAudioSettings,
-  type BackgroundDmAudioContact,
-  type BackgroundDmAudioSettings,
-  type BackgroundDmAudioSound,
-} from './background-dm-audio.js';
+  CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
+  addContactNotificationContact,
+  canPlayContactNotificationCue,
+  findEligibleContactNotificationBuffer,
+  removeContactNotificationContact,
+  serializeContactNotificationSettings,
+  type ContactNotificationContact,
+  type ContactNotificationSettings,
+  type ContactNotificationSound,
+} from './settings.js';
 import {
   getAudioContextConstructor,
   getBufferMap,
   getNotificationPermission,
   playCue,
-  readStoredSettings,
+  readStoredContactNotificationSettings,
   shouldShowSystemNotification,
-} from './background-dm-audio-browser.js';
-import { closeBackgroundDmNotification, createBackgroundDmNotification, type BackgroundDmNotificationHandle } from './background-dm-notification.js';
+} from './browser.js';
+import {
+  closeContactSystemNotification,
+  createContactSystemNotification,
+  type ContactSystemNotificationHandle,
+} from './system-notification.js';
 
-export type BackgroundDmAudioState = {
-  settings: BackgroundDmAudioSettings;
+export type ContactNotificationsController = {
+  settings: ContactNotificationSettings;
   systemPermission: NotificationPermission | 'unsupported';
   setEnabled: (enabled: boolean) => void;
   setSystemEnabled: (enabled: boolean) => void;
-  setSound: (sound: BackgroundDmAudioSound) => void;
-  addContact: (contact: BackgroundDmAudioContact) => void;
-  removeContact: (contact: BackgroundDmAudioContact) => void;
+  setSound: (sound: ContactNotificationSound) => void;
+  addContact: (contact: ContactNotificationContact) => void;
+  removeContact: (contact: ContactNotificationContact) => void;
+  preview: (sound: ContactNotificationSound) => void;
+  prime: () => void;
   requestSystemPermission: () => Promise<NotificationPermission | 'unsupported'>;
 };
 
-export function useBackgroundDmAudioSettings(): BackgroundDmAudioState {
-  const [settings, setSettings] = useState(readStoredSettings);
+export function useContactNotifications(input: {
+  buffers: readonly BufferState[];
+  networkNamesById: ReadonlyMap<string, string>;
+  onSelectBuffer: (buffer: BufferState) => void;
+  selectedBufferId: string | null;
+}): ContactNotificationsController {
+  const [settings, setSettings] = useState(readStoredContactNotificationSettings);
   const [systemPermission, setSystemPermission] = useState<
     NotificationPermission | 'unsupported'
   >(getNotificationPermission);
+  const previousBuffersRef = useRef<ReadonlyMap<string, Pick<BufferState, 'unread'>> | null>(null);
+  const lastPlayedAtRef = useRef(-Infinity);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const activeNotificationsRef = useRef(new Set<ContactSystemNotificationHandle>());
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -44,8 +59,8 @@ export function useBackgroundDmAudioSettings(): BackgroundDmAudioState {
     }
     try {
       window.localStorage.setItem(
-        BACKGROUND_DM_AUDIO_SETTINGS_STORAGE_KEY,
-        serializeBackgroundDmAudioSettings(settings),
+        CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
+        serializeContactNotificationSettings(settings),
       );
     } catch {
       // Ignore storage failures; the preference simply becomes session-local.
@@ -79,32 +94,26 @@ export function useBackgroundDmAudioSettings(): BackgroundDmAudioState {
   }, [systemPermission]);
 
   const setEnabled = useCallback((enabled: boolean) => {
-    setSettings((current) => current.enabled === enabled ? current : {
-      ...current,
-      enabled,
-    });
+    setSettings((current) =>
+      current.enabled === enabled ? current : { ...current, enabled });
   }, []);
 
   const setSystemEnabled = useCallback((enabled: boolean) => {
-    setSettings((current) => current.systemEnabled === enabled ? current : {
-      ...current,
-      systemEnabled: enabled,
-    });
+    setSettings((current) =>
+      current.systemEnabled === enabled ? current : { ...current, systemEnabled: enabled });
   }, []);
 
-  const setSound = useCallback((sound: BackgroundDmAudioSound) => {
-    setSettings((current) => current.sound === sound ? current : {
-      ...current,
-      sound,
-    });
+  const setSound = useCallback((sound: ContactNotificationSound) => {
+    setSettings((current) =>
+      current.sound === sound ? current : { ...current, sound });
   }, []);
 
-  const addContact = useCallback((contact: BackgroundDmAudioContact) => {
-    setSettings((current) => addBackgroundDmAudioContact(current, contact));
+  const addContact = useCallback((contact: ContactNotificationContact) => {
+    setSettings((current) => addContactNotificationContact(current, contact));
   }, []);
 
-  const removeContact = useCallback((contact: BackgroundDmAudioContact) => {
-    setSettings((current) => removeBackgroundDmAudioContact(current, contact));
+  const removeContact = useCallback((contact: ContactNotificationContact) => {
+    setSettings((current) => removeContactNotificationContact(current, contact));
   }, []);
 
   const requestSystemPermission = useCallback(async () => {
@@ -123,30 +132,6 @@ export function useBackgroundDmAudioSettings(): BackgroundDmAudioState {
     }
   }, []);
 
-  return {
-    settings,
-    systemPermission,
-    setEnabled,
-    setSystemEnabled,
-    setSound,
-    addContact,
-    removeContact,
-    requestSystemPermission,
-  };
-}
-
-export function useBackgroundDmAudioCue(input: {
-  buffers: readonly BufferState[];
-  networkNamesById: ReadonlyMap<string, string>;
-  onSelectBuffer: (buffer: BufferState) => void;
-  selectedBufferId: string | null;
-  settings: BackgroundDmAudioSettings;
-}) {
-  const previousBuffersRef = useRef<ReadonlyMap<string, Pick<BufferState, 'unread'>> | null>(null);
-  const lastPlayedAtRef = useRef(-Infinity);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const activeNotificationsRef = useRef(new Set<BackgroundDmNotificationHandle>());
-
   const ensureAudioContext = useCallback(() => {
     const AudioContextClass = getAudioContextConstructor();
     if (!AudioContextClass) {
@@ -164,7 +149,7 @@ export function useBackgroundDmAudioCue(input: {
     void audioContext.resume().catch(() => undefined);
   }, [ensureAudioContext]);
 
-  const preview = useCallback((sound: BackgroundDmAudioSound) => {
+  const preview = useCallback((sound: ContactNotificationSound) => {
     const audioContext = ensureAudioContext();
     if (!audioContext) {
       return;
@@ -176,7 +161,7 @@ export function useBackgroundDmAudioCue(input: {
     if (audioContextRef.current) {
       void audioContextRef.current.close().catch(() => undefined);
     }
-    activeNotificationsRef.current.forEach(closeBackgroundDmNotification);
+    activeNotificationsRef.current.forEach(closeContactSystemNotification);
     activeNotificationsRef.current.clear();
   }, []);
 
@@ -187,43 +172,43 @@ export function useBackgroundDmAudioCue(input: {
     if (!previousBuffers) {
       return;
     }
-    if (!input.settings.enabled && !input.settings.systemEnabled) {
+    if (!settings.enabled && !settings.systemEnabled) {
       return;
     }
-    const eligibleBuffer = findEligibleBackgroundDmNotificationBuffer({
+    const eligibleBuffer = findEligibleContactNotificationBuffer({
       previousBuffers,
       nextBuffers: input.buffers,
       appVisibleAndFocused: !shouldShowSystemNotification(),
       selectedBufferId: input.selectedBufferId,
-      settings: input.settings,
+      settings,
     });
     if (!eligibleBuffer) {
       return;
     }
-    const shouldPlayAudio = input.settings.enabled;
+    const shouldPlayAudio = settings.enabled;
     const shouldNotify =
-      input.settings.systemEnabled
+      settings.systemEnabled
       && getNotificationPermission() === 'granted'
       && shouldShowSystemNotification();
     if (!shouldPlayAudio && !shouldNotify) {
       return;
     }
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    if (!canPlayBackgroundDmAudioCue(now, lastPlayedAtRef.current)) {
+    if (!canPlayContactNotificationCue(now, lastPlayedAtRef.current)) {
       return;
     }
     lastPlayedAtRef.current = now;
     if (shouldPlayAudio) {
       const audioContext = ensureAudioContext();
       if (audioContext) {
-        void playCue(audioContext, input.settings.sound);
+        void playCue(audioContext, settings.sound);
       }
     }
     if (shouldNotify) {
       try {
         const networkName =
           input.networkNamesById.get(eligibleBuffer.networkId) ?? eligibleBuffer.networkId;
-        const notification = createBackgroundDmNotification({
+        const notification = createContactSystemNotification({
           buffer: eligibleBuffer,
           networkName,
           onRelease: (releasedNotification) => {
@@ -243,8 +228,20 @@ export function useBackgroundDmAudioCue(input: {
     input.networkNamesById,
     input.onSelectBuffer,
     input.selectedBufferId,
-    input.settings,
+    settings,
+    ensureAudioContext,
   ]);
 
-  return { prime, preview };
+  return {
+    settings,
+    systemPermission,
+    setEnabled,
+    setSystemEnabled,
+    setSound,
+    addContact,
+    removeContact,
+    preview,
+    prime,
+    requestSystemPermission,
+  };
 }

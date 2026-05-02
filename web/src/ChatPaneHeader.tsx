@@ -1,29 +1,23 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
-import type { BufferState, FriendState, NickEmojiState } from '../../shared/protocol.js';
+import type { BufferState, NickEmojiState } from '../../shared/protocol.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
 import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
 import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
 import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
-import { findFriendByNick } from './friend-utils.js';
+import { ContactRuleControls } from './contact-notifications/ContactRuleControls.js';
+import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
-import { QueryContactControls } from './QueryContactControls.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
-  friends: FriendState[];
   nickEmojis: NickEmojiState[];
-  selectedQueryMuted?: boolean;
-  queryNotificationsEnabled?: boolean;
+  contactRuleHandlers: ContactRuleHandlers;
+  selectedQueryContactRule?: ContactRuleState | null;
   onOpenMentionedChannel: (channel: string) => void;
-  onAddFriend: (nick: string) => Promise<boolean>;
-  onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onMuteSelectedQuery?: () => Promise<boolean>;
-  onUnmuteSelectedQuery?: () => Promise<boolean>;
-  onToggleQueryNotifications?: () => void;
   onWhoisSelectedQuery?: () => void;
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
@@ -39,13 +33,10 @@ type ChatPaneHeaderProps = {
 
 export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const { selectedBuffer } = props.workspace;
-  const selectedFriend =
-    selectedBuffer?.kind === 'query' ? findFriendByNick(props.friends, selectedBuffer.target) : null;
   const selectedNickEmoji =
     selectedBuffer?.kind === 'query'
       ? findNickEmoji(props.nickEmojis, selectedBuffer.networkId, selectedBuffer.target)
       : null;
-  const selectedQueryNick = selectedBuffer?.kind === 'query' ? selectedBuffer.target : null;
   const topic = props.workspace.selectedChannel?.topic.trim() ?? '';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
     && !resolveChatPaneStatusBanner(props.workspace)
@@ -100,17 +91,10 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           title={props.workspace.headerTitle}
           primary={actions.primary}
           contactControls={
-            selectedQueryNick ? (
-              <QueryContactControls
-                nick={selectedQueryNick}
-                friend={selectedFriend}
-                notifications={props.queryNotificationsEnabled ?? false}
-                muted={props.selectedQueryMuted ?? false}
-                onAddFriend={props.onAddFriend}
-                onRemoveFriend={props.onRemoveFriend}
-                onToggleNotifications={props.onToggleQueryNotifications}
-                onMute={props.onMuteSelectedQuery}
-                onUnmute={props.onUnmuteSelectedQuery}
+            props.selectedQueryContactRule ? (
+              <ContactRuleControls
+                state={props.selectedQueryContactRule}
+                handlers={props.contactRuleHandlers}
               />
             ) : null
           }

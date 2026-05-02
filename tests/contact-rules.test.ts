@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveContactRuleState } from '../web/src/contact-rules.js';
+import { resolveContactRuleState } from '../web/src/contact-notifications/contact-rules.js';
 
 test('contact rule state masks notification contacts while the nick is muted', () => {
   const state = resolveContactRuleState({
@@ -8,7 +8,7 @@ test('contact rule state masks notification contacts while the nick is muted', (
     nick: 'Alice',
     friends: [{ id: 'friend-1', nick: 'alice' }],
     mutedNicks: [{ id: 'mute-1', networkId: 'network-1', nick: 'ALICE' }],
-    backgroundDmAudio: {
+    contactNotifications: {
       contacts: [{ networkId: 'network-1', nick: 'aLiCe' }],
     },
   });
@@ -25,7 +25,7 @@ test('contact rule state combines friend and notification lists when the nick is
     nick: 'Alice',
     friends: [{ id: 'friend-1', nick: 'alice' }],
     mutedNicks: [],
-    backgroundDmAudio: {
+    contactNotifications: {
       contacts: [{ networkId: 'network-1', nick: 'aLiCe' }],
     },
   });
@@ -42,7 +42,7 @@ test('contact rule state keeps notification and mute matches scoped to the netwo
     nick: 'Alice',
     friends: [],
     mutedNicks: [{ id: 'mute-1', networkId: 'network-2', nick: 'Alice' }],
-    backgroundDmAudio: {
+    contactNotifications: {
       contacts: [{ networkId: 'network-2', nick: 'Alice' }],
     },
   });

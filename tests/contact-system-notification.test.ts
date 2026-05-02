@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState } from '../shared/protocol.js';
 import {
-  closeBackgroundDmNotification,
-  createBackgroundDmNotification,
-} from '../web/src/background-dm-notification.js';
+  closeContactSystemNotification,
+  createContactSystemNotification,
+} from '../web/src/contact-notifications/system-notification.js';
 
 class FakeNotification {
   closeCalls = 0;
@@ -35,7 +35,7 @@ const buffer: BufferState = {
 
 test('system notification reports release when browser-owned handlers are cleared', () => {
   const released: FakeNotification[] = [];
-  const notification = createBackgroundDmNotification({
+  const notification = createContactSystemNotification({
     buffer,
     networkName: 'ExampleNet',
     notificationConstructor: FakeNotification,
@@ -55,7 +55,7 @@ test('system notification reports release when browser-owned handlers are cleare
 
 test('system notification owner can close without retaining click handlers', () => {
   let selected = false;
-  const notification = createBackgroundDmNotification({
+  const notification = createContactSystemNotification({
     buffer,
     networkName: 'ExampleNet',
     notificationConstructor: FakeNotification,
@@ -64,7 +64,7 @@ test('system notification owner can close without retaining click handlers', () 
     },
   }) as FakeNotification;
 
-  closeBackgroundDmNotification(notification);
+  closeContactSystemNotification(notification);
 
   assert.equal(notification.closeCalls, 1);
   assert.equal(notification.onclick, null);

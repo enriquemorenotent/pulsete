@@ -1,5 +1,5 @@
-import type { BackgroundDmAudioSettings } from './background-dm-audio.js';
-import { BACKGROUND_DM_AUDIO_SOUND_OPTIONS } from './background-dm-audio.js';
+import type { ContactNotificationSettings } from './contact-notifications/settings.js';
+import { CONTACT_NOTIFICATION_SOUND_OPTIONS } from './contact-notifications/settings.js';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
 import {
@@ -15,10 +15,10 @@ const preferenceSelectTriggerClassName =
 
 type PreferencesNotificationSoundSectionProps = {
   enabled: boolean;
-  sound: BackgroundDmAudioSettings['sound'];
-  onPreviewSound: (sound: BackgroundDmAudioSettings['sound']) => void;
+  sound: ContactNotificationSettings['sound'];
+  onPreviewSound: (sound: ContactNotificationSettings['sound']) => void;
   onSetEnabled: (enabled: boolean) => void;
-  onSetSound: (sound: BackgroundDmAudioSettings['sound']) => void;
+  onSetSound: (sound: ContactNotificationSettings['sound']) => void;
 };
 
 export function PreferencesNotificationSoundSection(
@@ -51,7 +51,7 @@ export function PreferencesNotificationSoundSection(
           <Select
             value={props.sound}
             onValueChange={(value) =>
-              props.onSetSound(value as BackgroundDmAudioSettings['sound'])}
+              props.onSetSound(value as ContactNotificationSettings['sound'])}
           >
             <SelectTrigger
               aria-label="Notification sound"
@@ -61,7 +61,7 @@ export function PreferencesNotificationSoundSection(
               <SelectValue placeholder="Select a sound" />
             </SelectTrigger>
             <SelectContent>
-              {BACKGROUND_DM_AUDIO_SOUND_OPTIONS.map((option) => (
+              {CONTACT_NOTIFICATION_SOUND_OPTIONS.map((option) => (
                 <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
               ))}
             </SelectContent>

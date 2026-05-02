@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState } from '../shared/protocol.js';
 import {
-  addBackgroundDmAudioContact,
-  canPlayBackgroundDmAudioCue,
-  findEligibleBackgroundDmAudioBuffer,
-  findEligibleBackgroundDmNotificationBuffer,
-  parseBackgroundDmAudioSettings,
-  serializeBackgroundDmAudioSettings,
-} from '../web/src/background-dm-audio.js';
-import { createBackgroundDmNotification } from '../web/src/background-dm-notification.js';
+  addContactNotificationContact,
+  canPlayContactNotificationCue,
+  findEligibleContactNotificationBuffer,
+  findEligibleContactNotificationSoundBuffer,
+  parseContactNotificationSettings,
+  serializeContactNotificationSettings,
+} from '../web/src/contact-notifications/settings.js';
+import { createContactSystemNotification } from '../web/src/contact-notifications/system-notification.js';
 
 const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   id: overrides.id ?? 'buffer-1',
@@ -23,13 +23,13 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 });
 
 test('stored settings ignore invalid payloads', () => {
-  assert.deepEqual(parseBackgroundDmAudioSettings(null), {
+  assert.deepEqual(parseContactNotificationSettings(null), {
     enabled: false,
     systemEnabled: false,
     sound: 'chirp',
     contacts: [],
   });
-  assert.deepEqual(parseBackgroundDmAudioSettings('{"enabled":true,"contacts":[{"networkId":1}]}'), {
+  assert.deepEqual(parseContactNotificationSettings('{"enabled":true,"contacts":[{"networkId":1}]}'), {
     enabled: true,
     systemEnabled: false,
     sound: 'chirp',
@@ -38,7 +38,7 @@ test('stored settings ignore invalid payloads', () => {
 });
 
 test('stored settings fall back to the default sound when the payload is invalid', () => {
-  assert.deepEqual(parseBackgroundDmAudioSettings('{"enabled":true,"sound":"gong","contacts":[]}'), {
+  assert.deepEqual(parseContactNotificationSettings('{"enabled":true,"sound":"gong","contacts":[]}'), {
     enabled: true,
     systemEnabled: false,
     sound: 'chirp',
@@ -47,7 +47,7 @@ test('stored settings fall back to the default sound when the payload is invalid
 });
 
 test('adding contacts dedupes by network and IRC case-folded nick', () => {
-  const settings = addBackgroundDmAudioContact({
+  const settings = addContactNotificationContact({
     enabled: true,
     systemEnabled: false,
     sound: 'glass',
@@ -67,7 +67,7 @@ test('adding contacts dedupes by network and IRC case-folded nick', () => {
 
 test('serializing settings preserves the chosen sound', () => {
   assert.equal(
-    serializeBackgroundDmAudioSettings({
+    serializeContactNotificationSettings({
       enabled: true,
       systemEnabled: true,
       sound: 'bell',
@@ -81,7 +81,7 @@ test('eligible cue fires for allowed DM unread growth in another buffer', () => 
   const previousBuffers = new Map([['buffer-1', { unread: 0 }]]);
   const nextBuffer = makeBuffer({ unread: 1 });
 
-  const eligible = findEligibleBackgroundDmAudioBuffer({
+  const eligible = findEligibleContactNotificationSoundBuffer({
     previousBuffers,
     nextBuffers: [nextBuffer],
     appVisibleAndFocused: true,
@@ -100,7 +100,7 @@ test('eligible cue fires for allowed DM unread growth in another buffer', () => 
 test('eligible cue ignores selected, disallowed, and wrong-network buffers', () => {
   const nextBuffer = makeBuffer({ unread: 1 });
 
-  assert.equal(findEligibleBackgroundDmAudioBuffer({
+  assert.equal(findEligibleContactNotificationSoundBuffer({
     previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
     nextBuffers: [nextBuffer],
     appVisibleAndFocused: true,
@@ -113,7 +113,7 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
     },
   }), null);
 
-  assert.equal(findEligibleBackgroundDmAudioBuffer({
+  assert.equal(findEligibleContactNotificationSoundBuffer({
     previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
     nextBuffers: [makeBuffer({ unread: 1, networkId: 'network-2' })],
     appVisibleAndFocused: true,
@@ -126,7 +126,7 @@ test('eligible cue ignores selected, disallowed, and wrong-network buffers', () 
     },
   }), null);
 
-  assert.equal(findEligibleBackgroundDmAudioBuffer({
+  assert.equal(findEligibleContactNotificationSoundBuffer({
     previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
     nextBuffers: [makeBuffer({ unread: 1, kind: 'channel', target: '#help' })],
     appVisibleAndFocused: true,
@@ -144,7 +144,7 @@ test('system notification eligibility still works when audio is disabled', () =>
   const previousBuffers = new Map([['buffer-1', { unread: 0 }]]);
   const nextBuffer = makeBuffer({ unread: 1 });
 
-  const eligible = findEligibleBackgroundDmNotificationBuffer({
+  const eligible = findEligibleContactNotificationBuffer({
     previousBuffers,
     nextBuffers: [nextBuffer],
     appVisibleAndFocused: false,
@@ -163,7 +163,7 @@ test('system notification eligibility still works when audio is disabled', () =>
 test('selected query buffer still qualifies when the app is not visible and focused', () => {
   const nextBuffer = makeBuffer({ unread: 1 });
 
-  const eligible = findEligibleBackgroundDmAudioBuffer({
+  const eligible = findEligibleContactNotificationSoundBuffer({
     previousBuffers: new Map([['buffer-1', { unread: 0 }]]),
     nextBuffers: [nextBuffer],
     appVisibleAndFocused: false,
@@ -180,8 +180,8 @@ test('selected query buffer still qualifies when the app is not visible and focu
 });
 
 test('cooldown blocks repeated cues inside the throttle window', () => {
-  assert.equal(canPlayBackgroundDmAudioCue(1_500, 500), true);
-  assert.equal(canPlayBackgroundDmAudioCue(1_499, 500), false);
+  assert.equal(canPlayContactNotificationCue(1_500, 500), true);
+  assert.equal(canPlayContactNotificationCue(1_499, 500), false);
 });
 
 test('system notification clears browser-owned handlers after click or close', () => {
@@ -207,7 +207,7 @@ test('system notification clears browser-owned handlers after click or close', (
   const buffer = makeBuffer({ id: 'query-alice', target: 'Alice' });
   let focusCalls = 0;
   let selectedBuffer: BufferState | null = null;
-  const clicked = createBackgroundDmNotification({
+  const clicked = createContactSystemNotification({
     buffer,
     focusWindow: () => {
       focusCalls += 1;
@@ -233,7 +233,7 @@ test('system notification clears browser-owned handlers after click or close', (
   assert.equal(clicked.onclick, null);
   assert.equal(clicked.onclose, null);
 
-  const closed = createBackgroundDmNotification({
+  const closed = createContactSystemNotification({
     buffer,
     networkName: 'ExampleNet',
     notificationConstructor: FakeNotification,

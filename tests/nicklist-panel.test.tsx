@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ChannelState, ChannelUserState, FriendState, NetworkProfile } from '../shared/protocol.js';
 import { NicklistPanel } from '../web/src/NicklistPanel.js';
 import { buildNicklistGroups } from '../web/src/nicklist-groups.js';
+import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
 
 const makeUser = (
   nick: string,
@@ -52,14 +53,9 @@ test('nicklist groups users by privilege level', () => {
       friends={[] satisfies FriendState[]}
       nickEmojis={[]}
       mutedNicks={[]}
-      backgroundDmAudio={{ contacts: [] }}
-      onAddFriend={async () => true}
-      onAddNotificationContact={() => undefined}
-      onAddMutedNick={async () => true}
-      onRemoveFriend={async () => true}
+      contactNotificationSettings={{ contacts: [] }}
+      contactRuleHandlers={noopContactRuleHandlers}
       onSaveNickEmoji={async () => true}
-      onRemoveNotificationContact={() => undefined}
-      onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
   );
@@ -104,14 +100,9 @@ test('nicklist renders one-click contact controls beside away users', () => {
       friends={[{ id: 'friend-1', nick: 'alice' }] satisfies FriendState[]}
       nickEmojis={[{ id: 'nick-emoji-1', networkId: network.id, nick: 'alice', emoji: '🌙' }]}
       mutedNicks={[]}
-      backgroundDmAudio={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
-      onAddFriend={async () => true}
-      onAddNotificationContact={() => undefined}
-      onAddMutedNick={async () => true}
-      onRemoveFriend={async () => true}
+      contactNotificationSettings={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
+      contactRuleHandlers={noopContactRuleHandlers}
       onSaveNickEmoji={async () => true}
-      onRemoveNotificationContact={() => undefined}
-      onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
   );
@@ -144,14 +135,9 @@ test('nicklist shows the unmute control for muted users', () => {
       friends={[] satisfies FriendState[]}
       nickEmojis={[]}
       mutedNicks={[{ id: 'mute-1', networkId: network.id, nick: 'Alice' }]}
-      backgroundDmAudio={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
-      onAddFriend={async () => true}
-      onAddNotificationContact={() => undefined}
-      onAddMutedNick={async () => true}
-      onRemoveFriend={async () => true}
+      contactNotificationSettings={{ contacts: [{ networkId: network.id, nick: 'alice' }] }}
+      contactRuleHandlers={noopContactRuleHandlers}
       onSaveNickEmoji={async () => true}
-      onRemoveNotificationContact={() => undefined}
-      onRemoveMutedNick={async () => true}
       onSelectNick={() => undefined}
     />
   );

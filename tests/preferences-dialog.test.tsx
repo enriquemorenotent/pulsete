@@ -3,7 +3,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { NetworkProfile } from '../shared/protocol.js';
 import { PreferencesDialogBody } from '../web/src/PreferencesDialogBody.js';
-import type { BackgroundDmAudioSettings } from '../web/src/background-dm-audio.js';
+import type { ContactNotificationSettings } from '../web/src/contact-notifications/settings.js';
 
 const networks: NetworkProfile[] = [{
   id: 'network-1',
@@ -21,7 +21,7 @@ const networks: NetworkProfile[] = [{
   autoJoin: [],
 }];
 
-const backgroundDmAudio: BackgroundDmAudioSettings = {
+const contactNotifications: ContactNotificationSettings = {
   enabled: true,
   systemEnabled: false,
   sound: 'bell',
@@ -31,16 +31,16 @@ const backgroundDmAudio: BackgroundDmAudioSettings = {
 test('preferences dialog renders notification controls and muted nick management', () => {
   const markup = renderToStaticMarkup(
     <PreferencesDialogBody
-      backgroundDmAudio={backgroundDmAudio}
+      contactNotifications={contactNotifications}
       mutedNicks={[{ id: 'mute-1', networkId: 'network-1', nick: 'MissD' }]}
       networks={networks}
-      onSetBackgroundDmAudioEnabled={() => {}}
-      backgroundDmAudioSystemPermission="default"
-      onSetBackgroundDmAudioSystemEnabled={() => {}}
-      onRequestBackgroundDmAudioSystemPermission={async () => 'default'}
-      onSetBackgroundDmAudioSound={() => {}}
-      onPreviewBackgroundDmAudioSound={() => {}}
-      onRemoveBackgroundDmAudioContact={() => {}}
+      onSetContactNotificationSoundEnabled={() => {}}
+      contactNotificationSystemPermission="default"
+      onSetContactNotificationSystemEnabled={() => {}}
+      onRequestContactNotificationSystemPermission={async () => 'default'}
+      onSetContactNotificationSound={() => {}}
+      onPreviewContactNotificationSound={() => {}}
+      onRemoveContactNotificationContact={() => {}}
       onRemoveMutedNick={async () => true}
     />
   );

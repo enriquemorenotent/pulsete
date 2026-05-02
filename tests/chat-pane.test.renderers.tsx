@@ -1,7 +1,16 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ChannelUserState, ChatMessage, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
+import type { ContactRuleHandlers, ContactRuleState } from '../web/src/contact-notifications/contact-rules.js';
 import { closedChannelList, makeQueryWorkspace, makeServerWorkspace, makeWorkspace } from './chat-pane.test.fixtures.js';
+
+export const noopContactRuleHandlers: ContactRuleHandlers = {
+  addFriend: async () => true,
+  mute: async () => true,
+  removeFriend: async () => true,
+  toggleNotifications: async () => true,
+  unmute: async () => true,
+};
 
 export const renderChatPane = (
   selectedMessages: ChatMessage[],
@@ -23,7 +32,6 @@ export const renderChatPane = (
         channelUsers: overrides.channelUsers,
         topic: overrides.topic,
       })}
-      friends={overrides.friends ?? ([] satisfies FriendState[])}
       nickEmojis={overrides.nickEmojis ?? []}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
@@ -32,8 +40,7 @@ export const renderChatPane = (
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
+      contactRuleHandlers={noopContactRuleHandlers}
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
@@ -68,7 +75,6 @@ export const renderQueryPane = (
   renderToStaticMarkup(
     <ChatPane
       workspace={makeQueryWorkspace()}
-      friends={overrides.friends ?? ([] satisfies FriendState[])}
       nickEmojis={overrides.nickEmojis ?? []}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
@@ -77,14 +83,13 @@ export const renderQueryPane = (
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
-      selectedQueryMuted={overrides.selectedQueryMuted}
+      contactRuleHandlers={noopContactRuleHandlers}
+      selectedQueryContactRule={makeSelectedQueryContactRule({
+        friend: overrides.friends?.[0] ?? null,
+        muted: overrides.selectedQueryMuted ?? false,
+        notificationsEnabled: overrides.queryNotificationsEnabled ?? false,
+      })}
       mutedQueryNick={overrides.mutedQueryNick}
-      queryNotificationsEnabled={overrides.queryNotificationsEnabled ?? false}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
-      onMuteSelectedQuery={async () => true}
-      onUnmuteSelectedQuery={async () => true}
-      onToggleQueryNotifications={() => undefined}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -107,7 +112,6 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeServerWorkspace()}
-      friends={[] satisfies FriendState[]}
       nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={selectedMessages}
@@ -116,8 +120,7 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
+      contactRuleHandlers={noopContactRuleHandlers}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -132,3 +135,14 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       onOpenChannelList={() => undefined}
     />
   );
+
+const makeSelectedQueryContactRule = (input: {
+  friend: FriendState | null;
+  muted: boolean;
+  notificationsEnabled: boolean;
+}): ContactRuleState => ({
+  contact: { networkId: 'network-1', nick: 'MissD' },
+  friend: input.friend,
+  mutedNick: input.muted ? { id: 'mute-1', networkId: 'network-1', nick: 'MissD' } : null,
+  notificationsEnabled: !input.muted && input.notificationsEnabled,
+});

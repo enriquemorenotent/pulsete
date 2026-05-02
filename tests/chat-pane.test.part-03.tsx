@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { FriendState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import { closedChannelList, makeBuffer, makeChannel, makeNetwork } from './chat-pane.test.fixtures.js';
-import { renderQueryPane } from './chat-pane.test.renderers.js';
+import { noopContactRuleHandlers, renderQueryPane } from './chat-pane.test.renderers.js';
 
 test('offline channels surface an inline reconnect action', () => {
   const network = makeNetwork();
@@ -36,7 +35,6 @@ test('offline channels surface an inline reconnect action', () => {
         emptyBody: 'No history yet.',
         showNicklist: false,
       }}
-      friends={[] satisfies FriendState[]}
       nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={[]}
@@ -45,8 +43,7 @@ test('offline channels surface an inline reconnect action', () => {
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
+      contactRuleHandlers={noopContactRuleHandlers}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -95,7 +92,6 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
         emptyBody: 'Use /join to re-enter this channel before sending messages.',
         showNicklist: false,
       }}
-      friends={[] satisfies FriendState[]}
       nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={[]}
@@ -104,8 +100,7 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
+      contactRuleHandlers={noopContactRuleHandlers}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}

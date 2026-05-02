@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { FriendState } from '../shared/protocol.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import { closedChannelList, makeBuffer, makeChannel, makeMessage, makeNetwork, makeWorkspace } from './chat-pane.test.fixtures.js';
-import { renderChatPane, renderQueryPane, renderServerPane } from './chat-pane.test.renderers.js';
+import { noopContactRuleHandlers, renderChatPane, renderQueryPane, renderServerPane } from './chat-pane.test.renderers.js';
 
 test('channel transcripts keep the unread divider anchored after a day divider', () => {
   const messages = [
@@ -20,7 +19,6 @@ test('channel transcripts keep the unread divider anchored after a day divider',
           lastReadMessageId: 'message-1',
         }),
       }}
-      friends={[] satisfies FriendState[]}
       nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={messages}
@@ -29,8 +27,7 @@ test('channel transcripts keep the unread divider anchored after a day divider',
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
+      contactRuleHandlers={noopContactRuleHandlers}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -186,7 +183,6 @@ test('reconnecting channels rely on the inline status banner instead of header m
         emptyBody: 'No history yet.',
         showNicklist: false,
       }}
-      friends={[] satisfies FriendState[]}
       nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={[]}
@@ -195,8 +191,7 @@ test('reconnecting channels rely on the inline status banner instead of header m
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
+      contactRuleHandlers={noopContactRuleHandlers}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}

@@ -5,9 +5,9 @@ import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 import type {
-  BackgroundDmAudioContact,
-  BackgroundDmAudioSettings,
-} from './background-dm-audio.js';
+  ContactNotificationSettings,
+} from './contact-notifications/settings.js';
+import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 
 export type DesktopShellHeaderModel = {
@@ -26,13 +26,8 @@ export type DesktopShellNicklistModel = {
   friends: FriendState[];
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
-  backgroundDmAudio: Pick<BackgroundDmAudioSettings, 'contacts'>;
-  onAddFriend: (nick: string) => Promise<boolean>;
-  onAddNotificationContact: (contact: BackgroundDmAudioContact) => void;
-  onAddMutedNick: (networkId: string, nick: string) => Promise<boolean>;
-  onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onRemoveNotificationContact: (contact: BackgroundDmAudioContact) => void;
-  onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
+  contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
+  contactRuleHandlers: ContactRuleHandlers;
   onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };

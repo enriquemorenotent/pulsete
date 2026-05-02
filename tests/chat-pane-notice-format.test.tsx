@@ -5,6 +5,7 @@ import type { BufferState, ChannelState, ChatMessage, NetworkProfile } from '../
 import type { ChannelListState } from '../web/src/app-types.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import type { WorkspaceView } from '../web/src/workspace.js';
+import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
@@ -93,7 +94,6 @@ test('chat transcripts render sender notices inline without a notice badge', () 
   const markup = renderToStaticMarkup(
     <ChatPane
       workspace={makeWorkspace()}
-      friends={[]}
       nickEmojis={[]}
       mutedNicks={[]}
       selectedMessages={[makeMessage()]}
@@ -102,8 +102,7 @@ test('chat transcripts render sender notices inline without a notice badge', () 
       onRecallOlderDraft={() => {}}
       onRecallNewerDraft={() => {}}
       onSend={async () => false}
-      onAddFriend={async () => false}
-      onRemoveFriend={async () => false}
+      contactRuleHandlers={noopContactRuleHandlers}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => false}

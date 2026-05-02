@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { playCue } from '../web/src/background-dm-audio-browser.js';
+import {
+  playCue,
+  readStoredContactNotificationSettings,
+} from '../web/src/contact-notifications/browser.js';
+import { CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS } from '../web/src/contact-notifications/settings.js';
 
 class FakeAudioParam {
   setValueAtTime() {}
@@ -36,6 +40,41 @@ class FakeGain {
     this.disconnectCalls += 1;
   }
 }
+
+test('stored settings can be read from the legacy preference key', () => {
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  const storage = new Map([
+    [CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS[1], JSON.stringify({
+      enabled: true,
+      systemEnabled: true,
+      sound: 'bell',
+      contacts: [{ networkId: 'network-1', nick: 'Alice' }],
+    })],
+  ]);
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+      },
+    },
+  });
+
+  try {
+    assert.deepEqual(readStoredContactNotificationSettings(), {
+      enabled: true,
+      systemEnabled: true,
+      sound: 'bell',
+      contacts: [{ networkId: 'network-1', nick: 'Alice' }],
+    });
+  } finally {
+    if (originalWindow) {
+      Object.defineProperty(globalThis, 'window', originalWindow);
+    } else {
+      Reflect.deleteProperty(globalThis, 'window');
+    }
+  }
+});
 
 test('audio cue disconnects scheduled nodes after playback ends', async () => {
   const oscillators: FakeOscillator[] = [];

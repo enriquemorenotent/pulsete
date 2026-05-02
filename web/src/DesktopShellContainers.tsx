@@ -24,6 +24,8 @@ import {
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
+import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
+import type { ContactNotificationsController } from './contact-notifications/controller.js';
 import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.js';
 import { useDesktopChatModel } from './useDesktopChatModel.js';
 import {
@@ -43,14 +45,14 @@ type SharedProps = {
 
 type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   applyServerMessages: ApplyServerMessages;
-  backgroundDmAudio: import('./useBackgroundDmAudio.js').BackgroundDmAudioState;
   composer: ComposerStoreApi;
-  primeBackgroundDmAudio: () => void;
+  contactNotifications: ContactNotificationsController;
+  contactRuleHandlers: ContactRuleHandlers;
 };
 
 type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
-  backgroundDmAudio: import('./useBackgroundDmAudio.js').BackgroundDmAudioState;
-  primeBackgroundDmAudio: () => void;
+  contactNotifications: ContactNotificationsController;
+  contactRuleHandlers: ContactRuleHandlers;
 };
 
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
@@ -77,9 +79,9 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
 export const ChatPaneContainer = memo(function ChatPaneContainer({
   actions,
   applyServerMessages,
-  backgroundDmAudio,
   composer,
-  primeBackgroundDmAudio,
+  contactNotifications,
+  contactRuleHandlers,
 }: ChatContainerProps) {
   const channelList = useAppSelector(selectChannelList);
   const channelListNetwork = useAppSelector(selectChannelListNetwork);
@@ -134,13 +136,13 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   });
   const model = useDesktopChatModel({
     actions,
-    backgroundDmAudio,
     composer,
+    contactNotifications,
+    contactRuleHandlers,
     friends,
     mutedNicks,
     nickEmojis,
     networks,
-    primeBackgroundDmAudio,
     channelList,
     channelListNetwork,
     selectedBufferHistory,
@@ -152,8 +154,8 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
 
 export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSidebarContainer({
   actions,
-  backgroundDmAudio,
-  primeBackgroundDmAudio,
+  contactNotifications,
+  contactRuleHandlers,
 }: RightSidebarContainerProps) {
   const dispatch = useAppDispatch();
   const friends = useAppSelector(selectFriends);
@@ -163,11 +165,11 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   const workspace = useAppSelector(selectWorkspace);
   const nicklist = useDesktopNicklistModel({
     actions,
-    backgroundDmAudio,
+    contactNotifications,
+    contactRuleHandlers,
     friends,
     mutedNicks,
     nickEmojis,
-    primeBackgroundDmAudio,
   });
   const serverProfile = useMemo(() => ({
     network: serverProfileNetwork,

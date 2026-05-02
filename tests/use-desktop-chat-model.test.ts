@@ -1,25 +1,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type {
-  BackgroundDmAudioContact,
-  BackgroundDmAudioSettings,
-} from '../web/src/background-dm-audio.js';
+  ContactNotificationContact,
+  ContactNotificationSettings,
+} from '../web/src/contact-notifications/settings.js';
 import {
   enableContactNotificationsAndUnmute,
   muteContactAndDisableNotifications,
-} from '../web/src/contact-rule-actions.js';
-import {
-  resolveQueryNotificationsEnabled,
-} from '../web/src/useDesktopChatModel.js';
+  resolveContactRuleState,
+} from '../web/src/contact-notifications/contact-rules.js';
 
-const contact: BackgroundDmAudioContact = {
+const contact: ContactNotificationContact = {
   networkId: 'network-1',
   nick: 'MissD',
 };
 
 const makeSettings = (
-  contacts: BackgroundDmAudioContact[],
-): BackgroundDmAudioSettings => ({
+  contacts: ContactNotificationContact[],
+): ContactNotificationSettings => ({
   enabled: true,
   systemEnabled: false,
   sound: 'chirp',
@@ -29,20 +27,24 @@ const makeSettings = (
 test('query notifications are inactive while the selected PM nick is muted', () => {
   const settings = makeSettings([{ networkId: 'network-1', nick: 'missd' }]);
 
-  assert.equal(resolveQueryNotificationsEnabled({
-    contact,
-    mutedNick: null,
-    settings,
-  }), true);
-  assert.equal(resolveQueryNotificationsEnabled({
-    contact,
-    mutedNick: { id: 'mute-1' },
-    settings,
-  }), false);
+  assert.equal(resolveContactRuleState({
+    networkId: contact.networkId,
+    nick: contact.nick,
+    friends: [],
+    mutedNicks: [],
+    contactNotifications: settings,
+  }).notificationsEnabled, true);
+  assert.equal(resolveContactRuleState({
+    networkId: contact.networkId,
+    nick: contact.nick,
+    friends: [],
+    mutedNicks: [{ id: 'mute-1', networkId: contact.networkId, nick: contact.nick }],
+    contactNotifications: settings,
+  }).notificationsEnabled, false);
 });
 
 test('muting a PM removes its notification contact after the mute succeeds', async () => {
-  const removedContacts: BackgroundDmAudioContact[] = [];
+  const removedContacts: ContactNotificationContact[] = [];
 
   const muted = await muteContactAndDisableNotifications({
     contact,
@@ -61,7 +63,7 @@ test('muting a PM removes its notification contact after the mute succeeds', asy
 });
 
 test('muting a PM keeps notifications unchanged when the mute fails', async () => {
-  const removedContacts: BackgroundDmAudioContact[] = [];
+  const removedContacts: ContactNotificationContact[] = [];
 
   const muted = await muteContactAndDisableNotifications({
     contact,

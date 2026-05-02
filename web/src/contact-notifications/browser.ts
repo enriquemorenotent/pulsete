@@ -1,23 +1,27 @@
-import type { BufferState } from '../../shared/protocol.js';
+import type { BufferState } from '../../../shared/protocol.js';
 import {
-  BACKGROUND_DM_AUDIO_SETTINGS_STORAGE_KEY,
-  parseBackgroundDmAudioSettings,
-  type BackgroundDmAudioSettings,
-  type BackgroundDmAudioSound,
-} from './background-dm-audio.js';
+  CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS,
+  parseContactNotificationSettings,
+  type ContactNotificationSettings,
+  type ContactNotificationSound,
+} from './settings.js';
 
 type AudioContextConstructor = typeof AudioContext;
 
-export const readStoredSettings = (): BackgroundDmAudioSettings => {
+export const readStoredContactNotificationSettings = (): ContactNotificationSettings => {
   if (typeof window === 'undefined') {
-    return parseBackgroundDmAudioSettings(null);
+    return parseContactNotificationSettings(null);
   }
   try {
-    return parseBackgroundDmAudioSettings(
-      window.localStorage.getItem(BACKGROUND_DM_AUDIO_SETTINGS_STORAGE_KEY),
-    );
+    for (const storageKey of CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS) {
+      const value = window.localStorage.getItem(storageKey);
+      if (value) {
+        return parseContactNotificationSettings(value);
+      }
+    }
+    return parseContactNotificationSettings(null);
   } catch {
-    return parseBackgroundDmAudioSettings(null);
+    return parseContactNotificationSettings(null);
   }
 };
 
@@ -96,7 +100,7 @@ const scheduleOscillator = (input: {
   }
 };
 
-const scheduleCue = (audioContext: AudioContext, sound: BackgroundDmAudioSound) => {
+const scheduleCue = (audioContext: AudioContext, sound: ContactNotificationSound) => {
   const startAt = audioContext.currentTime + 0.01;
   if (sound === 'bell') {
     scheduleBellCue(audioContext, startAt);
@@ -166,7 +170,7 @@ const scheduleGlassCue = (audioContext: AudioContext, startAt: number) => {
 
 export const playCue = async (
   audioContext: AudioContext | null,
-  sound: BackgroundDmAudioSound,
+  sound: ContactNotificationSound,
 ) => {
   if (!audioContext) {
     return;

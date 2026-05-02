@@ -9,6 +9,8 @@ import {
   ConnectionSidebarContainer,
   WorkspaceRightSidebarContainer,
 } from './DesktopShellContainers.js';
+import { createContactRuleHandlers } from './contact-notifications/contact-rules.js';
+import type { ContactNotificationsController } from './contact-notifications/controller.js';
 import {
   NetworkEditorDialogContainer,
   NetworkManagerDialogContainer,
@@ -17,16 +19,13 @@ import {
 import { DesktopShellLayout } from './DesktopShellLayout.js';
 import { useDesktopHeaderModel } from './useDesktopShellModel.js';
 import type { AppActions } from './useAppActions.js';
-import type { BackgroundDmAudioState } from './useBackgroundDmAudio.js';
 import type { AppUiState } from './useAppUiState.js';
 
 type DesktopShellProps = {
   actions: AppActions;
   applyServerMessages: ApplyServerMessages;
-  backgroundDmAudio: BackgroundDmAudioState;
   composer: ComposerStoreApi;
-  previewBackgroundDmAudio: BackgroundDmAudioState['setSound'];
-  primeBackgroundDmAudio: () => void;
+  contactNotifications: ContactNotificationsController;
   ui: AppUiState;
 };
 
@@ -42,6 +41,29 @@ export function DesktopShell(props: DesktopShellProps) {
     }),
     [props.ui.commandPaletteOpen, props.ui.openCommandPalette],
   );
+  const contactRuleHandlers = useMemo(
+    () =>
+      createContactRuleHandlers({
+        addFriend: props.actions.addFriend,
+        addMutedNick: props.actions.addMutedNick,
+        addNotificationContact: props.contactNotifications.addContact,
+        notificationsUseSound: props.contactNotifications.settings.enabled,
+        primeNotifications: props.contactNotifications.prime,
+        removeFriend: props.actions.removeFriend,
+        removeMutedNick: props.actions.removeMutedNick,
+        removeNotificationContact: props.contactNotifications.removeContact,
+      }),
+    [
+      props.actions.addFriend,
+      props.actions.addMutedNick,
+      props.actions.removeFriend,
+      props.actions.removeMutedNick,
+      props.contactNotifications.addContact,
+      props.contactNotifications.prime,
+      props.contactNotifications.removeContact,
+      props.contactNotifications.settings.enabled,
+    ],
+  );
 
   return (
     <DesktopShellLayout
@@ -54,17 +76,17 @@ export function DesktopShell(props: DesktopShellProps) {
         <ChatPaneContainer
           actions={props.actions}
           applyServerMessages={props.applyServerMessages}
-          backgroundDmAudio={props.backgroundDmAudio}
           composer={props.composer}
-          primeBackgroundDmAudio={props.primeBackgroundDmAudio}
+          contactNotifications={props.contactNotifications}
+          contactRuleHandlers={contactRuleHandlers}
         />
       }
       rightSidebar={
         rightSidebarKind ? (
           <WorkspaceRightSidebarContainer
             actions={props.actions}
-            backgroundDmAudio={props.backgroundDmAudio}
-            primeBackgroundDmAudio={props.primeBackgroundDmAudio}
+            contactNotifications={props.contactNotifications}
+            contactRuleHandlers={contactRuleHandlers}
           />
         ) : null
       }
@@ -74,9 +96,7 @@ export function DesktopShell(props: DesktopShellProps) {
       preferencesDialog={
         <PreferencesDialogContainer
           actions={props.actions}
-          backgroundDmAudio={props.backgroundDmAudio}
-          previewBackgroundDmAudio={props.previewBackgroundDmAudio}
-          primeBackgroundDmAudio={props.primeBackgroundDmAudio}
+          contactNotifications={props.contactNotifications}
           ui={props.ui}
         />
       }

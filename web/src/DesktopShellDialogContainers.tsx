@@ -14,33 +14,27 @@ import { useNetworkEditorController } from './useNetworkEditorController.js';
 import { useNetworkManagerController } from './useNetworkManagerController.js';
 import { usePreferencesController } from './usePreferencesController.js';
 import type { AppActions } from './useAppActions.js';
-import type { BackgroundDmAudioState } from './useBackgroundDmAudio.js';
+import type { ContactNotificationsController } from './contact-notifications/controller.js';
 import type { AppUiState } from './useAppUiState.js';
 
 type PreferencesDialogContainerProps = {
   actions: AppActions;
-  backgroundDmAudio: BackgroundDmAudioState;
-  previewBackgroundDmAudio: BackgroundDmAudioState['setSound'];
-  primeBackgroundDmAudio: () => void;
+  contactNotifications: ContactNotificationsController;
   ui: AppUiState;
 };
 
 export const PreferencesDialogContainer = memo(function PreferencesDialogContainer({
   actions,
-  backgroundDmAudio,
-  previewBackgroundDmAudio,
-  primeBackgroundDmAudio,
+  contactNotifications,
   ui,
 }: PreferencesDialogContainerProps) {
   const mutedNicks = useAppSelector(selectMutedNicks);
   const networks = useAppSelector(selectNetworks);
   const model = usePreferencesController({
     actions,
-    backgroundDmAudio,
+    contactNotifications,
     mutedNicks,
     networks,
-    primeBackgroundDmAudio,
-    previewBackgroundDmAudio,
     ui,
   });
   return <PreferencesDialog {...model} />;

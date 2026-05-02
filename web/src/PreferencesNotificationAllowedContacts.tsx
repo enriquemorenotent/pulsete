@@ -1,10 +1,10 @@
-import type { BackgroundDmAudioContact } from './background-dm-audio.js';
+import type { ContactNotificationContact } from './contact-notifications/settings.js';
 import { Button } from '@/components/ui/button.js';
 
 type PreferencesNotificationAllowedContactsProps = {
-  contacts: BackgroundDmAudioContact[];
+  contacts: ContactNotificationContact[];
   networkNameById: Map<string, string>;
-  onRemoveContact: (contact: BackgroundDmAudioContact) => void;
+  onRemoveContact: (contact: ContactNotificationContact) => void;
 };
 
 export function PreferencesNotificationAllowedContacts(
@@ -38,7 +38,7 @@ export function PreferencesNotificationAllowedContacts(
                   variant="ghost"
                   size="sm"
                   onClick={() => props.onRemoveContact(contact)}
-                  aria-label={`Remove ${contact.nick} from background DM audio`}
+                  aria-label={`Remove ${contact.nick} from notification contacts`}
                 >
                   Remove
                 </Button>
