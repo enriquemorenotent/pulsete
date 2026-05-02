@@ -119,7 +119,6 @@ export function useDesktopChatModel({
       queryNotificationsEnabled,
       onAddFriend: actions.addFriend,
       onRemoveFriend: actions.removeFriend,
-      onSaveNickEmoji: actions.saveNickEmoji,
       onMuteSelectedQuery: selectedQueryNotificationContact
         ? () => muteContactAndDisableNotifications({
             contact: selectedQueryNotificationContact,

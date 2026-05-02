@@ -21,7 +21,6 @@ type ChatPaneHeaderProps = {
   onOpenMentionedChannel: (channel: string) => void;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onMuteSelectedQuery?: () => Promise<boolean>;
   onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
@@ -46,13 +45,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     selectedBuffer?.kind === 'query'
       ? findNickEmoji(props.nickEmojis, selectedBuffer.networkId, selectedBuffer.target)
       : null;
-  const selectedQuery =
-    selectedBuffer?.kind === 'query' && props.workspace.selectedNetwork
-      ? {
-          network: props.workspace.selectedNetwork,
-          nick: selectedBuffer.target,
-        }
-      : null;
+  const selectedQueryNick = selectedBuffer?.kind === 'query' ? selectedBuffer.target : null;
   const topic = props.workspace.selectedChannel?.topic.trim() ?? '';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
     && !resolveChatPaneStatusBanner(props.workspace)
@@ -107,18 +100,14 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           title={props.workspace.headerTitle}
           primary={actions.primary}
           contactControls={
-            selectedQuery ? (
+            selectedQueryNick ? (
               <QueryContactControls
-                nick={selectedQuery.nick}
-                emoji={selectedNickEmoji?.emoji ?? null}
+                nick={selectedQueryNick}
                 friend={selectedFriend}
                 notifications={props.queryNotificationsEnabled ?? false}
                 muted={props.selectedQueryMuted ?? false}
                 onAddFriend={props.onAddFriend}
                 onRemoveFriend={props.onRemoveFriend}
-                onSaveEmoji={(emoji) =>
-                  props.onSaveNickEmoji(selectedQuery.network.id, selectedQuery.nick, emoji)
-                }
                 onToggleNotifications={props.onToggleQueryNotifications}
                 onMute={props.onMuteSelectedQuery}
                 onUnmute={props.onUnmuteSelectedQuery}
@@ -187,12 +176,12 @@ function PaneHeader(props: {
                 props.subtitle && 'mb-1',
               )}
             >
+              <span className="truncate">{props.title}</span>
               {props.emoji ? (
                 <span aria-hidden className="shrink-0 leading-none">
                   {props.emoji}
                 </span>
               ) : null}
-              <span className="truncate">{props.title}</span>
             </h2>
           ) : null}
           {props.subtitle ? (

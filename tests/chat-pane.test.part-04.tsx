@@ -10,7 +10,10 @@ test('nick emoji tags render beside chat participant labels', () => {
     nickEmojis: [{ id: 'nick-emoji-1', networkId: 'network-1', nick: 'joby', emoji: '🌙' }],
   });
 
-  assert.match(markup, /🌙/);
+  assert.match(
+    markup,
+    />Joby<span aria-hidden="true" class="ml-1 font-sans normal-case tracking-normal">🌙<\/span>/,
+  );
   assert.match(markup, /aria-label="Open private message with Joby"/);
 });
 
@@ -19,5 +22,8 @@ test('query headers show nick emoji tags', () => {
     nickEmojis: [{ id: 'nick-emoji-1', networkId: 'network-1', nick: 'MissD', emoji: '🌙' }],
   });
 
-  assert.match(markup, /🌙[\s\S]*MissD/);
+  assert.match(
+    markup,
+    /<span class="truncate">MissD<\/span><span aria-hidden="true" class="shrink-0 leading-none">🌙<\/span>/,
+  );
 });

@@ -44,5 +44,8 @@ test('command palette body keeps the top chrome fixed above a flexible results p
   assert.match(markup, /aria-label="Search command palette"/);
   assert.match(markup, /class="relative overflow-hidden min-h-0 flex-1"/);
   assert.match(markup, /School-of-O/);
-  assert.match(markup, /🌙[\s\S]*School-of-O/);
+  assert.match(
+    markup,
+    /<span class="truncate">School-of-O<\/span><span aria-hidden="true" class="shrink-0 text-\[15px\] leading-5">🌙<\/span>/,
+  );
 });

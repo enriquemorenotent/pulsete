@@ -1,16 +1,13 @@
 import type { FriendState } from '../../shared/protocol.js';
 import { ContactRuleIconButton } from './ContactRuleButtons.js';
-import { NickEmojiEditorControl } from './NickEmojiEditorControl.js';
 
 type QueryContactControlsProps = {
   nick: string;
-  emoji: string | null;
   friend: FriendState | null;
   notifications: boolean;
   muted: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onSaveEmoji: (emoji: string | null) => Promise<boolean>;
   onToggleNotifications?: () => void;
   onMute?: () => Promise<boolean>;
   onUnmute?: () => Promise<boolean>;
@@ -19,11 +16,6 @@ type QueryContactControlsProps = {
 export function QueryContactControls(props: QueryContactControlsProps) {
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <NickEmojiEditorControl
-        emoji={props.emoji}
-        nick={props.nick}
-        onSave={props.onSaveEmoji}
-      />
       <ContactRuleIconButton
         kind="friend"
         active={Boolean(props.friend)}

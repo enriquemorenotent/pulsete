@@ -34,7 +34,6 @@ export const renderChatPane = (
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
@@ -83,7 +82,6 @@ export const renderQueryPane = (
       queryNotificationsEnabled={overrides.queryNotificationsEnabled ?? false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onSaveNickEmoji={async () => true}
       onMuteSelectedQuery={async () => true}
       onUnmuteSelectedQuery={async () => true}
       onToggleQueryNotifications={() => undefined}
@@ -120,7 +118,6 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}

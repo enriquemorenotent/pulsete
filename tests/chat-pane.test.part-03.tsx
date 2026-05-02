@@ -47,7 +47,6 @@ test('offline channels surface an inline reconnect action', () => {
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -107,7 +106,6 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}

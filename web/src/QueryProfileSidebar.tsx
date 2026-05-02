@@ -21,11 +21,6 @@ export function QueryProfileSidebar(props: {
         <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Private message</p>
         <div className="min-w-0">
           <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-foreground">
-            {props.nickEmoji?.emoji ? (
-              <span aria-hidden className="shrink-0 leading-none">
-                {props.nickEmoji.emoji}
-              </span>
-            ) : null}
             <span className="truncate">{buffer.target}</span>
             {props.network ? (
               <NickEmojiEditorControl

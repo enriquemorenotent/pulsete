@@ -70,12 +70,12 @@ export function ConnectionSidebarBufferRow(
 						offline: props.presence === 'offline',
 					})}
 				>
+					{props.buffer.target}
 					{props.emoji ? (
-						<span className="mr-1 text-[12px] leading-none" aria-hidden>
+						<span className="ml-1 text-[12px] leading-none" aria-hidden>
 							{props.emoji}
 						</span>
 					) : null}
-					{props.buffer.target}
 				</span>
 			</button>
 			<button

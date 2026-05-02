@@ -23,7 +23,10 @@ test('friend rows render a globally unambiguous saved nick emoji tag', () => {
     nickEmojis: [{ id: 'nick-emoji-1', networkId: 'network-1', nick: 'Alice', emoji: '🌙' }],
   });
 
-  assert.match(markup, /🌙[\s\S]*Alice/);
+  assert.match(
+    markup,
+    />Alice<\/span><span aria-hidden="true" class="shrink-0 text-\[12px\] leading-none">🌙<\/span>/,
+  );
   assert.doesNotMatch(markup, /aria-label="Edit emoji tag for Alice"/);
 });
 

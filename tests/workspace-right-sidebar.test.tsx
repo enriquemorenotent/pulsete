@@ -127,8 +127,12 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   );
 
   assert.match(markup, /Private message/);
-  assert.match(markup, /🌙[\s\S]*Sofia/);
+  assert.doesNotMatch(
+    markup,
+    /<span class="truncate">Sofia<\/span><span aria-hidden="true" class="shrink-0 leading-none">🌙<\/span>/,
+  );
   assert.match(markup, /Sofia/);
+  assert.match(markup, /aria-label="Edit emoji tag for Sofia"/);
   assert.match(markup, /query-profile-notes/);
   assert.match(markup, /Prefers encrypted routes/);
   assert.match(markup, /Saved/);

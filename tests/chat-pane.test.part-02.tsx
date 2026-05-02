@@ -31,7 +31,6 @@ test('channel transcripts keep the unread divider anchored after a day divider',
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
@@ -131,6 +130,7 @@ test('query headers expose one-click contact controls', () => {
   assert.match(markup, /aria-label="Add MissD to watchlist"/);
   assert.match(markup, /aria-label="Enable notifications for MissD"/);
   assert.match(markup, /aria-label="Mute MissD"/);
+  assert.doesNotMatch(markup, /aria-label="Edit emoji tag for MissD"/);
   assert.doesNotMatch(markup, /aria-label="Contact settings for MissD"/);
   assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
@@ -197,7 +197,6 @@ test('reconnecting channels rely on the inline status banner instead of header m
       onSend={async () => false}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
-      onSaveNickEmoji={async () => true}
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}

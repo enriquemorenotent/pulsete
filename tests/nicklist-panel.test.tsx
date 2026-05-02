@@ -117,7 +117,10 @@ test('nicklist renders one-click contact controls beside away users', () => {
   );
 
   assert.match(markup, /aria-label="Away"/);
-  assert.match(markup, /🌙[\s\S]*alice/);
+  assert.match(
+    markup,
+    /<span class="truncate text-fuchsia-300">alice<\/span><span aria-hidden="true" class="shrink-0 leading-none">🌙<\/span>/,
+  );
   assert.match(markup, /aria-label="Remove alice from watchlist"/);
   assert.match(markup, /aria-label="Disable notifications for alice"/);
   assert.match(markup, /aria-label="Mute alice"/);

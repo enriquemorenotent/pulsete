@@ -175,13 +175,15 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
                           void entry.onSelect();
                         }}
                       >
-                        {entry.emoji ? (
-                          <span aria-hidden className="shrink-0 text-[15px] leading-5">
-                            {entry.emoji}
-                          </span>
-                        ) : null}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[13px] font-medium">{entry.label}</div>
+                          <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium">
+                            <span className="truncate">{entry.label}</span>
+                            {entry.emoji ? (
+                              <span aria-hidden className="shrink-0 text-[15px] leading-5">
+                                {entry.emoji}
+                              </span>
+                            ) : null}
+                          </div>
                           {entry.subtitle ? (
                             <div className="truncate text-[12px] text-muted-foreground">{entry.subtitle}</div>
                           ) : null}

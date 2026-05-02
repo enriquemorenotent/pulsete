@@ -102,12 +102,12 @@ export function NicklistPanel(props: NicklistPanelProps) {
                               className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
                               onClick={() => props.network && props.onSelectNick(props.network, user.nick)}
                             >
+                              <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
                               {userNickEmoji?.emoji ? (
                                 <span aria-hidden className="shrink-0 leading-none">
                                   {userNickEmoji.emoji}
                                 </span>
                               ) : null}
-                              <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
                             </button>
                             {user.away ? (
                               <span

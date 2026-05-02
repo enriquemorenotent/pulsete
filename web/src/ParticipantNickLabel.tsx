@@ -10,12 +10,12 @@ type ParticipantNickLabelProps = {
 
 const renderNickContent = (nick: string, emoji?: string | null) => (
   <>
+    {nick}
     {emoji ? (
-      <span aria-hidden className="mr-1 font-sans normal-case tracking-normal">
+      <span aria-hidden className="ml-1 font-sans normal-case tracking-normal">
         {emoji}
       </span>
     ) : null}
-    {nick}
   </>
 );
 

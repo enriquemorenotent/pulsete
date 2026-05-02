@@ -39,7 +39,6 @@ export type ChatPaneProps = {
   queryNotificationsEnabled?: boolean;
   onAddFriend: (nick: string) => Promise<boolean>;
   onRemoveFriend: (friendId: string) => Promise<boolean>;
-  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   onMuteSelectedQuery?: () => Promise<boolean>;
   onUnmuteSelectedQuery?: () => Promise<boolean>;
   onToggleQueryNotifications?: () => void;
@@ -100,7 +99,6 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onOpenMentionedChannel={props.onOpenMentionedChannel}
         onAddFriend={props.onAddFriend}
         onRemoveFriend={props.onRemoveFriend}
-        onSaveNickEmoji={props.onSaveNickEmoji}
         onMuteSelectedQuery={props.onMuteSelectedQuery}
         onUnmuteSelectedQuery={props.onUnmuteSelectedQuery}
         onToggleQueryNotifications={props.onToggleQueryNotifications}

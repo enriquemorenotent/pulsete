@@ -27,11 +27,6 @@ export function FriendRow(props: FriendRowProps) {
 						friendPresenceTone(props.presence),
 					)}
 				/>
-				{props.emoji ? (
-					<span aria-hidden className="shrink-0 text-[12px] leading-none">
-						{props.emoji}
-					</span>
-				) : null}
 				<span
 					className={cn(
 						'truncate text-[12px]',
@@ -42,6 +37,11 @@ export function FriendRow(props: FriendRowProps) {
 				>
 					{props.friend.nick}
 				</span>
+				{props.emoji ? (
+					<span aria-hidden className="shrink-0 text-[12px] leading-none">
+						{props.emoji}
+					</span>
+				) : null}
 			</button>
 			<button
 				type="button"
