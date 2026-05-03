@@ -1,3 +1,2 @@
-import './irc-race-06.test.part-01.js';
-import './irc-race-06.test.part-02.js';
-
+import './irc-race-06.test.login-names-casing.js';
+import './irc-race-06.test.channel-mode-preservation.js';

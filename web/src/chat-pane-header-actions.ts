@@ -1,4 +1,4 @@
-import type { BufferState, ChannelState } from '../../shared/protocol.js';
+import type { BufferState, ChannelState } from '../../shared/protocol-chat.js';
 import type { WorkspaceView } from './workspace.js';
 
 export type ChatPaneHeaderAction = {

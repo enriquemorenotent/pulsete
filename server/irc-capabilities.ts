@@ -1,5 +1,5 @@
 import { resolveNetworkAuthMethod } from '../shared/network-model.js';
-import type { NetworkRuntimeCapabilities } from '../shared/protocol.js';
+import type { NetworkRuntimeCapabilities } from '../shared/protocol-chat.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 import type { IrcCapabilityState } from './irc-state-types.js';
 

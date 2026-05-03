@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState } from '../shared/protocol.js';
+import type { BufferState } from '../shared/protocol-chat.js';
 import type { SidebarConnectionView } from '../web/src/connection-sidebar-view.js';
 import {
   buildCommandPaletteEntrySpecs,

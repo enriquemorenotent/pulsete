@@ -1,4 +1,4 @@
-import type { BufferState, ChannelUserMode, ChannelUserState, ChatMessage } from '../../shared/protocol.js';
+import type { BufferState, ChannelUserMode, ChannelUserState, ChatMessage } from '../../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
 import { channelUserModeTone } from './channel-user-tone.js';
 import { showKindLabel } from './chat-pane-message-utils.js';

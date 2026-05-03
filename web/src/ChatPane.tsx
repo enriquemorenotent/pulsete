@@ -1,12 +1,5 @@
 import { memo, useCallback, useReducer } from 'react';
-import type {
-  BufferState,
-  ChannelUserState,
-  ChatMessage,
-  MutedNickState,
-  NetworkProfile,
-  NickEmojiState,
-} from '../../shared/protocol.js';
+import type { BufferState, ChannelUserState, ChatMessage, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { ChannelListState } from './app-types.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';

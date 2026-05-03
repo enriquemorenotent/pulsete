@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { slashIrcClientCommandCompletionCandidates } from '../shared/irc-client-command.js';
-import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol-chat.js';
 import {
   buildComposerCompletionModel,
   getComposerCompletionResult,

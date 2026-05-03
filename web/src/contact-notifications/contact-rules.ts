@@ -1,4 +1,4 @@
-import type { FriendState, MutedNickState } from '../../../shared/protocol.js';
+import type { FriendState, MutedNickState } from '../../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../../shared/irc-identifiers.js';
 import {
   type ContactNotificationContact,

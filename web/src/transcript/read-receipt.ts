@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import type { BufferState, ServerMessage } from '../../../shared/protocol.js';
+import type { BufferState } from '../../../shared/protocol-chat.js';
+import type { ServerMessage } from '../../../shared/protocol-messages.js';
 import type { ApplyServerMessages } from '../app-actions-types.js';
 import { api } from '../client.js';
 import { shouldMarkSelectedBufferRead } from './unread-state.js';

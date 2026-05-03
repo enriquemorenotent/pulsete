@@ -1,6 +1,7 @@
 import type WebSocket from 'ws';
 import { channelListBatchFlushMs, channelListBatchSize } from '../shared/channel-list.js';
-import type { ChannelListEntry, ServerMessage } from '../shared/protocol.js';
+import type { ChannelListEntry } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { RuntimeEvent } from './irc-types.js';
 import type { IrcRuntimeChannelListConnection } from './irc-types.js';
 

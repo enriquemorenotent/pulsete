@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { NetworkProfile } from '../shared/protocol-chat.js';
 import { initialState } from '../web/src/app-state.js';
 import { createNetworkActions } from '../web/src/app-actions-networks.js';
 

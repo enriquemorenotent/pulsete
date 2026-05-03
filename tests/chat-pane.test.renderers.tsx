@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { ChannelUserState, ChatMessage, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol.js';
+import type { ChannelUserState, ChatMessage, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol-chat.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import type { ContactRuleHandlers, ContactRuleState } from '../web/src/contact-notifications/contact-rules.js';
 import { closedChannelList, makeQueryWorkspace, makeServerWorkspace, makeWorkspace } from './chat-pane.test.fixtures.js';

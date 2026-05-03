@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState,NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../shared/protocol-chat.js';
 import { resolveFriendSelection } from '../web/src/friend-selection.js';
 import type { NetworkRuntimeState } from '../web/src/workspace.js';
 

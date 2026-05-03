@@ -1,5 +1,5 @@
 import { VolumeX } from 'lucide-react';
-import type { ChannelUserMode } from '../../shared/protocol.js';
+import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import type { ChatTranscriptMutedGroupRow } from './transcript/model.js';
 import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';

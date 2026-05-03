@@ -7,16 +7,16 @@ import { handleMutedNickRoutes } from './http-muted-nicks.js';
 import { handleNickEmojiRoutes } from './http-nick-emojis.js';
 import { handleNetworkRoutes } from './http-networks.js';
 import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js';
-import type { HttpContext } from './http-types.js';
+import type { HttpContext, HttpHandlerContext } from './http-types.js';
 import { serveStatic } from './static-handler.js';
 
-export const createHttpHandler = (context: HttpContext) => async (req: IncomingMessage, res: ServerResponse) => {
+export const createHttpHandler = (context: HttpHandlerContext) => async (req: IncomingMessage, res: ServerResponse) => {
   try {
     const url = parseRequestUrl(req.url);
     const pathname = url.pathname;
     const args = { req, res, url, pathname, context };
     if (
-      await handleBackupRoutes(args)
+      (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))
       || await handleNetworkRoutes(args)
       || await handleNickEmojiRoutes(args)
       || await handleFriendRoutes(args)
@@ -45,3 +45,5 @@ export const createHttpHandler = (context: HttpContext) => async (req: IncomingM
     res.end(appError.message);
   }
 };
+
+const hasBackupApi = (context: HttpHandlerContext): context is HttpContext => 'backups' in context;

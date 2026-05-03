@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState,ChannelState,NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol-chat.js';
 import { sendComposerMessage } from '../web/src/composer-actions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 

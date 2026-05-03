@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ChannelState } from '../shared/protocol.js';
+import type { ChannelState } from '../shared/protocol-chat.js';
 import {
   extractIrcCloudAvatarId,
   resolveIrcCloudAvatarUrl,

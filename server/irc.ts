@@ -1,9 +1,4 @@
-import type {
-  ChannelListEntry,
-  ChannelUserState,
-  NetworkRuntimeState,
-  PresenceStatus,
-} from '../shared/protocol.js';
+import type { ChannelListEntry, ChannelUserState, NetworkRuntimeState, PresenceStatus } from '../shared/protocol-chat.js';
 import { snapshotIrcCapabilities } from './irc-capabilities.js';
 import { createIrcControllers } from './irc-controls.js';
 import { createIrcConnectionState, type IrcConnectionOptions } from './irc-connection-state.js';

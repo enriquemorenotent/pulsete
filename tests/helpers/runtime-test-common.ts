@@ -1,5 +1,5 @@
 import type { NetworkInput } from '../../server/storage.js';
-import type { ChannelUserState } from '../../shared/protocol.js';
+import type { ChannelUserState } from '../../shared/protocol-chat.js';
 import { waitFor } from './async-test-helpers.js';
 
 export { waitFor };

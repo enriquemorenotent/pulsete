@@ -1,4 +1,4 @@
-import type { MutedNickState } from '../../shared/protocol.js';
+import type { MutedNickState } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 
 type PreferencesNotificationMutedNicksProps = {

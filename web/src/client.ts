@@ -1,15 +1,6 @@
-import {
-  historySearchLimit,
-  historyWindowLimit,
-  type ServerMessage,
-  type BufferState,
-  type BufferHistorySearchPayload,
-  type FriendState,
-  type MutedNickState,
-  type NetworkProfile,
-  type NickEmojiState,
-  type ChatMessage,
-} from '../../shared/protocol.js';
+import { historySearchLimit, historyWindowLimit } from '../../shared/protocol-chat.js';
+import type { ServerMessage } from '../../shared/protocol-messages.js';
+import type { BufferState, BufferHistorySearchPayload, FriendState, MutedNickState, NetworkProfile, NickEmojiState, ChatMessage } from '../../shared/protocol-chat.js';
 import {
   parseDownloadFileName,
   triggerFileDownload,

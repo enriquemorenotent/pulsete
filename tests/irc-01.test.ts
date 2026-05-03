@@ -1,4 +1,3 @@
-import './irc-01.test.part-01.js';
-import './irc-01.test.part-02.js';
-import './irc-01.test.part-03.js';
-
+import './irc-01.test.registration-join-parse.js';
+import './irc-01.test.direct-message-auth.js';
+import './irc-01.test.sasl-autojoin.js';

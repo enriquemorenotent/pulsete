@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
 
@@ -20,6 +21,7 @@ type PreferencesNotificationSystemSectionProps = {
 export function PreferencesNotificationSystemSection(
   props: PreferencesNotificationSystemSectionProps,
 ) {
+  const systemEnabledId = useId();
   return (
     <div className="space-y-3 rounded-md border border-white/6 bg-black/14 px-3 py-3">
       <div className="flex items-start justify-between gap-3">
@@ -29,15 +31,16 @@ export function PreferencesNotificationSystemSection(
             Show OS-level alerts when an allowed private-message contact writes while this app is in the background.
           </p>
         </div>
-        <label className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
           <Checkbox
+            id={systemEnabledId}
             checked={props.enabled}
             disabled={props.permission !== 'granted'}
             onCheckedChange={(checked) => props.onSetEnabled(checked === true)}
             aria-label="Show system notifications for allowed private messages"
           />
-          <span>System</span>
-        </label>
+          <label htmlFor={systemEnabledId} className="cursor-pointer">System</label>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">

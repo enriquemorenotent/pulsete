@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage,type NetworkInput } from '../server/storage.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState } from '../shared/protocol-chat.js';
 
 const makeUser = (
   nick: string,

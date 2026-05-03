@@ -1,5 +1,5 @@
 import type WebSocket from 'ws';
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { RuntimeSocketHub } from './runtime-socket-hub.js';
 
 export class RuntimePublisher {

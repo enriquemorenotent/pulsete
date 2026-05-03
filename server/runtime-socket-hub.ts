@@ -1,11 +1,19 @@
 import WebSocket from 'ws';
-import { encode, type ServerMessage } from '../shared/protocol.js';
+import { encode } from '../shared/protocol-messages.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 
 export class RuntimeSocketHub {
   private readonly sockets = new Set<WebSocket>();
   private readonly closeListeners = new Map<WebSocket, () => void>();
+  private onDrop: (ws: WebSocket) => void;
 
-  constructor(private readonly onDrop: (ws: WebSocket) => void) {}
+  constructor(onDrop: (ws: WebSocket) => void = () => {}) {
+    this.onDrop = onDrop;
+  }
+
+  setDropHandler(onDrop: (ws: WebSocket) => void) {
+    this.onDrop = onDrop;
+  }
 
   attach(ws: WebSocket) {
     if (this.sockets.has(ws)) {

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type WebSocket from 'ws';
-import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol-chat.js';
 import { IrcConnection } from './irc.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { requireRuntimeNetwork } from './runtime-network-guard.js';

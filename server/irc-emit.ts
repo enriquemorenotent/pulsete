@@ -1,6 +1,6 @@
 import type { IrcEventContext, IrcStateContext } from './irc-contexts.js';
 import type { RuntimeEvent } from './irc-types.js';
-import type { ChannelUserState, PresenceStatus } from '../shared/protocol.js';
+import type { ChannelUserState, PresenceStatus } from '../shared/protocol-chat.js';
 import type { MessageInput } from './storage-types.js';
 import { snapshotIrcCapabilities } from './irc-capabilities.js';
 

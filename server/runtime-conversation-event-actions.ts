@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { MessageKind, ServerMessage } from '../shared/protocol.js';
+import type { MessageKind } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { isNickMuted } from '../shared/muted-nicks.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import { isServiceNick } from './irc-services.js';

@@ -1,15 +1,8 @@
 import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
-import type {
-  AppSnapshot,
-  BufferState,
-  ChannelState,
-  ChannelUserState,
-  FriendState,
-  MutedNickState,
-  NickEmojiState,
-} from '../shared/protocol.js';
+import type { AppSnapshot } from '../shared/protocol-app.js';
+import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol-chat.js';
 import type {
   BufferInput,
   ChannelInput,
@@ -31,6 +24,7 @@ export type RuntimeSnapshotSource = {
   listNickEmojis(networkId?: string): NickEmojiState[];
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
+  listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
 };
 
 export type RuntimeConversationStore = {
@@ -52,6 +46,7 @@ export type RuntimeConversationStore = {
   listAllMessages(networkId: string, target: string): AppSnapshot['messages'];
   listOpeningMessages(networkId: string, target: string, limit: number): AppSnapshot['messages'];
   listRecentMessagesForBuffer(networkId: string, target: string, limit: number): AppSnapshot['messages'];
+  listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
   searchMessagesByBufferId(bufferId: string, query: string, limit: number): MessageSearchPage;
   getMessageWindow(messageId: string, before: number, after: number): AppSnapshot['messages'];
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];

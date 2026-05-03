@@ -1,5 +1,5 @@
 import { Copy, Heart, PencilLine, Server, Trash2 } from 'lucide-react';
-import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol.js';
+import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol-chat.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';

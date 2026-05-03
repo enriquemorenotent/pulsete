@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { X } from 'lucide-react';
-import type { BufferState, PresenceStatus } from '../../shared/protocol.js';
+import type { BufferState, PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { connectionSidebarLabelClass } from './connection-sidebar-label-class.js';

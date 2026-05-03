@@ -1,3 +1,2 @@
-import './irc-06.test.part-01.js';
-import './irc-06.test.part-02.js';
-
+import './irc-06.test.whois-routing.js';
+import './irc-06.test.labeled-whois-routing.js';

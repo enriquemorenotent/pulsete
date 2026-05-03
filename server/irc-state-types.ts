@@ -1,10 +1,6 @@
 import type net from 'node:net';
 import type tls from 'node:tls';
-import type {
-  ChannelListEntry,
-  ChannelUserState,
-  PresenceStatus,
-} from '../shared/protocol.js';
+import type { ChannelListEntry, ChannelUserState, PresenceStatus } from '../shared/protocol-chat.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
 
 export type ChannelSessionPhase = 'joining' | 'joined' | 'leaving';

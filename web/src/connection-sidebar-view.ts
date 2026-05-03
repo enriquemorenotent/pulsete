@@ -1,4 +1,4 @@
-import type { BufferState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile, PendingChannelState } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { ConversationIndex } from './conversation-selectors.js';
 import {

@@ -15,9 +15,6 @@ export type SecretBox = {
 
 export const isEncryptedSecret = (value: string) => parseEncryptedSecret(value) !== null;
 
-export const resolveNetworkSecretPath = (databasePath = resolve('data', 'pulsete.sqlite')) =>
-  resolve(dirname(databasePath), 'pulsete.secret');
-
 export const isValidNetworkSecretContent = (value: string) => {
   const normalized = value.trim();
   if (!normalized) {
@@ -31,10 +28,10 @@ export const isValidNetworkSecretContent = (value: string) => {
 };
 
 export const createSecretBox = (
-  databasePath = resolve('data', 'pulsete.sqlite'),
+  secretPath: string,
   options: { createIfMissing?: boolean } = {}
 ): SecretBox => {
-  const keyPath = resolveNetworkSecretPath(databasePath);
+  const keyPath = resolve(secretPath);
   mkdirSync(dirname(keyPath), { recursive: true });
   const key = loadOrCreateKey(keyPath, options.createIfMissing ?? true);
   return {

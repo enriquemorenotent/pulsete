@@ -7,17 +7,14 @@ import {
   readJson,
   writeJson,
 } from './http-utils.js';
-import type { RouteArgs } from './http-types.js';
+import type { BackupRouteArgs } from './http-types.js';
 import type { BrowserPreferences } from './storage-backup.js';
 
 const exportInputSchema = z.object({
   browserPreferences: z.record(z.string()).optional(),
 });
 
-export const handleBackupRoutes = async ({ req, res, pathname, context }: RouteArgs) => {
-  if (!context.backups) {
-    return false;
-  }
+export const handleBackupRoutes = async ({ req, res, pathname, context }: BackupRouteArgs) => {
   if (req.method === 'POST' && pathname === '/api/backups/export') {
     const input = readExportInput(await readJson(req, 1024 * 1024));
     const backup = context.backups.export(input.browserPreferences);

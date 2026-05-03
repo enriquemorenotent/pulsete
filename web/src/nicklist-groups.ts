@@ -1,4 +1,4 @@
-import type { ChannelUserState, FriendState } from '../../shared/protocol.js';
+import type { ChannelUserState, FriendState } from '../../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { ChannelUserGroup } from './channel-user-groups.js';
 import { groupChannelUsers } from './channel-user-groups.js';

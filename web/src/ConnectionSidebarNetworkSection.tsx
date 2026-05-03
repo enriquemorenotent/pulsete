@@ -1,5 +1,5 @@
 import { Hash, MessageSquareMore, PowerOff, RefreshCcw, Server, X } from 'lucide-react';
-import type { PresenceStatus } from '../../shared/protocol.js';
+import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';

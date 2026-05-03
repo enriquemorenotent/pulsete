@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState,ChannelState,NetworkProfile,PendingChannelState } from '../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../shared/protocol-chat.js';
 import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import {
   deriveWorkspace,

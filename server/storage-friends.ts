@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SqliteDb } from './storage-sqlite.js';
-import type { FriendState } from '../shared/protocol.js';
+import type { FriendState } from '../shared/protocol-chat.js';
 import type { FriendInput, FriendRow } from './storage-types.js';
 import { toFriendState } from './storage-utils.js';
 

@@ -1,4 +1,4 @@
-import type { NickEmojiState } from '../../shared/protocol.js';
+import type { NickEmojiState } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier, normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
 
 export const getNickEmojiTag = (nickEmoji: NickEmojiState | null | undefined) =>

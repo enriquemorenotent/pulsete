@@ -1,6 +1,6 @@
-import { useReducer } from 'react';
-import type { AppSnapshot, BufferState } from '../../shared/protocol.js';
-import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol.js';
+import type { AppSnapshot } from '../../shared/protocol-app.js';
+import type { BufferState } from '../../shared/protocol-chat.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
 import {
@@ -144,7 +144,3 @@ const retainActiveBufferKeys = <T extends Record<string, unknown>>(
   });
   return changed ? Object.fromEntries(entries) as T : map;
 };
-
-export function useStateReducer(initialReducer: typeof reducer, state: State) {
-  return useReducer(initialReducer, state);
-}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { NetworkProfile } from '../shared/protocol-chat.js';
 import {
   getNetworkManagerAuthLabel,
   getNetworkManagerAutoJoinLabel,

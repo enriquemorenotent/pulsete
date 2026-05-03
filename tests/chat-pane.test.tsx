@@ -1,4 +1,4 @@
-import './chat-pane.test.part-01.js';
-import './chat-pane.test.part-02.js';
-import './chat-pane.test.part-03.js';
-import './chat-pane.test.part-04.js';
+import './chat-pane.test.inline-message-rows.js';
+import './chat-pane.test.transcript-header-composer.js';
+import './chat-pane.test.offline-query-actions.js';
+import './chat-pane.test.nick-emoji-tags.js';

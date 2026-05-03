@@ -1,4 +1,4 @@
-import type { ServerMessage } from '../../shared/protocol.js';
+import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type { AppStoreApi } from './app-store.js';
 import type { Action } from './app-types.js';
 import { dispatchInboundServerMessage } from './server-message-actions.js';

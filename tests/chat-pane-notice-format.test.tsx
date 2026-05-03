@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { BufferState, ChannelState, ChatMessage, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChatMessage, NetworkProfile } from '../shared/protocol-chat.js';
 import type { ChannelListState } from '../web/src/app-types.js';
 import { ChatPane } from '../web/src/ChatPane.js';
 import type { WorkspaceView } from '../web/src/workspace.js';

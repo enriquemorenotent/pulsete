@@ -1,4 +1,4 @@
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import { listWorkspaceNetworks } from '../../shared/network-model.js';
 import type { NetworkRuntimeState } from './workspace-types.js';
 

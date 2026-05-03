@@ -7,13 +7,8 @@ import {
 } from './storage-migrations.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
 
-export const defaultDatabasePath = () => resolve('data', 'pulsete.sqlite');
-
-export const resolveDatabaseFilePath = (filePath?: string) =>
-  filePath ? resolve(filePath) : defaultDatabasePath();
-
-export const createDatabase = (filePath = defaultDatabasePath()) => {
-  filePath = resolveDatabaseFilePath(filePath);
+export const createDatabase = (filePath: string, backupDirectory: string) => {
+  filePath = resolve(filePath);
   mkdirSync(dirname(filePath), { recursive: true });
   const existedBeforeOpen = existsSync(filePath);
   const db = openSqliteDatabase(filePath);
@@ -24,7 +19,7 @@ export const createDatabase = (filePath = defaultDatabasePath()) => {
   }
   const version = getDatabaseUserVersion(db);
   if (existedBeforeOpen && hasUserTables && version < currentStorageSchemaVersion) {
-    createPreMigrationBackup(db, filePath, version);
+    createPreMigrationBackup(db, filePath, backupDirectory, version);
   }
   applyStorageMigrations(db, { existedBeforeOpen: existedBeforeOpen && hasUserTables });
   return db;
@@ -51,19 +46,29 @@ const databaseHasUserTables = (db: SqliteDb) =>
 const getDatabaseUserVersion = (db: SqliteDb) =>
   Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
 
-const createPreMigrationBackup = (db: SqliteDb, filePath: string, fromVersion: number) => {
+const createPreMigrationBackup = (
+  db: SqliteDb,
+  filePath: string,
+  backupDirectory: string,
+  fromVersion: number
+) => {
   db.prepare('PRAGMA wal_checkpoint(PASSIVE)').get();
-  const backupPath = preMigrationBackupPath(filePath, fromVersion, new Date());
+  const backupPath = preMigrationBackupPath(filePath, backupDirectory, fromVersion, new Date());
   mkdirSync(dirname(backupPath), { recursive: true });
   copyFileSync(filePath, backupPath);
   copySidecarIfPresent(`${filePath}-wal`, `${backupPath}-wal`);
   copySidecarIfPresent(`${filePath}-shm`, `${backupPath}-shm`);
 };
 
-const preMigrationBackupPath = (filePath: string, fromVersion: number, date: Date) => {
+const preMigrationBackupPath = (
+  filePath: string,
+  backupDirectory: string,
+  fromVersion: number,
+  date: Date
+) => {
   const timestamp = date.toISOString().replace(/[:.]/g, '-');
   const name = `${basename(filePath)}.pre-migration-v${fromVersion}-to-v${currentStorageSchemaVersion}-${timestamp}.sqlite`;
-  return join(dirname(filePath), 'backups', name);
+  return join(backupDirectory, name);
 };
 
 const copySidecarIfPresent = (source: string, destination: string) => {

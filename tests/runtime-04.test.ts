@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
 import { createStreamingListServer } from './helpers/runtime-test-list-servers.js';
 import { createSocketRecorder } from './helpers/runtime-test-sockets.js';

@@ -1,4 +1,4 @@
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import { selectionFor } from './conversation-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import {

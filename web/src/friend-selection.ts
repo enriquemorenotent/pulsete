@@ -1,4 +1,4 @@
-import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { AppDomainState } from './app-types.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';

@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ConnectionSidebar } from '../web/src/ConnectionSidebar.js';
-import type {
-  BufferState,
-  FriendState,
-  NetworkProfile,
-} from '../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol-chat.js';
 import { buildConnectionSidebarView } from '../web/src/connection-sidebar-view.js';
 import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import type { NetworkRuntimeState } from '../web/src/workspace.js';

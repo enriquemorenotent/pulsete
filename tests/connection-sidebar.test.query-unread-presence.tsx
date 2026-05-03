@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ConnectionSidebar } from '../web/src/ConnectionSidebar.js';
-import type {
-  BufferState,
-  FriendState,
-  NetworkProfile,
-} from '../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol-chat.js';
 import { buildConnectionSidebarView } from '../web/src/connection-sidebar-view.js';
 import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 import type { NetworkRuntimeState } from '../web/src/workspace.js';
@@ -48,72 +44,52 @@ const makeRuntime = (
   nick: overrides.nick ?? 'sofia',
 });
 
-test('offline connections keep channel and query rows visible and selectable', () => {
+test('open query buffers show saved contact presence cues', () => {
   const network = makeNetwork();
-  const channel = makeBuffer({
-    id: 'channel-1',
-    kind: 'channel',
-    target: '#help',
+  const offlineQuery = makeBuffer({
+    id: 'query-1',
+    kind: 'query',
+    target: 'alice',
   });
-  const query = makeBuffer({ id: 'query-1', kind: 'query', target: 'alice' });
+  const awayQuery = makeBuffer({
+    id: 'query-2',
+    kind: 'query',
+    target: 'bob',
+  });
+  const onlineQuery = makeBuffer({
+    id: 'query-3',
+    kind: 'query',
+    target: 'carol',
+  });
   const markup = renderToStaticMarkup(
     <ConnectionSidebar
       connections={buildConnectionSidebarView({
         networks: [network],
         conversation: buildConversationIndex({
-          buffers: [makeBuffer({ id: 'server-1' }), channel, query],
-          channels: [],
-          pendingChannels: [],
-          messages: {},
-        }),
-        networkStates: { [network.id]: makeRuntime({ phase: 'offline' }) },
-        selection: { kind: 'buffer', bufferId: 'server-1' },
-      })}
-      friends={[] satisfies FriendState[]}
-      friendPresence={{}}
-      nickEmojis={[]}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
-      onSelectFriend={async () => undefined}
-      onSelectNetwork={() => undefined}
-      onSelectBuffer={() => undefined}
-      onSelectPendingChannel={() => undefined}
-      onReconnectNetwork={() => undefined}
-      onDisconnectNetwork={() => undefined}
-      onCloseConnection={() => undefined}
-      onCloseChannel={() => undefined}
-      onCloseBuffer={() => undefined}
-    />,
-  );
-
-  assert.match(markup, /aria-label="Open #help"/);
-  assert.match(markup, /aria-label="Open alice"/);
-  assert.match(markup, /Connections<\/h2>/);
-  assert.doesNotMatch(markup, /Buffers<\/h2>/);
-  assert.doesNotMatch(markup, /aria-label="Open #help"[^>]*disabled/);
-  assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
-  assert.doesNotMatch(markup, />Offline</);
-});
-
-test('connected rows rely on the status dot instead of repeating a connected label', () => {
-  const network = makeNetwork();
-  const server = makeBuffer({ id: 'server-1' });
-  const markup = renderToStaticMarkup(
-    <ConnectionSidebar
-      connections={buildConnectionSidebarView({
-        networks: [network],
-        conversation: buildConversationIndex({
-          buffers: [server],
+          buffers: [
+            makeBuffer({ id: 'server-1' }),
+            offlineQuery,
+            awayQuery,
+            onlineQuery,
+          ],
           channels: [],
           pendingChannels: [],
           messages: {},
         }),
         networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
-        selection: { kind: 'buffer', bufferId: server.id },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
       })}
-      friends={[] satisfies FriendState[]}
+      friends={[
+        { id: 'friend-1', nick: 'Alice' },
+        { id: 'friend-2', nick: 'Bob' },
+      ]}
       friendPresence={{}}
-      nickEmojis={[]}
+      nickEmojis={[{ id: 'nick-emoji-1', networkId: network.id, nick: 'carol', emoji: '🌙' }]}
+      queryPresence={{
+        [offlineQuery.id]: 'offline',
+        [awayQuery.id]: 'away',
+        [onlineQuery.id]: 'online',
+      }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -128,57 +104,25 @@ test('connected rows rely on the status dot instead of repeating a connected lab
     />,
   );
 
-  assert.doesNotMatch(markup, />Connected</);
-  assert.doesNotMatch(markup, />as sofia</);
-  assert.match(markup, /text-emerald-400/);
+  assert.match(markup, /aria-label="Open alice \(offline\)"/);
+  assert.match(markup, /aria-label="Open bob \(away\)"/);
+  assert.match(markup, /aria-label="Open carol \(online\)"/);
   assert.match(
     markup,
-    /class="truncate text-\[12px\] text-foreground">Cuff-Link<\/span>/,
+    /<span class="truncate text-\[12px\] text-foreground">carol<span class="ml-1 text-\[12px\] leading-none" aria-hidden="true">🌙<\/span><\/span>/,
   );
+  assert.match(markup, /text-red-400/);
+  assert.match(markup, /text-yellow-400/);
+  assert.match(markup, /text-emerald-400/);
+  assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });
 
-test('connecting rows rely on the status dot instead of repeating a connecting label', () => {
+test('query rows use the overlaid dot for unread state instead of a trailing marker', () => {
   const network = makeNetwork();
-  const server = makeBuffer({ id: 'server-1' });
-  const markup = renderToStaticMarkup(
-    <ConnectionSidebar
-      connections={buildConnectionSidebarView({
-        networks: [network],
-        conversation: buildConversationIndex({
-          buffers: [server],
-          channels: [],
-          pendingChannels: [],
-          messages: {},
-        }),
-        networkStates: { [network.id]: makeRuntime({ phase: 'connecting' }) },
-        selection: { kind: 'buffer', bufferId: server.id },
-      })}
-      friends={[] satisfies FriendState[]}
-      friendPresence={{}}
-      nickEmojis={[]}
-      onAddFriend={async () => true}
-      onRemoveFriend={async () => true}
-      onSelectFriend={async () => undefined}
-      onSelectNetwork={() => undefined}
-      onSelectBuffer={() => undefined}
-      onSelectPendingChannel={() => undefined}
-      onReconnectNetwork={() => undefined}
-      onDisconnectNetwork={() => undefined}
-      onCloseConnection={() => undefined}
-      onCloseChannel={() => undefined}
-      onCloseBuffer={() => undefined}
-    />,
-  );
-
-  assert.doesNotMatch(markup, />Connecting</);
-  assert.doesNotMatch(markup, />as sofia</);
-  assert.match(markup, /text-amber-300/);
-});
-
-test('server rows use the overlaid dot for unread state instead of a trailing marker', () => {
-  const network = makeNetwork();
-  const server = makeBuffer({
-    id: 'server-1',
+  const unreadQuery = makeBuffer({
+    id: 'query-1',
+    kind: 'query',
+    target: 'alice',
     unread: 2,
     priorityUnread: 1,
   });
@@ -187,17 +131,18 @@ test('server rows use the overlaid dot for unread state instead of a trailing ma
       connections={buildConnectionSidebarView({
         networks: [network],
         conversation: buildConversationIndex({
-          buffers: [server],
+          buffers: [makeBuffer({ id: 'server-1' }), unreadQuery],
           channels: [],
           pendingChannels: [],
           messages: {},
         }),
         networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
-        selection: { kind: 'buffer', bufferId: server.id },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
       })}
       friends={[] satisfies FriendState[]}
       friendPresence={{}}
       nickEmojis={[]}
+      queryPresence={{ [unreadQuery.id]: 'online' }}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}
       onSelectFriend={async () => undefined}
@@ -212,13 +157,62 @@ test('server rows use the overlaid dot for unread state instead of a trailing ma
     />,
   );
 
-  assert.match(markup, /aria-label="Open Cuff-Link \(unread\)"/);
+  assert.match(markup, /aria-label="Open alice \(online, unread\)"/);
   assert.match(markup, /text-emerald-400/);
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[12px\] text-foreground font-semibold">Cuff-Link<\/span>/,
+    /class="truncate text-\[12px\] text-foreground font-semibold">alice<\/span>/,
   );
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
 });
 
+test('query rows use the same blue overlaid dot for non-priority unread state', () => {
+  const network = makeNetwork();
+  const unreadQuery = makeBuffer({
+    id: 'query-1',
+    kind: 'query',
+    target: 'alice',
+    unread: 2,
+    priorityUnread: 0,
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), unreadQuery],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      nickEmojis={[]}
+      queryPresence={{ [unreadQuery.id]: 'away' }}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open alice \(away, unread\)"/);
+  assert.match(markup, /text-yellow-400/);
+  assert.match(markup, /bg-primary/);
+  assert.match(
+    markup,
+    /class="truncate text-\[12px\] text-foreground font-medium">alice<\/span>/,
+  );
+  assert.doesNotMatch(markup, /aria-label="Unread messages"/);
+});

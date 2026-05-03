@@ -1,5 +1,5 @@
 import type { StoredNetworkProfile } from '../shared/network-model.js';
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { RuntimeConversationStore } from './runtime-store-ports.js';
 
 export const collectRequestedServerBuffer = (

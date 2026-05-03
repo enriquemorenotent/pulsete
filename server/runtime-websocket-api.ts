@@ -1,5 +1,5 @@
 import type WebSocket from 'ws';
-import type { ClientMessage } from '../shared/protocol.js';
+import type { ClientMessage } from '../shared/protocol-messages.js';
 import type { RuntimeIrcService } from './runtime-irc-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type { RuntimeHttpApi, RuntimeWebSocketApi } from './runtime-service-types.js';

@@ -1,5 +1,5 @@
 import type { SqliteDb } from './storage-sqlite.js';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { NetworkProfile } from '../shared/protocol-chat.js';
 import { upsertBuffer } from './storage-buffers.js';
 import { listNetworks } from './storage-networks.js';
 

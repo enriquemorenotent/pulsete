@@ -1,5 +1,6 @@
 import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
-import { historyWindowLimit, type BufferState, type ChatMessage } from '../../shared/protocol.js';
+import { historyWindowLimit } from '../../shared/protocol-chat.js';
+import type { BufferState, ChatMessage } from '../../shared/protocol-chat.js';
 
 export type ConversationMessages = Record<string, ChatMessage[]>;
 

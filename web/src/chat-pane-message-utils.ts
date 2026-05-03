@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../shared/protocol.js';
+import type { ChatMessage } from '../../shared/protocol-chat.js';
 
 export const formatMessageTime = (value: number) => {
   const date = new Date(value);

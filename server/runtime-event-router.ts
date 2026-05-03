@@ -1,4 +1,5 @@
-import type { FriendState, NetworkProfile, ServerMessage } from '../shared/protocol.js';
+import type { FriendState, NetworkProfile } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import type WebSocket from 'ws';
 import type { IrcConnection } from './irc.js';
 import type { RuntimeEvent, IrcRuntimeChannelListConnection } from './irc-types.js';

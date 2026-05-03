@@ -1,5 +1,5 @@
 import { normalizeIrcIdentifier } from '../../../shared/irc-identifiers.js';
-import type { ChatMessage, MutedNickState } from '../../../shared/protocol.js';
+import type { ChatMessage, MutedNickState } from '../../../shared/protocol-chat.js';
 import {
   formatDayDividerLabel,
   getServerMessageSourceLabel,

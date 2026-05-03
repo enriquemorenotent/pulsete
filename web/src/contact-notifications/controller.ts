@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BufferState } from '../../../shared/protocol.js';
+import type { BufferState } from '../../../shared/protocol-chat.js';
 import {
   CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
   addContactNotificationContact,

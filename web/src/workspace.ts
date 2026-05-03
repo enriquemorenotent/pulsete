@@ -1,6 +1,7 @@
 import { buildConversationModel } from './conversation-model.js';
 import type { ConversationIndex } from './conversation-selectors.js';
-import type { AppSnapshot, NetworkProfile } from '../../shared/protocol.js';
+import type { AppSnapshot } from '../../shared/protocol-app.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import { getWorkspaceNetworks } from './workspace-helpers.js';
 import { buildEmptyWorkspace, buildResolvedWorkspace } from './workspace-builders.js';
 import { resolveWorkspace, type WorkspaceInput } from './workspace-resolve.js';

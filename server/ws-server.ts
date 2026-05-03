@@ -1,7 +1,7 @@
 import type { IncomingMessage, Server } from 'node:http';
 import type { Duplex } from 'node:stream';
 import WebSocket, { WebSocketServer } from 'ws';
-import { decodeClient, encode } from '../shared/protocol.js';
+import { decodeClient, encode } from '../shared/protocol-messages.js';
 import type { RuntimeWebSocketApi } from './runtime.js';
 import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
 

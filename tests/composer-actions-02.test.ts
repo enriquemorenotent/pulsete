@@ -1,3 +1,2 @@
-import './composer-actions-02.test.part-01.js';
-import './composer-actions-02.test.part-02.js';
-
+import './composer-actions-02.test.whois-list-commands.js';
+import './composer-actions-02.test.close-command.js';

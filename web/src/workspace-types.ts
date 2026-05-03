@@ -1,5 +1,5 @@
-import type { BufferState, ChannelState, NetworkProfile, PendingChannelState, NetworkRuntimeState } from '../../shared/protocol.js';
-export type { NetworkRuntimeState } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile, PendingChannelState, NetworkRuntimeState } from '../../shared/protocol-chat.js';
+export type { NetworkRuntimeState } from '../../shared/protocol-chat.js';
 
 export type SelectedBuffer =
   | {

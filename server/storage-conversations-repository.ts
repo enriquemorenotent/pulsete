@@ -1,5 +1,5 @@
 import type { SqliteDb } from './storage-sqlite.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState } from '../shared/protocol-chat.js';
 import {
   appendMessage,
   deleteMessages,
@@ -11,6 +11,7 @@ import {
   listMessagePage,
   listMessages,
   listRecentMessagesForBuffer,
+  listRecentMessagesForBufferIds,
   listRecentMessages,
   searchMessagesByBufferId,
 } from './storage-messages.js';
@@ -117,6 +118,10 @@ export class StorageConversationsRepository {
 
   listRecentMessagesForBuffer(networkId: string, target: string, limit: number) {
     return listRecentMessagesForBuffer(this.db, networkId, target, limit);
+  }
+
+  listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number) {
+    return listRecentMessagesForBufferIds(this.db, bufferIds, limit);
   }
 
   searchMessagesByBufferId(bufferId: string, query: string, limit: number) {

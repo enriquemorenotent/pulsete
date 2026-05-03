@@ -3,7 +3,7 @@ import {
   createStorageBackup,
   type BrowserPreferences,
 } from './storage-backup.js';
-import { resolveDatabaseFilePath } from './storage-db.js';
+import { resolveAppPaths, type AppPaths } from './app-paths.js';
 import { StorageConversationsRepository } from './storage-conversations-repository.js';
 import { StorageFriendsRepository } from './storage-friends-repository.js';
 import { StorageMutedNicksRepository } from './storage-muted-nicks-repository.js';
@@ -20,6 +20,7 @@ export { type MessageInput, type NetworkInput };
 export class Storage {
   private readonly db: SqliteDb;
   private readonly secretBox;
+  private readonly paths: AppPaths;
   private closed = false;
   readonly databasePath: string;
   readonly networks: StorageNetworksRepository;
@@ -30,9 +31,10 @@ export class Storage {
   readonly nickEmojis: StorageNickEmojisRepository;
   readonly runtimeStore: RuntimeStore;
 
-  constructor(filePath?: string) {
-    this.databasePath = resolveDatabaseFilePath(filePath);
-    const resources = openStorageResources(this.databasePath);
+  constructor(paths: AppPaths | string) {
+    this.paths = typeof paths === 'string' ? resolveAppPaths({ databasePath: paths }) : paths;
+    this.databasePath = this.paths.databasePath;
+    const resources = openStorageResources(this.paths);
     this.db = resources.db;
     this.secretBox = resources.secretBox;
     initializeStorageDefaults(resources);
@@ -59,8 +61,8 @@ export class Storage {
   exportBackup(browserPreferences: BrowserPreferences) {
     return createStorageBackup({
       browserPreferences,
-      databasePath: this.databasePath,
       db: this.db,
+      paths: this.paths,
     });
   }
 

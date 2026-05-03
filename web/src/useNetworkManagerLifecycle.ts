@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import type { Action, AppDomainState, NetworkManagerState } from './app-types.js';
 import { resolveManagedNetworkId } from './network-manager-state.js';
 

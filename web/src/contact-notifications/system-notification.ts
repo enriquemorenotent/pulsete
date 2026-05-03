@@ -1,4 +1,4 @@
-import type { BufferState } from '../../../shared/protocol.js';
+import type { BufferState } from '../../../shared/protocol-chat.js';
 
 export type ContactSystemNotificationHandle = {
   close: () => void;

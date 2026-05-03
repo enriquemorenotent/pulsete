@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -39,9 +39,8 @@ const tagMutationMessages = (messages: readonly ServerMessage[]) => {
 
 export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
-  let connectionManager!: RuntimeConnectionManager;
 
-  const socketHub = new RuntimeSocketHub((ws) => connectionManager.removeSocket(ws));
+  const socketHub = new RuntimeSocketHub();
   const publisher = new RuntimePublisher(socketHub);
   const publishMutation = <T extends MutationResult>(result: T): T => {
     const messages = tagMutationMessages(result.messages);
@@ -63,13 +62,14 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     publish: (messages) => publisher.publish(messages),
     sendSocket: (ws, message) => publisher.sendSocket(ws, message),
   });
-  connectionManager = new RuntimeConnectionManager({
+  const connectionManager = new RuntimeConnectionManager({
     conversations: store.conversations,
     eventRouter,
     friends: store.friends,
     networks: store.networks,
     isClosing: () => closing,
   });
+  socketHub.setDropHandler((ws) => connectionManager.removeSocket(ws));
 
   const friendMutations = new RuntimeFriendService({
     connectionManager,

@@ -1,4 +1,5 @@
-import type { AppSnapshot, BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import type { AppSnapshot } from '../../shared/protocol-app.js';
+import type { BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol-chat.js';
 import { initialState } from '../../web/src/app-state.js';
 import type { State } from '../../web/src/app-types.js';
 

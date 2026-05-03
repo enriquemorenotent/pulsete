@@ -1,4 +1,4 @@
-import type { NetworkAuthMethod, NetworkProfile } from './protocol.js';
+import type { NetworkAuthMethod, NetworkProfile } from './protocol-chat.js';
 
 export const defaultNetworkAuthTarget = 'NickServ';
 

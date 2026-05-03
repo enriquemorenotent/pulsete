@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ChatMessage, MutedNickState } from '../shared/protocol.js';
+import type { ChatMessage, MutedNickState } from '../shared/protocol-chat.js';
 import { buildChatTranscriptModel, pruneExpandedMutedGroupKeys } from '../web/src/transcript/model.js';
 import {
   resolveMutedAwareUnreadDividerIndex,

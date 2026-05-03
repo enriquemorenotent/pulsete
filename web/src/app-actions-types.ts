@@ -1,10 +1,5 @@
-import type {
-  BufferHistorySearchPayload,
-  BufferState,
-  ClientMessage,
-  NetworkProfile,
-  ServerMessage,
-} from '../../shared/protocol.js';
+import type { BufferHistorySearchPayload, BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
+import type { ClientMessage, ServerMessage } from '../../shared/protocol-messages.js';
 import { selectConversation, selectWorkspace } from './app-selectors.js';
 import type { ConversationModel } from './conversation-model.js';
 import type { Action } from './app-types.js';

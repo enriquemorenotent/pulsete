@@ -1,4 +1,4 @@
-import type { ChannelUserMode, ChannelUserState } from './protocol.js';
+import type { ChannelUserMode, ChannelUserState } from './protocol-chat.js';
 import { normalizeIrcIdentifier } from './irc-identifiers.js';
 
 const modeByPrefix = {

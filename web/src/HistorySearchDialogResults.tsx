@@ -1,7 +1,4 @@
-import type {
-  BufferHistorySearchResult,
-  ChatMessage,
-} from '../../shared/protocol.js';
+import type { BufferHistorySearchResult, ChatMessage } from '../../shared/protocol-chat.js';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils.js';
 import {

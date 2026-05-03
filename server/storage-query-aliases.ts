@@ -1,4 +1,4 @@
-import type { BufferState } from '../shared/protocol.js';
+import type { BufferState } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import {

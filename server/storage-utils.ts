@@ -1,6 +1,6 @@
-import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol.js';
+import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol-chat.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
-import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol-chat.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
 import type { SecretBox } from './network-secret.js';
 import type {

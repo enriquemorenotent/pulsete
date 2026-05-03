@@ -1,4 +1,4 @@
-import type { BufferState } from '../../../shared/protocol.js';
+import type { BufferState } from '../../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../../shared/irc-identifiers.js';
 
 export const CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY =

@@ -1,7 +1,5 @@
-import {
-  emptyNetworkRuntimeCapabilities,
-  type NetworkProfile,
-} from '../../shared/protocol.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
 export function buildManagedRuntime(

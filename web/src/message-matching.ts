@@ -1,4 +1,4 @@
-import type { BufferState, ChatMessage } from '../../shared/protocol.js';
+import type { BufferState, ChatMessage } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 
 export const matchesBufferMessage = (buffer: BufferState, message: ChatMessage) =>

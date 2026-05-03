@@ -1,4 +1,4 @@
-import type { BufferState, ChatMessage } from '../shared/protocol.js';
+import type { BufferState, ChatMessage } from '../shared/protocol-chat.js';
 import { getTranscriptSpeakerLabel } from '../shared/message-speaker.js';
 
 export const renderBufferHistoryDownload = ({

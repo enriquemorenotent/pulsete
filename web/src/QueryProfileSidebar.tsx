@@ -1,4 +1,4 @@
-import type { BufferState, NetworkProfile, NickEmojiState } from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import { AutosaveNotesEditor } from './AutosaveNotesEditor.js';
 import { NickEmojiEditorControl } from './NickEmojiEditorControl.js';
 

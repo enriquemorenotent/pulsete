@@ -1,9 +1,4 @@
-import type {
-  BufferState,
-  FriendState,
-  NetworkProfile,
-  PendingChannelState,
-} from '../../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol-chat.js';
 import type { SidebarConnectionView } from '../../web/src/connection-sidebar-view.js';
 import type { BuildCommandPaletteEntrySpecsInput } from '../../web/src/command-palette.js';
 

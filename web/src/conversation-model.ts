@@ -1,4 +1,4 @@
-import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
 import { getWorkspaceNetworks } from './workspace-helpers.js';
 import { buildConversationIndex, type ConversationIndex } from './conversation-selectors.js';
 import type { SelectedBuffer } from './workspace-types.js';

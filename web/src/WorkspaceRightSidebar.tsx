@@ -7,13 +7,8 @@ import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import type { WorkspaceView } from './workspace-types.js';
-import {
-  emptyNetworkRuntimeCapabilities,
-  type BufferState,
-  type NetworkProfile,
-  type NetworkRuntimeCapabilities,
-  type NickEmojiState,
-} from '../../shared/protocol.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
+import type { BufferState, NetworkProfile, NetworkRuntimeCapabilities, NickEmojiState } from '../../shared/protocol-chat.js';
 
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;

@@ -1,5 +1,5 @@
 import { Hash, LoaderCircle } from 'lucide-react';
-import type { PendingChannelState } from '../../shared/protocol.js';
+import type { PendingChannelState } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 
 type ConnectionSidebarPendingChannelRowProps = {

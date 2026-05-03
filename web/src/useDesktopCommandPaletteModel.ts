@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { BufferState, NetworkProfile } from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
 import { resolveCurrentChannelAutoJoinState } from './channel-autojoin.js';
 import {
   buildCommandPaletteEntrySpecs,

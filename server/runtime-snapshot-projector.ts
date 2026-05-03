@@ -1,12 +1,8 @@
-import {
-  emptyNetworkRuntimeCapabilities,
-  type FriendState,
-  type NetworkProfile,
-  type NetworkRuntimeState,
-} from '../shared/protocol.js';
+import { emptyNetworkRuntimeCapabilities } from '../shared/protocol-chat.js';
+import type { FriendState, NetworkProfile, NetworkRuntimeState } from '../shared/protocol-chat.js';
 import type { IrcConnection } from './irc.js';
 import type { RuntimeFriendPresenceProjector } from './runtime-friend-presence-projector.js';
-import type { BufferState } from '../shared/protocol.js';
+import type { BufferState } from '../shared/protocol-chat.js';
 
 export const createRuntimeProjectionSnapshot = (
   networks: NetworkProfile[],

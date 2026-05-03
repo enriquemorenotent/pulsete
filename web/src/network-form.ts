@@ -1,4 +1,4 @@
-import type { NetworkAuthMethod, NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkAuthMethod, NetworkProfile } from '../../shared/protocol-chat.js';
 import {
   defaultNetworkAuthTarget,
   resolveNetworkAuthMethod,

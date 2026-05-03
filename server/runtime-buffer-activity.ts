@@ -1,4 +1,4 @@
-import type { BufferState } from '../shared/protocol.js';
+import type { BufferState } from '../shared/protocol-chat.js';
 import { hasIrcMention } from './message-mentions.js';
 import type { MessageInput } from './storage-types.js';
 

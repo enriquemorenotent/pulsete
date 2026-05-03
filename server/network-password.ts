@@ -1,4 +1,4 @@
-import type { NetworkAuthMethod } from '../shared/protocol.js';
+import type { NetworkAuthMethod } from '../shared/protocol-chat.js';
 import { badRequest } from './app-error.js';
 
 const lineBreakPattern = /[\r\n]/;

@@ -1,11 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type {
-  BufferState,
-  ChannelUserState,
-  ChatMessage,
-  MutedNickState,
-  NickEmojiState,
-} from '../../shared/protocol.js';
+import type { BufferState, ChannelUserState, ChatMessage, MutedNickState, NickEmojiState } from '../../shared/protocol-chat.js';
 import {
   captureUnreadDividerAnchor,
   resolveInitialTranscriptScrollTarget,

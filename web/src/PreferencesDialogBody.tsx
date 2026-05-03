@@ -1,4 +1,4 @@
-import type { MutedNickState, NetworkProfile } from '../../shared/protocol.js';
+import type { MutedNickState, NetworkProfile } from '../../shared/protocol-chat.js';
 import type {
   ContactNotificationContact,
   ContactNotificationSettings,

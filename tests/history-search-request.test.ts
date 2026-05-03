@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferHistorySearchPayload } from '../shared/protocol.js';
+import type { BufferHistorySearchPayload } from '../shared/protocol-chat.js';
 import { runHistorySearchRequest } from '../web/src/history-search-request.js';
 
 const payload: BufferHistorySearchPayload = {

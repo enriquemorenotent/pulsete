@@ -1,4 +1,5 @@
-import type { BufferState, ServerMessage } from '../shared/protocol.js';
+import type { BufferState } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import { createNetworkRemoveMessages, createNetworkUpsertMessages } from './network-lifecycle-messages.js';
 import { notFound } from './app-error.js';

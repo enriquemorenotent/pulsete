@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
-import { historyWindowLimit } from '../shared/protocol.js';
+import { historyWindowLimit } from '../shared/protocol-chat.js';
 import { requestJson } from './helpers/http-request-helpers.js';
 import { createHttpRuntimeContext } from './helpers/http-runtime-test-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';

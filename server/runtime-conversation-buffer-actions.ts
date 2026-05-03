@@ -10,12 +10,9 @@ import {
   searchConversationBufferHistory,
 } from './runtime-conversation-store.js';
 import { normalizeQueryTarget } from './irc-validate.js';
-import {
-  historySearchContextAfter,
-  historySearchContextBefore,
-  type BufferHistorySearchPayload,
-  type ServerMessage,
-} from '../shared/protocol.js';
+import { historySearchContextAfter, historySearchContextBefore } from '../shared/protocol-chat.js';
+import type { BufferHistorySearchPayload } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 
 export const openRuntimeConversationQuery = (

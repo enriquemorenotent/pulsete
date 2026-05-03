@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Moon } from 'lucide-react';
-import type { ChannelState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol.js';
+import type { ChannelState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';

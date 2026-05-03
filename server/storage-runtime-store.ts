@@ -23,6 +23,8 @@ export const createStorageViews = (repositories: StorageRepositories) => {
     listNetworks: () => repositories.networks.list(),
     listNickEmojis: (networkId) => repositories.nickEmojis.list(networkId),
     listRecentMessages: (limit) => repositories.conversations.listRecentMessages(limit),
+    listRecentMessagesForBufferIds: (bufferIds, limit) =>
+      repositories.conversations.listRecentMessagesForBufferIds(bufferIds, limit),
   };
   const runtimeStore: RuntimeStore = {
     snapshotSource,

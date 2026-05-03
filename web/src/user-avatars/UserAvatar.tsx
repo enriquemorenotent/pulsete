@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { ChannelUserState } from '../../../shared/protocol.js';
+import type { ChannelUserState } from '../../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog.js';
 import { InlineImagePreviewDialogBody } from '../InlineImagePreviewDialogBody.js';

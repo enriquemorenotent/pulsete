@@ -5,6 +5,7 @@ export {
   listAllMessages,
   listOpeningMessages,
   listRecentMessagesForBuffer,
+  listRecentMessagesForBufferIds,
   searchMessagesByBufferId,
   getMessageWindow,
   listRecentMessages,

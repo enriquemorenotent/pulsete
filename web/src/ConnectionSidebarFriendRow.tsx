@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import type { PresenceStatus } from '../../shared/protocol.js';
+import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 

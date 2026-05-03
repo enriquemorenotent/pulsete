@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox.js';
 import type { UserAvatarSettings } from './user-avatars/settings.js';
 
@@ -7,6 +8,7 @@ type PreferencesAvatarSectionProps = {
 };
 
 export function PreferencesAvatarSection(props: PreferencesAvatarSectionProps) {
+  const externalAvatarsId = useId();
   return (
     <section className="space-y-4">
       <div className="space-y-1">
@@ -26,15 +28,16 @@ export function PreferencesAvatarSection(props: PreferencesAvatarSectionProps) {
               Loads matching avatar images from IRCCloud&apos;s CDN in nicklists and private-message headers.
             </p>
           </div>
-          <label className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
             <Checkbox
+              id={externalAvatarsId}
               checked={props.settings.externalAvatarsEnabled}
               onCheckedChange={(checked) =>
                 props.onSetExternalAvatarsEnabled(checked === true)}
               aria-label="Show external IRCCloud avatars"
             />
-            <span>External</span>
-          </label>
+            <label htmlFor={externalAvatarsId} className="cursor-pointer">External</label>
+          </div>
         </div>
       </div>
     </section>

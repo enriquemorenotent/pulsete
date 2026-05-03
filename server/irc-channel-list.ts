@@ -1,4 +1,4 @@
-import type { ChannelListEntry } from '../shared/protocol.js';
+import type { ChannelListEntry } from '../shared/protocol-chat.js';
 import {
   appendStructuredChannelListEntry,
   clearActiveChannelListSession,

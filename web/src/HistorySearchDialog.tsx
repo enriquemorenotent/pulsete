@@ -6,10 +6,7 @@ import {
   type RefObject,
 } from 'react';
 import { Search } from 'lucide-react';
-import type {
-  BufferHistorySearchResult,
-  BufferState,
-} from '../../shared/protocol.js';
+import type { BufferHistorySearchResult, BufferState } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,

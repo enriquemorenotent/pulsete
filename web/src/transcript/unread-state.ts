@@ -1,4 +1,4 @@
-import type { BufferState, ChatMessage, MutedNickState } from '../../../shared/protocol.js';
+import type { BufferState, ChatMessage, MutedNickState } from '../../../shared/protocol-chat.js';
 import { isMessageMuted } from '../muted-nick-utils.js';
 
 type BufferActivityFields = Pick<BufferState, 'unread' | 'priorityUnread'>;

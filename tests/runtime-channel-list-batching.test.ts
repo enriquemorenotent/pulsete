@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import type WebSocket from 'ws';
 import { channelListBatchSize } from '../shared/channel-list.js';
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { createRuntime } from '../server/runtime.js';
 import { RuntimeChannelListService } from '../server/runtime-channel-lists.js';
 import { Storage } from '../server/storage.js';

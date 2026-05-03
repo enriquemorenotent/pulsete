@@ -1,4 +1,4 @@
-import type { PresenceStatus } from '../shared/protocol.js';
+import type { PresenceStatus } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { IrcFriendPresenceContext } from './irc-contexts.js';
 import { emitFriendPresence } from './irc-emit.js';

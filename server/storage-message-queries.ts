@@ -60,6 +60,15 @@ export const listOpeningMessages = (db: SqliteDb, networkId: string, target: str
 export const listRecentMessagesForBuffer = (db: SqliteDb, networkId: string, target: string, limit = 200) =>
   listMessages(db, networkId, target, limit);
 
+export const listRecentMessagesForBufferIds = (
+  db: SqliteDb,
+  bufferIds: readonly string[],
+  limit = 200
+) =>
+  bufferIds
+    .flatMap((bufferId) => selectMessages(db, bufferId, limit))
+    .sort((left, right) => left.ts - right.ts);
+
 export const searchMessagesByBufferId = (
   db: SqliteDb,
   bufferId: string,
@@ -222,4 +231,4 @@ const matchesSearchTerms = (
   return terms.every((term) => searchable.some((value) => value.includes(term)));
 };
 
-const normalizeSearchText = (value: string) => value.toLocaleLowerCase();
+const normalizeSearchText = (value: string) => value.toLowerCase();

@@ -1,4 +1,4 @@
-import type { FriendState } from '../../shared/protocol.js';
+import type { FriendState } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 
 export const friendsMatchNick = (friendNick: string, nick: string) =>

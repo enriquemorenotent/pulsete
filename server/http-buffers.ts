@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { badRequest } from './app-error.js';
-import { historySearchLimit, historyWindowLimit } from '../shared/protocol.js';
+import { historySearchLimit, historyWindowLimit } from '../shared/protocol-chat.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import { normalizeChannelTarget } from './irc-validate.js';
 import type { RouteArgs } from './http-types.js';

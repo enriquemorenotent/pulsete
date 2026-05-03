@@ -1,4 +1,4 @@
-import type { ChannelUserMode } from '../../shared/protocol.js';
+import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import { DayDivider, TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptModel } from './transcript/model.js';

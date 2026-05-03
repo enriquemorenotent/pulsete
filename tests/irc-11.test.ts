@@ -1,3 +1,2 @@
-import './irc-11.test.part-01.js';
-import './irc-11.test.part-02.js';
-
+import './irc-11.test.failed-command-routing.js';
+import './irc-11.test.labeled-failure-routing.js';

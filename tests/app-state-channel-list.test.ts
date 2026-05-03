@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { channelListEntryLimit } from '../shared/channel-list.js';
 import { initialState,reducer } from '../web/src/app-state.js';
-import type { ChannelListEntry } from '../shared/protocol.js';
+import type { ChannelListEntry } from '../shared/protocol-chat.js';
 
 test('channel list reducer appends entry batches and completion metadata', () => {
   const state = startChannelList();

@@ -1,10 +1,5 @@
-import {
-  clientMessageSchema,
-  decodeServer,
-  encode,
-  type ClientMessage,
-  type ServerMessage,
-} from '../../shared/protocol.js';
+import { clientMessageSchema, decodeServer, encode } from '../../shared/protocol-messages.js';
+import type { ClientMessage, ServerMessage } from '../../shared/protocol-messages.js';
 import { gatewaySocketClosedMessage } from './gateway.js';
 
 export type SocketHandle = {

@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type {
-  BufferState,
-  ChannelState,
-  ClientMessage,
-  NetworkProfile,
-} from '../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol-chat.js';
+import type { ClientMessage } from '../shared/protocol-messages.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action,State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';

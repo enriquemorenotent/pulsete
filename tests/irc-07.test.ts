@@ -1,3 +1,2 @@
-import './irc-07.test.part-01.js';
-import './irc-07.test.part-02.js';
-
+import './irc-07.test.server-notices.js';
+import './irc-07.test.user-bot-service-notices.js';

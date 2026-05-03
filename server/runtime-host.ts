@@ -1,25 +1,24 @@
 import type WebSocket from 'ws';
-import type { ClientMessage } from '../shared/protocol.js';
+import type { ClientMessage } from '../shared/protocol-messages.js';
 import { createRuntime, type Runtime, type RuntimeHttpApi } from './runtime.js';
 import { Storage } from './storage.js';
 import {
   prepareStorageBackupRestore,
   type BrowserPreferences,
 } from './storage-backup.js';
+import { resolveAppPaths, type AppPaths } from './app-paths.js';
 import type { RuntimeWebSocketApi } from './runtime-service-types.js';
-
-export type BackupHttpApi = {
-  export(browserPreferences: BrowserPreferences): ReturnType<Storage['exportBackup']>;
-  import(backupContent: Buffer): { browserPreferences: BrowserPreferences };
-};
+import type { BackupHttpApi } from './http-types.js';
 
 export class RuntimeHost {
+  private readonly paths: AppPaths;
   private storage: Storage;
   private runtime: Runtime;
   readonly http: RuntimeHttpApi & { backups: BackupHttpApi };
   readonly ws: RuntimeWebSocketApi;
 
-  constructor(private readonly databasePath?: string) {
+  constructor(paths: AppPaths | string) {
+    this.paths = typeof paths === 'string' ? resolveAppPaths({ databasePath: paths }) : paths;
     const current = this.openRuntime();
     this.storage = current.storage;
     this.runtime = current.runtime;
@@ -37,7 +36,7 @@ export class RuntimeHost {
   }
 
   private openRuntime() {
-    const storage = new Storage(this.databasePath);
+    const storage = new Storage(this.paths);
     return {
       runtime: createRuntime(storage.runtimeStore),
       storage,
@@ -45,8 +44,7 @@ export class RuntimeHost {
   }
 
   private restore(backupContent: Buffer) {
-    const databasePath = this.storage.databasePath;
-    const prepared = prepareStorageBackupRestore({ backupContent, databasePath });
+    const prepared = prepareStorageBackupRestore({ backupContent, paths: this.paths });
     this.close();
     prepared.apply();
     const current = this.openRuntime();

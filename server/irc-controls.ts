@@ -1,4 +1,4 @@
-import type { ChannelListEntry, ChannelUserState } from '../shared/protocol.js';
+import type { ChannelListEntry, ChannelUserState } from '../shared/protocol-chat.js';
 import {
   abortActiveChannelList,
   clearActiveChannelList,
@@ -81,7 +81,7 @@ import type {
   IrcSocket,
 } from './irc-state-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
-import type { PresenceStatus } from '../shared/protocol.js';
+import type { PresenceStatus } from '../shared/protocol-chat.js';
 
 export const createIrcControllers = (connection: IrcConnectionState) => ({
   lifecycleControl: {

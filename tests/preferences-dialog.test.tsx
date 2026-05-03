@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { NetworkProfile } from '../shared/protocol-chat.js';
 import { PreferencesDialogBody } from '../web/src/PreferencesDialogBody.js';
 import type { ContactNotificationSettings } from '../web/src/contact-notifications/settings.js';
 import type { UserAvatarSettings } from '../web/src/user-avatars/settings.js';

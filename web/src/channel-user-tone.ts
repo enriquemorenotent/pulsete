@@ -1,4 +1,4 @@
-import type { ChannelUserMode } from '../../shared/protocol.js';
+import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 
 export const channelUserModeTone = (mode: ChannelUserMode) => {
   if (mode === 'owner') {

@@ -1,17 +1,5 @@
-import type {
-  AppSnapshot,
-  BufferState,
-  ChannelState,
-  ChannelListEntry,
-  ChannelUserState,
-  ChatMessage,
-  FriendState,
-  MutedNickState,
-  NetworkProfile,
-  NickEmojiState,
-  PendingChannelState,
-  PresenceStatus,
-} from '../../shared/protocol.js';
+import type { AppSnapshot } from '../../shared/protocol-app.js';
+import type { BufferState, ChannelState, ChannelListEntry, ChannelUserState, ChatMessage, FriendState, MutedNickState, NetworkProfile, NickEmojiState, PendingChannelState, PresenceStatus } from '../../shared/protocol-chat.js';
 import type { ConversationMessages } from './conversation-message-state.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';

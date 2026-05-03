@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { Storage,type NetworkInput } from '../server/storage.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState } from '../shared/protocol-chat.js';
 
 const makeUser = (
   nick: string,

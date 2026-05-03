@@ -1,4 +1,3 @@
-import './runtime-01.test.part-01.js';
-import './runtime-01.test.part-02.js';
-import './runtime-01.test.part-03.js';
-
+import './runtime-01.test.message-reconnect-settings.js';
+import './runtime-01.test.snapshot-presence.js';
+import './runtime-01.test.presence-cache-disconnect.js';

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState } from '../shared/protocol-chat.js';
 import { makeUser } from './helpers/irc-race-test-helpers.js';
 
 const projectUserModes = (users: ChannelUserState[]) =>

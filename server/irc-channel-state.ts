@@ -1,5 +1,5 @@
 import { removeChannelUser, upsertChannelUser } from '../shared/channel-users.js';
-import type { ChannelUserState } from '../shared/protocol.js';
+import type { ChannelUserState } from '../shared/protocol-chat.js';
 import type { IrcChannelStateContext } from './irc-contexts.js';
 import { emitPendingChannel, emitPendingChannelRemoved, emitStatus } from './irc-emit.js';
 import { findIrcCaseMatch } from './irc-parser.js';

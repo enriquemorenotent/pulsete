@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Plus, Power, Server } from 'lucide-react';
-import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol.js';
+import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
 import {
@@ -38,6 +38,7 @@ type NetworkManagerDialogProps = {
 
 export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
   const [removeCandidate, setRemoveCandidate] = useState<NetworkProfile | null>(null);
+  const favoritesOnlyId = useId();
   const connectButton = getNetworkManagerConnectButtonState(props.selected, props.runtime);
   const confirmRemove = () => {
     if (!removeCandidate) {
@@ -68,10 +69,14 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <label className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
-                    <Checkbox checked={props.showFavoritesOnly} onCheckedChange={props.onToggleFavorites} />
-                    <span>Favorites only</span>
-                  </label>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
+                    <Checkbox
+                      id={favoritesOnlyId}
+                      checked={props.showFavoritesOnly}
+                      onCheckedChange={props.onToggleFavorites}
+                    />
+                    <label htmlFor={favoritesOnlyId} className="cursor-pointer">Favorites only</label>
+                  </div>
                   <Button variant="secondary" size="sm" onClick={props.onAdd} className="ml-auto">
                     <Plus />
                     Add Network

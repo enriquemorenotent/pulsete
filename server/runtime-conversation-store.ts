@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { BufferState, ChannelState } from '../shared/protocol.js';
+import type { BufferState, ChannelState } from '../shared/protocol-chat.js';
 import { badRequest, notFound } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { resolveNextBufferActivity } from './runtime-buffer-activity.js';

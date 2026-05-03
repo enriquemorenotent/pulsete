@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import net from 'node:net';
 import { IrcConnection } from '../../server/irc.js';
-import type { ChannelUserState } from '../../shared/protocol.js';
+import type { ChannelUserState } from '../../shared/protocol-chat.js';
 import { waitFor } from './async-test-helpers.js';
 
 export { waitFor };

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
-import type { BufferState, ChannelUserState, NickEmojiState } from '../../shared/protocol.js';
+import type { BufferState, ChannelUserState, NickEmojiState } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';

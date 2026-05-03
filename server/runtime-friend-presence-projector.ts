@@ -1,10 +1,6 @@
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
-import type {
-  BufferState,
-  FriendState,
-  PresenceStatus,
-  ServerMessage,
-} from '../shared/protocol.js';
+import type { BufferState, FriendState, PresenceStatus } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { RuntimeEvent } from './irc-types.js';
 
 export class RuntimeFriendPresenceProjector {

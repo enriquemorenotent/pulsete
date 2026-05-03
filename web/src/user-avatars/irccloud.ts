@@ -1,4 +1,4 @@
-import type { ChannelState, ChannelUserState } from '../../../shared/protocol.js';
+import type { ChannelState, ChannelUserState } from '../../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../../shared/irc-identifiers.js';
 
 export type UserAvatarCandidate = Pick<ChannelUserState, 'host' | 'nick' | 'username'>;

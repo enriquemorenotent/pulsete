@@ -1,18 +1,6 @@
 import type { StoredNetworkProfile } from '../shared/network-model.js';
-import type {
-  SpeakerAttributionConfidence,
-  SpeakerAttributionSource,
-  SpeakerRole,
-  AppSnapshot,
-  BufferState,
-  ChannelState,
-  ChannelUserState,
-  FriendState,
-  MutedNickState,
-  NetworkAuthMethod,
-  NetworkProfile,
-  NickEmojiState,
-} from '../shared/protocol.js';
+import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole, BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NetworkAuthMethod, NetworkProfile, NickEmojiState } from '../shared/protocol-chat.js';
+import type { AppSnapshot } from '../shared/protocol-app.js';
 
 export type NetworkRow = {
   id: string;
@@ -169,6 +157,7 @@ export type StorageSnapshotSource = {
   listNetworks(): StoredNetworkProfile[];
   listNickEmojis(networkId?: string): NickEmojiState[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
+  listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
 };
 
 export type ChannelUsers = ChannelUserState[];

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ContactNotificationSettings } from './contact-notifications/settings.js';
 import { CONTACT_NOTIFICATION_SOUND_OPTIONS } from './contact-notifications/settings.js';
 import { Button } from '@/components/ui/button.js';
@@ -24,6 +25,7 @@ type PreferencesNotificationSoundSectionProps = {
 export function PreferencesNotificationSoundSection(
   props: PreferencesNotificationSoundSectionProps,
 ) {
+  const soundEnabledId = useId();
   return (
     <div className="space-y-3 rounded-md border border-white/6 bg-black/14 px-3 py-3">
       <div className="flex items-start justify-between gap-3">
@@ -33,14 +35,15 @@ export function PreferencesNotificationSoundSection(
             Play a short sound when an allowed private-message contact writes in another buffer.
           </p>
         </div>
-        <label className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
           <Checkbox
+            id={soundEnabledId}
             checked={props.enabled}
             onCheckedChange={(checked) => props.onSetEnabled(checked === true)}
             aria-label="Play sound cues for allowed private messages"
           />
-          <span>Sound</span>
-        </label>
+          <label htmlFor={soundEnabledId} className="cursor-pointer">Sound</label>
+        </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">

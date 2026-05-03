@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SqliteDb } from './storage-sqlite.js';
-import type { MutedNickState } from '../shared/protocol.js';
+import type { MutedNickState } from '../shared/protocol-chat.js';
 import { findMutedNickByNick } from '../shared/muted-nicks.js';
 import type { MutedNickInput, MutedNickRow } from './storage-types.js';
 import { toMutedNickState } from './storage-utils.js';

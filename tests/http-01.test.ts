@@ -1,3 +1,3 @@
-import './http-01.test.part-01.js';
-import './http-01.test.part-02.js';
-
+import './http-01.test.network-validation-routes.js';
+import './http-01.test.network-websocket-broadcast.js';
+import './http-01.test.network-password-validation.js';

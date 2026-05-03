@@ -1,4 +1,5 @@
-import type { MutedNickState, ServerMessage } from '../shared/protocol.js';
+import type { MutedNickState } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { notFound } from './app-error.js';
 import { normalizeMutedNick } from './irc-validate.js';
 import { recomputeMutedNickUnread } from './runtime-muted-nick-unread.js';

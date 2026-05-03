@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ChannelUserState, ChatMessage } from '../shared/protocol.js';
+import type { ChannelUserState, ChatMessage } from '../shared/protocol-chat.js';
 import {
   buildChannelUserModesByNick,
   resolveMessageParticipantPresentation,

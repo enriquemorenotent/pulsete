@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SqliteDb } from './storage-sqlite.js';
-import type { BufferState, ChannelState, ChannelUserState } from '../shared/protocol.js';
+import type { BufferState, ChannelState, ChannelUserState } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { listBufferSelfNickAliases, replaceBufferSelfNickAliases } from './storage-owned-lists.js';
 import type { BufferInput, BufferRow, ChannelInput, ChannelRow } from './storage-types.js';

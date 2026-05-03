@@ -1,4 +1,4 @@
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import type {
   AppActionContext,
 } from './app-actions-types.js';

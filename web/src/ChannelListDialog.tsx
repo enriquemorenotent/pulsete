@@ -1,6 +1,6 @@
 import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
-import type { ChannelListEntry, NetworkProfile } from '../../shared/protocol.js';
+import type { ChannelListEntry, NetworkProfile } from '../../shared/protocol-chat.js';
 import type { ChannelListState } from './app-types.js';
 import { Button } from '@/components/ui/button.js';
 import {

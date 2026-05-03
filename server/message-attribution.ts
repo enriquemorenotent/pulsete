@@ -1,9 +1,5 @@
 import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
-import type {
-  SpeakerAttributionConfidence,
-  SpeakerAttributionSource,
-  SpeakerRole,
-} from '../shared/protocol.js';
+import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol-chat.js';
 import type { MessageAttributionUpdate, MessageInput } from './storage-types.js';
 
 export type SpeakerAttribution = Omit<MessageAttributionUpdate, 'id' | 'importBatchId'>;

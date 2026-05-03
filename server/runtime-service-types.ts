@@ -1,10 +1,6 @@
 import type WebSocket from 'ws';
-import type {
-  BufferState,
-  ClientMessage,
-  NetworkProfile,
-  ServerMessage,
-} from '../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../shared/protocol-chat.js';
+import type { ClientMessage, ServerMessage } from '../shared/protocol-messages.js';
 import type { NetworkLifecycleService } from './network-lifecycle-service.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';

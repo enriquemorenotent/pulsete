@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import WebSocket from 'ws';
-import type { ClientMessage } from '../shared/protocol.js';
+import type { ClientMessage } from '../shared/protocol-messages.js';
 import { createHttpHandler } from '../server/http-router.js';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';

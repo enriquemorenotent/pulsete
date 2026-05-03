@@ -8,7 +8,7 @@ import { createHttpHandler } from '../server/http-router.js';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
-import { type NetworkProfile } from '../shared/protocol.js';
+import type { NetworkProfile } from '../shared/protocol-chat.js';
 import { waitFor } from './helpers/async-test-helpers.js';
 import { listen,requestJson } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';

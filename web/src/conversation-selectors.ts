@@ -1,4 +1,4 @@
-import type { BufferState, ChannelState, ChatMessage, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, ChatMessage, PendingChannelState } from '../../shared/protocol-chat.js';
 import type { AppDomainState } from './app-types.js';
 import { toConversationMessageKey, type ConversationMessages } from './conversation-message-state.js';
 import type { SelectedBuffer } from './workspace-types.js';

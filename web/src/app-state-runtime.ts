@@ -1,6 +1,6 @@
 import type { Action, AppDomainState } from './app-types.js';
 import { removeNetworkMessages } from './conversation-message-state.js';
-import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 
 export const offlineNetworkStates = (state: Pick<AppDomainState, 'networks'>) =>
   Object.fromEntries(

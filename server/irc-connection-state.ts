@@ -1,4 +1,4 @@
-import type { ChannelUserState, PresenceStatus } from '../shared/protocol.js';
+import type { ChannelUserState, PresenceStatus } from '../shared/protocol-chat.js';
 import { createIdleSaslState, resolveDeferredNickservAutoJoinTarget } from './irc-auth.js';
 import { ReplyTracker } from './irc-reply-tracker.js';
 import type {

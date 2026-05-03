@@ -1,4 +1,4 @@
-import type { BufferState, MutedNickState } from '../shared/protocol.js';
+import type { BufferState, MutedNickState } from '../shared/protocol-chat.js';
 import { isNickMuted } from '../shared/muted-nicks.js';
 import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
 import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';

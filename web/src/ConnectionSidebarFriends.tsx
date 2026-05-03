@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, MoreHorizontal } from 'lucide-react';
-import type { PresenceStatus } from '../../shared/protocol.js';
+import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import { FriendRow } from './ConnectionSidebarFriendRow.js';

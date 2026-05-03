@@ -1,5 +1,5 @@
 import { createStorageSnapshot } from './storage-snapshot.js';
-import type { AppSnapshot } from '../shared/protocol.js';
+import type { AppSnapshot } from '../shared/protocol-app.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import type { RuntimeSnapshotSource } from './runtime-store-ports.js';
 

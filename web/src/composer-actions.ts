@@ -1,4 +1,4 @@
-import type { BufferState } from '../../shared/protocol.js';
+import type { BufferState } from '../../shared/protocol-chat.js';
 import type { SocketHandle } from './client.js';
 import type { WorkspaceView } from './workspace-types.js';
 import { parseSlashIrcClientCommand } from '../../shared/irc-client-command.js';

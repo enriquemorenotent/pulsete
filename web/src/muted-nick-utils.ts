@@ -1,5 +1,5 @@
 import { findMutedNickByNick, isNickMuted } from '../../shared/muted-nicks.js';
-import type { ChatMessage, MutedNickState } from '../../shared/protocol.js';
+import type { ChatMessage, MutedNickState } from '../../shared/protocol-chat.js';
 
 export const findMutedNick = (
   mutedNicks: readonly MutedNickState[],

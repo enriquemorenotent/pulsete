@@ -1,3 +1,2 @@
-import './irc-18.test.part-01.js';
-import './irc-18.test.part-02.js';
-
+import './irc-18.test.unjoined-channel-raw-routing.js';
+import './irc-18.test.channel-roster-refresh.js';

@@ -1,7 +1,4 @@
-import type {
-  BufferState,
-  NetworkProfile,
-} from '../../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
 import { createAppMutationExecutor } from './app-mutation.js';

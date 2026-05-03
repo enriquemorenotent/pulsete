@@ -1,5 +1,5 @@
-import type { ServerMessage } from '../../shared/protocol.js';
-import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol.js';
+import type { ServerMessage } from '../../shared/protocol-messages.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 import type { Action } from './app-types.js';
 
 type Dispatch = (action: Action) => void;

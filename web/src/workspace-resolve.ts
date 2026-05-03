@@ -1,4 +1,4 @@
-import type { BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, ChannelState, NetworkProfile, PendingChannelState } from '../../shared/protocol-chat.js';
 import { selectionFor } from './conversation-model.js';
 import type { ConversationIndex } from './conversation-selectors.js';
 import { getConnectionStatus, getWorkspaceNetworks } from './workspace-helpers.js';

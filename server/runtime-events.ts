@@ -1,4 +1,4 @@
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
 import type {

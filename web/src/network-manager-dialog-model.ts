@@ -1,5 +1,5 @@
 import { resolveNetworkAuthMethod } from '../../shared/network-model.js';
-import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol.js';
+import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol-chat.js';
 
 export type NetworkManagerRowStatus = 'online' | 'connecting' | null;
 

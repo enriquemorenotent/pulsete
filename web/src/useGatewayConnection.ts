@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ServerMessage } from '../../shared/protocol.js';
+import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type { Action } from './app-types.js';
 import { connectSocket, type SocketHandle } from './client.js';
 import { gatewayReconnectMessage, getGatewayReconnectDelayMs } from './gateway.js';

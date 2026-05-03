@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { networkAuthMethodSchema } from '../shared/protocol.js';
+import { networkAuthMethodSchema } from '../shared/protocol-chat.js';
 import { badRequest } from './app-error.js';
 import { normalizeAuthTarget, normalizeChannelTarget, requireIrcToken, requireSingleLineValue } from './irc-validate.js';
 import type { NetworkInput } from './storage-types.js';

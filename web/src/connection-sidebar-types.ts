@@ -1,10 +1,4 @@
-import type {
-  BufferState,
-  FriendState,
-  NetworkProfile,
-  NickEmojiState,
-  PresenceStatus,
-} from '../../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile, NickEmojiState, PresenceStatus } from '../../shared/protocol-chat.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 
 export type ConnectionSidebarProps = {

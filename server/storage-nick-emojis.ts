@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { NickEmojiState } from '../shared/protocol.js';
+import type { NickEmojiState } from '../shared/protocol-chat.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import type { NickEmojiInput, NickEmojiRow } from './storage-types.js';
 import { toNickEmojiState } from './storage-utils.js';

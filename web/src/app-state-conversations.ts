@@ -1,5 +1,5 @@
 import type { AppDomainState, Action } from './app-types.js';
-import type { BufferState, FriendState, MutedNickState, NickEmojiState, PendingChannelState } from '../../shared/protocol.js';
+import type { BufferState, FriendState, MutedNickState, NickEmojiState, PendingChannelState } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
   appendConversationMessages,

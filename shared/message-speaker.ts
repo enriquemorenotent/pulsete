@@ -2,7 +2,7 @@ import type {
   ChatMessage,
   SpeakerAttributionConfidence,
   SpeakerRole,
-} from './protocol.js';
+} from './protocol-chat.js';
 
 type MessageSpeakerLike = Pick<
   ChatMessage,

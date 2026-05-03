@@ -1,4 +1,4 @@
-import type { BufferHistorySearchPayload } from '../../shared/protocol.js';
+import type { BufferHistorySearchPayload } from '../../shared/protocol-chat.js';
 
 export type SearchBufferHistory = (
   bufferId: string,

@@ -1,4 +1,4 @@
-import type { FriendState, NetworkProfile } from '../../shared/protocol.js';
+import type { FriendState, NetworkProfile } from '../../shared/protocol-chat.js';
 import type {
   AppActionContext,
   ConversationActions,

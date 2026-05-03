@@ -1,4 +1,4 @@
-import type { ChannelUserMode } from '../../shared/protocol.js';
+import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
 import { ChatPaneExpandedMessageRow } from './ChatPaneExpandedMessageRow.js';
 import {

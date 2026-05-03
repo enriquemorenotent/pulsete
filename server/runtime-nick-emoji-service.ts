@@ -1,4 +1,4 @@
-import type { ServerMessage } from '../shared/protocol.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { notFound } from './app-error.js';
 import { normalizeNickEmoji, normalizeNickEmojiNick } from './irc-validate.js';
 import type { RuntimeNetworkStore, RuntimeNickEmojiStore } from './runtime-store-ports.js';

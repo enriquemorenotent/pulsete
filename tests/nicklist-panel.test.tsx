@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { ChannelState, ChannelUserState, NetworkProfile } from '../shared/protocol.js';
+import type { ChannelState, ChannelUserState, NetworkProfile } from '../shared/protocol-chat.js';
 import { NicklistPanel } from '../web/src/NicklistPanel.js';
 import { buildNicklistGroups } from '../web/src/nicklist-groups.js';
 import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';

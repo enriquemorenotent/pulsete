@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState, NetworkProfile } from '../shared/protocol.js';
+import type { BufferState, NetworkProfile } from '../shared/protocol-chat.js';
 import { resolveChatPaneHeaderActions } from '../web/src/chat-pane-header-actions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 

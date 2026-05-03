@@ -8,7 +8,7 @@ import {
   isActionMessage,
   messageTone,
 } from './chat-pane-message-utils.js';
-import type { ChatMessage } from '../../shared/protocol.js';
+import type { ChatMessage } from '../../shared/protocol-chat.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { MessageParticipantPresentation } from './message-participant-presentation.js';
 

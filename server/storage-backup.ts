@@ -12,10 +12,8 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { badRequest } from './app-error.js';
-import {
-  isValidNetworkSecretContent,
-  resolveNetworkSecretPath,
-} from './network-secret.js';
+import { isValidNetworkSecretContent } from './network-secret.js';
+import type { AppPaths } from './app-paths.js';
 import { currentStorageSchemaVersion } from './storage-migrations.js';
 import { hasEncryptedNetworkPasswords } from './storage-networks.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
@@ -53,8 +51,8 @@ type ParsedBackup = {
 
 export const createStorageBackup = (input: {
   browserPreferences: BrowserPreferences;
-  databasePath: string;
   db: SqliteDb;
+  paths: AppPaths;
 }): StorageBackupDownload => {
   const createdAt = new Date();
   const tempDir = mkdtempSync(join(tmpdir(), 'pulsete-backup-'));
@@ -66,7 +64,7 @@ export const createStorageBackup = (input: {
       createdAt: createdAt.toISOString(),
       database: readFileSync(backupDatabasePath).toString('base64'),
       format: backupFormat,
-      secret: readNetworkSecret(input.databasePath),
+      secret: readNetworkSecret(input.paths.networkSecretPath),
       storageSchemaVersion: currentStorageSchemaVersion,
     };
     return {
@@ -80,7 +78,7 @@ export const createStorageBackup = (input: {
 
 export const prepareStorageBackupRestore = (input: {
   backupContent: Buffer;
-  databasePath: string;
+  paths: AppPaths;
 }): PreparedStorageRestore => {
   const backup = parseStorageBackup(input.backupContent);
   const tempDir = mkdtempSync(join(tmpdir(), 'pulsete-restore-'));
@@ -91,8 +89,8 @@ export const prepareStorageBackupRestore = (input: {
     return {
       browserPreferences: backup.browserPreferences,
       apply: () => {
-        createPreRestoreBackup(input.databasePath);
-        replaceStorageFiles(input.databasePath, backup);
+        createPreRestoreBackup(input.paths);
+        replaceStorageFiles(input.paths, backup);
       },
     };
   } finally {
@@ -176,32 +174,26 @@ const hasRequiredTables = (db: SqliteDb) =>
     Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table))
   );
 
-const createPreRestoreBackup = (databasePath: string) => {
-  const backupDir = join(
-    dirname(databasePath),
-    'backups',
-    `pre-restore-${formatBackupTimestamp(new Date())}-${randomUUID()}`
-  );
+const createPreRestoreBackup = (paths: AppPaths) => {
+  const backupDir = join(paths.backupDirectory, `pre-restore-${formatBackupTimestamp(new Date())}-${randomUUID()}`);
   mkdirSync(backupDir, { recursive: true });
-  copyIfPresent(databasePath, join(backupDir, basename(databasePath)));
-  copyIfPresent(`${databasePath}-wal`, join(backupDir, `${basename(databasePath)}-wal`));
-  copyIfPresent(`${databasePath}-shm`, join(backupDir, `${basename(databasePath)}-shm`));
-  const secretPath = resolveNetworkSecretPath(databasePath);
-  copyIfPresent(secretPath, join(backupDir, basename(secretPath)));
+  copyIfPresent(paths.databasePath, join(backupDir, basename(paths.databasePath)));
+  copyIfPresent(`${paths.databasePath}-wal`, join(backupDir, `${basename(paths.databasePath)}-wal`));
+  copyIfPresent(`${paths.databasePath}-shm`, join(backupDir, `${basename(paths.databasePath)}-shm`));
+  copyIfPresent(paths.networkSecretPath, join(backupDir, basename(paths.networkSecretPath)));
 };
 
-const replaceStorageFiles = (databasePath: string, backup: ParsedBackup) => {
-  mkdirSync(dirname(databasePath), { recursive: true });
-  rmSync(databasePath, { force: true });
-  rmSync(`${databasePath}-wal`, { force: true });
-  rmSync(`${databasePath}-shm`, { force: true });
-  writeFileSync(databasePath, backup.database, { mode: 0o600 });
-  const secretPath = resolveNetworkSecretPath(databasePath);
+const replaceStorageFiles = (paths: AppPaths, backup: ParsedBackup) => {
+  mkdirSync(dirname(paths.databasePath), { recursive: true });
+  rmSync(paths.databasePath, { force: true });
+  rmSync(`${paths.databasePath}-wal`, { force: true });
+  rmSync(`${paths.databasePath}-shm`, { force: true });
+  writeFileSync(paths.databasePath, backup.database, { mode: 0o600 });
   if (backup.secret) {
-    writeFileSync(secretPath, `${backup.secret}\n`, { mode: 0o600 });
+    writeFileSync(paths.networkSecretPath, `${backup.secret}\n`, { mode: 0o600 });
     return;
   }
-  rmSync(secretPath, { force: true });
+  rmSync(paths.networkSecretPath, { force: true });
 };
 
 const normalizeBrowserPreferences = (value: BrowserPreferences) =>
@@ -213,8 +205,7 @@ const normalizeBrowserPreferences = (value: BrowserPreferences) =>
       .sort(([left], [right]) => left.localeCompare(right))
   );
 
-const readNetworkSecret = (databasePath: string) => {
-  const secretPath = resolveNetworkSecretPath(databasePath);
+const readNetworkSecret = (secretPath: string) => {
   if (!existsSync(secretPath)) {
     return null;
   }

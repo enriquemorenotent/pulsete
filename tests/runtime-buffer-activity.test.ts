@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferState } from '../shared/protocol.js';
+import type { BufferState } from '../shared/protocol-chat.js';
 import { resolveNextBufferActivity, shouldIncrementPriorityUnread } from '../server/runtime-buffer-activity.js';
 import type { MessageInput } from '../server/storage-types.js';
 

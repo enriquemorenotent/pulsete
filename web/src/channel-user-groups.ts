@@ -1,4 +1,4 @@
-import type { ChannelUserMode, ChannelUserState } from '../../shared/protocol.js';
+import type { ChannelUserMode, ChannelUserState } from '../../shared/protocol-chat.js';
 import { channelUserGroupLabels, sortChannelUsers } from '../../shared/channel-users.js';
 
 export type ChannelUserGroup = {

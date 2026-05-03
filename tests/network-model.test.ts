@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { listWorkspaceNetworks } from '../shared/network-model.js';
-import type { NetworkProfile } from '../shared/protocol.js';
+import type { NetworkProfile } from '../shared/protocol-chat.js';
 
 const makeNetwork = (overrides: Partial<NetworkProfile>): NetworkProfile => ({
   id: overrides.id ?? 'network-1',

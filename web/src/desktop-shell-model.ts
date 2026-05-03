@@ -1,6 +1,6 @@
 import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
-import type { BufferState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol.js';
+import type { BufferState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { EditorTab, NetworkForm } from './network-form.js';

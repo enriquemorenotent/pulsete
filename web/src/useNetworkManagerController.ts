@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol.js';
+import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol-chat.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import { buildManagedRuntime } from './network-manager-runtime.js';

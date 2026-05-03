@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ChatMessage } from '../../shared/protocol.js';
+import type { ChatMessage } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import type { MessageParticipantPresentation } from './message-participant-presentation.js';
 import { ParticipantNickLabel } from './ParticipantNickLabel.js';

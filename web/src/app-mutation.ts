@@ -1,4 +1,4 @@
-import type { ServerMessage } from '../../shared/protocol.js';
+import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
 
 type MutationResult = {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BufferState, ChatMessage } from '../../../shared/protocol.js';
+import type { BufferState, ChatMessage } from '../../../shared/protocol-chat.js';
 import type { Action, GatewayStatus } from '../app-types.js';
 import { api, type BufferHistoryPayload } from '../client.js';
 

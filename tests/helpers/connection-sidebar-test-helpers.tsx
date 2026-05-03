@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { BufferState, FriendState, NetworkProfile, NickEmojiState, PresenceStatus } from '../../shared/protocol.js';
+import type { BufferState, FriendState, NetworkProfile, NickEmojiState, PresenceStatus } from '../../shared/protocol-chat.js';
 import { ConnectionSidebar } from '../../web/src/ConnectionSidebar.js';
 import { buildConnectionSidebarView } from '../../web/src/connection-sidebar-view.js';
 import { buildConversationIndex } from '../../web/src/conversation-selectors.js';

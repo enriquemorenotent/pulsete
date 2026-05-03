@@ -1,8 +1,4 @@
-import type {
-  ChannelUserState,
-  NetworkRuntimeState,
-  PresenceStatus,
-} from '../shared/protocol.js';
+import type { ChannelUserState, NetworkRuntimeState, PresenceStatus } from '../shared/protocol-chat.js';
 import type {
   ChannelSessionPhase,
   ChannelSessionState,
@@ -16,7 +12,7 @@ import type {
   IrcSocket,
 } from './irc-state-types.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
-import type { ChannelListEntry } from '../shared/protocol.js';
+import type { ChannelListEntry } from '../shared/protocol-chat.js';
 import type { MessageInput, RuntimeNetworkProfile } from './storage-types.js';
 
 export type RuntimeEvent =

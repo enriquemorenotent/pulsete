@@ -1,5 +1,5 @@
 import { listSavedNetworks, listWorkspaceNetworks } from '../../shared/network-model.js';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import { buildConnectionSidebarView } from './connection-sidebar-view.js';
 import { buildConversationModel } from './conversation-model.js';
 import { selectConversationMessages } from './conversation-selectors.js';

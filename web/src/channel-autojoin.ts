@@ -1,5 +1,5 @@
 import { findIrcCaseMatch, isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
-import type { NetworkProfile } from '../../shared/protocol.js';
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 export type CurrentChannelAutoJoinState = {
