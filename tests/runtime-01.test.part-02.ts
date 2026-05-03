@@ -34,6 +34,7 @@ test('runtime snapshot includes live network states after a refresh point', asyn
       phase: 'connected',
       serverName: 'irc.example',
       nick: 'tester',
+      capabilities: { offered: [], negotiated: [], pending: [] },
     });
   } finally {
     runtime.sessions.disconnect(network.id);
@@ -216,4 +217,3 @@ test('query presence stays scoped to the query network', async () => {
     await new Promise<void>((resolve, reject) => second.server.close((error) => (error ? reject(error) : resolve())));
   }
 });
-

@@ -2,6 +2,7 @@ import type { IrcEventContext, IrcStateContext } from './irc-contexts.js';
 import type { RuntimeEvent } from './irc-types.js';
 import type { ChannelUserState, PresenceStatus } from '../shared/protocol.js';
 import type { MessageInput } from './storage-types.js';
+import { snapshotIrcCapabilities } from './irc-capabilities.js';
 
 export const emitEvent = (connection: IrcEventContext, event: RuntimeEvent) => {
   connection.handlers.onEvent(event);
@@ -51,6 +52,7 @@ export const emitState = (connection: IrcStateContext) => {
     phase: lifecycle.connected ? 'connected' : lifecycle.socket ? 'connecting' : 'offline',
     serverName: lifecycle.serverName,
     nick: lifecycle.currentNick,
+    capabilities: snapshotIrcCapabilities(lifecycle.capabilities),
   });
 };
 

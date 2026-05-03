@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Badge, type BadgeProps } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { AutosaveNotesEditor } from './AutosaveNotesEditor.js';
 import { NicklistPanel } from './NicklistPanel.js';
@@ -6,7 +7,13 @@ import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import type { WorkspaceView } from './workspace-types.js';
-import type { BufferState, NetworkProfile, NickEmojiState } from '../../shared/protocol.js';
+import {
+  emptyNetworkRuntimeCapabilities,
+  type BufferState,
+  type NetworkProfile,
+  type NetworkRuntimeCapabilities,
+  type NickEmojiState,
+} from '../../shared/protocol.js';
 
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
@@ -37,6 +44,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
       <ServerProfileSidebar
         network={props.serverProfile?.network ?? null}
         fallbackNetwork={props.workspace.selectedNetwork}
+        runtime={props.workspace.selectedRuntime}
         onEdit={props.serverProfile?.onEdit ?? (() => undefined)}
         onSaveNotes={props.serverProfile?.onSaveNotes ?? (async () => null)}
       />
@@ -89,6 +97,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
 function ServerProfileSidebar(props: {
   network: WorkspaceView['selectedNetwork'];
   fallbackNetwork: WorkspaceView['selectedNetwork'];
+  runtime: WorkspaceView['selectedRuntime'];
   onEdit: () => void;
   onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<NetworkProfile | null>;
 }) {
@@ -115,6 +124,8 @@ function ServerProfileSidebar(props: {
         </div>
       </div>
 
+      <ServerCapabilityInspector capabilities={props.runtime?.capabilities} />
+
       <AutosaveNotesEditor
         id="server-profile-notes"
         notes={network.notes ?? ''}
@@ -122,6 +133,57 @@ function ServerProfileSidebar(props: {
         placeholder="Character, aliases, plot hooks..."
         scopeKey={network.id}
       />
+    </div>
+  );
+}
+
+function ServerCapabilityInspector(props: {
+  capabilities?: NetworkRuntimeCapabilities | null;
+}) {
+  const capabilities = props.capabilities ?? emptyNetworkRuntimeCapabilities();
+  const negotiated = capabilities.negotiated;
+  const pending = capabilities.pending;
+  const unavailable = new Set([...negotiated, ...pending]);
+  const offered = capabilities.offered.filter((capability) => !unavailable.has(capability));
+  const hasCapabilities = negotiated.length > 0 || offered.length > 0 || pending.length > 0;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Capabilities</p>
+      {hasCapabilities ? (
+        <div className="space-y-2">
+          <CapabilityGroup capabilities={negotiated} label="Active" variant="success" />
+          <CapabilityGroup capabilities={offered} label="Offered" variant="secondary" />
+          <CapabilityGroup capabilities={pending} label="Pending" variant="default" />
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">No capabilities reported yet.</p>
+      )}
+    </div>
+  );
+}
+
+function CapabilityGroup(props: {
+  capabilities: string[];
+  label: string;
+  variant: BadgeProps['variant'];
+}) {
+  if (props.capabilities.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        {props.label}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {props.capabilities.map((capability) => (
+          <Badge key={capability} variant={props.variant} className="max-w-full normal-case tracking-normal">
+            <span className="truncate">{capability}</span>
+          </Badge>
+        ))}
+      </div>
     </div>
   );
 }

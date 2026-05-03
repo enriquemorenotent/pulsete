@@ -154,9 +154,23 @@ export type PendingChannelState = z.infer<typeof pendingChannelSchema>;
 export const networkRuntimePhaseSchema = z.enum(['offline', 'connecting', 'connected']);
 export type NetworkRuntimePhase = z.infer<typeof networkRuntimePhaseSchema>;
 
+export const networkRuntimeCapabilitiesSchema = z.object({
+  offered: z.array(z.string()).default([]),
+  negotiated: z.array(z.string()).default([]),
+  pending: z.array(z.string()).default([]),
+});
+export type NetworkRuntimeCapabilities = z.infer<typeof networkRuntimeCapabilitiesSchema>;
+
+export const emptyNetworkRuntimeCapabilities = (): NetworkRuntimeCapabilities => ({
+  offered: [],
+  negotiated: [],
+  pending: [],
+});
+
 export const networkRuntimeStateSchema = z.object({
   phase: networkRuntimePhaseSchema,
   serverName: z.string().nullable(),
   nick: z.string(),
+  capabilities: networkRuntimeCapabilitiesSchema.optional(),
 });
 export type NetworkRuntimeState = z.infer<typeof networkRuntimeStateSchema>;

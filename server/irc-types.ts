@@ -20,7 +20,14 @@ import type { ChannelListEntry } from '../shared/protocol.js';
 import type { MessageInput, RuntimeNetworkProfile } from './storage-types.js';
 
 export type RuntimeEvent =
-  | { type: 'state'; networkId: string; phase: NetworkRuntimeState['phase']; serverName: string | null; nick: string }
+  | {
+      type: 'state';
+      networkId: string;
+      phase: NetworkRuntimeState['phase'];
+      serverName: string | null;
+      nick: string;
+      capabilities: NonNullable<NetworkRuntimeState['capabilities']>;
+    }
   | {
       type: 'status';
       networkId: string;
@@ -78,7 +85,7 @@ export type IrcConnectionData = {
 };
 
 export type IrcConnectionMethods = {
-  readonly state: Pick<NetworkRuntimeState, 'phase' | 'serverName' | 'nick'>;
+  readonly state: NetworkRuntimeState;
   beginLogin(): void;
   connect(resetRetryBudget?: boolean): void;
   disconnect(raw?: string): void;

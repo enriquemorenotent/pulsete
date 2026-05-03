@@ -57,6 +57,7 @@ test('channel list resets when the gateway drops, its network disconnects, or th
     phase: 'offline',
     serverName: null,
     nick: 'tester',
+    capabilities: { offered: [], negotiated: [], pending: [] },
   });
   const removed = reducer(connectedState, { type: 'remove-network', networkId: 'network-1' });
 

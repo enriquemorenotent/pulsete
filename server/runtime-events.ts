@@ -37,6 +37,7 @@ export function translateRuntimeEvent(
       phase: event.phase,
       serverName: event.serverName,
       nick: event.nick,
+      capabilities: event.capabilities,
     } satisfies ServerMessage];
   }
   if (event.type === 'status') {

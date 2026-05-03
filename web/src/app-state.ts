@@ -1,5 +1,6 @@
 import { useReducer } from 'react';
 import type { AppSnapshot, BufferState } from '../../shared/protocol.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
 import { indexConversationMessages } from './conversation-message-state.js';
 import {
@@ -61,7 +62,15 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
   channels: snapshot.channels,
   pendingChannels: sortPendingChannels(snapshot.pendingChannels),
   messages: indexConversationMessages(snapshot.messages),
-  networkStates: snapshot.networkStates,
+  networkStates: Object.fromEntries(
+    Object.entries(snapshot.networkStates).map(([networkId, runtime]) => [
+      networkId,
+      {
+        ...runtime,
+        capabilities: runtime.capabilities ?? emptyNetworkRuntimeCapabilities(),
+      },
+    ]),
+  ),
 });
 
 export const reducer = (state: State, action: Action): State => {

@@ -52,3 +52,32 @@ test('legacy single channel-list entry messages dispatch as one-entry batches', 
     entries: [{ name: '#help', users: 42, topic: 'Support' }],
   }]);
 });
+
+test('network state messages dispatch runtime capabilities', () => {
+  const actions: Action[] = [];
+  dispatchInboundServerMessage({
+    type: 'network.state',
+    networkId: 'network-1',
+    phase: 'connecting',
+    serverName: null,
+    nick: 'tester',
+    capabilities: {
+      offered: ['account-tag', 'echo-message'],
+      negotiated: ['echo-message'],
+      pending: ['userhost-in-names'],
+    },
+  }, (action) => actions.push(action));
+
+  assert.deepEqual(actions, [{
+    type: 'network-state',
+    networkId: 'network-1',
+    phase: 'connecting',
+    serverName: null,
+    nick: 'tester',
+    capabilities: {
+      offered: ['account-tag', 'echo-message'],
+      negotiated: ['echo-message'],
+      pending: ['userhost-in-names'],
+    },
+  }]);
+});

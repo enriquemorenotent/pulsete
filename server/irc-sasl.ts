@@ -1,4 +1,4 @@
-import { emitStatus } from './irc-emit.js';
+import { emitState, emitStatus } from './irc-emit.js';
 import { applyAcknowledgedCapabilities, normalizeCapabilityName, parseCapabilityTokens, recordAdvertisedCapabilities, resolveRequestedCapabilities, usesSaslPlain } from './irc-capabilities.js';
 import { resolveNetworkAuthAccount, resolveNetworkAuthMethod } from '../shared/network-model.js';
 import type { IrcRegistrationContext } from './irc-contexts.js';
@@ -53,6 +53,7 @@ export const finishSaslNegotiation = (connection: IrcRegistrationContext, option
   sasl.phase = 'completed';
   sasl.pendingCapabilities.clear();
   connection.lifecycle.capabilities.pendingRequest.clear();
+  emitState(connection);
 };
 
 export const getWelcomeSaslFallbackMessage = (phase: IrcSaslPhase) => {
@@ -94,6 +95,7 @@ const handleCapList = (connection: IrcRegistrationContext, params: string[]) => 
   const tokens = parseCapabilityTokens(params.at(-1));
   recordAdvertisedCapabilities(sasl.offeredCapabilities, tokens);
   recordAdvertisedCapabilities(connection.lifecycle.capabilities.offered, tokens);
+  emitState(connection);
   if ([...sasl.offeredCapabilities].some((capability) => normalizeCapabilityName(capability) === 'sasl')) {
     sasl.capabilityAdvertised = true;
   }
@@ -112,6 +114,7 @@ const handleCapList = (connection: IrcRegistrationContext, params: string[]) => 
     sasl.pendingCapabilities = requestedCapabilities;
     connection.lifecycle.capabilities.pendingRequest = new Set(requestedCapabilities);
     sasl.phase = 'awaiting-cap-ack';
+    emitState(connection);
   }
   return true;
 };
@@ -129,6 +132,7 @@ const handleCapAck = (connection: IrcRegistrationContext, params: string[]) => {
       sasl.pendingCapabilities.delete(name);
     }
   }
+  emitState(connection);
   if (sasl.pendingCapabilities.size > 0) {
     return true;
   }
@@ -153,6 +157,7 @@ const handleCapNak = (connection: IrcRegistrationContext, params: string[]) => {
       connection.lifecycle.capabilities.pendingRequest.delete(name);
     }
   }
+  emitState(connection);
   emitStatus(connection, params.at(-1) ? `Server rejected requested capabilities (${params.at(-1)})` : 'Server rejected requested capabilities', 'error');
   finishSaslNegotiation(connection);
   return true;

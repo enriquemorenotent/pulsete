@@ -56,6 +56,7 @@ test('snapshot selects the first instance server buffer', () => {
     phase: 'connecting',
     serverName: null,
     nick: network.nick,
+    capabilities: { offered: [], negotiated: [], pending: [] },
   });
 });
 
@@ -192,6 +193,7 @@ test('gateway transitions reset transport state and clear the reconnect banner o
     phase: 'offline',
     serverName: null,
     nick: network.nick,
+    capabilities: { offered: [], negotiated: [], pending: [] },
   });
   assert.deepEqual(disconnected.transient.historyLoadedByBufferId, {});
   assert.deepEqual(disconnected.transient.historyHasOlderByBufferId, {});

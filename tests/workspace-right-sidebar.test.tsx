@@ -108,6 +108,63 @@ test('server profile sidebar renders the per-network notes editor', () => {
   assert.doesNotMatch(markup, />Save<\/button>/);
 });
 
+test('server profile sidebar renders grouped IRC capabilities', () => {
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={{
+        ...workspace,
+        selectedRuntime: {
+          phase: 'connecting',
+          serverName: null,
+          nick: network.nick,
+          capabilities: {
+            offered: ['account-tag', 'echo-message', 'userhost-in-names'],
+            negotiated: ['echo-message'],
+            pending: ['userhost-in-names'],
+          },
+        },
+      }}
+      nicklist={nicklist}
+      serverProfile={{
+        network,
+        onEdit: () => undefined,
+        onSaveNotes: async () => null,
+      }}
+    />,
+  );
+
+  assert.match(markup, /Capabilities/);
+  assert.match(markup, /Active[\s\S]*echo-message/);
+  assert.match(markup, /Offered[\s\S]*account-tag/);
+  assert.match(markup, /Pending[\s\S]*userhost-in-names/);
+  assert.doesNotMatch(markup, /No capabilities reported yet/);
+});
+
+test('server profile sidebar renders an empty capability state', () => {
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={{
+        ...workspace,
+        selectedRuntime: {
+          phase: 'connected',
+          serverName: 'irc.example.test',
+          nick: network.nick,
+          capabilities: { offered: [], negotiated: [], pending: [] },
+        },
+      }}
+      nicklist={nicklist}
+      serverProfile={{
+        network,
+        onEdit: () => undefined,
+        onSaveNotes: async () => null,
+      }}
+    />,
+  );
+
+  assert.match(markup, /Capabilities/);
+  assert.match(markup, /No capabilities reported yet/);
+});
+
 test('query profile sidebar renders the per-DM notes editor', () => {
   const markup = renderToStaticMarkup(
     <WorkspaceRightSidebar

@@ -4,6 +4,7 @@ import type {
   NetworkRuntimeState,
   PresenceStatus,
 } from '../shared/protocol.js';
+import { snapshotIrcCapabilities } from './irc-capabilities.js';
 import { createIrcControllers } from './irc-controls.js';
 import { createIrcConnectionState, type IrcConnectionOptions } from './irc-connection-state.js';
 import type { PendingReplyContext } from './irc-reply-context-types.js';
@@ -45,7 +46,7 @@ export class IrcConnection implements IrcConnectionState {
     this.controls = createIrcControllers(this);
   }
 
-  get state(): Pick<NetworkRuntimeState, 'phase' | 'serverName' | 'nick'> {
+  get state(): NetworkRuntimeState {
     const phase: NetworkRuntimeState['phase'] = this.lifecycle.connected
       ? 'connected'
       : this.lifecycle.socket
@@ -55,6 +56,7 @@ export class IrcConnection implements IrcConnectionState {
       phase,
       serverName: this.lifecycle.serverName,
       nick: this.lifecycle.currentNick,
+      capabilities: snapshotIrcCapabilities(this.lifecycle.capabilities),
     };
   }
 

@@ -1,5 +1,6 @@
 import type { Action, AppDomainState } from './app-types.js';
 import { removeNetworkMessages } from './conversation-message-state.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol.js';
 
 export const offlineNetworkStates = (state: Pick<AppDomainState, 'networks'>) =>
   Object.fromEntries(
@@ -9,6 +10,7 @@ export const offlineNetworkStates = (state: Pick<AppDomainState, 'networks'>) =>
         phase: 'offline' as const,
         serverName: null,
         nick: network.nick,
+        capabilities: emptyNetworkRuntimeCapabilities(),
       },
     ])
   );
@@ -48,6 +50,7 @@ export const reduceRuntimeDomain = (
                 phase: runtime?.phase ?? 'offline',
                 serverName: runtime?.serverName ?? null,
                 nick: action.network.nick,
+                capabilities: runtime?.capabilities ?? emptyNetworkRuntimeCapabilities(),
               },
             };
       if (!action.network.workspaceOpen) {
@@ -88,6 +91,7 @@ export const reduceRuntimeDomain = (
             phase: action.phase,
             serverName: action.serverName,
             nick: action.nick,
+            capabilities: action.capabilities,
           },
         },
         pendingChannels:

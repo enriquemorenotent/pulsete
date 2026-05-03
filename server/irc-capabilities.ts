@@ -1,4 +1,5 @@
 import { resolveNetworkAuthMethod } from '../shared/network-model.js';
+import type { NetworkRuntimeCapabilities } from '../shared/protocol.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
 import type { IrcCapabilityState } from './irc-state-types.js';
 
@@ -84,3 +85,14 @@ export const hasNegotiatedCapability = (
   state: Pick<IrcCapabilityState, 'negotiated'>,
   capability: SupportedCapabilityName | string,
 ) => state.negotiated.has(capability);
+
+export const snapshotIrcCapabilities = (
+  state: Pick<IrcCapabilityState, 'negotiated' | 'offered' | 'pendingRequest'>,
+): NetworkRuntimeCapabilities => ({
+  offered: listSortedCapabilityNames(state.offered),
+  negotiated: listSortedCapabilityNames(state.negotiated),
+  pending: listSortedCapabilityNames(state.pendingRequest),
+});
+
+const listSortedCapabilityNames = (capabilities: ReadonlySet<string>) =>
+  Array.from(capabilities).sort((left, right) => left.localeCompare(right));

@@ -1,4 +1,7 @@
-import type { NetworkProfile } from '../../shared/protocol.js';
+import {
+  emptyNetworkRuntimeCapabilities,
+  type NetworkProfile,
+} from '../../shared/protocol.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
 export function buildManagedRuntime(
@@ -15,6 +18,7 @@ export function buildManagedRuntime(
     phase: 'offline',
     serverName: null,
     nick: managedNetwork.nick,
+    capabilities: emptyNetworkRuntimeCapabilities(),
   };
 }
 

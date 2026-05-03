@@ -101,7 +101,14 @@ export type Action =
   | { type: 'add-pending-channel'; pendingChannel: PendingChannelState }
   | { type: 'remove-pending-channel'; networkId: string; channel: string }
   | { type: 'update-presence'; networkId: string; channel: string; users: ChannelUserState[] }
-  | { type: 'network-state'; networkId: string; phase: NetworkRuntimeState['phase']; serverName: string | null; nick: string }
+  | {
+      type: 'network-state';
+      networkId: string;
+      phase: NetworkRuntimeState['phase'];
+      serverName: string | null;
+      nick: string;
+      capabilities: NonNullable<NetworkRuntimeState['capabilities']>;
+    }
   | { type: 'set-banner'; banner: Banner }
   | { type: 'open-channel-list'; networkId: string }
   | { type: 'close-channel-list' }

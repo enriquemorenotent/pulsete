@@ -1,4 +1,5 @@
 import type { ServerMessage } from '../../shared/protocol.js';
+import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol.js';
 import type { Action } from './app-types.js';
 
 type Dispatch = (action: Action) => void;
@@ -23,6 +24,7 @@ const toActions = (message: ServerMessage): Action[] => {
         phase: message.phase,
         serverName: message.serverName,
         nick: message.nick,
+        capabilities: message.capabilities ?? emptyNetworkRuntimeCapabilities(),
       }];
     case 'network.upsert':
       return [{ type: 'upsert-network', network: message.network }];
