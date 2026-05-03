@@ -21,6 +21,7 @@ export const updateChannelUsers = (
       ? upsertChannelUser(current, {
           nick,
           mode: details.mode ?? 'normal',
+          modes: details.modes,
           away: details.away ?? false,
           account: details.account ?? null,
           username: details.username ?? null,

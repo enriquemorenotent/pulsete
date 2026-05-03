@@ -11,6 +11,7 @@ export const makeUser = (
 ): ChannelUserState => ({
   nick,
   mode,
+  modes: mode === 'normal' ? [] : [mode],
   away,
   account: null,
   username: null,

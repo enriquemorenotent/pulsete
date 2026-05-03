@@ -46,8 +46,8 @@ test('irc connection can authenticate through SASL before autojoin', async () =>
           sentCapList = true;
         }
 
-        if (!sentCapAck && line === 'CAP REQ :sasl') {
-          socket.write(':irc.example CAP * ACK :sasl\r\n');
+        if (!sentCapAck && line === 'CAP REQ :multi-prefix sasl') {
+          socket.write(':irc.example CAP * ACK :multi-prefix sasl\r\n');
           sentCapAck = true;
         }
 

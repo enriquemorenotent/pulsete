@@ -16,7 +16,7 @@ import {
   waitForWebSocketCloseDetails,
 } from './helpers/http-websocket-test-helpers.js';
 
-const backupChannelUser = { account: 'alice', away: false, host: 'example.test', mode: 'op' as const, nick: 'Alice', realname: 'Alice Backup', username: 'alice' };
+const backupChannelUser = { account: 'alice', away: false, host: 'example.test', mode: 'op' as const, modes: ['op' as const], nick: 'Alice', realname: 'Alice Backup', username: 'alice' };
 
 test('backup export and import fully replace stored app data', async () => {
   const context = await createBackupServer();

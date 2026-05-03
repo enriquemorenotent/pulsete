@@ -110,6 +110,9 @@ const handleCapList = (connection: IrcRegistrationContext, params: string[]) => 
     finishSaslNegotiation(connection);
     return true;
   }
+  if (usesSaslPlain(connection.profile) && !sasl.capabilityAdvertised) {
+    emitStatus(connection, 'Server does not advertise SASL; continuing without it', 'error');
+  }
   if (connection.sendRaw(`CAP REQ :${Array.from(requestedCapabilities).join(' ')}`)) {
     sasl.pendingCapabilities = requestedCapabilities;
     connection.lifecycle.capabilities.pendingRequest = new Set(requestedCapabilities);

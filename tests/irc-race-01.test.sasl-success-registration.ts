@@ -50,9 +50,9 @@ test('sasl plain connections negotiate capabilities before completing registrati
     ]);
 
     handleIrcLine(connection, ':irc.example CAP * LS :multi-prefix sasl');
-    assert.equal(writes.at(-1), 'CAP REQ :sasl\r\n');
+    assert.equal(writes.at(-1), 'CAP REQ :multi-prefix sasl\r\n');
 
-    handleIrcLine(connection, ':irc.example CAP * ACK :sasl');
+    handleIrcLine(connection, ':irc.example CAP * ACK :multi-prefix sasl');
     assert.equal(writes.at(-1), 'AUTHENTICATE PLAIN\r\n');
 
     handleIrcLine(connection, ':irc.example AUTHENTICATE +');
@@ -114,7 +114,7 @@ test('sasl plain connections complete negotiation on numeric 900 success', () =>
     socket.emit('connect');
 
     handleIrcLine(connection, ':irc.example CAP * LS :multi-prefix sasl');
-    handleIrcLine(connection, ':irc.example CAP * ACK :sasl');
+    handleIrcLine(connection, ':irc.example CAP * ACK :multi-prefix sasl');
     handleIrcLine(connection, ':irc.example AUTHENTICATE +');
     handleIrcLine(connection, ':irc.example 900 tester account account!user@example :You are now logged in as account');
 

@@ -10,6 +10,7 @@ const passiveCapabilityNames = [
   'echo-message',
   'extended-join',
   'message-tags',
+  'multi-prefix',
   'server-time',
   'setname',
   'standard-replies',

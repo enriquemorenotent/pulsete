@@ -1,27 +1,19 @@
-import type { ChannelUserMode, ChannelUserState } from './protocol-chat.js';
+import type { ChannelUserMode, ChannelUserPrivilegeMode, ChannelUserState } from './protocol-chat.js';
 import { normalizeIrcIdentifier } from './irc-identifiers.js';
+import {
+  getChannelUserModeRank,
+  getPrimaryChannelUserMode,
+  modeByPrefix,
+  normalizeChannelUserModes,
+  orderedModes,
+} from './channel-user-modes.js';
 
-const modeByPrefix = {
-  '~': 'owner',
-  '&': 'admin',
-  '@': 'op',
-  '%': 'halfop',
-  '+': 'voice',
-} as const satisfies Record<string, Exclude<ChannelUserMode, 'normal'>>;
-
-const orderedModes: ChannelUserMode[] = ['owner', 'admin', 'op', 'halfop', 'voice', 'normal'];
-
-export const channelUserGroupLabels: Record<ChannelUserMode, string> = {
-  owner: 'Owners',
-  admin: 'Admins',
-  op: 'Operators',
-  halfop: 'Half-Ops',
-  voice: 'Voiced',
-  normal: 'Users',
-};
-
-export const getChannelUserModeRank = (mode: ChannelUserMode) =>
-  orderedModes.indexOf(mode);
+export {
+  channelUserGroupLabels,
+  getChannelUserModeRank,
+  getPrimaryChannelUserMode,
+  normalizeChannelUserModes,
+} from './channel-user-modes.js';
 
 export const parseChannelUser = (
   value: string | ChannelUserState | null | undefined
@@ -34,36 +26,35 @@ export const parseChannelUser = (
     if (!trimmed) {
       return null;
     }
-    const maybePrefix = trimmed[0] ?? '';
-    const prefix = Object.prototype.hasOwnProperty.call(modeByPrefix, maybePrefix)
-      ? (maybePrefix as keyof typeof modeByPrefix)
-      : null;
-    const identity = parseUserHost(prefix ? trimmed.slice(1) : trimmed);
+    const prefixes = parseChannelUserPrefixes(trimmed);
+    const identity = parseUserHost(prefixes.value);
     return identity.nick
-      ? {
+      ? normalizeChannelUser({
           nick: identity.nick,
-          mode: prefix ? modeByPrefix[prefix] : 'normal',
+          mode: getPrimaryChannelUserMode(prefixes.modes),
+          modes: prefixes.modes,
           away: false,
           username: identity.username,
           host: identity.host,
           account: null,
           realname: null,
-        }
+        })
       : null;
   }
   const nick = value.nick.trim();
   if (!nick) {
     return null;
   }
-  return {
+  return normalizeChannelUser({
     nick,
     mode: orderedModes.includes(value.mode) ? value.mode : 'normal',
+    modes: getStoredChannelUserModes(value),
     away: value.away === true,
     account: value.account?.trim() || null,
     username: value.username?.trim() || null,
     host: value.host?.trim() || null,
     realname: value.realname?.trim() || null,
-  };
+  });
 };
 
 export const compareChannelUsers = (left: ChannelUserState, right: ChannelUserState) => {
@@ -102,6 +93,7 @@ export const renameChannelUser = (users: ChannelUserState[], previousNick: strin
   return upsertChannelUser(removeChannelUser(users, previousNick), {
     nick: nextNick,
     mode: existing.mode,
+    modes: getStoredChannelUserModes(existing),
     away: existing.away,
     account: existing.account ?? null,
     username: existing.username ?? null,
@@ -110,15 +102,28 @@ export const renameChannelUser = (users: ChannelUserState[], previousNick: strin
   });
 };
 
-export const updateChannelUserMode = (users: ChannelUserState[], nick: string, mode: ChannelUserMode) => {
+export const updateChannelUserMode = (
+  users: ChannelUserState[],
+  nick: string,
+  mode: ChannelUserPrivilegeMode,
+  active: boolean
+) => {
   const normalizedNick = normalizeIrcIdentifier(nick);
   const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick) === normalizedNick);
   if (!existing) {
     return users;
   }
+  const currentModes = getStoredChannelUserModes(existing);
+  const nextModes = active
+    ? normalizeChannelUserModes([...currentModes, mode])
+    : currentModes.filter((candidate) => candidate !== mode);
+  if (areSameChannelUserModes(currentModes, nextModes)) {
+    return users;
+  }
   return upsertChannelUser(users, {
     nick: existing.nick,
-    mode,
+    mode: getPrimaryChannelUserMode(nextModes),
+    modes: nextModes,
     away: existing.away,
     account: existing.account ?? null,
     username: existing.username ?? null,
@@ -136,6 +141,7 @@ export const updateChannelUserAway = (users: ChannelUserState[], nick: string, a
   return upsertChannelUser(users, {
     nick: existing.nick,
     mode: existing.mode,
+    modes: getStoredChannelUserModes(existing),
     away,
     account: existing.account ?? null,
     username: existing.username ?? null,
@@ -157,6 +163,7 @@ export const updateChannelUserDetails = (
   const nextUser = parseChannelUser({
     nick: existing.nick,
     mode: existing.mode,
+    modes: getStoredChannelUserModes(existing),
     away: existing.away,
     account: updates.account === undefined ? existing.account ?? null : updates.account,
     username: updates.username === undefined ? existing.username ?? null : updates.username,
@@ -174,6 +181,50 @@ export const updateChannelUserDetails = (
   );
   return unchanged ? users : upsertChannelUser(users, nextUser);
 };
+
+type NormalizableChannelUser = Omit<ChannelUserState, 'modes'> & {
+  modes: readonly ChannelUserMode[];
+};
+
+const normalizeChannelUser = (user: NormalizableChannelUser): ChannelUserState => {
+  const modes = normalizeChannelUserModes(user.modes);
+  return {
+    nick: user.nick,
+    mode: getPrimaryChannelUserMode(modes),
+    modes,
+    away: user.away,
+    account: user.account ?? null,
+    username: user.username ?? null,
+    host: user.host ?? null,
+    realname: user.realname ?? null,
+  };
+};
+
+const getStoredChannelUserModes = (
+  user: Pick<ChannelUserState, 'mode' | 'modes'>
+) => normalizeChannelUserModes(user.modes && user.modes.length > 0 ? user.modes : [user.mode]);
+
+const parseChannelUserPrefixes = (value: string) => {
+  const modes: ChannelUserPrivilegeMode[] = [];
+  let index = 0;
+  while (index < value.length) {
+    const prefix = value[index] as keyof typeof modeByPrefix;
+    if (!Object.prototype.hasOwnProperty.call(modeByPrefix, prefix)) {
+      break;
+    }
+    modes.push(modeByPrefix[prefix]);
+    index += 1;
+  }
+  return {
+    modes: normalizeChannelUserModes(modes),
+    value: value.slice(index),
+  };
+};
+
+const areSameChannelUserModes = (
+  left: readonly ChannelUserPrivilegeMode[],
+  right: readonly ChannelUserPrivilegeMode[]
+) => left.length === right.length && left.every((mode, index) => mode === right[index]);
 
 const parseUserHost = (value: string) => {
   const [nickPart, rest = ''] = value.split('!', 2);

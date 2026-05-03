@@ -99,12 +99,16 @@ export type NickEmojiState = z.infer<typeof nickEmojiSchema>;
 export const presenceStatusSchema = z.enum(['online', 'away', 'offline']);
 export type PresenceStatus = z.infer<typeof presenceStatusSchema>;
 
+export const channelUserPrivilegeModeSchema = z.enum(['owner', 'admin', 'op', 'halfop', 'voice']);
+export type ChannelUserPrivilegeMode = z.infer<typeof channelUserPrivilegeModeSchema>;
+
 export const channelUserModeSchema = z.enum(['owner', 'admin', 'op', 'halfop', 'voice', 'normal']);
 export type ChannelUserMode = z.infer<typeof channelUserModeSchema>;
 
 export const channelUserSchema = z.object({
   nick: z.string(),
   mode: channelUserModeSchema.default('normal'),
+  modes: z.array(channelUserPrivilegeModeSchema).default([]).optional(),
   away: z.boolean().default(false),
   account: z.string().nullable().optional(),
   username: z.string().nullable().optional(),

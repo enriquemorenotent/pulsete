@@ -42,7 +42,9 @@ test('sasl plain falls back cleanly when the server does not advertise sasl', ()
     connection.connect();
     socket.emit('connect');
     handleIrcLine(connection, ':irc.example CAP * LS :multi-prefix');
+    assert.equal(writes.at(-1), 'CAP REQ :multi-prefix\r\n');
 
+    handleIrcLine(connection, ':irc.example CAP * ACK :multi-prefix');
     assert.equal(writes.at(-1), 'CAP END\r\n');
     assert.equal(connection.lifecycle.sasl.phase, 'completed');
     assert.equal(
@@ -119,4 +121,3 @@ test('sasl plain aborts cleanly when the server welcomes before replying to CAP 
     connection.disconnect();
   }
 });
-

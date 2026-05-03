@@ -1,5 +1,6 @@
 import { emitChannel } from './irc-emit.js';
 import { updateChannelUserMode } from '../shared/channel-users.js';
+import type { ChannelUserPrivilegeMode } from '../shared/protocol-chat.js';
 import type { IrcConnectionState } from './irc-types.js';
 
 const channelModeArgumentTokens = new Set(['b', 'e', 'I', 'k']);
@@ -26,7 +27,7 @@ export const handleMode = (connection: IrcConnectionState, params: string[]) => 
       if (!nick) {
         continue;
       }
-      const nextUsers = updateChannelUserMode(users, nick, sign === '+' ? mode : 'normal');
+      const nextUsers = updateChannelUserMode(users, nick, mode, sign === '+');
       if (nextUsers.some((user, offset) => user !== users[offset]) || nextUsers.length !== users.length) {
         users = nextUsers;
         changed = true;
@@ -43,7 +44,7 @@ export const handleMode = (connection: IrcConnectionState, params: string[]) => 
   }
 };
 
-const modeFromToken = (token: string) =>
+const modeFromToken = (token: string): ChannelUserPrivilegeMode | null =>
   token === 'q' ? 'owner'
     : token === 'a' ? 'admin'
     : token === 'o' ? 'op'
