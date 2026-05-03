@@ -18,7 +18,6 @@ test('irc channel list retains a capped snapshot while counting all server entri
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: false,
       favorite: false,

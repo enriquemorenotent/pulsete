@@ -69,7 +69,6 @@ test('irc connection uses MONITOR updates for tracked friend presence without lo
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: false,
       favorite: false,

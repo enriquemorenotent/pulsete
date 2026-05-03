@@ -22,7 +22,6 @@ test('deleteNetwork removes runtime connections', async () => {
     port: handshake.port,
     nick: 'deleter',
     altNicks: ['deleter_', 'deleter__'],
-    username: 'deleter',
     realName: 'deleter',
   }));
   const state = runtime as unknown as { connections: Map<string, unknown> };
@@ -52,7 +51,6 @@ test('runtime close disconnects active connections without appending shutdown no
     port: handshake.port,
     nick: 'close',
     altNicks: ['close_', 'close__'],
-    username: 'close',
     realName: 'close',
   }));
   const state = runtime as unknown as { connections: Map<string, unknown> };
@@ -88,7 +86,6 @@ test('deleteNetwork removes open network connections', async () => {
     port: handshake.port,
     nick: 'template',
     altNicks: ['template_', 'template__'],
-    username: 'template',
     realName: 'template',
   }));
   const state = runtime as unknown as { connections: Map<string, unknown> };

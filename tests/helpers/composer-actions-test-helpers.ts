@@ -12,7 +12,6 @@ const network: NetworkProfile = {
   tls: false,
   nick: 'tester',
   altNicks: ['tester_', 'tester__'],
-  username: 'tester',
   realName: 'tester',
   hasPassword: false,
   favorite: false,

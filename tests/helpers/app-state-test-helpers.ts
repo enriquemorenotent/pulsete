@@ -12,7 +12,6 @@ export const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkPro
   tls: overrides.tls ?? true,
   nick: overrides.nick ?? 'tester',
   altNicks: overrides.altNicks ?? ['tester_', 'tester__'],
-  username: overrides.username ?? 'tester',
   realName: overrides.realName ?? 'tester',
   hasPassword: overrides.hasPassword ?? false,
   authMethod: overrides.authMethod ?? 'none',

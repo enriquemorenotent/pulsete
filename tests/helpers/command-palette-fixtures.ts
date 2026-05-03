@@ -11,7 +11,6 @@ export const network: NetworkProfile = {
   tls: true,
   nick: 'sofia',
   altNicks: ['sofia_', 'sofia__'],
-  username: 'sofia',
   realName: 'Sofia',
   hasPassword: false,
   authMethod: 'none',

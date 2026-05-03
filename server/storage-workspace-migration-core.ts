@@ -16,7 +16,6 @@ type LegacyNetworkRow = {
   port: number;
   tls: number;
   nick: string;
-  username: string;
   realName: string;
   password: string | null;
   authMethod: string;
@@ -64,7 +63,7 @@ export const migrateWorkspaceData = (db: SqliteDb) => {
 
 const migrateNetworks = (db: SqliteDb) => {
   const rows = db.prepare(`
-    SELECT id, templateId, managerHidden, connectionClosed, name, host, port, tls, nick, username,
+    SELECT id, templateId, managerHidden, connectionClosed, name, host, port, tls, nick,
       realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt
     FROM networks
     ORDER BY managerHidden ASC, createdAt ASC
@@ -92,13 +91,13 @@ const migrateNetworks = (db: SqliteDb) => {
   }
   const insert = db.prepare(`
     INSERT INTO networks_next
-      (id, workspaceOpen, name, host, port, tls, nick, username, realName, password, authMethod,
+      (id, workspaceOpen, name, host, port, tls, nick, realName, password, authMethod,
        authTarget, authAccount, favorite, createdAt, updatedAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   for (const { row, workspaceOpen } of destinationRows.values()) {
     insert.run(row.id, workspaceOpen ? 1 : 0, row.name, row.host, row.port, row.tls, row.nick,
-      row.username, row.realName, row.password, row.authMethod, row.authTarget, row.authAccount,
+      row.realName, row.password, row.authMethod, row.authTarget, row.authAccount,
       row.favorite, row.createdAt, row.updatedAt);
   }
   return sourceToDestination;

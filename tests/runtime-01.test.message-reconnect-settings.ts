@@ -63,7 +63,6 @@ test('runtime stores untagged live messages with a generated timestamp', async (
     port: address.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
 
@@ -95,7 +94,6 @@ test('runtime uses updated network settings on reconnect', async () => {
     port: first.port,
     nick: 'oldnick',
     altNicks: ['oldnick_', 'oldnick__'],
-    username: 'olduser',
     realName: 'Old User',
   }));
 
@@ -110,7 +108,6 @@ test('runtime uses updated network settings on reconnect', async () => {
       port: second.port,
       nick: 'newnick',
       altNicks: ['newnick_', 'newnick__'],
-      username: 'newuser',
       realName: 'New User',
     });
 
@@ -138,14 +135,13 @@ test('saving a connected network reconnects with updated settings', async () => 
     port: first.port,
     nick: 'oldnick',
     altNicks: ['oldnick_', 'oldnick__'],
-    username: 'olduser',
     realName: 'Old User',
   }));
 
   try {
     runtime.sessions.connect(network.id);
     await waitFor(() => firstReceived.includes('NICK oldnick'));
-    await waitFor(() => firstReceived.includes('USER olduser 0 * :Old User'));
+    await waitFor(() => firstReceived.includes('USER oldnick 0 * :Old User'));
 
     runtime.networks.saveNetwork({
       ...network,
@@ -153,12 +149,11 @@ test('saving a connected network reconnects with updated settings', async () => 
       port: second.port,
       nick: 'newnick',
       altNicks: ['newnick_', 'newnick__'],
-      username: 'newuser',
       realName: 'New User',
     });
 
     await waitFor(() => secondReceived.includes('NICK newnick'));
-    await waitFor(() => secondReceived.includes('USER newuser 0 * :New User'));
+    await waitFor(() => secondReceived.includes('USER newnick 0 * :New User'));
     await waitFor(() => !first.hasConnections());
     assert.equal(storage.networks.get(network.id)?.nick, 'newnick');
   } finally {

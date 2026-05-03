@@ -63,6 +63,20 @@ test('current local databases do not create pre-migration backups', () => {
   assert.equal(existsSync(join(dir, 'backups')), false);
 });
 
+test('current network schema does not keep legacy configured usernames', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+
+  const storage = new Storage(file);
+  storage.close();
+
+  const db = openSqliteDatabase(file);
+  const columns = db.prepare('PRAGMA table_info(networks)').all() as Array<{ name: string }>;
+  db.close();
+
+  assert.equal(columns.some((column) => column.name === 'username'), false);
+});
+
 const createLegacyFormattingDatabase = (file: string, now: number) => {
   const existing = openSqliteDatabase(file);
   existing.exec(`

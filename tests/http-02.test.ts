@@ -23,7 +23,6 @@ test('saving an open workspace network broadcasts its server buffer before the n
     name: 'Open network',
     nick: 'oldnick',
     altNicks: ['oldnick_'],
-    username: 'olduser',
     realName: 'Old User',
   }));
   const server = createServer(createHttpHandler(runtime.http));
@@ -40,7 +39,6 @@ test('saving an open workspace network broadcasts its server buffer before the n
       ...network,
       nick: 'newnick',
       altNicks: ['newnick_'],
-      username: 'newuser',
       realName: 'New User',
     });
     assert.equal(response.status, 200);
@@ -98,7 +96,6 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     tls: true,
     nick: 'sofia',
     altNicks: ['sofia_', 'sofia__'],
-    username: 'sofia',
     realName: 'Sofia',
     authMethod: 'nickserv',
     authTarget: 'AuthServ',
@@ -125,7 +122,6 @@ test('duplicate creates a new saved network and preserves encrypted passwords', 
     assert.equal(duplicate.tls, network.tls);
     assert.equal(duplicate.nick, network.nick);
     assert.deepEqual(duplicate.altNicks, network.altNicks);
-    assert.equal(duplicate.username, network.username);
     assert.equal(duplicate.realName, network.realName);
     assert.equal(duplicate.authMethod, 'nickserv');
     assert.equal(duplicate.authTarget, 'AuthServ');

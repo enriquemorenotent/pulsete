@@ -36,8 +36,16 @@ export const buildRegistrationLines = (profile: RuntimeNetworkProfile) => [
   ...buildServerPassLines(profile),
   ...buildCapabilityNegotiationLines(profile),
   `NICK ${profile.nick}`,
-  `USER ${profile.username} 0 * :${profile.realName || profile.name}`,
+  `USER ${toRegistrationIdent(profile.nick)} 0 * :${profile.realName || profile.name}`,
 ];
+
+export const toRegistrationIdent = (nick: string) => {
+  const ident = nick.trim().replace(/[^A-Za-z0-9_.-]/g, '').slice(0, 32);
+  if (!ident) {
+    return 'pulsete';
+  }
+  return /^[A-Za-z0-9]/.test(ident) ? ident : `u${ident}`.slice(0, 32);
+};
 
 export const buildPostRegistrationAuthLines = (profile: RuntimeNetworkProfile) => {
   const authMethod = resolveNetworkAuthMethod(profile);

@@ -24,14 +24,13 @@ test('saving a connected network updates the live connection profile', async () 
     port: first.port,
     nick: 'oldnick',
     altNicks: ['oldnick_', 'oldnick__'],
-    username: 'olduser',
     realName: 'Old User',
   }));
 
   try {
     runtime.sessions.connect(network.id);
     await waitFor(() => firstReceived.includes('NICK oldnick'));
-    await waitFor(() => firstReceived.includes('USER olduser 0 * :Old User'));
+    await waitFor(() => firstReceived.includes('USER oldnick 0 * :Old User'));
 
     runtime.networks.saveNetwork({
       ...network,
@@ -39,12 +38,11 @@ test('saving a connected network updates the live connection profile', async () 
       port: second.port,
       nick: 'newnick',
       altNicks: ['newnick_', 'newnick__'],
-      username: 'newuser',
       realName: 'New User',
     });
 
     await waitFor(() => secondReceived.includes('NICK newnick'));
-    await waitFor(() => secondReceived.includes('USER newuser 0 * :New User'));
+    await waitFor(() => secondReceived.includes('USER newnick 0 * :New User'));
     await waitFor(() => !first.hasConnections());
     assert.equal(storage.networks.get(network.id)?.host, '127.0.0.1');
     assert.equal(storage.networks.get(network.id)?.port, second.port);

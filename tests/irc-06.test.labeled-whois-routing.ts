@@ -17,7 +17,6 @@ test('irc connection routes labeled WHOIS replies to the matching buffer even wh
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: false,
       favorite: false,

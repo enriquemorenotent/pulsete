@@ -57,7 +57,6 @@ test('network save rejects invalid payloads and IRC-unsafe fields', async () => 
       port: 0,
       tls: 'yes',
       nick: '',
-      username: '',
       autoJoin: ['#test'],
     });
     assert.equal(invalidResponse.status, 400);

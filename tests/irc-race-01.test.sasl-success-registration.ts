@@ -24,7 +24,6 @@ test('sasl plain connections negotiate capabilities before completing registrati
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'ident',
       realName: 'Test User',
       hasPassword: true,
       authMethod: 'sasl-plain',
@@ -47,7 +46,7 @@ test('sasl plain connections negotiate capabilities before completing registrati
     assert.deepEqual(writes, [
       'CAP LS 302\r\n',
       'NICK tester\r\n',
-      'USER ident 0 * :Test User\r\n',
+      'USER tester 0 * :Test User\r\n',
     ]);
 
     handleIrcLine(connection, ':irc.example CAP * LS :multi-prefix sasl');
@@ -95,7 +94,6 @@ test('sasl plain connections complete negotiation on numeric 900 success', () =>
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'ident',
       realName: 'Test User',
       hasPassword: true,
       authMethod: 'sasl-plain',
@@ -146,7 +144,6 @@ test('numeric 900 releases deferred NickServ autojoin after identify', () => {
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: true,
       authMethod: 'nickserv',
@@ -186,7 +183,6 @@ test('nickserv identify success accepts configured service targets and notice st
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: true,
       authMethod: 'nickserv',

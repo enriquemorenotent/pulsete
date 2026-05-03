@@ -7,7 +7,6 @@ export const createWorkspaceMigrationTablesSql = `
     port INTEGER NOT NULL,
     tls INTEGER NOT NULL,
     nick TEXT NOT NULL,
-    username TEXT NOT NULL,
     realName TEXT NOT NULL DEFAULT '',
     password TEXT,
     authMethod TEXT NOT NULL DEFAULT 'none',

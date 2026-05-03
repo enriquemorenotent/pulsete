@@ -16,7 +16,6 @@ export type NetworkForm = {
   nick: string;
   nick2: string;
   nick3: string;
-  username: string;
   realName: string;
   authMethod: NetworkAuthMethod;
   authTarget: string;
@@ -37,7 +36,6 @@ export type SaveNetworkPayload = {
   tls: boolean;
   nick: string;
   altNicks: string[];
-  username: string;
   realName: string;
   authMethod?: NetworkAuthMethod;
   authTarget?: string;
@@ -57,7 +55,6 @@ export const emptyNetworkForm = (): NetworkForm => ({
   nick: '',
   nick2: '',
   nick3: '',
-  username: '',
   realName: '',
   authMethod: 'none',
   authTarget: defaultNetworkAuthTarget,
@@ -85,7 +82,6 @@ export const toForm = (network: NetworkProfile): NetworkForm => ({
   nick: network.nick,
   nick2: network.altNicks[0] ?? '',
   nick3: network.altNicks[1] ?? '',
-  username: network.username,
   realName: network.realName,
   authMethod: resolveNetworkAuthMethod(network),
   authTarget: resolveNetworkAuthTarget(network.authTarget),
@@ -110,7 +106,6 @@ export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
     tls: form.tls,
     nick: form.nick.trim(),
     altNicks: [form.nick2.trim(), form.nick3.trim()].filter(Boolean),
-    username: form.username.trim() || form.nick.trim(),
     realName: form.realName.trim() || form.nick.trim(),
     authMethod: form.authMethod,
     authTarget: form.authMethod === 'nickserv'

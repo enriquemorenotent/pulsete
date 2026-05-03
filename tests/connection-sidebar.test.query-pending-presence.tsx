@@ -18,7 +18,6 @@ const makeNetwork = (
   tls: overrides.tls ?? true,
   nick: overrides.nick ?? 'sofia',
   altNicks: overrides.altNicks ?? ['sofia_', 'sofia__'],
-  username: overrides.username ?? 'sofia',
   realName: overrides.realName ?? 'Sofia',
   hasPassword: overrides.hasPassword ?? false,
   favorite: overrides.favorite ?? false,

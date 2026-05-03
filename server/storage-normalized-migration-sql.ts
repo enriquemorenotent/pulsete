@@ -45,7 +45,6 @@ export const createScratchTablesSql = `
     port INTEGER NOT NULL,
     tls INTEGER NOT NULL,
     nick TEXT NOT NULL,
-    username TEXT NOT NULL,
     realName TEXT NOT NULL DEFAULT '',
     password TEXT,
     authMethod TEXT NOT NULL DEFAULT 'none',
@@ -111,8 +110,8 @@ export const createScratchTablesSql = `
 
 export const copyNetworksSql = `
   INSERT INTO networks_next
-    (id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
-  SELECT id, templateId, managerHidden, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt
+    (id, templateId, managerHidden, name, host, port, tls, nick, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
+  SELECT id, templateId, managerHidden, name, host, port, tls, nick, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt
   FROM networks
 `;
 

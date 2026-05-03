@@ -64,7 +64,6 @@ export const networkSchema = z.object({
   nick: z.string(),
   altNicks: z.array(z.string()).default([]),
   historicalSelfNicks: z.array(z.string()).default([]).optional(),
-  username: z.string(),
   realName: z.string().default(''),
   hasPassword: z.boolean().default(false),
   authMethod: networkAuthMethodSchema.optional(),

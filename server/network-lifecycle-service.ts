@@ -37,7 +37,6 @@ export class NetworkLifecycleService {
       nick: network.nick,
       altNicks: network.altNicks,
       historicalSelfNicks: network.historicalSelfNicks ?? [],
-      username: network.username,
       realName: network.realName,
       authMethod: network.authMethod,
       authTarget: network.authTarget,

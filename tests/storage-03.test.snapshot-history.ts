@@ -11,7 +11,6 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
   tls: false,
   nick: 'tester',
   altNicks: [],
-  username: 'tester',
   realName: 'Tester Example',
   favorite: false,
   autoJoin: [],

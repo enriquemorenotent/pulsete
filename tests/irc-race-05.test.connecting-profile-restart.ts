@@ -24,7 +24,6 @@ test('updating a profile while connecting restarts the handshake with the new se
       tls: false,
       nick: 'oldnick',
       altNicks: ['oldnick_', 'oldnick__'],
-      username: 'olduser',
       realName: 'Old User',
       hasPassword: true,
       password: 'oldpass',
@@ -51,7 +50,6 @@ test('updating a profile while connecting restarts the handshake with the new se
       port: 6697,
       nick: 'newnick',
       altNicks: ['newnick_', 'newnick__'],
-      username: 'newuser',
       realName: 'New User',
       hasPassword: true,
       password: 'newpass',
@@ -73,7 +71,7 @@ test('updating a profile while connecting restarts the handshake with the new se
       'PASS :newpass\r\n',
       'CAP LS 302\r\n',
       'NICK newnick\r\n',
-      'USER newuser 0 * :New User\r\n',
+      'USER newnick 0 * :New User\r\n',
     ]);
     assert.ok(statuses.includes('Looking up old.example.test'));
     assert.ok(statuses.includes('Looking up new.example.test'));

@@ -21,7 +21,6 @@ test('network save broadcasts the updated workspace network over websocket', asy
     name: 'Open network',
     nick: 'oldnick',
     altNicks: ['oldnick_'],
-    username: 'olduser',
     realName: 'Old User',
   }));
   const server = createServer(createHttpHandler(runtime.http));
@@ -35,7 +34,6 @@ test('network save broadcasts the updated workspace network over websocket', asy
       ...network,
       nick: 'newnick',
       altNicks: ['newnick_'],
-      username: 'newuser',
       realName: 'New User',
     });
     assert.equal(response.status, 200);
@@ -43,7 +41,6 @@ test('network save broadcasts the updated workspace network over websocket', asy
     const updates = await updatesPromise;
     assert.deepEqual(updates.map((message) => (message.network as { id: string }).id), [network.id]);
     assert.equal(storage.networks.get(network.id)?.nick, 'newnick');
-    assert.equal(storage.networks.get(network.id)?.username, 'newuser');
   } finally {
     await closeWebSocket(socket);
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));

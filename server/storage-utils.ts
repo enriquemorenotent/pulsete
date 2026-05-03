@@ -46,7 +46,6 @@ export const toNetworkProfile = (
     nick: row.nick,
     altNicks: lists.altNicks,
     historicalSelfNicks: lists.historicalSelfNicks,
-    username: row.username,
     realName: row.realName,
     hasPassword: Boolean(row.password),
     authMethod: row.authMethod,

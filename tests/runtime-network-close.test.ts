@@ -20,7 +20,6 @@ test('closeConnection closes a workspace network without deleting its logs', asy
     port: handshake.port,
     nick: 'closer',
     altNicks: ['closer_', 'closer__'],
-    username: 'closer',
     realName: 'closer',
   }));
   storage.conversations.upsertBuffer({ networkId: network.id, kind: 'channel', target: '#help' });

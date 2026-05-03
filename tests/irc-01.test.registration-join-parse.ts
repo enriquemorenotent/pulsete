@@ -80,7 +80,6 @@ test('irc connection negotiates, joins, and parses messages', async () => {
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: false,
       favorite: false,

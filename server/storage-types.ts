@@ -10,7 +10,6 @@ export type NetworkRow = {
   port: number;
   tls: number;
   nick: string;
-  username: string;
   realName: string;
   password: string | null;
   authMethod: NetworkAuthMethod;

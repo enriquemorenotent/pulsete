@@ -20,7 +20,6 @@ test('channel mode changes preserve user updates when channel modes are mixed in
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: false,
       favorite: false,

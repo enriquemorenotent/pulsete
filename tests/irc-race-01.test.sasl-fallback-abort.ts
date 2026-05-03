@@ -23,7 +23,6 @@ test('sasl plain falls back cleanly when the server does not advertise sasl', ()
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'ident',
       realName: 'Test User',
       hasPassword: true,
       authMethod: 'sasl-plain',
@@ -78,7 +77,6 @@ test('sasl plain aborts cleanly when the server welcomes before replying to CAP 
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'ident',
       realName: 'Test User',
       hasPassword: true,
       authMethod: 'sasl-plain',
@@ -104,7 +102,7 @@ test('sasl plain aborts cleanly when the server welcomes before replying to CAP 
     assert.deepEqual(writes, [
       'CAP LS 302\r\n',
       'NICK tester\r\n',
-      'USER ident 0 * :Test User\r\n',
+      'USER tester 0 * :Test User\r\n',
       'JOIN #chat\r\n',
     ]);
     assert.equal(

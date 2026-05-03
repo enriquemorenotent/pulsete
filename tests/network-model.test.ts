@@ -12,7 +12,6 @@ const makeNetwork = (overrides: Partial<NetworkProfile>): NetworkProfile => ({
   tls: overrides.tls ?? true,
   nick: overrides.nick ?? 'tester',
   altNicks: overrides.altNicks ?? [],
-  username: overrides.username ?? 'tester',
   realName: overrides.realName ?? 'Tester',
   hasPassword: overrides.hasPassword ?? false,
   favorite: overrides.favorite ?? false,

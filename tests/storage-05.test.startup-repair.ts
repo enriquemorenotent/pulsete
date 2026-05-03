@@ -14,7 +14,6 @@ test('startup repair preserves explicit none auth methods on current schemas', (
     tls: false,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
     authMethod: 'none',
     password: 'secret',
@@ -41,7 +40,6 @@ test('startup repair rebuilds missing current message search artifacts', () => {
     tls: false,
     nick: 'tester',
     altNicks: [],
-    username: 'tester',
     realName: 'Tester Example',
     authMethod: 'none',
     favorite: false,
@@ -234,6 +232,7 @@ test('startup repair migrates newer local schemas to workspace networks', () => 
   assert.equal(network?.workspaceOpen, false);
   assert.deepEqual(network?.altNicks, ['tester_']);
   assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
+  assert.equal(columns.some((column) => column.name === 'username'), false);
   assert.equal(columns.some((column) => column.name === 'templateId'), false);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), false);
 });

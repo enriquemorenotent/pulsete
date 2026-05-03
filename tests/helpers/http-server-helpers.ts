@@ -59,7 +59,6 @@ export const createNetworkInput = (overrides: Partial<NetworkInput> = {}): Netwo
   tls: false,
   nick: 'tester',
   altNicks: ['tester_', 'tester__'],
-  username: 'tester',
   realName: 'Tester Example',
   authAccount: '',
   favorite: false,

@@ -12,8 +12,8 @@ test('versioned storage migrations remove legacy message search artifacts', () =
   existing.exec('PRAGMA user_version = 17');
   existing.prepare(
     `INSERT INTO networks
-       (id, workspaceOpen, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, workspaceOpen, name, host, port, tls, nick, realName, password, authMethod, authTarget, authAccount, favorite, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     'network-1',
     1,
@@ -21,7 +21,6 @@ test('versioned storage migrations remove legacy message search artifacts', () =
     'irc.example.test',
     6667,
     0,
-    'tester',
     'tester',
     'Tester Example',
     null,
@@ -86,7 +85,7 @@ test('versioned storage migrations remove legacy message search artifacts', () =
   `).all('payload') as Array<{ id: string }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 22);
+  assert.equal(version.user_version, 23);
   assert.deepEqual(artifacts, []);
   assert.deepEqual(newArtifacts.map((artifact) => artifact.name), [
     'message_search_ad',

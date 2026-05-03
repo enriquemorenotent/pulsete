@@ -17,7 +17,6 @@ test('irc connection routes labeled standard reply failures back to the originat
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'tester',
       realName: 'Test User',
       hasPassword: false,
       favorite: false,

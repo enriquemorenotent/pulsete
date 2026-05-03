@@ -13,7 +13,6 @@ const network: NetworkProfile = {
   tls: true,
   nick: 'sofia',
   altNicks: ['sofia_'],
-  username: 'sofia',
   realName: 'Sofia',
   hasPassword: false,
   authMethod: 'none',

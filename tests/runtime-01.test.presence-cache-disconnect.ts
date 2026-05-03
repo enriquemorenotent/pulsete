@@ -21,7 +21,6 @@ test('runtime clears cached friend presence when a network disconnects', async (
     port: server.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
   const friend = runtime.friends.upsertFriend('Alice').friend;

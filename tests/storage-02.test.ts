@@ -13,7 +13,6 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
   tls: false,
   nick: 'tester',
   altNicks: ['tester_', 'tester__'],
-  username: 'tester',
   realName: 'Tester Example',
   favorite: false,
   autoJoin: [],
@@ -35,7 +34,6 @@ const createConnectionInstance = (storage: Storage, overrides: Partial<NetworkIn
     tls: overrides.tls ?? template.tls,
     nick: overrides.nick ?? template.nick,
     altNicks: overrides.altNicks ?? template.altNicks,
-    username: overrides.username ?? template.username,
     realName: overrides.realName ?? template.realName,
     favorite: overrides.favorite ?? template.favorite,
     autoJoin: overrides.autoJoin ?? template.autoJoin,
@@ -112,7 +110,6 @@ test('deleting a network leaves other saved networks alone', () => {
     name: 'TemplateNet',
     nick: 'templated',
     altNicks: ['templated_', 'templated__'],
-    username: 'templated',
     realName: 'templated',
   }));
 
@@ -121,7 +118,6 @@ test('deleting a network leaves other saved networks alone', () => {
     name: 'TemplateNet clone',
     nick: 'templated',
     altNicks: ['templated_', 'templated__'],
-    username: 'templated',
     realName: 'templated',
   }));
 

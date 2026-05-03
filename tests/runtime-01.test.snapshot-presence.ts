@@ -22,7 +22,6 @@ test('runtime snapshot includes live network states after a refresh point', asyn
     port: server.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
 
@@ -54,7 +53,6 @@ test('runtime snapshot includes aggregated friend presence from live connections
     port: server.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
   const friend = runtime.friends.upsertFriend('Alice').friend;
@@ -83,7 +81,6 @@ test('runtime snapshot includes presence for open query targets', async () => {
     port: server.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
   const query = storage.conversations.upsertQuery(network.id, 'Alice');
@@ -112,7 +109,6 @@ test('opening a query after connect starts tracking that target presence', async
     port: server.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
 
@@ -143,7 +139,6 @@ test('opening a query after connect does not emit an immediate offline presence'
     port: server.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
 
@@ -185,7 +180,6 @@ test('query presence stays scoped to the query network', async () => {
     port: first.port,
     nick: 'tester1',
     altNicks: ['tester1_', 'tester1__'],
-    username: 'tester1',
     realName: 'Tester One',
   }));
   const secondNetwork = storage.networks.upsert(createNetworkInput({
@@ -193,7 +187,6 @@ test('query presence stays scoped to the query network', async () => {
     port: second.port,
     nick: 'tester2',
     altNicks: ['tester2_', 'tester2__'],
-    username: 'tester2',
     realName: 'Tester Two',
   }));
 

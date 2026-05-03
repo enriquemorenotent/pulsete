@@ -15,7 +15,6 @@ const networks: NetworkProfile[] = [{
   tls: true,
   nick: 'tester',
   altNicks: ['tester_'],
-  username: 'tester',
   realName: 'Tester',
   hasPassword: false,
   favorite: false,

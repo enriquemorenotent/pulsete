@@ -98,7 +98,6 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
         <TextField label="Second choice" value={props.form.nick2} onChange={(value) => props.onChange({ nick2: value })} />
         <TextField label="Third choice" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />
         <TextField label="Real name" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
-        <TextField label="User name" value={props.form.username} onChange={(value) => props.onChange({ username: value })} />
         <SelectField
           label="Authentication"
           value={props.form.authMethod}

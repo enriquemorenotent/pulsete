@@ -13,7 +13,6 @@ const networkInputSchema = z.object({
   nick: z.string().trim().min(1, 'Nick name is required'),
   altNicks: z.array(z.string()).optional().default([]),
   historicalSelfNicks: z.array(z.string()).optional().default([]),
-  username: z.string().trim().min(1, 'Username is required'),
   realName: z.string().optional().default(''),
   authMethod: networkAuthMethodSchema.optional(),
   authTarget: z.string().trim().optional(),
@@ -50,7 +49,6 @@ export const parseNetworkInput = (body: unknown, id?: string): NetworkInput => {
   for (const historicalNick of data.historicalSelfNicks) {
     requireIrcToken(historicalNick, 'Historical self nick cannot contain whitespace');
   }
-  requireIrcToken(data.username, 'Username cannot contain whitespace');
   requireSingleLineValue(data.realName, 'Real name cannot contain carriage returns or line feeds');
   if (data.authTarget) {
     normalizeAuthTarget(data.authTarget);

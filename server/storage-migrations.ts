@@ -10,7 +10,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 22;
+export const currentStorageSchemaVersion = 23;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -20,6 +20,8 @@ type StorageMigration = {
   version: number;
   apply(db: SqliteDb, context: StorageMigrationContext): void;
 };
+
+const noopMigration = () => {};
 
 const storageMigrations: readonly StorageMigration[] = [
   {
@@ -53,22 +55,10 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureColumn(db, 'networks', 'authAccount', "TEXT NOT NULL DEFAULT ''");
     },
   },
-  {
-    version: 5,
-    apply: () => {},
-  },
-  {
-    version: 6,
-    apply: () => {},
-  },
-  {
-    version: 7,
-    apply: () => {},
-  },
-  {
-    version: 8,
-    apply: () => {},
-  },
+  { version: 5, apply: noopMigration },
+  { version: 6, apply: noopMigration },
+  { version: 7, apply: noopMigration },
+  { version: 8, apply: noopMigration },
   {
     version: 9,
     apply: (db) => {
@@ -115,10 +105,7 @@ const storageMigrations: readonly StorageMigration[] = [
       `);
     },
   },
-  {
-    version: 13,
-    apply: () => {},
-  },
+  { version: 13, apply: noopMigration },
   {
     version: 14,
     apply: (db) => {
@@ -173,6 +160,12 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureNickEmojiTable(db);
     },
   },
+  {
+    version: 23,
+    apply: (db) => {
+      dropColumnIfPresent(db, 'networks', 'username');
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => db.exec(storageBootstrapSchemaSql);
@@ -216,6 +209,12 @@ const ensureColumn = (db: SqliteDb, table: string, column: string, definition: s
     return true;
   }
   return false;
+};
+
+const dropColumnIfPresent = (db: SqliteDb, table: string, column: string) => {
+  if (tableHasColumn(db, table, column)) {
+    db.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+  }
 };
 
 const ensureCurrentNetworkColumns = (db: SqliteDb) => {

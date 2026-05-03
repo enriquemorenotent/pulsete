@@ -36,7 +36,6 @@ test('runtime snapshots include negotiated IRC capabilities', async () => {
     port: server.port,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Tester Example',
   }));
 

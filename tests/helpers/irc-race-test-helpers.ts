@@ -112,7 +112,6 @@ export const createConnection = (onEvent: (event: Record<string, unknown>) => vo
     tls: false,
     nick: 'tester',
     altNicks: ['tester_', 'tester__'],
-    username: 'tester',
     realName: 'Test User',
     hasPassword: false,
     favorite: false,

@@ -93,7 +93,6 @@ test('irc connection can authenticate through SASL before autojoin', async () =>
       tls: false,
       nick: 'tester',
       altNicks: ['tester_', 'tester__'],
-      username: 'ident',
       realName: 'Test User',
       hasPassword: true,
       authMethod: 'sasl-plain',
