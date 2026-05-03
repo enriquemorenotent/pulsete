@@ -6,7 +6,10 @@ import type { AppUiState } from './useAppUiState.js';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol.js';
 
 type PreferencesControllerParams = {
-  actions: Pick<import('./useAppActions.js').AppActions, 'removeMutedNick'>;
+  actions: Pick<
+    import('./useAppActions.js').AppActions,
+    'exportBackup' | 'importBackup' | 'removeMutedNick'
+  >;
   contactNotifications: ContactNotificationsController;
   mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
@@ -43,7 +46,12 @@ export function usePreferencesController({
     onRemoveContactNotificationContact: contactNotifications.removeContact,
     onRemoveMutedNick: actions.removeMutedNick,
     onSetExternalAvatarsEnabled: userAvatarSettings.setExternalAvatarsEnabled,
+    onExportBackup: actions.exportBackup,
+    onImportBackup: actions.importBackup,
   }), [
+    actions.exportBackup,
+    actions.importBackup,
+    actions.removeMutedNick,
     contactNotifications.removeContact,
     contactNotifications.setEnabled,
     contactNotifications.setSystemEnabled,
@@ -55,7 +63,6 @@ export function usePreferencesController({
     contactNotifications.preview,
     mutedNicks,
     networks,
-    actions.removeMutedNick,
     userAvatarSettings.settings,
     userAvatarSettings.setExternalAvatarsEnabled,
     ui.closePreferences,

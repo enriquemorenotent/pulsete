@@ -15,11 +15,26 @@ export type SecretBox = {
 
 export const isEncryptedSecret = (value: string) => parseEncryptedSecret(value) !== null;
 
+export const resolveNetworkSecretPath = (databasePath = resolve('data', 'pulsete.sqlite')) =>
+  resolve(dirname(databasePath), 'pulsete.secret');
+
+export const isValidNetworkSecretContent = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return false;
+  }
+  try {
+    return Buffer.from(normalized, 'base64').length === keyBytes;
+  } catch {
+    return false;
+  }
+};
+
 export const createSecretBox = (
   databasePath = resolve('data', 'pulsete.sqlite'),
   options: { createIfMissing?: boolean } = {}
 ): SecretBox => {
-  const keyPath = resolve(dirname(databasePath), 'pulsete.secret');
+  const keyPath = resolveNetworkSecretPath(databasePath);
   mkdirSync(dirname(keyPath), { recursive: true });
   const key = loadOrCreateKey(keyPath, options.createIfMissing ?? true);
   return {
@@ -74,10 +89,11 @@ const parseEncryptedSecret = (value: string) => {
 
 const loadOrCreateKey = (keyPath: string, createIfMissing: boolean) => {
   if (existsSync(keyPath)) {
-    const key = Buffer.from(readFileSync(keyPath, 'utf8').trim(), 'base64');
-    if (key.length !== keyBytes) {
+    const content = readFileSync(keyPath, 'utf8');
+    if (!isValidNetworkSecretContent(content)) {
       throw new Error('Invalid network secret key');
     }
+    const key = Buffer.from(content.trim(), 'base64');
     return key;
   }
   if (!createIfMissing) {

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toAppError } from './app-error.js';
+import { handleBackupRoutes } from './http-backups.js';
 import { handleBufferRoutes } from './http-buffers.js';
 import { handleFriendRoutes } from './http-friends.js';
 import { handleMutedNickRoutes } from './http-muted-nicks.js';
@@ -15,7 +16,8 @@ export const createHttpHandler = (context: HttpContext) => async (req: IncomingM
     const pathname = url.pathname;
     const args = { req, res, url, pathname, context };
     if (
-      await handleNetworkRoutes(args)
+      await handleBackupRoutes(args)
+      || await handleNetworkRoutes(args)
       || await handleNickEmojiRoutes(args)
       || await handleFriendRoutes(args)
       || await handleMutedNickRoutes(args)

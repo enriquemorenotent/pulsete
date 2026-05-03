@@ -4,6 +4,7 @@ import type {
   ContactNotificationSettings,
 } from './contact-notifications/settings.js';
 import { PreferencesAvatarSection } from './PreferencesAvatarSection.js';
+import { PreferencesBackupSection } from './PreferencesBackupSection.js';
 import { PreferencesNotificationsPanel } from './PreferencesNotificationsPanel.js';
 import type { UserAvatarSettings } from './user-avatars/settings.js';
 
@@ -23,6 +24,8 @@ export type PreferencesDialogBodyProps = {
   onRemoveContactNotificationContact: (contact: ContactNotificationContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
   onSetExternalAvatarsEnabled: (enabled: boolean) => void;
+  onExportBackup: () => Promise<void>;
+  onImportBackup: (file: Blob) => Promise<void>;
 };
 
 export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
@@ -44,6 +47,10 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
         onPreviewContactNotificationSound={props.onPreviewContactNotificationSound}
         onRemoveContactNotificationContact={props.onRemoveContactNotificationContact}
         onRemoveMutedNick={props.onRemoveMutedNick}
+      />
+      <PreferencesBackupSection
+        onExportBackup={props.onExportBackup}
+        onImportBackup={props.onImportBackup}
       />
     </div>
   );

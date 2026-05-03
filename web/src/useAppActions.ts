@@ -1,4 +1,5 @@
 import { createChatActions } from './app-actions-chat.js';
+import { createBackupActions } from './app-actions-backups.js';
 import { createConversationActions } from './app-actions-conversation.js';
 import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
@@ -68,6 +69,7 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
     ...actionContext,
   });
   return {
+    ...createBackupActions(),
     ...createNetworkActions({
       ...actionContext,
     }),

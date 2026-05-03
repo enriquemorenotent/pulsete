@@ -1,19 +1,16 @@
 import { createServer } from 'node:http';
 import { createHttpHandler } from './http-router.js';
-import { createRuntime } from './runtime.js';
-import { Storage } from './storage.js';
+import { RuntimeHost } from './runtime-host.js';
 import { attachWebSocketServer } from './ws-server.js';
 
 const PORT = Number(process.env.PORT ?? 18487);
 const HOST = process.env.HOST ?? '127.0.0.1';
-const storage = new Storage();
-const runtime = createRuntime(storage.runtimeStore);
-const server = createServer(createHttpHandler(runtime.http));
+const host = new RuntimeHost();
+const server = createServer(createHttpHandler(host.http));
 
-attachWebSocketServer(server, runtime.ws);
+attachWebSocketServer(server, host.ws);
 server.on('close', () => {
-  runtime.gateway.close();
-  storage.close();
+  host.close();
 });
 
 server.listen(PORT, HOST, () => {

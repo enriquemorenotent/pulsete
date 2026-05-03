@@ -49,6 +49,8 @@ test('preferences dialog renders notification controls and muted nick management
       onRemoveContactNotificationContact={() => {}}
       onRemoveMutedNick={async () => true}
       onSetExternalAvatarsEnabled={() => {}}
+      onExportBackup={async () => {}}
+      onImportBackup={async () => {}}
     />
   );
 
@@ -73,4 +75,7 @@ test('preferences dialog renders notification controls and muted nick management
   assert.match(markup, />TestNet</);
   assert.match(markup, /Muted Nicks/);
   assert.match(markup, />MissD</);
+  assert.match(markup, /Backup &amp; Restore/);
+  assert.match(markup, /Export Backup/);
+  assert.match(markup, /Import Backup/);
 });

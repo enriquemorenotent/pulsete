@@ -7,7 +7,13 @@ import {
 } from './storage-migrations.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
 
-export const createDatabase = (filePath = resolve('data', 'pulsete.sqlite')) => {
+export const defaultDatabasePath = () => resolve('data', 'pulsete.sqlite');
+
+export const resolveDatabaseFilePath = (filePath?: string) =>
+  filePath ? resolve(filePath) : defaultDatabasePath();
+
+export const createDatabase = (filePath = defaultDatabasePath()) => {
+  filePath = resolveDatabaseFilePath(filePath);
   mkdirSync(dirname(filePath), { recursive: true });
   const existedBeforeOpen = existsSync(filePath);
   const db = openSqliteDatabase(filePath);

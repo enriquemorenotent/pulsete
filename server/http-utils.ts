@@ -2,9 +2,15 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { badRequest, payloadTooLarge } from './app-error.js';
 
 export const jsonBodyLimitBytes = 64 * 1024;
+export const backupBodyLimitBytes = 512 * 1024 * 1024;
 const requestBase = 'http://127.0.0.1';
 
 export const readJson = async (req: IncomingMessage, maxBytes = jsonBodyLimitBytes) => {
+  const raw = await readBytes(req, maxBytes);
+  return raw.length > 0 ? JSON.parse(raw.toString('utf8')) : {};
+};
+
+export const readBytes = async (req: IncomingMessage, maxBytes: number) => {
   const declaredLength = Number(req.headers['content-length'] ?? 0);
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
     throw payloadTooLarge('Request body too large');
@@ -19,8 +25,7 @@ export const readJson = async (req: IncomingMessage, maxBytes = jsonBodyLimitByt
     }
     chunks.push(buffer);
   }
-  const raw = Buffer.concat(chunks).toString('utf8');
-  return raw.length > 0 ? JSON.parse(raw) : {};
+  return Buffer.concat(chunks);
 };
 
 export const writeJson = (res: ServerResponse, status: number, payload: unknown, cookie?: string) => {

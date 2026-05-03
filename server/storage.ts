@@ -1,4 +1,9 @@
 import { initializeStorageDefaults, openStorageResources } from './storage-bootstrap.js';
+import {
+  createStorageBackup,
+  type BrowserPreferences,
+} from './storage-backup.js';
+import { resolveDatabaseFilePath } from './storage-db.js';
 import { StorageConversationsRepository } from './storage-conversations-repository.js';
 import { StorageFriendsRepository } from './storage-friends-repository.js';
 import { StorageMutedNicksRepository } from './storage-muted-nicks-repository.js';
@@ -16,6 +21,7 @@ export class Storage {
   private readonly db: SqliteDb;
   private readonly secretBox;
   private closed = false;
+  readonly databasePath: string;
   readonly networks: StorageNetworksRepository;
   readonly conversations: StorageConversationsRepository;
   readonly friends: StorageFriendsRepository;
@@ -25,7 +31,8 @@ export class Storage {
   readonly runtimeStore: RuntimeStore;
 
   constructor(filePath?: string) {
-    const resources = openStorageResources(filePath);
+    this.databasePath = resolveDatabaseFilePath(filePath);
+    const resources = openStorageResources(this.databasePath);
     this.db = resources.db;
     this.secretBox = resources.secretBox;
     initializeStorageDefaults(resources);
@@ -47,6 +54,14 @@ export class Storage {
 
   snapshot() {
     return createStorageSnapshot(this.snapshotSource);
+  }
+
+  exportBackup(browserPreferences: BrowserPreferences) {
+    return createStorageBackup({
+      browserPreferences,
+      databasePath: this.databasePath,
+      db: this.db,
+    });
   }
 
   close() {

@@ -1,0 +1,110 @@
+import type WebSocket from 'ws';
+import type { ClientMessage } from '../shared/protocol.js';
+import { createRuntime, type Runtime, type RuntimeHttpApi } from './runtime.js';
+import { Storage } from './storage.js';
+import {
+  prepareStorageBackupRestore,
+  type BrowserPreferences,
+} from './storage-backup.js';
+import type { RuntimeWebSocketApi } from './runtime-service-types.js';
+
+export type BackupHttpApi = {
+  export(browserPreferences: BrowserPreferences): ReturnType<Storage['exportBackup']>;
+  import(backupContent: Buffer): { browserPreferences: BrowserPreferences };
+};
+
+export class RuntimeHost {
+  private storage: Storage;
+  private runtime: Runtime;
+  readonly http: RuntimeHttpApi & { backups: BackupHttpApi };
+  readonly ws: RuntimeWebSocketApi;
+
+  constructor(private readonly databasePath?: string) {
+    const current = this.openRuntime();
+    this.storage = current.storage;
+    this.runtime = current.runtime;
+    this.http = this.createHttpApi();
+    this.ws = this.createWebSocketApi();
+  }
+
+  currentStorage() {
+    return this.storage;
+  }
+
+  close() {
+    this.runtime.gateway.close();
+    this.storage.close();
+  }
+
+  private openRuntime() {
+    const storage = new Storage(this.databasePath);
+    return {
+      runtime: createRuntime(storage.runtimeStore),
+      storage,
+    };
+  }
+
+  private restore(backupContent: Buffer) {
+    const databasePath = this.storage.databasePath;
+    const prepared = prepareStorageBackupRestore({ backupContent, databasePath });
+    this.close();
+    prepared.apply();
+    const current = this.openRuntime();
+    this.storage = current.storage;
+    this.runtime = current.runtime;
+    return { browserPreferences: prepared.browserPreferences };
+  }
+
+  private createHttpApi(): RuntimeHost['http'] {
+    return {
+      networks: {
+        list: () => this.runtime.http.networks.list(),
+        save: (data, networkId) => this.runtime.http.networks.save(data, networkId),
+        duplicate: (networkId) => this.runtime.http.networks.duplicate(networkId),
+        remove: (networkId) => this.runtime.http.networks.remove(networkId),
+        close: (networkId) => this.runtime.http.networks.close(networkId),
+        connect: (networkId) => this.runtime.http.networks.connect(networkId),
+        disconnect: (networkId) => this.runtime.http.networks.disconnect(networkId),
+      },
+      buffers: {
+        joinChannel: (networkId, channel, sourceBufferId) =>
+          this.runtime.http.buffers.joinChannel(networkId, channel, sourceBufferId),
+        openQuery: (networkId, target) => this.runtime.http.buffers.openQuery(networkId, target),
+        close: (bufferId) => this.runtime.http.buffers.close(bufferId),
+        markRead: (bufferId) => this.runtime.http.buffers.markRead(bufferId),
+        saveNotes: (bufferId, notes) => this.runtime.http.buffers.saveNotes(bufferId, notes),
+        history: (bufferId, limit, beforeMessageId) =>
+          this.runtime.http.buffers.history(bufferId, limit, beforeMessageId),
+        searchHistory: (bufferId, query, limit) =>
+          this.runtime.http.buffers.searchHistory(bufferId, query, limit),
+        exportHistory: (bufferId) => this.runtime.http.buffers.exportHistory(bufferId),
+      },
+      friends: {
+        add: (nick) => this.runtime.http.friends.add(nick),
+        remove: (friendId) => this.runtime.http.friends.remove(friendId),
+      },
+      nickEmojis: {
+        save: (networkId, nick, emoji) =>
+          this.runtime.http.nickEmojis.save(networkId, nick, emoji),
+      },
+      mutedNicks: {
+        add: (networkId, nick) => this.runtime.http.mutedNicks.add(networkId, nick),
+        remove: (mutedNickId) => this.runtime.http.mutedNicks.remove(mutedNickId),
+      },
+      backups: {
+        export: (browserPreferences) => this.storage.exportBackup(browserPreferences),
+        import: (backupContent) => this.restore(backupContent),
+      },
+    };
+  }
+
+  private createWebSocketApi(): RuntimeWebSocketApi {
+    return {
+      attachSocket: (ws: WebSocket) => this.runtime.ws.attachSocket(ws),
+      detachSocket: (ws: WebSocket) => this.runtime.ws.detachSocket(ws),
+      snapshot: () => this.runtime.ws.snapshot(),
+      handleMessage: (ws: WebSocket, message: ClientMessage) =>
+        this.runtime.ws.handleMessage(ws, message),
+    };
+  }
+}
