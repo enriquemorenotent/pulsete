@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { AppEffects } from './AppEffects.js';
 import {
   selectBuffers,
+  selectMessagesByConversation,
   selectNetworkNamesById,
   selectPhase,
   selectSelectedBufferId,
@@ -80,10 +81,12 @@ type AppBodyProps = Omit<
 function AppBody(props: AppBodyProps) {
   const phase = useAppSelector(selectPhase);
   const buffers = useAppSelector(selectBuffers);
+  const messagesByConversation = useAppSelector(selectMessagesByConversation);
   const networkNamesById = useAppSelector(selectNetworkNamesById);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
   const contactNotifications = useContactNotifications({
     buffers,
+    messagesByConversation,
     networkNamesById,
     onSelectBuffer: props.actions.selectTabBuffer,
     selectedBufferId,

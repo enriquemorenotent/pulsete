@@ -1,8 +1,9 @@
 import type { FriendState, MutedNickState } from '../../../shared/protocol-chat.js';
-import { isSameIrcIdentifier } from '../../../shared/irc-identifiers.js';
+import type { NetworkUserIdentity } from '../../../shared/user-identity.js';
 import {
   type ContactNotificationContact,
   type ContactNotificationSettings,
+  isContactNotificationAllowedForTarget,
 } from './settings.js';
 import { findFriendByNick } from '../friend-utils.js';
 import { findMutedNick } from '../muted-nick-utils.js';
@@ -25,16 +26,19 @@ export type ContactRuleHandlers = {
 export const resolveContactRuleState = (input: {
   networkId: string;
   nick: string;
+  identity?: NetworkUserIdentity | null;
   friends: readonly FriendState[];
   mutedNicks: readonly MutedNickState[];
   contactNotifications: Pick<ContactNotificationSettings, 'contacts'>;
 }): ContactRuleState => {
-  const contact = { networkId: input.networkId, nick: input.nick };
-  const mutedNick = findMutedNick(input.mutedNicks, input.networkId, input.nick);
-  const notificationContactEnabled = input.contactNotifications.contacts.some(
-    (candidate) =>
-      candidate.networkId === input.networkId &&
-      isSameIrcIdentifier(candidate.nick, input.nick),
+  const contact: ContactNotificationContact = input.identity
+    ? { networkId: input.networkId, nick: input.nick, identity: input.identity }
+    : { networkId: input.networkId, nick: input.nick };
+  const target = { networkId: input.networkId, nick: input.nick, identity: input.identity };
+  const mutedNick = findMutedNick(input.mutedNicks, input.networkId, input.nick, input.identity);
+  const notificationContactEnabled = isContactNotificationAllowedForTarget(
+    input.contactNotifications,
+    target,
   );
   return {
     contact,
@@ -46,10 +50,14 @@ export const resolveContactRuleState = (input: {
 
 export const muteContactAndDisableNotifications = async (input: {
   contact: ContactNotificationContact;
-  addMutedNick: (networkId: string, nick: string) => Promise<boolean>;
+  addMutedNick: (networkId: string, nick: string, identity?: NetworkUserIdentity | null) => Promise<boolean>;
   removeNotificationContact: (contact: ContactNotificationContact) => void;
 }) => {
-  const muted = await input.addMutedNick(input.contact.networkId, input.contact.nick);
+  const muted = await input.addMutedNick(
+    input.contact.networkId,
+    input.contact.nick,
+    input.contact.identity,
+  );
   if (muted) {
     input.removeNotificationContact(input.contact);
   }
@@ -76,7 +84,7 @@ export const enableContactNotificationsAndUnmute = async (input: {
 
 export const createContactRuleHandlers = (input: {
   addFriend: (nick: string) => Promise<boolean>;
-  addMutedNick: (networkId: string, nick: string) => Promise<boolean>;
+  addMutedNick: (networkId: string, nick: string, identity?: NetworkUserIdentity | null) => Promise<boolean>;
   addNotificationContact: (contact: ContactNotificationContact) => void;
   notificationsUseSound: boolean;
   primeNotifications: () => void;

@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Moon } from 'lucide-react';
 import type { ChannelState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { cn } from '@/lib/utils.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -26,7 +27,12 @@ type NicklistPanelProps = {
   contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
-  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
+  onSaveNickEmoji: (
+    networkId: string,
+    nick: string,
+    emoji: string | null,
+    identity?: NetworkUserIdentity | null,
+  ) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };
 
@@ -80,13 +86,14 @@ export function NicklistPanel(props: NicklistPanelProps) {
                           ? resolveContactRuleState({
                               networkId: props.network.id,
                               nick: user.nick,
+                              identity: user.identity,
                               friends: props.friends,
                               mutedNicks: props.mutedNicks,
                               contactNotifications: props.contactNotificationSettings,
                             })
                           : null;
                         const userNickEmoji = props.network
-                          ? findNickEmoji(props.nickEmojis, props.network.id, user.nick)
+                          ? findNickEmoji(props.nickEmojis, props.network.id, user.nick, user.identity)
                           : null;
                         return (
                           <div key={user.nick} className="flex items-center rounded-sm">
@@ -124,7 +131,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                                   nick={user.nick}
                                   onSave={(emoji) =>
                                     props.network
-                                      ? props.onSaveNickEmoji(props.network.id, user.nick, emoji)
+                                      ? props.onSaveNickEmoji(props.network.id, user.nick, emoji, user.identity)
                                       : Promise.resolve(false)
                                   }
                                 />

@@ -93,14 +93,51 @@ test('nick emoji tags persist per network and deduplicate case-insensitively', (
     id: tagged.id,
     networkId: firstNetwork.id,
     nick: 'alice',
+    identity: { kind: 'nick', value: 'alice' },
     emoji: '⭐',
   }]);
   assert.deepEqual(reopened.nickEmojis.list(secondNetwork.id), [{
     id: otherNetworkTag.id,
     networkId: secondNetwork.id,
     nick: 'Alice',
+    identity: { kind: 'nick', value: 'alice' },
     emoji: '🔥',
   }]);
+});
+
+test('nick emoji tags migrate legacy nick matches to known identities', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+
+  const legacy = storage.nickEmojis.upsert({
+    networkId: network.id,
+    nick: 'Alice',
+    emoji: '🌙',
+  });
+  const updated = storage.nickEmojis.upsert({
+    networkId: network.id,
+    nick: 'Alice',
+    identity: { kind: 'account', value: 'alice-account' },
+    emoji: '⭐',
+  });
+
+  assert.equal(updated.id, legacy.id);
+  assert.deepEqual(storage.nickEmojis.list(network.id), [{
+    id: legacy.id,
+    networkId: network.id,
+    nick: 'Alice',
+    identity: { kind: 'account', value: 'alice-account' },
+    emoji: '⭐',
+  }]);
+
+  const removed = storage.nickEmojis.removeByIdentity(
+    network.id,
+    'Alice',
+    { kind: 'account', value: 'alice-account' },
+  );
+  assert.equal(removed?.id, legacy.id);
+  assert.deepEqual(storage.nickEmojis.list(network.id), []);
 });
 
 test('deleting a network leaves other saved networks alone', () => {

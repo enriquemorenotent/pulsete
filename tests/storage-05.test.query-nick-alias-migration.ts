@@ -52,7 +52,7 @@ test('query nick alias migration repairs empty duplicate buffers without rewriti
   const bodies = migrated.conversations.listMessages(network.id, 'Rust', 10).map((message) => message.body);
   migrated.close();
 
-  assert.equal(version.user_version, 23);
+  assert.equal(version.user_version, 24);
   assert.equal(duplicate, undefined);
   assert.deepEqual(aliases, ['Rust', 'Rust-AFK']);
   assert.equal(reopened.id, rustAfk.id);

@@ -82,11 +82,11 @@ export class RuntimeHost {
         remove: (friendId) => this.runtime.http.friends.remove(friendId),
       },
       nickEmojis: {
-        save: (networkId, nick, emoji) =>
-          this.runtime.http.nickEmojis.save(networkId, nick, emoji),
+        save: (networkId, nick, emoji, identity) =>
+          this.runtime.http.nickEmojis.save(networkId, nick, emoji, identity),
       },
       mutedNicks: {
-        add: (networkId, nick) => this.runtime.http.mutedNicks.add(networkId, nick),
+        add: (networkId, nick, identity) => this.runtime.http.mutedNicks.add(networkId, nick, identity),
         remove: (mutedNickId) => this.runtime.http.mutedNicks.remove(mutedNickId),
       },
       backups: {

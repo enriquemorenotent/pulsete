@@ -1,24 +1,41 @@
-import { findMutedNickByNick, isNickMuted } from '../../shared/muted-nicks.js';
+import {
+  findMutedNickByIdentity,
+  findMutedNickByNick,
+  isUserMuted,
+  resolveMutedTarget,
+} from '../../shared/muted-nicks.js';
 import type { ChatMessage, MutedNickState } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 
 export const findMutedNick = (
   mutedNicks: readonly MutedNickState[],
   networkId: string,
   nick: string,
-) => findMutedNickByNick(mutedNicks, networkId, nick);
+  identity?: NetworkUserIdentity | null,
+) =>
+  findMutedNickByIdentity(mutedNicks, { networkId, nick, identity })
+  ?? findMutedNickByNick(mutedNicks, networkId, nick);
 
 export const isMessageMuted = (
   mutedNicks: readonly MutedNickState[],
-  message: Pick<ChatMessage, 'networkId' | 'nick' | 'speakerNick'>,
-) => isNickMuted(mutedNicks, message.networkId, message.nick ?? message.speakerNick ?? null);
+  message: Pick<ChatMessage, 'networkId' | 'nick' | 'senderIdentity' | 'speakerNick'>,
+) => isUserMuted(
+  mutedNicks,
+  resolveMutedTarget(
+    message.networkId,
+    message.nick ?? message.speakerNick ?? null,
+    message.senderIdentity,
+  ),
+);
 
 export const resolveMutedMessageNick = (
   mutedNicks: readonly MutedNickState[],
-  message: Pick<ChatMessage, 'networkId' | 'nick' | 'speakerNick'>,
+  message: Pick<ChatMessage, 'networkId' | 'nick' | 'senderIdentity' | 'speakerNick'>,
 ) => {
   const nick = message.nick ?? message.speakerNick ?? null;
-  if (!isNickMuted(mutedNicks, message.networkId, nick)) {
+  const target = resolveMutedTarget(message.networkId, nick, message.senderIdentity);
+  if (!isUserMuted(mutedNicks, target)) {
     return null;
   }
-  return findMutedNick(mutedNicks, message.networkId, nick ?? '')?.nick ?? nick;
+  return target ? findMutedNickByIdentity(mutedNicks, target)?.nick ?? nick : nick;
 };

@@ -38,6 +38,7 @@ import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
+import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 
 type SharedProps = {
   actions: AppActions;
@@ -166,6 +167,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   externalAvatarsEnabled,
 }: RightSidebarContainerProps) {
   const dispatch = useAppDispatch();
+  const channels = useAppSelector(selectChannels);
   const friends = useAppSelector(selectFriends);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const nickEmojis = useAppSelector(selectNickEmojis);
@@ -193,15 +195,29 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     },
     onSaveNotes: actions.saveNetworkNotes,
   }), [actions.saveNetworkNotes, dispatch, serverProfileNetwork]);
-  const queryProfile = useMemo(() => ({
-    buffer: workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null,
-    nickEmoji: workspace.selectedBuffer?.kind === 'query'
-      ? findNickEmoji(nickEmojis, workspace.selectedBuffer.networkId, workspace.selectedBuffer.target)
-      : null,
-    network: workspace.selectedNetwork,
-    onSaveNotes: actions.saveBufferNotes,
-    onSaveNickEmoji: actions.saveNickEmoji,
-  }), [actions.saveBufferNotes, actions.saveNickEmoji, nickEmojis, workspace.selectedBuffer, workspace.selectedNetwork]);
+  const queryProfile = useMemo(() => {
+    const buffer = workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null;
+    const user = buffer
+      ? resolveUserAvatarCandidate(channels, buffer.networkId, buffer.target)
+      : null;
+    return {
+      buffer,
+      identity: user?.identity,
+      nickEmoji: buffer
+        ? findNickEmoji(nickEmojis, buffer.networkId, buffer.target, user?.identity)
+        : null,
+      network: workspace.selectedNetwork,
+      onSaveNotes: actions.saveBufferNotes,
+      onSaveNickEmoji: actions.saveNickEmoji,
+    };
+  }, [
+    actions.saveBufferNotes,
+    actions.saveNickEmoji,
+    channels,
+    nickEmojis,
+    workspace.selectedBuffer,
+    workspace.selectedNetwork,
+  ]);
   return (
     <WorkspaceRightSidebar
       workspace={workspace}

@@ -1,4 +1,5 @@
 import type { NetworkInput } from '../../server/storage.js';
+import { identityFromNick } from '../../shared/user-identity.js';
 import type { ChannelUserState } from '../../shared/protocol-chat.js';
 import { waitFor } from './async-test-helpers.js';
 
@@ -16,6 +17,7 @@ export const makeUser = (
   account: null,
   username: null,
   host: null,
+  identity: identityFromNick(nick),
   realname: null,
 });
 

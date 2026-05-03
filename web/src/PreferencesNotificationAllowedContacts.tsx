@@ -1,5 +1,6 @@
 import type { ContactNotificationContact } from './contact-notifications/settings.js';
 import { Button } from '@/components/ui/button.js';
+import { identityFromNick, identityKey } from '../../shared/user-identity.js';
 
 type PreferencesNotificationAllowedContactsProps = {
   contacts: ContactNotificationContact[];
@@ -27,7 +28,7 @@ export function PreferencesNotificationAllowedContacts(
             const networkName = props.networkNameById.get(contact.networkId) ?? contact.networkId;
             return (
               <li
-                key={`${contact.networkId}:${contact.nick}`}
+                key={`${contact.networkId}:${identityKey(contact.identity ?? identityFromNick(contact.nick))}`}
                 className="flex items-center justify-between gap-3 rounded-md border border-white/6 bg-black/14 px-3 py-2"
               >
                 <div className="min-w-0">

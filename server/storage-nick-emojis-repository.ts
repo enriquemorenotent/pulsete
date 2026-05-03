@@ -1,13 +1,16 @@
 import type { SqliteDb } from './storage-sqlite.js';
 import {
   getNickEmoji,
+  getNickEmojiByIdentity,
   getNickEmojiByNick,
   listNickEmojis,
   removeNickEmoji,
+  removeNickEmojiByIdentity,
   removeNickEmojiByNick,
   upsertNickEmoji,
 } from './storage-nick-emojis.js';
 import type { NickEmojiInput } from './storage-types.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 
 export class StorageNickEmojisRepository {
   constructor(private readonly db: SqliteDb) {}
@@ -24,6 +27,10 @@ export class StorageNickEmojisRepository {
     return getNickEmojiByNick(this.db, networkId, nick);
   }
 
+  findByIdentity(networkId: string, identity: NetworkUserIdentity) {
+    return getNickEmojiByIdentity(this.db, networkId, identity);
+  }
+
   upsert(input: NickEmojiInput) {
     return upsertNickEmoji(this.db, input);
   }
@@ -34,5 +41,9 @@ export class StorageNickEmojisRepository {
 
   removeByNick(networkId: string, nick: string) {
     return removeNickEmojiByNick(this.db, networkId, nick);
+  }
+
+  removeByIdentity(networkId: string, nick: string, identity: NetworkUserIdentity | null | undefined) {
+    return removeNickEmojiByIdentity(this.db, networkId, nick, identity);
   }
 }

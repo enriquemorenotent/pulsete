@@ -195,13 +195,14 @@ test('normalized storage migration preserves large transcripts and backfills mis
   `).all('network-1') as Array<{ target: string; batchCount: number }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 23);
+  assert.equal(version.user_version, 24);
   assert.equal(networkColumns.some((column) => column.name === 'username'), false);
   assert.deepEqual(
     nickEmojiColumns.map((column) => column.name),
-    ['id', 'networkId', 'nick', 'emoji', 'createdAt', 'updatedAt'],
+    ['id', 'networkId', 'nick', 'identityKind', 'identityValue', 'emoji', 'createdAt', 'updatedAt'],
   );
   assert.equal(nickEmojiIndexes.some((index) => index.name === 'idx_nick_emoji_tags_network_nick'), true);
+  assert.equal(nickEmojiIndexes.some((index) => index.name === 'idx_nick_emoji_tags_network_identity'), true);
   assert.equal(messageCount.count, 1_200);
   assert.equal(batchCount.count, 3);
   assert.deepEqual(migratedBuffers, [

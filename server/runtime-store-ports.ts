@@ -15,6 +15,7 @@ import type {
   NickEmojiInput,
   RuntimeNetworkProfile,
 } from './storage-types.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 
 export type RuntimeSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
@@ -72,6 +73,7 @@ export type RuntimeMutedNickStore = {
   list(networkId?: string): MutedNickState[];
   get(mutedNickId: string): MutedNickState | null;
   findByNick(networkId: string, nick: string): MutedNickState | null;
+  findByIdentity(networkId: string, nick: string, identity: NetworkUserIdentity): MutedNickState | null;
   upsert(input: MutedNickInput): MutedNickState;
   remove(mutedNickId: string): MutedNickState | null;
 };
@@ -80,9 +82,15 @@ export type RuntimeNickEmojiStore = {
   list(networkId?: string): NickEmojiState[];
   get(nickEmojiId: string): NickEmojiState | null;
   findByNick(networkId: string, nick: string): NickEmojiState | null;
+  findByIdentity(networkId: string, identity: NetworkUserIdentity): NickEmojiState | null;
   upsert(input: NickEmojiInput): NickEmojiState;
   remove(nickEmojiId: string): NickEmojiState | null;
   removeByNick(networkId: string, nick: string): NickEmojiState | null;
+  removeByIdentity(
+    networkId: string,
+    nick: string,
+    identity: NetworkUserIdentity | null | undefined,
+  ): NickEmojiState | null;
 };
 
 export type RuntimeNetworkStore = {

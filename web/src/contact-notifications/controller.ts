@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BufferState } from '../../../shared/protocol-chat.js';
+import type { ConversationMessages } from '../conversation-message-state.js';
 import {
   CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
   addContactNotificationContact,
@@ -40,6 +41,7 @@ export type ContactNotificationsController = {
 
 export function useContactNotifications(input: {
   buffers: readonly BufferState[];
+  messagesByConversation?: ConversationMessages;
   networkNamesById: ReadonlyMap<string, string>;
   onSelectBuffer: (buffer: BufferState) => void;
   selectedBufferId: string | null;
@@ -178,6 +180,7 @@ export function useContactNotifications(input: {
     const eligibleBuffer = findEligibleContactNotificationBuffer({
       previousBuffers,
       nextBuffers: input.buffers,
+      messagesByConversation: input.messagesByConversation,
       appVisibleAndFocused: !shouldShowSystemNotification(),
       selectedBufferId: input.selectedBufferId,
       settings,
@@ -225,6 +228,7 @@ export function useContactNotifications(input: {
     }
   }, [
     input.buffers,
+    input.messagesByConversation,
     input.networkNamesById,
     input.onSelectBuffer,
     input.selectedBufferId,

@@ -1,6 +1,7 @@
 import type { AppActionContext } from './app-actions-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 
 type MutedNickActionParams = Pick<
   AppActionContext,
@@ -13,12 +14,16 @@ export const createMutedNickActions = ({
 }: MutedNickActionParams) => {
   const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
 
-  const addMutedNick = async (networkId: string, nick: string) =>
+  const addMutedNick = async (
+    networkId: string,
+    nick: string,
+    identity?: NetworkUserIdentity | null,
+  ) =>
     executeMutation({
-      request: () => api.addMutedNick(networkId, nick),
+      request: () => api.addMutedNick(networkId, nick, identity),
       mapResult: () => true,
-      successMessage: 'Nick muted',
-      errorMessage: 'Failed to mute nick',
+      successMessage: 'User muted',
+      errorMessage: 'Failed to mute user',
       failureValue: false,
     });
 
@@ -26,8 +31,8 @@ export const createMutedNickActions = ({
     executeMutation({
       request: () => api.removeMutedNick(mutedNickId),
       mapResult: () => true,
-      successMessage: 'Nick unmuted',
-      errorMessage: 'Failed to unmute nick',
+      successMessage: 'User unmuted',
+      errorMessage: 'Failed to unmute user',
       failureValue: false,
     });
 

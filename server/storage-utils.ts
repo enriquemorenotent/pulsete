@@ -14,6 +14,7 @@ import type {
   NickEmojiRow,
   RuntimeNetworkProfile,
 } from './storage-types.js';
+import { identityFromNick, normalizeNetworkUserIdentity } from '../shared/user-identity.js';
 
 export const parseJson = <T>(value: string, fallback: T): T => {
   try {
@@ -99,12 +100,20 @@ export const toMutedNickState = (row: MutedNickRow): MutedNickState => ({
   id: row.id,
   networkId: row.networkId,
   nick: row.nick,
+  identity: normalizeNetworkUserIdentity({
+    kind: row.identityKind,
+    value: row.identityValue,
+  }) ?? identityFromNick(row.nick),
 });
 
 export const toNickEmojiState = (row: NickEmojiRow): NickEmojiState => ({
   id: row.id,
   networkId: row.networkId,
   nick: row.nick,
+  identity: normalizeNetworkUserIdentity({
+    kind: row.identityKind,
+    value: row.identityValue,
+  }) ?? identityFromNick(row.nick),
   emoji: row.emoji,
 });
 
@@ -129,6 +138,11 @@ export const toMessage = (row: MessageRow): MessageInput => {
     networkId: row.networkId,
     target: row.target,
     nick: row.nick,
+    senderIdentity: normalizeNetworkUserIdentity(
+      row.senderIdentityKind && row.senderIdentityValue
+        ? { kind: row.senderIdentityKind, value: row.senderIdentityValue }
+        : null,
+    ),
     speakerRole,
     speakerNick: row.speakerNick ?? row.nick,
     attributionSource: normalizeAttributionSource(row.attributionSource),

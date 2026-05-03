@@ -7,6 +7,7 @@ import {
   normalizeChannelUserModes,
   orderedModes,
 } from './channel-user-modes.js';
+import { resolveNetworkUserIdentity } from './user-identity.js';
 
 export {
   channelUserGroupLabels,
@@ -196,6 +197,12 @@ const normalizeChannelUser = (user: NormalizableChannelUser): ChannelUserState =
     account: user.account ?? null,
     username: user.username ?? null,
     host: user.host ?? null,
+    identity: resolveNetworkUserIdentity({
+      account: user.account,
+      username: user.username,
+      host: user.host,
+      nick: user.nick,
+    }) ?? undefined,
     realname: user.realname ?? null,
   };
 };

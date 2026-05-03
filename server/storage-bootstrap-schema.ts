@@ -93,6 +93,8 @@ export const storageBootstrapSchemaSql = `
     id TEXT PRIMARY KEY,
     bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
     nick TEXT,
+    senderIdentityKind TEXT,
+    senderIdentityValue TEXT,
     speakerRole TEXT NOT NULL DEFAULT 'unknown',
     speakerNick TEXT,
     attributionSource TEXT NOT NULL DEFAULT 'unknown',
@@ -119,19 +121,23 @@ ${queryNickAliasesSchemaSql}
     id TEXT PRIMARY KEY,
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     nick TEXT NOT NULL COLLATE NOCASE,
+    identityKind TEXT NOT NULL DEFAULT 'nick',
+    identityValue TEXT NOT NULL,
     emoji TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
-    UNIQUE(networkId, nick)
+    UNIQUE(networkId, identityKind, identityValue)
   );
 
   CREATE TABLE IF NOT EXISTS muted_nicks (
     id TEXT PRIMARY KEY,
     networkId TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     nick TEXT NOT NULL COLLATE NOCASE,
+    identityKind TEXT NOT NULL DEFAULT 'nick',
+    identityValue TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
-    UNIQUE(networkId, nick)
+    UNIQUE(networkId, identityKind, identityValue)
   );
 
   CREATE INDEX IF NOT EXISTS idx_messages_buffer

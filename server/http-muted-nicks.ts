@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { networkUserIdentitySchema } from '../shared/user-identity.js';
 import { badRequest } from './app-error.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import type { RouteArgs } from './http-types.js';
@@ -6,12 +7,13 @@ import type { RouteArgs } from './http-types.js';
 const mutedNickInputSchema = z.object({
   networkId: z.string(),
   nick: z.string(),
+  identity: networkUserIdentitySchema.nullable().optional(),
 });
 
 export const handleMutedNickRoutes = async ({ req, res, pathname, context }: RouteArgs) => {
   if (pathname === '/api/muted-nicks' && req.method === 'POST') {
-    const { networkId, nick } = readMutedNickInput(await readJson(req));
-    writeJson(res, 200, context.mutedNicks.add(networkId, nick));
+    const { networkId, nick, identity } = readMutedNickInput(await readJson(req));
+    writeJson(res, 200, context.mutedNicks.add(networkId, nick, identity));
     return true;
   }
 

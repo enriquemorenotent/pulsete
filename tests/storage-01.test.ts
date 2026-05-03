@@ -184,7 +184,42 @@ test('muted nick storage dedupes case-insensitively per network while allowing o
   const otherNetwork = storage.mutedNicks.upsert({ networkId: secondNetwork.id, nick: 'ALICE' });
 
   assert.equal(first.id, duplicate.id);
+  assert.deepEqual(duplicate.identity, { kind: 'nick', value: 'alice' });
   assert.equal(storage.mutedNicks.list(firstNetwork.id).length, 1);
   assert.equal(storage.mutedNicks.list(secondNetwork.id).length, 1);
   assert.notEqual(first.id, otherNetwork.id);
+});
+
+test('muted nick storage dedupes by identity instead of display nick', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = createConnectionInstance(storage);
+
+  const accountMute = storage.mutedNicks.upsert({
+    networkId: network.id,
+    nick: 'Alice',
+    identity: { kind: 'account', value: 'alice-account' },
+  });
+  const renamedAccountMute = storage.mutedNicks.upsert({
+    networkId: network.id,
+    nick: 'Alice_',
+    identity: { kind: 'account', value: 'alice-account' },
+  });
+  const nickFallbackMute = storage.mutedNicks.upsert({
+    networkId: network.id,
+    nick: 'Alice',
+  });
+
+  assert.equal(renamedAccountMute.id, accountMute.id);
+  assert.notEqual(nickFallbackMute.id, accountMute.id);
+  assert.deepEqual(
+    storage.mutedNicks.list(network.id).map((mute) => ({
+      identity: mute.identity,
+      nick: mute.nick,
+    })),
+    [
+      { identity: { kind: 'nick', value: 'alice' }, nick: 'Alice' },
+      { identity: { kind: 'account', value: 'alice-account' }, nick: 'Alice_' },
+    ],
+  );
 });

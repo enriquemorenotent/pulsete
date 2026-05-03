@@ -2,9 +2,10 @@ import { emitMessage } from './irc-emit.js';
 import { handleNickservAutoJoinMessage } from './irc-auth.js';
 import { isServiceNick } from './irc-services.js';
 import { parseServerTimeTag, type IrcMessageTags } from './irc-message-tags.js';
-import { isChannelTarget, stripCtcp } from './irc-parser.js';
+import { isChannelTarget, parsePrefixIdentity, stripCtcp } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
 import type { IrcMessageEventContext } from './irc-contexts.js';
+import { resolveNetworkUserIdentity } from '../shared/user-identity.js';
 
 export const handleTextMessage = (
   connection: IrcMessageEventContext,
@@ -58,9 +59,17 @@ export const handleTextMessage = (
     : isDirectCtcp
       ? `<${ctcp}>`
       : payload;
+  const prefixIdentity = parsePrefixIdentity(prefix);
+  const senderIdentity = resolveNetworkUserIdentity({
+    nick,
+    account: tags.account,
+    username: prefixIdentity.username,
+    host: prefixIdentity.host,
+  });
   emitMessage(connection, createMessage(connection, {
     target,
     nick,
+    senderIdentity,
     body,
     kind: command === 'NOTICE' ? 'notice' : isAction ? 'action' : 'line',
     self: isSelfNick(connection, nick),

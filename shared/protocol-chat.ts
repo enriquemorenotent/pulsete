@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { networkUserIdentitySchema } from './user-identity.js';
 
 export const historyWindowLimit = 250;
 export const historySearchLimit = 50;
@@ -28,6 +29,7 @@ export const chatMessageSchema = z.object({
   networkId: z.string(),
   target: z.string(),
   nick: z.string().nullable(),
+  senderIdentity: networkUserIdentitySchema.nullable().optional(),
   speakerRole: speakerRoleSchema.optional(),
   speakerNick: z.string().nullable().optional(),
   attributionSource: speakerAttributionSourceSchema.optional(),
@@ -85,6 +87,7 @@ export const mutedNickSchema = z.object({
   id: z.string(),
   networkId: z.string(),
   nick: z.string(),
+  identity: networkUserIdentitySchema.optional(),
 });
 export type MutedNickState = z.infer<typeof mutedNickSchema>;
 
@@ -92,6 +95,7 @@ export const nickEmojiSchema = z.object({
   id: z.string(),
   networkId: z.string(),
   nick: z.string(),
+  identity: networkUserIdentitySchema.optional(),
   emoji: z.string(),
 });
 export type NickEmojiState = z.infer<typeof nickEmojiSchema>;
@@ -113,6 +117,7 @@ export const channelUserSchema = z.object({
   account: z.string().nullable().optional(),
   username: z.string().nullable().optional(),
   host: z.string().nullable().optional(),
+  identity: networkUserIdentitySchema.optional(),
   realname: z.string().nullable().optional(),
 });
 export type ChannelUserState = z.infer<typeof channelUserSchema>;

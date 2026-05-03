@@ -55,10 +55,10 @@ export const createRuntimeHttpApi = ({
     remove: (friendId) => friends.removeFriend(friendId),
   },
   nickEmojis: {
-    save: (networkId, nick, emoji) => nickEmojis.saveNickEmoji(networkId, nick, emoji),
+    save: (networkId, nick, emoji, identity) => nickEmojis.saveNickEmoji(networkId, nick, emoji, identity),
   },
   mutedNicks: {
-    add: (networkId, nick) => mutedNicks.upsertMutedNick(networkId, nick),
+    add: (networkId, nick, identity) => mutedNicks.upsertMutedNick(networkId, nick, identity),
     remove: (mutedNickId) => mutedNicks.removeMutedNick(mutedNickId),
   },
 });

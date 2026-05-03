@@ -10,6 +10,7 @@ import {
   serializeContactNotificationSettings,
 } from '../web/src/contact-notifications/settings.js';
 import { createContactSystemNotification } from '../web/src/contact-notifications/system-notification.js';
+import { toConversationMessageKey } from '../web/src/conversation-message-state.js';
 
 const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   id: overrides.id ?? 'buffer-1',
@@ -61,7 +62,7 @@ test('adding contacts dedupes by network and IRC case-folded nick', () => {
     enabled: true,
     systemEnabled: false,
     sound: 'glass',
-    contacts: [{ networkId: 'network-1', nick: 'Alice' }],
+    contacts: [{ identity: { kind: 'nick', value: 'alice' }, networkId: 'network-1', nick: 'Alice' }],
   });
 });
 
@@ -73,7 +74,7 @@ test('serializing settings preserves the chosen sound', () => {
       sound: 'bell',
       contacts: [{ networkId: 'network-1', nick: 'Alice' }],
     }),
-    '{"enabled":true,"systemEnabled":true,"sound":"bell","contacts":[{"networkId":"network-1","nick":"Alice"}]}',
+    '{"enabled":true,"systemEnabled":true,"sound":"bell","contacts":[{"identity":{"kind":"nick","value":"alice"},"networkId":"network-1","nick":"Alice"}]}',
   );
 });
 
@@ -95,6 +96,80 @@ test('eligible cue fires for allowed DM unread growth in another buffer', () => 
   });
 
   assert.equal(eligible?.id, nextBuffer.id);
+});
+
+test('eligible cue can match an identity contact after a nick change', () => {
+  const previousBuffers = new Map([['buffer-1', { unread: 0 }]]);
+  const nextBuffer = makeBuffer({ target: 'Alice_', unread: 1 });
+
+  const eligible = findEligibleContactNotificationBuffer({
+    previousBuffers,
+    nextBuffers: [nextBuffer],
+    messagesByConversation: {
+      [toConversationMessageKey(nextBuffer.networkId, nextBuffer.target)]: [{
+        id: 'message-1',
+        networkId: nextBuffer.networkId,
+        target: nextBuffer.target,
+        nick: nextBuffer.target,
+        senderIdentity: { kind: 'account', value: 'alice-account' },
+        body: 'new nick',
+        kind: 'line',
+        self: false,
+        ts: Date.now(),
+      }],
+    },
+    appVisibleAndFocused: true,
+    selectedBufferId: 'buffer-2',
+    settings: {
+      enabled: true,
+      systemEnabled: false,
+      sound: 'chirp',
+      contacts: [{
+        networkId: 'network-1',
+        nick: 'Alice',
+        identity: { kind: 'account', value: 'alice-account' },
+      }],
+    },
+  });
+
+  assert.equal(eligible?.id, nextBuffer.id);
+});
+
+test('eligible cue does not degrade strong identity contacts to nick matches', () => {
+  const previousBuffers = new Map([['buffer-1', { unread: 0 }]]);
+  const nextBuffer = makeBuffer({ unread: 1 });
+
+  const eligible = findEligibleContactNotificationBuffer({
+    previousBuffers,
+    nextBuffers: [nextBuffer],
+    messagesByConversation: {
+      [toConversationMessageKey(nextBuffer.networkId, nextBuffer.target)]: [{
+        id: 'message-1',
+        networkId: nextBuffer.networkId,
+        target: nextBuffer.target,
+        nick: nextBuffer.target,
+        senderIdentity: { kind: 'account', value: 'different-account' },
+        body: 'same nick',
+        kind: 'line',
+        self: false,
+        ts: Date.now(),
+      }],
+    },
+    appVisibleAndFocused: true,
+    selectedBufferId: 'buffer-2',
+    settings: {
+      enabled: true,
+      systemEnabled: false,
+      sound: 'chirp',
+      contacts: [{
+        networkId: 'network-1',
+        nick: 'Alice',
+        identity: { kind: 'account', value: 'alice-account' },
+      }],
+    },
+  });
+
+  assert.equal(eligible, null);
 });
 
 test('eligible cue ignores selected, disallowed, and wrong-network buffers', () => {

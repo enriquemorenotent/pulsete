@@ -45,7 +45,7 @@ test('runtime snapshots include negotiated IRC capabilities', async () => {
 
     assert.deepEqual(runtime.gateway.snapshot().networkStates[network.id]?.capabilities, {
       offered: ['account-tag', 'echo-message', 'multi-prefix', 'userhost-in-names'],
-      negotiated: ['echo-message', 'multi-prefix', 'userhost-in-names'],
+      negotiated: ['account-tag', 'echo-message', 'multi-prefix', 'userhost-in-names'],
       pending: [],
     });
     assert.equal(received.some((line) => line.startsWith('CAP REQ :')), true);

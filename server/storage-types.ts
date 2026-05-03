@@ -1,6 +1,7 @@
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole, BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NetworkAuthMethod, NetworkProfile, NickEmojiState } from '../shared/protocol-chat.js';
 import type { AppSnapshot } from '../shared/protocol-app.js';
+import type { NetworkUserIdentity, UserIdentityKind } from '../shared/user-identity.js';
 
 export type NetworkRow = {
   id: string;
@@ -50,6 +51,8 @@ export type MessageRow = {
   networkId: string;
   target: string;
   nick: string | null;
+  senderIdentityKind: UserIdentityKind | null;
+  senderIdentityValue: string | null;
   speakerRole: SpeakerRole | null;
   speakerNick: string | null;
   attributionSource: SpeakerAttributionSource | null;
@@ -72,6 +75,8 @@ export type MutedNickRow = {
   id: string;
   networkId: string;
   nick: string;
+  identityKind: UserIdentityKind;
+  identityValue: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -80,6 +85,8 @@ export type NickEmojiRow = {
   id: string;
   networkId: string;
   nick: string;
+  identityKind: UserIdentityKind;
+  identityValue: string;
   emoji: string;
   createdAt: number;
   updatedAt: number;
@@ -111,15 +118,18 @@ export type BufferInput = Omit<BufferState, 'id' | 'unread' | 'priorityUnread' |
 
 export type FriendInput = Omit<FriendState, 'id'> & Partial<Pick<FriendState, 'id'>>;
 
-export type MutedNickInput = Omit<MutedNickState, 'id'> & Partial<Pick<MutedNickState, 'id'>>;
+export type MutedNickInput = Omit<MutedNickState, 'id' | 'identity'> &
+  Partial<Pick<MutedNickState, 'id' | 'identity'>>;
 
-export type NickEmojiInput = Omit<NickEmojiState, 'id'> & Partial<Pick<NickEmojiState, 'id'>>;
+export type NickEmojiInput = Omit<NickEmojiState, 'id' | 'identity'> &
+  Partial<Pick<NickEmojiState, 'id' | 'identity'>>;
 
 export type MessageInput = {
   id: string;
   networkId: string;
   target: string;
   nick: string | null;
+  senderIdentity?: NetworkUserIdentity | null;
   speakerRole?: SpeakerRole;
   speakerNick?: string | null;
   attributionSource?: SpeakerAttributionSource;

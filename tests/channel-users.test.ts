@@ -18,6 +18,7 @@ test('channel user parsing stores every stacked prefix mode', () => {
     away: false,
     username: 'ident',
     host: 'example.test',
+    identity: { kind: 'userhost', value: 'ident@example.test' },
     account: null,
     realname: null,
   });
@@ -41,6 +42,7 @@ test('channel user parsing upgrades legacy primary mode users', () => {
     account: 'alice',
     username: 'ident',
     host: 'example.test',
+    identity: { kind: 'account', value: 'alice' },
     realname: 'Alice Example',
   });
 });

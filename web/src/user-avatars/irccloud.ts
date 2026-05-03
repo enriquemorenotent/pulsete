@@ -1,7 +1,7 @@
 import type { ChannelState, ChannelUserState } from '../../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../../shared/irc-identifiers.js';
 
-export type UserAvatarCandidate = Pick<ChannelUserState, 'host' | 'nick' | 'username'>;
+export type UserAvatarCandidate = Pick<ChannelUserState, 'account' | 'host' | 'identity' | 'nick' | 'username'>;
 
 export const IRCLOUD_PUBLIC_AVATAR_BASE_URL =
   'https://static.irccloud-cdn.com/avatar-redirect/';
@@ -48,7 +48,9 @@ export const resolveUserAvatarCandidate = (
   }
   return firstMatchedUser ?? {
     nick,
+    account: null,
     username: null,
     host: null,
+    identity: undefined,
   } satisfies UserAvatarCandidate;
 };

@@ -160,6 +160,37 @@ test('pending nick self events are handled before the nick echo arrives', () => 
   ]);
 });
 
+test('message account tags are stored as sender identity', () => {
+  const identities: unknown[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'message') {
+          identities.push(event.message.senderIdentity);
+        }
+      },
+    }
+  );
+
+  handleIrcLine(connection, '@account=AliceAccount :alice!user@host PRIVMSG tester :hello');
+
+  assert.deepEqual(identities, [{ kind: 'account', value: 'aliceaccount' }]);
+});
+
 test('rejected connected nick changes keep the last accepted nick', () => {
   const writes: string[] = [];
   const statuses: string[] = [];

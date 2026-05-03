@@ -25,12 +25,15 @@ export const appendMessage = (db: SqliteDb, input: MessageInput, lookup: Message
     : resolveRuntimeMessageAttribution(input);
   db.prepare(`
     INSERT INTO messages
-      (id, bufferId, nick, speakerRole, speakerNick, attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, bufferId, nick, senderIdentityKind, senderIdentityValue, speakerRole, speakerNick,
+       attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     input.id,
     bufferId,
     input.nick,
+    input.senderIdentity?.kind ?? null,
+    input.senderIdentity?.value ?? null,
     attribution.speakerRole,
     attribution.speakerNick ?? input.nick,
     attribution.attributionSource,

@@ -65,8 +65,10 @@ test('query avatar lookup is network-scoped and IRC-case aware', () => {
 test('query avatar lookup falls back to a placeholder identity', () => {
   assert.deepEqual(resolveUserAvatarCandidate([], 'network-1', 'MissD'), {
     nick: 'MissD',
+    account: null,
     username: null,
     host: null,
+    identity: undefined,
   });
 
   const user = resolveUserAvatarCandidate([

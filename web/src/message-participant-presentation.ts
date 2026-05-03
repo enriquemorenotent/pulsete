@@ -54,7 +54,12 @@ export const resolveMessageParticipantPresentation = (
   return {
     label,
     emoji: label && input.nickEmojiByNetworkNick
-      ? resolveNickEmoji(input.nickEmojiByNetworkNick, input.message.networkId, label)
+      ? resolveNickEmoji(
+          input.nickEmojiByNetworkNick,
+          input.message.networkId,
+          label,
+          input.message.senderIdentity,
+        )
       : null,
     toneClassName: resolveParticipantTone(input.message, input.highlightMode, input.channelUserModesByNick),
     clickable: label === input.message.nick && canOpenParticipantQuery(input.message, input.highlightMode, input.allowParticipantQuery),

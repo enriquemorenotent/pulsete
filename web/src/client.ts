@@ -1,6 +1,7 @@
 import { historySearchLimit, historyWindowLimit } from '../../shared/protocol-chat.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type { BufferState, BufferHistorySearchPayload, FriendState, MutedNickState, NetworkProfile, NickEmojiState, ChatMessage } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import {
   parseDownloadFileName,
   triggerFileDownload,
@@ -120,18 +121,23 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
-  saveNickEmoji: (networkId: string, nick: string, emoji: string | null) =>
+  saveNickEmoji: (
+    networkId: string,
+    nick: string,
+    emoji: string | null,
+    identity?: NetworkUserIdentity | null,
+  ) =>
     apiRequest<{ nickEmoji: NickEmojiState | null; messages: ServerMessage[] }>(
       `/api/networks/${encodeURIComponent(networkId)}/nick-emojis/${encodeURIComponent(nick)}`,
       {
         method: 'PUT',
-        body: JSON.stringify({ emoji }),
+        body: JSON.stringify({ emoji, identity }),
       },
     ),
-  addMutedNick: (networkId: string, nick: string) =>
+  addMutedNick: (networkId: string, nick: string, identity?: NetworkUserIdentity | null) =>
     apiRequest<{ mutedNick: MutedNickState; messages: ServerMessage[] }>('/api/muted-nicks', {
       method: 'POST',
-      body: JSON.stringify({ networkId, nick }),
+      body: JSON.stringify({ networkId, nick, identity }),
     }),
   removeMutedNick: (mutedNickId: string) =>
     apiRequest<{ ok: boolean; mutedNickId: string; messages: ServerMessage[] }>(`/api/muted-nicks/${mutedNickId}`, {

@@ -109,6 +109,37 @@ test('incoming private messages from muted nicks stay in history without opening
   assert.equal(harness.sent.some((message) => message.type === 'buffer.upsert'), false);
 });
 
+test('incoming private messages from muted account identity stay muted after nick changes', () => {
+  const harness = createRuntimeEventHarness();
+  harness.storage.mutedNicks.upsert({
+    networkId: harness.network.id,
+    nick: 'helper',
+    identity: { kind: 'account', value: 'helper-account' },
+  });
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper_',
+      nick: 'helper_',
+      senderIdentity: { kind: 'account', value: 'helper-account' },
+      body: 'new nick, same account',
+      kind: 'line',
+      self: false,
+      ts: Date.now(),
+    },
+  });
+
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'helper_'), null);
+  assert.equal(
+    harness.storage.conversations.listMessages(harness.network.id, 'helper_', 10)[0]?.body,
+    'new nick, same account',
+  );
+  assert.equal(harness.sent.some((message) => message.type === 'buffer.upsert'), false);
+});
+
 test('private action messages open query buffers automatically', () => {
   const harness = createRuntimeEventHarness();
 

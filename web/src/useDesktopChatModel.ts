@@ -61,21 +61,22 @@ export function useDesktopChatModel({
     workspace.selectedBuffer?.kind === 'channel'
     || workspace.selectedBuffer?.kind === 'query';
   const selectedBufferId = canUseBufferHistoryTools ? workspace.selectedBuffer?.id ?? null : null;
-  const selectedQueryContactRule = workspace.selectedBuffer?.kind === 'query'
-    ? resolveContactRuleState({
-        networkId: workspace.selectedBuffer.networkId,
-        nick: workspace.selectedBuffer.target,
-        friends,
-        mutedNicks,
-        contactNotifications: contactNotifications.settings,
-      })
-    : null;
   const selectedQueryAvatarUser = useMemo(() => {
     const selectedBuffer = workspace.selectedBuffer;
     return selectedBuffer?.kind === 'query'
       ? resolveUserAvatarCandidate(channels, selectedBuffer.networkId, selectedBuffer.target)
       : null;
   }, [channels, workspace.selectedBuffer]);
+  const selectedQueryContactRule = workspace.selectedBuffer?.kind === 'query'
+    ? resolveContactRuleState({
+        networkId: workspace.selectedBuffer.networkId,
+        nick: workspace.selectedBuffer.target,
+        identity: selectedQueryAvatarUser?.identity,
+        friends,
+        mutedNicks,
+        contactNotifications: contactNotifications.settings,
+      })
+    : null;
   const participantQueryNetwork = workspace.selectedBuffer?.kind === 'channel'
     ? workspace.selectedNetwork
     : null;

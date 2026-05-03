@@ -1,5 +1,6 @@
 import type { MutedNickState } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import { notFound } from './app-error.js';
 import { normalizeMutedNick } from './irc-validate.js';
 import { recomputeMutedNickUnread } from './runtime-muted-nick-unread.js';
@@ -21,6 +22,7 @@ export class RuntimeMutedNickService {
   upsertMutedNick(
     networkId: string,
     nick: string,
+    identity?: NetworkUserIdentity | null,
   ): { mutedNick: MutedNickState; messages: readonly ServerMessage[] } {
     if (!this.options.networks.get(networkId)) {
       throw notFound('Network not found');
@@ -28,6 +30,7 @@ export class RuntimeMutedNickService {
     const mutedNick = this.options.mutedNicks.upsert({
       networkId,
       nick: normalizeMutedNick(nick),
+      identity: identity ?? undefined,
     });
     const changedBuffers = recomputeMutedNickUnread(
       this.options.conversations,

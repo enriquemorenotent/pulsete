@@ -11,6 +11,8 @@ export const messageColumns = [
   'b.networkId AS networkId',
   'b.target AS target',
   'm.nick',
+  'm.senderIdentityKind',
+  'm.senderIdentityValue',
   'm.speakerRole',
   'm.speakerNick',
   'm.attributionSource',

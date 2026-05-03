@@ -9,6 +9,7 @@ import type {
 } from './contact-notifications/settings.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 
 export type DesktopShellHeaderModel = {
   onOpenNetworkManager: () => void;
@@ -29,7 +30,12 @@ export type DesktopShellNicklistModel = {
   contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
-  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
+  onSaveNickEmoji: (
+    networkId: string,
+    nick: string,
+    emoji: string | null,
+    identity?: NetworkUserIdentity | null,
+  ) => Promise<boolean>;
   onSelectNick: (network: NetworkProfile, nick: string) => void;
 };
 
@@ -69,10 +75,16 @@ export type DesktopShellServerProfileModel = {
 
 export type DesktopShellQueryProfileModel = {
   buffer: BufferState | null;
+  identity?: NetworkUserIdentity | null;
   nickEmoji?: NickEmojiState | null;
   network: NetworkProfile | null;
   onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
-  onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
+  onSaveNickEmoji: (
+    networkId: string,
+    nick: string,
+    emoji: string | null,
+    identity?: NetworkUserIdentity | null,
+  ) => Promise<boolean>;
 };
 
 export type DesktopShellModel = {

@@ -20,6 +20,7 @@ type WorkspaceRightSidebarProps = {
   };
   queryProfile?: {
     buffer: BufferState | null;
+    identity?: NickEmojiState['identity'] | null;
     nickEmoji?: NickEmojiState | null;
     network: NetworkProfile | null;
     onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
@@ -50,6 +51,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     return (
       <QueryProfileSidebar
         buffer={props.queryProfile?.buffer ?? props.workspace.selectedBuffer}
+        identity={props.queryProfile?.identity}
         nickEmoji={
           props.queryProfile?.nickEmoji
           ?? (props.workspace.selectedBuffer

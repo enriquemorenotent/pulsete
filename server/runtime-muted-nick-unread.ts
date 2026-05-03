@@ -1,11 +1,11 @@
 import type { BufferState, MutedNickState } from '../shared/protocol-chat.js';
-import { isNickMuted } from '../shared/muted-nicks.js';
+import { isUserMuted, resolveMutedTarget } from '../shared/muted-nicks.js';
 import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
 import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
 import type { MessageInput } from './storage-types.js';
 
 const resolveMessageMuted = (mutedNicks: readonly MutedNickState[], message: MessageInput) =>
-  isNickMuted(mutedNicks, message.networkId, message.nick);
+  isUserMuted(mutedNicks, resolveMutedTarget(message.networkId, message.nick, message.senderIdentity));
 
 const findFirstUnreadIndex = (messages: readonly MessageInput[], buffer: BufferState) => {
   if (buffer.lastReadMessageId) {

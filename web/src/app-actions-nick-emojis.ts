@@ -1,6 +1,7 @@
 import type { AppActionContext } from './app-actions-types.js';
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 
 type NickEmojiActionParams = Pick<
   AppActionContext,
@@ -14,9 +15,14 @@ export const createNickEmojiActions = ({
 }: NickEmojiActionParams) => {
   const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
 
-  const saveNickEmoji = async (networkId: string, nick: string, emoji: string | null) => {
+  const saveNickEmoji = async (
+    networkId: string,
+    nick: string,
+    emoji: string | null,
+    identity?: NetworkUserIdentity | null,
+  ) => {
     return executeMutation({
-      request: () => api.saveNickEmoji(networkId, nick, emoji),
+      request: () => api.saveNickEmoji(networkId, nick, emoji, identity),
       mapResult: () => true,
       successMessage: null,
       errorMessage: 'Failed to update nick emoji',

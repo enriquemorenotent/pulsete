@@ -4,6 +4,7 @@ import type { RuntimeNetworkProfile } from './storage-types.js';
 import type { IrcCapabilityState } from './irc-state-types.js';
 
 const passiveCapabilityNames = [
+  'account-tag',
   'account-notify',
   'away-notify',
   'chghost',

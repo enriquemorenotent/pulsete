@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { MessageKind } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
-import { isNickMuted } from '../shared/muted-nicks.js';
+import { isUserMuted, resolveMutedTarget } from '../shared/muted-nicks.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
@@ -57,10 +57,9 @@ export const handleRuntimeConversationMessageEvent = (
     && !isChannelTarget(event.message.target)
     && !findOpenBufferByTarget(options, event.message.networkId, event.message.target);
   const message = openTargetNotice ? { ...event.message, target: 'server' } : event.message;
-  const messageMuted = isNickMuted(
+  const messageMuted = isUserMuted(
     options.mutedNicks.list(message.networkId),
-    message.networkId,
-    message.nick,
+    resolveMutedTarget(message.networkId, message.nick, message.senderIdentity),
   );
   const removedChannel = event.message.self && event.message.kind === 'part'
     ? options.conversations.getChannelByName(event.message.networkId, event.message.target)
@@ -179,10 +178,9 @@ const appendRuntimeConversationMessage = (
   options: RuntimeConversationServiceOptions,
   message: MessageInput,
 ) => {
-  const messageMuted = isNickMuted(
+  const messageMuted = isUserMuted(
     options.mutedNicks.list(message.networkId),
-    message.networkId,
-    message.nick,
+    resolveMutedTarget(message.networkId, message.nick, message.senderIdentity),
   );
   const { saved, bufferUpdate } = appendConversationMessage(options.conversations, {
     message,

@@ -18,7 +18,7 @@ type ChatPaneHeaderProps = {
   nickEmojis: NickEmojiState[];
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
-  selectedQueryAvatarUser?: Pick<ChannelUserState, 'host' | 'nick' | 'username'> | null;
+  selectedQueryAvatarUser?: Pick<ChannelUserState, 'host' | 'identity' | 'nick' | 'username'> | null;
   selectedQueryContactRule?: ContactRuleState | null;
   onOpenMentionedChannel: (channel: string) => void;
   onWhoisSelectedQuery?: () => void;
@@ -38,7 +38,12 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const { selectedBuffer } = props.workspace;
   const selectedNickEmoji =
     selectedBuffer?.kind === 'query'
-      ? findNickEmoji(props.nickEmojis, selectedBuffer.networkId, selectedBuffer.target)
+      ? findNickEmoji(
+          props.nickEmojis,
+          selectedBuffer.networkId,
+          selectedBuffer.target,
+          props.selectedQueryAvatarUser?.identity,
+        )
       : null;
   const topic = props.workspace.selectedChannel?.topic.trim() ?? '';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
