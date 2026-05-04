@@ -7,6 +7,7 @@ import {
   prependConversationMessages,
   removeBufferMessages,
   removeConversationMessages,
+  updateBufferMessageMetadata,
 } from './conversation-message-state.js';
 
 export const sortBuffers = (buffers: BufferState[]) =>
@@ -119,10 +120,13 @@ export const reduceConversationDomain = (
         ...domain,
         buffers: sortBuffers(buffers),
         pendingChannels,
+        messages: updateBufferMessageMetadata(domain.messages, action.buffer),
       };
     }
     case 'remove-buffer': {
-      const removedBuffer = findBufferById(domain.buffers, action.bufferId);
+      const replacementBuffer = action.replacementBufferId
+        ? findBufferById(domain.buffers, action.replacementBufferId)
+        : null;
       return {
         ...domain,
         buffers: domain.buffers.filter((buffer) => buffer.id !== action.bufferId),
@@ -130,7 +134,7 @@ export const reduceConversationDomain = (
           Object.entries(domain.queryPresence).filter(([bufferId]) => bufferId !== action.bufferId)
         ),
         channels: domain.channels.filter((channel) => channel.id !== action.bufferId),
-        messages: removedBuffer ? removeBufferMessages(domain.messages, removedBuffer) : domain.messages,
+        messages: removeBufferMessages(domain.messages, action.bufferId, replacementBuffer),
       };
     }
     case 'append-message':
@@ -156,7 +160,13 @@ export const reduceConversationDomain = (
     case 'remove-messages':
       return {
         ...domain,
-        messages: removeConversationMessages(domain.messages, action.networkId, action.target, action.messageIds),
+        messages: removeConversationMessages(
+          domain.messages,
+          action.networkId,
+          action.target,
+          action.messageIds,
+          action.bufferId,
+        ),
       };
     case 'upsert-channel': {
       const channels = domain.channels.filter((channel) => channel.id !== action.channel.id);

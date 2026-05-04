@@ -1,4 +1,5 @@
 import type { ChannelUserMode } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { Button } from '@/components/ui/button.js';
 import { DayDivider, TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptModel } from './transcript/model.js';
@@ -16,7 +17,7 @@ type ChatTranscriptStaticProps = {
   mode: MessageDisplayMode;
   model: ChatTranscriptModel;
   onOpenChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
   onToggleMutedGroup: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;

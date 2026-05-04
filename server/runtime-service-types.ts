@@ -11,6 +11,7 @@ import type { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type { createRuntimeSnapshot } from './runtime-snapshot.js';
 import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 
 export type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
 
@@ -26,6 +27,7 @@ export type RuntimeConversationMutations = {
   openQuery(
     networkId: string,
     target: string,
+    peerIdentity?: NetworkUserIdentity | null,
   ): { buffer: BufferState; messages: readonly ServerMessage[] };
   closeBuffer(bufferId: string): { buffer: BufferState; messages: readonly ServerMessage[] };
   markBufferRead: RuntimeConversationService['markBufferRead'];

@@ -34,8 +34,13 @@ import {
   upsertChannel,
 } from './storage-buffers.js';
 import { runInTransaction } from './storage-db.js';
-import { recordObservedQueryNickChange, upsertQueryBuffer } from './storage-query-aliases.js';
+import {
+  recordObservedQueryNickChange,
+  upsertQueryBuffer,
+  upsertQueryBufferWithMergeResult,
+} from './storage-query-aliases.js';
 import type { BufferInput, ChannelInput, MessageInput } from './storage-types.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 
 export class StorageConversationsRepository {
   constructor(private readonly db: SqliteDb) {}
@@ -155,8 +160,20 @@ export class StorageConversationsRepository {
     return upsertBuffer(this.db, input);
   }
 
-  upsertQuery(networkId: string, target: string) {
-    return runInTransaction(this.db, () => upsertQueryBuffer(this.db, { networkId, kind: 'query', target }));
+  upsertQuery(networkId: string, target: string, peerIdentity?: NetworkUserIdentity | null) {
+    return this.upsertQueryWithMergeResult(networkId, target, peerIdentity).buffer;
+  }
+
+  upsertQueryWithMergeResult(networkId: string, target: string, peerIdentity?: NetworkUserIdentity | null) {
+    return runInTransaction(this.db, () =>
+      upsertQueryBufferWithMergeResult(this.db, {
+        networkId,
+        kind: 'query',
+        target,
+        peerIdentity,
+        peerIdentitySource: 'manual',
+      })
+    );
   }
 
   recordObservedQueryNickChange(networkId: string, fromTarget: string, toTarget: string) {

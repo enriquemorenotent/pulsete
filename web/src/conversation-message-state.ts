@@ -49,10 +49,52 @@ export const prependConversationMessages = (
   return next;
 };
 
-export const removeBufferMessages = (messages: ConversationMessages, buffer: BufferState) => {
-  const key = toConversationMessageKey(buffer.networkId, buffer.target);
+export const updateBufferMessageMetadata = (messages: ConversationMessages, buffer: BufferState) => {
+  const key = buffer.id;
+  const bucket = messages[key];
+  if (!bucket || bucket.length === 0) {
+    return messages;
+  }
+  let changed = false;
+  const nextBucket = bucket.map((message) => {
+    if (message.bufferId === buffer.id && message.networkId === buffer.networkId && message.target === buffer.target) {
+      return message;
+    }
+    changed = true;
+    return {
+      ...message,
+      bufferId: buffer.id,
+      networkId: buffer.networkId,
+      target: buffer.target,
+    };
+  });
+  return changed ? { ...messages, [key]: nextBucket } : messages;
+};
+
+export const removeBufferMessages = (
+  messages: ConversationMessages,
+  bufferId: string,
+  replacementBuffer?: BufferState | null,
+) => {
+  const key = bufferId;
   if (!(key in messages)) {
     return messages;
+  }
+  if (replacementBuffer) {
+    const replacementKey = replacementBuffer.id;
+    const replacementBucket = messages[replacementKey] ?? [];
+    const movedBucket = messages[key].map((message) => ({
+      ...message,
+      bufferId: replacementBuffer.id,
+      networkId: replacementBuffer.networkId,
+      target: replacementBuffer.target,
+    }));
+    const next = {
+      ...messages,
+      [replacementKey]: mergeMessageBucket(replacementBucket, movedBucket),
+    };
+    delete next[key];
+    return next;
   }
   const next = { ...messages };
   delete next[key];
@@ -61,7 +103,7 @@ export const removeBufferMessages = (messages: ConversationMessages, buffer: Buf
 
 export const removeNetworkMessages = (messages: ConversationMessages, networkId: string) => {
   const next = Object.fromEntries(
-    Object.entries(messages).filter(([key]) => !key.startsWith(`${networkId}:`))
+    Object.entries(messages).filter(([, bucket]) => !bucket.some((message) => message.networkId === networkId))
   );
   return Object.keys(next).length === Object.keys(messages).length ? messages : next;
 };
@@ -71,46 +113,46 @@ export const removeConversationMessages = (
   networkId: string,
   target: string,
   messageIds: string[],
+  bufferId?: string,
 ) => {
   if (messageIds.length === 0) {
     return messages;
   }
-  const key = toConversationMessageKey(networkId, target);
-  const bucket = messages[key];
-  if (!bucket || bucket.length === 0) {
+  const keys = bufferId
+    ? [bufferId]
+    : findConversationBucketsByTarget(messages, networkId, target);
+  if (keys.length === 0) {
     return messages;
   }
   const deletedIds = new Set(messageIds);
-  const nextBucket = bucket.filter((message) => !deletedIds.has(message.id));
-  if (nextBucket.length === bucket.length) {
-    return messages;
+  let changed = false;
+  const next = { ...messages };
+  for (const key of keys) {
+    const bucket = next[key];
+    if (!bucket || bucket.length === 0) {
+      continue;
+    }
+    const nextBucket = bucket.filter((message) => !deletedIds.has(message.id));
+    if (nextBucket.length === bucket.length) {
+      continue;
+    }
+    changed = true;
+    if (nextBucket.length === 0) {
+      delete next[key];
+    } else {
+      next[key] = nextBucket;
+    }
   }
-  if (nextBucket.length === 0) {
-    const next = { ...messages };
-    delete next[key];
-    return next;
-  }
-  return {
-    ...messages,
-    [key]: nextBucket,
-  };
+  return changed ? next : messages;
 };
 
-const mergeMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => {
-  const merged = new Map<string, ChatMessage>();
-  for (const message of current) {
-    merged.set(message.id, message);
-  }
-  for (const message of incoming) {
-    merged.set(message.id, message);
-  }
-  return Array.from(merged.values()).sort((left, right) => left.ts - right.ts);
-};
+const mergeMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) =>
+  normalizeMessageBucket([...current, ...incoming]);
 
 const groupMessagesByConversation = (messages: ChatMessage[]) => {
   const grouped = new Map<string, ChatMessage[]>();
   for (const message of messages) {
-    const key = toConversationMessageKey(message.networkId, message.target);
+    const key = message.bufferId;
     const bucket = grouped.get(key);
     if (bucket) {
       bucket.push(message);
@@ -120,6 +162,17 @@ const groupMessagesByConversation = (messages: ChatMessage[]) => {
   }
   return grouped;
 };
+
+const findConversationBucketsByTarget = (
+  messages: ConversationMessages,
+  networkId: string,
+  target: string,
+) => Object.entries(messages)
+  .filter(([, bucket]) => bucket.some((message) =>
+    message.networkId === networkId
+    && normalizeIrcIdentifier(message.target) === normalizeIrcIdentifier(target)
+  ))
+  .map(([key]) => key);
 
 const appendMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => {
   const normalizedIncoming = normalizeMessageBucket(incoming);
@@ -184,12 +237,7 @@ const canPrependWithoutResort = (current: ChatMessage[], incoming: ChatMessage[]
 
 const hasDuplicateMessageIds = (current: ChatMessage[], incoming: ChatMessage[]) => {
   const currentIds = new Set(current.map((message) => message.id));
-  for (const message of incoming) {
-    if (currentIds.has(message.id)) {
-      return true;
-    }
-  }
-  return false;
+  return incoming.some((message) => currentIds.has(message.id));
 };
 
 const limitMessageBucket = (bucket: ChatMessage[], maxMessages: number | undefined) =>

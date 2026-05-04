@@ -36,7 +36,11 @@ export type DesktopShellNicklistModel = {
     emoji: string | null,
     identity?: NetworkUserIdentity | null,
   ) => Promise<boolean>;
-  onSelectNick: (network: NetworkProfile, nick: string) => void;
+  onSelectNick: (
+    network: NetworkProfile,
+    nick: string,
+    identity?: NetworkUserIdentity | null,
+  ) => void;
 };
 
 export type DesktopShellNetworkManagerModel = {

@@ -21,8 +21,12 @@ import type { RuntimeConversationServiceOptions } from './runtime-conversation-s
 export class RuntimeConversationService {
   constructor(private readonly options: RuntimeConversationServiceOptions) {}
 
-  openQuery(networkId: string, target: string) {
-    return openRuntimeConversationQuery(this.options, networkId, target);
+  openQuery(
+    networkId: string,
+    target: string,
+    peerIdentity?: Parameters<typeof openRuntimeConversationQuery>[3],
+  ) {
+    return openRuntimeConversationQuery(this.options, networkId, target, peerIdentity);
   }
 
   closeBuffer(bufferId: string) {

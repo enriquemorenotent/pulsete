@@ -1,5 +1,6 @@
 import { VolumeX } from 'lucide-react';
 import type { ChannelUserMode } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { cn } from '@/lib/utils.js';
 import type { ChatTranscriptMutedGroupRow } from './transcript/model.js';
 import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';
@@ -14,7 +15,7 @@ type ChatPaneMutedMessageGroupRowProps = {
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onToggle: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;
   row: ChatTranscriptMutedGroupRow;

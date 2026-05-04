@@ -1,4 +1,5 @@
 import type { ChannelUserMode } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { ChatPaneMutedMessageGroupRow } from './ChatPaneMutedMessageGroupRow.js';
 import { UnreadDivider } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptRow as TranscriptRow } from './transcript/model.js';
@@ -14,7 +15,7 @@ type ChatTranscriptRowProps = {
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onToggleMutedGroup: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;
   row: TranscriptRow;

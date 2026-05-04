@@ -53,12 +53,17 @@ export type RuntimeConversationStore = {
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];
   upsertChannel(input: ChannelInput): ChannelState;
   upsertBuffer(input: BufferInput): BufferState;
-  upsertQuery(networkId: string, target: string): BufferState;
+  upsertQuery(networkId: string, target: string, peerIdentity?: NetworkUserIdentity | null): BufferState;
+  upsertQueryWithMergeResult(
+    networkId: string,
+    target: string,
+    peerIdentity?: NetworkUserIdentity | null,
+  ): { buffer: BufferState; removedBufferIds: string[] };
   recordObservedQueryNickChange(
     networkId: string,
     fromTarget: string,
     toTarget: string,
-  ): { buffer: BufferState; removedBufferId: string | null } | null;
+  ): { buffer: BufferState; removedBufferIds: string[] } | null;
   appendMessage(input: MessageInput): AppSnapshot['messages'][number];
 };
 

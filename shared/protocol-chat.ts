@@ -26,6 +26,7 @@ export type SpeakerAttributionConfidence = z.infer<typeof speakerAttributionConf
 
 export const chatMessageSchema = z.object({
   id: z.string(),
+  bufferId: z.string(),
   networkId: z.string(),
   target: z.string(),
   nick: z.string().nullable(),
@@ -133,6 +134,7 @@ export const bufferSchema = z.object({
   priorityUnread: z.number().int().nonnegative().default(0),
   lastReadTs: z.number().int().nonnegative().nullable().default(null),
   lastReadMessageId: z.string().nullable().default(null),
+  peerIdentity: networkUserIdentitySchema.optional(),
   selfNickAliases: z.array(z.string()).default([]).optional(),
 });
 export type BufferState = z.infer<typeof bufferSchema>;

@@ -52,7 +52,7 @@ const dispatchRuntimeClientMessage = (
       dispatcher.irc.part(message.networkId, message.channel, message.sourceBufferId);
       return;
     case 'query.open':
-      dispatcher.http.buffers.openQuery(message.networkId, message.target);
+      dispatcher.http.buffers.openQuery(message.networkId, message.target, message.peerIdentity);
       return;
     case 'message.send':
       dispatcher.irc.sendMessage(

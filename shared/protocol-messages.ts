@@ -15,6 +15,7 @@ import {
   pendingChannelSchema,
   presenceStatusSchema,
 } from './protocol-chat.js';
+import { networkUserIdentitySchema } from './user-identity.js';
 
 const baseClientSchema = z.object({
   type: z.string(),
@@ -39,7 +40,12 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     channel: z.string(),
     sourceBufferId: z.string().optional(),
   }),
-  baseClientSchema.extend({ type: z.literal('query.open'), networkId: z.string(), target: z.string() }),
+  baseClientSchema.extend({
+    type: z.literal('query.open'),
+    networkId: z.string(),
+    target: z.string(),
+    peerIdentity: networkUserIdentitySchema.nullable().optional(),
+  }),
   baseClientSchema.extend({
     type: z.literal('message.send'),
     networkId: z.string(),
@@ -92,6 +98,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('buffer.remove'),
     networkId: z.string(),
     bufferId: z.string(),
+    replacementBufferId: z.string().optional(),
   }),
   baseServerSchema.extend({ type: z.literal('channel.snapshot'), channel: channelSchema }),
   baseServerSchema.extend({ type: z.literal('channel.pending'), pendingChannel: pendingChannelSchema }),
@@ -134,6 +141,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseServerSchema.extend({ type: z.literal('message.upsert'), message: chatMessageSchema }),
   baseServerSchema.extend({
     type: z.literal('message.remove'),
+    bufferId: z.string().optional(),
     networkId: z.string(),
     target: z.string(),
     messageIds: z.array(z.string()),

@@ -1,4 +1,5 @@
 import type { ChannelUserMode } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { ChatPaneCompactMessageRow } from './ChatPaneCompactMessageRow.js';
 import { ChatPaneExpandedMessageRow } from './ChatPaneExpandedMessageRow.js';
 import {
@@ -19,7 +20,7 @@ type ChatTranscriptMessageRowProps = {
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   participantHighlightMode: ParticipantHighlightMode;
   row: TranscriptMessageRow;
 };

@@ -1,6 +1,7 @@
 import {
   historyImportBatchesSchemaSql,
   messageSearchSchemaSql,
+  queryPeerIdentitiesSchemaSql,
   queryNickAliasesSchemaSql,
 } from './storage-schema-helpers.js';
 
@@ -109,6 +110,8 @@ export const storageBootstrapSchemaSql = `
 ${historyImportBatchesSchemaSql}
 
 ${queryNickAliasesSchemaSql}
+
+${queryPeerIdentitiesSchemaSql}
 
   CREATE TABLE IF NOT EXISTS friends (
     id TEXT PRIMARY KEY,

@@ -31,6 +31,7 @@ const emptySnapshot = {
 
 const message: ChatMessage = {
   id: 'message-1',
+  bufferId: 'buffer-1',
   networkId: 'network-1',
   target: '#help',
   nick: 'alice',

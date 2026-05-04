@@ -17,6 +17,7 @@ const queryBuffer: BufferState = {
 test('message matching treats IRC nick casing as the same private-message target', () => {
   const message: ChatMessage = {
     id: 'message-1',
+    bufferId: queryBuffer.id,
     networkId: 'network-1',
     target: 'alice',
     nick: 'alice',
@@ -32,6 +33,7 @@ test('message matching treats IRC nick casing as the same private-message target
 test('message matching still respects the network id', () => {
   const message: ChatMessage = {
     id: 'message-2',
+    bufferId: 'buffer-2',
     networkId: 'network-2',
     target: 'alice',
     nick: 'alice',

@@ -91,14 +91,21 @@ const shouldRespectInputAttribution = (input: MessageInput) =>
   || input.attributionConfidence !== undefined;
 
 const ensureMessageBufferId = (db: SqliteDb, input: MessageInput) => {
-  const existing = getMessageBufferId(db, input.networkId, input.target);
+  const existing = getMessageBufferId(db, input.networkId, input.target, input.senderIdentity);
   if (existing) {
     return existing;
   }
 
   const kind = resolveMessageBufferKind(input.target);
   const buffer = kind === 'query'
-    ? upsertQueryBuffer(db, { networkId: input.networkId, kind, target: input.target, isOpen: false })
+    ? upsertQueryBuffer(db, {
+        networkId: input.networkId,
+        kind,
+        target: input.target,
+        isOpen: false,
+        peerIdentity: input.senderIdentity,
+        peerIdentitySource: 'message',
+      })
     : upsertBuffer(db, {
         networkId: input.networkId,
         kind,

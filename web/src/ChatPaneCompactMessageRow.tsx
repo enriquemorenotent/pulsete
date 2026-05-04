@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { ChatMessage } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { cn } from '@/lib/utils.js';
 import type { MessageParticipantPresentation } from './message-participant-presentation.js';
 import { ParticipantNickLabel } from './ParticipantNickLabel.js';
@@ -28,7 +29,7 @@ type ChatPaneCompactMessageRowProps = {
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
 };
 
 export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps) {
@@ -68,6 +69,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
       {props.participant.label ? (
         <ParticipantNickLabel
           nick={props.participant.label}
+          identity={message.senderIdentity}
           emoji={props.participant.emoji}
           clickable={props.participant.clickable}
           onOpenParticipantQuery={props.onOpenParticipantQuery}

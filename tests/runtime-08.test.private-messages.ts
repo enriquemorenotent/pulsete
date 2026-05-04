@@ -57,6 +57,150 @@ test('incoming private messages reuse an existing query buffer across IRC nick c
   });
 });
 
+test('incoming private messages reuse account identity when nick changes were missed', () => {
+  const harness = createRuntimeEventHarness();
+  const query = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'helper',
+      senderIdentity: { kind: 'account', value: 'helper-account' },
+      body: 'before rename',
+      kind: 'line',
+      self: false,
+      ts: 1,
+    },
+  });
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'guide',
+      nick: 'guide',
+      senderIdentity: { kind: 'account', value: 'helper-account' },
+      body: 'after missed nick event',
+      kind: 'line',
+      self: false,
+      ts: 2,
+    },
+  });
+
+  const queryBuffers = harness.storage.conversations
+    .listBuffers(harness.network.id)
+    .filter((buffer) => buffer.kind === 'query');
+  assert.equal(queryBuffers.length, 1);
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'guide')?.id, query.id);
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'guide', 10).map((message) => message.body),
+    ['before rename', 'after missed nick event'],
+  );
+  assert.deepEqual(
+    harness.storage.conversations.getBuffer(query.id)?.peerIdentity,
+    { kind: 'account', value: 'helper-account' },
+  );
+});
+
+test('incoming private messages reuse userhost identity when account is unavailable', () => {
+  const harness = createRuntimeEventHarness();
+  const query = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'helper',
+      senderIdentity: { kind: 'userhost', value: 'helper@users.example' },
+      body: 'before rename',
+      kind: 'line',
+      self: false,
+      ts: 1,
+    },
+  });
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'guide',
+      nick: 'guide',
+      senderIdentity: { kind: 'userhost', value: 'helper@users.example' },
+      body: 'after missed nick event',
+      kind: 'line',
+      self: false,
+      ts: 2,
+    },
+  });
+
+  const queryBuffers = harness.storage.conversations
+    .listBuffers(harness.network.id)
+    .filter((buffer) => buffer.kind === 'query');
+  assert.equal(queryBuffers.length, 1);
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'guide')?.id, query.id);
+  assert.deepEqual(
+    harness.storage.conversations.getBuffer(query.id)?.peerIdentity,
+    { kind: 'userhost', value: 'helper@users.example' },
+  );
+});
+
+test('incoming private messages merge duplicate query buffers that share account identity', () => {
+  const harness = createRuntimeEventHarness();
+  const originalQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
+  const renamedQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'guide');
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'helper',
+      senderIdentity: { kind: 'account', value: 'helper-account' },
+      body: 'old window',
+      kind: 'line',
+      self: false,
+      ts: 1,
+    },
+  });
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'guide',
+      nick: 'guide',
+      senderIdentity: { kind: 'account', value: 'helper-account' },
+      body: 'new window',
+      kind: 'line',
+      self: false,
+      ts: 2,
+    },
+  });
+
+  const queryBuffers = harness.storage.conversations
+    .listBuffers(harness.network.id)
+    .filter((buffer) => buffer.kind === 'query');
+  assert.equal(queryBuffers.length, 1);
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'guide')?.id, originalQuery.id);
+  assert.equal(harness.storage.conversations.getBuffer(renamedQuery.id), null);
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'guide', 10).map((message) => message.body),
+    ['old window', 'new window'],
+  );
+  assert.deepEqual(harness.sent.find((message) => message.type === 'buffer.remove'), {
+    type: 'buffer.remove',
+    networkId: harness.network.id,
+    bufferId: renamedQuery.id,
+    replacementBufferId: originalQuery.id,
+  });
+});
+
 test('self-sent private messages open query buffers automatically', () => {
   const harness = createRuntimeEventHarness();
 

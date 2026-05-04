@@ -77,13 +77,13 @@ export type Action =
   | { type: 'friend-presence'; friendId: string; presence: PresenceStatus }
   | { type: 'query-presence'; bufferId: string; presence: PresenceStatus }
   | { type: 'upsert-buffer'; buffer: BufferState }
-  | { type: 'remove-buffer'; bufferId: string; networkId: string }
+  | { type: 'remove-buffer'; bufferId: string; networkId: string; replacementBufferId?: string }
   | { type: 'select'; selection: SelectedBuffer | null }
   | { type: 'append-message'; message: ChatMessage }
   | { type: 'upsert-message'; message: ChatMessage }
   | { type: 'append-messages'; messages: ChatMessage[] }
   | { type: 'prepend-messages'; messages: ChatMessage[] }
-  | { type: 'remove-messages'; networkId: string; target: string; messageIds: string[] }
+  | { type: 'remove-messages'; networkId: string; target: string; messageIds: string[]; bufferId?: string }
   | { type: 'upsert-channel'; channel: ChannelState }
   | { type: 'remove-channel'; channelId: string; networkId: string }
   | { type: 'add-pending-channel'; pendingChannel: PendingChannelState }

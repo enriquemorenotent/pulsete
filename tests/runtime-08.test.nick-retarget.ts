@@ -146,6 +146,7 @@ test('peer nick events merge an existing destination query buffer into the origi
     type: 'buffer.remove',
     networkId: harness.network.id,
     bufferId: renamedQuery.id,
+    replacementBufferId: originalQuery.id,
   });
 });
 

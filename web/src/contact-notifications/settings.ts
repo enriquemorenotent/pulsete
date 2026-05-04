@@ -9,7 +9,6 @@ import {
   normalizeNetworkUserIdentity,
 } from '../../../shared/user-identity.js';
 import type { ConversationMessages } from '../conversation-message-state.js';
-import { toConversationMessageKey } from '../conversation-message-state.js';
 
 export const CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY =
   'pulsete.preferences.contactNotifications.v2';
@@ -233,9 +232,9 @@ const resolveNotificationTarget = (
 
 const getLatestBufferMessage = (
   messagesByConversation: ConversationMessages | undefined,
-  buffer: Pick<BufferState, 'networkId' | 'target'>,
+  buffer: Pick<BufferState, 'id'>,
 ) =>
-  messagesByConversation?.[toConversationMessageKey(buffer.networkId, buffer.target)]?.at(-1) ?? null;
+  messagesByConversation?.[buffer.id]?.at(-1) ?? null;
 
 const contactKey = (contact: ContactNotificationContact) => {
   const normalized = normalizeContact(contact);

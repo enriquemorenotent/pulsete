@@ -1,5 +1,6 @@
 import { memo, useCallback, useReducer } from 'react';
 import type { BufferState, ChannelUserState, ChatMessage, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type { ChannelListState } from './app-types.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
@@ -51,7 +52,7 @@ export type ChatPaneProps = {
   onCloseChannelList: () => void;
   onJoinChannelFromList: (channel: string) => Promise<void>;
   onOpenMentionedChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onOpenChannelList: () => void;
   onReconnectNetwork?: () => Promise<boolean>;
 };

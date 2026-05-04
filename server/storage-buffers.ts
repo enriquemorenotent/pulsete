@@ -3,6 +3,7 @@ import type { SqliteDb } from './storage-sqlite.js';
 import type { BufferState, ChannelState, ChannelUserState } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { listBufferSelfNickAliases, replaceBufferSelfNickAliases } from './storage-owned-lists.js';
+import { getPrimaryQueryPeerIdentity } from './storage-query-identities.js';
 import type { BufferInput, BufferRow, ChannelInput, ChannelRow } from './storage-types.js';
 import { toBufferState, toChannelState } from './storage-utils.js';
 
@@ -28,20 +29,22 @@ export const listBuffers = (db: SqliteDb, networkId?: string): BufferState[] => 
     ? `SELECT ${bufferColumns} FROM buffers WHERE networkId = ? AND isOpen = 1 ORDER BY createdAt ASC`
     : `SELECT ${bufferColumns} FROM buffers WHERE isOpen = 1 ORDER BY createdAt ASC`;
   const args = networkId ? [networkId] : [];
-  return (db.prepare(sql).all(...args) as BufferRow[]).map((row) => toBufferState(row, listBufferSelfNickAliases(db, row.id)));
+  return (db.prepare(sql).all(...args) as BufferRow[]).map((row) =>
+    toBufferState(row, listBufferSelfNickAliases(db, row.id), getPrimaryQueryPeerIdentity(db, row.id))
+  );
 };
 
 export const getBuffer = (db: SqliteDb, bufferId: string): BufferState | null => {
   const row = db.prepare(`SELECT ${bufferColumns} FROM buffers WHERE id = ?`)
     .get(bufferId) as BufferRow | undefined;
-  return row ? toBufferState(row, listBufferSelfNickAliases(db, row.id)) : null;
+  return row ? toBufferState(row, listBufferSelfNickAliases(db, row.id), getPrimaryQueryPeerIdentity(db, row.id)) : null;
 };
 
 export const getStoredBufferByTarget = (db: SqliteDb, networkId: string, target: string): BufferState | null => {
   const row = db.prepare(
     `SELECT ${bufferColumns} FROM buffers WHERE networkId = ? AND targetKey = ?`
   ).get(networkId, normalizeIrcIdentifier(target)) as BufferRow | undefined;
-  return row ? toBufferState(row, listBufferSelfNickAliases(db, row.id)) : null;
+  return row ? toBufferState(row, listBufferSelfNickAliases(db, row.id), getPrimaryQueryPeerIdentity(db, row.id)) : null;
 };
 
 export const getBufferByTarget = (db: SqliteDb, networkId: string, target: string): BufferState | null => {

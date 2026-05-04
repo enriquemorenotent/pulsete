@@ -23,6 +23,7 @@ const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
 
 const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: overrides.id ?? 'message-1',
+  bufferId: overrides.bufferId ?? 'buffer-1',
   networkId: overrides.networkId ?? 'network-1',
   target: overrides.target ?? '#help',
   nick: overrides.nick ?? 'alice',

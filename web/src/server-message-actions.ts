@@ -57,7 +57,12 @@ const toActions = (message: ServerMessage): Action[] => {
     case 'buffer.upsert':
       return [{ type: 'upsert-buffer', buffer: message.buffer }];
     case 'buffer.remove':
-      return [{ type: 'remove-buffer', networkId: message.networkId, bufferId: message.bufferId }];
+      return [{
+        type: 'remove-buffer',
+        networkId: message.networkId,
+        bufferId: message.bufferId,
+        ...(message.replacementBufferId ? { replacementBufferId: message.replacementBufferId } : {}),
+      }];
     case 'channel.snapshot':
       return [{ type: 'upsert-channel', channel: message.channel }];
     case 'channel.pending':
@@ -105,6 +110,7 @@ const toActions = (message: ServerMessage): Action[] => {
         networkId: message.networkId,
         target: message.target,
         messageIds: message.messageIds,
+        ...(message.bufferId ? { bufferId: message.bufferId } : {}),
       }];
     case 'presence.update':
       return [{

@@ -178,11 +178,12 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     const user = buffer
       ? resolveUserAvatarCandidate(channels, buffer.networkId, buffer.target)
       : null;
+    const identity = user?.identity ?? buffer?.peerIdentity;
     return {
       buffer,
-      identity: user?.identity,
+      identity,
       nickEmoji: buffer
-        ? findNickEmoji(nickEmojis, buffer.networkId, buffer.target, user?.identity)
+        ? findNickEmoji(nickEmojis, buffer.networkId, buffer.target, identity)
         : null,
       network: workspace.selectedNetwork,
       onSaveNotes: actions.saveBufferNotes,

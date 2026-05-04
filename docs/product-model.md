@@ -83,17 +83,31 @@ license to turn search into a different product.
 IRC private-message identity is messy because users can change nicks. Pulsete
 tries to preserve transcript continuity without merging unrelated people.
 
-Query buffers are matched by network and IRC-case-normalized target. Nick-change
-events can add aliases so opening a query by a recently observed nick can return
-the existing transcript. Empty duplicate query buffers can be merged away during
-migration or repair, but message-bearing conflicts should not be rewritten into
-one transcript unless the app has strong evidence they represent the same
-conversation.
+Query buffers are matched by stable peer identity when the server provides one,
+then by network and IRC-case-normalized target. Stable peer identity means an
+account identity first, then a userhost identity. Nick identity remains a weak
+fallback, not proof that two conversations are the same person.
+
+After a query buffer exists, the buffer id is the transcript identity. The
+target nick may change during a PM, but live transcript state and stored logs
+must continue to follow the same buffer.
+
+Nick-change events can add aliases so opening a query by a recently observed
+nick can return the existing transcript. Empty duplicate query buffers can be
+merged away during migration or repair. Message-bearing conflicts may be merged
+only when the app has strong evidence they represent the same conversation, such
+as the same stable account identity or a directly observed nick-change event.
 
 Nick-change continuity is convenience from directly observed IRC events, not
 proof of a stable person identity. The app may retarget or merge private-message
 buffers when it saw the nick change happen, but ambiguous alias matches should
 stay separate.
+
+Identity migrations are additive. Existing messages keep their raw nick, sender
+identity fields, target-derived transcript, and buffer membership unless a later
+strong identity match merges duplicate query buffers. When buffers merge,
+messages and import batches move to the surviving buffer rather than being
+deleted.
 
 `selfNickAliases` records the user's historical self nicks for a query buffer.
 This supports old imported or migrated history where "me" was known by a

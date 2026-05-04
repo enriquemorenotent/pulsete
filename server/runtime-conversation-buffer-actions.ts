@@ -13,16 +13,29 @@ import { normalizeQueryTarget } from './irc-validate.js';
 import { historySearchContextAfter, historySearchContextBefore } from '../shared/protocol-chat.js';
 import type { BufferHistorySearchPayload } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import type { RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 
 export const openRuntimeConversationQuery = (
   options: RuntimeConversationServiceOptions,
   networkId: string,
   target: string,
+  peerIdentity?: NetworkUserIdentity | null,
 ) => {
   requireStoredNetwork(options.networks, networkId);
-  const buffer = openConversationQuery(options.conversations, networkId, normalizeQueryTarget(target));
-  return { buffer, messages: [{ type: 'buffer.upsert', buffer } satisfies ServerMessage] };
+  const result = openConversationQuery(
+    options.conversations,
+    networkId,
+    normalizeQueryTarget(target),
+    peerIdentity,
+  );
+  return {
+    buffer: result.buffer,
+    messages: [
+      { type: 'buffer.upsert', buffer: result.buffer } satisfies ServerMessage,
+      ...removedBufferMessages(networkId, result.removedBufferIds, result.buffer.id),
+    ],
+  };
 };
 
 export const closeRuntimeConversationBuffer = (options: RuntimeConversationServiceOptions, bufferId: string) => {
@@ -95,3 +108,14 @@ export const exportRuntimeConversationBufferHistory = (
     content: renderBufferHistoryDownload({ buffer, messages, networkName: network.name }),
   };
 };
+
+const removedBufferMessages = (
+  networkId: string,
+  removedBufferIds: readonly string[],
+  replacementBufferId: string,
+): ServerMessage[] => removedBufferIds.map((bufferId) => ({
+  type: 'buffer.remove',
+  networkId,
+  bufferId,
+  replacementBufferId,
+}));

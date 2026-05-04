@@ -1,13 +1,23 @@
 import { randomUUID } from 'node:crypto';
 import type { BufferState, ChannelState } from '../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import { badRequest, notFound } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
 import type { RuntimeConversationStore } from './runtime-store-ports.js';
 import type { MessageInput } from './storage-types.js';
 
-export const openConversationQuery = (store: RuntimeConversationStore, networkId: string, target: string) =>
-  store.upsertQuery(networkId, target);
+type BufferResolution = {
+  buffer: BufferState;
+  removedBufferIds: string[];
+};
+
+export const openConversationQuery = (
+  store: RuntimeConversationStore,
+  networkId: string,
+  target: string,
+  peerIdentity?: NetworkUserIdentity | null,
+) => store.upsertQueryWithMergeResult(networkId, target, peerIdentity);
 
 export const closeConversationBuffer = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
@@ -82,10 +92,11 @@ export const appendConversationMessage = (
     allowCreateBuffer?: boolean;
   },
 ) => {
-  const bufferUpdate = resolveMessageBuffer(store, input);
+  const resolvedBuffer = resolveMessageBuffer(store, input);
   return {
     saved: store.appendMessage(input.message),
-    bufferUpdate,
+    bufferUpdate: resolvedBuffer?.buffer ?? null,
+    removedBufferIds: resolvedBuffer?.removedBufferIds ?? [],
   };
 };
 
@@ -120,40 +131,55 @@ const resolveMessageBuffer = (
   if (!existing && input.allowCreateBuffer === false) {
     return null;
   }
-  const created = existing ?? createMessageBuffer(store, input.message);
+  const created = shouldRouteQueryByIdentity(input.message)
+    ? store.upsertQueryWithMergeResult(input.message.networkId, input.message.target, input.message.senderIdentity)
+    : existing
+      ? toBufferResolution(existing)
+      : createMessageBuffer(store, input.message);
   if (!created) {
     return null;
   }
 
   const nextBuffer = resolveNextBufferActivity({
-    buffer: created,
+    buffer: created.buffer,
     message: input.message,
     currentNick: input.currentNick,
     altNicks: input.altNicks,
     messageMuted: input.messageMuted,
   });
-  if (nextBuffer === created) {
+  if (nextBuffer === created.buffer) {
     return created;
   }
-  return store.upsertBuffer(nextBuffer);
+  return {
+    buffer: store.upsertBuffer(nextBuffer),
+    removedBufferIds: created.removedBufferIds,
+  };
 };
 
-const createMessageBuffer = (store: RuntimeConversationStore, message: MessageInput): BufferState | null => {
+const createMessageBuffer = (store: RuntimeConversationStore, message: MessageInput): BufferResolution | null => {
   if (message.target === 'server') {
-    return store.getServerBuffer(message.networkId)
-      ?? store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' });
+    return toBufferResolution(
+      store.getServerBuffer(message.networkId)
+        ?? store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' }),
+    );
   }
   if (isChannelTarget(message.target)) {
     if (message.self && message.kind === 'part') {
       return null;
     }
-    return store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target });
+    return toBufferResolution(store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target }));
   }
   if (message.kind === 'line' || message.kind === 'action') {
-    return store.upsertQuery(message.networkId, message.target);
+    return store.upsertQueryWithMergeResult(message.networkId, message.target, message.senderIdentity);
   }
   return null;
 };
+
+const shouldRouteQueryByIdentity = (message: MessageInput) =>
+  !isChannelTarget(message.target)
+  && message.target !== 'server'
+  && !!message.senderIdentity
+  && (message.kind === 'line' || message.kind === 'action');
 
 const getRequiredBuffer = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = store.getBuffer(bufferId);
@@ -162,5 +188,10 @@ const getRequiredBuffer = (store: RuntimeConversationStore, bufferId: string) =>
   }
   return buffer;
 };
+
+const toBufferResolution = (buffer: BufferState): BufferResolution => ({
+  buffer,
+  removedBufferIds: [],
+});
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

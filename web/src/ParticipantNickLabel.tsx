@@ -1,11 +1,13 @@
 import { cn } from '@/lib/utils.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 
 type ParticipantNickLabelProps = {
   nick: string;
+  identity?: NetworkUserIdentity | null;
   emoji?: string | null;
   className?: string;
   clickable?: boolean;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
 };
 
 const renderNickContent = (nick: string, emoji?: string | null) => (
@@ -29,7 +31,7 @@ export function ParticipantNickLabel(props: ParticipantNickLabelProps) {
           'cursor-pointer appearance-none border-0 bg-transparent p-0 align-baseline text-left transition-opacity hover:opacity-85 hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60',
           props.className,
         )}
-        onClick={() => props.onOpenParticipantQuery?.(props.nick)}
+        onClick={() => props.onOpenParticipantQuery?.(props.nick, props.identity)}
       >
         {renderNickContent(props.nick, props.emoji)}
       </button>

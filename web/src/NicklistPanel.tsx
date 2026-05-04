@@ -33,7 +33,11 @@ type NicklistPanelProps = {
     emoji: string | null,
     identity?: NetworkUserIdentity | null,
   ) => Promise<boolean>;
-  onSelectNick: (network: NetworkProfile, nick: string) => void;
+  onSelectNick: (
+    network: NetworkProfile,
+    nick: string,
+    identity?: NetworkUserIdentity | null,
+  ) => void;
 };
 
 export function NicklistPanel(props: NicklistPanelProps) {
@@ -100,7 +104,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                             <button
                               type="button"
                               className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
-                              onClick={() => props.network && props.onSelectNick(props.network, user.nick)}
+                              onClick={() => props.network && props.onSelectNick(props.network, user.nick, user.identity)}
                             >
                               <UserAvatar
                                 enabled={props.externalAvatarsEnabled}

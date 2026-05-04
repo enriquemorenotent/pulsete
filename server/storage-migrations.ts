@@ -2,6 +2,10 @@ import type { SqliteDb } from './storage-sqlite.js';
 import { backfillQueryBufferSelfNickAliases } from './storage-migration-alias-backfill.js';
 import { migrateNormalizedStorage } from './storage-normalized-migration.js';
 import { migrateQueryNickAliases } from './storage-query-alias-migration.js';
+import {
+  backfillQueryPeerIdentities,
+  ensureQueryPeerIdentityStorage,
+} from './storage-query-identities.js';
 import { migrateWorkspaceNetworks } from './storage-workspace-migration.js';
 import {
   ensureIdentityIndexes,
@@ -17,7 +21,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 24;
+export const currentStorageSchemaVersion = 25;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -181,6 +185,12 @@ const storageMigrations: readonly StorageMigration[] = [
       ensureColumn(db, 'messages', 'senderIdentityValue', 'TEXT');
     },
   },
+  {
+    version: 25,
+    apply: (db) => {
+      backfillQueryPeerIdentities(db);
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => db.exec(storageBootstrapSchemaSql);
@@ -203,6 +213,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
   ensureCurrentNetworkColumns(db);
   ensureCurrentBufferColumns(db);
   ensureNickEmojiTable(db);
+  ensureQueryPeerIdentityStorage(db);
   ensureIdentityIndexes(db);
   dropLegacyMessageSearchArtifacts(db);
   ensureMessageSearchArtifacts(db);

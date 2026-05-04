@@ -144,10 +144,10 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
-  openQuery: (networkId: string, target: string) =>
+  openQuery: (networkId: string, target: string, peerIdentity?: NetworkUserIdentity | null) =>
     apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/networks/${networkId}/queries`, {
       method: 'POST',
-      body: JSON.stringify({ target }),
+      body: JSON.stringify({ target, peerIdentity }),
     }),
   closeBuffer: (bufferId: string) =>
     apiRequest<{ buffer: BufferState; messages: ServerMessage[]; ok: boolean }>(`/api/buffers/${bufferId}`, {

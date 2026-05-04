@@ -4,7 +4,6 @@ import { reducer } from '../web/src/app-state.js';
 import {
   indexConversationMessages,
   liveConversationMessageLimit,
-  toConversationMessageKey,
 } from '../web/src/conversation-message-state.js';
 import { makeBuffer, makeMessage, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
@@ -41,7 +40,7 @@ test('append-messages merges batched updates in timestamp order per conversation
     type: 'append-messages',
     messages: [later, earlier, duplicateLater],
   });
-  const key = toConversationMessageKey(existing.networkId, existing.target);
+  const key = existing.bufferId;
 
   assert.deepEqual(
     nextState.domain.messages[key].map((message) => ({ id: message.id, body: message.body, ts: message.ts })),
@@ -71,7 +70,7 @@ test('live message appends retain only the newest browser message window', () =>
     type: 'append-message',
     message: nextLiveMessage,
   });
-  const key = toConversationMessageKey(nextLiveMessage.networkId, nextLiveMessage.target);
+  const key = nextLiveMessage.bufferId;
   const retained = nextState.domain.messages[key];
 
   assert.equal(retained.length, liveConversationMessageLimit);
@@ -88,7 +87,7 @@ test('manual history batches are not capped by the live message window', () => {
     type: 'append-messages',
     messages: historyMessages,
   });
-  const key = toConversationMessageKey(historyMessages[0]!.networkId, historyMessages[0]!.target);
+  const key = historyMessages[0]!.bufferId;
 
   assert.equal(nextState.domain.messages[key].length, liveConversationMessageLimit + 1);
 });
@@ -111,12 +110,76 @@ test('remove-messages deletes only the requested conversation entries', () => {
   });
 
   assert.deepEqual(
-    nextState.domain.messages[toConversationMessageKey(keep.networkId, keep.target)],
+    nextState.domain.messages[keep.bufferId],
     [keep]
   );
   assert.deepEqual(
-    nextState.domain.messages[toConversationMessageKey(otherConversation.networkId, otherConversation.target)],
+    nextState.domain.messages[otherConversation.bufferId],
     [otherConversation]
+  );
+});
+
+test('retargeting a query buffer keeps its live transcript in the selected bucket', () => {
+  const query = makeBuffer({ id: 'query-1', kind: 'query', target: 'helper' });
+  const state = makeState({
+    domain: {
+      buffers: [query],
+      messages: indexConversationMessages([
+        makeMessage({ id: 'message-1', bufferId: query.id, target: 'helper', body: 'before rename' }),
+      ]),
+    },
+    transient: {
+      selection: { kind: 'buffer', bufferId: query.id },
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'upsert-buffer',
+    buffer: { ...query, target: 'guide' },
+  });
+
+  assert.deepEqual(
+    nextState.domain.messages[query.id]?.map((message) => ({
+      bufferId: message.bufferId,
+      target: message.target,
+      body: message.body,
+    })),
+    [{ bufferId: query.id, target: 'guide', body: 'before rename' }],
+  );
+  assert.deepEqual(nextState.transient.selection, { kind: 'buffer', bufferId: query.id });
+});
+
+test('removing a merged query buffer moves live messages into the survivor bucket', () => {
+  const survivor = makeBuffer({ id: 'query-1', kind: 'query', target: 'guide' });
+  const removed = makeBuffer({ id: 'query-2', kind: 'query', target: 'helper' });
+  const state = makeState({
+    domain: {
+      buffers: [survivor, removed],
+      messages: indexConversationMessages([
+        makeMessage({ id: 'old-message', bufferId: removed.id, target: 'helper', body: 'old window', ts: 1 }),
+        makeMessage({ id: 'new-message', bufferId: survivor.id, target: 'guide', body: 'new window', ts: 2 }),
+      ]),
+    },
+  });
+
+  const nextState = reducer(state, {
+    type: 'remove-buffer',
+    networkId: survivor.networkId,
+    bufferId: removed.id,
+    replacementBufferId: survivor.id,
+  });
+
+  assert.equal(nextState.domain.messages[removed.id], undefined);
+  assert.deepEqual(
+    nextState.domain.messages[survivor.id]?.map((message) => ({
+      id: message.id,
+      bufferId: message.bufferId,
+      target: message.target,
+    })),
+    [
+      { id: 'old-message', bufferId: survivor.id, target: 'guide' },
+      { id: 'new-message', bufferId: survivor.id, target: 'guide' },
+    ],
   );
 });
 
@@ -126,7 +189,7 @@ test('removing a buffer also removes its indexed messages', () => {
     domain: {
       buffers: [buffer],
       messages: indexConversationMessages([
-        makeMessage({ id: 'message-1', target: '#help' }),
+        makeMessage({ id: 'message-1', bufferId: buffer.id, target: '#help' }),
       ]),
     },
   });

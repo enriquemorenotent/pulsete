@@ -67,11 +67,14 @@ export function useDesktopChatModel({
       ? resolveUserAvatarCandidate(channels, selectedBuffer.networkId, selectedBuffer.target)
       : null;
   }, [channels, workspace.selectedBuffer]);
+  const selectedQueryIdentity = workspace.selectedBuffer?.kind === 'query'
+    ? selectedQueryAvatarUser?.identity ?? workspace.selectedBuffer.peerIdentity
+    : null;
   const selectedQueryContactRule = workspace.selectedBuffer?.kind === 'query'
     ? resolveContactRuleState({
         networkId: workspace.selectedBuffer.networkId,
         nick: workspace.selectedBuffer.target,
-        identity: selectedQueryAvatarUser?.identity,
+        identity: selectedQueryIdentity,
         friends,
         mutedNicks,
         contactNotifications: contactNotifications.settings,
@@ -130,7 +133,7 @@ export function useDesktopChatModel({
       onJoinChannelFromList: actions.joinChannelFromList,
       onOpenMentionedChannel: actions.openMentionedChannel,
       onOpenParticipantQuery: participantQueryNetwork
-        ? (nick) => void actions.selectPrivateBuffer(participantQueryNetwork, nick)
+        ? (nick, identity) => void actions.selectPrivateBuffer(participantQueryNetwork, nick, identity)
         : undefined,
       onOpenChannelList: actions.openChannelList,
       onReconnectNetwork: selectedNetwork ? () => actions.reconnectNetwork(selectedNetwork) : undefined,
@@ -153,6 +156,7 @@ export function useDesktopChatModel({
       mutedNicks,
       nickEmojis,
       participantQueryNetwork,
+      selectedQueryIdentity,
       selectedQueryContactRule,
       selectedQueryAvatarUser,
       selectedBufferHistory,

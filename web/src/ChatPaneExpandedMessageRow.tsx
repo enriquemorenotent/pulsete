@@ -9,6 +9,7 @@ import {
   messageTone,
 } from './chat-pane-message-utils.js';
 import type { ChatMessage } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { MessageParticipantPresentation } from './message-participant-presentation.js';
 
@@ -17,7 +18,7 @@ export const ChatPaneExpandedMessageRow = (props: {
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   participant: MessageParticipantPresentation;
 }) => (
   <article
@@ -36,6 +37,7 @@ export const ChatPaneExpandedMessageRow = (props: {
         {props.participant.label ? (
           <ParticipantNickLabel
             nick={props.participant.label}
+            identity={props.message.senderIdentity}
             emoji={props.participant.emoji}
             clickable={props.participant.clickable}
             onOpenParticipantQuery={props.onOpenParticipantQuery}

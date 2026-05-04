@@ -49,7 +49,7 @@ test('observed query nick changes merge message-bearing source and destination b
   const renamed = storage.conversations.recordObservedQueryNickChange(network.id, 'helper', 'guide');
 
   assert.equal(renamed?.buffer.id, original.id);
-  assert.equal(renamed?.removedBufferId, destination.id);
+  assert.deepEqual(renamed?.removedBufferIds, [destination.id]);
   assert.equal(storage.conversations.getBuffer(destination.id), null);
   assert.deepEqual(
     storage.conversations.listMessages(network.id, 'guide', 10).map((message) => message.body),
@@ -110,5 +110,42 @@ test('query alias resolution does not guess between multiple message-bearing can
   assert.deepEqual(
     storage.conversations.listMessages(network.id, 'RustWork', 10).map((message) => message.body),
     ['work identity'],
+  );
+});
+
+test('query peer identity migration backfills stable identities without moving logs', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'pulsete-storage-')), 'db.sqlite');
+  let storage = new Storage(file);
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertQuery(network.id, 'helper');
+  storage.conversations.appendMessage({
+    id: 'identity-backed-message',
+    networkId: network.id,
+    target: 'helper',
+    nick: 'helper',
+    senderIdentity: { kind: 'account', value: 'helper-account' },
+    body: 'stable identity',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.close();
+
+  const db = openSqliteDatabase(file);
+  db.exec(`
+    DROP TABLE query_peer_identities;
+    PRAGMA user_version = 24;
+  `);
+  db.close();
+
+  storage = new Storage(file);
+
+  assert.deepEqual(
+    storage.conversations.getBuffer(query.id)?.peerIdentity,
+    { kind: 'account', value: 'helper-account' },
+  );
+  assert.deepEqual(
+    storage.conversations.listMessages(network.id, 'helper', 10).map((message) => message.body),
+    ['stable identity'],
   );
 });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { badRequest } from './app-error.js';
 import { historySearchLimit, historyWindowLimit } from '../shared/protocol-chat.js';
+import { networkUserIdentitySchema } from '../shared/user-identity.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import { normalizeChannelTarget } from './irc-validate.js';
 import type { RouteArgs } from './http-types.js';
@@ -8,6 +9,7 @@ import type { ServerResponse } from 'node:http';
 
 const queryInputSchema = z.object({
   target: z.string(),
+  peerIdentity: networkUserIdentitySchema.nullable().optional(),
 });
 
 const channelInputSchema = z.object({
@@ -32,8 +34,8 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   const queryMatch = pathname.match(/^\/api\/networks\/([^/]+)\/queries$/);
   if (queryMatch && req.method === 'POST') {
     const networkId = decodeRouteParam(queryMatch[1]);
-    const target = readQueryTarget(await readJson(req));
-    writeJson(res, 200, context.buffers.openQuery(networkId, target));
+    const query = readQueryTarget(await readJson(req));
+    writeJson(res, 200, context.buffers.openQuery(networkId, query.target, query.peerIdentity));
     return true;
   }
 
@@ -120,7 +122,7 @@ const readQueryTarget = (body: unknown) => {
   if (!result.success) {
     throw badRequest('Invalid query payload');
   }
-  return result.data.target;
+  return result.data;
 };
 
 const readBufferNotes = (body: unknown) => {

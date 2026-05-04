@@ -1,5 +1,6 @@
 import type { BufferState } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import {
   deleteBuffer,
@@ -7,6 +8,12 @@ import {
   getStoredBufferByTarget,
   upsertBuffer,
 } from './storage-buffers.js';
+import {
+  copyQueryPeerIdentities,
+  listQueryPeerIdentityCandidates,
+  normalizeStableQueryIdentity,
+  upsertQueryPeerIdentity,
+} from './storage-query-identities.js';
 import type { BufferInput } from './storage-types.js';
 
 type QueryAliasSource = 'target' | 'nick-change';
@@ -24,7 +31,16 @@ type AliasCandidate = {
   messageCount: number;
 };
 
-type QueryBufferInput = BufferInput & { kind: 'query' };
+type QueryBufferInput = Omit<BufferInput, 'peerIdentity'> & {
+  kind: 'query';
+  peerIdentity?: NetworkUserIdentity | null;
+  peerIdentitySource?: 'message' | 'manual';
+};
+
+export type QueryBufferUpsertResult = {
+  buffer: BufferState;
+  removedBufferIds: string[];
+};
 
 export const upsertQueryNickAlias = (db: SqliteDb, input: QueryAliasInput) => {
   const nick = input.nick.trim();
@@ -44,14 +60,29 @@ export const upsertQueryNickAlias = (db: SqliteDb, input: QueryAliasInput) => {
   `).run(input.bufferId, input.networkId, nick, normalizeIrcIdentifier(nick), seenAt, seenAt, input.source);
 };
 
-export const resolveMessageBufferId = (db: SqliteDb, networkId: string, target: string) => {
+export const resolveMessageBufferId = (
+  db: SqliteDb,
+  networkId: string,
+  target: string,
+  peerIdentity?: NetworkUserIdentity | null,
+) => {
   if (target === 'server' || isChannelTarget(target)) {
     return getStoredBufferByTarget(db, networkId, target)?.id ?? null;
   }
-  return resolveQueryBufferId(db, networkId, target);
+  return resolveQueryBufferId(db, networkId, target, peerIdentity);
 };
 
-export const resolveQueryBufferId = (db: SqliteDb, networkId: string, target: string) => {
+export const resolveQueryBufferId = (
+  db: SqliteDb,
+  networkId: string,
+  target: string,
+  peerIdentity?: NetworkUserIdentity | null,
+) => {
+  const identityCandidates = listQueryPeerIdentityCandidates(db, networkId, peerIdentity);
+  if (identityCandidates.length === 1) {
+    return identityCandidates[0]!.bufferId;
+  }
+
   const exact = getStoredBufferByTarget(db, networkId, target);
   if (exact?.kind === 'query') {
     if (countBufferMessages(db, exact.id) > 0) {
@@ -68,33 +99,71 @@ export const resolveQueryBufferId = (db: SqliteDb, networkId: string, target: st
   return candidates.length === 1 ? candidates[0]!.bufferId : null;
 };
 
-export const upsertQueryBuffer = (db: SqliteDb, input: QueryBufferInput) => {
+export const upsertQueryBuffer = (db: SqliteDb, input: QueryBufferInput) =>
+  upsertQueryBufferWithMergeResult(db, input).buffer;
+
+export const upsertQueryBufferWithMergeResult = (db: SqliteDb, input: QueryBufferInput): QueryBufferUpsertResult => {
   const target = input.target.trim();
+  const peerIdentity = normalizeStableQueryIdentity(input.peerIdentity);
   if (input.id) {
-    return upsertQueryBufferById(db, { ...input, target });
+    return {
+      buffer: upsertQueryBufferById(db, { ...input, target, peerIdentity }),
+      removedBufferIds: [],
+    };
   }
 
   const exact = getStoredBufferByTarget(db, input.networkId, target);
+  const identityCandidates = listQueryPeerIdentityCandidates(db, input.networkId, peerIdentity);
+  const identitySource = resolveIdentitySourceBuffer(db, identityCandidates);
+  if (identitySource) {
+    const merged = mergeQueryBuffers(
+      db,
+      identitySource,
+      [
+        ...identityCandidates
+          .filter((candidate) => candidate.bufferId !== identitySource.id)
+          .map((candidate) => getBuffer(db, candidate.bufferId)),
+        exact?.kind === 'query' && exact.id !== identitySource.id ? exact : null,
+      ],
+      input.networkId,
+      'target',
+    );
+    return {
+      buffer: retargetQueryBuffer(db, merged.buffer, { ...input, target, peerIdentity }),
+      removedBufferIds: merged.removedBufferIds,
+    };
+  }
+
   if (exact?.kind === 'query') {
     if (countBufferMessages(db, exact.id) === 0) {
       const candidates = listAliasCandidates(db, input.networkId, target, exact.id)
         .filter((candidate) => candidate.messageCount > 0);
       if (candidates.length === 1) {
         deleteBuffer(db, exact.id);
-        return retargetQueryBuffer(db, getBuffer(db, candidates[0]!.bufferId)!, { ...input, target });
+        return {
+          buffer: retargetQueryBuffer(db, getBuffer(db, candidates[0]!.bufferId)!, { ...input, target }),
+          removedBufferIds: [exact.id],
+        };
       }
     }
-    return retargetQueryBuffer(db, exact, { ...input, target });
+    return {
+      buffer: retargetQueryBuffer(db, exact, { ...input, target }),
+      removedBufferIds: [],
+    };
   }
 
   const candidates = listAliasCandidates(db, input.networkId, target);
   if (candidates.length === 1) {
-    return retargetQueryBuffer(db, getBuffer(db, candidates[0]!.bufferId)!, { ...input, target });
+    return {
+      buffer: retargetQueryBuffer(db, getBuffer(db, candidates[0]!.bufferId)!, { ...input, target }),
+      removedBufferIds: [],
+    };
   }
 
-  const buffer = upsertBuffer(db, { ...input, target, kind: 'query' });
+  const buffer = upsertBuffer(db, toBufferInput({ ...input, target, kind: 'query' }));
   upsertQueryNickAlias(db, { bufferId: buffer.id, networkId: buffer.networkId, nick: target, source: 'target' });
-  return buffer;
+  recordQueryPeerIdentity(db, buffer, { ...input, target, peerIdentity });
+  return { buffer, removedBufferIds: [] };
 };
 
 export const recordObservedQueryNickChange = (
@@ -112,32 +181,38 @@ export const recordObservedQueryNickChange = (
   upsertQueryNickAlias(db, { bufferId: source.id, networkId, nick: fromTarget, source: 'nick-change' });
   const destination = getStoredBufferByTarget(db, networkId, toTarget);
   const mergedBuffer = destination?.kind === 'query' && destination.id !== source.id ? destination : null;
-  if (mergedBuffer) {
-    copyQueryNickAliases(db, mergedBuffer.id, source.id, networkId);
-    upsertQueryNickAlias(db, { bufferId: source.id, networkId, nick: mergedBuffer.target, source: 'nick-change' });
-    db.prepare('UPDATE messages SET bufferId = ? WHERE bufferId = ?').run(source.id, mergedBuffer.id);
-    db.prepare('UPDATE history_import_batches SET bufferId = ? WHERE bufferId = ?').run(source.id, mergedBuffer.id);
-    deleteBuffer(db, mergedBuffer.id);
-  }
+  const merged = mergeQueryBuffers(db, source, [mergedBuffer], networkId, 'nick-change');
 
   const updated = upsertBuffer(db, {
-    ...source,
+    ...merged.buffer,
     target: toTarget,
     isOpen: true,
-    unread: source.unread + (mergedBuffer?.unread ?? 0),
-    priorityUnread: source.priorityUnread + (mergedBuffer?.priorityUnread ?? 0),
-    ...pickLatestReadState(source, mergedBuffer),
-    notes: pickQueryNotes(source, mergedBuffer),
-    selfNickAliases: mergeNickAliases(source.selfNickAliases ?? [], mergedBuffer?.selfNickAliases ?? []),
   });
   upsertQueryNickAlias(db, { bufferId: updated.id, networkId, nick: toTarget, source: 'nick-change' });
-  return { buffer: updated, removedBufferId: mergedBuffer?.id ?? null };
+  return { buffer: updated, removedBufferIds: merged.removedBufferIds };
 };
 
 const upsertQueryBufferById = (db: SqliteDb, input: QueryBufferInput) => {
-  const buffer = upsertBuffer(db, input);
+  const buffer = upsertBuffer(db, toBufferInput(input));
   upsertQueryNickAlias(db, { bufferId: buffer.id, networkId: buffer.networkId, nick: buffer.target, source: 'target' });
-  return buffer;
+  recordQueryPeerIdentity(db, buffer, input);
+  return getBuffer(db, buffer.id)!;
+};
+
+const toBufferInput = (input: QueryBufferInput): BufferInput => {
+  return {
+    id: input.id,
+    networkId: input.networkId,
+    kind: input.kind,
+    target: input.target,
+    notes: input.notes,
+    unread: input.unread,
+    priorityUnread: input.priorityUnread,
+    lastReadTs: input.lastReadTs,
+    lastReadMessageId: input.lastReadMessageId,
+    selfNickAliases: input.selfNickAliases,
+    isOpen: input.isOpen,
+  };
 };
 
 const retargetQueryBuffer = (db: SqliteDb, buffer: BufferState, input: QueryBufferInput) =>
@@ -153,6 +228,64 @@ const retargetQueryBuffer = (db: SqliteDb, buffer: BufferState, input: QueryBuff
     lastReadMessageId: input.lastReadMessageId ?? buffer.lastReadMessageId,
     selfNickAliases: input.selfNickAliases ?? buffer.selfNickAliases,
   });
+
+const recordQueryPeerIdentity = (
+  db: SqliteDb,
+  buffer: BufferState,
+  input: QueryBufferInput,
+) => {
+  const identity = normalizeStableQueryIdentity(input.peerIdentity);
+  if (!identity) {
+    return;
+  }
+  upsertQueryPeerIdentity(db, {
+    bufferId: buffer.id,
+    networkId: buffer.networkId,
+    nick: input.target,
+    identity,
+    source: input.peerIdentitySource ?? 'message',
+  });
+};
+
+const resolveIdentitySourceBuffer = (
+  db: SqliteDb,
+  candidates: readonly AliasCandidate[],
+) => {
+  const source = candidates[0]?.bufferId ? getBuffer(db, candidates[0].bufferId) : null;
+  return source?.kind === 'query' ? source : null;
+};
+
+const mergeQueryBuffers = (
+  db: SqliteDb,
+  source: BufferState,
+  candidates: ReadonlyArray<BufferState | null>,
+  networkId: string,
+  aliasSource: QueryAliasSource,
+) => {
+  let buffer = source;
+  const removedBufferIds: string[] = [];
+  for (const candidate of candidates) {
+    if (candidate?.kind !== 'query' || candidate.id === source.id || removedBufferIds.includes(candidate.id)) {
+      continue;
+    }
+    copyQueryNickAliases(db, candidate.id, source.id, networkId);
+    copyQueryPeerIdentities(db, candidate.id, source.id, networkId);
+    upsertQueryNickAlias(db, { bufferId: source.id, networkId, nick: candidate.target, source: aliasSource });
+    db.prepare('UPDATE messages SET bufferId = ? WHERE bufferId = ?').run(source.id, candidate.id);
+    db.prepare('UPDATE history_import_batches SET bufferId = ? WHERE bufferId = ?').run(source.id, candidate.id);
+    deleteBuffer(db, candidate.id);
+    removedBufferIds.push(candidate.id);
+    buffer = {
+      ...buffer,
+      unread: buffer.unread + candidate.unread,
+      priorityUnread: buffer.priorityUnread + candidate.priorityUnread,
+      ...pickLatestReadState(buffer, candidate),
+      notes: pickQueryNotes(buffer, candidate),
+      selfNickAliases: mergeNickAliases(buffer.selfNickAliases ?? [], candidate.selfNickAliases ?? []),
+    };
+  }
+  return { buffer, removedBufferIds };
+};
 
 const copyQueryNickAliases = (db: SqliteDb, fromBufferId: string, toBufferId: string, networkId: string) => {
   const aliases = db.prepare(`

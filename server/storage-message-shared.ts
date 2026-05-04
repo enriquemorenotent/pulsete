@@ -1,5 +1,6 @@
 import type { SqliteDb } from './storage-sqlite.js';
 import type { MessageInput, MessagePage, MessageRow } from './storage-types.js';
+import type { ChatMessage } from '../shared/protocol-chat.js';
 import { resolveMessageBufferId } from './storage-query-aliases.js';
 import { toMessage } from './storage-utils.js';
 
@@ -26,11 +27,15 @@ export const messageColumns = [
 
 export const messageJoin = 'FROM messages AS m JOIN buffers AS b ON b.id = m.bufferId';
 
-export type MessageLookup = (messageId: string) => MessageInput | null;
+export type MessageLookup = (messageId: string) => ChatMessage | null;
 export type MessageCursor = { bufferId: string; rowid: number; ts: number };
 
-export const getMessageBufferId = (db: SqliteDb, networkId: string, target: string) =>
-  resolveMessageBufferId(db, networkId, target);
+export const getMessageBufferId = (
+  db: SqliteDb,
+  networkId: string,
+  target: string,
+  senderIdentity?: MessageInput['senderIdentity'],
+) => resolveMessageBufferId(db, networkId, target, senderIdentity);
 
 export const getMessageCursor = (db: SqliteDb, messageId: string) =>
   db.prepare('SELECT bufferId, rowid, ts FROM messages WHERE id = ?').get(messageId) as MessageCursor | undefined;

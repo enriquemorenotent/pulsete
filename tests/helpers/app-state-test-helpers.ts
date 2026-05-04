@@ -42,16 +42,21 @@ export const makePendingChannel = (overrides: Partial<PendingChannelState> = {})
   channel: overrides.channel ?? '#help',
 });
 
-export const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
-  id: overrides.id ?? 'message-1',
-  networkId: overrides.networkId ?? 'network-1',
-  target: overrides.target ?? '#help',
-  nick: overrides.nick ?? 'alice',
-  body: overrides.body ?? 'hello',
-  kind: overrides.kind ?? 'line',
-  self: overrides.self ?? false,
-  ts: overrides.ts ?? 1,
-});
+export const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => {
+  const networkId = overrides.networkId ?? 'network-1';
+  const target = overrides.target ?? '#help';
+  return {
+    id: overrides.id ?? 'message-1',
+    bufferId: overrides.bufferId ?? `${networkId}:${target.toLowerCase()}`,
+    networkId,
+    target,
+    nick: overrides.nick ?? 'alice',
+    body: overrides.body ?? 'hello',
+    kind: overrides.kind ?? 'line',
+    self: overrides.self ?? false,
+    ts: overrides.ts ?? 1,
+  };
+};
 
 export const emptySnapshot = (): AppSnapshot => ({
   networks: [],

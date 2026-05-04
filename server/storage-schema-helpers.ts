@@ -36,6 +36,23 @@ export const queryNickAliasesSchemaSql = `
     ON query_nick_aliases(networkId, nickKey, bufferId);
 `;
 
+export const queryPeerIdentitiesSchemaSql = `
+  CREATE TABLE IF NOT EXISTS query_peer_identities (
+    bufferId TEXT NOT NULL REFERENCES buffers(id) ON DELETE CASCADE,
+    networkId TEXT NOT NULL,
+    identityKind TEXT NOT NULL,
+    identityValue TEXT NOT NULL,
+    nick TEXT NOT NULL,
+    firstSeenAt INTEGER NOT NULL,
+    lastSeenAt INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    PRIMARY KEY (bufferId, identityKind, identityValue)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_query_peer_identities_network_identity
+    ON query_peer_identities(networkId, identityKind, identityValue, bufferId);
+`;
+
 export const messageSearchSchemaSql = `
   CREATE VIRTUAL TABLE IF NOT EXISTS message_search_fts USING fts5(
     messageId UNINDEXED,
@@ -84,6 +101,10 @@ export const ensureHistoryImportBatchesTable = (db: SqliteDb) => {
 
 export const ensureQueryNickAliasesTable = (db: SqliteDb) => {
   db.exec(queryNickAliasesSchemaSql);
+};
+
+export const ensureQueryPeerIdentitiesTable = (db: SqliteDb) => {
+  db.exec(queryPeerIdentitiesSchemaSql);
 };
 
 export const ensureMessageSearchArtifacts = (db: SqliteDb, options: { backfill?: boolean } = {}) => {

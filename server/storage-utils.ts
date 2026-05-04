@@ -1,4 +1,4 @@
-import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol-chat.js';
+import type { ChatMessage, SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol-chat.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol-chat.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
@@ -7,14 +7,17 @@ import type {
   BufferRow,
   ChannelRow,
   FriendRow,
-  MessageInput,
   MessageRow,
   MutedNickRow,
   NetworkRow,
   NickEmojiRow,
   RuntimeNetworkProfile,
 } from './storage-types.js';
-import { identityFromNick, normalizeNetworkUserIdentity } from '../shared/user-identity.js';
+import {
+  identityFromNick,
+  normalizeNetworkUserIdentity,
+  type NetworkUserIdentity,
+} from '../shared/user-identity.js';
 
 export const parseJson = <T>(value: string, fallback: T): T => {
   try {
@@ -78,7 +81,11 @@ export const encryptNetworkPassword = (password: string | undefined, secretBox: 
 export const decryptNetworkPassword = (password: string | null, secretBox: SecretBox) =>
   password ? secretBox.decrypt(password) : undefined;
 
-export const toBufferState = (row: BufferRow, selfNickAliases: string[]): BufferState => ({
+export const toBufferState = (
+  row: BufferRow,
+  selfNickAliases: string[],
+  peerIdentity?: NetworkUserIdentity | null,
+): BufferState => ({
   id: row.id,
   networkId: row.networkId,
   unread: row.unread,
@@ -88,6 +95,7 @@ export const toBufferState = (row: BufferRow, selfNickAliases: string[]): Buffer
   kind: row.kind,
   target: row.target,
   notes: row.notes,
+  ...(peerIdentity ? { peerIdentity } : {}),
   selfNickAliases,
 });
 
@@ -130,11 +138,12 @@ export const toChannelState = (
   users: parseChannelUsers(row.users),
 });
 
-export const toMessage = (row: MessageRow): MessageInput => {
+export const toMessage = (row: MessageRow): ChatMessage => {
   const speakerRole = normalizeSpeakerRole(row.speakerRole, row.self);
   const attributionConfidence = normalizeAttributionConfidence(row.attributionConfidence);
   return {
     id: row.id,
+    bufferId: row.bufferId,
     networkId: row.networkId,
     target: row.target,
     nick: row.nick,
@@ -149,7 +158,7 @@ export const toMessage = (row: MessageRow): MessageInput => {
     attributionConfidence,
     importBatchId: row.importBatchId,
     body: row.body,
-    kind: row.kind as MessageInput['kind'],
+    kind: row.kind as ChatMessage['kind'],
     self: Boolean(row.self) || (speakerRole === 'self' && attributionConfidence === 'high'),
     ts: row.ts,
   };

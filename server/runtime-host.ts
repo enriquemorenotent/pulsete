@@ -2,10 +2,7 @@ import type WebSocket from 'ws';
 import type { ClientMessage } from '../shared/protocol-messages.js';
 import { createRuntime, type Runtime, type RuntimeHttpApi } from './runtime.js';
 import { Storage } from './storage.js';
-import {
-  prepareStorageBackupRestore,
-  type BrowserPreferences,
-} from './storage-backup.js';
+import { prepareStorageBackupRestore } from './storage-backup.js';
 import { resolveAppPaths, type AppPaths } from './app-paths.js';
 import type { RuntimeWebSocketApi } from './runtime-service-types.js';
 import type { BackupHttpApi } from './http-types.js';
@@ -67,7 +64,8 @@ export class RuntimeHost {
       buffers: {
         joinChannel: (networkId, channel, sourceBufferId) =>
           this.runtime.http.buffers.joinChannel(networkId, channel, sourceBufferId),
-        openQuery: (networkId, target) => this.runtime.http.buffers.openQuery(networkId, target),
+        openQuery: (networkId, target, peerIdentity) =>
+          this.runtime.http.buffers.openQuery(networkId, target, peerIdentity),
         close: (bufferId) => this.runtime.http.buffers.close(bufferId),
         markRead: (bufferId) => this.runtime.http.buffers.markRead(bufferId),
         saveNotes: (bufferId, notes) => this.runtime.http.buffers.saveNotes(bufferId, notes),

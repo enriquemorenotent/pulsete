@@ -1,4 +1,5 @@
 import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { isChannelListLoadingForNetwork } from './app-state-channel-list.js';
 import { api } from './client.js';
 import { createAppMutationExecutor } from './app-mutation.js';
@@ -54,14 +55,18 @@ export const createConversationActions = ({
     return true;
   };
 
-  const openOrSelectQueryBuffer = async (network: NetworkProfile, nick: string): Promise<BufferState> => {
+  const openOrSelectQueryBuffer = async (
+    network: NetworkProfile,
+    nick: string,
+    peerIdentity?: NetworkUserIdentity | null,
+  ): Promise<BufferState> => {
     const conversation = getConversation(getState);
     const existingBuffer = conversation.findQueryBuffer(network.id, nick);
-    if (existingBuffer) {
+    if (existingBuffer && !peerIdentity) {
       selectBuffer(dispatch, existingBuffer);
       return existingBuffer;
     }
-    const result = await api.openQuery(network.id, nick);
+    const result = await api.openQuery(network.id, nick, peerIdentity);
     applyServerMessages(result.messages);
     selectBuffer(dispatch, result.buffer);
     return result.buffer;

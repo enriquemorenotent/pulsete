@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { initialChannelListState,initialState,reducer } from '../web/src/app-state.js';
-import { indexConversationMessages,toConversationMessageKey } from '../web/src/conversation-message-state.js';
+import { indexConversationMessages } from '../web/src/conversation-message-state.js';
 import { gatewayReconnectMessage } from '../web/src/gateway.js';
 import { emptySnapshot, makeBuffer, makeFriend, makeMessage, makeNetwork, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
@@ -233,7 +233,7 @@ test('append-messages keeps prepended pages ahead of equal-timestamp rows', () =
   });
 
   assert.deepEqual(
-    nextState.domain.messages[toConversationMessageKey('network-1', '#help')]?.map((entry) => entry.id),
+    nextState.domain.messages['network-1:#help']?.map((entry) => entry.id),
     ['older-1', 'older-2', 'newer-1', 'newer-2']
   );
 });

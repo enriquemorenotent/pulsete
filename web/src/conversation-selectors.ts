@@ -26,7 +26,7 @@ export const selectConversationMessages = (
   messages: ConversationMessages,
   buffer: BufferState | null
 ): ChatMessage[] =>
-  buffer ? messages[toConversationMessageKey(buffer.networkId, buffer.target)] ?? [] : [];
+  buffer ? messages[buffer.id] ?? [] : [];
 
 export const buildConversationIndex = (state: ConversationState): ConversationIndex => {
   const buffersById = new Map<string, BufferState>();

@@ -5,7 +5,6 @@ import {
   findEligibleContactNotificationBuffer,
   findEligibleContactNotificationSoundBuffer,
 } from '../web/src/contact-notifications/settings.js';
-import { toConversationMessageKey } from '../web/src/conversation-message-state.js';
 
 const makeBuffer = (overrides: Partial<BufferState> = {}): BufferState => ({
   id: overrides.id ?? 'buffer-1',
@@ -46,8 +45,9 @@ test('eligible cue can match an identity contact after a nick change', () => {
     previousBuffers,
     nextBuffers: [nextBuffer],
     messagesByConversation: {
-      [toConversationMessageKey(nextBuffer.networkId, nextBuffer.target)]: [{
+      [nextBuffer.id]: [{
         id: 'message-1',
+        bufferId: nextBuffer.id,
         networkId: nextBuffer.networkId,
         target: nextBuffer.target,
         nick: nextBuffer.target,
@@ -83,8 +83,9 @@ test('eligible cue does not degrade strong identity contacts to nick matches', (
     previousBuffers,
     nextBuffers: [nextBuffer],
     messagesByConversation: {
-      [toConversationMessageKey(nextBuffer.networkId, nextBuffer.target)]: [{
+      [nextBuffer.id]: [{
         id: 'message-1',
+        bufferId: nextBuffer.id,
         networkId: nextBuffer.networkId,
         target: nextBuffer.target,
         nick: nextBuffer.target,

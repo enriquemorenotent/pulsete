@@ -5,10 +5,7 @@ import { isUserMuted, resolveMutedTarget } from '../shared/muted-nicks.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
-import {
-  appendConversationMessage,
-  upsertConversationChannel,
-} from './runtime-conversation-store.js';
+import { appendConversationMessage, upsertConversationChannel } from './runtime-conversation-store.js';
 import { isChannelTarget, type RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 import type { MessageInput } from './storage-types.js';
 
@@ -36,11 +33,13 @@ export const handleRuntimeConversationSendFailure = (
   if (event.rollbackMessageId) {
     const deleted = options.conversations.deleteMessagesByIdPrefixes([event.rollbackMessageId]);
     if (deleted.length > 0) {
+      const bufferId = resolveDeletedBufferId(deleted);
       messages.push({
         type: 'message.remove',
         networkId: event.networkId,
         target: event.target,
         messageIds: deleted.map((message) => message.id),
+        ...(bufferId ? { bufferId } : {}),
       });
     }
   }
@@ -67,7 +66,7 @@ export const handleRuntimeConversationMessageEvent = (
   if (event.message.self && event.message.kind === 'part' && !removedChannel) {
     return [];
   }
-  const { saved, bufferUpdate } = appendConversationMessage(options.conversations, {
+  const { saved, bufferUpdate, removedBufferIds } = appendConversationMessage(options.conversations, {
     message,
     currentNick: event.currentNick,
     altNicks: event.altNicks,
@@ -81,6 +80,7 @@ export const handleRuntimeConversationMessageEvent = (
   const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
   if (bufferUpdate) {
     messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
+    messages.push(...removedBufferMessages(event.message.networkId, removedBufferIds, bufferUpdate.id));
   }
   const closedServiceQuery = !event.message.self
     && event.message.target === 'server'
@@ -141,13 +141,7 @@ export const handleRuntimeConversationPeerNickEvent = (
     if (renamed) {
       queryTarget = renamed.buffer.target;
       messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });
-      if (renamed.removedBufferId) {
-        messages.push({
-          type: 'buffer.remove',
-          networkId: event.networkId,
-          bufferId: renamed.removedBufferId,
-        });
-      }
+      messages.push(...removedBufferMessages(event.networkId, renamed.removedBufferIds, renamed.buffer.id));
     }
   }
 
@@ -182,13 +176,14 @@ const appendRuntimeConversationMessage = (
     options.mutedNicks.list(message.networkId),
     resolveMutedTarget(message.networkId, message.nick, message.senderIdentity),
   );
-  const { saved, bufferUpdate } = appendConversationMessage(options.conversations, {
+  const { saved, bufferUpdate, removedBufferIds } = appendConversationMessage(options.conversations, {
     message,
     messageMuted,
   });
   const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
   if (bufferUpdate) {
     messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
+    messages.push(...removedBufferMessages(message.networkId, removedBufferIds, bufferUpdate.id));
   }
   return messages;
 };
@@ -206,6 +201,11 @@ const createNickChangeMessage = (
   self: event.self,
   ts: Date.now(),
 });
+
+const resolveDeletedBufferId = (messages: readonly { bufferId?: string }[]) => {
+  const bufferIds = new Set(messages.map((message) => message.bufferId ?? null));
+  return bufferIds.size === 1 ? [...bufferIds][0] ?? undefined : undefined;
+};
 
 const resolveNickChangeChannelTargets = (
   options: RuntimeConversationServiceOptions,
@@ -236,3 +236,14 @@ const findOpenBufferByTarget = (
 ) => options.conversations
   .listBuffers(networkId)
   .find((buffer) => isSameIrcIdentifier(buffer.target, target)) ?? null;
+
+const removedBufferMessages = (
+  networkId: string,
+  removedBufferIds: readonly string[],
+  replacementBufferId: string,
+): ServerMessage[] => removedBufferIds.map((bufferId) => ({
+  type: 'buffer.remove',
+  networkId,
+  bufferId,
+  replacementBufferId,
+}));

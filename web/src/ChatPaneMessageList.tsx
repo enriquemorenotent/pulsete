@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BufferState, ChannelUserState, ChatMessage, MutedNickState, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import {
   captureUnreadDividerAnchor,
   resolveInitialTranscriptScrollTarget,
@@ -28,7 +29,7 @@ type ChatPaneMessageListProps = {
   initialHistoryPending?: boolean;
   loadingOlderHistory?: boolean;
   onOpenChannel: (channel: string) => void;
-  onOpenParticipantQuery?: (nick: string) => void;
+  onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
 };
 

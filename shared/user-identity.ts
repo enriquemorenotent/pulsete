@@ -108,6 +108,13 @@ export const isSameNetworkUserIdentity = (
     && normalizedLeft.value === normalizedRight.value;
 };
 
+export const isStableNetworkUserIdentity = (
+  identity: NetworkUserIdentity | null | undefined,
+) => {
+  const normalized = normalizeNetworkUserIdentity(identity);
+  return !!normalized && (normalized.kind === 'account' || normalized.kind === 'userhost');
+};
+
 export const matchesIdentityScopedEntry = (
   entry: IdentityScopedEntry,
   target: NetworkUserIdentityTarget | null | undefined,

@@ -1,4 +1,5 @@
 import type { FriendState, NetworkProfile } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type {
   AppActionContext,
   ConversationActions,
@@ -27,9 +28,13 @@ export const createFriendActions = ({
 }: FriendActionParams) => {
   const executeMutation = createAppMutationExecutor({ applyServerMessages, updateBanner });
 
-  const selectPrivateBuffer = async (network: NetworkProfile, nick: string) => {
+  const selectPrivateBuffer = async (
+    network: NetworkProfile,
+    nick: string,
+    peerIdentity?: NetworkUserIdentity | null,
+  ) => {
     try {
-      await openOrSelectQueryBuffer(network, nick);
+      await openOrSelectQueryBuffer(network, nick, peerIdentity);
     } catch (error) {
       updateBanner('error', error instanceof Error ? error.message : 'Failed to open private message');
     }
