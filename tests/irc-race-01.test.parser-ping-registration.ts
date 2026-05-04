@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { EventEmitter } from 'node:events';
-import net from 'node:net';
 import test from 'node:test';
 import tls from 'node:tls';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { parseLine } from '../server/irc-parser.js';
 import { IrcConnection } from '../server/irc.js';
-import { createConnection,createMockSocket,createWelcomeServer,waitFor } from './helpers/irc-race-test-helpers.js';
+import {
+  attachMockSocket,
+  createConnection,
+  createMockSocket,
+  createThrowingMockSocket,
+  createWelcomeServer,
+  mockNetConnect,
+  waitFor,
+} from './helpers/irc-race-test-helpers.js';
 
 test('parseLine skips repeated spaces between IRC parameters', () => {
   assert.deepEqual(parseLine('PING  :abc def'), {
@@ -42,7 +48,7 @@ test('parseLine extracts IRCv3 tags before the prefix and command', () => {
 test('PING replies preserve the original parameter framing', () => {
   const writes: string[] = [];
   const connection = createConnection();
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
 
   handleIrcLine(connection, 'PING  :abc def');
 
@@ -51,27 +57,10 @@ test('PING replies preserve the original parameter framing', () => {
 
 test('sendRaw degrades synchronous socket write failures into status events', () => {
   const events: Array<Record<string, unknown>> = [];
-
-  class ThrowingSocket extends EventEmitter {
-    destroyed = false;
-
-    write() {
-      throw new Error('boom');
-    }
-
-    end() {}
-    setEncoding() {}
-    destroy() {
-      this.destroyed = true;
-      return this;
-    }
-  }
-
   const connection = createConnection((event) => {
     events.push(event as Record<string, unknown>);
   });
-  const socket = new ThrowingSocket();
-  connection.lifecycle.socket = socket as any;
+  const socket = attachMockSocket(connection, createThrowingMockSocket());
 
   const sent = connection.sendRaw('PING :test', '#status');
 
@@ -90,26 +79,9 @@ test('sendRaw degrades synchronous socket write failures into status events', ()
 });
 
 test('login write failures keep the write error instead of being relabeled as a line-limit error', () => {
-  const originalConnect = net.connect;
   const events: Array<Record<string, unknown>> = [];
-
-  class ThrowingConnectSocket extends EventEmitter {
-    destroyed = false;
-
-    write() {
-      throw new Error('boom');
-    }
-
-    end() {}
-    setEncoding() {}
-    destroy() {
-      this.destroyed = true;
-      return this;
-    }
-  }
-
-  const socket = new ThrowingConnectSocket();
-  net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
+  const socket = createThrowingMockSocket();
+  const restoreConnect = mockNetConnect(socket);
 
   const connection = createConnection((event) => {
     events.push(event as Record<string, unknown>);
@@ -132,7 +104,7 @@ test('login write failures keep the write error instead of being relabeled as a 
     connection.clearConnectDeadlineTimer();
     connection.clearReconnectTimer();
     connection.lifecycle.socket = null;
-    net.connect = originalConnect;
+    restoreConnect();
   }
 });
 
@@ -194,8 +166,8 @@ test('tls connections wait for secureConnect before sending credentials', () => 
   const writes: string[] = [];
   const socket = Object.assign(createMockSocket(writes), {
     authorized: false,
-  });
-  tls.connect = (() => socket as unknown as tls.TLSSocket) as typeof tls.connect;
+  }) as tls.TLSSocket;
+  tls.connect = (() => socket) as typeof tls.connect;
 
   const connection = new IrcConnection(
     {

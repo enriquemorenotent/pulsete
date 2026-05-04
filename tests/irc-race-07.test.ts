@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
 import type { ChannelUserState } from '../shared/protocol-chat.js';
-import { createMockSocket,makeUser } from './helpers/irc-race-test-helpers.js';
+import { createMockSocket, makeUser, mockNetConnect } from './helpers/irc-race-test-helpers.js';
 
 const projectUserModes = (users: ChannelUserState[]) =>
   users.map(({ nick, mode, away }) => ({ nick, mode, away }));
@@ -168,10 +167,9 @@ test('late channel events and messages do not recreate a self-parted channel', (
 });
 
 test('socket close clears parser buffers and nick tracking', () => {
-  const originalConnect = net.connect;
   const writes: string[] = [];
   const socket = createMockSocket(writes);
-  net.connect = (() => socket) as unknown as typeof net.connect;
+  const restoreConnect = mockNetConnect(socket);
 
   const connection = new IrcConnection(
     {
@@ -202,6 +200,6 @@ test('socket close clears parser buffers and nick tracking', () => {
     assert.equal(connection.lifecycle.buffer, '');
     assert.equal(connection.channels.users.size, 0);
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
   }
 });

@@ -4,6 +4,7 @@ import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
 import { waitFor } from './helpers/async-test-helpers.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection ignores stale ISON replies after friend tracking is cleared', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -31,11 +32,7 @@ test('irc connection ignores stale ISON replies after friend tracking is cleared
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.setFriendNicks(['Alice']);
   connection.setFriendNicks([]);
@@ -66,11 +63,7 @@ test('irc connection skips oversized friend nicks when snapshotting presence', (
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.setFriendNicks(['Alice', 'x'.repeat(600)]);
 

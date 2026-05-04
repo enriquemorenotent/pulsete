@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 import { waitFor } from './helpers/async-test-helpers.js';
 
 test('irc connection keeps an already joined channel after a retry JOIN times out', async () => {
@@ -34,11 +35,7 @@ test('irc connection keeps an already joined channel after a retry JOIN times ou
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.join('#help');
   connection.consume(':tester!user@host JOIN #help\r\n');

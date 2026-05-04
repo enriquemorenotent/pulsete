@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 import { waitFor } from './helpers/async-test-helpers.js';
 
 test('irc connection routes whois replies to the originating buffer', async () => {
@@ -185,11 +186,7 @@ test('irc connection routes duplicate WHOIS replies for the same nick in request
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('WHOIS alice', '#first');
   connection.sendClientRaw('WHOIS alice', '#second');

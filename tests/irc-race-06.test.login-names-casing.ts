@@ -1,22 +1,20 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
 import type { ChannelUserState } from '../shared/protocol-chat.js';
-import { createMockSocket,makeUser } from './helpers/irc-race-test-helpers.js';
+import { createMockSocket, makeUser, mockNetConnect } from './helpers/irc-race-test-helpers.js';
 
 const projectUserModes = (users: ChannelUserState[]) =>
   users.map(({ nick, mode, away }) => ({ nick, mode, away }));
 
 test('updating login fields during handshake restarts even on the same server', () => {
-  const originalConnect = net.connect;
   const firstWrites: string[] = [];
   const secondWrites: string[] = [];
   const sockets = [createMockSocket(firstWrites), createMockSocket(secondWrites)];
   let connectCalls = 0;
-  net.connect = (() => sockets[connectCalls++]) as unknown as typeof net.connect;
+  const restoreConnect = mockNetConnect(() => sockets[connectCalls++] ?? assert.fail('Unexpected reconnect'));
 
   const connection = new IrcConnection(
     {
@@ -65,7 +63,7 @@ test('updating login fields during handshake restarts even on the same server', 
       'USER newnick 0 * :New User\r\n',
     ]);
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
   }
 });
 

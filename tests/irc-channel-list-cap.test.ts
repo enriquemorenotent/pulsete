@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { channelListEntryLimit } from '../shared/channel-list.js';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc channel list retains a capped snapshot while counting all server entries', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -31,11 +31,7 @@ test('irc channel list retains a capped snapshot while counting all server entri
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.requestChannelList('request-1');
   connection.consume(':irc.example 321 tester Channel :Users Name\r\n');

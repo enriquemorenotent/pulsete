@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket } from './helpers/irc-race-test-helpers.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-race-test-helpers.js';
 
 test('queued connected nick changes keep the accepted nick after a later rejection', () => {
   const writes: string[] = [];
@@ -37,7 +37,7 @@ test('queued connected nick changes keep the accepted nick after a later rejecti
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.setNick('new1', '#chat');
   connection.setNick('new2', '#chat');
 
@@ -83,7 +83,7 @@ test('duplicate connected nick requests are fully retired after a successful sel
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.setNick('newnick', '#first');
   connection.setNick('newnick', '#second');
 
@@ -127,7 +127,7 @@ test('queued connected nick rejections keep the rejected nick bound to its origi
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.setNick('bad?', '#first');
   connection.setNick('new2', '#second');
 
@@ -176,7 +176,7 @@ test('duplicate rejected nick requests do not leave stale pending nick state beh
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.setNick('bad?', '#first');
   connection.setNick('bad?', '#second');
 

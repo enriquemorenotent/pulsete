@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection clears duplicate successful topic-change contexts before later topic numerics', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection clears duplicate successful topic-change contexts before la
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#help', []);
 
   connection.sendClientRaw('TOPIC #help :one', '#topic-a');
@@ -86,11 +82,7 @@ test('irc connection clears duplicate topic-error contexts for the same channel'
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.trackChannel('#help');
 
   connection.sendClientRaw('TOPIC #help :locked', '#topic-a');
@@ -135,11 +127,7 @@ test('irc connection keeps older topic-change contexts after a later topic self 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#help', []);
 
   connection.sendClientRaw('TOPIC #help :one', '#topic-a');
@@ -193,11 +181,7 @@ test('irc connection surfaces otherwise unformatted numerics from raw commands',
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('MODE #help', '#chat');
   connection.consume(':irc.example 324 tester #help +nt\r\n');

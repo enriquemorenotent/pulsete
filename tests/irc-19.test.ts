@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection keeps pending nick changes from stealing channel 437 replies', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection keeps pending nick changes from stealing channel 437 replie
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.setNick('newnick', '#chat');
   connection.join('#missing', '#chat', { visiblePending: true });
@@ -84,11 +80,7 @@ test('irc connection keeps channel 437 replies out of nick contexts regardless o
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.join('#missing', '#chat', { visiblePending: true });
   connection.setNick('newnick', '#chat');
@@ -138,11 +130,7 @@ test('irc connection clears join rollback metadata after a successful self join'
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.join('#help', '#chat', 'buffer-live');
   connection.consume(':tester!user@host JOIN #help\r\n');
@@ -195,11 +183,7 @@ test('irc connection clears all pending join rollback metadata after duplicate s
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.join('#help', '#chat', 'buffer-live');
   connection.join('#help', '#chat');

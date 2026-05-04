@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { ChatPane } from './ChatPane.js';
 import { CommandPaletteDialog } from './CommandPaletteDialog.js';
@@ -39,6 +39,7 @@ import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
+import { useDocumentActivityState } from './useDocumentActivityState.js';
 
 type SharedProps = {
   actions: AppActions;
@@ -101,30 +102,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   const selectedMessages = useAppSelector(selectSelectedMessages);
   const workspace = useAppSelector(selectWorkspace);
   const dispatch = useAppDispatch();
-  const [documentVisible, setDocumentVisible] = useState(() =>
-    typeof document === 'undefined' ? true : document.visibilityState === 'visible',
-  );
-  const [windowFocused, setWindowFocused] = useState(() =>
-    typeof document === 'undefined' ? true : document.hasFocus(),
-  );
-
-  useEffect(() => {
-    if (typeof document === 'undefined' || typeof window === 'undefined') {
-      return;
-    }
-    const handleVisibilityChange = () =>
-      setDocumentVisible(document.visibilityState === 'visible');
-    const handleFocus = () => setWindowFocused(true);
-    const handleBlur = () => setWindowFocused(false);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
-    };
-  }, []);
+  const { documentVisible, windowFocused } = useDocumentActivityState();
 
   useSelectedBufferReadReceipt({
     applyServerMessages,

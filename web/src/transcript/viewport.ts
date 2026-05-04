@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GroupedVirtuosoHandle, ListItem } from 'react-virtuoso';
+import {
+  firstItemIndexBase,
+  resolveFirstUnreadScrollLocation,
+  resolveLatestFollowBehavior,
+  resolveRestoredTranscriptScrollIndex,
+  resolveRowKeyFromItemIndex,
+  scrollToLatest,
+  topAutoLoadThreshold,
+  type ScrollBehavior,
+  type TranscriptScrollSnapshot,
+} from './viewport-positioning.js';
+import { useTranscriptOlderHistory } from './viewport-older-history.js';
 
-const firstItemIndexBase = 1_000_000;
-const topAutoLoadThreshold = 240;
-const unreadViewportOffsetRatio = 0.25;
+export { resolveFirstUnreadScrollLocation, resolveLatestFollowBehavior, resolveNextFirstItemIndex, resolvePrependedRowCountFromAnchor, resolveRestoredTranscriptScrollIndex, type TranscriptScrollSnapshot } from './viewport-positioning.js';
 
-type ScrollBehavior = 'auto' | false;
 export type TranscriptInitialScrollTarget = 'latest' | 'first-unread' | 'wait';
-
-export type TranscriptScrollSnapshot =
-  | { kind: 'latest' }
-  | { kind: 'anchor'; rowKey: string };
 
 type UseTranscriptViewportParams = {
   bufferId: string | null;
@@ -30,15 +35,12 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const currentBufferIdRef = useRef<string | null>(null);
   const firstItemIndexRef = useRef(firstItemIndexBase);
   const isPinnedToLatestRef = useRef(true);
-  const loadingOlderRef = useRef(false);
   const pendingSendToLatestRef = useRef(false);
-  const pendingOlderHistoryAnchorKeyRef = useRef<string | null>(null);
   const positionedBufferIdRef = useRef<string | null>(null);
   const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
   const scrollSnapshotsRef = useRef(new Map<string, TranscriptScrollSnapshot>());
   const visibleAnchorRowKeyRef = useRef<string | null>(null);
   const [firstItemIndex, setFirstItemIndexValue] = useState(firstItemIndexBase);
-  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [isPinnedToLatest, setIsPinnedToLatest] = useState(true);
 
   const setFirstItemIndex = useCallback((value: number | ((current: number) => number)) => {
@@ -48,6 +50,12 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
       return next;
     });
   }, []);
+  const { handleLoadOlderHistory, resetOlderHistory } = useTranscriptOlderHistory({
+    loadingOlderHistory: params.loadingOlderHistory,
+    onLoadOlderHistory: params.onLoadOlderHistory,
+    rowKeys: params.rowKeys,
+    setFirstItemIndex,
+  });
 
   const saveBufferScrollSnapshot = useCallback((bufferId: string | null) => {
     if (!bufferId || positionedBufferIdRef.current !== bufferId) {
@@ -79,15 +87,13 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     currentBufferIdRef.current = params.bufferId;
     firstItemIndexRef.current = firstItemIndexBase;
     isPinnedToLatestRef.current = true;
-    loadingOlderRef.current = false;
-    pendingOlderHistoryAnchorKeyRef.current = null;
+    resetOlderHistory();
     pendingSendToLatestRef.current = false;
     positionedBufferIdRef.current = null;
     visibleAnchorRowKeyRef.current = null;
     setFirstItemIndex(firstItemIndexBase);
     setIsPinnedToLatest(true);
-    setShowJumpToLatest(false);
-  }, [params.bufferId, saveBufferScrollSnapshot, setFirstItemIndex]);
+  }, [params.bufferId, resetOlderHistory, saveBufferScrollSnapshot, setFirstItemIndex]);
 
   useEffect(
     () => () => saveBufferScrollSnapshot(currentBufferIdRef.current),
@@ -140,55 +146,6 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     params.unreadRowIndex,
   ]);
 
-  useLayoutEffect(() => {
-    const anchorKey = pendingOlderHistoryAnchorKeyRef.current;
-    if (!anchorKey) {
-      return;
-    }
-
-    const prependedRowCount = resolvePrependedRowCountFromAnchor(
-      anchorKey,
-      params.rowKeys,
-    );
-    if (prependedRowCount !== null && prependedRowCount > 0) {
-      setFirstItemIndex((current) =>
-        resolveNextFirstItemIndex(current, prependedRowCount),
-      );
-      pendingOlderHistoryAnchorKeyRef.current = null;
-      return;
-    }
-
-    if (!params.loadingOlderHistory) {
-      pendingOlderHistoryAnchorKeyRef.current = null;
-    }
-  }, [params.loadingOlderHistory, params.rowKeys, setFirstItemIndex]);
-
-  const handleLoadOlderHistory = useCallback(async () => {
-    if (
-      !params.onLoadOlderHistory
-      || loadingOlderRef.current
-      || params.loadingOlderHistory
-      || pendingOlderHistoryAnchorKeyRef.current
-    ) {
-      return 0;
-    }
-
-    loadingOlderRef.current = true;
-    pendingOlderHistoryAnchorKeyRef.current = params.rowKeys[0] ?? null;
-    try {
-      const loadedMessageCount = await params.onLoadOlderHistory();
-      if (loadedMessageCount <= 0) {
-        pendingOlderHistoryAnchorKeyRef.current = null;
-      }
-      return loadedMessageCount;
-    } catch {
-      pendingOlderHistoryAnchorKeyRef.current = null;
-      return 0;
-    } finally {
-      loadingOlderRef.current = false;
-    }
-  }, [params.loadingOlderHistory, params.onLoadOlderHistory, params.rowKeys]);
-
   const handleAtTopStateChange = useCallback(
     (atTop: boolean) => {
       if (
@@ -234,9 +191,8 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     (nextAtBottom: boolean) => {
       isPinnedToLatestRef.current = nextAtBottom;
       setIsPinnedToLatest(nextAtBottom);
-      setShowJumpToLatest(params.totalItemCount > 0 && !nextAtBottom);
     },
-    [params.totalItemCount],
+    [],
   );
 
   const handleInlinePreviewLoad = useCallback(() => {
@@ -255,14 +211,6 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     [params.rowKeys],
   );
 
-  const handleJumpToLatest = useCallback(() => {
-    pendingSendToLatestRef.current = false;
-    isPinnedToLatestRef.current = true;
-    setIsPinnedToLatest(true);
-    setShowJumpToLatest(false);
-    scrollToLatest(virtuosoRef.current);
-  }, []);
-
   const setScrollerNode = useCallback((node: HTMLElement | null | Window) => {
     scrollerRef.current = node instanceof HTMLElement ? node : null;
   }, []);
@@ -275,71 +223,9 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     handleAtTopStateChange,
     handleInlinePreviewLoad,
     handleItemsRendered,
-    handleJumpToLatest,
     handleLoadOlderHistory,
     handleStartReached,
     scrollerRef: setScrollerNode,
-    showJumpToLatest,
     virtuosoRef,
   };
 }
-
-export const resolveLatestFollowBehavior = (input: {
-  atLatest: boolean;
-  pendingSendToLatest: boolean;
-}): ScrollBehavior =>
-  input.pendingSendToLatest || input.atLatest ? 'auto' : false;
-
-export const resolveNextFirstItemIndex = (
-  currentFirstItemIndex: number,
-  prependedRowCount: number,
-) => Math.max(1, currentFirstItemIndex - Math.max(0, prependedRowCount));
-
-export const resolvePrependedRowCountFromAnchor = (
-  previousFirstRowKey: string,
-  rowKeys: readonly string[],
-) => {
-  const anchorIndex = rowKeys.indexOf(previousFirstRowKey);
-  return anchorIndex >= 0 ? anchorIndex : null;
-};
-
-export const resolveRestoredTranscriptScrollIndex = (input: {
-  firstItemIndex: number;
-  rowKeys: readonly string[];
-  snapshot: TranscriptScrollSnapshot | null;
-}) => {
-  if (!input.snapshot) {
-    return null;
-  }
-  if (input.snapshot.kind === 'latest') {
-    return { align: 'end' as const, behavior: 'auto' as const, index: 'LAST' as const };
-  }
-  const rowIndex = input.rowKeys.indexOf(input.snapshot.rowKey);
-  return rowIndex >= 0
-    ? { align: 'start' as const, behavior: 'auto' as const, index: input.firstItemIndex + rowIndex }
-    : null;
-};
-
-export const resolveFirstUnreadScrollLocation = (
-  unreadRowIndex: number,
-  scrollerHeight: number,
-) => ({
-  align: 'start' as const,
-  behavior: 'auto' as const,
-  index: unreadRowIndex,
-  offset: -Math.round(scrollerHeight * unreadViewportOffsetRatio),
-});
-
-const resolveRowKeyFromItemIndex = (
-  itemIndex: number,
-  rowKeys: readonly string[],
-  firstItemIndex: number,
-) => rowKeys[itemIndex - firstItemIndex] ?? null;
-
-const scrollToLatest = (virtuoso: GroupedVirtuosoHandle | null) => {
-  virtuoso?.scrollToIndex({
-    align: 'end',
-    behavior: 'auto',
-    index: 'LAST',
-  });
-};

@@ -1,18 +1,16 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket } from './helpers/irc-race-test-helpers.js';
+import { attachMockSocket, createMockSocket, mockNetConnect } from './helpers/irc-race-test-helpers.js';
 
 test('sasl plain connections negotiate capabilities before completing registration', () => {
-  const originalConnect = net.connect;
   const writes: string[] = [];
   const events: Array<Record<string, unknown>> = [];
   const password = ' hunter 2 ';
   const socket = createMockSocket(writes);
-  net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
+  const restoreConnect = mockNetConnect(socket);
 
   const connection = new IrcConnection(
     {
@@ -72,17 +70,16 @@ test('sasl plain connections negotiate capabilities before completing registrati
       true
     );
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
     connection.disconnect();
   }
 });
 
 test('sasl plain connections complete negotiation on numeric 900 success', () => {
-  const originalConnect = net.connect;
   const writes: string[] = [];
   const events: Array<Record<string, unknown>> = [];
   const socket = createMockSocket(writes);
-  net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
+  const restoreConnect = mockNetConnect(socket);
 
   const connection = new IrcConnection(
     {
@@ -127,7 +124,7 @@ test('sasl plain connections complete negotiation on numeric 900 success', () =>
       true
     );
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
     connection.disconnect();
   }
 });
@@ -155,7 +152,7 @@ test('numeric 900 releases deferred NickServ autojoin after identify', () => {
     { onEvent() {} }
   );
 
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
 
   handleIrcLine(connection, ':irc.example 001 tester_ :Welcome');
 
@@ -194,7 +191,7 @@ test('nickserv identify success accepts configured service targets and notice st
     { onEvent() {} }
   );
 
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
 
   handleIrcLine(connection, ':irc.example 001 tester :Welcome');
 

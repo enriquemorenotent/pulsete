@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection drops oversized pending lines instead of buffering indefinitely', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
-  let destroyed = false;
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -29,15 +28,11 @@ test('irc connection drops oversized pending lines instead of buffering indefini
     }
   );
 
-  connection.lifecycle.socket = {
-    destroy() {
-      destroyed = true;
-    },
-  } as unknown as net.Socket;
+  const socket = attachMockSocket(connection);
 
   connection.consume('x'.repeat(20_000));
 
-  assert.equal(destroyed, true);
+  assert.equal(socket.destroyed, true);
   assert.ok(
     events.some(
       (event) =>
@@ -50,7 +45,6 @@ test('irc connection drops oversized pending lines instead of buffering indefini
 
 test('irc connection drops oversized complete lines before dispatching them', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
-  let destroyed = false;
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -73,15 +67,11 @@ test('irc connection drops oversized complete lines before dispatching them', ()
     }
   );
 
-  connection.lifecycle.socket = {
-    destroy() {
-      destroyed = true;
-    },
-  } as unknown as net.Socket;
+  const socket = attachMockSocket(connection);
 
   connection.consume(`:irc.example NOTICE tester :${'x'.repeat(20_000)}\r\n`);
 
-  assert.equal(destroyed, true);
+  assert.equal(socket.destroyed, true);
   assert.equal(events.some((event) => event.type === 'message'), false);
   assert.ok(
     events.some(
@@ -95,7 +85,6 @@ test('irc connection drops oversized complete lines before dispatching them', ()
 
 test('irc connection accepts large chunks when they contain complete IRC lines', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
-  let destroyed = false;
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -118,17 +107,13 @@ test('irc connection accepts large chunks when they contain complete IRC lines',
     }
   );
 
-  connection.lifecycle.socket = {
-    destroy() {
-      destroyed = true;
-    },
-  } as unknown as net.Socket;
+  const socket = attachMockSocket(connection);
 
   const chunk = Array.from({ length: 500 }, (_, index) => `:irc.example NOTICE tester :line ${index}\r\n`).join('');
   assert.ok(Buffer.byteLength(chunk, 'utf8') > 16 * 1024);
 
   connection.consume(chunk);
 
-  assert.equal(destroyed, false);
+  assert.equal(socket.destroyed, false);
   assert.equal(events.filter((event) => event.type === 'message').length, 500);
 });

@@ -1,18 +1,16 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket,makeUser } from './helpers/irc-race-test-helpers.js';
+import { createMockSocket, makeUser, mockNetConnect } from './helpers/irc-race-test-helpers.js';
 
 test('updating a profile while connecting restarts the handshake with the new settings', () => {
-  const originalConnect = net.connect;
   const firstWrites: string[] = [];
   const secondWrites: string[] = [];
   const sockets = [createMockSocket(firstWrites), createMockSocket(secondWrites)];
   const statuses: string[] = [];
   let connectCalls = 0;
-  net.connect = (() => sockets[connectCalls++]) as unknown as typeof net.connect;
+  const restoreConnect = mockNetConnect(() => sockets[connectCalls++] ?? assert.fail('Unexpected reconnect'));
 
   const connection = new IrcConnection(
     {
@@ -77,6 +75,6 @@ test('updating a profile while connecting restarts the handshake with the new se
     assert.ok(statuses.includes('Looking up new.example.test'));
     assert.ok(statuses.includes('Connecting to new.example.test (127.0.0.1:6697)'));
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
   }
 });

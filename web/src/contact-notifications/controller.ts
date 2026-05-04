@@ -22,7 +22,7 @@ import {
 } from './browser.js';
 import {
   closeContactSystemNotification,
-  createContactSystemNotification,
+  showContactSystemNotification,
   type ContactSystemNotificationHandle,
 } from './system-notification.js';
 
@@ -208,23 +208,12 @@ export function useContactNotifications(input: {
       }
     }
     if (shouldNotify) {
-      try {
-        const networkName =
-          input.networkNamesById.get(eligibleBuffer.networkId) ?? eligibleBuffer.networkId;
-        const notification = createContactSystemNotification({
-          buffer: eligibleBuffer,
-          networkName,
-          onRelease: (releasedNotification) => {
-            activeNotificationsRef.current.delete(releasedNotification);
-          },
-          onSelectBuffer: input.onSelectBuffer,
-        });
-        if (notification) {
-          activeNotificationsRef.current.add(notification);
-        }
-      } catch {
-        // Browser notification delivery can still fail despite granted permission.
-      }
+      showContactSystemNotification({
+        activeNotifications: activeNotificationsRef.current,
+        buffer: eligibleBuffer,
+        networkNamesById: input.networkNamesById,
+        onSelectBuffer: input.onSelectBuffer,
+      });
     }
   }, [
     input.buffers,

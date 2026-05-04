@@ -1,3 +1,5 @@
+import type { IrcConnection } from '../../server/irc.js';
+import type { Runtime } from '../../server/runtime.js';
 import type { NetworkInput } from '../../server/storage.js';
 import { identityFromNick } from '../../shared/user-identity.js';
 import type { ChannelUserState } from '../../shared/protocol-chat.js';
@@ -34,3 +36,11 @@ export const createNetworkInput = (overrides: Partial<NetworkInput> = {}): Netwo
   autoJoin: [],
   ...overrides,
 });
+
+export const setRuntimeConnection = (
+  runtime: Pick<Runtime, 'connections'>,
+  networkId: string,
+  connection: Partial<IrcConnection>,
+) => {
+  runtime.connections.set(networkId, connection as IrcConnection);
+};

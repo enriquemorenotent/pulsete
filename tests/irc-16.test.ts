@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection keeps ambiguous same-channel 442 replies on the server buffer', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection keeps ambiguous same-channel 442 replies on the server buff
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('TOPIC #help :new topic', '#topic');
   connection.part('#help', 'Leaving', '#part');
@@ -94,11 +90,7 @@ test('irc connection clears ambiguous same-channel 442 contexts before later rep
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('TOPIC #help :old topic', '#topic-old');
   connection.part('#help', 'Leaving', '#part-old');
@@ -159,11 +151,7 @@ test('irc connection clears successful topic-change contexts before later topic 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#help', []);
 
   connection.sendClientRaw('TOPIC #help :old topic', '#topic-old');

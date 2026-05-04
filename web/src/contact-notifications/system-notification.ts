@@ -20,6 +20,14 @@ type ContactSystemNotificationInput = {
   onSelectBuffer: (buffer: BufferState) => void;
 };
 
+type ContactSystemNotificationDispatchInput = {
+  activeNotifications: Set<ContactSystemNotificationHandle>;
+  buffer: BufferState;
+  networkNamesById: ReadonlyMap<string, string>;
+  notificationConstructor?: ContactSystemNotificationConstructor;
+  onSelectBuffer: (buffer: BufferState) => void;
+};
+
 const clearContactSystemNotificationHandlers = (
   notification: ContactSystemNotificationHandle,
 ) => {
@@ -72,9 +80,32 @@ export const createContactSystemNotification = (
   return notification;
 };
 
+export const showContactSystemNotification = (
+  input: ContactSystemNotificationDispatchInput,
+) => {
+  try {
+    const networkName =
+      input.networkNamesById.get(input.buffer.networkId) ?? input.buffer.networkId;
+    const notification = createContactSystemNotification({
+      buffer: input.buffer,
+      networkName,
+      notificationConstructor: input.notificationConstructor,
+      onRelease: (releasedNotification) => {
+        input.activeNotifications.delete(releasedNotification);
+      },
+      onSelectBuffer: input.onSelectBuffer,
+    });
+    if (notification) {
+      input.activeNotifications.add(notification);
+    }
+  } catch {
+    // Browser notification delivery can still fail despite granted permission.
+  }
+};
+
 const resolveNotificationConstructor = () => {
   if (typeof window === 'undefined' || typeof window.Notification === 'undefined') {
     return null;
   }
-  return window.Notification as unknown as ContactSystemNotificationConstructor;
+  return window.Notification;
 };

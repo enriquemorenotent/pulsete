@@ -208,18 +208,6 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         scrollerRef={viewport.scrollerRef}
         startReached={viewport.handleStartReached}
       />
-      {viewport.showJumpToLatest ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
-          <Button
-            variant="outline"
-            size="sm"
-            className="pointer-events-auto rounded-full border-white/12 bg-[#2b303a]/88 px-3.5 text-[12px] text-foreground shadow-[0_14px_32px_rgba(0,0,0,0.36)] backdrop-blur-xl hover:bg-[#333845]/92"
-            onClick={viewport.handleJumpToLatest}
-          >
-            Jump to latest
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 });

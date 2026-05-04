@@ -33,15 +33,15 @@ test('closeConnection closes a workspace network without deleting its logs', asy
     self: false,
     ts: 1,
   });
-  const state = runtime as unknown as { connections: Map<string, unknown> };
+  const { connections } = runtime;
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => state.connections.has(network.id));
+    await waitFor(() => connections.has(network.id));
 
     const result = runtime.networks.closeConnection(network.id);
 
-    assert.equal(state.connections.has(network.id), false);
+    assert.equal(connections.has(network.id), false);
     assert.equal(storage.networks.get(network.id)?.workspaceOpen, false);
     assert.deepEqual(
       storage.conversations.listMessages(network.id, '#help', 10).map((message) => message.id),

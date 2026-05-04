@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection routes labeled standard reply failures back to the originating buffer', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection routes labeled standard reply failures back to the originat
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.lifecycle.capabilities.negotiated.add('labeled-response');
 
   connection.say('alice', 'hi', '#chat');

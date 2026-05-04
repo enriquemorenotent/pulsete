@@ -10,7 +10,7 @@ import { createRuntime } from '../server/runtime.js';
 import { RuntimeChannelListService } from '../server/runtime-channel-lists.js';
 import { Storage } from '../server/storage.js';
 import type { IrcRuntimeChannelListConnection } from '../server/irc-types.js';
-import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
+import { createNetworkInput, waitFor } from './helpers/runtime-test-common.js';
 import { createBulkListServer } from './helpers/runtime-test-list-servers.js';
 import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
 
@@ -65,6 +65,7 @@ test('runtime clears pending channel-list batches when replacing a stale session
   const originalSetTimeout = global.setTimeout;
   const originalClearTimeout = global.clearTimeout;
   const scheduled: Array<{ callback: () => void; delay: number; cancelled: boolean }> = [];
+  const timerEntries = new Map<ReturnType<typeof setTimeout>, typeof scheduled[number]>();
   global.setTimeout = (((callback: () => void, delay?: number) => {
     const entry = {
       callback,
@@ -72,17 +73,19 @@ test('runtime clears pending channel-list batches when replacing a stale session
       cancelled: false,
     };
     scheduled.push(entry);
-    return {
-      __entry: entry,
-      unref() {
-        return this;
-      },
-    } as unknown as ReturnType<typeof setTimeout>;
+    const handle = originalSetTimeout(() => {}, 60_000);
+    handle.unref?.();
+    timerEntries.set(handle, entry);
+    return handle;
   }) as typeof setTimeout);
   global.clearTimeout = (((handle?: ReturnType<typeof setTimeout>) => {
-    const entry = (handle as (ReturnType<typeof setTimeout> & { __entry?: typeof scheduled[number] }) | undefined)?.__entry;
+    const entry = handle ? timerEntries.get(handle) : undefined;
     if (entry) {
       entry.cancelled = true;
+    }
+    if (handle) {
+      timerEntries.delete(handle);
+      originalClearTimeout(handle);
     }
   }) as typeof clearTimeout);
 
@@ -136,6 +139,9 @@ test('runtime clears pending channel-list batches when replacing a stale session
       false
     );
   } finally {
+    for (const handle of timerEntries.keys()) {
+      originalClearTimeout(handle);
+    }
     global.setTimeout = originalSetTimeout;
     global.clearTimeout = originalClearTimeout;
   }

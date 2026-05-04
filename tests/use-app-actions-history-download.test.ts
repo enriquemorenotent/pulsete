@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol-chat.js';
 import { initialState } from '../web/src/app-state.js';
-import type { Action,State } from '../web/src/app-types.js';
+import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
 import type { SocketHandle } from '../web/src/client.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
 import { createAppActions } from '../web/src/useAppActions.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
+import { createDocumentTestDouble } from './helpers/browser-test-doubles.js';
 
 const network: NetworkProfile = {
   id: 'network-1',
@@ -164,17 +165,17 @@ test('downloadBufferHistory fetches the transcript attachment and triggers a bro
     }
     throw new Error(`Unexpected fetch: ${String(input)}`);
   }) as typeof fetch;
-  globalThis.document = {
+  globalThis.document = createDocumentTestDouble({
     createElement(tagName: string) {
       assert.equal(tagName, 'a');
       return link;
     },
     body: {
       append(element: unknown) {
-        appended.push(element);
+      appended.push(element);
       },
     },
-  } as unknown as Document;
+  });
   globalThis.URL.createObjectURL = () => 'blob:test-history';
   globalThis.URL.revokeObjectURL = () => {};
 
@@ -215,13 +216,13 @@ test('downloadBufferHistory revokes the blob URL when the browser click fails', 
   };
   globalThis.fetch = (async () =>
     new Response('history body', { status: 200 })) as typeof fetch;
-  globalThis.document = {
+  globalThis.document = createDocumentTestDouble({
     createElement(tagName: string) {
       assert.equal(tagName, 'a');
       return link;
     },
     body: { append() {} },
-  } as unknown as Document;
+  });
   globalThis.URL.createObjectURL = () => 'blob:test-history';
   globalThis.URL.revokeObjectURL = (url) => revoked.push(url);
 

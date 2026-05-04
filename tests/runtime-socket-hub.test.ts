@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import WebSocket from 'ws';
 import { RuntimeSocketHub } from '../server/runtime-socket-hub.js';
+import { createWebSocketTestDouble } from './helpers/websocket-test-doubles.js';
 
 class FakeSocket extends EventEmitter {
   readyState: number = WebSocket.OPEN;
@@ -20,7 +21,7 @@ class FakeSocket extends EventEmitter {
 test('runtime socket hub removes close listeners when detaching sockets', () => {
   const dropped: WebSocket[] = [];
   const hub = new RuntimeSocketHub((ws) => dropped.push(ws));
-  const socket = new FakeSocket() as unknown as WebSocket & FakeSocket;
+  const socket = createWebSocketTestDouble(new FakeSocket());
 
   hub.attach(socket);
   assert.equal(socket.listenerCount('close'), 1);
@@ -37,7 +38,7 @@ test('runtime socket hub removes close listeners when detaching sockets', () => 
 test('runtime socket hub removes close listeners while closing all sockets', () => {
   const dropped: WebSocket[] = [];
   const hub = new RuntimeSocketHub((ws) => dropped.push(ws));
-  const socket = new FakeSocket() as unknown as WebSocket & FakeSocket;
+  const socket = createWebSocketTestDouble(new FakeSocket());
 
   hub.attach(socket);
   hub.closeAll();

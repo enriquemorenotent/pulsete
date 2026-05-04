@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection routes direct user notices to the sender target', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -70,11 +70,7 @@ test('irc connection routes bot notice replies back to the source buffer', () =>
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('helper', '!view sofia', '#chat');
   connection.consume(':helper!bot@example NOTICE tester :Sofia is online\r\n');
@@ -119,11 +115,7 @@ test('irc connection keeps direct service notices on the server buffer even afte
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('NOTICE NickServ :STATUS tester', '#chat');
   connection.consume(':NickServ!service@example NOTICE tester :STATUS tester 3\r\n');

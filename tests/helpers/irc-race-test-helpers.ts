@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { EventEmitter } from 'node:events';
 import net from 'node:net';
 import { IrcConnection } from '../../server/irc.js';
 import type { ChannelUserState } from '../../shared/protocol-chat.js';
 import { waitFor } from './async-test-helpers.js';
 
 export { waitFor };
+export {
+  attachMockSocket,
+  createMockSocket,
+  createThrowingMockSocket,
+  mockNetConnect,
+  type MockIrcSocket,
+} from './irc-test-socket-helpers.js';
 
 export const makeUser = (
   nick: string,
@@ -17,27 +23,6 @@ export const makeUser = (
   mode,
   away,
 });
-
-export const createMockSocket = (writes: string[]) => {
-  class MockSocket extends EventEmitter {
-    destroyed = false;
-
-    write(line: string) {
-      writes.push(line);
-      return true;
-    }
-
-    end() {}
-    setEncoding() {}
-    destroy() {
-      this.destroyed = true;
-      this.emit('close');
-      return this;
-    }
-  }
-
-  return new MockSocket();
-};
 
 export const createWelcomeServer = async (closeDelayMs = 0) => {
   let activeSocket: net.Socket | null = null;

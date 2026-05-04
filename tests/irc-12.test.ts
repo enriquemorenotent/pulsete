@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 import { waitFor } from './helpers/async-test-helpers.js';
 
 test('irc connection streams dedicated LIST replies without generic status noise', () => {
@@ -31,11 +31,7 @@ test('irc connection streams dedicated LIST replies without generic status noise
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.requestChannelList('request-1');
   connection.consume(':irc.example 321 tester Channel :Users Name\r\n');
@@ -94,11 +90,7 @@ test('irc connection refuses a structured LIST while a raw LIST reply is still p
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('LIST', '#chat');
 
@@ -142,11 +134,7 @@ test('irc connection times out a stalled LIST, drains late numerics, and retries
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   assert.equal(connection.requestChannelList('request-1'), true);
   await waitFor(() =>

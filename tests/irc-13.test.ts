@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 import { waitFor } from './helpers/async-test-helpers.js';
 
 test('irc connection expires a stalled LIST drain and allows a later retry without a terminator', async () => {
@@ -32,11 +32,7 @@ test('irc connection expires a stalled LIST drain and allows a later retry witho
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   assert.equal(connection.requestChannelList('request-1'), true);
   await waitFor(() =>
@@ -82,11 +78,7 @@ test('irc connection refuses a second LIST while one is already active', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   assert.equal(connection.requestChannelList('request-1'), true);
   assert.equal(connection.requestChannelList('request-2'), false);
@@ -123,11 +115,7 @@ test('irc connection keeps unrelated command errors from failing LIST', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.requestChannelList('request-1');
   connection.sendClientRaw('NOPE', '#chat');
@@ -181,11 +169,7 @@ test('irc connection keeps raw LIST numerics on the server buffer', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('LIST', '#chat');
   connection.consume(':irc.example 322 tester #help 42 :Support room\r\n');

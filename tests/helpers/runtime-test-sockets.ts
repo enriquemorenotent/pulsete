@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import WebSocket from 'ws';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
+import { createWebSocketTestDouble } from './websocket-test-doubles.js';
 
 export const createSocketRecorder = () => {
   const socket = new EventEmitter() as EventEmitter & {
@@ -18,7 +19,7 @@ export const createSocketRecorder = () => {
     socket.readyState = WebSocket.CLOSED;
     socket.emit('close');
   };
-  return socket as unknown as WebSocket & { sent: ServerMessage[]; close(): void };
+  return createWebSocketTestDouble(socket);
 };
 
 export const createThrowingSocket = () => {
@@ -38,5 +39,5 @@ export const createThrowingSocket = () => {
     socket.readyState = WebSocket.CLOSED;
     socket.emit('close');
   };
-  return socket as unknown as WebSocket & { closed: boolean };
+  return createWebSocketTestDouble(socket);
 };

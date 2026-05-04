@@ -1,15 +1,13 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket } from './helpers/irc-race-test-helpers.js';
+import { attachMockSocket, createMockSocket, mockNetConnect } from './helpers/irc-race-test-helpers.js';
 
 test('reconnect timers are unrefd and cleared on manual disconnect', () => {
-  const originalConnect = net.connect;
   const socket = createMockSocket([]);
-  net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
+  const restoreConnect = mockNetConnect(socket);
 
   const connection = new IrcConnection(
     {
@@ -40,18 +38,18 @@ test('reconnect timers are unrefd and cleared on manual disconnect', () => {
 
     assert.equal(connection.lifecycle.reconnectTimer, null);
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
   }
 });
 
 test('manual reconnect resets the exhausted retry budget', () => {
-  const originalConnect = net.connect;
   const originalSetTimeout = global.setTimeout;
   const originalClearTimeout = global.clearTimeout;
   const scheduled: Array<{ callback: () => void; delay: number; cancelled: boolean }> = [];
+  const timerEntries = new Map<ReturnType<typeof setTimeout>, typeof scheduled[number]>();
   const sockets = Array.from({ length: 5 }, () => createMockSocket([]));
   let connectCalls = 0;
-  net.connect = (() => sockets[connectCalls++] as unknown as net.Socket) as typeof net.connect;
+  const restoreConnect = mockNetConnect(() => sockets[connectCalls++] ?? assert.fail('Unexpected reconnect'));
   global.setTimeout = (((callback: () => void, delay?: number) => {
     const entry = {
       callback,
@@ -59,20 +57,19 @@ test('manual reconnect resets the exhausted retry budget', () => {
       cancelled: false,
     };
     scheduled.push(entry);
-    return {
-      __entry: entry,
-      unref() {
-        return this;
-      },
-      hasRef() {
-        return false;
-      },
-    } as unknown as ReturnType<typeof setTimeout>;
+    const handle = originalSetTimeout(() => {}, 60_000);
+    handle.unref?.();
+    timerEntries.set(handle, entry);
+    return handle;
   }) as typeof setTimeout);
   global.clearTimeout = (((handle?: ReturnType<typeof setTimeout>) => {
-    const entry = (handle as (ReturnType<typeof setTimeout> & { __entry?: typeof scheduled[number] }) | undefined)?.__entry;
+    const entry = handle ? timerEntries.get(handle) : undefined;
     if (entry) {
       entry.cancelled = true;
+    }
+    if (handle) {
+      timerEntries.delete(handle);
+      originalClearTimeout(handle);
     }
   }) as typeof clearTimeout);
 
@@ -121,7 +118,10 @@ test('manual reconnect resets the exhausted retry budget', () => {
 
     assert.equal(activeTimers().length, 1);
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
+    for (const handle of timerEntries.keys()) {
+      originalClearTimeout(handle);
+    }
     global.setTimeout = originalSetTimeout;
     global.clearTimeout = originalClearTimeout;
   }
@@ -129,16 +129,6 @@ test('manual reconnect resets the exhausted retry budget', () => {
 
 test('nick fallback uses the updated profile nick after reconnecting', () => {
   const writes: string[] = [];
-  const createMockSocket = () => ({
-    write(line: string) {
-      writes.push(line);
-    },
-    end() {},
-    setEncoding() {},
-    on() {
-      return this;
-    },
-  });
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -158,10 +148,10 @@ test('nick fallback uses the updated profile nick after reconnecting', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket() as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.updateProfile({ ...connection.profile, nick: 'newnick', altNicks: ['newnick_', 'newnick__'] });
   connection.disconnect();
-  connection.lifecycle.socket = createMockSocket() as any;
+  attachMockSocket(connection, createMockSocket(writes));
 
   handleIrcLine(connection, ':irc.example 433 * newnick :Nickname is already in use');
 
@@ -171,16 +161,7 @@ test('nick fallback uses the updated profile nick after reconnecting', () => {
 
 test('nick conflicts use configured alternate nicknames before suffix fallback', () => {
   const writes: string[] = [];
-  const socket = {
-    write(line: string) {
-      writes.push(line);
-    },
-    end() {},
-    setEncoding() {},
-    on() {
-      return this;
-    },
-  };
+  const socket = createMockSocket(writes);
   const notices: string[] = [];
   const connection = new IrcConnection(
     {
@@ -206,7 +187,7 @@ test('nick conflicts use configured alternate nicknames before suffix fallback',
     }
   );
 
-  connection.lifecycle.socket = socket as any;
+  attachMockSocket(connection, socket);
   handleIrcLine(connection, ':irc.example 433 * primary :Nickname is already in use');
   handleIrcLine(connection, ':irc.example 433 * secondary :Nickname is already in use');
   handleIrcLine(connection, ':irc.example 433 * tertiary :Nickname is already in use');

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection keeps WHOIS 401 replies out of stale private-message contexts', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection keeps WHOIS 401 replies out of stale private-message contex
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('WHOIS alice', '#whois');
   connection.say('alice', 'hi', '#chat');
@@ -87,11 +83,7 @@ test('irc connection emits private-message 401 replies as send failures', () => 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('alice', 'hi', '#chat');
   connection.consume(':irc.example 401 tester alice :No such nick/channel\r\n');
@@ -149,11 +141,7 @@ test('irc connection keeps generic raw-command numerics on the server buffer', (
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('LIST', '#chat');
   connection.consume(':irc.example 372 tester :- motd line\r\n');
@@ -204,11 +192,7 @@ test('irc connection trusts echoed self messages when echo-message is negotiated
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.lifecycle.capabilities.negotiated.add('echo-message');
 
   connection.say('alice', 'hi', '#chat');
@@ -228,4 +212,3 @@ test('irc connection trusts echoed self messages when echo-message is negotiated
   assert.equal(messageEvent.message.self, true);
   assert.equal(messageEvent.message.ts, Date.parse('2026-03-28T12:00:00.000Z'));
 });
-

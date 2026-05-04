@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 import { commandReplyBurstIdleMs } from '../server/irc-reply-context-types.js';
 
 const getNoticeTriples = (events: Array<{ type: string; [key: string]: unknown }>) =>
@@ -33,11 +33,7 @@ const createConnectedIrc = () => {
     { onEvent: (event) => { events.push(event); } },
   );
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   return { connection, events, writes };
 };
 

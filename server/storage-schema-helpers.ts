@@ -1,5 +1,16 @@
 import type { SqliteDb } from './storage-sqlite.js';
 
+export const tableExists = (db: SqliteDb, table: string) =>
+  Boolean(
+    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(table)
+  );
+
+export const tableHasColumn = (db: SqliteDb, table: string, column: string) =>
+  tableExists(db, table)
+  && (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
+    .some((entry) => entry.name === column);
+
 export const historyImportBatchesSchemaSql = `
   CREATE TABLE IF NOT EXISTS history_import_batches (
     id TEXT PRIMARY KEY,
@@ -107,8 +118,4 @@ export const dropLegacyMessageSearchArtifacts = (db: SqliteDb) => {
   `);
 };
 
-const messageSearchIndexExists = (db: SqliteDb) =>
-  Boolean(
-    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'message_search_fts'")
-      .get()
-  );
+const messageSearchIndexExists = (db: SqliteDb) => tableExists(db, 'message_search_fts');

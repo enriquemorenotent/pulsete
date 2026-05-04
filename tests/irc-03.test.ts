@@ -4,6 +4,7 @@ import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
 import { waitFor } from './helpers/async-test-helpers.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('raw ISON replies stay in the originating buffer and do not affect friend presence', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -31,11 +32,7 @@ test('raw ISON replies stay in the originating buffer and do not affect friend p
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('ISON helper', '#chat');
   connection.consume(':irc.example 303 tester :helper\r\n');
@@ -187,11 +184,7 @@ test('irc connection ignores stale ISON replies when snapshots overlap', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.lifecycle.connected = false;
   connection.setFriendNicks(['Alice']);

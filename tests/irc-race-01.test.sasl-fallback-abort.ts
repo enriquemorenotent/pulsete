@@ -1,17 +1,15 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket } from './helpers/irc-race-test-helpers.js';
+import { createMockSocket, mockNetConnect } from './helpers/irc-race-test-helpers.js';
 
 test('sasl plain falls back cleanly when the server does not advertise sasl', () => {
-  const originalConnect = net.connect;
   const writes: string[] = [];
   const events: Array<Record<string, unknown>> = [];
   const socket = createMockSocket(writes);
-  net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
+  const restoreConnect = mockNetConnect(socket);
 
   const connection = new IrcConnection(
     {
@@ -57,17 +55,16 @@ test('sasl plain falls back cleanly when the server does not advertise sasl', ()
       true
     );
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
     connection.disconnect();
   }
 });
 
 test('sasl plain aborts cleanly when the server welcomes before replying to CAP LS', () => {
-  const originalConnect = net.connect;
   const writes: string[] = [];
   const events: Array<Record<string, unknown>> = [];
   const socket = createMockSocket(writes);
-  net.connect = (() => socket as unknown as net.Socket) as typeof net.connect;
+  const restoreConnect = mockNetConnect(socket);
 
   const connection = new IrcConnection(
     {
@@ -117,7 +114,7 @@ test('sasl plain aborts cleanly when the server welcomes before replying to CAP 
       true
     );
   } finally {
-    net.connect = originalConnect;
+    restoreConnect();
     connection.disconnect();
   }
 });

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection keeps queued rejoin failures bound after a self part', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection keeps queued rejoin failures bound after a self part', () =
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.part('#help', 'Leaving', '#part');
@@ -88,11 +84,7 @@ test('irc connection clears stale part contexts after a self kick', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.part('#help', 'Leaving', '#part');
@@ -146,11 +138,7 @@ test('irc connection keeps queued rejoin failures bound after a self kick', () =
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.part('#help', 'Leaving', '#part');

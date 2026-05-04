@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection refuses a raw LIST while a structured LIST is active', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection refuses a raw LIST while a structured LIST is active', () =
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   assert.equal(connection.requestChannelList('request-1'), true);
   assert.equal(connection.sendClientRaw('LIST', '#chat'), false);
@@ -75,11 +71,7 @@ test('irc connection routes topic change status to the affected channel', () => 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write() {
-      return true;
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection);
   connection.channels.users.set('#help', []);
 
   connection.consume(':alice!user@host TOPIC #help :new topic\r\n');
@@ -129,11 +121,7 @@ test('irc connection keeps topic errors bound to topic commands on the same chan
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('TOPIC #help :new topic', '#topic');
   connection.part('#help', 'Leaving', '#part');
@@ -185,11 +173,7 @@ test('irc connection clears stale channel reply contexts after a self part', () 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#help', [{ nick: 'tester', mode: 'normal', away: false }]);
 
   connection.sendClientRaw('TOPIC #help :new topic', '#topic');

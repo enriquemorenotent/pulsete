@@ -4,6 +4,8 @@ import type { BufferState } from '../shared/protocol-chat.js';
 import {
   closeContactSystemNotification,
   createContactSystemNotification,
+  showContactSystemNotification,
+  type ContactSystemNotificationHandle,
 } from '../web/src/contact-notifications/system-notification.js';
 
 class FakeNotification {
@@ -53,6 +55,36 @@ test('system notification reports release when browser-owned handlers are cleare
   assert.equal(notification.onclose, null);
 });
 
+test('system notification click focuses, selects, and clears handlers', () => {
+  let focusCalls = 0;
+  let selectedBuffer: BufferState | null = null;
+  const notification = createContactSystemNotification({
+    buffer,
+    focusWindow: () => {
+      focusCalls += 1;
+    },
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: (nextBuffer) => {
+      selectedBuffer = nextBuffer;
+    },
+  }) as FakeNotification;
+
+  assert.equal(notification.title, 'Alice');
+  assert.deepEqual(notification.options, {
+    body: 'New private message on ExampleNet',
+    tag: 'pulsete-dm:query-alice',
+  });
+
+  notification.onclick?.(new Event('click'));
+
+  assert.equal(focusCalls, 1);
+  assert.equal(selectedBuffer, buffer);
+  assert.equal(notification.closeCalls, 1);
+  assert.equal(notification.onclick, null);
+  assert.equal(notification.onclose, null);
+});
+
 test('system notification owner can close without retaining click handlers', () => {
   let selected = false;
   const notification = createContactSystemNotification({
@@ -70,4 +102,25 @@ test('system notification owner can close without retaining click handlers', () 
   assert.equal(notification.onclick, null);
   assert.equal(notification.onclose, null);
   assert.equal(selected, false);
+});
+
+test('system notification dispatch tracks active notifications until release', () => {
+  const activeNotifications = new Set<ContactSystemNotificationHandle>();
+
+  showContactSystemNotification({
+    activeNotifications,
+    buffer,
+    networkNamesById: new Map([['network-1', 'ExampleNet']]),
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: () => undefined,
+  });
+
+  const notification = [...activeNotifications][0] as FakeNotification;
+
+  assert.equal(activeNotifications.size, 1);
+  assert.equal(notification.options?.body, 'New private message on ExampleNet');
+
+  notification.onclose?.(new Event('close'));
+
+  assert.equal(activeNotifications.size, 0);
 });

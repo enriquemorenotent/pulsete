@@ -5,6 +5,7 @@ import test from 'node:test';
 import WebSocket from 'ws';
 import { attachWebSocketServer, initializeWebSocketConnection } from '../server/ws-server.js';
 import { createFailingWebSocket, createThrowingWebSocket } from './helpers/http-websocket-test-helpers.js';
+import { createWebSocketTestDouble } from './helpers/websocket-test-doubles.js';
 
 type WebSocketTestContext = Parameters<typeof initializeWebSocketConnection>[1];
 type WebSocketTestContextOverrides = Partial<WebSocketTestContext>;
@@ -97,7 +98,7 @@ test('websocket initialization handles frames emitted during the first snapshot 
     },
   });
 
-  assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), true);
+  assert.equal(initializeWebSocketConnection(createWebSocketTestDouble(socket), context), true);
   assert.deepEqual(calls, ['attach', 'snapshot', 'connect:net-1']);
 });
 
@@ -131,7 +132,7 @@ test('websocket initialization detaches listeners when the initial snapshot thro
     },
   });
 
-  assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), false);
+  assert.equal(initializeWebSocketConnection(createWebSocketTestDouble(socket), context), false);
   assert.deepEqual(calls, [
     'attach',
     'snapshot',
@@ -156,7 +157,7 @@ test('websocket initialization removes runtime listeners after socket close', ()
   };
   const context = createWebSocketTestContext();
 
-  assert.equal(initializeWebSocketConnection(socket as unknown as WebSocket, context), true);
+  assert.equal(initializeWebSocketConnection(createWebSocketTestDouble(socket), context), true);
   assert.equal(socket.listenerCount('message'), 1);
   assert.equal(socket.listenerCount('error'), 1);
   assert.equal(socket.listenerCount('close'), 1);

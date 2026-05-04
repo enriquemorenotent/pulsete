@@ -7,7 +7,7 @@ import test from 'node:test';
 import { handleRuntimeEvent } from '../server/runtime-events.js';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import { createNetworkInput,makeUser,waitFor } from './helpers/runtime-test-common.js';
+import { createNetworkInput, makeUser, waitFor } from './helpers/runtime-test-common.js';
 import { createHandshakeServer } from './helpers/runtime-test-handshake-servers.js';
 
 test('deleteNetwork removes runtime connections', async () => {
@@ -24,15 +24,15 @@ test('deleteNetwork removes runtime connections', async () => {
     altNicks: ['deleter_', 'deleter__'],
     realName: 'deleter',
   }));
-  const state = runtime as unknown as { connections: Map<string, unknown> };
+  const { connections } = runtime;
 
   try {
     runtime.sessions.connect(network.id);
-    await waitFor(() => state.connections.has(network.id));
+    await waitFor(() => connections.has(network.id));
 
     runtime.networks.deleteNetwork(network.id);
 
-    assert.equal(state.connections.has(network.id), false);
+    assert.equal(connections.has(network.id), false);
     assert.equal(storage.networks.get(network.id), null);
   } finally {
     handshake.closeConnections();
@@ -53,7 +53,7 @@ test('runtime close disconnects active connections without appending shutdown no
     altNicks: ['close_', 'close__'],
     realName: 'close',
   }));
-  const state = runtime as unknown as { connections: Map<string, unknown> };
+  const { connections } = runtime;
 
   try {
     runtime.sessions.connect(network.id);
@@ -63,7 +63,7 @@ test('runtime close disconnects active connections without appending shutdown no
     runtime.gateway.close();
 
     await waitFor(() => !handshake.hasConnections());
-    assert.equal(state.connections.size, 0);
+    assert.equal(connections.size, 0);
     assert.deepEqual(
       storage.conversations.listMessages(network.id, 'server', 20).map((message) => message.body),
       beforeShutdownMessages
@@ -88,7 +88,7 @@ test('deleteNetwork removes open network connections', async () => {
     altNicks: ['template_', 'template__'],
     realName: 'template',
   }));
-  const state = runtime as unknown as { connections: Map<string, unknown> };
+  const { connections } = runtime;
   let uncaught: string | null = null;
   const onUncaught = (error: unknown) => {
     uncaught = error instanceof Error ? error.message : String(error);
@@ -103,7 +103,7 @@ test('deleteNetwork removes open network connections', async () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     assert.equal(storage.networks.get(network.id), null);
-    assert.equal(state.connections.has(network.id), false);
+    assert.equal(connections.has(network.id), false);
     assert.equal(uncaught, null);
   } finally {
     process.removeListener('uncaughtException', onUncaught);

@@ -5,6 +5,7 @@ import {
   readStoredContactNotificationSettings,
 } from '../web/src/contact-notifications/browser.js';
 import { CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS } from '../web/src/contact-notifications/settings.js';
+import { createAudioContextTestDouble } from './helpers/browser-test-doubles.js';
 
 class FakeAudioParam {
   setValueAtTime() {}
@@ -79,7 +80,7 @@ test('stored settings can be read from the legacy preference key', () => {
 test('audio cue disconnects scheduled nodes after playback ends', async () => {
   const oscillators: FakeOscillator[] = [];
   const gains: FakeGain[] = [];
-  const audioContext = {
+  const audioContext = createAudioContextTestDouble({
     currentTime: 0,
     destination: {},
     state: 'running',
@@ -94,7 +95,7 @@ test('audio cue disconnects scheduled nodes after playback ends', async () => {
       return oscillator;
     },
     resume: async () => undefined,
-  } as unknown as AudioContext;
+  });
 
   await playCue(audioContext, 'chirp');
 
@@ -110,7 +111,7 @@ test('audio cue disconnects scheduled nodes after playback ends', async () => {
 test('audio cue disconnects scheduled nodes when playback scheduling fails', async () => {
   const oscillators: FakeOscillator[] = [];
   const gains: FakeGain[] = [];
-  const audioContext = {
+  const audioContext = createAudioContextTestDouble({
     currentTime: 0,
     destination: {},
     state: 'running',
@@ -125,7 +126,7 @@ test('audio cue disconnects scheduled nodes when playback scheduling fails', asy
       return oscillator;
     },
     resume: async () => undefined,
-  } as unknown as AudioContext;
+  });
 
   await playCue(audioContext, 'chirp');
 

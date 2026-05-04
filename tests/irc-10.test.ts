@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection clears raw MODE contexts after untargeted mode errors', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection clears raw MODE contexts after untargeted mode errors', () 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('MODE alice', '#server');
   connection.consume(':irc.example 502 tester :Cant change mode for other users\r\n');
@@ -96,11 +92,7 @@ test('irc connection clears duplicate raw MODE contexts after untargeted mode er
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('MODE alice', '#server-a');
   connection.sendClientRaw('MODE bob', '#server-b');
@@ -154,11 +146,7 @@ test('irc connection clears duplicate raw MODE contexts after targeted mode erro
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('MODE bob', '#server-a');
   connection.sendClientRaw('MODE bob', '#server-b');

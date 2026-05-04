@@ -5,7 +5,12 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import { createNetworkInput,makeUser,waitFor } from './helpers/runtime-test-common.js';
+import {
+  createNetworkInput,
+  makeUser,
+  setRuntimeConnection,
+  waitFor,
+} from './helpers/runtime-test-common.js';
 import { createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
 import { createListServer } from './helpers/runtime-test-list-servers.js';
 import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
@@ -17,11 +22,7 @@ test('runtime join defers channel persistence until the server confirms the join
   const network = storage.networks.upsert(createNetworkInput());
   let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
 
-  (runtime as unknown as {
-    connections: Map<string, {
-      join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
-    }>;
-  }).connections.set(network.id, {
+  setRuntimeConnection(runtime, network.id, {
     join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
       requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
       return channel === '#missing';
@@ -49,11 +50,7 @@ test('runtime rejoins existing channel buffers without surfacing a pending chann
 
   let requestedJoin: { channel: string; sourceTarget: string | undefined; visiblePending: boolean | undefined } | null = null;
 
-  (runtime as unknown as {
-    connections: Map<string, {
-      join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }): boolean;
-    }>;
-  }).connections.set(network.id, {
+  setRuntimeConnection(runtime, network.id, {
     join(channel: string, sourceTarget?: string, options?: { visiblePending?: boolean }) {
       requestedJoin = { channel, sourceTarget, visiblePending: options?.visiblePending };
       return channel === '#help';

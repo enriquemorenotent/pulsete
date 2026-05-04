@@ -5,8 +5,15 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import { createNetworkInput,waitFor } from './helpers/runtime-test-common.js';
-import { createHandshakeServer,createRegisteredServer } from './helpers/runtime-test-handshake-servers.js';
+import {
+  createNetworkInput,
+  setRuntimeConnection,
+  waitFor,
+} from './helpers/runtime-test-common.js';
+import {
+  createHandshakeServer,
+  createRegisteredServer,
+} from './helpers/runtime-test-handshake-servers.js';
 import { createListServer } from './helpers/runtime-test-list-servers.js';
 import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
 
@@ -128,18 +135,7 @@ test('runtime reports when a timed-out LIST is still draining late server replie
   const socket = createSocketRecorder();
 
   runtime.gateway.attachSocket(socket);
-  (runtime as unknown as {
-    connections: Map<string, {
-      getActiveChannelListSnapshot(): {
-        requestId: string;
-        entries: [];
-        totalEntries: number;
-        truncated: boolean;
-      } | null;
-      requestChannelList(requestId: string): boolean;
-      getChannelListRequestFailureMessage(): string;
-    }>;
-  }).connections.set(network.id, {
+  setRuntimeConnection(runtime, network.id, {
     getActiveChannelListSnapshot() {
       return null;
     },

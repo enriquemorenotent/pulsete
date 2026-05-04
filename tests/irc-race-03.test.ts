@@ -3,7 +3,12 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket, makeUser } from './helpers/irc-race-test-helpers.js';
+import {
+  attachMockSocket,
+  createMockSocket,
+  createThrowingMockSocket,
+  makeUser,
+} from './helpers/irc-race-test-helpers.js';
 
 test('nick fallback keeps the attempted nick when the retry write fails', () => {
   const writes: string[] = [];
@@ -36,18 +41,7 @@ test('nick fallback keeps the attempted nick when the retry write fails', () => 
     }
   );
 
-  connection.lifecycle.socket = {
-    write(line: string) {
-      writes.push(line);
-      throw new Error('boom');
-    },
-    end() {},
-    setEncoding() {},
-    destroy() {},
-    on() {
-      return this;
-    },
-  } as any;
+  attachMockSocket(connection, createThrowingMockSocket(writes));
 
   handleIrcLine(connection, ':irc.example 433 * primary :Nickname is already in use');
 
@@ -94,7 +88,7 @@ test('connected nick changes wait for server confirmation before mutating curren
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.channels.users.set('#Help', [makeUser('tester'), makeUser('alice')]);
   connection.setNick('newnick');
 
@@ -219,7 +213,7 @@ test('rejected connected nick changes keep the last accepted nick', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.setNick('newnick');
   handleIrcLine(connection, ':irc.example 437 tester newnick :Nickname temporarily unavailable');
 

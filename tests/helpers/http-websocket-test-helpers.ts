@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import WebSocket from 'ws';
+import { createWebSocketTestDouble } from './websocket-test-doubles.js';
 
 const normalizeWebSocketMessage = (payload: WebSocket.RawData) => {
   const { mutationId: _mutationId, ...message } = JSON.parse(payload.toString()) as Record<string, unknown>;
@@ -159,7 +160,7 @@ export const createThrowingWebSocket = () => {
     return true;
   };
   socket.close = () => {};
-  return { socket: socket as unknown as WebSocket, getErrorListenersAtSend: () => errorListenersAtSend };
+  return { socket: createWebSocketTestDouble(socket), getErrorListenersAtSend: () => errorListenersAtSend };
 };
 
 export const createFailingWebSocket = () => {
@@ -172,7 +173,7 @@ export const createFailingWebSocket = () => {
   socket.close = () => {
     closeCalls += 1;
   };
-  return { socket: socket as unknown as WebSocket, getCloseCalls: () => closeCalls };
+  return { socket: createWebSocketTestDouble(socket), getCloseCalls: () => closeCalls };
 };
 
 export const createBootstrapThenFailingWebSocket = () => {
@@ -190,5 +191,5 @@ export const createBootstrapThenFailingWebSocket = () => {
   socket.close = () => {
     closeCalls += 1;
   };
-  return { socket: socket as unknown as WebSocket & EventEmitter, getCloseCalls: () => closeCalls };
+  return { socket: createWebSocketTestDouble(socket), getCloseCalls: () => closeCalls };
 };

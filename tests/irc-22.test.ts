@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('service notice replies to a bot command stay in the source buffer', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('service notice replies to a bot command stay in the source buffer', () => 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('HelpServ', '!view some_rules', '#chat');
   connection.consume(':HelpServ!service@example NOTICE tester :some_rules: be nice\r\n');
@@ -77,11 +73,7 @@ test('service notice replies match configured service targets and stay in the so
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('HelpServ@services', '!view some_rules', '#chat');
   connection.consume(':HelpServ!service@services NOTICE tester :some_rules: be nice\r\n');
@@ -124,11 +116,7 @@ test('channel command notices stay in the originating channel buffer', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('#chat', '!view some_rules', '#chat');
   connection.consume(':helper!bot@example NOTICE tester :some_rules: be nice\r\n');

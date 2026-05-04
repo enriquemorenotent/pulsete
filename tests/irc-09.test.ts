@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection keeps delivery notices on the server buffer after channel messages', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection keeps delivery notices on the server buffer after channel m
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('#chat', 'hello there', '#chat');
   connection.consume(':irc.example NOTICE tester :Delivery failed\r\n');
@@ -89,11 +85,7 @@ test('irc connection keeps direct notices on the server buffer after generic raw
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.sendClientRaw('LIST', '#chat');
   connection.consume(':irc.example NOTICE tester :maintenance soon\r\n');
@@ -138,11 +130,7 @@ test('irc connection keeps raw MODE 401 replies from stale private-message conte
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('sofia', 'hello there', '#chat');
   connection.sendClientRaw('MODE sofia', '#server');

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { handleIrcLine } from '../server/irc-handle-line.js';
 import { IrcConnection } from '../server/irc.js';
-import { createMockSocket } from './helpers/irc-race-test-helpers.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-race-test-helpers.js';
 
 test('older nick conflicts do not overwrite a newer pending nick request', () => {
   const writes: string[] = [];
@@ -33,7 +33,7 @@ test('older nick conflicts do not overwrite a newer pending nick request', () =>
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.setNick('new1', '#first');
   connection.setNick('new2', '#second');
 
@@ -71,7 +71,7 @@ test('profile updates retry a rejected connected nick change when the desired ni
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   connection.updateProfile({ ...connection.profile, nick: 'newnick', altNicks: ['newnick_', 'newnick__'] });
   handleIrcLine(connection, ':irc.example 437 tester newnick :Nickname temporarily unavailable');
   connection.updateProfile({ ...connection.profile, favorite: true });
@@ -115,7 +115,7 @@ test('connected profiles do not reconnect when only an unused password changes',
 
   const socket = createMockSocket(writes);
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = socket as any;
+  attachMockSocket(connection, socket);
 
   connection.updateProfile({
     ...connection.profile,
@@ -157,7 +157,7 @@ test('connecting connections reject client commands before registration complete
     }
   );
 
-  connection.lifecycle.socket = createMockSocket(writes) as any;
+  attachMockSocket(connection, createMockSocket(writes));
   const joinSent = connection.join('#help', '#join');
   connection.say('alice', 'hello', '#chat');
   const rawSent = connection.sendClientRaw('WHOIS alice', '#raw');
@@ -177,4 +177,3 @@ test('connecting connections reject client commands before registration complete
     { target: '#nick', message: 'Still connecting to server' },
   ]);
 });
-

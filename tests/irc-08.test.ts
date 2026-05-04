@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 
 test('irc connection keeps unrelated auth notices on the server buffer', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
@@ -30,11 +30,7 @@ test('irc connection keeps unrelated auth notices on the server buffer', () => {
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('sofia', 'hello there', '#chat');
   connection.consume(':irc.example NOTICE tester :You need to be identified to use that command\r\n');
@@ -79,11 +75,7 @@ test('irc connection keeps unrelated cannot-send notices on the server buffer', 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('sofia', 'hello there', '#chat');
   connection.consume(':irc.example NOTICE tester :Cannot send invites while restricted\r\n');
@@ -128,11 +120,7 @@ test('irc connection keeps message blocked notices on the server buffer', () => 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('sofia', 'hello there', '#chat');
   connection.consume(':irc.example NOTICE tester :Message blocked by policy\r\n');
@@ -177,11 +165,7 @@ test('irc connection keeps ambiguous delivery notices on the server buffer', () 
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('alice', 'hi', '#chat-a');
   connection.say('bob', 'hi', '#chat-b');

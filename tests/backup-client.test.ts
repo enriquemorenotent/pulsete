@@ -5,6 +5,7 @@ import {
   importFullBackup,
   readPulseteBrowserPreferences,
 } from '../web/src/backup-client.js';
+import { createDocumentTestDouble } from './helpers/browser-test-doubles.js';
 
 test('downloadFullBackup sends Pulsete browser preferences and downloads the attachment', async () => {
   const restore = installBrowserStubs();
@@ -28,10 +29,10 @@ test('downloadFullBackup sends Pulsete browser preferences and downloads the att
       },
     });
   }) as typeof fetch;
-  globalThis.document = {
+  globalThis.document = createDocumentTestDouble({
     createElement: () => link,
     body: { append() {} },
-  } as unknown as Document;
+  });
   globalThis.URL.createObjectURL = () => 'blob:backup';
   globalThis.URL.revokeObjectURL = () => {};
 

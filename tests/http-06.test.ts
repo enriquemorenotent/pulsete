@@ -9,10 +9,16 @@ import type { ClientMessage } from '../shared/protocol-messages.js';
 import { createHttpHandler } from '../server/http-router.js';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
-import { attachWebSocketServer,initializeWebSocketConnection } from '../server/ws-server.js';
+import { attachWebSocketServer, initializeWebSocketConnection } from '../server/ws-server.js';
 import { listen } from './helpers/http-request-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
-import { closeWebSocket,connectWebSocket,createBootstrapThenFailingWebSocket,waitForWebSocketMessage,waitForWebSocketMessageType } from './helpers/http-websocket-test-helpers.js';
+import {
+  closeWebSocket,
+  connectWebSocket,
+  createBootstrapThenFailingWebSocket,
+  waitForWebSocketMessage,
+  waitForWebSocketMessageType,
+} from './helpers/http-websocket-test-helpers.js';
 
 test('websocket error replies detach the socket when a later send fails', () => {
   const { socket, getCloseCalls } = createBootstrapThenFailingWebSocket();
@@ -42,7 +48,7 @@ test('websocket error replies detach the socket when a later send fails', () => 
     handleMessage() {
       throw new Error('not used');
     },
-  } as unknown as Parameters<typeof initializeWebSocketConnection>[1];
+  } as Parameters<typeof initializeWebSocketConnection>[1];
 
   assert.equal(initializeWebSocketConnection(socket, context), true);
   socket.emit('message', '{invalid-json');

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import test from 'node:test';
 import { IrcConnection } from '../server/irc.js';
+import { attachMockSocket, createMockSocket } from './helpers/irc-test-socket-helpers.js';
 import { waitFor } from './helpers/async-test-helpers.js';
 
 test('irc connection keeps direct notices on the server buffer', async () => {
@@ -212,11 +213,7 @@ test('irc connection keeps unrelated direct server notices on the server buffer'
   );
 
   connection.lifecycle.connected = true;
-  connection.lifecycle.socket = {
-    write(chunk: string) {
-      writes.push(chunk);
-    },
-  } as unknown as net.Socket;
+  attachMockSocket(connection, createMockSocket(writes));
 
   connection.say('sofia', 'hello there', '#chat');
   connection.consume(':irc.example NOTICE tester :maintenance soon\r\n');
