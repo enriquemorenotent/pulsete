@@ -149,3 +149,32 @@ test('query peer identity migration backfills stable identities without moving l
     ['stable identity'],
   );
 });
+
+test('self-sent private message storage fallback ignores sender identity routing', () => {
+  const storage = new Storage(join(mkdtempSync(join(tmpdir(), 'pulsete-storage-')), 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const pollutedQuery = storage.conversations.upsertQuery(
+    network.id,
+    'oldPeer',
+    { kind: 'account', value: 'tester' },
+  );
+
+  storage.conversations.appendMessage({
+    id: 'self-message',
+    networkId: network.id,
+    target: 'alicia',
+    nick: 'tester',
+    senderIdentity: { kind: 'account', value: 'tester' },
+    body: 'Hi',
+    kind: 'line',
+    self: true,
+    ts: 1,
+  });
+
+  assert.equal(storage.conversations.getBuffer(pollutedQuery.id)?.target, 'oldPeer');
+  assert.deepEqual(
+    storage.conversations.listMessages(network.id, 'alicia', 10).map((message) => message.body),
+    ['Hi'],
+  );
+  assert.deepEqual(storage.conversations.listMessages(network.id, 'oldPeer', 10), []);
+});

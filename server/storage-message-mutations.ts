@@ -15,8 +15,13 @@ import {
 } from './storage-message-shared.js';
 import type { MessageInput, MessageRow } from './storage-types.js';
 
-export const appendMessage = (db: SqliteDb, input: MessageInput, lookup: MessageLookup) => {
-  const bufferId = ensureMessageBufferId(db, input);
+export const appendMessage = (
+  db: SqliteDb,
+  input: MessageInput,
+  lookup: MessageLookup,
+  resolvedBufferId?: string,
+) => {
+  const bufferId = ensureMessageBufferId(db, input, resolvedBufferId);
   if (!bufferId) {
     throw new Error(`Buffer not found for message target: ${input.networkId}:${input.target}`);
   }
@@ -90,8 +95,14 @@ const shouldRespectInputAttribution = (input: MessageInput) =>
   || input.attributionSource !== undefined
   || input.attributionConfidence !== undefined;
 
-const ensureMessageBufferId = (db: SqliteDb, input: MessageInput) => {
-  const existing = getMessageBufferId(db, input.networkId, input.target, input.senderIdentity);
+const ensureMessageBufferId = (db: SqliteDb, input: MessageInput, resolvedBufferId?: string) => {
+  if (resolvedBufferId) {
+    const row = db.prepare('SELECT id FROM buffers WHERE id = ?').get(resolvedBufferId);
+    return row ? resolvedBufferId : null;
+  }
+
+  const routingIdentity = shouldResolveQueryByIdentity(input) ? input.senderIdentity : null;
+  const existing = getMessageBufferId(db, input.networkId, input.target, routingIdentity);
   if (existing) {
     return existing;
   }
@@ -103,7 +114,7 @@ const ensureMessageBufferId = (db: SqliteDb, input: MessageInput) => {
         kind,
         target: input.target,
         isOpen: false,
-        peerIdentity: input.senderIdentity,
+        peerIdentity: routingIdentity,
         peerIdentitySource: 'message',
       })
     : upsertBuffer(db, {
@@ -124,6 +135,9 @@ const resolveMessageBufferKind = (target: string) =>
     : /^[#&+!]/.test(target)
       ? 'channel' as const
       : 'query' as const;
+
+const shouldResolveQueryByIdentity = (input: MessageInput) =>
+  !input.self && (input.kind === 'line' || input.kind === 'action');
 
 const ensureChannelDetails = (db: SqliteDb, bufferId: string) => {
   const now = Date.now();

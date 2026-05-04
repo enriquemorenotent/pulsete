@@ -67,7 +67,7 @@ export type RuntimeConversationStore = {
     fromTarget: string,
     toTarget: string,
   ): { buffer: BufferState; removedBufferIds: string[]; retargetedFrom?: string | null } | null;
-  appendMessage(input: MessageInput): AppSnapshot['messages'][number];
+  appendMessage(input: MessageInput, bufferId?: string): AppSnapshot['messages'][number];
 };
 
 export type RuntimeFriendStore = {

@@ -239,6 +239,46 @@ test('self-sent private messages open query buffers automatically', () => {
   );
 });
 
+test('self-sent private messages do not retarget an identity-polluted query buffer', () => {
+  const harness = createRuntimeEventHarness();
+  const pollutedQuery = harness.storage.conversations.upsertQuery(
+    harness.network.id,
+    'oldPeer',
+    { kind: 'account', value: 'tester' },
+  );
+  const selectedQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'alicia');
+
+  harness.publishEvent({
+    type: 'message',
+    currentNick: 'tester',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'alicia',
+      nick: 'tester',
+      senderIdentity: { kind: 'account', value: 'tester' },
+      body: 'Hi',
+      kind: 'line',
+      self: true,
+      ts: Date.now(),
+    },
+  });
+
+  const appended = harness.sent.find((message) => message.type === 'message.append')?.message as
+    | { bufferId?: string; target?: string }
+    | undefined;
+  assert.equal(appended?.bufferId, selectedQuery.id);
+  assert.equal(appended?.target, 'alicia');
+  assert.equal(harness.storage.conversations.getBuffer(pollutedQuery.id)?.target, 'oldPeer');
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'alicia')?.id, selectedQuery.id);
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'alicia', 10).map((message) => message.body),
+    ['Hi'],
+  );
+  assert.deepEqual(harness.storage.conversations.listMessages(harness.network.id, 'oldPeer', 10), []);
+  assert.equal(harness.sent.some((message) => message.type === 'buffer.remove'), false);
+});
+
 test('incoming private messages from muted nicks stay in history without opening a query buffer', () => {
   const harness = createRuntimeEventHarness();
   harness.storage.mutedNicks.upsert({ networkId: harness.network.id, nick: 'helper' });
@@ -314,4 +354,41 @@ test('private action messages open query buffers automatically', () => {
   assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'helper')?.kind, 'query');
   assert.equal(harness.storage.conversations.listMessages(harness.network.id, 'helper', 5)[0]?.kind, 'action');
   assert.ok(harness.sent.some((message) => message.type === 'message.append'));
+});
+
+test('routed private notices stay in the selected query when the sender has its own identity buffer', () => {
+  const harness = createRuntimeEventHarness();
+  const dataQuery = harness.storage.conversations.upsertQuery(
+    harness.network.id,
+    'Data',
+    { kind: 'account', value: 'data' },
+  );
+  harness.storage.conversations.removeBuffer(dataQuery.id);
+  const selectedQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'Lez-Ali');
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'Lez-Ali',
+      nick: 'Data',
+      senderIdentity: { kind: 'account', value: 'data' },
+      body: 'profile reply',
+      kind: 'notice',
+      self: false,
+      ts: Date.now(),
+    },
+  });
+
+  const appended = harness.sent.find((message) => message.type === 'message.append')?.message as
+    | { bufferId?: string; target?: string }
+    | undefined;
+  assert.equal(appended?.bufferId, selectedQuery.id);
+  assert.equal(appended?.target, 'Lez-Ali');
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'Lez-Ali', 10).map((message) => message.body),
+    ['profile reply'],
+  );
+  assert.deepEqual(harness.storage.conversations.listMessages(harness.network.id, 'Data', 10), []);
 });

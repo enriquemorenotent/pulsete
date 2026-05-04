@@ -108,7 +108,7 @@ export const appendConversationMessage = (
 ) => {
   const resolvedBuffer = resolveMessageBuffer(store, input);
   return {
-    saved: store.appendMessage(input.message),
+    saved: store.appendMessage(input.message, resolvedBuffer?.buffer.id),
     bufferUpdate: resolvedBuffer?.buffer ?? null,
     removedBufferIds: resolvedBuffer?.removedBufferIds ?? [],
     retargetedFrom: resolvedBuffer?.retargetedFrom ?? null,
@@ -186,13 +186,18 @@ const createMessageBuffer = (store: RuntimeConversationStore, message: MessageIn
     return toBufferResolution(store.upsertBuffer({ networkId: message.networkId, kind: 'channel', target: message.target }));
   }
   if (message.kind === 'line' || message.kind === 'action') {
-    return store.upsertQueryWithMergeResult(message.networkId, message.target, message.senderIdentity);
+    return store.upsertQueryWithMergeResult(
+      message.networkId,
+      message.target,
+      message.self ? null : message.senderIdentity,
+    );
   }
   return null;
 };
 
 const shouldRouteQueryByIdentity = (message: MessageInput) =>
-  !isChannelTarget(message.target)
+  !message.self
+  && !isChannelTarget(message.target)
   && message.target !== 'server'
   && !!message.senderIdentity
   && (message.kind === 'line' || message.kind === 'action');

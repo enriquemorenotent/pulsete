@@ -187,7 +187,7 @@ export class StorageConversationsRepository {
     );
   }
 
-  appendMessage(input: MessageInput) {
-    return appendMessage(this.db, input, (messageId) => this.getMessageById(messageId));
+  appendMessage(input: MessageInput, bufferId?: string) {
+    return appendMessage(this.db, input, (messageId) => this.getMessageById(messageId), bufferId);
   }
 }
