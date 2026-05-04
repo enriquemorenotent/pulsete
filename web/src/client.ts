@@ -100,6 +100,14 @@ export const api = {
       ?? `history-${bufferId}.txt`;
     triggerFileDownload(blob, fileName);
   },
+  clearBufferHistory: (bufferId: string) =>
+    apiRequest<{ buffer: BufferState; messages: ServerMessage[]; ok: boolean }>(
+      `/api/buffers/${bufferId}/history`,
+      {
+        method: 'DELETE',
+        body: '{}',
+      },
+    ),
   markBufferRead: (bufferId: string, init?: Pick<RequestInit, 'signal'>) =>
     apiRequest<{ buffer: BufferState; messages: ServerMessage[] }>(`/api/buffers/${bufferId}/read`, {
       method: 'POST',

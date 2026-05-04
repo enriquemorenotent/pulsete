@@ -1,5 +1,6 @@
 import type { RuntimeEvent } from './irc-types.js';
 import {
+  clearRuntimeConversationBufferHistory,
   closeRuntimeConversationBuffer,
   exportRuntimeConversationBufferHistory,
   listRuntimeConversationBufferHistory,
@@ -31,6 +32,10 @@ export class RuntimeConversationService {
 
   closeBuffer(bufferId: string) {
     return closeRuntimeConversationBuffer(this.options, bufferId);
+  }
+
+  clearBufferHistory(bufferId: string) {
+    return clearRuntimeConversationBufferHistory(this.options, bufferId);
   }
 
   markBufferRead(bufferId: string) {

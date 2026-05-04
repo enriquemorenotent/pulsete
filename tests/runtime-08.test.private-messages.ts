@@ -97,7 +97,13 @@ test('incoming private messages reuse account identity when nick changes were mi
   assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'guide')?.id, query.id);
   assert.deepEqual(
     harness.storage.conversations.listMessages(harness.network.id, 'guide', 10).map((message) => message.body),
-    ['before rename', 'after missed nick event'],
+    ['before rename', 'helper is now known as guide', 'after missed nick event'],
+  );
+  assert.deepEqual(
+    harness.sent
+      .filter((message) => message.type === 'message.append')
+      .map((message) => (message.message as { body: string }).body),
+    ['before rename', 'helper is now known as guide', 'after missed nick event'],
   );
   assert.deepEqual(
     harness.storage.conversations.getBuffer(query.id)?.peerIdentity,
@@ -143,6 +149,10 @@ test('incoming private messages reuse userhost identity when account is unavaila
     .filter((buffer) => buffer.kind === 'query');
   assert.equal(queryBuffers.length, 1);
   assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'guide')?.id, query.id);
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'guide', 10).map((message) => message.body),
+    ['before rename', 'helper is now known as guide', 'after missed nick event'],
+  );
   assert.deepEqual(
     harness.storage.conversations.getBuffer(query.id)?.peerIdentity,
     { kind: 'userhost', value: 'helper@users.example' },
@@ -191,7 +201,7 @@ test('incoming private messages merge duplicate query buffers that share account
   assert.equal(harness.storage.conversations.getBuffer(renamedQuery.id), null);
   assert.deepEqual(
     harness.storage.conversations.listMessages(harness.network.id, 'guide', 10).map((message) => message.body),
-    ['old window', 'new window'],
+    ['old window', 'helper is now known as guide', 'new window'],
   );
   assert.deepEqual(harness.sent.find((message) => message.type === 'buffer.remove'), {
     type: 'buffer.remove',

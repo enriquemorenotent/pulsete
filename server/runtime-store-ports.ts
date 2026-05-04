@@ -16,6 +16,7 @@ import type {
   RuntimeNetworkProfile,
 } from './storage-types.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
+import type { QueryNickAliasRecord } from './storage-query-aliases.js';
 
 export type RuntimeSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
@@ -31,6 +32,7 @@ export type RuntimeSnapshotSource = {
 export type RuntimeConversationStore = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];
+  listQueryNickAliases(networkId?: string): QueryNickAliasRecord[];
   getBuffer(bufferId: string): BufferState | null;
   getBufferByTarget(networkId: string, target: string): BufferState | null;
   getServerBuffer(networkId: string): BufferState | null;
@@ -50,6 +52,7 @@ export type RuntimeConversationStore = {
   listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
   searchMessagesByBufferId(bufferId: string, query: string, limit: number): MessageSearchPage;
   getMessageWindow(messageId: string, before: number, after: number): AppSnapshot['messages'];
+  deleteMessages(networkId: string, target: string): AppSnapshot['messages'];
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];
   upsertChannel(input: ChannelInput): ChannelState;
   upsertBuffer(input: BufferInput): BufferState;
@@ -58,12 +61,12 @@ export type RuntimeConversationStore = {
     networkId: string,
     target: string,
     peerIdentity?: NetworkUserIdentity | null,
-  ): { buffer: BufferState; removedBufferIds: string[] };
+  ): { buffer: BufferState; removedBufferIds: string[]; retargetedFrom?: string | null };
   recordObservedQueryNickChange(
     networkId: string,
     fromTarget: string,
     toTarget: string,
-  ): { buffer: BufferState; removedBufferIds: string[] } | null;
+  ): { buffer: BufferState; removedBufferIds: string[]; retargetedFrom?: string | null } | null;
   appendMessage(input: MessageInput): AppSnapshot['messages'][number];
 };
 

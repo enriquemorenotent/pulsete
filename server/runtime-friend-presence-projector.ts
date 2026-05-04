@@ -92,7 +92,8 @@ export class RuntimeFriendPresenceProjector {
       this.friendPresenceCache.delete(friendId);
     }
     for (const [bufferId, presence] of Object.entries(nextQueryPresence)) {
-      if (this.queryPresenceCache.get(bufferId) === presence) {
+      const previous = this.queryPresenceCache.get(bufferId) ?? null;
+      if (previous === presence) {
         continue;
       }
       this.queryPresenceCache.set(bufferId, presence);

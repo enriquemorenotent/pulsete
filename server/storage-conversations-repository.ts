@@ -35,6 +35,7 @@ import {
 } from './storage-buffers.js';
 import { runInTransaction } from './storage-db.js';
 import {
+  listQueryNickAliases,
   recordObservedQueryNickChange,
   upsertQueryBuffer,
   upsertQueryBufferWithMergeResult,
@@ -51,6 +52,10 @@ export class StorageConversationsRepository {
 
   listChannels(networkId?: string) {
     return listChannels(this.db, networkId);
+  }
+
+  listQueryNickAliases(networkId?: string) {
+    return listQueryNickAliases(this.db, networkId);
   }
 
   getBuffer(bufferId: string) {

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type WebSocket from 'ws';
 import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { IrcConnection } from './irc.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { requireRuntimeNetwork } from './runtime-network-guard.js';
@@ -14,7 +15,7 @@ import type {
 type RuntimeConnectionManagerOptions = {
   eventRouter: RuntimeEventRouter;
   onConnectionEvent?(event: RuntimeEvent): void;
-  conversations: Pick<RuntimeConversationStore, 'listBuffers'>;
+  conversations: Pick<RuntimeConversationStore, 'listBuffers' | 'listQueryNickAliases'>;
   friends: Pick<RuntimeFriendStore, 'list'>;
   networks: Pick<RuntimeNetworkStore, 'getRuntime'>;
   isClosing(): boolean;
@@ -141,12 +142,17 @@ export class RuntimeConnectionManager {
   }
 
   private listTrackedPresenceNicks(networkId: string) {
+    const queryBuffers = this.conversations
+      .listBuffers(networkId)
+      .filter((buffer): buffer is BufferState & { kind: 'query' } => buffer.kind === 'query');
+    const queryBufferIds = new Set(queryBuffers.map((buffer) => buffer.id));
     return [
       ...this.friends.list().map((friend) => friend.nick),
+      ...queryBuffers.map((buffer) => buffer.target),
       ...this.conversations
-        .listBuffers(networkId)
-        .filter((buffer): buffer is BufferState & { kind: 'query' } => buffer.kind === 'query')
-        .map((buffer) => buffer.target),
+        .listQueryNickAliases(networkId)
+        .filter((alias) => queryBufferIds.has(alias.bufferId))
+        .map((alias) => alias.nick),
     ];
   }
 
@@ -155,7 +161,10 @@ export class RuntimeConnectionManager {
       return;
     }
     this.onConnectionEvent?.(event);
-    this.eventRouter.route(event);
+    const routedMessages = this.eventRouter.route(event);
+    for (const networkId of collectPresenceTrackingNetworkIds(routedMessages)) {
+      this.syncPresenceTracking(networkId);
+    }
   }
 
   private getRequiredRuntimeNetwork(networkId: string) {
@@ -166,3 +175,16 @@ export class RuntimeConnectionManager {
     connection.dispose();
   }
 }
+
+const collectPresenceTrackingNetworkIds = (messages: readonly ServerMessage[]) => {
+  const networkIds = new Set<string>();
+  for (const message of messages) {
+    if (message.type === 'buffer.upsert' && message.buffer.kind === 'query') {
+      networkIds.add(message.buffer.networkId);
+    }
+    if (message.type === 'buffer.remove') {
+      networkIds.add(message.networkId);
+    }
+  }
+  return networkIds;
+};

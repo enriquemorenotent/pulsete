@@ -53,6 +53,22 @@ test('peer nick events append notices to both shared channels and an open privat
   assert.equal(messageBodies(harness, 'server').length, 0);
 });
 
+test('peer nick events append a notice to an open private message already using the new nick', () => {
+  const harness = createRuntimeEventHarness();
+  harness.storage.conversations.upsertQuery(harness.network.id, 'guide');
+
+  harness.publishEvent({
+    type: 'peer-nick',
+    networkId: harness.network.id,
+    oldNick: 'helper',
+    newNick: 'guide',
+    self: false,
+  });
+
+  assert.deepEqual(messageBodies(harness, 'guide'), ['helper is now known as guide']);
+  assert.equal(messageBodies(harness, 'server').length, 0);
+});
+
 test('peer nick events fall back to the server buffer when no conversation context exists', () => {
   const harness = createRuntimeEventHarness();
 

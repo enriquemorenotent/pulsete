@@ -1,5 +1,6 @@
 import type { FriendState, NetworkProfile } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
+import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import type WebSocket from 'ws';
 import type { IrcConnection } from './irc.js';
 import type { RuntimeEvent, IrcRuntimeChannelListConnection } from './irc-types.js';
@@ -12,7 +13,7 @@ import type { RuntimeConversationStore, RuntimeFriendStore } from './runtime-sto
 
 type RuntimeEventRouterOptions = {
   conversations: RuntimeConversationService;
-  buffers: Pick<RuntimeConversationStore, 'listBuffers'>;
+  buffers: Pick<RuntimeConversationStore, 'listBuffers' | 'listQueryNickAliases'>;
   friends: Pick<RuntimeFriendStore, 'list'>;
   publish(messages: ServerMessage[]): void;
   sendSocket(ws: WebSocket, message: ServerMessage): void;
@@ -79,21 +80,23 @@ export class RuntimeEventRouter {
     );
   }
 
-  route(event: RuntimeEvent) {
+  route(event: RuntimeEvent): ServerMessage[] {
+    const routedMessages: ServerMessage[] = [];
     if (event.type === 'friend-presence') {
-      this.publish(
-        this.friendPresence.project(
-          event,
-          this.options.friends.list(),
-          this.options.buffers.listBuffers(),
-        ),
+      const inferredNickMessages = this.createKnownAliasNickChangeMessages(event);
+      return this.publishAndCollect(
+        routedMessages,
+        [
+          ...inferredNickMessages,
+          ...this.friendPresence.project(event, this.options.friends.list(), this.options.buffers.listBuffers()),
+        ],
       );
-      return;
     }
 
     if (event.type === 'state' && event.phase === 'offline') {
       this.channelLists.clearNetwork(event.networkId);
-      this.publish(
+      this.publishAndCollect(
+        routedMessages,
         this.friendPresence.clearNetwork(
           event.networkId,
           this.options.friends.list(),
@@ -108,15 +111,61 @@ export class RuntimeEventRouter {
       || event.type === 'channel-list-failed'
     ) {
       this.channelLists.handle(event);
-      return;
+      return routedMessages;
     }
 
-    this.publish(translateRuntimeEvent(event, this.options.conversations));
+    return this.publishAndCollect(
+      routedMessages,
+      translateRuntimeEvent(event, this.options.conversations),
+    );
+  }
+
+  private publishAndCollect(
+    routedMessages: ServerMessage[],
+    messages: ServerMessage[],
+  ) {
+    routedMessages.push(...messages);
+    this.publish(messages);
+    return routedMessages;
   }
 
   private publish(messages: ServerMessage[]) {
     if (messages.length > 0) {
       this.options.publish(messages);
     }
+  }
+
+  private createKnownAliasNickChangeMessages(event: Extract<RuntimeEvent, { type: 'friend-presence' }>) {
+    const presences = new Map(
+      Object.entries(event.presences).map(([nick, presence]) => [normalizeIrcIdentifier(nick), presence]),
+    );
+    const aliasesByBufferId = new Map<string, string[]>();
+    for (const alias of this.options.buffers.listQueryNickAliases(event.networkId)) {
+      aliasesByBufferId.set(alias.bufferId, [...(aliasesByBufferId.get(alias.bufferId) ?? []), alias.nick]);
+    }
+
+    const messages: ServerMessage[] = [];
+    for (const buffer of this.options.buffers.listBuffers(event.networkId)) {
+      if (buffer.kind !== 'query' || presences.get(normalizeIrcIdentifier(buffer.target)) !== 'offline') {
+        continue;
+      }
+      const onlineAliases = (aliasesByBufferId.get(buffer.id) ?? [])
+        .filter((nick) => normalizeIrcIdentifier(nick) !== normalizeIrcIdentifier(buffer.target))
+        .filter((nick) => presences.get(normalizeIrcIdentifier(nick)) === 'online');
+      const uniqueOnlineAliases = [...new Map(
+        onlineAliases.map((nick) => [normalizeIrcIdentifier(nick), nick] as const),
+      ).values()];
+      if (uniqueOnlineAliases.length !== 1) {
+        continue;
+      }
+      messages.push(...this.options.conversations.handlePeerNickEvent({
+        type: 'peer-nick',
+        networkId: event.networkId,
+        oldNick: buffer.target,
+        newNick: uniqueOnlineAliases[0]!,
+        self: false,
+      }));
+    }
+    return messages;
   }
 }

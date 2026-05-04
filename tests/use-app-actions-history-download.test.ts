@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol-chat.js';
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action, State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from '../web/src/app-session.js';
@@ -241,5 +242,64 @@ test('downloadBufferHistory revokes the blob URL when the browser click fails', 
     globalThis.document = original.document;
     globalThis.URL.createObjectURL = original.createObjectURL;
     globalThis.URL.revokeObjectURL = original.revokeObjectURL;
+  }
+});
+
+test('clearBufferHistory deletes PM history and applies returned server messages', async () => {
+  const { params, banners } = createParams();
+  const queryBuffer: BufferState = {
+    ...selectedBuffer,
+    id: 'query-1',
+    kind: 'query',
+    target: 'MissD',
+  };
+  const returnedMessages: ServerMessage[] = [
+    {
+      type: 'message.remove',
+      bufferId: queryBuffer.id,
+      networkId: queryBuffer.networkId,
+      target: queryBuffer.target,
+      messageIds: ['message-1', 'message-2'],
+    },
+    { type: 'buffer.upsert', buffer: queryBuffer },
+  ];
+  const fetchCalls: Array<{ body: string; method: string; url: string }> = [];
+  const appliedMessages: ServerMessage[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      body: String(init?.body ?? ''),
+      method: String(init?.method ?? 'GET'),
+      url: String(input),
+    });
+    return new Response(JSON.stringify({
+      ok: true,
+      buffer: queryBuffer,
+      messages: returnedMessages,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  try {
+    const actions = createAppActions({
+      ...params,
+      applyServerMessages: (messages) => {
+        appliedMessages.push(...messages);
+      },
+    });
+    const deleted = await actions.clearBufferHistory(queryBuffer);
+
+    assert.equal(deleted, true);
+    assert.deepEqual(fetchCalls, [
+      { url: '/api/buffers/query-1/history', method: 'DELETE', body: '{}' },
+    ]);
+    assert.deepEqual(appliedMessages, returnedMessages);
+    assert.deepEqual(banners, [
+      { kind: 'notice', message: 'Private-message history deleted' },
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });

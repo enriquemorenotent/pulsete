@@ -118,7 +118,63 @@ test('buffer history download returns a human-readable transcript attachment', a
   }
 });
 
-test('buffer history delete route is not exposed', async () => {
+test('private-message history delete route clears the saved transcript and keeps the PM open', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const buffer = storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'query',
+    target: 'MissD',
+    unread: 2,
+    priorityUnread: 1,
+    lastReadTs: 99,
+    lastReadMessageId: 'message-1',
+  });
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'MissD',
+    body: 'hello',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.appendMessage({
+    id: 'message-2',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'tester',
+    body: 'hi',
+    kind: 'line',
+    self: true,
+    ts: 2,
+  });
+  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const port = await listen(server);
+
+  try {
+    const response = await requestJson(port, 'DELETE', `/api/buffers/${buffer.id}/history`, {});
+
+    assert.equal(response.status, 200);
+    assert.equal(response.json.ok, true);
+    assert.deepEqual(
+      (response.json.messages as Array<{ messageIds?: string[]; type: string }>).find((message) => message.type === 'message.remove')?.messageIds,
+      ['message-1', 'message-2'],
+    );
+    assert.equal(storage.conversations.listMessages(network.id, 'MissD', 10).length, 0);
+    assert.equal(storage.conversations.getBuffer(buffer.id)?.kind, 'query');
+    assert.equal(storage.conversations.getBuffer(buffer.id)?.unread, 0);
+    assert.equal(storage.conversations.getBuffer(buffer.id)?.priorityUnread, 0);
+    assert.equal(storage.conversations.getBuffer(buffer.id)?.lastReadTs, null);
+    assert.equal(storage.conversations.getBuffer(buffer.id)?.lastReadMessageId, null);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test('buffer history delete route rejects non-private-message buffers', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.networks.upsert(createNetworkInput());
@@ -139,8 +195,8 @@ test('buffer history delete route is not exposed', async () => {
   try {
     const response = await requestJson(port, 'DELETE', `/api/buffers/${buffer.id}/history`, {});
 
-    assert.equal(response.status, 404);
-    assert.equal(response.json.message, 'Not found');
+    assert.equal(response.status, 400);
+    assert.equal(response.json.message, 'Only private-message history can be deleted');
     assert.equal(storage.conversations.listMessages(network.id, '#help', 10).length, 1);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));

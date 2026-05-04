@@ -61,6 +61,9 @@ export function useDesktopChatModel({
     workspace.selectedBuffer?.kind === 'channel'
     || workspace.selectedBuffer?.kind === 'query';
   const selectedBufferId = canUseBufferHistoryTools ? workspace.selectedBuffer?.id ?? null : null;
+  const selectedQueryBuffer = workspace.selectedBuffer?.kind === 'query'
+    ? workspace.selectedBuffer
+    : null;
   const selectedQueryAvatarUser = useMemo(() => {
     const selectedBuffer = workspace.selectedBuffer;
     return selectedBuffer?.kind === 'query'
@@ -119,6 +122,8 @@ export function useDesktopChatModel({
       onToggleChannelAutoJoin: actions.toggleCurrentChannelAutoJoin,
       canDownloadHistory: canUseBufferHistoryTools,
       onDownloadHistory: selectedBufferId ? () => actions.downloadBufferHistory(selectedBufferId) : undefined,
+      canDeleteHistory: Boolean(selectedQueryBuffer),
+      onDeleteHistory: selectedQueryBuffer ? actions.clearBufferHistory : undefined,
       canSearchHistory: canUseBufferHistoryTools,
       onSearchHistory: selectedBufferId
         ? (bufferId, query, init) => actions.searchBufferHistory(bufferId, query, init)
@@ -159,6 +164,7 @@ export function useDesktopChatModel({
       selectedQueryIdentity,
       selectedQueryContactRule,
       selectedQueryAvatarUser,
+      selectedQueryBuffer,
       selectedBufferHistory,
       selectedBufferId,
       selectedMessages,

@@ -124,6 +124,72 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.deepEqual(storage.conversations.listMessages(network.id, 'server', 10), []);
 });
 
+test('runtime clears private-message history without closing the buffer', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const network = storage.networks.upsert(createNetworkInput());
+  const query = storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'query',
+    target: 'MissD',
+    unread: 2,
+    priorityUnread: 1,
+    lastReadTs: 2,
+    lastReadMessageId: 'message-2',
+  });
+  const channel = storage.conversations.upsertChannel({
+    networkId: network.id,
+    name: '#help',
+  });
+  storage.conversations.appendMessage({
+    id: 'message-1',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'MissD',
+    body: 'hello',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  storage.conversations.appendMessage({
+    id: 'message-2',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'tester',
+    body: 'hi',
+    kind: 'line',
+    self: true,
+    ts: 2,
+  });
+
+  assert.throws(
+    () => runtime.conversations.clearBufferHistory(channel.id),
+    /Only private-message history can be deleted/,
+  );
+  const result = runtime.conversations.clearBufferHistory(query.id);
+  const removeMessage = result.messages.find((message) => message.type === 'message.remove');
+  const bufferMessage = result.messages.find((message) => message.type === 'buffer.upsert');
+
+  if (!removeMessage || removeMessage.type !== 'message.remove') {
+    assert.fail('Expected message.remove after clearing private-message history');
+  }
+  assert.equal(removeMessage.bufferId, query.id);
+  assert.equal(removeMessage.networkId, network.id);
+  assert.equal(removeMessage.target, 'MissD');
+  assert.deepEqual([...removeMessage.messageIds].sort(), ['message-1', 'message-2']);
+  if (!bufferMessage || bufferMessage.type !== 'buffer.upsert') {
+    assert.fail('Expected buffer.upsert after clearing private-message history');
+  }
+  assert.equal(bufferMessage.buffer.id, query.id);
+  assert.equal(storage.conversations.listMessages(network.id, 'MissD', 10).length, 0);
+  assert.equal(storage.conversations.getBuffer(query.id)?.kind, 'query');
+  assert.equal(storage.conversations.getBuffer(query.id)?.unread, 0);
+  assert.equal(storage.conversations.getBuffer(query.id)?.priorityUnread, 0);
+  assert.equal(storage.conversations.getBuffer(query.id)?.lastReadTs, null);
+  assert.equal(storage.conversations.getBuffer(query.id)?.lastReadMessageId, null);
+});
+
 test('muting and unmuting recomputes unread counts for existing buffers immediately', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

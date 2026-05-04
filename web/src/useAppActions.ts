@@ -138,6 +138,7 @@ export const createLiveAppActions = (params: CreateAppActionsParams) =>
 export type AppActions = ReturnType<typeof createAppActions>;
 export type ChatActionSet = Pick<
   AppActions,
+  | 'clearBufferHistory'
   | 'closeBuffer'
   | 'closeChannel'
   | 'closeChannelList'

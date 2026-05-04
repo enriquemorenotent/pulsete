@@ -13,10 +13,12 @@ type ResolveChatPaneHeaderActionsContext = {
   showChannelAutoJoin: boolean;
   channelAutoJoinActive: boolean;
   canDownloadHistory?: boolean;
+  canDeleteHistory?: boolean;
   canSearchHistory?: boolean;
   onWhoisSelectedQuery?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
+  onDeleteHistory?: () => void;
   onOpenHistorySearch?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
@@ -117,6 +119,15 @@ const resolveOverflowActions = (
       onSelect: () => {
         void context.onDownloadHistory?.();
       },
+    });
+  }
+
+  if (selectedBuffer?.kind === 'query' && context.canDeleteHistory && context.onDeleteHistory) {
+    overflow.push({
+      id: 'delete-history',
+      label: 'Delete history',
+      tone: 'danger',
+      onSelect: context.onDeleteHistory,
     });
   }
 

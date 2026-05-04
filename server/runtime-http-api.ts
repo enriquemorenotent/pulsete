@@ -44,6 +44,7 @@ export const createRuntimeHttpApi = ({
     joinChannel: (networkId, channel, sourceBufferId) => irc.join(networkId, channel, sourceBufferId),
     openQuery: (networkId, target, peerIdentity) => conversations.openQuery(networkId, target, peerIdentity),
     close: (bufferId) => conversations.closeBuffer(bufferId),
+    clearHistory: (bufferId) => conversations.clearBufferHistory(bufferId),
     markRead: (bufferId) => conversations.markBufferRead(bufferId),
     saveNotes: (bufferId, notes) => conversations.saveBufferNotes(bufferId, notes),
     history: (bufferId, limit, beforeMessageId) => conversations.history(bufferId, limit, beforeMessageId),

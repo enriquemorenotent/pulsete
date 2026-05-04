@@ -30,6 +30,7 @@ export type RuntimeConversationMutations = {
     peerIdentity?: NetworkUserIdentity | null,
   ): { buffer: BufferState; messages: readonly ServerMessage[] };
   closeBuffer(bufferId: string): { buffer: BufferState; messages: readonly ServerMessage[] };
+  clearBufferHistory(bufferId: string): { buffer: BufferState; messages: readonly ServerMessage[] };
   markBufferRead: RuntimeConversationService['markBufferRead'];
   saveBufferNotes: RuntimeConversationService['saveBufferNotes'];
   history: RuntimeConversationService['listBufferHistory'];
@@ -73,6 +74,7 @@ export type RuntimeHttpApi = {
     joinChannel(networkId: string, channel: string, sourceBufferId?: string): void;
     openQuery: RuntimeConversationMutations['openQuery'];
     close: RuntimeConversationMutations['closeBuffer'];
+    clearHistory: RuntimeConversationMutations['clearBufferHistory'];
     markRead: RuntimeConversationMutations['markBufferRead'];
     saveNotes: RuntimeConversationMutations['saveBufferNotes'];
     history: RuntimeConversationMutations['history'];

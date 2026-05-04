@@ -2,6 +2,7 @@ import { badRequest, notFound } from './app-error.js';
 import { buildHistoryDownloadName, renderBufferHistoryDownload } from './runtime-conversation-download.js';
 import { requireStoredNetwork } from './runtime-network-guard.js';
 import {
+  clearConversationQueryHistory,
   closeConversationBuffer,
   listConversationBufferHistory,
   markConversationBufferRead,
@@ -14,6 +15,7 @@ import { historySearchContextAfter, historySearchContextBefore } from '../shared
 import type { BufferHistorySearchPayload } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
+import { removedBufferMessages } from './runtime-conversation-server-messages.js';
 import type { RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 
 export const openRuntimeConversationQuery = (
@@ -49,6 +51,26 @@ export const closeRuntimeConversationBuffer = (options: RuntimeConversationServi
 export const markRuntimeConversationBufferRead = (options: RuntimeConversationServiceOptions, bufferId: string) => {
   const buffer = markConversationBufferRead(options.conversations, bufferId);
   return { buffer, messages: [{ type: 'buffer.upsert', buffer } satisfies ServerMessage] };
+};
+
+export const clearRuntimeConversationBufferHistory = (
+  options: RuntimeConversationServiceOptions,
+  bufferId: string,
+) => {
+  const { buffer, deletedMessages } = clearConversationQueryHistory(options.conversations, bufferId);
+  const messages: ServerMessage[] = [
+    ...(deletedMessages.length > 0
+      ? [{
+          type: 'message.remove',
+          bufferId: buffer.id,
+          networkId: buffer.networkId,
+          target: buffer.target,
+          messageIds: deletedMessages.map((message) => message.id),
+        } satisfies ServerMessage]
+      : []),
+    { type: 'buffer.upsert', buffer },
+  ];
+  return { buffer, messages };
 };
 
 export const saveRuntimeConversationBufferNotes = (
@@ -108,14 +130,3 @@ export const exportRuntimeConversationBufferHistory = (
     content: renderBufferHistoryDownload({ buffer, messages, networkName: network.name }),
   };
 };
-
-const removedBufferMessages = (
-  networkId: string,
-  removedBufferIds: readonly string[],
-  replacementBufferId: string,
-): ServerMessage[] => removedBufferIds.map((bufferId) => ({
-  type: 'buffer.remove',
-  networkId,
-  bufferId,
-  replacementBufferId,
-}));

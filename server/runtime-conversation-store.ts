@@ -10,6 +10,7 @@ import type { MessageInput } from './storage-types.js';
 type BufferResolution = {
   buffer: BufferState;
   removedBufferIds: string[];
+  retargetedFrom?: string | null;
 };
 
 export const openConversationQuery = (
@@ -45,6 +46,19 @@ export const markConversationBufferRead = (store: RuntimeConversationStore, buff
     lastReadMessageId: nextLastReadMessageId,
   });
   return getRequiredBuffer(store, bufferId);
+};
+
+export const clearConversationQueryHistory = (store: RuntimeConversationStore, bufferId: string) => {
+  const buffer = getRequiredBuffer(store, bufferId);
+  if (buffer.kind !== 'query') {
+    throw badRequest('Only private-message history can be deleted');
+  }
+  const deletedMessages = store.deleteMessages(buffer.networkId, buffer.target);
+  store.markBufferRead(buffer.id, { lastReadTs: null, lastReadMessageId: null });
+  return {
+    buffer: getRequiredBuffer(store, buffer.id),
+    deletedMessages,
+  };
 };
 
 export const saveConversationBufferNotes = (
@@ -97,6 +111,7 @@ export const appendConversationMessage = (
     saved: store.appendMessage(input.message),
     bufferUpdate: resolvedBuffer?.buffer ?? null,
     removedBufferIds: resolvedBuffer?.removedBufferIds ?? [],
+    retargetedFrom: resolvedBuffer?.retargetedFrom ?? null,
   };
 };
 
@@ -153,6 +168,7 @@ const resolveMessageBuffer = (
   return {
     buffer: store.upsertBuffer(nextBuffer),
     removedBufferIds: created.removedBufferIds,
+    retargetedFrom: created.retargetedFrom ?? null,
   };
 };
 
@@ -192,6 +208,7 @@ const getRequiredBuffer = (store: RuntimeConversationStore, bufferId: string) =>
 const toBufferResolution = (buffer: BufferState): BufferResolution => ({
   buffer,
   removedBufferIds: [],
+  retargetedFrom: null,
 });
 
 const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

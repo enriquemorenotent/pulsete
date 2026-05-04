@@ -5,6 +5,10 @@ import { isUserMuted, resolveMutedTarget } from '../shared/muted-nicks.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import { isServiceNick } from './irc-services.js';
 import type { RuntimeEvent } from './irc-types.js';
+import {
+  appendMissedNickChangeMessage,
+  removedBufferMessages,
+} from './runtime-conversation-server-messages.js';
 import { appendConversationMessage, upsertConversationChannel } from './runtime-conversation-store.js';
 import { isChannelTarget, type RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 import type { MessageInput } from './storage-types.js';
@@ -66,7 +70,7 @@ export const handleRuntimeConversationMessageEvent = (
   if (event.message.self && event.message.kind === 'part' && !removedChannel) {
     return [];
   }
-  const { saved, bufferUpdate, removedBufferIds } = appendConversationMessage(options.conversations, {
+  const { saved, bufferUpdate, removedBufferIds, retargetedFrom } = appendConversationMessage(options.conversations, {
     message,
     currentNick: event.currentNick,
     altNicks: event.altNicks,
@@ -77,7 +81,11 @@ export const handleRuntimeConversationMessageEvent = (
       || isChannelTarget(message.target)
       || (message.kind !== 'line' && message.kind !== 'action'),
   });
-  const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
+  const retargetNotice = appendMissedNickChangeMessage(options.conversations, saved, retargetedFrom);
+  const messages: ServerMessage[] = [
+    ...(retargetNotice ? [{ type: 'message.append', message: retargetNotice } satisfies ServerMessage] : []),
+    { type: 'message.append', message: saved },
+  ];
   if (bufferUpdate) {
     messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
     messages.push(...removedBufferMessages(event.message.networkId, removedBufferIds, bufferUpdate.id));
@@ -142,6 +150,10 @@ export const handleRuntimeConversationPeerNickEvent = (
       queryTarget = renamed.buffer.target;
       messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });
       messages.push(...removedBufferMessages(event.networkId, renamed.removedBufferIds, renamed.buffer.id));
+    }
+    const newNickBuffer = findOpenBufferByTarget(options, event.networkId, event.newNick);
+    if (!queryTarget && newNickBuffer?.kind === 'query') {
+      queryTarget = newNickBuffer.target;
     }
   }
 
@@ -236,14 +248,3 @@ const findOpenBufferByTarget = (
 ) => options.conversations
   .listBuffers(networkId)
   .find((buffer) => isSameIrcIdentifier(buffer.target, target)) ?? null;
-
-const removedBufferMessages = (
-  networkId: string,
-  removedBufferIds: readonly string[],
-  replacementBufferId: string,
-): ServerMessage[] => removedBufferIds.map((bufferId) => ({
-  type: 'buffer.remove',
-  networkId,
-  bufferId,
-  replacementBufferId,
-}));

@@ -220,6 +220,38 @@ test('searchBufferHistory calls the buffer-scoped history search endpoint', asyn
   }
 });
 
+test('clearBufferHistory calls the buffer-scoped history delete endpoint', async () => {
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: Array<{ body: string; method: string; url: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push({
+      body: String(init?.body ?? ''),
+      method: String(init?.method ?? 'GET'),
+      url: String(input),
+    });
+    return new Response(JSON.stringify({
+      ok: true,
+      buffer: {
+        id: 'buffer-1', networkId: 'network-1', kind: 'query', target: 'Sofia',
+        unread: 0, priorityUnread: 0, lastReadTs: null, lastReadMessageId: null,
+      },
+      messages: [],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+
+  try {
+    const payload = await api.clearBufferHistory('buffer-1');
+
+    assert.deepEqual(fetchCalls, [
+      { url: '/api/buffers/buffer-1/history', method: 'DELETE', body: '{}' },
+    ]);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.buffer.kind, 'query');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('saveBufferNotes updates the buffer notes endpoint', async () => {
   const originalFetch = globalThis.fetch;
   const fetchCalls: Array<{ url: string; method: string; notes: string }> = [];

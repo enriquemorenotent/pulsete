@@ -67,6 +67,7 @@ export class RuntimeHost {
         openQuery: (networkId, target, peerIdentity) =>
           this.runtime.http.buffers.openQuery(networkId, target, peerIdentity),
         close: (bufferId) => this.runtime.http.buffers.close(bufferId),
+        clearHistory: (bufferId) => this.runtime.http.buffers.clearHistory(bufferId),
         markRead: (bufferId) => this.runtime.http.buffers.markRead(bufferId),
         saveNotes: (bufferId, notes) => this.runtime.http.buffers.saveNotes(bufferId, notes),
         history: (bufferId, limit, beforeMessageId) =>

@@ -44,8 +44,8 @@ test('runtime snapshots include negotiated IRC capabilities', async () => {
     await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
 
     assert.deepEqual(runtime.gateway.snapshot().networkStates[network.id]?.capabilities, {
-      offered: ['account-tag', 'echo-message', 'multi-prefix', 'userhost-in-names'],
-      negotiated: ['account-tag', 'echo-message', 'multi-prefix', 'userhost-in-names'],
+      offered: ['account-tag', 'echo-message', 'extended-monitor', 'multi-prefix', 'userhost-in-names'],
+      negotiated: ['account-tag', 'echo-message', 'extended-monitor', 'multi-prefix', 'userhost-in-names'],
       pending: [],
     });
     assert.equal(received.some((line) => line.startsWith('CAP REQ :')), true);
@@ -110,7 +110,7 @@ const createCapabilityServer = async (received: string[]) => {
         received.push(line);
         if (line === 'CAP LS 302') {
           socket.write(
-            ':irc.example CAP * LS :multi-prefix echo-message userhost-in-names account-tag\r\n',
+            ':irc.example CAP * LS :multi-prefix echo-message userhost-in-names account-tag extended-monitor\r\n',
           );
         } else if (line.startsWith('CAP REQ :')) {
           socket.write(`:irc.example CAP * ACK :${line.slice('CAP REQ :'.length)}\r\n`);

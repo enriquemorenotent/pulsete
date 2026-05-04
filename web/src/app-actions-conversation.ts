@@ -102,6 +102,15 @@ export const createConversationActions = ({
     }
   };
 
+  const clearBufferHistory = async (buffer: BufferState) =>
+    executeMutation({
+      request: () => api.clearBufferHistory(buffer.id),
+      mapResult: () => true,
+      successMessage: 'Private-message history deleted',
+      errorMessage: 'Failed to delete private-message history',
+      failureValue: false,
+    });
+
   const searchBufferHistory = (
     bufferId: string,
     query: string,
@@ -118,6 +127,7 @@ export const createConversationActions = ({
     });
 
   return {
+    clearBufferHistory,
     downloadBufferHistory,
     joinChannel,
     openOrSelectQueryBuffer,

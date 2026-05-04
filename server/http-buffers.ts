@@ -63,6 +63,12 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   const historyMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history$/);
   const historySearchMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/search$/);
   const downloadMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/download$/);
+  if (historyMatch && req.method === 'DELETE') {
+    const bufferId = decodeRouteParam(historyMatch[1]);
+    writeJson(res, 200, { ok: true, ...context.buffers.clearHistory(bufferId) });
+    return true;
+  }
+
   if (historySearchMatch && req.method === 'GET') {
     const bufferId = decodeRouteParam(historySearchMatch[1]);
     const query = normalizeHistorySearchQuery(url.searchParams.get('q'));

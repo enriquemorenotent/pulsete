@@ -10,6 +10,7 @@ const passiveCapabilityNames = [
   'chghost',
   'echo-message',
   'extended-join',
+  'extended-monitor',
   'message-tags',
   'multi-prefix',
   'server-time',

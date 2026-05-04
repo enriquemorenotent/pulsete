@@ -42,6 +42,27 @@ test('http buffer mutation routes succeed and broadcast buffer changes', async (
     assert.equal(queryBuffer.target, 'helper');
     assert.equal(((await queryMessagePromise) as { buffer: { target: string } }).buffer.target, 'helper');
 
+    storage.conversations.appendMessage({
+      id: 'history-message',
+      networkId: network.id,
+      target: 'helper',
+      nick: 'helper',
+      body: 'saved line',
+      kind: 'line',
+      self: false,
+      ts: 1,
+    });
+    const historyRemoveMessagePromise = waitForWebSocketMessageType(socket, 'message.remove');
+    const clearHistoryResponse = await requestJson(port, 'DELETE', `/api/buffers/${queryBuffer.id}/history`, {});
+    assert.equal(clearHistoryResponse.status, 200);
+    assert.deepEqual(await historyRemoveMessagePromise, {
+      type: 'message.remove',
+      bufferId: queryBuffer.id,
+      networkId: network.id,
+      target: 'helper',
+      messageIds: ['history-message'],
+    });
+
     runtime.sessions.connect(network.id);
     await waitFor(() => ircReceived.includes('NICK tester'));
 

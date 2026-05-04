@@ -71,10 +71,12 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   showChannelAutoJoin: false,
   channelAutoJoinActive: false,
   canDownloadHistory: false,
+  canDeleteHistory: false,
   canSearchHistory: false,
   onWhoisSelectedQuery: () => undefined,
   onToggleChannelAutoJoin: async () => true,
   onDownloadHistory: async () => true,
+  onDeleteHistory: () => undefined,
   onOpenHistorySearch: () => undefined,
   onCloseChannel: () => undefined,
   onCloseBuffer: () => undefined,
@@ -128,6 +130,30 @@ test('query header actions keep close visible and leave utilities in overflow', 
     primary: ['Close'],
     overflow: ['WHOIS', 'Download history'],
   });
+});
+
+test('query header actions expose destructive history delete when enabled', () => {
+  const queryBuffer = makeBuffer({
+    kind: 'query',
+    target: 'MissD',
+  });
+  const actions = resolveChatPaneHeaderActions(createContext({
+    workspace: makeWorkspace({
+      mode: 'query-connected',
+      selectedBuffer: queryBuffer,
+      selectedChannel: null,
+      headerTitle: 'MissD',
+      composerPlaceholder: 'Message MissD',
+      showNicklist: false,
+    }),
+    canDeleteHistory: true,
+  }));
+
+  assert.deepEqual(resolveActionLabels(actions), {
+    primary: ['Close'],
+    overflow: ['WHOIS', 'Delete history'],
+  });
+  assert.equal(actions.overflow.find((action) => action.label === 'Delete history')?.tone, 'danger');
 });
 
 test('query header actions are stable when notifications are enabled', () => {
