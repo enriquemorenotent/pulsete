@@ -151,12 +151,13 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     removeFriend: (friendId) => publishMutation(friendMutations.removeFriend(friendId)),
   };
   const mutedNicks: RuntimeMutedNickMutations = {
-    upsertMutedNick: (networkId, nick) => publishMutation(mutedNickMutations.upsertMutedNick(networkId, nick)),
+    upsertMutedNick: (networkId, nick, identity) =>
+      publishMutation(mutedNickMutations.upsertMutedNick(networkId, nick, identity)),
     removeMutedNick: (mutedNickId) => publishMutation(mutedNickMutations.removeMutedNick(mutedNickId)),
   };
   const nickEmojis: RuntimeNickEmojiMutations = {
-    saveNickEmoji: (networkId, nick, emoji) =>
-      publishMutation(nickEmojiMutations.saveNickEmoji(networkId, nick, emoji)),
+    saveNickEmoji: (networkId, nick, emoji, identity) =>
+      publishMutation(nickEmojiMutations.saveNickEmoji(networkId, nick, emoji, identity)),
   };
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),

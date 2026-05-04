@@ -151,6 +151,25 @@ test('muted nick routes persist entries, recompute unread, and broadcast updates
   }
 });
 
+test('muted nick routes preserve identity-scoped entries', async () => {
+  const context = await createHttpRuntimeContext();
+  const network = context.storage.networks.upsert(createNetworkInput());
+  const identity = { kind: 'account' as const, value: 'alice-account' };
+
+  try {
+    const createResponse = await requestJson(context.port, 'POST', '/api/muted-nicks', {
+      networkId: network.id,
+      nick: 'Alice',
+      identity,
+    });
+    assert.equal(createResponse.status, 200);
+    assert.deepEqual((createResponse.json.mutedNick as { identity: unknown }).identity, identity);
+    assert.deepEqual(context.storage.mutedNicks.list(network.id)[0]?.identity, identity);
+  } finally {
+    await context.close();
+  }
+});
+
 test('muted nick routes validate payloads, networks, and targets', async () => {
   const context = await createHttpRuntimeContext();
   const network = context.storage.networks.upsert(createNetworkInput());

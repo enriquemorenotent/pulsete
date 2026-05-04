@@ -54,6 +54,36 @@ test('nick emoji routes persist per-network entries and broadcast updates withou
   }
 });
 
+test('nick emoji routes preserve identity-scoped entries', async () => {
+  const context = await createHttpRuntimeContext();
+  const network = context.storage.networks.upsert(createNetworkInput());
+  const identity = { kind: 'account' as const, value: 'alice-account' };
+
+  try {
+    const createResponse = await requestJson(
+      context.port,
+      'PUT',
+      `/api/networks/${encodeURIComponent(network.id)}/nick-emojis/Alice`,
+      { emoji: '🌙', identity },
+    );
+    assert.equal(createResponse.status, 200);
+    assert.deepEqual((createResponse.json.nickEmoji as { identity: unknown }).identity, identity);
+    assert.deepEqual(context.storage.nickEmojis.list(network.id)[0]?.identity, identity);
+
+    const clearResponse = await requestJson(
+      context.port,
+      'PUT',
+      `/api/networks/${encodeURIComponent(network.id)}/nick-emojis/Alice`,
+      { emoji: '', identity },
+    );
+    assert.equal(clearResponse.status, 200);
+    assert.equal(clearResponse.json.nickEmoji, null);
+    assert.deepEqual(context.storage.nickEmojis.list(network.id), []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('nick emoji routes validate payloads and targets', async () => {
   const context = await createHttpRuntimeContext();
   const network = context.storage.networks.upsert(createNetworkInput());

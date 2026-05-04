@@ -101,14 +101,23 @@ export const reduceRuntimeDomain = (
       };
     case 'remove-network': {
       const networkStates = { ...domain.networkStates };
+      const removedBufferIds = new Set(
+        domain.buffers
+          .filter((buffer) => buffer.networkId === action.networkId)
+          .map((buffer) => buffer.id),
+      );
       delete networkStates[action.networkId];
       return {
         ...domain,
         networks: domain.networks.filter((network) => network.id !== action.networkId),
         buffers: domain.buffers.filter((buffer) => buffer.networkId !== action.networkId),
         channels: domain.channels.filter((channel) => channel.networkId !== action.networkId),
+        mutedNicks: domain.mutedNicks.filter((mutedNick) => mutedNick.networkId !== action.networkId),
         nickEmojis: domain.nickEmojis.filter((nickEmoji) => nickEmoji.networkId !== action.networkId),
         pendingChannels: domain.pendingChannels.filter((pendingChannel) => pendingChannel.networkId !== action.networkId),
+        queryPresence: Object.fromEntries(
+          Object.entries(domain.queryPresence).filter(([bufferId]) => !removedBufferIds.has(bufferId))
+        ),
         messages: removeNetworkMessages(domain.messages, action.networkId),
         networkStates,
       };
