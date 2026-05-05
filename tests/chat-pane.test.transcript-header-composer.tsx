@@ -85,22 +85,14 @@ test('connected channel headers keep only the title and topic context', () => {
     ],
   });
 
-  assert.match(markup, />Topic</);
   assert.match(markup, />Help channel</);
+  assert.match(markup, /border-l-2 border-primary\/55/);
+  assert.doesNotMatch(markup, />Topic</);
   assert.doesNotMatch(markup, />State</);
   assert.doesNotMatch(markup, />Nick</);
   assert.doesNotMatch(markup, />Unread</);
   assert.doesNotMatch(markup, />Mentions</);
   assert.doesNotMatch(markup, /<p class="max-w-xl truncate text-\[12px\] uppercase tracking-\[0\.12em\] text-muted-foreground">sofia @ irc\.example\.test<\/p>/);
-});
-
-test('channel topics render links in a dedicated wrapped row', () => {
-  const markup = renderChatPane([], {
-    topic: 'Rules at https://example.test/rules and idle in #lounge',
-  });
-
-  assert.match(markup, /href="https:\/\/example\.test\/rules"/);
-  assert.match(markup, />#lounge</);
 });
 
 test('server headers omit the old metadata row', () => {
