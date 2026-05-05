@@ -12,6 +12,7 @@ import { buildChannelUserModesByNick, resolveParticipantHighlightMode } from './
 import { buildChatTranscriptModel, pruneExpandedMutedGroupKeys } from './transcript/model.js';
 import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
 import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
+import { TranscriptLoadingState } from './ChatPaneTranscriptDecorations.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import { buildNickEmojiByNetworkNick } from './nick-emoji-utils.js';
 
@@ -109,6 +110,14 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
     props.canLoadOlderHistory && props.onLoadOlderHistory
       ? props.onLoadOlderHistory
       : undefined;
+
+  if (props.initialHistoryPending) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pt-0">
+        <TranscriptLoadingState />
+      </div>
+    );
+  }
 
   if (typeof window === 'undefined') {
     return (

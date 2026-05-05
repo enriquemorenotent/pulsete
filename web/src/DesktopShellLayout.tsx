@@ -145,10 +145,18 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
                 </TabsTrigger>
               ) : null}
             </TabsList>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              {compactPane === 'browse' ? props.sidebar : null}
-              {compactPane === 'chat' ? props.chat : null}
-              {compactPane === 'details' && props.rightSidebarKind ? props.rightSidebar : null}
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+              <CompactPane active={compactPane === 'browse'}>
+                {props.sidebar}
+              </CompactPane>
+              <CompactPane active={compactPane === 'chat'}>
+                {props.chat}
+              </CompactPane>
+              {props.rightSidebarKind ? (
+                <CompactPane active={compactPane === 'details'}>
+                  {props.rightSidebar}
+                </CompactPane>
+              ) : null}
             </div>
           </Tabs>
         ) : (
@@ -195,6 +203,24 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
       {props.logInspectorDialog}
       {props.preferencesDialog}
       {props.networkEditorDialog}
+    </div>
+  );
+}
+
+function CompactPane(props: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      aria-hidden={!props.active}
+      className={
+        props.active
+          ? 'absolute inset-0 min-h-0 overflow-hidden'
+          : 'invisible pointer-events-none absolute inset-0 min-h-0 overflow-hidden'
+      }
+    >
+      {props.children}
     </div>
   );
 }

@@ -11,6 +11,14 @@ export const TranscriptEmptyState = (props: { body: string }) => (
   </div>
 );
 
+export const TranscriptLoadingState = () => (
+  <div className="flex h-full items-center justify-center">
+    <p className="font-sans text-[13px] leading-6 text-muted-foreground">
+      Loading messages...
+    </p>
+  </div>
+);
+
 export const UnreadDivider = () => (
   <div className="my-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-primary">
     <span className="h-px flex-1 bg-primary/40" />

@@ -216,23 +216,6 @@ test('error rows keep high-priority destructive text', () => {
   assert.match(channelMarkup, /<p class="whitespace-pre-wrap break-words font-sans text-\[15px\] leading-6 text-inherit">/);
 });
 
-test('server tab rows keep inline source labels instead of grouped headers', () => {
-  const markup = renderServerPane([
-    makeMessage({ id: 'message-1', nick: null, body: 'Connected', kind: 'system', ts: 1 }),
-    makeMessage({ id: 'message-2', nick: null, body: 'Welcome', kind: 'system', ts: 2 }),
-    makeMessage({ id: 'message-3', nick: null, body: 'Maintenance soon', kind: 'notice', ts: 3 }),
-  ]);
-
-  const serverLabels = markup.match(/>Server</g) ?? [];
-  assert.equal(serverLabels.length, 2);
-  assert.match(markup, />Notice</);
-  assert.match(markup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
-  assert.doesNotMatch(markup, /opacity-0 transition-opacity/);
-  assert.doesNotMatch(markup, /text-\[15px\] font-semibold/);
-  assert.doesNotMatch(markup, /flex min-w-0 flex-wrap items-baseline/);
-  assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[15px\] leading-6 text-inherit">/);
-});
-
 test('query transcripts show a load older control when earlier history is available', () => {
   const markup = renderQueryPane([
     makeMessage({ id: 'message-1', nick: 'MissD', target: 'MissD', body: 'latest', ts: 2 }),

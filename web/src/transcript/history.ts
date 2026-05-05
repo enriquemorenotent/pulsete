@@ -39,6 +39,10 @@ export type SelectedBufferHistoryControls = {
 export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams): SelectedBufferHistoryControls {
   const historyRequestRef = useRef(0);
   const loadingOlderRef = useRef(false);
+  const [initialHistoryRequest, setInitialHistoryRequest] = useState<{
+    bufferId: string;
+    pending: boolean;
+  } | null>(null);
   const [loadingOlderHistory, setLoadingOlderHistory] = useState(false);
   const selectedBufferId = params.selectedBuffer?.id ?? null;
   const oldestSelectedMessageId = params.selectedMessages[0]?.id ?? null;
@@ -48,15 +52,26 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
   const hasOlderHistory = selectedBufferId
     ? params.historyHasOlderByBufferId[selectedBufferId] === true
     : false;
-  const initialHistoryPending =
+  const shouldLoadInitialHistory =
     !!selectedBufferId
     && params.gatewayStatus === 'connected'
     && !hasLoadedHistory;
+  const initialHistoryPending =
+    shouldLoadInitialHistory
+    && (
+      initialHistoryRequest?.bufferId !== selectedBufferId
+      || initialHistoryRequest.pending
+    );
 
   useEffect(() => {
     historyRequestRef.current += 1;
     const requestId = historyRequestRef.current;
     let active = true;
+    if (!shouldLoadInitialHistory) {
+      setInitialHistoryRequest(null);
+    } else if (selectedBufferId) {
+      setInitialHistoryRequest({ bufferId: selectedBufferId, pending: true });
+    }
     void loadSelectedBufferHistory({
       bufferId: selectedBufferId,
       gatewayStatus: params.gatewayStatus,
@@ -64,11 +79,21 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
       dispatch: params.dispatch,
       loadHistory: api.loadHistory,
       isCurrentRequest: () => active && historyRequestRef.current === requestId,
+    }).finally(() => {
+      if (active && historyRequestRef.current === requestId && selectedBufferId) {
+        setInitialHistoryRequest({ bufferId: selectedBufferId, pending: false });
+      }
     });
     return () => {
       active = false;
     };
-  }, [params.dispatch, params.gatewayStatus, hasLoadedHistory, selectedBufferId]);
+  }, [
+    params.dispatch,
+    params.gatewayStatus,
+    hasLoadedHistory,
+    selectedBufferId,
+    shouldLoadInitialHistory,
+  ]);
 
   const loadOlderHistory = useCallback(async () => {
     if (loadingOlderRef.current) {

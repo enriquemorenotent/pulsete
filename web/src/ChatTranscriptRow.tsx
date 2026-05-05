@@ -1,6 +1,7 @@
 import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { ChatPaneMutedMessageGroupRow } from './ChatPaneMutedMessageGroupRow.js';
+import { ChatPaneServerMessageGroupRow } from './ChatPaneServerMessageGroupRow.js';
 import { UnreadDivider } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptRow as TranscriptRow } from './transcript/model.js';
 import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';
@@ -40,6 +41,17 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
         onOpenParticipantQuery={props.onOpenParticipantQuery}
         onToggle={props.onToggleMutedGroup}
         participantHighlightMode={props.participantHighlightMode}
+      />
+    );
+  }
+
+  if (props.row.kind === 'server-group') {
+    return (
+      <ChatPaneServerMessageGroupRow
+        row={props.row}
+        mode={props.mode}
+        onInlinePreviewLoad={props.onInlinePreviewLoad}
+        onOpenChannel={props.onOpenChannel}
       />
     );
   }

@@ -55,6 +55,9 @@ export const getServerMessageSourceLabel = (message: ChatMessage) => {
   return null;
 };
 
+export const getServerMessageDisplayBody = (message: ChatMessage) =>
+  message.kind === 'system' ? message.body.replace(/^\*\s+/, '') : message.body;
+
 export const isCompactMessage = (message: ChatMessage) =>
   message.kind === 'line'
   || message.kind === 'action'

@@ -82,6 +82,37 @@ test('transcript model hides compact timestamps only for consecutive rows from t
   );
 });
 
+test('server transcript model groups consecutive routine rows by source and tone', () => {
+  const model = buildChatTranscriptModel({
+    firstUnreadDividerIndex: null,
+    listKind: 'server',
+    messages: [
+      { id: 'message-1', bufferId: 'buffer-1', networkId: 'network-1', target: 'server', nick: null, body: 'Connected', kind: 'system', self: false, ts: 1 },
+      { id: 'message-2', bufferId: 'buffer-1', networkId: 'network-1', target: 'server', nick: null, body: '* Welcome', kind: 'system', self: false, ts: 2 },
+      { id: 'message-3', bufferId: 'buffer-1', networkId: 'network-1', target: 'server', nick: null, body: 'Maintenance soon', kind: 'notice', self: false, ts: 3 },
+      { id: 'message-4', bufferId: 'buffer-1', networkId: 'network-1', target: 'server', nick: 'StatServ', body: '<VERSION>', kind: 'line', self: false, ts: 4 },
+      { id: 'message-5', bufferId: 'buffer-1', networkId: 'network-1', target: 'server', nick: null, body: 'Connection failed', kind: 'error', self: false, ts: 5 },
+    ],
+    mutedNicks: [],
+    unreadDividerKey: 'unused',
+  });
+
+  assert.deepEqual(
+    model.flatRows.map((row) => {
+      if (row.kind === 'server-group') {
+        return `${row.sourceLabel}:${row.tone}:${row.messageRows.map((messageRow) => messageRow.message.id).join(',')}`;
+      }
+      return row.kind === 'message' ? row.message.id : row.kind;
+    }),
+    [
+      'Server:system:message-1,message-2',
+      'Notice:notice:message-3',
+      'StatServ:system:message-4',
+      'message-5',
+    ],
+  );
+});
+
 test('latest follow behavior autoscrolls only while pinned or after sending', () => {
   assert.equal(
     resolveLatestFollowBehavior({ atLatest: true, pendingSendToLatest: false }),

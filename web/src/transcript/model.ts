@@ -1,7 +1,20 @@
-import { normalizeIrcIdentifier } from '../../../shared/irc-identifiers.js';
 import type { ChatMessage, MutedNickState } from '../../../shared/protocol-chat.js';
 import { formatDayDividerLabel } from '../chat-pane-message-utils.js';
 import { resolveMutedMessageNick } from '../muted-nick-utils.js';
+import {
+  appendMutedMessageRow,
+  buildMutedGroupRow,
+  shouldFlushMutedGroup,
+  type PendingMutedGroup,
+} from './muted-message-groups.js';
+import {
+  appendServerMessageRow,
+  buildServerGroupRow,
+  resolveServerGroupDescriptor,
+  shouldFlushServerGroup,
+  type ChatTranscriptServerGroupRow,
+  type PendingServerGroup,
+} from './server-message-groups.js';
 import {
   getLocalDayKey,
   resolveTimestampGroupKey,
@@ -28,6 +41,7 @@ export type ChatTranscriptMutedGroupRow = {
 export type ChatTranscriptRow =
   | ChatTranscriptMessageRow
   | ChatTranscriptMutedGroupRow
+  | ChatTranscriptServerGroupRow
   | {
       kind: 'unread-divider';
       key: string;
@@ -54,21 +68,13 @@ type BuildChatTranscriptModelInput = {
   unreadDividerKey: string;
 };
 
-type PendingMutedGroup = {
-  activeGroup: ChatTranscriptGroup;
-  messageRows: ChatTranscriptMessageRow[];
-  networkId: string;
-  nick: string;
-  nickKey: string;
-  previousTimestampGroupKey: string | null;
-};
-
 export const buildChatTranscriptModel = (
   input: BuildChatTranscriptModelInput,
 ): ChatTranscriptModel => {
   const groups: ChatTranscriptGroup[] = [];
   const flatRows: ChatTranscriptRow[] = [];
   let pendingMutedGroup: PendingMutedGroup | null = null;
+  let pendingServerGroup: PendingServerGroup | null = null;
   let previousDayKey: string | null = null;
   let previousTimestampGroupKey: string | null = null;
   let unreadRowIndex: number | null = null;
@@ -77,24 +83,25 @@ export const buildChatTranscriptModel = (
     if (!pendingMutedGroup) {
       return;
     }
-    const firstMessage = pendingMutedGroup.messageRows[0]?.message;
-    const lastMessage = pendingMutedGroup.messageRows.at(-1)?.message;
-    if (!firstMessage || !lastMessage) {
-      pendingMutedGroup = null;
+    const row = buildMutedGroupRow(pendingMutedGroup);
+    if (row) {
+      pendingMutedGroup.activeGroup.rows.push(row);
+      flatRows.push(row);
+    }
+    pendingMutedGroup = null;
+    previousTimestampGroupKey = null;
+  };
+
+  const flushServerGroup = () => {
+    if (!pendingServerGroup) {
       return;
     }
-    const row: ChatTranscriptMutedGroupRow = {
-      kind: 'muted-group',
-      key: `muted-group:${firstMessage.id}:${lastMessage.id}`,
-      firstMessageId: firstMessage.id,
-      lastMessageId: lastMessage.id,
-      messageCount: pendingMutedGroup.messageRows.length,
-      messageRows: pendingMutedGroup.messageRows,
-      nick: pendingMutedGroup.nick,
-    };
-    pendingMutedGroup.activeGroup.rows.push(row);
-    flatRows.push(row);
-    pendingMutedGroup = null;
+    const row = buildServerGroupRow(pendingServerGroup);
+    if (row) {
+      pendingServerGroup.activeGroup.rows.push(row);
+      flatRows.push(row);
+    }
+    pendingServerGroup = null;
     previousTimestampGroupKey = null;
   };
 
@@ -102,6 +109,7 @@ export const buildChatTranscriptModel = (
     const dayKey = getLocalDayKey(message.ts);
     if (dayKey !== previousDayKey) {
       flushMutedGroup();
+      flushServerGroup();
       groups.push({
         key: `day-${dayKey}`,
         label: formatDayDividerLabel(message.ts),
@@ -118,6 +126,7 @@ export const buildChatTranscriptModel = (
 
     if (input.firstUnreadDividerIndex === messageIndex) {
       flushMutedGroup();
+      flushServerGroup();
       const unreadRow: ChatTranscriptRow = {
         kind: 'unread-divider',
         key: input.unreadDividerKey,
@@ -130,15 +139,8 @@ export const buildChatTranscriptModel = (
 
     const mutedNick = resolveMutedMessageNick(input.mutedNicks, message);
     if (mutedNick) {
-      const mutedNickKey = normalizeIrcIdentifier(mutedNick);
-      if (
-        pendingMutedGroup
-        && (
-          pendingMutedGroup.activeGroup !== activeGroup
-          || pendingMutedGroup.networkId !== message.networkId
-          || pendingMutedGroup.nickKey !== mutedNickKey
-        )
-      ) {
+      flushServerGroup();
+      if (shouldFlushMutedGroup(pendingMutedGroup, activeGroup, message, mutedNick)) {
         flushMutedGroup();
       }
       pendingMutedGroup = appendMutedMessageRow({
@@ -153,7 +155,27 @@ export const buildChatTranscriptModel = (
       return;
     }
 
+    const serverGroupDescriptor = input.listKind === 'server'
+      ? resolveServerGroupDescriptor(message)
+      : null;
+    if (serverGroupDescriptor) {
+      flushMutedGroup();
+      if (shouldFlushServerGroup(pendingServerGroup, activeGroup, serverGroupDescriptor)) {
+        flushServerGroup();
+      }
+      pendingServerGroup = appendServerMessageRow({
+        activeGroup,
+        descriptor: serverGroupDescriptor,
+        message,
+        messageIndex,
+        pendingServerGroup,
+      });
+      previousTimestampGroupKey = null;
+      return;
+    }
+
     flushMutedGroup();
+    flushServerGroup();
     const timestampGroupKey = resolveTimestampGroupKey(message, input.listKind);
     const row: ChatTranscriptRow = {
       kind: 'message',
@@ -170,6 +192,7 @@ export const buildChatTranscriptModel = (
   });
 
   flushMutedGroup();
+  flushServerGroup();
 
   return {
     flatRows,
@@ -203,40 +226,4 @@ export const pruneExpandedMutedGroupKeys = (
   return changed ? next : current;
 };
 
-const appendMutedMessageRow = (input: {
-  activeGroup: ChatTranscriptGroup;
-  listKind: 'chat' | 'server';
-  message: ChatMessage;
-  messageIndex: number;
-  mutedNick: string;
-  pendingMutedGroup: PendingMutedGroup | null;
-}) => {
-  const nickKey = normalizeIrcIdentifier(input.mutedNick);
-  const matchingPendingGroup =
-    input.pendingMutedGroup
-    && input.pendingMutedGroup.activeGroup === input.activeGroup
-    && input.pendingMutedGroup.networkId === input.message.networkId
-    && input.pendingMutedGroup.nickKey === nickKey
-      ? input.pendingMutedGroup
-      : null;
-  const pendingGroup = matchingPendingGroup ?? {
-    activeGroup: input.activeGroup,
-    messageRows: [],
-    networkId: input.message.networkId,
-    nick: input.mutedNick,
-    nickKey,
-    previousTimestampGroupKey: null,
-  };
-  const timestampGroupKey = resolveTimestampGroupKey(input.message, input.listKind);
-  pendingGroup.messageRows.push({
-    kind: 'message',
-    key: `message:${input.message.id}`,
-    hideTimestamp:
-      timestampGroupKey !== null
-      && timestampGroupKey === pendingGroup.previousTimestampGroupKey,
-    message: input.message,
-    messageIndex: input.messageIndex,
-  });
-  pendingGroup.previousTimestampGroupKey = timestampGroupKey;
-  return pendingGroup;
-};
+export type { ChatTranscriptServerGroupRow } from './server-message-groups.js';

@@ -18,6 +18,7 @@ export const renderChatPane = (
     showChannelAutoJoin: boolean;
     channelAutoJoinActive: boolean;
     canLoadOlderHistory: boolean;
+    initialHistoryPending: boolean;
     loadingOlderHistory: boolean;
     channelUsers: ChannelUserState[];
     friends: FriendState[];
@@ -50,6 +51,7 @@ export const renderChatPane = (
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
+      initialHistoryPending={overrides.initialHistoryPending}
       loadingOlderHistory={overrides.loadingOlderHistory}
       onLoadOlderHistory={async () => 0}
       onCloseChannel={() => undefined}
@@ -68,6 +70,7 @@ export const renderQueryPane = (
   selectedMessages: ChatMessage[],
   overrides: Partial<{
     canLoadOlderHistory: boolean;
+    initialHistoryPending: boolean;
     loadingOlderHistory: boolean;
     friends: FriendState[];
     nickEmojis: NickEmojiState[];
@@ -104,6 +107,7 @@ export const renderQueryPane = (
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
+      initialHistoryPending={overrides.initialHistoryPending}
       loadingOlderHistory={overrides.loadingOlderHistory}
       onLoadOlderHistory={async () => 0}
       onCloseChannel={() => undefined}
