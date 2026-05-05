@@ -36,20 +36,23 @@ export function ConnectionSidebarNetworkSection(
 	return (
 		<section
 			className={cn(
-				'space-y-1',
-				props.index > 0 && 'border-t border-white/6 pt-2',
+				'space-y-1.5',
+				props.index > 0 && 'border-t border-white/6 pt-1.5',
 			)}
 		>
 			<div
 				className={cn(
-					'group flex items-stretch rounded-sm transition-colors',
+					'group flex items-stretch rounded-sm transition-colors focus-within:bg-white/[0.035]',
+					serverActivity.hasUnread &&
+						!connection.selectedServer &&
+						'bg-white/[0.018]',
 					connection.selectedServer
-						? 'bg-white/6 ring-1 ring-inset ring-primary/24'
-						: 'hover:bg-white/3',
+						? 'bg-primary/[0.095] ring-1 ring-inset ring-primary/30'
+						: 'hover:bg-white/[0.035]',
 				)}
 			>
 				<button
-					className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+					className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
 					onClick={() => props.onSelectNetwork(connection.network)}
 					aria-label={
 						serverActivity.hasUnread
@@ -83,9 +86,9 @@ export function ConnectionSidebarNetworkSection(
 						</div>
 					</div>
 				</button>
-				<div className="flex shrink-0 items-center gap-0.5 px-1 opacity-70 transition-opacity group-hover:opacity-100">
+				<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
 					<button
-						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
 						onClick={() =>
 							connection.runtime?.phase === 'connected'
 								? props.onDisconnectNetwork(
@@ -103,7 +106,7 @@ export function ConnectionSidebarNetworkSection(
 						)}
 					</button>
 					<button
-						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
+						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
 						onClick={() =>
 							props.onCloseConnection(connection.network)
 						}

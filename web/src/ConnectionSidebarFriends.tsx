@@ -65,10 +65,10 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 
 	return (
 		<>
-			<section className="shrink-0 border-t border-white/6 px-2.5 py-2">
+			<section className="shrink-0 border-t border-white/6 px-2.5 py-1.5">
 				<div className="flex items-center justify-between gap-2 px-1 py-0.5">
 					<div className="min-w-0">
-						<h2 className="text-[12px] font-semibold tracking-tight text-foreground">
+						<h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
 							Watchlist
 						</h2>
 					</div>
@@ -119,7 +119,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 							No watched nicks are online right now.
 						</div>
 					) : (
-						<div className="space-y-px border-white/6">
+						<div className="space-y-0.5 border-white/6">
 							{visibleFriends.map((friend) => (
 								<FriendRow
 									key={friend.id}

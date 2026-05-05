@@ -13,10 +13,10 @@ type FriendRowProps = {
 
 export function FriendRow(props: FriendRowProps) {
 	return (
-		<div className="group flex items-stretch rounded-sm transition-colors hover:bg-white/3">
+		<div className="group flex items-stretch rounded-sm transition-colors hover:bg-white/[0.035] focus-within:bg-white/[0.035]">
 			<button
 				type="button"
-				className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left"
+				className="flex min-w-0 flex-1 items-center gap-1.5 rounded-sm px-2 py-1 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
 				onClick={props.onOpen}
 				aria-label={`Open ${props.friend.nick} (${props.presence})`}
 			>
@@ -45,7 +45,7 @@ export function FriendRow(props: FriendRowProps) {
 			</button>
 			<button
 				type="button"
-				className="px-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
+				className="flex w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity duration-150 hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
 				aria-label={`Remove ${props.friend.nick} from watchlist`}
 				onClick={props.onRemove}
 			>

@@ -27,15 +27,16 @@ export function ConnectionSidebarBufferRow(
 	return (
 		<div
 			className={cn(
-				'group flex items-stretch rounded-sm transition-colors',
+				'group flex items-stretch rounded-sm transition-colors focus-within:bg-white/[0.035]',
+				activity.hasUnread && !props.selected && 'bg-white/[0.018]',
 				props.selected
-					? 'bg-white/5 ring-1 ring-inset ring-white/8'
-					: 'hover:bg-white/3',
+					? 'bg-white/[0.07] ring-1 ring-inset ring-white/10'
+					: 'hover:bg-white/[0.035]',
 			)}
 		>
 			<button
 				className={cn(
-					'flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left',
+					'flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45',
 					props.dimmed && 'opacity-70',
 				)}
 				onClick={props.onSelect}
@@ -79,7 +80,7 @@ export function ConnectionSidebarBufferRow(
 				</span>
 			</button>
 			<button
-				className="px-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:text-foreground"
+				className="flex w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity duration-150 hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
 				onClick={props.onClose}
 				aria-label={`Close ${props.buffer.target}`}
 			>
