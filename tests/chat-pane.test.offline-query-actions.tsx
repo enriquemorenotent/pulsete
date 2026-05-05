@@ -66,6 +66,9 @@ test('offline channels surface an inline reconnect action', () => {
     /You&#x27;re offline\. History stays available until you reconnect\./,
   );
   assert.match(markup, />Reconnect</);
+  assert.match(markup, /role="status"/);
+  assert.match(markup, /rounded-md border px-3 py-2/);
+  assert.doesNotMatch(markup, /rounded-\[1rem\]/);
 });
 
 test('saved channels that are no longer joined surface a rejoin action', () => {
