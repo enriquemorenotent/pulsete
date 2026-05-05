@@ -49,14 +49,14 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
       ? (
         <span
           aria-hidden
-          className="invisible shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground/55"
+          className="invisible shrink-0 font-sans tabular-nums text-[11px] leading-5 text-[var(--transcript-meta)]"
         >
           00:00
         </span>
       )
       : (
         <time
-          className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground/55"
+          className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-[var(--transcript-meta)]"
           dateTime={formatMessageTimestampDateTime(message.ts)}
           title={formatMessageTimestampTitle(message.ts)}
         >
@@ -96,13 +96,13 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
 
   return (
     <article
-      className={cn('px-1 py-0.5 text-foreground', messageTone(message))}
+      className={cn('px-1 py-0.5', messageTone(message))}
       data-message-id={message.id}
     >
       <div className="grid items-start grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 font-sans">
         {timeLabel}
         <div className="min-w-0">
-          <p className="min-w-0 break-words font-sans text-[13px] leading-5 text-inherit">
+          <p className="min-w-0 break-words font-sans text-[15px] leading-6 text-inherit">
             {metadata}
             {hasVisibleText ? (
               <span className={bodyClassName}>

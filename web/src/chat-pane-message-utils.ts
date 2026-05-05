@@ -81,15 +81,15 @@ export const getLifecycleEventLabel = (message: ChatMessage) => {
 
 export const getLifecycleEventTone = (message: ChatMessage) => {
   if (message.kind === 'join') {
-    return 'border-emerald-300/16 bg-emerald-300/[0.045] text-emerald-300/75';
+    return 'border-emerald-300/22 bg-emerald-300/[0.06] text-emerald-200';
   }
   if (message.kind === 'part') {
-    return 'border-amber-300/16 bg-amber-300/[0.045] text-amber-300/75';
+    return 'border-amber-300/22 bg-amber-300/[0.06] text-amber-200';
   }
   if (message.kind === 'quit') {
-    return 'border-red-500/18 bg-red-500/[0.045] text-red-400/75';
+    return 'border-red-500/24 bg-red-500/[0.06] text-red-300';
   }
-  return 'border-white/8 bg-white/[0.025] text-muted-foreground/80';
+  return 'border-white/10 bg-white/[0.04] text-[var(--transcript-secondary)]';
 };
 
 export const getLifecycleEventSummary = (message: ChatMessage) => {
@@ -114,12 +114,12 @@ export const messageTone = (message: ChatMessage) => {
     return 'text-destructive';
   }
   if (message.kind === 'notice') {
-    return 'text-foreground/85';
+    return 'text-[var(--transcript-notice)]';
   }
   if (message.kind === 'system' || isLifecycleEventMessage(message)) {
-    return 'text-muted-foreground/78';
+    return 'text-[var(--transcript-secondary)]';
   }
-  return '';
+  return 'text-[var(--transcript-message)]';
 };
 
 const padDatePart = (value: number) => String(value).padStart(2, '0');

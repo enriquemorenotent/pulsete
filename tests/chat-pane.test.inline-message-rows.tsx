@@ -32,8 +32,8 @@ test('transcript rows render without boxed message chrome', () => {
   ]);
 
   assert.doesNotMatch(markup, /border px-2 py-1\.5/);
-  assert.match(markup, /class="px-1 py-0\.5 text-foreground" data-message-id="message-1"/);
-  assert.match(markup, /class="px-1 py-0\.5 text-foreground\/85" data-message-id="message-2"/);
+  assert.match(markup, /class="px-1 py-0\.5 text-\[var\(--transcript-message\)\]" data-message-id="message-1"/);
+  assert.match(markup, /class="px-1 py-0\.5 text-\[var\(--transcript-notice\)\]" data-message-id="message-2"/);
 });
 
 test('join part and quit rows render as aligned boxed event labels', () => {
@@ -44,9 +44,9 @@ test('join part and quit rows render as aligned boxed event labels', () => {
     makeMessage({ id: 'message-4', nick: 'Joby', body: 'Joby was kicked from #help by Opal (bye)', kind: 'part', ts: 4 }),
   ]);
 
-  assert.match(markup, /class="[^"]*min-w-10[^"]*border-emerald-300\/16[^"]*text-emerald-300\/75[^"]*">JOIN<\/span>/);
-  assert.match(markup, /class="[^"]*min-w-10[^"]*border-amber-300\/16[^"]*text-amber-300\/75[^"]*">PART<\/span>/);
-  assert.match(markup, /class="[^"]*min-w-10[^"]*border-red-500\/18[^"]*text-red-400\/75[^"]*">QUIT<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-emerald-300\/22[^"]*text-emerald-200[^"]*">JOIN<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-amber-300\/22[^"]*text-amber-200[^"]*">PART<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-red-500\/24[^"]*text-red-300[^"]*">QUIT<\/span>/);
   assert.match(markup, /JOIN<\/span><span class="">Joby<\/span>/);
   assert.match(markup, /PART<\/span><span class="">Joby \(bye\)<\/span>/);
   assert.match(markup, /QUIT<\/span><span class="">Joby \(Ping timeout\)<\/span>/);
@@ -56,7 +56,7 @@ test('join part and quit rows render as aligned boxed event labels', () => {
   assert.doesNotMatch(markup, /Joby quit/);
   assert.doesNotMatch(markup, /was kicked from #help/);
   assert.doesNotMatch(markup, /border-l border-white\/12/);
-  assert.match(markup, /class="px-1 py-0\.5 text-muted-foreground\/78" data-message-id="message-1"/);
+  assert.match(markup, /class="px-1 py-0\.5 text-\[var\(--transcript-secondary\)\]" data-message-id="message-1"/);
 });
 
 test('compact chat rows use one grid skeleton for plain text and inline previews', () => {
@@ -88,7 +88,7 @@ test('message rows render a compact time with full datetime metadata', () => {
   assert.match(markup, />02:57<\/time>/);
   assert.match(markup, /title="2026-03-11 02:57:36"/);
   assert.match(markup, new RegExp(`dateTime="${new Date(timestamp).toISOString()}"`));
-  assert.match(markup, /font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground\/55/);
+  assert.match(markup, /font-sans tabular-nums text-\[11px\] leading-5 text-\[var\(--transcript-meta\)\]/);
 });
 
 test('channel transcripts render day dividers when the calendar day changes', () => {
@@ -113,7 +113,7 @@ test('compact rows suppress repeated timestamps for the same sender within the s
 
   const visibleTimestampMetadata = markup.match(/title="2026-03-11 02:(57|58):/g) ?? [];
   assert.equal(visibleTimestampMetadata.length, 2);
-  assert.match(markup, /invisible shrink-0 font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground\/55/);
+  assert.match(markup, /invisible shrink-0 font-sans tabular-nums text-\[11px\] leading-5 text-\[var\(--transcript-meta\)\]/);
 });
 
 test('private-message rows color self and peer nick labels differently', () => {
@@ -198,8 +198,8 @@ test('system rows in channel transcripts use the compact inline timestamp layout
   ]);
 
   assert.match(markup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
-  assert.match(markup, /class="px-1 py-0\.5 text-muted-foreground\/78" data-message-id="message-1"/);
-  assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
+  assert.match(markup, /class="px-1 py-0\.5 text-\[var\(--transcript-secondary\)\]" data-message-id="message-1"/);
+  assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[15px\] leading-6 text-inherit">/);
   assert.doesNotMatch(markup, /flex flex-wrap items-center gap-2 text-\[11px\] uppercase/);
 });
 
@@ -213,7 +213,7 @@ test('error rows keep high-priority destructive text', () => {
 
   assert.match(serverMarkup, /class="px-1 py-0\.5 text-destructive" data-message-id="message-1"/);
   assert.match(channelMarkup, /class="px-1 py-0\.5 text-destructive" data-message-id="message-1"/);
-  assert.match(channelMarkup, /<p class="whitespace-pre-wrap break-words font-sans text-\[13px\] leading-5 text-inherit">/);
+  assert.match(channelMarkup, /<p class="whitespace-pre-wrap break-words font-sans text-\[15px\] leading-6 text-inherit">/);
 });
 
 test('server tab rows keep inline source labels instead of grouped headers', () => {
@@ -230,7 +230,7 @@ test('server tab rows keep inline source labels instead of grouped headers', () 
   assert.doesNotMatch(markup, /opacity-0 transition-opacity/);
   assert.doesNotMatch(markup, /text-\[15px\] font-semibold/);
   assert.doesNotMatch(markup, /flex min-w-0 flex-wrap items-baseline/);
-  assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
+  assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[15px\] leading-6 text-inherit">/);
 });
 
 test('query transcripts show a load older control when earlier history is available', () => {

@@ -28,6 +28,10 @@
   --ring: oklch(0.64 0.08 246);
   --success: oklch(0.67 0.08 156);
   --success-foreground: oklch(0.98 0.002 156);
+  --transcript-message: oklch(0.935 0.006 255);
+  --transcript-notice: oklch(0.86 0.008 255);
+  --transcript-secondary: oklch(0.73 0.01 255);
+  --transcript-meta: oklch(0.62 0.01 255);
   --radius: 0.35rem;
 }
 

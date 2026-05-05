@@ -22,11 +22,11 @@ export const ChatPaneExpandedMessageRow = (props: {
   participant: MessageParticipantPresentation;
 }) => (
   <article
-    className={cn('px-1 py-0.5 text-foreground', messageTone(props.message))}
+    className={cn('px-1 py-0.5', messageTone(props.message))}
     data-message-id={props.message.id}
   >
     <div className="min-w-0">
-      <div className="mb-0.5 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/55">
+      <div className="mb-0.5 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-[var(--transcript-meta)]">
         <time
           className="tabular-nums normal-case tracking-normal"
           dateTime={formatMessageTimestampDateTime(props.message.ts)}
@@ -48,7 +48,7 @@ export const ChatPaneExpandedMessageRow = (props: {
       </div>
       <p
         className={cn(
-          'whitespace-pre-wrap break-words font-sans text-[13px] leading-5 text-inherit',
+          'whitespace-pre-wrap break-words font-sans text-[15px] leading-6 text-inherit',
           isActionMessage(props.message) && 'italic',
         )}
       >
