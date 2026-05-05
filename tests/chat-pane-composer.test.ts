@@ -52,6 +52,7 @@ test('prompt resolution favors command mode for server buffers', () => {
     }),
     {
       actionLabel: 'Run',
+      actionIcon: 'terminal',
       prefixSymbol: '/',
       variant: 'commands',
     },
@@ -65,6 +66,7 @@ test('prompt resolution keeps normal chatting minimal', () => {
     }),
     {
       actionLabel: 'Send',
+      actionIcon: 'send',
       prefixSymbol: null,
       variant: 'normal',
     },

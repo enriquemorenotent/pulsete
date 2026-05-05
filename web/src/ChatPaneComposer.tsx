@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { SendHorizonal } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { SendHorizonal, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { cn } from '@/lib/utils.js';
@@ -8,6 +8,7 @@ import {
   type ComposerCompletionDirection,
   type ComposerCompletionSession,
 } from './composer-completion.js';
+import { ChatPaneComposerTargetChip, type ChatPaneComposerTarget } from './ChatPaneComposerTargetChip.js';
 import { resolveChatPaneComposerPrompt } from './chat-pane-composer-prompt.js';
 import type { ComposerMode } from './workspace-types.js';
 
@@ -50,6 +51,7 @@ type ChatPaneComposerProps = {
   draft: string;
   mode: ComposerMode;
   placeholder: string;
+  target: ChatPaneComposerTarget | null;
   focusContextKey?: string | null;
   completionEnabled?: boolean;
   completionContextKey?: string | null;
@@ -66,10 +68,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   const completionSessionRef = useRef<ComposerCompletionSession | null>(null);
   const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const previousFocusContextKeyRef = useRef<string | null>(props.focusContextKey ?? null);
-  const prompt = useMemo(
-    () => resolveChatPaneComposerPrompt({ mode: props.mode }),
-    [props.mode]
-  );
+  const prompt = resolveChatPaneComposerPrompt({ mode: props.mode });
 
   useEffect(() => {
     completionSessionRef.current = null;
@@ -134,7 +133,13 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
 
   return (
     <footer className="shrink-0 border-t border-white/6 bg-background/32 px-4 py-3 backdrop-blur-sm">
-      <div className="flex gap-2 rounded-[1rem] bg-black/12 p-2 ring-1 ring-white/[0.05]">
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-[1rem] bg-black/12 p-2 ring-1 ring-white/[0.05]',
+          prompt.variant === 'commands' && 'flex-wrap bg-amber-400/[0.045] ring-amber-300/15 sm:flex-nowrap'
+        )}
+      >
+        {props.target ? <ChatPaneComposerTargetChip target={props.target} variant={prompt.variant} /> : null}
         {prompt.prefixSymbol ? (
           <div
             className={cn(
@@ -146,59 +151,66 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
             {prompt.prefixSymbol}
           </div>
         ) : null}
-        <Input
-          ref={inputRef}
-          value={props.draft}
-          className="flex-1 border-transparent bg-transparent focus-visible:border-ring/40"
-          onBlur={() => {
-            completionSessionRef.current = null;
-            pendingSelectionRef.current = null;
-          }}
-          onChange={(event) => {
-            completionSessionRef.current = null;
-            pendingSelectionRef.current = null;
-            props.onDraftChange(event.target.value);
-          }}
-          onKeyDown={(event) => {
-            if (
-              props.completionEnabled
-              && event.key === 'Tab'
-              && !event.altKey
-              && !event.ctrlKey
-              && !event.metaKey
-              && !event.nativeEvent.isComposing
-            ) {
+        <div className={cn('flex min-w-0 flex-1 gap-2', prompt.variant === 'commands' && 'basis-full sm:basis-auto')}>
+          <Input
+            ref={inputRef}
+            value={props.draft}
+            className="min-w-0 flex-1 border-transparent bg-transparent focus-visible:border-ring/40"
+            onBlur={() => {
+              completionSessionRef.current = null;
+              pendingSelectionRef.current = null;
+            }}
+            onChange={(event) => {
+              completionSessionRef.current = null;
+              pendingSelectionRef.current = null;
+              props.onDraftChange(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              if (
+                props.completionEnabled
+                && event.key === 'Tab'
+                && !event.altKey
+                && !event.ctrlKey
+                && !event.metaKey
+                && !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                handleCompletionKey(
+                  event.shiftKey ? 'backward' : 'forward',
+                  event.currentTarget.selectionStart,
+                  event.currentTarget.selectionEnd,
+                );
+                return;
+              }
+              const action = getChatPaneComposerKeyAction(event, props.draft);
+              if (!action) {
+                return;
+              }
               event.preventDefault();
-              handleCompletionKey(
-                event.shiftKey ? 'backward' : 'forward',
-                event.currentTarget.selectionStart,
-                event.currentTarget.selectionEnd,
-              );
-              return;
-            }
-            const action = getChatPaneComposerKeyAction(event, props.draft);
-            if (!action) {
-              return;
-            }
-            event.preventDefault();
-            if (action === 'recall-older') {
-              props.onRecallOlderDraft();
-              return;
-            }
-            if (action === 'recall-newer') {
-              props.onRecallNewerDraft();
-              return;
-            }
-            if (action === 'send') {
-              void props.onSend();
-            }
-          }}
-          placeholder={props.placeholder}
-        />
-        <Button size="sm" variant={prompt.variant === 'commands' ? 'secondary' : 'default'} onClick={() => void props.onSend()}>
-          <SendHorizonal />
-          {prompt.actionLabel}
-        </Button>
+              if (action === 'recall-older') {
+                props.onRecallOlderDraft();
+                return;
+              }
+              if (action === 'recall-newer') {
+                props.onRecallNewerDraft();
+                return;
+              }
+              if (action === 'send') {
+                void props.onSend();
+              }
+            }}
+            placeholder={props.placeholder}
+          />
+          <Button
+            size="sm"
+            variant={prompt.variant === 'commands' ? 'secondary' : 'default'}
+            className="shrink-0"
+            onClick={() => void props.onSend()}
+          >
+            {prompt.actionIcon === 'terminal' ? <Terminal /> : <SendHorizonal />}
+            {prompt.actionLabel}
+          </Button>
+        </div>
       </div>
     </footer>
   );

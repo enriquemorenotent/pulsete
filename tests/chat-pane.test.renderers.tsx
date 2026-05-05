@@ -26,6 +26,7 @@ export const renderChatPane = (
     externalAvatarsEnabled: boolean;
     selectedQueryAvatarUser: ChannelUserState | null;
     topic: string;
+    draft: string;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -39,7 +40,7 @@ export const renderChatPane = (
       selectedQueryAvatarUser={overrides.selectedQueryAvatarUser}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
-      draft=""
+      draft={overrides.draft ?? ''}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
@@ -76,6 +77,7 @@ export const renderQueryPane = (
     mutedNicks: MutedNickState[];
     externalAvatarsEnabled: boolean;
     selectedQueryAvatarUser: ChannelUserState | null;
+    draft: string;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -86,7 +88,7 @@ export const renderQueryPane = (
       selectedQueryAvatarUser={overrides.selectedQueryAvatarUser}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
-      draft=""
+      draft={overrides.draft ?? ''}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}
@@ -116,7 +118,10 @@ export const renderQueryPane = (
     />
   );
 
-export const renderServerPane = (selectedMessages: ChatMessage[]) =>
+export const renderServerPane = (
+  selectedMessages: ChatMessage[],
+  overrides: Partial<{ draft: string }> = {},
+) =>
   renderToStaticMarkup(
     <ChatPane
       workspace={makeServerWorkspace()}
@@ -124,7 +129,7 @@ export const renderServerPane = (selectedMessages: ChatMessage[]) =>
       externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={selectedMessages}
-      draft=""
+      draft={overrides.draft ?? ''}
       onDraftChange={() => undefined}
       onRecallOlderDraft={() => undefined}
       onRecallNewerDraft={() => undefined}

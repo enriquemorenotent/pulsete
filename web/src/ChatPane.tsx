@@ -13,6 +13,7 @@ import {
 import type { ChannelListState } from './app-types.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
+import type { ChatPaneComposerTarget } from './ChatPaneComposerTargetChip.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
@@ -87,6 +88,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
   const clearableBuffer = props.canDeleteHistory && props.workspace.selectedBuffer?.kind === 'query'
     ? props.workspace.selectedBuffer
     : null;
+  const composerTarget = resolveChatPaneComposerTarget(props.workspace);
   const handleSend = useCallback(async () => {
     const submitted = await props.onSend();
     if (submitted) {
@@ -161,6 +163,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           draft={props.draft}
           mode={props.workspace.composerMode}
           placeholder={props.workspace.composerPlaceholder}
+          target={composerTarget}
           focusContextKey={props.focusContextKey}
           completionEnabled={props.completionEnabled}
           completionContextKey={props.completionContextKey}
@@ -195,6 +198,25 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     </section>
   );
 });
+
+function resolveChatPaneComposerTarget(workspace: WorkspaceView): ChatPaneComposerTarget | null {
+  if (workspace.composerMode === 'hidden') {
+    return null;
+  }
+  if (workspace.composerMode === 'commands') {
+    return { kind: 'server', label: workspace.selectedNetwork?.name ?? 'Server' };
+  }
+  if (workspace.selectedBuffer?.kind === 'channel') {
+    return { kind: 'channel', label: workspace.selectedChannel?.name ?? workspace.selectedBuffer.target };
+  }
+  if (workspace.selectedPendingChannel) {
+    return { kind: 'channel', label: workspace.selectedPendingChannel.channel };
+  }
+  if (workspace.selectedBuffer?.kind === 'query') {
+    return { kind: 'query', label: workspace.selectedBuffer.target };
+  }
+  return null;
+}
 
 function DeleteHistoryDialog(props: {
   buffer: BufferState | null;

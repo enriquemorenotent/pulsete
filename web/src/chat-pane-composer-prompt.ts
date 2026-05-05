@@ -6,6 +6,7 @@ type ComposerPromptContext = {
 
 export type ChatPaneComposerPrompt = {
   actionLabel: 'Run' | 'Send';
+  actionIcon: 'send' | 'terminal';
   prefixSymbol: '/' | null;
   variant: 'commands' | 'normal';
 };
@@ -16,6 +17,7 @@ export const resolveChatPaneComposerPrompt = (
   if (context.mode === 'commands') {
     return {
       actionLabel: 'Run',
+      actionIcon: 'terminal',
       prefixSymbol: '/',
       variant: 'commands',
     };
@@ -23,6 +25,7 @@ export const resolveChatPaneComposerPrompt = (
 
   return {
     actionLabel: 'Send',
+    actionIcon: 'send',
     prefixSymbol: null,
     variant: 'normal',
   };
