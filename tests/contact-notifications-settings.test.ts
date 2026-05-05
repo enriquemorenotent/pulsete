@@ -4,6 +4,7 @@ import {
   addContactNotificationContact,
   canPlayContactNotificationCue,
   parseContactNotificationSettings,
+  removeContactNotificationContact,
   serializeContactNotificationSettings,
 } from '../web/src/contact-notifications/settings.js';
 
@@ -48,6 +49,44 @@ test('adding contacts dedupes by network and IRC case-folded nick', () => {
     sound: 'glass',
     contacts: [{ identity: { kind: 'nick', value: 'alice' }, networkId: 'network-1', nick: 'Alice' }],
   });
+});
+
+test('removing an identity contact also removes a matching nick fallback contact', () => {
+  const settings = removeContactNotificationContact({
+    enabled: true,
+    systemEnabled: false,
+    sound: 'glass',
+    contacts: [{ networkId: 'network-1', nick: 'Alice' }],
+  }, {
+    networkId: 'network-1',
+    nick: 'ALICE',
+    identity: { kind: 'account', value: 'alice-account' },
+  });
+
+  assert.deepEqual(settings.contacts, []);
+});
+
+test('removing an identity contact preserves a different strong identity with the same nick', () => {
+  const settings = removeContactNotificationContact({
+    enabled: true,
+    systemEnabled: false,
+    sound: 'glass',
+    contacts: [{
+      networkId: 'network-1',
+      nick: 'Alice',
+      identity: { kind: 'account', value: 'other-account' },
+    }],
+  }, {
+    networkId: 'network-1',
+    nick: 'ALICE',
+    identity: { kind: 'account', value: 'alice-account' },
+  });
+
+  assert.deepEqual(settings.contacts, [{
+    networkId: 'network-1',
+    nick: 'Alice',
+    identity: { kind: 'account', value: 'other-account' },
+  }]);
 });
 
 test('serializing settings preserves the chosen sound', () => {

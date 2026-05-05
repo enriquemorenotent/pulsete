@@ -134,12 +134,18 @@ export const addContactNotificationContact = (
 export const removeContactNotificationContact = (
   settings: ContactNotificationSettings,
   contact: ContactNotificationContact,
-): ContactNotificationSettings => ({
-  ...settings,
-  contacts: settings.contacts.filter((candidate) =>
-    contactKey(candidate) !== contactKey(normalizeContact(contact))
-  ),
-});
+): ContactNotificationSettings => {
+  const normalizedContact = normalizeContact(contact);
+  const removalTarget: NetworkUserIdentityTarget = normalizedContact;
+  return {
+    ...settings,
+    contacts: settings.contacts.filter((candidate) => {
+      const normalizedCandidate = normalizeContact(candidate);
+      return contactKey(normalizedCandidate) !== contactKey(normalizedContact)
+        && !matchesIdentityScopedEntry(normalizedCandidate, removalTarget);
+    }),
+  };
+};
 
 export const isContactNotificationAllowedForTarget = (
   settings: Pick<ContactNotificationSettings, 'contacts'>,
