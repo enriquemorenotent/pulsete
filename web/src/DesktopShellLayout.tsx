@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { FolderSearch, PanelsTopLeft, Search, Settings2 } from 'lucide-react';
+import { FolderSearch, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
@@ -12,6 +12,7 @@ import type {
   DesktopShellCommandPaletteModel,
   DesktopShellHeaderModel,
 } from './desktop-shell-model.js';
+import { DesktopShellToolsMenu } from './DesktopShellToolsMenu.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
 import {
   RIGHT_SIDEBAR_WIDTH_STORAGE_KEY,
@@ -92,7 +93,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
 
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(87,128,208,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] text-foreground">
-      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/6 bg-background/80 px-4 py-3 backdrop-blur-xl">
+      <header className="relative z-30 flex shrink-0 flex-wrap items-center gap-3 border-b border-white/6 bg-background/80 px-4 py-3 backdrop-blur-xl">
         <div className="mr-auto min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-semibold tracking-tight text-foreground">Pulsete</span>
@@ -111,14 +112,10 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             <FolderSearch />
             Logs
           </Button>
-          <Button variant="ghost" size="sm" onClick={props.header.onOpenPreferences}>
-            <Settings2 />
-            Preferences
-          </Button>
-          <Button variant="outline" size="sm" onClick={props.header.onOpenNetworkManager}>
-            <PanelsTopLeft />
-            Network Manager
-          </Button>
+          <DesktopShellToolsMenu
+            onOpenNetworkManager={props.header.onOpenNetworkManager}
+            onOpenPreferences={props.header.onOpenPreferences}
+          />
         </div>
       </header>
 

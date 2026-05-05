@@ -26,4 +26,7 @@ test('desktop shell renders a visible command palette trigger in the header', ()
   assert.match(markup, /Go to…/);
   assert.match(markup, /Ctrl\/Cmd\+K/);
   assert.match(markup, /Logs/);
+  assert.match(markup, /aria-label="Tools"/);
+  assert.doesNotMatch(markup, />Preferences</);
+  assert.doesNotMatch(markup, />Network Manager</);
 });
