@@ -103,10 +103,18 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={props.commandPalette.onOpen}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-8 min-w-[13rem] justify-start px-3"
+            aria-label="Search Pulsete"
+            onClick={props.commandPalette.onOpen}
+          >
             <Search />
-            Go to…
-            <span className="text-[11px] font-normal text-muted-foreground">Ctrl/Cmd+K</span>
+            <span className="min-w-0 flex-1 truncate text-left">Search Pulsete</span>
+            <span className="hidden rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground sm:inline-flex">
+              Ctrl/Cmd+K
+            </span>
           </Button>
           <Button variant="ghost" size="sm" onClick={props.header.onOpenLogInspector}>
             <FolderSearch />

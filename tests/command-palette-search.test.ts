@@ -30,6 +30,18 @@ test('command palette filtering matches labels, subtitles, and keywords case-ins
     ['Joby'],
   );
   assert.deepEqual(
+    filterCommandPaletteEntries(entries, 'people').map((entry) => entry.label),
+    ['Joby'],
+  );
+  assert.deepEqual(
+    filterCommandPaletteEntries(entries, 'logs').map((entry) => entry.label),
+    ['Search Logs'],
+  );
+  assert.deepEqual(
+    filterCommandPaletteEntries(entries, 'conversation').map((entry) => entry.label),
+    ['Cuff-Link', '#help', 'Nathe', '#pending'],
+  );
+  assert.deepEqual(
     filterCommandPaletteEntries(entries, 'hexchat').map((entry) => entry.label),
     [],
   );

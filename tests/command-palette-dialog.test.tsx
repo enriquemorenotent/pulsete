@@ -41,7 +41,9 @@ test('command palette body keeps the top chrome fixed above a flexible results p
 
   assert.match(markup, /class="flex h-full min-h-0 flex-col"/);
   assert.match(markup, /class="shrink-0 border-b border-border px-4 py-3"/);
+  assert.match(markup, /Search Pulsete/);
   assert.match(markup, /aria-label="Search command palette"/);
+  assert.match(markup, /Search channels, people, logs, networks, actions/);
   assert.match(markup, /class="relative overflow-hidden min-h-0 flex-1"/);
   assert.match(markup, /School-of-O/);
   assert.match(

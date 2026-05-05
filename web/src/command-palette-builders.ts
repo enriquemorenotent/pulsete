@@ -34,7 +34,16 @@ const buildBufferEntries = (
         section: 'buffers',
         label: connection.labelParts.name,
         subtitle: `Server buffer · as ${connection.labelParts.nick}`,
-        keywords: [connection.label, connection.network.host, connection.labelParts.nick, 'server', 'network'],
+        keywords: [
+          connection.label,
+          connection.network.host,
+          connection.labelParts.nick,
+          'connection',
+          'conversation',
+          'messages',
+          'server',
+          'network',
+        ],
         badge: 'server',
         ranking: {
           currentNetwork,
@@ -62,6 +71,8 @@ const buildBufferEntries = (
           connection.labelParts.nick,
           child.buffer.kind,
           child.buffer.kind === 'query' ? 'private message' : 'channel',
+          'conversation',
+          'messages',
         ],
         badge,
         ranking: {
@@ -80,7 +91,15 @@ const buildBufferEntries = (
         section: 'buffers',
         label: pending.pendingChannel.channel,
         subtitle: `Joining on ${connection.label}`,
-        keywords: [connection.network.name, connection.network.host, connection.labelParts.nick, 'pending', 'joining', 'channel'],
+        keywords: [
+          connection.network.name,
+          connection.network.host,
+          connection.labelParts.nick,
+          'pending',
+          'joining',
+          'channel',
+          'conversation',
+        ],
         badge: 'pending',
         ranking: {
           currentNetwork,
@@ -109,7 +128,7 @@ const buildFriendEntries = (
     label: friend.nick,
     emoji: resolveUniqueNickEmoji(nickEmojis, friend.nick),
     subtitle: 'Watched nick',
-    keywords: ['watchlist', 'watched nick', 'private message', 'pm'],
+    keywords: ['watchlist', 'watched nick', 'private message', 'pm', 'people', 'person', 'contact', 'nick'],
     badge: 'watchlist',
     ranking: {
       currentNetwork: false,

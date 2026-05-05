@@ -23,7 +23,8 @@ test('desktop shell renders a visible command palette trigger in the header', ()
     <DesktopShellLayout {...createDesktopShellLayoutProps()} />,
   );
 
-  assert.match(markup, /Go to…/);
+  assert.match(markup, /Search Pulsete/);
+  assert.match(markup, /aria-label="Search Pulsete"/);
   assert.match(markup, /Ctrl\/Cmd\+K/);
   assert.match(markup, /Logs/);
   assert.match(markup, /aria-label="Tools"/);

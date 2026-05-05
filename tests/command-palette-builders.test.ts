@@ -29,7 +29,7 @@ test('command palette builds buffers, watchlist entries, and current-buffer acti
       'buffers:#pending',
       'friends:Joby',
       'actions:Preferences',
-      'actions:Log Inspector',
+      'actions:Search Logs',
       'actions:Network Manager',
       'actions:List Channels',
       'actions:Enable Autojoin',
