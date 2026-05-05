@@ -1,5 +1,11 @@
 import type { CSSProperties } from 'react';
 import type { MessageTextPart } from './formatted-message.js';
+import {
+  defaultReverseBackgroundColor,
+  defaultReverseForegroundColor,
+  resolveIrcBackgroundColor,
+  resolveIrcForegroundColor,
+} from './irc-format-render-colors.js';
 
 export const renderFormattedMessageParts = (
   parts: MessageTextPart[],
@@ -39,13 +45,13 @@ const resolveSpanStyle = (style: MessageTextPart['style'], insideLink: boolean):
 const resolveColors = (style: MessageTextPart['style']) => {
   if (!style.reverse) {
     return {
-      foregroundColor: style.foregroundColor,
-      backgroundColor: style.backgroundColor,
+      foregroundColor: resolveIrcForegroundColor(style.foregroundColor),
+      backgroundColor: resolveIrcBackgroundColor(style.backgroundColor),
     };
   }
   return {
-    foregroundColor: style.backgroundColor ?? 'var(--background)',
-    backgroundColor: style.foregroundColor ?? 'var(--foreground)',
+    foregroundColor: resolveIrcForegroundColor(style.backgroundColor) ?? defaultReverseForegroundColor,
+    backgroundColor: resolveIrcBackgroundColor(style.foregroundColor, 0.24) ?? defaultReverseBackgroundColor,
   };
 };
 

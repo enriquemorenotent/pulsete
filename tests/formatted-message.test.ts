@@ -95,10 +95,34 @@ test('renders styled links and channel mentions without control-code junk', () =
 
   assert.match(html, /href="https:\/\/www\.example\.com"/);
   assert.match(html, /font-medium text-primary\/90 underline decoration-primary\/35/);
-  assert.match(html, /style="color:#FF0000"/);
+  assert.match(html, /style="color:hsl\(0 58% 66%\)"/);
   assert.match(html, /<button[^>]*>#?<span style="font-weight:700">#help<\/span><\/button>/);
   assert.ok(!html.includes('\u0003'));
   assert.ok(!html.includes('\u0002'));
+});
+
+test('renders IRC colors through a subdued dark-theme palette', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: '\u000304,12red on blue \u0004ff00ff,00ff00hex color\u000F \u0016reverse',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(
+    html,
+    /style="color:hsl\(0 58% 66%\);background-color:hsl\(240 36% 54% \/ 0\.18\)">red on blue/,
+  );
+  assert.match(
+    html,
+    /style="color:hsl\(300 58% 66%\);background-color:hsl\(120 36% 54% \/ 0\.18\)">hex color/,
+  );
+  assert.match(
+    html,
+    /style="color:var\(--transcript-message\);background-color:rgba\(255, 255, 255, 0\.12\)">reverse/,
+  );
+  assert.ok(!html.includes('#FF0000'));
+  assert.ok(!html.includes('#FF00FF'));
 });
 
 test('renders stripped mode as plain visible text while keeping links clickable', () => {
@@ -113,6 +137,7 @@ test('renders stripped mode as plain visible text while keeping links clickable'
   assert.match(html, /href="https:\/\/www\.example\.com"/);
   assert.match(html, /<button[^>]*>#help<\/button>/);
   assert.ok(!html.includes('style="color:#FF0000"'));
+  assert.ok(!html.includes('style="color:hsl(0 58% 66%)"'));
   assert.ok(!html.includes('\u0003'));
   assert.ok(!html.includes('\u000F'));
 });
