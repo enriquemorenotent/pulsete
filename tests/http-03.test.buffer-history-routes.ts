@@ -142,6 +142,68 @@ test('buffer history search returns scoped hits with nearby context', async () =
   }
 });
 
+test('log search returns hits across stored buffers with nearby context and filters', async () => {
+  const context = await createHttpRuntimeContext();
+  const network = context.storage.networks.upsert(createNetworkInput());
+  for (let index = 0; index < 5; index += 1) {
+    context.storage.conversations.appendMessage({
+      id: `log-help-${index}`,
+      networkId: network.id,
+      target: '#help',
+      nick: 'alice',
+      body: index === 2 ? 'global needle line' : `help context ${index}`,
+      kind: 'line',
+      self: false,
+      ts: Date.now() + index,
+    });
+  }
+  context.storage.conversations.appendMessage({
+    id: 'log-query-hit',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'alice',
+    body: 'global needle private',
+    kind: 'line',
+    self: false,
+    ts: Date.now() + 10,
+  });
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${context.port}/api/logs/search?q=global%20needle&limit=10`,
+    );
+    const body = await response.json() as {
+      query: string;
+      networkId: string | null;
+      target: string | null;
+      hasMore: boolean;
+      results: Array<{ message: { id: string; target: string }; context: Array<{ id: string }> }>;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.query, 'global needle');
+    assert.equal(body.networkId, null);
+    assert.equal(body.target, null);
+    assert.deepEqual(body.results.map((result) => result.message.id), ['log-query-hit', 'log-help-2']);
+    assert.deepEqual(body.results[1]?.context.map((message) => message.id), [
+      'log-help-0',
+      'log-help-1',
+      'log-help-2',
+      'log-help-3',
+      'log-help-4',
+    ]);
+
+    const filtered = await fetch(
+      `http://127.0.0.1:${context.port}/api/logs/search?q=global%20needle&target=help`,
+    );
+    const filteredBody = await filtered.json() as { results: Array<{ message: { id: string } }> };
+    assert.equal(filtered.status, 200);
+    assert.deepEqual(filteredBody.results.map((result) => result.message.id), ['log-help-2']);
+  } finally {
+    await context.close();
+  }
+});
+
 test('buffer history search handles empty, capped, missing, and server-buffer searches', async () => {
   const context = await createHttpRuntimeContext();
   const network = context.storage.networks.upsert(createNetworkInput());

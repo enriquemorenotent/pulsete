@@ -51,6 +51,9 @@ export const createRuntimeHttpApi = ({
     searchHistory: (bufferId, query, limit) => conversations.searchHistory(bufferId, query, limit),
     exportHistory: (bufferId) => conversations.exportHistory(bufferId),
   },
+  logs: {
+    search: (query, limit, filters) => conversations.searchLogs(query, limit, filters),
+  },
   friends: {
     add: (nick) => friends.upsertFriend(nick),
     remove: (friendId) => friends.removeFriend(friendId),

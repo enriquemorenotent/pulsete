@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BufferHistorySearchPayload } from '../shared/protocol-chat.js';
-import { runHistorySearchRequest } from '../web/src/history-search-request.js';
+import type { BufferHistorySearchPayload, LogHistorySearchPayload } from '../shared/protocol-chat.js';
+import { runHistorySearchRequest, runLogSearchRequest } from '../web/src/history-search-request.js';
 
 const payload: BufferHistorySearchPayload = {
   query: 'needle',
@@ -104,4 +104,40 @@ test('runHistorySearchRequest reports failures for the current search', async ()
   });
 
   assert.deepEqual(errors, ['search failed']);
+});
+
+test('runLogSearchRequest applies global log filters', async () => {
+  const controller = new AbortController();
+  const logPayload: LogHistorySearchPayload = {
+    query: 'needle',
+    networkId: 'network-1',
+    target: '#help',
+    results: [],
+    hasMore: false,
+  };
+  const loaded: LogHistorySearchPayload[] = [];
+  let receivedSignal: AbortSignal | undefined;
+
+  await runLogSearchRequest({
+    filters: { networkId: 'network-1', target: '#help' },
+    query: 'needle',
+    signal: controller.signal,
+    search: async (query, filters, init) => {
+      assert.equal(query, 'needle');
+      assert.deepEqual(filters, { networkId: 'network-1', target: '#help' });
+      receivedSignal = init?.signal ?? undefined;
+      return logPayload;
+    },
+    isCurrentRequest: () => true,
+    onLoaded: (result) => {
+      loaded.push(result);
+    },
+    onError: () => {
+      throw new Error('error should not be called');
+    },
+    onSettled: () => undefined,
+  });
+
+  assert.equal(receivedSignal, controller.signal);
+  assert.deepEqual(loaded, [logPayload]);
 });

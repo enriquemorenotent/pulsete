@@ -15,6 +15,7 @@ export function HistorySearchResults(props: {
   expandedMessageId: string | null;
   mode: MessageDisplayMode;
   searchState: HistorySearchState;
+  renderResultMeta?: (message: ChatMessage) => ReactNode;
   onOpenChannel: (channel: string) => void;
   onResultToggle: (messageId: string) => void;
 }) {
@@ -32,13 +33,14 @@ export function HistorySearchResults(props: {
     return <EmptySearchState>No results for "{searchState.query}".</EmptySearchState>;
   }
   return (
-    <div className="space-y-1 p-2">
+    <div className="flex flex-col gap-1 p-2">
       {searchState.results.map((result) => (
         <HistorySearchResultRow
           key={result.message.id}
           expanded={props.expandedMessageId === result.message.id}
           mode={props.mode}
           result={result}
+          resultMeta={props.renderResultMeta?.(result.message)}
           onOpenChannel={props.onOpenChannel}
           onToggle={() => props.onResultToggle(result.message.id)}
         />
@@ -56,6 +58,7 @@ function HistorySearchResultRow(props: {
   expanded: boolean;
   mode: MessageDisplayMode;
   result: BufferHistorySearchResult;
+  resultMeta?: ReactNode;
   onOpenChannel: (channel: string) => void;
   onToggle: () => void;
 }) {
@@ -72,6 +75,7 @@ function HistorySearchResultRow(props: {
       >
         <MessageTimestamp message={props.result.message} />
         <MessageSummary
+          meta={props.resultMeta}
           message={props.result.message}
           mode={props.mode}
           onOpenChannel={props.onOpenChannel}
@@ -120,6 +124,7 @@ function HistorySearchContextLine(props: {
 }
 
 function MessageSummary(props: {
+  meta?: ReactNode;
   message: ChatMessage;
   mode: MessageDisplayMode;
   onOpenChannel: (channel: string) => void;
@@ -127,6 +132,11 @@ function MessageSummary(props: {
   const speaker = props.message.speakerNick ?? props.message.nick;
   return (
     <div className="min-w-0 break-words leading-5">
+      {props.meta ? (
+        <div className="mb-1 flex min-w-0 flex-wrap items-center gap-1.5">
+          {props.meta}
+        </div>
+      ) : null}
       {speaker ? <span className="mr-2 font-medium text-muted-foreground">{speaker}</span> : null}
       <span className="text-foreground">
         <FormattedMessageText

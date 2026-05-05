@@ -1,5 +1,5 @@
 import type { SqliteDb } from './storage-sqlite.js';
-import type { MessagePage, MessageRow, MessageSearchPage } from './storage-types.js';
+import type { MessagePage, MessageRow } from './storage-types.js';
 import {
   emptyMessagePage,
   getMessageBufferId,
@@ -69,72 +69,6 @@ export const listRecentMessagesForBufferIds = (
     .flatMap((bufferId) => selectMessages(db, bufferId, limit))
     .sort((left, right) => left.ts - right.ts);
 
-export const searchMessagesByBufferId = (
-  db: SqliteDb,
-  bufferId: string,
-  query: string,
-  limit: number,
-): MessageSearchPage => {
-  const terms = parseSearchTerms(query);
-  if (limit <= 0 || terms.length === 0) {
-    return { messages: [], hasMore: false };
-  }
-  if (terms.some((term) => term.length < minimumFtsTermLength)) {
-    return searchMessagesByBufferIdWithScan(db, bufferId, terms, limit);
-  }
-  return searchMessagesByBufferIdWithFts(db, bufferId, terms, limit);
-};
-
-const searchMessagesByBufferIdWithFts = (
-  db: SqliteDb,
-  bufferId: string,
-  terms: readonly string[],
-  limit: number,
-): MessageSearchPage => {
-  const rows = db.prepare(`
-    SELECT ${messageColumns}
-    FROM message_search_fts AS search
-    JOIN messages AS m ON m.rowid = search.rowid
-    JOIN buffers AS b ON b.id = m.bufferId
-    WHERE message_search_fts MATCH ?
-      AND m.bufferId = ?
-    ORDER BY m.ts DESC, m.rowid DESC
-    LIMIT ?
-  `).all(toFtsMatchQuery(terms), bufferId, limit + 1) as MessageRow[];
-  return {
-    messages: hydrateMessages(db, rows.length > limit ? rows.slice(0, limit) : rows),
-    hasMore: rows.length > limit,
-  };
-};
-
-const searchMessagesByBufferIdWithScan = (
-  db: SqliteDb,
-  bufferId: string,
-  terms: readonly string[],
-  limit: number,
-): MessageSearchPage => {
-  const rows = db.prepare(`
-    SELECT ${messageColumns}
-    ${messageJoin}
-    WHERE m.bufferId = ?
-    ORDER BY m.ts DESC, m.rowid DESC
-  `).iterate(bufferId) as IterableIterator<MessageRow>;
-  const matches: MessageRow[] = [];
-  for (const row of rows) {
-    if (!matchesSearchTerms(row, terms)) {
-      continue;
-    }
-    matches.push(row);
-    if (matches.length > limit) {
-      break;
-    }
-  }
-  return {
-    messages: hydrateMessages(db, matches.slice(0, limit)),
-    hasMore: matches.length > limit,
-  };
-};
-
 export const getMessageWindow = (db: SqliteDb, messageId: string, before: number, after: number) => {
   const cursor = getMessageCursor(db, messageId);
   if (!cursor) {
@@ -199,36 +133,3 @@ const selectMessagePage = (
     hasMore: rows.length > limit,
   };
 };
-
-const parseSearchTerms = (query: string) => {
-  const terms: string[] = [];
-  const seen = new Set<string>();
-  for (const rawTerm of query.trim().split(/\s+/)) {
-    const term = normalizeSearchText(rawTerm);
-    if (!term || seen.has(term)) {
-      continue;
-    }
-    seen.add(term);
-    terms.push(term);
-  }
-  return terms;
-};
-
-const minimumFtsTermLength = 3;
-
-const toFtsMatchQuery = (terms: readonly string[]) =>
-  terms.map((term) => `"${term.replace(/"/g, '""')}"`).join(' ');
-
-const matchesSearchTerms = (
-  row: Pick<MessageRow, 'body' | 'nick' | 'speakerNick'>,
-  terms: readonly string[],
-) => {
-  const searchable = [
-    row.body,
-    row.nick ?? '',
-    row.speakerNick ?? '',
-  ].map(normalizeSearchText);
-  return terms.every((term) => searchable.some((value) => value.includes(term)));
-};
-
-const normalizeSearchText = (value: string) => value.toLowerCase();

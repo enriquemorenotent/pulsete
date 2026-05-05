@@ -158,6 +158,11 @@ export type MessagePage = {
 
 export type MessageSearchPage = MessagePage;
 
+export type MessageSearchFilters = {
+  networkId?: string;
+  target?: string;
+};
+
 export type StorageSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];

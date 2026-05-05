@@ -117,6 +117,12 @@ export const createConversationActions = ({
     init?: Pick<RequestInit, 'signal'>,
   ) => api.searchBufferHistory(bufferId, query, undefined, init);
 
+  const searchLogs: ConversationActions['searchLogs'] = (
+    query,
+    filters,
+    init,
+  ) => api.searchLogs(query, filters, undefined, init);
+
   const saveBufferNotes = async (buffer: BufferState, notes: string) =>
     executeMutation({
       request: () => api.saveBufferNotes(buffer.id, notes),
@@ -134,5 +140,6 @@ export const createConversationActions = ({
     openChannelListForNetwork,
     saveBufferNotes,
     searchBufferHistory,
+    searchLogs,
   };
 };

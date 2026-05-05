@@ -9,6 +9,7 @@ import {
   ConnectionSidebarContainer,
   WorkspaceRightSidebarContainer,
 } from './DesktopShellContainers.js';
+import { LogInspectorDialogContainer } from './LogInspectorDialogContainer.js';
 import { createContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
 import {
@@ -96,6 +97,9 @@ export function DesktopShell(props: DesktopShellProps) {
       }
       commandPaletteDialog={
         <CommandPaletteDialogContainer actions={props.actions} ui={props.ui} />
+      }
+      logInspectorDialog={
+        <LogInspectorDialogContainer actions={props.actions} ui={props.ui} />
       }
       preferencesDialog={
         <PreferencesDialogContainer

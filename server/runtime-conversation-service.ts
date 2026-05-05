@@ -8,6 +8,7 @@ import {
   openRuntimeConversationQuery,
   saveRuntimeConversationBufferNotes,
   searchRuntimeConversationBufferHistory,
+  searchRuntimeConversationLogs,
 } from './runtime-conversation-buffer-actions.js';
 import {
   handleRuntimeConversationChannelEvent,
@@ -52,6 +53,14 @@ export class RuntimeConversationService {
 
   searchBufferHistory(bufferId: string, query: string, limit: number) {
     return searchRuntimeConversationBufferHistory(this.options, bufferId, query, limit);
+  }
+
+  searchLogs(
+    query: string,
+    limit: number,
+    filters?: Parameters<typeof searchRuntimeConversationLogs>[3],
+  ) {
+    return searchRuntimeConversationLogs(this.options, query, limit, filters);
   }
 
   exportBufferHistory(bufferId: string) {

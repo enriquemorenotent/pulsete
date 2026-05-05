@@ -3,6 +3,7 @@ import { toAppError } from './app-error.js';
 import { handleBackupRoutes } from './http-backups.js';
 import { handleBufferRoutes } from './http-buffers.js';
 import { handleFriendRoutes } from './http-friends.js';
+import { handleLogRoutes } from './http-logs.js';
 import { handleMutedNickRoutes } from './http-muted-nicks.js';
 import { handleNickEmojiRoutes } from './http-nick-emojis.js';
 import { handleNetworkRoutes } from './http-networks.js';
@@ -21,6 +22,7 @@ export const createHttpHandler = (context: HttpHandlerContext) => async (req: In
       || await handleNickEmojiRoutes(args)
       || await handleFriendRoutes(args)
       || await handleMutedNickRoutes(args)
+      || await handleLogRoutes(args)
       || await handleBufferRoutes(args)
     ) {
       return;

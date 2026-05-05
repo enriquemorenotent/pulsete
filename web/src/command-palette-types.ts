@@ -9,6 +9,7 @@ export type CommandPaletteAction =
   | { kind: 'select-pending-channel'; networkId: string; channel: string }
   | { kind: 'select-friend'; friendId: string }
   | { kind: 'open-preferences' }
+  | { kind: 'open-log-inspector' }
   | { kind: 'open-network-manager' }
   | { kind: 'open-channel-list' }
   | { kind: 'toggle-current-channel-autojoin' }
@@ -43,6 +44,7 @@ export type CommandPaletteActionHandlers = {
   selectPendingChannel: (networkId: string, channel: string) => void;
   selectFriend: (friendId: string) => void | Promise<void>;
   openPreferences: () => void;
+  openLogInspector: () => void;
   openNetworkManager: () => void;
   openChannelList: () => void | Promise<void>;
   toggleCurrentChannelAutoJoin: () => void | Promise<void>;

@@ -54,6 +54,17 @@ export type BufferHistorySearchPayload = {
   hasMore: boolean;
 };
 
+export type LogHistorySearchFilters = {
+  networkId?: string | null;
+  target?: string | null;
+};
+
+export type LogHistorySearchPayload = LogHistorySearchFilters & {
+  query: string;
+  results: BufferHistorySearchResult[];
+  hasMore: boolean;
+};
+
 export const networkAuthMethodSchema = z.enum(['none', 'server-pass', 'nickserv', 'sasl-plain']);
 export type NetworkAuthMethod = z.infer<typeof networkAuthMethodSchema>;
 

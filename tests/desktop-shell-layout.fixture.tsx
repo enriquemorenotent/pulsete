@@ -4,6 +4,7 @@ export const createDesktopShellLayoutProps = (
   overrides: Partial<DesktopShellLayoutProps> = {},
 ): DesktopShellLayoutProps => ({
   header: {
+    onOpenLogInspector: () => undefined,
     onOpenNetworkManager: () => undefined,
     onOpenPreferences: () => undefined,
   },
@@ -17,6 +18,7 @@ export const createDesktopShellLayoutProps = (
   chat: <div>Chat</div>,
   rightSidebar: <div>Details</div>,
   commandPaletteDialog: null,
+  logInspectorDialog: null,
   preferencesDialog: null,
   networkManagerDialog: null,
   networkEditorDialog: null,

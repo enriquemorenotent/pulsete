@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { PanelsTopLeft, Search, Settings2 } from 'lucide-react';
+import { FolderSearch, PanelsTopLeft, Search, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
@@ -27,6 +27,7 @@ export type DesktopShellLayoutProps = {
   commandPalette: Pick<DesktopShellCommandPaletteModel, 'onOpen' | 'open'>;
   commandPaletteDialog: ReactNode;
   header: DesktopShellHeaderModel;
+  logInspectorDialog: ReactNode;
   networkEditorDialog: ReactNode;
   networkManagerDialog: ReactNode;
   preferencesDialog: ReactNode;
@@ -106,6 +107,10 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             Go to…
             <span className="text-[11px] font-normal text-muted-foreground">Ctrl/Cmd+K</span>
           </Button>
+          <Button variant="ghost" size="sm" onClick={props.header.onOpenLogInspector}>
+            <FolderSearch />
+            Logs
+          </Button>
           <Button variant="ghost" size="sm" onClick={props.header.onOpenPreferences}>
             <Settings2 />
             Preferences
@@ -182,6 +187,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
 
       {props.networkManagerDialog}
       {props.commandPaletteDialog}
+      {props.logInspectorDialog}
       {props.preferencesDialog}
       {props.networkEditorDialog}
     </div>

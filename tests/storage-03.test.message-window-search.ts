@@ -186,6 +186,48 @@ test('message history search stays literal and scoped to the selected buffer', (
   assert.deepEqual(searchIds('hotel'), []);
 });
 
+test('message history search can scan all stored logs with filters', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const firstNetwork = createConnectionInstance(storage, { name: 'FirstNet' });
+  const secondNetwork = createConnectionInstance(storage, { name: 'SecondNet', host: 'irc2.example.test' });
+  const append = (
+    id: string,
+    networkId: string,
+    target: string,
+    body: string,
+    ts: number,
+  ) =>
+    storage.conversations.appendMessage({
+      id,
+      networkId,
+      target,
+      nick: 'alice',
+      body,
+      kind: 'line',
+      self: false,
+      ts,
+    });
+
+  append('first-old', firstNetwork.id, '#help', 'needle in old channel', 1);
+  append('first-new', firstNetwork.id, 'MissD', 'needle in private log', 5);
+  append('first-server', firstNetwork.id, 'server', 'needle from server log', 4);
+  append('second-hit', secondNetwork.id, '#help', 'needle on another network', 6);
+  append('miss', firstNetwork.id, '#help', 'unrelated', 7);
+
+  const searchIds = (filters = {}) =>
+    storage.conversations.searchMessages('needle', 10, filters).messages.map((message) => message.id);
+
+  assert.deepEqual(searchIds(), ['second-hit', 'first-new', 'first-server', 'first-old']);
+  assert.deepEqual(searchIds({ networkId: firstNetwork.id }), ['first-new', 'first-server', 'first-old']);
+  assert.deepEqual(searchIds({ target: '#help' }), ['second-hit', 'first-old']);
+  assert.deepEqual(searchIds({ networkId: firstNetwork.id, target: 'server' }), ['first-server']);
+
+  const capped = storage.conversations.searchMessages('needle', 1);
+  assert.deepEqual(capped.messages.map((message) => message.id), ['second-hit']);
+  assert.equal(capped.hasMore, true);
+});
+
 test('deleteMessagesByIdPrefixes removes matching rows without touching normal messages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

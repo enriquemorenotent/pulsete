@@ -12,6 +12,7 @@ export const buildCommandPaletteActionEntries = (
 ): CommandPaletteEntrySpec[] => {
   const entries: CommandPaletteEntrySpec[] = [
     createActionEntry('open-preferences', 'Preferences', 'App settings and notifications', ['settings', 'preferences', 'notifications']),
+    createActionEntry('open-log-inspector', 'Log Inspector', 'Search saved logs', ['logs', 'history', 'search', 'messages']),
     createActionEntry('open-network-manager', 'Network Manager', 'Saved networks and live connection state', ['networks', 'connections', 'server']),
   ];
 
@@ -59,6 +60,8 @@ export const runCommandPaletteAction = (
       return handlers.selectFriend(action.friendId);
     case 'open-preferences':
       return handlers.openPreferences();
+    case 'open-log-inspector':
+      return handlers.openLogInspector();
     case 'open-network-manager':
       return handlers.openNetworkManager();
     case 'open-channel-list':

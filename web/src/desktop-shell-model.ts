@@ -12,6 +12,7 @@ import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 
 export type DesktopShellHeaderModel = {
+  onOpenLogInspector: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
 };

@@ -1,6 +1,16 @@
 import { historySearchLimit, historyWindowLimit } from '../../shared/protocol-chat.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
-import type { BufferState, BufferHistorySearchPayload, FriendState, MutedNickState, NetworkProfile, NickEmojiState, ChatMessage } from '../../shared/protocol-chat.js';
+import type {
+  BufferHistorySearchPayload,
+  BufferState,
+  ChatMessage,
+  FriendState,
+  LogHistorySearchFilters,
+  LogHistorySearchPayload,
+  MutedNickState,
+  NetworkProfile,
+  NickEmojiState,
+} from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import {
   parseDownloadFileName,
@@ -86,6 +96,24 @@ export const api = {
     const searchParams = new URLSearchParams({ q: query, limit: String(limit) });
     return apiRequest<BufferHistorySearchPayload>(
       `/api/buffers/${bufferId}/history/search?${searchParams.toString()}`,
+      { signal: init?.signal },
+    );
+  },
+  searchLogs: (
+    query: string,
+    filters: LogHistorySearchFilters = {},
+    limit = historySearchLimit,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => {
+    const searchParams = new URLSearchParams({ q: query, limit: String(limit) });
+    if (filters.networkId) {
+      searchParams.set('networkId', filters.networkId);
+    }
+    if (filters.target) {
+      searchParams.set('target', filters.target);
+    }
+    return apiRequest<LogHistorySearchPayload>(
+      `/api/logs/search?${searchParams.toString()}`,
       { signal: init?.signal },
     );
   },

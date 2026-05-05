@@ -8,6 +8,7 @@ import type {
   ChannelInput,
   FriendInput,
   MessagePage,
+  MessageSearchFilters,
   MessageSearchPage,
   MessageInput,
   MutedNickInput,
@@ -50,6 +51,7 @@ export type RuntimeConversationStore = {
   listOpeningMessages(networkId: string, target: string, limit: number): AppSnapshot['messages'];
   listRecentMessagesForBuffer(networkId: string, target: string, limit: number): AppSnapshot['messages'];
   listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
+  searchMessages(query: string, limit: number, filters?: MessageSearchFilters): MessageSearchPage;
   searchMessagesByBufferId(bufferId: string, query: string, limit: number): MessageSearchPage;
   getMessageWindow(messageId: string, before: number, after: number): AppSnapshot['messages'];
   deleteMessages(networkId: string, target: string): AppSnapshot['messages'];

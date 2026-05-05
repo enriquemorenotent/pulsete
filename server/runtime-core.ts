@@ -144,6 +144,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     saveBufferNotes: (bufferId, notes) => publishMutation(conversationsService.saveBufferNotes(bufferId, notes)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     searchHistory: (bufferId, query, limit) => conversationsService.searchBufferHistory(bufferId, query, limit),
+    searchLogs: (query, limit, filters) => conversationsService.searchLogs(query, limit, filters),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),
   };
   const friends: RuntimeFriendMutations = {

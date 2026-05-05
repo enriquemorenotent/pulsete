@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { badRequest } from './app-error.js';
-import { historySearchLimit, historyWindowLimit } from '../shared/protocol-chat.js';
+import { historyWindowLimit } from '../shared/protocol-chat.js';
 import { networkUserIdentitySchema } from '../shared/user-identity.js';
+import {
+  normalizeHistorySearchLimit,
+  normalizeHistorySearchQuery,
+} from './http-history-search.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import { normalizeChannelTarget } from './irc-validate.js';
 import type { RouteArgs } from './http-types.js';
@@ -103,13 +107,6 @@ const normalizeHistoryLimit = (value: string | null) => {
 const normalizeHistoryBefore = (value: string | null) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
-};
-
-const normalizeHistorySearchQuery = (value: string | null) => value?.trim() ?? '';
-
-const normalizeHistorySearchLimit = (value: string | null) => {
-  const limit = Number(value ?? historySearchLimit);
-  return Number.isInteger(limit) && limit > 0 ? Math.min(limit, historySearchLimit) : historySearchLimit;
 };
 
 const readChannelTarget = (body: unknown) => {

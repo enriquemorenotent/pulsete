@@ -29,6 +29,7 @@ test('command palette builds buffers, watchlist entries, and current-buffer acti
       'buffers:#pending',
       'friends:Joby',
       'actions:Preferences',
+      'actions:Log Inspector',
       'actions:Network Manager',
       'actions:List Channels',
       'actions:Enable Autojoin',
@@ -64,6 +65,7 @@ test('command palette action dispatcher routes each action to the matching handl
     selectPendingChannel: (networkId: string, channel: string) => { calls.push(`pending:${networkId}:${channel}`); },
     selectFriend: async (friendId: string) => { calls.push(`friend:${friendId}`); },
     openPreferences: () => { calls.push('preferences'); },
+    openLogInspector: () => { calls.push('logs'); },
     openNetworkManager: () => { calls.push('network-manager'); },
     openChannelList: () => { calls.push('channel-list'); },
     toggleCurrentChannelAutoJoin: () => { calls.push('autojoin'); },
@@ -79,12 +81,14 @@ test('command palette action dispatcher routes each action to the matching handl
     handlers,
   );
   await runCommandPaletteAction({ kind: 'open-preferences' }, handlers);
+  await runCommandPaletteAction({ kind: 'open-log-inspector' }, handlers);
   await runCommandPaletteAction({ kind: 'select-friend', friendId: friend.id }, handlers);
 
   assert.deepEqual(calls, [
     `pending:${network.id}:#pending`,
     `download:${channelBuffer.id}`,
     'preferences',
+    'logs',
     `friend:${friend.id}`,
   ]);
 });

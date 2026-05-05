@@ -13,6 +13,7 @@ import {
   listRecentMessagesForBuffer,
   listRecentMessagesForBufferIds,
   listRecentMessages,
+  searchMessages,
   searchMessagesByBufferId,
 } from './storage-messages.js';
 import {
@@ -40,7 +41,7 @@ import {
   upsertQueryBuffer,
   upsertQueryBufferWithMergeResult,
 } from './storage-query-aliases.js';
-import type { BufferInput, ChannelInput, MessageInput } from './storage-types.js';
+import type { BufferInput, ChannelInput, MessageInput, MessageSearchFilters } from './storage-types.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 
 export class StorageConversationsRepository {
@@ -136,6 +137,10 @@ export class StorageConversationsRepository {
 
   searchMessagesByBufferId(bufferId: string, query: string, limit: number) {
     return searchMessagesByBufferId(this.db, bufferId, query, limit);
+  }
+
+  searchMessages(query: string, limit: number, filters?: MessageSearchFilters) {
+    return searchMessages(this.db, query, limit, filters);
   }
 
   getMessageWindow(messageId: string, before: number, after: number) {

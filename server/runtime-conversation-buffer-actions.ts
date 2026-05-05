@@ -12,7 +12,11 @@ import {
 } from './runtime-conversation-store.js';
 import { normalizeQueryTarget } from './irc-validate.js';
 import { historySearchContextAfter, historySearchContextBefore } from '../shared/protocol-chat.js';
-import type { BufferHistorySearchPayload } from '../shared/protocol-chat.js';
+import type {
+  BufferHistorySearchPayload,
+  LogHistorySearchFilters,
+  LogHistorySearchPayload,
+} from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import { removedBufferMessages } from './runtime-conversation-server-messages.js';
@@ -111,6 +115,38 @@ export const searchRuntimeConversationBufferHistory = (
   };
 };
 
+export const searchRuntimeConversationLogs = (
+  options: RuntimeConversationServiceOptions,
+  query: string,
+  limit: number,
+  filters: LogHistorySearchFilters = {},
+): LogHistorySearchPayload => {
+  const trimmedQuery = query.trim();
+  const networkId = normalizeOptionalFilter(filters.networkId);
+  const target = normalizeOptionalFilter(filters.target);
+  if (networkId) {
+    requireStoredNetwork(options.networks, networkId);
+  }
+  const page = options.conversations.searchMessages(trimmedQuery, limit, {
+    ...(networkId ? { networkId } : {}),
+    ...(target ? { target } : {}),
+  });
+  return {
+    query: trimmedQuery,
+    networkId: networkId ?? null,
+    target: target ?? null,
+    results: page.messages.map((message) => ({
+      message,
+      context: options.conversations.getMessageWindow(
+        message.id,
+        historySearchContextBefore,
+        historySearchContextAfter,
+      ),
+    })),
+    hasMore: page.hasMore,
+  };
+};
+
 export const exportRuntimeConversationBufferHistory = (
   options: RuntimeConversationServiceOptions,
   bufferId: string,
@@ -129,4 +165,9 @@ export const exportRuntimeConversationBufferHistory = (
     fileName: buildHistoryDownloadName(network.name, buffer.target),
     content: renderBufferHistoryDownload({ buffer, messages, networkName: network.name }),
   };
+};
+
+const normalizeOptionalFilter = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 };

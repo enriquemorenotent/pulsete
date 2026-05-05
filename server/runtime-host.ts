@@ -76,6 +76,9 @@ export class RuntimeHost {
           this.runtime.http.buffers.searchHistory(bufferId, query, limit),
         exportHistory: (bufferId) => this.runtime.http.buffers.exportHistory(bufferId),
       },
+      logs: {
+        search: (query, limit, filters) => this.runtime.http.logs.search(query, limit, filters),
+      },
       friends: {
         add: (nick) => this.runtime.http.friends.add(nick),
         remove: (friendId) => this.runtime.http.friends.remove(friendId),

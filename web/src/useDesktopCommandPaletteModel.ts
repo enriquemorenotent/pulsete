@@ -33,6 +33,7 @@ type DesktopCommandPaletteModelParams = {
     AppUiState,
     | 'closeCommandPalette'
     | 'commandPaletteOpen'
+    | 'openLogInspector'
     | 'openCommandPalette'
     | 'openPreferences'
   >;
@@ -140,6 +141,7 @@ export function useDesktopCommandPaletteModel({
         }
       },
       openPreferences: ui.openPreferences,
+      openLogInspector: ui.openLogInspector,
       openNetworkManager: () => dispatch({ type: 'open-network-manager' }),
       openChannelList: () => { void actions.openChannelList(); },
       toggleCurrentChannelAutoJoin: () => { void actions.toggleCurrentChannelAutoJoin(); },
@@ -158,6 +160,7 @@ export function useDesktopCommandPaletteModel({
       selectableBuffersById,
       selectableNetworksById,
       ui.openPreferences,
+      ui.openLogInspector,
     ],
   );
 
