@@ -122,7 +122,13 @@ function ServerProfileSidebar(props: {
         title={network.name}
         subtitle={`${network.host}:${network.port}${network.tls ? ' - SSL/TLS' : ''}`}
         actions={(
-          <Button variant="outline" size="sm" onClick={props.onEdit} disabled={!props.network}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 border border-white/[0.055] bg-transparent px-2 text-muted-foreground/86 hover:border-white/12 hover:bg-white/[0.045] hover:text-foreground"
+            onClick={props.onEdit}
+            disabled={!props.network}
+          >
             Edit
           </Button>
         )}
@@ -164,7 +170,7 @@ function ServerCapabilityInspector(props: {
 
   return (
     <InspectorSection title="Capabilities">
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <CapabilityGroup capabilities={negotiated} label="Active" variant="success" />
         <CapabilityGroup capabilities={offered} label="Offered" variant="secondary" />
         <CapabilityGroup capabilities={pending} label="Pending" variant="default" />
@@ -184,12 +190,16 @@ function CapabilityGroup(props: {
 
   return (
     <div className="space-y-1">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
         {props.label}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {props.capabilities.map((capability) => (
-          <Badge key={capability} variant={props.variant} className="max-w-full normal-case tracking-normal">
+          <Badge
+            key={capability}
+            variant={props.variant}
+            className="max-w-full normal-case tracking-normal opacity-[0.82]"
+          >
             <span className="truncate">{capability}</span>
           </Badge>
         ))}

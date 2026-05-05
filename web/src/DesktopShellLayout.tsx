@@ -181,7 +181,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
                   onNudge={rightSidebarResize.nudgeWidth}
                   onReset={rightSidebarResize.resetWidth}
                 />
-                <div className="min-h-0 bg-card/36 backdrop-blur-xl lg:w-[var(--right-sidebar-width)] lg:shrink-0">
+                <div className="min-h-0 bg-black/[0.08] backdrop-blur-xl lg:w-[var(--right-sidebar-width)] lg:shrink-0">
                   {props.rightSidebar}
                 </div>
               </>

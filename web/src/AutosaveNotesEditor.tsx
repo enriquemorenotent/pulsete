@@ -77,10 +77,14 @@ export function AutosaveNotesEditor(props: {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={props.id}>Notes</Label>
+        <Label htmlFor={props.id} className="text-muted-foreground/86">
+          Notes
+        </Label>
         <span
           aria-live="polite"
-          className={`text-[11px] ${autosaveState === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}
+          className={`text-[11px] ${
+            autosaveState === 'error' ? 'text-destructive' : 'text-muted-foreground/68'
+          }`}
         >
           {statusText}
         </span>
@@ -90,7 +94,7 @@ export function AutosaveNotesEditor(props: {
         value={draftNotes}
         onChange={(event) => setDraftNotes(event.target.value)}
         placeholder={props.placeholder}
-        className="min-h-40 flex-1 resize-none rounded-sm border border-input bg-input px-3 py-2 text-[13px] leading-5 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50"
+        className="min-h-40 flex-1 resize-none rounded-sm border border-white/[0.055] bg-white/[0.018] px-2.5 py-2 text-[13px] leading-5 text-foreground/84 outline-none transition-colors placeholder:text-muted-foreground/54 hover:border-white/10 hover:bg-white/[0.026] focus-visible:border-ring/60 focus-visible:bg-white/[0.032] focus-visible:ring-1 focus-visible:ring-ring/35"
       />
     </div>
   );
