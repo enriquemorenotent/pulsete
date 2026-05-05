@@ -12,19 +12,19 @@ export const TranscriptEmptyState = (props: { body: string }) => (
 );
 
 export const UnreadDivider = () => (
-  <div className="my-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-primary">
-    <span className="h-px flex-1 bg-primary/35" />
+  <div className="my-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-primary">
+    <span className="h-px flex-1 bg-primary/40" />
     <span>New messages</span>
-    <span className="h-px flex-1 bg-primary/35" />
+    <span className="h-px flex-1 bg-primary/40" />
   </div>
 );
 
 export const DayDivider = (props: { label: string }) => (
-  <div className="sticky top-0 z-10 -mx-4 mb-3 bg-background/80 px-4 py-2 backdrop-blur-sm">
-    <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
-      <span className="h-px flex-1 bg-border/60" />
+  <div className="sticky top-0 z-10 -mx-4 mb-2 bg-background/92 px-4 py-2 backdrop-blur-sm">
+    <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/58">
+      <span className="h-px flex-1 bg-border/40" />
       <span>{props.label}</span>
-      <span className="h-px flex-1 bg-border/60" />
+      <span className="h-px flex-1 bg-border/40" />
     </div>
   </div>
 );

@@ -53,7 +53,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
               key={`channel-${token.channel}-${tokenIndex}`}
               type="button"
               onClick={() => props.onOpenChannel(token.channel)}
-              className="cursor-pointer appearance-none border-0 bg-transparent p-0 align-baseline font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
+              className="cursor-pointer appearance-none border-0 bg-transparent p-0 align-baseline font-medium text-primary/90 underline decoration-primary/35 decoration-1 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/80 hover:opacity-90"
             >
               {renderedContent}
             </button>
@@ -68,7 +68,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
             href={token.href}
             target={token.external ? '_blank' : undefined}
             rel={token.external ? 'noreferrer' : undefined}
-            className="font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
+            className="font-medium text-primary/90 underline decoration-primary/35 decoration-1 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/80 hover:opacity-90"
           >
             {renderedContent}
           </a>

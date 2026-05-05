@@ -26,7 +26,7 @@ export const ChatPaneExpandedMessageRow = (props: {
     data-message-id={props.message.id}
   >
     <div className="min-w-0">
-      <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="mb-0.5 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/55">
         <time
           className="tabular-nums normal-case tracking-normal"
           dateTime={formatMessageTimestampDateTime(props.message.ts)}
@@ -41,10 +41,10 @@ export const ChatPaneExpandedMessageRow = (props: {
             emoji={props.participant.emoji}
             clickable={props.participant.clickable}
             onOpenParticipantQuery={props.onOpenParticipantQuery}
-            className={cn('font-medium', props.participant.toneClassName)}
+            className={cn('font-medium opacity-90', props.participant.toneClassName)}
           />
         ) : null}
-        {props.participant.kindBadgeLabel ? <span>{props.participant.kindBadgeLabel}</span> : null}
+        {props.participant.kindBadgeLabel ? <span className="text-muted-foreground/65">{props.participant.kindBadgeLabel}</span> : null}
       </div>
       <p
         className={cn(

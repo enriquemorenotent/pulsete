@@ -170,7 +170,7 @@ function PaneHeader(props: {
   topicBar?: ReactNode;
 }) {
   return (
-    <div className="relative z-20 shrink-0 border-b border-white/6 bg-background/32 backdrop-blur-sm">
+    <div className="relative z-20 shrink-0 border-b border-white/6 bg-background/90 backdrop-blur-sm">
       <div className="flex items-start justify-between gap-4 px-4 py-4">
         <div className="min-w-0">
           {props.title ? (

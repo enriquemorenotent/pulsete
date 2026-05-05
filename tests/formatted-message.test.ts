@@ -94,6 +94,7 @@ test('renders styled links and channel mentions without control-code junk', () =
   );
 
   assert.match(html, /href="https:\/\/www\.example\.com"/);
+  assert.match(html, /font-medium text-primary\/90 underline decoration-primary\/35/);
   assert.match(html, /style="color:#FF0000"/);
   assert.match(html, /<button[^>]*>#?<span style="font-weight:700">#help<\/span><\/button>/);
   assert.ok(!html.includes('\u0003'));

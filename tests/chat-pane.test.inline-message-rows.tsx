@@ -32,6 +32,8 @@ test('transcript rows render without boxed message chrome', () => {
   ]);
 
   assert.doesNotMatch(markup, /border px-2 py-1\.5/);
+  assert.match(markup, /class="px-1 py-0\.5 text-foreground" data-message-id="message-1"/);
+  assert.match(markup, /class="px-1 py-0\.5 text-foreground\/85" data-message-id="message-2"/);
 });
 
 test('join part and quit rows render as aligned boxed event labels', () => {
@@ -42,9 +44,9 @@ test('join part and quit rows render as aligned boxed event labels', () => {
     makeMessage({ id: 'message-4', nick: 'Joby', body: 'Joby was kicked from #help by Opal (bye)', kind: 'part', ts: 4 }),
   ]);
 
-  assert.match(markup, /class="[^"]*min-w-10[^"]*border-emerald-300\/25[^"]*text-emerald-300[^"]*">JOIN<\/span>/);
-  assert.match(markup, /class="[^"]*min-w-10[^"]*border-amber-300\/25[^"]*text-amber-300[^"]*">PART<\/span>/);
-  assert.match(markup, /class="[^"]*min-w-10[^"]*border-red-500\/25[^"]*text-red-500[^"]*">QUIT<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-emerald-300\/16[^"]*text-emerald-300\/75[^"]*">JOIN<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-amber-300\/16[^"]*text-amber-300\/75[^"]*">PART<\/span>/);
+  assert.match(markup, /class="[^"]*min-w-10[^"]*border-red-500\/18[^"]*text-red-400\/75[^"]*">QUIT<\/span>/);
   assert.match(markup, /JOIN<\/span><span class="">Joby<\/span>/);
   assert.match(markup, /PART<\/span><span class="">Joby \(bye\)<\/span>/);
   assert.match(markup, /QUIT<\/span><span class="">Joby \(Ping timeout\)<\/span>/);
@@ -54,7 +56,7 @@ test('join part and quit rows render as aligned boxed event labels', () => {
   assert.doesNotMatch(markup, /Joby quit/);
   assert.doesNotMatch(markup, /was kicked from #help/);
   assert.doesNotMatch(markup, /border-l border-white\/12/);
-  assert.doesNotMatch(markup, /bg-white\/\[0\.025\]/);
+  assert.match(markup, /class="px-1 py-0\.5 text-muted-foreground\/78" data-message-id="message-1"/);
 });
 
 test('compact chat rows use one grid skeleton for plain text and inline previews', () => {
@@ -86,7 +88,7 @@ test('message rows render a compact time with full datetime metadata', () => {
   assert.match(markup, />02:57<\/time>/);
   assert.match(markup, /title="2026-03-11 02:57:36"/);
   assert.match(markup, new RegExp(`dateTime="${new Date(timestamp).toISOString()}"`));
-  assert.match(markup, /font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground/);
+  assert.match(markup, /font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground\/55/);
 });
 
 test('channel transcripts render day dividers when the calendar day changes', () => {
@@ -99,7 +101,7 @@ test('channel transcripts render day dividers when the calendar day changes', ()
   assert.match(markup, /2000-01-02/);
   assert.match(markup, /2000-01-01[\s\S]*late night/);
   assert.match(markup, /2000-01-02[\s\S]*next day/);
-  assert.match(markup, /sticky top-0 z-10 -mx-4 mb-3 bg-background\/80 px-4 py-2 backdrop-blur-sm/);
+  assert.match(markup, /sticky top-0 z-10 -mx-4 mb-2 bg-background\/92 px-4 py-2 backdrop-blur-sm/);
 });
 
 test('compact rows suppress repeated timestamps for the same sender within the same minute', () => {
@@ -111,7 +113,7 @@ test('compact rows suppress repeated timestamps for the same sender within the s
 
   const visibleTimestampMetadata = markup.match(/title="2026-03-11 02:(57|58):/g) ?? [];
   assert.equal(visibleTimestampMetadata.length, 2);
-  assert.match(markup, /invisible shrink-0 font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground/);
+  assert.match(markup, /invisible shrink-0 font-sans tabular-nums text-\[11px\] leading-5 text-muted-foreground\/55/);
 });
 
 test('private-message rows color self and peer nick labels differently', () => {
@@ -120,8 +122,8 @@ test('private-message rows color self and peer nick labels differently', () => {
     makeMessage({ id: 'message-2', nick: 'MissD', self: false, target: 'MissD', body: 'hi', ts: 2 }),
   ]);
 
-  assert.match(markup, /class="mr-2 font-sans font-semibold text-primary">sofia</);
-  assert.match(markup, /class="mr-2 font-sans font-semibold text-success">MissD</);
+  assert.match(markup, /class="mr-2 font-sans font-medium text-primary">sofia</);
+  assert.match(markup, /class="mr-2 font-sans font-medium text-success">MissD</);
 });
 
 test('channel rows highlight self and color normal participant nick labels', () => {
@@ -130,9 +132,9 @@ test('channel rows highlight self and color normal participant nick labels', () 
     makeMessage({ id: 'message-2', nick: 'Joby', body: 'plain line', ts: 2 }),
   ]);
 
-  assert.match(markup, /class="mr-2 font-sans font-semibold text-primary">sofia</);
+  assert.match(markup, /class="mr-2 font-sans font-medium text-primary">sofia</);
   assert.match(markup, /aria-label="Open private message with Joby"/);
-  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-fuchsia-300[^"]*">Joby/);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-medium text-fuchsia-300[^"]*">Joby/);
   assert.doesNotMatch(markup, /aria-label="Open private message with sofia"/);
 });
 
@@ -153,9 +155,9 @@ test('channel rows tint peer nick labels by their channel mode', () => {
   );
 
   assert.match(markup, /aria-label="Open private message with Opal"/);
-  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-amber-300[^"]*">Opal</);
-  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-emerald-300[^"]*">Vox</);
-  assert.match(markup, /class="[^"]*mr-2 font-sans font-semibold text-fuchsia-300[^"]*">Guest/);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-medium text-amber-300[^"]*">Opal</);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-medium text-emerald-300[^"]*">Vox</);
+  assert.match(markup, /class="[^"]*mr-2 font-sans font-medium text-fuchsia-300[^"]*">Guest/);
 });
 
 test('query and server transcripts keep participant labels non-clickable', () => {
@@ -196,8 +198,22 @@ test('system rows in channel transcripts use the compact inline timestamp layout
   ]);
 
   assert.match(markup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
+  assert.match(markup, /class="px-1 py-0\.5 text-muted-foreground\/78" data-message-id="message-1"/);
   assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[13px\] leading-5 text-inherit">/);
   assert.doesNotMatch(markup, /flex flex-wrap items-center gap-2 text-\[11px\] uppercase/);
+});
+
+test('error rows keep high-priority destructive text', () => {
+  const serverMarkup = renderServerPane([
+    makeMessage({ id: 'message-1', nick: null, body: 'Connection failed', kind: 'error', ts: 1 }),
+  ]);
+  const channelMarkup = renderChatPane([
+    makeMessage({ id: 'message-1', nick: null, body: 'Connection failed', kind: 'error', ts: 1 }),
+  ]);
+
+  assert.match(serverMarkup, /class="px-1 py-0\.5 text-destructive" data-message-id="message-1"/);
+  assert.match(channelMarkup, /class="px-1 py-0\.5 text-destructive" data-message-id="message-1"/);
+  assert.match(channelMarkup, /<p class="whitespace-pre-wrap break-words font-sans text-\[13px\] leading-5 text-inherit">/);
 });
 
 test('server tab rows keep inline source labels instead of grouped headers', () => {

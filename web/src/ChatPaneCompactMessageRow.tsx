@@ -49,14 +49,14 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
       ? (
         <span
           aria-hidden
-          className="invisible shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground"
+          className="invisible shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground/55"
         >
           00:00
         </span>
       )
       : (
         <time
-          className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground"
+          className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground/55"
           dateTime={formatMessageTimestampDateTime(message.ts)}
           title={formatMessageTimestampTitle(message.ts)}
         >
@@ -73,11 +73,11 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
           emoji={props.participant.emoji}
           clickable={props.participant.clickable}
           onOpenParticipantQuery={props.onOpenParticipantQuery}
-          className={cn('mr-2 font-sans font-semibold', props.participant.toneClassName)}
+          className={cn('mr-2 font-sans font-medium', props.participant.toneClassName)}
         />
       ) : null}
       {props.participant.kindBadgeLabel ? (
-        <span className="mr-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+        <span className="mr-2 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/65">
           {props.participant.kindBadgeLabel}
         </span>
       ) : null}

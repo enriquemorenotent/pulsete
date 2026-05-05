@@ -81,15 +81,15 @@ export const getLifecycleEventLabel = (message: ChatMessage) => {
 
 export const getLifecycleEventTone = (message: ChatMessage) => {
   if (message.kind === 'join') {
-    return 'border-emerald-300/25 bg-emerald-300/10 text-emerald-300';
+    return 'border-emerald-300/16 bg-emerald-300/[0.045] text-emerald-300/75';
   }
   if (message.kind === 'part') {
-    return 'border-amber-300/25 bg-amber-300/10 text-amber-300';
+    return 'border-amber-300/16 bg-amber-300/[0.045] text-amber-300/75';
   }
   if (message.kind === 'quit') {
-    return 'border-red-500/25 bg-red-500/10 text-red-500';
+    return 'border-red-500/18 bg-red-500/[0.045] text-red-400/75';
   }
-  return 'border-white/10 bg-white/[0.04] text-muted-foreground';
+  return 'border-white/8 bg-white/[0.025] text-muted-foreground/80';
 };
 
 export const getLifecycleEventSummary = (message: ChatMessage) => {
@@ -114,10 +114,10 @@ export const messageTone = (message: ChatMessage) => {
     return 'text-destructive';
   }
   if (message.kind === 'notice') {
-    return 'text-primary';
+    return 'text-foreground/85';
   }
   if (message.kind === 'system' || isLifecycleEventMessage(message)) {
-    return 'text-muted-foreground';
+    return 'text-muted-foreground/78';
   }
   return '';
 };

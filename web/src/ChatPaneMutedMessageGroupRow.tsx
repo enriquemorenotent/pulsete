@@ -27,7 +27,7 @@ export function ChatPaneMutedMessageGroupRow(props: ChatPaneMutedMessageGroupRow
   const action = props.expanded ? 'Hide' : 'Show';
 
   return (
-    <div className="px-1 py-0.5 font-sans text-[12px] text-muted-foreground">
+    <div className="px-1 py-0.5 font-sans text-[12px] text-muted-foreground/72">
       <button
         type="button"
         aria-expanded={props.expanded}
@@ -45,12 +45,12 @@ export function ChatPaneMutedMessageGroupRow(props: ChatPaneMutedMessageGroupRow
           <VolumeX className="size-3" />
           Muted
         </span>
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 truncate text-muted-foreground/78">
           {props.expanded ? `${action} ${summary}` : summary}
         </span>
       </button>
       {props.expanded ? (
-        <div className="mt-1 border-l border-dashed border-white/12 pl-3 opacity-70">
+        <div className="mt-1 border-l border-dashed border-white/10 pl-3 opacity-65">
           {props.row.messageRows.map((row) => (
             <ChatTranscriptMessageRow
               key={row.key}

@@ -26,7 +26,7 @@ export const ChatPaneTopicBar = memo(function ChatPaneTopicBar(props: ChatPaneTo
   }
 
   return (
-    <div className="border-t border-white/6 bg-black/14 px-4 py-2.5">
+    <div className="border-t border-white/6 bg-background/80 px-4 py-2.5">
       <div className="flex items-start gap-2.5 border-l-2 border-primary/55 pl-3">
         <div
           id={topicId}
