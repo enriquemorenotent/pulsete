@@ -15,7 +15,11 @@ import type { ContactNotificationSettings } from './contact-notifications/settin
 import { buildNicklistGroups } from './nicklist-groups.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import { NickEmojiEditorControl } from './NickEmojiEditorControl.js';
-import { SidebarWidget } from './SidebarWidget.js';
+import {
+  InspectorHeader,
+  InspectorPanel,
+  InspectorSection,
+} from './RightSidebarInspector.js';
 import { UserAvatar } from './user-avatars/UserAvatar.js';
 
 type NicklistPanelProps = {
@@ -53,15 +57,20 @@ export function NicklistPanel(props: NicklistPanelProps) {
   }, [props.channel.id]);
 
   return (
-    <aside className="h-full min-h-0 overflow-hidden">
-      <SidebarWidget title="Users" className="h-full" bodyClassName="flex min-h-0 flex-1 flex-col">
+    <InspectorPanel>
+      <InspectorHeader
+        eyebrow="Channel users"
+        title={props.channel.name}
+        subtitle={formatUserCount(props.channel.users.length)}
+      />
+      <InspectorSection className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {props.channel.users.length === 0 ? (
-          <div className="px-4 py-3 text-[13px] text-muted-foreground">
+          <div className="px-1 py-1 text-[13px] text-muted-foreground">
             No users yet.
           </div>
         ) : (
           <>
-            <div className="shrink-0 border-b border-white/6 px-2 py-2">
+            <div className="shrink-0">
               <Input
                 type="search"
                 value={query}
@@ -73,15 +82,18 @@ export function NicklistPanel(props: NicklistPanelProps) {
                 className="h-8 border-white/8 bg-black/10 font-mono text-[12px]"
               />
             </div>
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="p-2">
+            <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0 [&_[data-radix-scroll-area-viewport]>div]:!w-full">
+              <div className="w-full min-w-0 py-1">
                 {groups.length === 0 ? (
                   <div className="px-2 py-2 text-[13px] text-muted-foreground">
                     No matching users.
                   </div>
                 ) : (
                   groups.map((group, groupIndex) => (
-                    <section key={group.mode} className={groupIndex > 0 ? 'mt-3 border-t border-border/70 pt-3' : ''}>
+                    <section
+                      key={group.mode}
+                      className={cn('w-full min-w-0', groupIndex > 0 && 'mt-3 border-t border-border/70 pt-3')}
+                    >
                       <div className="px-2 pb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                         {group.label}
                       </div>
@@ -100,10 +112,13 @@ export function NicklistPanel(props: NicklistPanelProps) {
                           ? findNickEmoji(props.nickEmojis, props.network.id, user.nick, user.identity)
                           : null;
                         return (
-                          <div key={user.nick} className="flex items-center rounded-sm">
+                          <div
+                            key={user.nick}
+                            className="group flex w-full min-w-0 items-center overflow-hidden rounded-sm hover:bg-accent/60 focus-within:bg-accent/60"
+                          >
                             <button
                               type="button"
-                              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-[13px] text-foreground hover:bg-accent"
+                              className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-2 py-1.5 text-left text-[13px] text-foreground"
                               onClick={() => props.network && props.onSelectNick(props.network, user.nick, user.identity)}
                             >
                               <UserAvatar
@@ -129,7 +144,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                               </span>
                             ) : null}
                             {userContactState ? (
-                              <div className="flex shrink-0 items-center gap-0.5">
+                              <div className="ml-1 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-[[aria-pressed=true]]:opacity-100">
                                 <NickEmojiEditorControl
                                   emoji={userNickEmoji?.emoji ?? null}
                                   nick={user.nick}
@@ -156,7 +171,11 @@ export function NicklistPanel(props: NicklistPanelProps) {
             </ScrollArea>
           </>
         )}
-      </SidebarWidget>
-    </aside>
+      </InspectorSection>
+    </InspectorPanel>
   );
+}
+
+function formatUserCount(count: number) {
+  return `${count} ${count === 1 ? 'user' : 'users'}`;
 }

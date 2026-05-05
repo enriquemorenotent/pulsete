@@ -2,6 +2,12 @@ import type { BufferState, NetworkProfile, NickEmojiState } from '../../shared/p
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { AutosaveNotesEditor } from './AutosaveNotesEditor.js';
 import { NickEmojiEditorControl } from './NickEmojiEditorControl.js';
+import {
+  InspectorHeader,
+  InspectorPanel,
+  InspectorSection,
+  MetadataRow,
+} from './RightSidebarInspector.js';
 
 export function QueryProfileSidebar(props: {
   buffer: BufferState | null;
@@ -22,32 +28,37 @@ export function QueryProfileSidebar(props: {
     return null;
   }
 
+  const identity = props.identity ?? props.nickEmoji?.identity ?? buffer.peerIdentity ?? null;
+  const identityLabel = identity ? formatIdentityLabel(identity) : null;
+  const network = props.network;
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 px-3 py-4">
-      <div className="space-y-1">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Private message</p>
-        <div className="min-w-0">
-          <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-foreground">
-            <span className="truncate">{buffer.target}</span>
-            {props.network ? (
-              <NickEmojiEditorControl
-                emoji={props.nickEmoji?.emoji ?? null}
-                nick={buffer.target}
-                onSave={(emoji) =>
-                  props.onSaveNickEmoji(
-                    props.network!.id,
-                    buffer.target,
-                    emoji,
-                    props.identity ?? props.nickEmoji?.identity,
-                  )}
-              />
-            ) : null}
-          </p>
-          <p className="truncate font-mono text-[11px] text-muted-foreground">
-            {props.network?.name ?? buffer.networkId}
-          </p>
-        </div>
-      </div>
+    <InspectorPanel>
+      <InspectorHeader
+        eyebrow="Private message"
+        title={buffer.target}
+        subtitle={network?.name ?? buffer.networkId}
+        actions={network ? (
+          <NickEmojiEditorControl
+            emoji={props.nickEmoji?.emoji ?? null}
+            nick={buffer.target}
+            onSave={(emoji) =>
+              props.onSaveNickEmoji(
+                network.id,
+                buffer.target,
+                emoji,
+                identity,
+              )}
+          />
+        ) : null}
+      />
+
+      <InspectorSection title="Details">
+        <dl className="space-y-1.5">
+          <MetadataRow label="Network" value={network?.name ?? buffer.networkId} />
+          {identityLabel ? <MetadataRow label="Identity" value={identityLabel} /> : null}
+        </dl>
+      </InspectorSection>
 
       <AutosaveNotesEditor
         id="query-profile-notes"
@@ -56,6 +67,16 @@ export function QueryProfileSidebar(props: {
         placeholder="Character, aliases, plot hooks..."
         scopeKey={buffer.id}
       />
-    </div>
+    </InspectorPanel>
   );
+}
+
+function formatIdentityLabel(identity: NetworkUserIdentity) {
+  if (identity.kind === 'account') {
+    return `Account ${identity.value}`;
+  }
+  if (identity.kind === 'userhost') {
+    return `Userhost ${identity.value}`;
+  }
+  return `Nick ${identity.value}`;
 }

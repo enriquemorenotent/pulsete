@@ -100,6 +100,11 @@ test('server profile sidebar renders the per-network notes editor', () => {
   );
 
   assert.match(markup, /RoleplayNet/);
+  assert.match(markup, /Connection/);
+  assert.match(markup, /Status[\s\S]*Online/);
+  assert.match(markup, /Nick[\s\S]*mira/);
+  assert.match(markup, /Auth[\s\S]*No auth/);
+  assert.match(markup, /Autojoin[\s\S]*Manual/);
   assert.match(markup, /server-profile-notes/);
   assert.match(markup, /Character: Mira/);
   assert.match(markup, /Current plot: bridge watch/);
@@ -139,7 +144,7 @@ test('server profile sidebar renders grouped IRC capabilities', () => {
   assert.doesNotMatch(markup, /No capabilities reported yet/);
 });
 
-test('server profile sidebar renders an empty capability state', () => {
+test('server profile sidebar hides empty capabilities', () => {
   const markup = renderToStaticMarkup(
     <WorkspaceRightSidebar
       workspace={{
@@ -160,8 +165,8 @@ test('server profile sidebar renders an empty capability state', () => {
     />,
   );
 
-  assert.match(markup, /Capabilities/);
-  assert.match(markup, /No capabilities reported yet/);
+  assert.doesNotMatch(markup, /Capabilities/);
+  assert.doesNotMatch(markup, /No capabilities reported yet/);
 });
 
 test('query profile sidebar renders the per-DM notes editor', () => {
@@ -171,6 +176,7 @@ test('query profile sidebar renders the per-DM notes editor', () => {
       nicklist={nicklist}
       queryProfile={{
         buffer: queryBuffer,
+        identity: { kind: 'account', value: 'sofia' },
         nickEmoji: { id: 'nick-emoji-1', networkId: network.id, nick: 'sofia', emoji: '🌙' },
         network,
         onSaveNotes: async () => queryBuffer,
@@ -180,6 +186,9 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   );
 
   assert.match(markup, /Private message/);
+  assert.match(markup, /Details/);
+  assert.match(markup, /Network[\s\S]*RoleplayNet/);
+  assert.match(markup, /Identity[\s\S]*Account sofia/);
   assert.doesNotMatch(
     markup,
     /<span class="truncate">Sofia<\/span><span aria-hidden="true" class="shrink-0 leading-none">🌙<\/span>/,

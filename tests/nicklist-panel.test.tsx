@@ -118,6 +118,10 @@ test('nicklist renders one-click contact controls beside away users', () => {
   assert.match(markup, /aria-label="Disable notifications for alice"/);
   assert.match(markup, /aria-label="Mute alice"/);
   assert.doesNotMatch(markup, /aria-label="Contact settings for alice"/);
+  assert.match(markup, /opacity-0 transition-opacity/);
+  assert.match(markup, /group-hover:opacity-100/);
+  assert.match(markup, /group-focus-within:opacity-100/);
+  assert.match(markup, /has-\[\[aria-pressed=true\]\]:opacity-100/);
   assert.match(markup, /aria-label="Away"[\s\S]*aria-label="Mute alice"/);
 });
 

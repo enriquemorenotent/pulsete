@@ -4,8 +4,19 @@ import { Button } from '@/components/ui/button.js';
 import { AutosaveNotesEditor } from './AutosaveNotesEditor.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { QueryProfileSidebar } from './QueryProfileSidebar.js';
+import {
+  InspectorHeader,
+  InspectorPanel,
+  InspectorSection,
+  MetadataRow,
+} from './RightSidebarInspector.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
+import {
+  getNetworkManagerAuthLabel,
+  getNetworkManagerAutoJoinLabel,
+  getNetworkManagerStatusLabel,
+} from './network-manager-dialog-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 import type { BufferState, NetworkProfile, NetworkRuntimeCapabilities, NickEmojiState } from '../../shared/protocol-chat.js';
@@ -74,7 +85,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   }
 
   return (
-    <div className="h-full px-3 py-4">
+    <div className="h-full min-h-0">
       <NicklistPanel
         network={props.workspace.selectedNetwork}
         channel={props.workspace.selectedChannel}
@@ -105,22 +116,26 @@ function ServerProfileSidebar(props: {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 px-3 py-4">
-      <div className="space-y-1">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Profile</p>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">{network.name}</p>
-            <p className="truncate font-mono text-[11px] text-muted-foreground">
-              {network.host}:{network.port}
-            </p>
-          </div>
+    <InspectorPanel>
+      <InspectorHeader
+        eyebrow="Profile"
+        title={network.name}
+        subtitle={`${network.host}:${network.port}${network.tls ? ' - SSL/TLS' : ''}`}
+        actions={(
           <Button variant="outline" size="sm" onClick={props.onEdit} disabled={!props.network}>
             Edit
           </Button>
-        </div>
-      </div>
+        )}
+      />
 
+      <InspectorSection title="Connection">
+        <dl className="space-y-1.5">
+          <MetadataRow label="Status" value={getNetworkManagerStatusLabel(props.runtime)} />
+          <MetadataRow label="Nick" value={props.runtime?.nick ?? network.nick} />
+          <MetadataRow label="Auth" value={getNetworkManagerAuthLabel(network)} />
+          <MetadataRow label="Autojoin" value={getNetworkManagerAutoJoinLabel(network)} />
+        </dl>
+      </InspectorSection>
       <ServerCapabilityInspector capabilities={props.runtime?.capabilities} />
 
       <AutosaveNotesEditor
@@ -130,7 +145,7 @@ function ServerProfileSidebar(props: {
         placeholder="Character, aliases, plot hooks..."
         scopeKey={network.id}
       />
-    </div>
+    </InspectorPanel>
   );
 }
 
@@ -143,20 +158,18 @@ function ServerCapabilityInspector(props: {
   const unavailable = new Set([...negotiated, ...pending]);
   const offered = capabilities.offered.filter((capability) => !unavailable.has(capability));
   const hasCapabilities = negotiated.length > 0 || offered.length > 0 || pending.length > 0;
+  if (!hasCapabilities) {
+    return null;
+  }
 
   return (
-    <div className="space-y-2">
-      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Capabilities</p>
-      {hasCapabilities ? (
-        <div className="space-y-2">
-          <CapabilityGroup capabilities={negotiated} label="Active" variant="success" />
-          <CapabilityGroup capabilities={offered} label="Offered" variant="secondary" />
-          <CapabilityGroup capabilities={pending} label="Pending" variant="default" />
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">No capabilities reported yet.</p>
-      )}
-    </div>
+    <InspectorSection title="Capabilities">
+      <div className="space-y-2">
+        <CapabilityGroup capabilities={negotiated} label="Active" variant="success" />
+        <CapabilityGroup capabilities={offered} label="Offered" variant="secondary" />
+        <CapabilityGroup capabilities={pending} label="Pending" variant="default" />
+      </div>
+    </InspectorSection>
   );
 }
 
