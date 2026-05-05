@@ -29,7 +29,7 @@ test('offline channels surface an inline reconnect action', () => {
         selectedChannel,
         selectedPendingChannel: null,
         headerTitle: selectedChannel.name,
-        headerSubtitle: 'Offline. History only until you reconnect.',
+        headerSubtitle: 'Offline. History remains available.',
         composerMode: 'hidden',
         composerPlaceholder: '',
         emptyBody: 'No history yet.',
@@ -63,11 +63,11 @@ test('offline channels surface an inline reconnect action', () => {
 
   assert.match(
     markup,
-    /You&#x27;re offline\. History stays available until you reconnect\./,
+    /History stays available until you reconnect\./,
   );
   assert.match(markup, />Reconnect</);
   assert.match(markup, /role="status"/);
-  assert.match(markup, /rounded-md border px-3 py-2/);
+  assert.match(markup, /border-b py-1.5/);
   assert.doesNotMatch(markup, /rounded-\[1rem\]/);
 });
 

@@ -79,11 +79,11 @@ export const resolveChatPaneStatusBanner = (
     workspace.mode === 'channel-connecting' ||
     workspace.mode === 'query-connecting'
   ) {
-    return {
-      tone: 'warning',
-      title: 'Reconnecting',
-      body: 'Reconnecting. History stays available until the connection returns.',
-    };
+      return {
+        tone: 'warning',
+        title: 'Reconnecting',
+        body: 'History stays available while the connection returns.',
+      };
   }
 
   if (
@@ -96,8 +96,8 @@ export const resolveChatPaneStatusBanner = (
       title: 'Offline',
       body:
         workspace.mode === 'server-offline'
-          ? "You're offline. Reconnect to restore channels and private messages."
-          : "You're offline. History stays available until you reconnect.",
+          ? 'Reconnect to restore channels and private messages.'
+          : 'History stays available until you reconnect.',
       action: workspace.selectedNetwork
         ? {
             kind: 'reconnect',

@@ -29,8 +29,8 @@ export type ResolvedWorkspace = {
 
 export const getReadOnlySubtitle = (status: 'offline' | 'connecting') =>
   status === 'offline'
-    ? 'Offline. History only until you reconnect.'
-    : 'Reconnecting. History stays available until the connection returns.';
+    ? 'Offline. History remains available.'
+    : 'Reconnecting. History remains available.';
 
 export const getReadOnlyEmptyBody = (
   kind: Extract<BufferState['kind'], 'channel' | 'query'>,

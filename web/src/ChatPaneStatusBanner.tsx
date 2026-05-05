@@ -3,6 +3,9 @@ import { cn } from '@/lib/utils.js';
 import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import type { WorkspaceView } from './workspace-types.js';
 
+const statusActionClassName =
+  'h-6 shrink-0 rounded-sm border border-white/[0.055] px-2 text-[11px] text-muted-foreground/78 hover:border-white/12 hover:bg-white/[0.045] hover:text-foreground';
+
 type ChatPaneStatusBannerProps = {
   workspace: WorkspaceView;
   mutedQueryNick?: string | null;
@@ -17,7 +20,7 @@ export function ChatPaneStatusBanner(props: ChatPaneStatusBannerProps) {
   }
 
   return (
-    <div className="shrink-0 space-y-1.5 px-4 pt-2">
+    <div className="shrink-0 space-y-1 px-4 pt-1.5">
       {props.mutedQueryNick ? (
         <StatusStrip
           tone="muted"
@@ -58,32 +61,40 @@ function StatusStrip(props: {
     <div
       role="status"
       className={cn(
-        'flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border px-3 py-2',
+        'flex min-h-8 items-center justify-between gap-3 border-b py-1.5',
         props.tone === 'warning'
-          ? 'border-amber-300/16 bg-amber-300/[0.045]'
-          : 'border-white/[0.07] bg-white/[0.025]',
+          ? 'border-amber-300/12'
+          : 'border-white/[0.045]',
       )}
     >
-      <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span
+          aria-hidden
+          className={cn(
+            'size-1.5 shrink-0 rounded-full',
+            props.tone === 'warning' ? 'bg-amber-300/70' : 'bg-muted-foreground/45',
+          )}
+        />
         <span
           className={cn(
-            'shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase leading-4 tracking-[0.14em]',
+            'shrink-0 font-mono text-[10px] uppercase leading-4 tracking-[0.14em]',
             props.tone === 'warning'
-              ? 'bg-amber-300/10 text-amber-300'
-              : 'bg-white/[0.05] text-muted-foreground',
+              ? 'text-amber-200/78'
+              : 'text-muted-foreground/62',
           )}
         >
           {props.title}
         </span>
-        <p className="min-w-[14rem] flex-1 text-[12px] leading-5 text-foreground/78">
+        <span aria-hidden className="h-3 w-px shrink-0 bg-white/[0.07]" />
+        <p className="min-w-0 flex-1 truncate text-[12px] leading-5 text-muted-foreground/72">
           {props.body}
         </p>
       </div>
       {props.actionLabel && props.onAction ? (
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="h-7 shrink-0 px-2.5"
+          className={statusActionClassName}
           onClick={props.onAction}
         >
           {props.actionLabel}
