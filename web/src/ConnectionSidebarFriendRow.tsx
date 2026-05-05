@@ -13,10 +13,10 @@ type FriendRowProps = {
 
 export function FriendRow(props: FriendRowProps) {
 	return (
-		<div className="group flex items-stretch rounded-sm transition-colors hover:bg-white/[0.035] focus-within:bg-white/[0.035]">
+		<div className="group flex items-stretch rounded-sm transition-colors hover:bg-white/[0.025] focus-within:bg-white/[0.03]">
 			<button
 				type="button"
-				className="flex min-w-0 flex-1 items-center gap-1.5 rounded-sm px-2 py-1 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
+				className="flex min-w-0 flex-1 items-center gap-1.5 rounded-sm px-2 py-1 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/35"
 				onClick={props.onOpen}
 				aria-label={`Open ${props.friend.nick} (${props.presence})`}
 			>
@@ -31,8 +31,8 @@ export function FriendRow(props: FriendRowProps) {
 					className={cn(
 						'truncate text-[12px]',
 						props.presence !== 'offline'
-							? 'text-foreground'
-							: 'text-muted-foreground/90',
+							? 'text-muted-foreground/90'
+							: 'text-muted-foreground/55',
 					)}
 				>
 					{props.friend.nick}
@@ -45,7 +45,7 @@ export function FriendRow(props: FriendRowProps) {
 			</button>
 			<button
 				type="button"
-				className="flex w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity duration-150 hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
+				className="flex w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground/80 opacity-0 transition-opacity duration-150 hover:bg-white/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/35 group-hover:opacity-100 group-focus-within:opacity-100"
 				aria-label={`Remove ${props.friend.nick} from watchlist`}
 				onClick={props.onRemove}
 			>
@@ -62,5 +62,5 @@ const friendPresenceTone = (presence: PresenceStatus) => {
 	if (presence === 'away') {
 		return 'bg-yellow-400';
 	}
-	return 'bg-neutral-700';
+	return 'bg-neutral-700/70';
 };

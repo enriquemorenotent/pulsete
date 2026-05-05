@@ -65,10 +65,10 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 
 	return (
 		<>
-			<section className="shrink-0 border-t border-white/6 px-2.5 py-1.5">
+			<section className="shrink-0 border-t border-white/8 px-2.5 py-1.5">
 				<div className="flex items-center justify-between gap-2 px-1 py-0.5">
 					<div className="min-w-0">
-						<h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+						<h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/75">
 							Watchlist
 						</h2>
 					</div>
@@ -77,7 +77,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 							type="button"
 							variant="ghost"
 							size="icon"
-							className="size-6 text-muted-foreground hover:text-foreground"
+							className="size-6 text-muted-foreground/75 hover:text-foreground"
 							aria-label="Watchlist options"
 							aria-expanded={menuOpen}
 							aria-haspopup="menu"
@@ -111,11 +111,11 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 				</div>
 				<div className="mt-0.5 max-h-[min(28dvh,14rem)] overflow-y-auto overscroll-contain pr-0.5">
 					{props.friends.length === 0 ? (
-						<div className="px-2 py-1 text-[12px] text-muted-foreground">
+						<div className="px-2 py-1 text-[12px] text-muted-foreground/70">
 							No watched nicks yet.
 						</div>
 					) : visibleFriends.length === 0 ? (
-						<div className="px-2 py-1 text-[12px] text-muted-foreground">
+						<div className="px-2 py-1 text-[12px] text-muted-foreground/70">
 							No watched nicks are online right now.
 						</div>
 					) : (

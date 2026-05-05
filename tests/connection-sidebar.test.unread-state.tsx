@@ -7,7 +7,7 @@ import {
   renderConnectionSidebar,
 } from './helpers/connection-sidebar-test-helpers.js';
 
-test('server rows use medium weight for non-priority unread state', () => {
+test('selected server rows stay prominent for non-priority unread state', () => {
   const network = makeSidebarNetwork();
   const server = makeSidebarBuffer({
     id: 'server-1',
@@ -25,6 +25,6 @@ test('server rows use medium weight for non-priority unread state', () => {
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[12px\] text-foreground font-medium">Cuff-Link<\/span>/,
+    /class="truncate text-\[12\.5px\] text-foreground font-semibold">Cuff-Link<\/span>/,
   );
 });

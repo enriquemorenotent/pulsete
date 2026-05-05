@@ -121,7 +121,7 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
 
   const selectedRows =
     markup.match(
-      /bg-white\/\[0\.05\] ring-1 ring-inset ring-white\/\[0\.08\]/g,
+      /border-primary\/35 border-l-primary bg-primary\/\[0\.13\] ring-1 ring-inset ring-primary\/25/g,
     ) ?? [];
   assert.equal(selectedRows.length, 1);
   assert.match(markup, /aria-label="Open pending #Help"/);
@@ -224,4 +224,3 @@ test('non-priority unread buffers render the same blue unread marker instead of 
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
   assert.doesNotMatch(markup, />3</);
 });
-

@@ -4,7 +4,10 @@ import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
 import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingChannelRow.js';
-import { connectionSidebarLabelClass } from './connection-sidebar-label-class.js';
+import {
+	connectionSidebarLabelClass,
+	connectionSidebarRowClass,
+} from './connection-sidebar-label-class.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
@@ -41,18 +44,12 @@ export function ConnectionSidebarNetworkSection(
 			)}
 		>
 			<div
-				className={cn(
-					'group flex items-stretch rounded-sm transition-colors focus-within:bg-white/[0.035]',
-					serverActivity.hasUnread &&
-						!connection.selectedServer &&
-						'bg-white/[0.018]',
-					connection.selectedServer
-						? 'bg-primary/[0.095] ring-1 ring-inset ring-primary/30'
-						: 'hover:bg-white/[0.035]',
-				)}
+				className={connectionSidebarRowClass(serverActivity, {
+					selected: connection.selectedServer,
+				})}
 			>
 				<button
-					className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
+					className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2.5 py-2 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
 					onClick={() => props.onSelectNetwork(connection.network)}
 					aria-label={
 						serverActivity.hasUnread
@@ -72,15 +69,20 @@ export function ConnectionSidebarNetworkSection(
 							<span
 								aria-hidden
 								className={cn(
-									'absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
-									unreadBadgeTone(),
+									'absolute -bottom-0.5 -right-0.5 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
+									unreadBadgeTone(serverActivity),
 								)}
 							/>
 						) : null}
 					</span>
 					<div className="min-w-0 flex-1">
 						<div className="flex min-w-0 items-center gap-2">
-							<span className={connectionSidebarLabelClass(serverActivity)}>
+							<span
+								className={connectionSidebarLabelClass(serverActivity, {
+									selected: connection.selectedServer,
+									variant: 'network',
+								})}
+							>
 								{connection.labelParts.name}
 							</span>
 						</div>
@@ -118,7 +120,7 @@ export function ConnectionSidebarNetworkSection(
 			</div>
 			{connection.childBuffers.length > 0 ||
 			connection.pendingChannels.length > 0 ? (
-				<div className="space-y-px">
+				<div className="ml-3 space-y-px border-l border-white/7 pl-2">
 					{connection.childBuffers.map(({ buffer, selected }) =>
 						buffer.kind === 'channel' ? (
 							<ConnectionSidebarBufferRow
@@ -202,4 +204,7 @@ const serverIconTone = (runtime: NetworkRuntimeState | null) => {
 	return 'text-zinc-500';
 };
 
-const unreadBadgeTone = () => 'bg-primary';
+const unreadBadgeTone = (activity: { priority: boolean }) =>
+	activity.priority
+		? 'size-2.5 bg-primary ring-2 ring-primary/25'
+		: 'size-2 bg-primary/70';

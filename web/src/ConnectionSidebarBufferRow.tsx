@@ -3,7 +3,10 @@ import { X } from 'lucide-react';
 import type { BufferState, PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
-import { connectionSidebarLabelClass } from './connection-sidebar-label-class.js';
+import {
+	connectionSidebarLabelClass,
+	connectionSidebarRowClass,
+} from './connection-sidebar-label-class.js';
 
 type BufferPresenceDisplay = PresenceStatus | 'pending';
 
@@ -26,19 +29,13 @@ export function ConnectionSidebarBufferRow(
 
 	return (
 		<div
-			className={cn(
-				'group flex items-stretch rounded-sm transition-colors focus-within:bg-white/[0.035]',
-				activity.hasUnread && !props.selected && 'bg-white/[0.018]',
-				props.selected
-					? 'bg-white/[0.07] ring-1 ring-inset ring-white/10'
-					: 'hover:bg-white/[0.035]',
-			)}
+			className={connectionSidebarRowClass(activity, {
+				dimmed: props.dimmed,
+				selected: props.selected,
+			})}
 		>
 			<button
-				className={cn(
-					'flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45',
-					props.dimmed && 'opacity-70',
-				)}
+				className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
 				onClick={props.onSelect}
 				aria-label={resolveBufferAriaLabel(
 					props.buffer.target,
@@ -59,8 +56,8 @@ export function ConnectionSidebarBufferRow(
 						<span
 							aria-hidden
 							className={cn(
-								'absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
-								unreadBadgeTone(),
+								'absolute -bottom-0.5 -right-0.5 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
+								unreadBadgeTone(activity),
 							)}
 						/>
 					) : null}
@@ -69,6 +66,7 @@ export function ConnectionSidebarBufferRow(
 					className={connectionSidebarLabelClass(activity, {
 						dimmed: props.dimmed,
 						offline: props.presence === 'offline',
+						selected: props.selected,
 					})}
 				>
 					{props.buffer.target}
@@ -119,4 +117,7 @@ const presenceIconTone = (presence: BufferPresenceDisplay) => {
 	return 'text-red-400';
 };
 
-const unreadBadgeTone = () => 'bg-primary';
+const unreadBadgeTone = (activity: { priority: boolean }) =>
+	activity.priority
+		? 'size-2.5 bg-primary ring-2 ring-primary/25'
+		: 'size-2 bg-primary/70';

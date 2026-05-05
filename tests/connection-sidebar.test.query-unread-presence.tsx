@@ -108,7 +108,7 @@ test('open query buffers show saved contact presence cues', () => {
   assert.match(markup, /aria-label="Open carol \(online\)"/);
   assert.match(
     markup,
-    /<span class="truncate text-\[12px\] text-foreground">carol<span class="ml-1 text-\[12px\] leading-none" aria-hidden="true">🌙<\/span><\/span>/,
+    /<span class="truncate text-\[12px\] text-muted-foreground\/88">carol<span class="ml-1 text-\[12px\] leading-none" aria-hidden="true">🌙<\/span><\/span>/,
   );
   assert.match(markup, /text-red-400/);
   assert.match(markup, /text-yellow-400/);
