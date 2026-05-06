@@ -13,12 +13,37 @@ import {
 
 export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpecsInput) => {
   const nickEmojiByNetworkNick = buildNickEmojiByNetworkNick(input.nickEmojis);
+  const bufferEntries = buildBufferEntries(input.connections, input.selectedNetwork.id, nickEmojiByNetworkNick);
   return [
-    ...buildBufferEntries(input.connections, input.selectedNetwork.id, nickEmojiByNetworkNick),
+    ...buildUnreadBufferEntries(bufferEntries),
+    ...bufferEntries.filter((entry) => !hasUnreadCommandPaletteActivity(entry)),
     ...buildFriendEntries(input.friends, input.nickEmojis),
     ...buildCommandPaletteActionEntries(input),
   ];
 };
+
+const buildUnreadBufferEntries = (
+  bufferEntries: readonly CommandPaletteEntrySpec[],
+): CommandPaletteEntrySpec[] =>
+  bufferEntries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => hasUnreadCommandPaletteActivity(entry))
+    .sort((left, right) =>
+      compareUnreadCommandPaletteEntries(left.entry, right.entry) || left.index - right.index
+    )
+    .map(({ entry }) => ({ ...entry, section: 'unread' }));
+
+const hasUnreadCommandPaletteActivity = (entry: CommandPaletteEntrySpec) =>
+  entry.ranking.unread > 0 || entry.ranking.priorityUnread > 0;
+
+const compareUnreadCommandPaletteEntries = (
+  left: CommandPaletteEntrySpec,
+  right: CommandPaletteEntrySpec,
+) =>
+  Number(right.ranking.priorityUnread > 0) - Number(left.ranking.priorityUnread > 0)
+  || right.ranking.priorityUnread - left.ranking.priorityUnread
+  || right.ranking.unread - left.ranking.unread
+  || Number(right.ranking.currentNetwork) - Number(left.ranking.currentNetwork);
 
 const buildBufferEntries = (
   connections: BuildCommandPaletteEntrySpecsInput['connections'],

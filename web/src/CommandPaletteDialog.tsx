@@ -43,6 +43,7 @@ export type CommandPaletteDialogBodyProps = {
 };
 
 const sectionLabels: Record<CommandPaletteEntrySection, string> = {
+  unread: 'Unread',
   buffers: 'Conversations',
   friends: 'Watchlist',
   actions: 'Tools',
@@ -177,6 +178,15 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium">
+                            {hasUnreadPaletteActivity(entry) ? (
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  'shrink-0 rounded-full',
+                                  unreadMarkerTone(entry),
+                                )}
+                              />
+                            ) : null}
                             <span className="truncate">{entry.label}</span>
                             {entry.emoji ? (
                               <span aria-hidden className="shrink-0 text-[15px] leading-5">
@@ -221,3 +231,11 @@ const groupEntriesBySection = (entries: readonly CommandPaletteEntry[]) => {
     entries: groupedEntries,
   }));
 };
+
+const hasUnreadPaletteActivity = (entry: CommandPaletteEntry) =>
+  entry.ranking.unread > 0 || entry.ranking.priorityUnread > 0;
+
+const unreadMarkerTone = (entry: CommandPaletteEntry) =>
+  entry.ranking.priorityUnread > 0
+    ? 'size-2.5 bg-primary ring-2 ring-primary/25'
+    : 'size-2 bg-primary/70';

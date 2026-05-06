@@ -1,7 +1,7 @@
 import type { FriendState, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 
-export type CommandPaletteEntrySection = 'buffers' | 'friends' | 'actions';
+export type CommandPaletteEntrySection = 'unread' | 'buffers' | 'friends' | 'actions';
 
 export type CommandPaletteAction =
   | { kind: 'select-network'; networkId: string }

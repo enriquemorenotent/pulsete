@@ -44,8 +44,6 @@ export const connectionSidebarRowClass = (
 ) =>
 	cn(
 		'group relative flex items-stretch overflow-hidden rounded-sm border border-l-2 border-transparent transition-colors',
-		activity.hasUnread && !options.selected && 'border-white/8 bg-white/[0.024]',
-		activity.priority && !options.selected && 'border-primary/24 border-l-primary/70 bg-primary/[0.045]',
 		options.selected
 			? 'border-primary/35 border-l-primary bg-primary/[0.13] ring-1 ring-inset ring-primary/25'
 			: 'hover:border-white/10 hover:bg-white/[0.04] focus-within:bg-white/[0.045]',

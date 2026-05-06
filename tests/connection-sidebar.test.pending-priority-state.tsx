@@ -168,6 +168,10 @@ test('priority unread buffers render a stronger unread marker instead of a count
 
   assert.match(markup, /aria-label="Open #help \(unread\)"/);
   assert.match(markup, /bg-primary/);
+  assert.doesNotMatch(
+    markup,
+    /border-primary\/24 border-l-primary\/70 bg-primary\/\[0\.045\]/,
+  );
   assert.match(
     markup,
     /class="truncate text-\[12px\] text-foreground font-semibold">#help<\/span>/,
@@ -217,6 +221,7 @@ test('non-priority unread buffers render the same blue unread marker instead of 
 
   assert.match(markup, /aria-label="Open #help \(unread\)"/);
   assert.match(markup, /bg-primary/);
+  assert.doesNotMatch(markup, /border-white\/8 bg-white\/\[0\.024\]/);
   assert.match(
     markup,
     /class="truncate text-\[12px\] text-foreground font-medium">#help<\/span>/,

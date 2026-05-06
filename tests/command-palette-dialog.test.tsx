@@ -7,6 +7,20 @@ import type { CommandPaletteEntry } from '../web/src/command-palette.js';
 import { Dialog } from '../web/src/components/ui/dialog.js';
 
 const entries: CommandPaletteEntry[] = [{
+  id: 'buffer-unread',
+  section: 'unread',
+  label: '#ops',
+  subtitle: 'Cuff-Link (cubanita)',
+  keywords: ['ops'],
+  badge: 'channel',
+  ranking: {
+    currentNetwork: true,
+    priorityUnread: 1,
+    selected: false,
+    unread: 3,
+  },
+  onSelect: () => undefined,
+}, {
   id: 'buffer-1',
   section: 'friends',
   label: 'School-of-O',
@@ -45,6 +59,11 @@ test('command palette body keeps the top chrome fixed above a flexible results p
   assert.match(markup, /aria-label="Search command palette"/);
   assert.match(markup, /Search channels, people, logs, networks, actions/);
   assert.match(markup, /class="relative overflow-hidden min-h-0 flex-1"/);
+  assert.match(markup, /Unread/);
+  assert.match(
+    markup,
+    /<span aria-hidden="true" class="shrink-0 rounded-full size-2\.5 bg-primary ring-2 ring-primary\/25"><\/span><span class="truncate">#ops<\/span>/,
+  );
   assert.match(markup, /School-of-O/);
   assert.match(
     markup,

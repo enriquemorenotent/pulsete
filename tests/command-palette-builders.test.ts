@@ -7,8 +7,11 @@ import {
 import {
   buildPaletteInput,
   channelBuffer,
+  connection,
   friend,
   network,
+  queryBuffer,
+  serverBuffer,
 } from './helpers/command-palette-fixtures.js';
 
 test('command palette builds buffers, watchlist entries, and current-buffer actions in order', () => {
@@ -35,6 +38,43 @@ test('command palette builds buffers, watchlist entries, and current-buffer acti
       'actions:Enable Autojoin',
       'actions:Download History',
     ],
+  );
+});
+
+test('command palette promotes unread buffers into a top section without duplicates', () => {
+  const unreadChannel = { ...channelBuffer, unread: 7 };
+  const priorityQuery = { ...queryBuffer, unread: 1, priorityUnread: 1 };
+  const quietChannel = { ...channelBuffer, id: 'buffer-quiet', target: '#quiet' };
+  const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
+    connections: [{
+      ...connection,
+      serverBuffer,
+      childBuffers: [
+        { buffer: unreadChannel, selected: false },
+        { buffer: priorityQuery, selected: false },
+        { buffer: quietChannel, selected: false },
+      ],
+    }],
+  }));
+
+  assert.deepEqual(
+    entries.map((entry) => `${entry.section}:${entry.label}`),
+    [
+      'unread:Nathe',
+      'unread:#help',
+      'buffers:Cuff-Link',
+      'buffers:#quiet',
+      'buffers:#pending',
+      'friends:Joby',
+      'actions:Preferences',
+      'actions:Search Logs',
+      'actions:Network Manager',
+      'actions:List Channels',
+    ],
+  );
+  assert.deepEqual(
+    entries.find((entry) => entry.id === `buffer:${priorityQuery.id}`)?.action,
+    { kind: 'select-buffer', bufferId: priorityQuery.id },
   );
 });
 
