@@ -1,4 +1,5 @@
 import { historySearchLimit, historyWindowLimit } from '../../shared/protocol-chat.js';
+import type { RuntimeDebugMemorySnapshot } from '../../shared/protocol-debug.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type {
   BufferHistorySearchPayload,
@@ -41,6 +42,8 @@ const apiRequest = async <T>(path: string, init?: RequestInit) => {
 };
 
 export const api = {
+  loadMemoryDiagnostics: () =>
+    apiRequest<RuntimeDebugMemorySnapshot>('/api/debug/memory'),
   saveNetwork: (payload: Partial<NetworkProfile> & { clearPassword?: boolean; id?: string; password?: string }) =>
     apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(
       payload.id ? `/api/networks/${payload.id}` : '/api/networks',

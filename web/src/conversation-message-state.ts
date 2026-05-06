@@ -4,7 +4,7 @@ import type { BufferState, ChatMessage } from '../../shared/protocol-chat.js';
 
 export type ConversationMessages = Record<string, ChatMessage[]>;
 
-export const liveConversationMessageLimit = historyWindowLimit * 4;
+export const retainedConversationMessageLimit = historyWindowLimit * 8;
 
 export const toConversationMessageKey = (networkId: string, target: string) =>
   `${networkId}:${normalizeIrcIdentifier(target)}`;
@@ -38,13 +38,15 @@ export const appendConversationMessages = (
 export const prependConversationMessages = (
   current: ConversationMessages,
   incoming: ChatMessage[],
+  options: { maxMessagesPerConversation?: number } = {},
 ): ConversationMessages => {
   if (incoming.length === 0) {
     return current;
   }
   const next = { ...current };
   for (const [key, bucket] of groupMessagesByConversation(incoming)) {
-    next[key] = prependMessageBucket(next[key] ?? [], bucket);
+    const prepended = prependMessageBucket(next[key] ?? [], bucket);
+    next[key] = limitMessageBucket(prepended, options.maxMessagesPerConversation);
   }
   return next;
 };

@@ -79,6 +79,9 @@ export class RuntimeHost {
       logs: {
         search: (query, limit, filters) => this.runtime.http.logs.search(query, limit, filters),
       },
+      debug: {
+        memory: () => this.runtime.http.debug.memory(),
+      },
       friends: {
         add: (nick) => this.runtime.http.friends.add(nick),
         remove: (friendId) => this.runtime.http.friends.remove(friendId),

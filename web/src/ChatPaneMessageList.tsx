@@ -13,6 +13,10 @@ import { buildChatTranscriptModel, pruneExpandedMutedGroupKeys } from './transcr
 import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
 import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
 import { TranscriptLoadingState } from './ChatPaneTranscriptDecorations.js';
+import {
+  recordDiagnosticTranscript,
+  useDiagnosticRenderCounter,
+} from './memory-instrumentation.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import { buildNickEmojiByNetworkNick } from './nick-emoji-utils.js';
 
@@ -37,6 +41,7 @@ type ChatPaneMessageListProps = {
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(
   props: ChatPaneMessageListProps,
 ) {
+  useDiagnosticRenderCounter('ChatPaneMessageList');
   const participantHighlightMode = resolveParticipantHighlightMode(
     props.selectedBuffer?.kind ?? null,
   );
@@ -87,6 +92,19 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       }),
     [firstUnreadDividerIndex, props.listKind, props.messages, props.mutedNicks, props.selectedBuffer?.id],
   );
+  useEffect(() => {
+    recordDiagnosticTranscript({
+      bufferId: props.selectedBuffer?.id ?? null,
+      groups: transcriptModel.groups.length,
+      kind: props.selectedBuffer?.kind ?? null,
+      messages: props.messages.length,
+      mutedGroups: transcriptModel.flatRows.filter((row) => row.kind === 'muted-group').length,
+      rows: transcriptModel.flatRows.length,
+      serverGroups: transcriptModel.flatRows.filter((row) => row.kind === 'server-group').length,
+      target: props.selectedBuffer?.target ?? null,
+      unreadRowIndex: transcriptModel.unreadRowIndex,
+    });
+  }, [props.messages.length, props.selectedBuffer, transcriptModel]);
   useEffect(() => {
     setExpandedMutedGroupKeys((current) =>
       pruneExpandedMutedGroupKeys(current, transcriptModel),

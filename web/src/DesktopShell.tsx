@@ -18,6 +18,8 @@ import {
   PreferencesDialogContainer,
 } from './DesktopShellDialogContainers.js';
 import { DesktopShellLayout } from './DesktopShellLayout.js';
+import { MemoryDiagnosticsDialogContainer } from './MemoryDiagnosticsDialogContainer.js';
+import { useDiagnosticRenderCounter } from './memory-instrumentation.js';
 import { useDesktopHeaderModel } from './useDesktopShellModel.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppActions } from './useAppActions.js';
@@ -33,6 +35,7 @@ type DesktopShellProps = {
 };
 
 export function DesktopShell(props: DesktopShellProps) {
+  useDiagnosticRenderCounter('DesktopShell');
   const dispatch = useAppDispatch();
   const header = useDesktopHeaderModel({ dispatch, ui: props.ui });
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
@@ -101,6 +104,7 @@ export function DesktopShell(props: DesktopShellProps) {
       logInspectorDialog={
         <LogInspectorDialogContainer actions={props.actions} ui={props.ui} />
       }
+      memoryDiagnosticsDialog={<MemoryDiagnosticsDialogContainer ui={props.ui} />}
       preferencesDialog={
         <PreferencesDialogContainer
           actions={props.actions}

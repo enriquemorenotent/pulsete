@@ -4,13 +4,16 @@ import type { SocketHandle } from './client.js';
 export type AppUiState = {
   closeCommandPalette: () => void;
   closeLogInspector: () => void;
+  closeMemoryDiagnostics: () => void;
   closePreferences: () => void;
   commandPaletteOpen: boolean;
   didAutoOpenManagerRef: { current: boolean };
   hideOfflineFriends: boolean;
   logInspectorOpen: boolean;
+  memoryDiagnosticsOpen: boolean;
   openCommandPalette: () => void;
   openLogInspector: () => void;
+  openMemoryDiagnostics: () => void;
   openPreferences: () => void;
   preferencesOpen: boolean;
   socketRef: { current: SocketHandle | null };
@@ -57,6 +60,7 @@ export function useAppUiState(): AppUiState {
     readStoredHideOfflineFriendsPreference,
   );
   const [logInspectorOpen, setLogInspectorOpen] = useState(false);
+  const [memoryDiagnosticsOpen, setMemoryDiagnosticsOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const socketRef = useRef<SocketHandle | null>(null);
   const didAutoOpenManagerRef = useRef(false);
@@ -67,9 +71,11 @@ export function useAppUiState(): AppUiState {
 
   const closeCommandPalette = useCallback(() => setCommandPaletteOpen(false), []);
   const closeLogInspector = useCallback(() => setLogInspectorOpen(false), []);
+  const closeMemoryDiagnostics = useCallback(() => setMemoryDiagnosticsOpen(false), []);
   const closePreferences = useCallback(() => setPreferencesOpen(false), []);
   const openCommandPalette = useCallback(() => setCommandPaletteOpen(true), []);
   const openLogInspector = useCallback(() => setLogInspectorOpen(true), []);
+  const openMemoryDiagnostics = useCallback(() => setMemoryDiagnosticsOpen(true), []);
   const openPreferences = useCallback(() => setPreferencesOpen(true), []);
   const toggleHideOfflineFriends = useCallback(
     () => setHideOfflineFriends((value) => !value),
@@ -79,13 +85,16 @@ export function useAppUiState(): AppUiState {
   return {
     closeCommandPalette,
     closeLogInspector,
+    closeMemoryDiagnostics,
     closePreferences,
     commandPaletteOpen,
     didAutoOpenManagerRef,
     hideOfflineFriends,
     logInspectorOpen,
+    memoryDiagnosticsOpen,
     openCommandPalette,
     openLogInspector,
+    openMemoryDiagnostics,
     openPreferences,
     preferencesOpen,
     socketRef,

@@ -35,6 +35,7 @@ import {
 } from './useDesktopShellModel.js';
 import { useSelectedBufferHistory } from './transcript/history.js';
 import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
+import { useDiagnosticRenderCounter } from './memory-instrumentation.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
@@ -89,6 +90,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   contactRuleHandlers,
   externalAvatarsEnabled,
 }: ChatContainerProps) {
+  useDiagnosticRenderCounter('ChatPaneContainer');
   const channels = useAppSelector(selectChannels);
   const channelList = useAppSelector(selectChannelList);
   const channelListNetwork = useAppSelector(selectChannelListNetwork);

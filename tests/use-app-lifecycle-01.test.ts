@@ -230,10 +230,15 @@ test('loadOlderBufferHistory prepends older messages and updates hasOlder state'
     beforeMessageId: message.id,
     bufferId: 'buffer-1',
     gatewayStatus: 'connected',
+    remainingMessageCapacity: 1,
     dispatch: (action) => {
       dispatched.push(action);
     },
-    loadHistory: async () => ({ messages: [olderMessage], hasMore: false }),
+    loadHistory: async (_bufferId, limit, beforeMessageId) => {
+      assert.equal(limit, 1);
+      assert.equal(beforeMessageId, message.id);
+      return { messages: [olderMessage], hasMore: false };
+    },
   });
 
   assert.equal(prependedCount, 1);

@@ -19,6 +19,7 @@ import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
+import { useDiagnosticRenderCounter } from './memory-instrumentation.js';
 import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
@@ -70,6 +71,7 @@ export type ChatPaneProps = {
 };
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
+  useDiagnosticRenderCounter('ChatPane');
   const [followOutputRequestId, requestFollowOutput] = useReducer(
     (value: number) => value + 1,
     0,
@@ -218,12 +220,9 @@ function resolveChatPaneComposerTarget(workspace: WorkspaceView): ChatPaneCompos
   return null;
 }
 
-function DeleteHistoryDialog(props: {
-  buffer: BufferState | null;
-  pending: boolean;
-  onCancel: () => void;
-  onConfirm: () => Promise<void>;
-}) {
+function DeleteHistoryDialog(
+  props: { buffer: BufferState | null; pending: boolean; onCancel: () => void; onConfirm: () => Promise<void> },
+) {
   return (
     <Dialog open={Boolean(props.buffer)} onOpenChange={(open) => !open && props.onCancel()}>
       <DialogContent className="sm:w-[min(calc(100vw-1rem),28rem)]">

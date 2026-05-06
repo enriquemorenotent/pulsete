@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BufferState, ChatMessage } from '../../../shared/protocol-chat.js';
+import { historyWindowLimit, type BufferState, type ChatMessage } from '../../../shared/protocol-chat.js';
 import type { Action, GatewayStatus } from '../app-types.js';
 import { api, type BufferHistoryPayload } from '../client.js';
+import { retainedConversationMessageLimit } from '../conversation-message-state.js';
 
 type UseSelectedBufferHistoryParams = {
   dispatch: (action: Action) => void;
@@ -25,6 +26,7 @@ type LoadOlderBufferHistoryParams = {
   beforeMessageId: string | null;
   bufferId: string | null;
   gatewayStatus: GatewayStatus;
+  remainingMessageCapacity: number;
   dispatch: (action: Action) => void;
   loadHistory: typeof api.loadHistory;
 };
@@ -52,6 +54,10 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
   const hasOlderHistory = selectedBufferId
     ? params.historyHasOlderByBufferId[selectedBufferId] === true
     : false;
+  const remainingMessageCapacity = Math.max(
+    0,
+    retainedConversationMessageLimit - params.selectedMessages.length,
+  );
   const shouldLoadInitialHistory =
     !!selectedBufferId
     && params.gatewayStatus === 'connected'
@@ -106,6 +112,7 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
         beforeMessageId: oldestSelectedMessageId,
         bufferId: selectedBufferId,
         gatewayStatus: params.gatewayStatus,
+        remainingMessageCapacity,
         dispatch: params.dispatch,
         loadHistory: api.loadHistory,
       });
@@ -113,14 +120,15 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
       loadingOlderRef.current = false;
       setLoadingOlderHistory(false);
     }
-  }, [oldestSelectedMessageId, params.dispatch, params.gatewayStatus, selectedBufferId]);
+  }, [oldestSelectedMessageId, params.dispatch, params.gatewayStatus, remainingMessageCapacity, selectedBufferId]);
 
   return {
     canLoadOlderHistory:
       !!selectedBufferId
       && params.selectedBuffer?.kind !== 'server'
       && params.selectedMessages.length > 0
-      && hasOlderHistory,
+      && hasOlderHistory
+      && remainingMessageCapacity > 0,
     initialHistoryPending,
     isLoadingOlderHistory: loadingOlderHistory,
     loadOlderHistory,
@@ -158,14 +166,19 @@ export async function loadOlderBufferHistory({
   beforeMessageId,
   bufferId,
   gatewayStatus,
+  remainingMessageCapacity,
   dispatch,
   loadHistory,
 }: LoadOlderBufferHistoryParams) {
-  if (!bufferId || !beforeMessageId || gatewayStatus !== 'connected') {
+  const limit = Math.min(
+    historyWindowLimit,
+    Math.max(0, Math.floor(remainingMessageCapacity)),
+  );
+  if (!bufferId || !beforeMessageId || gatewayStatus !== 'connected' || limit <= 0) {
     return 0;
   }
   try {
-    const payload = await loadHistory(bufferId, undefined, beforeMessageId);
+    const payload = await loadHistory(bufferId, limit, beforeMessageId);
     applyHistoryPayload(dispatch, bufferId, payload, 'prepend-messages');
     return payload.messages.length;
   } catch {

@@ -3,12 +3,16 @@ import type { BufferState, FriendState, MutedNickState, NickEmojiState, PendingC
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
   appendConversationMessages,
-  liveConversationMessageLimit,
   prependConversationMessages,
   removeBufferMessages,
   removeConversationMessages,
+  retainedConversationMessageLimit,
   updateBufferMessageMetadata,
 } from './conversation-message-state.js';
+
+const retainedConversationMessageOptions = {
+  maxMessagesPerConversation: retainedConversationMessageLimit,
+};
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -144,18 +148,26 @@ export const reduceConversationDomain = (
         messages: appendConversationMessages(
           domain.messages,
           [action.message],
-          { maxMessagesPerConversation: liveConversationMessageLimit },
+          retainedConversationMessageOptions,
         ),
       };
     case 'append-messages':
       return {
         ...domain,
-        messages: appendConversationMessages(domain.messages, action.messages),
+        messages: appendConversationMessages(
+          domain.messages,
+          action.messages,
+          retainedConversationMessageOptions,
+        ),
       };
     case 'prepend-messages':
       return {
         ...domain,
-        messages: prependConversationMessages(domain.messages, action.messages),
+        messages: prependConversationMessages(
+          domain.messages,
+          action.messages,
+          retainedConversationMessageOptions,
+        ),
       };
     case 'remove-messages':
       return {

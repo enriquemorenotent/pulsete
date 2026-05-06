@@ -1,6 +1,7 @@
 import { clientMessageSchema, decodeServer, encode } from '../../shared/protocol-messages.js';
 import type { ClientMessage, ServerMessage } from '../../shared/protocol-messages.js';
 import { gatewaySocketClosedMessage } from './gateway.js';
+import { recordDiagnosticWebsocketMessage } from './memory-instrumentation.js';
 
 export type SocketHandle = {
   send: (message: ClientMessage) => void;
@@ -56,8 +57,11 @@ export const connectSocket = ({
     if (closed) {
       return;
     }
+    const payload = String(event.data);
     try {
-      onMessage(decodeServer(String(event.data)));
+      const message = decodeServer(payload);
+      recordDiagnosticWebsocketMessage(message.type, payload.length * 2);
+      onMessage(message);
     } catch (error) {
       console.error('Invalid websocket payload', error);
       closeAndRetireSocket();

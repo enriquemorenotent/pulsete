@@ -5,6 +5,7 @@ import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
 import { RuntimeFriendService } from './runtime-friend-service.js';
+import { createRuntimeDebugMemorySnapshot } from './runtime-debug.js';
 import { createRuntimeHttpApi } from './runtime-http-api.js';
 import { RuntimeIrcService } from './runtime-irc-service.js';
 import { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
@@ -14,6 +15,7 @@ import { RuntimePublisher } from './runtime-publisher.js';
 import { createRuntimeSnapshot } from './runtime-snapshot.js';
 import type {
   RuntimeConversationMutations,
+  RuntimeDebugApi,
   RuntimeFriendMutations,
   RuntimeGateway,
   RuntimeMutedNickMutations,
@@ -160,6 +162,9 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     saveNickEmoji: (networkId, nick, emoji, identity) =>
       publishMutation(nickEmojiMutations.saveNickEmoji(networkId, nick, emoji, identity)),
   };
+  const debug: RuntimeDebugApi = {
+    memory: () => createRuntimeDebugMemorySnapshot(store, connectionManager, socketHub),
+  };
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
@@ -184,6 +189,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const http = createRuntimeHttpApi({
     catalog: store.networks,
     conversations,
+    debug,
     friends,
     mutedNicks,
     nickEmojis,
@@ -210,6 +216,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     nickEmojis,
     irc,
     networks,
+    debug,
     http,
     ws,
   };

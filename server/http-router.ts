@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toAppError } from './app-error.js';
 import { handleBackupRoutes } from './http-backups.js';
 import { handleBufferRoutes } from './http-buffers.js';
+import { handleDebugRoutes } from './http-debug.js';
 import { handleFriendRoutes } from './http-friends.js';
 import { handleLogRoutes } from './http-logs.js';
 import { handleMutedNickRoutes } from './http-muted-nicks.js';
@@ -18,6 +19,7 @@ export const createHttpHandler = (context: HttpHandlerContext) => async (req: In
     const args = { req, res, url, pathname, context };
     if (
       (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))
+      || await handleDebugRoutes(args)
       || await handleNetworkRoutes(args)
       || await handleNickEmojiRoutes(args)
       || await handleFriendRoutes(args)

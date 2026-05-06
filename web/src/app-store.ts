@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { initialState, reducer } from './app-state.js';
 import type { Action, State } from './app-types.js';
+import { recordDiagnosticAction } from './memory-instrumentation.js';
 
 type Listener = () => void;
 
@@ -59,6 +60,7 @@ export const createAppStore = (state: State = initialState): AppStoreApi => {
     },
     dispatch(action) {
       const nextState = reducer(currentState, action);
+      recordDiagnosticAction(action.type, nextState !== currentState);
       if (nextState === currentState) {
         return;
       }

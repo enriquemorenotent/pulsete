@@ -29,6 +29,7 @@ export type DesktopShellLayoutProps = {
   commandPaletteDialog: ReactNode;
   header: DesktopShellHeaderModel;
   logInspectorDialog: ReactNode;
+  memoryDiagnosticsDialog: ReactNode;
   networkEditorDialog: ReactNode;
   networkManagerDialog: ReactNode;
   preferencesDialog: ReactNode;
@@ -121,6 +122,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             Logs
           </Button>
           <DesktopShellToolsMenu
+            onOpenMemoryDiagnostics={props.header.onOpenMemoryDiagnostics}
             onOpenNetworkManager={props.header.onOpenNetworkManager}
             onOpenPreferences={props.header.onOpenPreferences}
           />
@@ -201,6 +203,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
       {props.networkManagerDialog}
       {props.commandPaletteDialog}
       {props.logInspectorDialog}
+      {props.memoryDiagnosticsDialog}
       {props.preferencesDialog}
       {props.networkEditorDialog}
     </div>

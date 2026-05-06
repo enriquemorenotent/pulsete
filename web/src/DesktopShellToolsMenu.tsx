@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ChevronDown, PanelsTopLeft, Settings2 } from 'lucide-react';
+import { Activity, ChevronDown, PanelsTopLeft, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 
 type DesktopShellToolsMenuProps = {
+  onOpenMemoryDiagnostics: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
 };
@@ -68,6 +69,14 @@ export function DesktopShellToolsMenu(props: DesktopShellToolsMenuProps) {
             onSelect={() => {
               setOpen(false);
               props.onOpenNetworkManager();
+            }}
+          />
+          <DesktopShellToolsMenuItem
+            icon={<Activity className="size-3.5" />}
+            label="Memory Diagnostics"
+            onSelect={() => {
+              setOpen(false);
+              props.onOpenMemoryDiagnostics();
             }}
           />
         </div>

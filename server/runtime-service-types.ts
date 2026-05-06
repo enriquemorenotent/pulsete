@@ -1,5 +1,6 @@
 import type WebSocket from 'ws';
 import type { BufferState, NetworkProfile } from '../shared/protocol-chat.js';
+import type { RuntimeDebugMemorySnapshot } from '../shared/protocol-debug.js';
 import type { ClientMessage, ServerMessage } from '../shared/protocol-messages.js';
 import type { NetworkLifecycleService } from './network-lifecycle-service.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
@@ -53,6 +54,10 @@ export type RuntimeNickEmojiMutations = {
   saveNickEmoji: RuntimeNickEmojiService['saveNickEmoji'];
 };
 
+export type RuntimeDebugApi = {
+  memory(): RuntimeDebugMemorySnapshot;
+};
+
 export type RuntimeNetworkMutations = {
   saveNetwork: NetworkLifecycleService['saveNetwork'];
   duplicateNetwork: NetworkLifecycleService['duplicateNetwork'];
@@ -96,6 +101,7 @@ export type RuntimeHttpApi = {
     add: RuntimeMutedNickMutations['upsertMutedNick'];
     remove: RuntimeMutedNickMutations['removeMutedNick'];
   };
+  debug: RuntimeDebugApi;
 };
 
 export type RuntimeWebSocketApi = {
@@ -115,6 +121,7 @@ export type RuntimeServices = {
   nickEmojis: RuntimeNickEmojiMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
+  debug: RuntimeDebugApi;
   http: RuntimeHttpApi;
   ws: RuntimeWebSocketApi;
 };

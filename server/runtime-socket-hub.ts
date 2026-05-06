@@ -11,6 +11,10 @@ export class RuntimeSocketHub {
     this.onDrop = onDrop;
   }
 
+  get size() {
+    return this.sockets.size;
+  }
+
   setDropHandler(onDrop: (ws: WebSocket) => void) {
     this.onDrop = onDrop;
   }
