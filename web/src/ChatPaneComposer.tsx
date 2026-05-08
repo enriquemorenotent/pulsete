@@ -47,12 +47,18 @@ export const shouldAutoFocusChatPaneComposer = (
   nextContextKey: string | null,
 ) => !!nextContextKey && previousContextKey !== nextContextKey;
 
+export const shouldFocusChatPaneComposerFromRequest = (
+  previousRequestId: number,
+  nextRequestId: number,
+) => previousRequestId !== nextRequestId;
+
 type ChatPaneComposerProps = {
   draft: string;
   mode: ComposerMode;
   placeholder: string;
   target: ChatPaneComposerTarget | null;
   focusContextKey?: string | null;
+  focusRequestId?: number;
   completionEnabled?: boolean;
   completionContextKey?: string | null;
   completionCandidates?: string[];
@@ -68,6 +74,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   const completionSessionRef = useRef<ComposerCompletionSession | null>(null);
   const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const previousFocusContextKeyRef = useRef<string | null>(props.focusContextKey ?? null);
+  const previousFocusRequestIdRef = useRef(props.focusRequestId ?? 0);
   const prompt = resolveChatPaneComposerPrompt({ mode: props.mode });
 
   useEffect(() => {
@@ -81,14 +88,18 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
     if (!shouldAutoFocusChatPaneComposer(previousFocusContextKey, nextFocusContextKey)) {
       return;
     }
-    const input = inputRef.current;
-    if (!input) {
+    focusInputAtEnd(inputRef.current);
+  }, [props.focusContextKey]);
+
+  useEffect(() => {
+    const nextFocusRequestId = props.focusRequestId ?? 0;
+    const previousFocusRequestId = previousFocusRequestIdRef.current;
+    previousFocusRequestIdRef.current = nextFocusRequestId;
+    if (!shouldFocusChatPaneComposerFromRequest(previousFocusRequestId, nextFocusRequestId)) {
       return;
     }
-    input.focus({ preventScroll: true });
-    const caret = input.value.length;
-    input.setSelectionRange(caret, caret);
-  }, [props.focusContextKey]);
+    focusInputAtEnd(inputRef.current);
+  }, [props.focusRequestId]);
 
   useLayoutEffect(() => {
     const pendingSelection = pendingSelectionRef.current;
@@ -214,4 +225,13 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
       </div>
     </footer>
   );
+}
+
+function focusInputAtEnd(input: HTMLInputElement | null) {
+  if (!input) {
+    return;
+  }
+  input.focus({ preventScroll: true });
+  const caret = input.value.length;
+  input.setSelectionRange(caret, caret);
 }

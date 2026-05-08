@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   getChatPaneComposerKeyAction,
   shouldAutoFocusChatPaneComposer,
+  shouldFocusChatPaneComposerFromRequest,
 } from '../web/src/ChatPaneComposer.js';
 import { resolveChatPaneComposerPrompt } from '../web/src/chat-pane-composer-prompt.js';
 
@@ -43,6 +44,11 @@ test('chat composer auto-focuses when the buffer context changes', () => {
 test('chat composer does not auto-focus when the buffer context is unchanged or missing', () => {
   assert.equal(shouldAutoFocusChatPaneComposer('buffer-1', 'buffer-1'), false);
   assert.equal(shouldAutoFocusChatPaneComposer('buffer-1', null), false);
+});
+
+test('chat composer focuses when a focus request id changes', () => {
+  assert.equal(shouldFocusChatPaneComposerFromRequest(0, 1), true);
+  assert.equal(shouldFocusChatPaneComposerFromRequest(2, 2), false);
 });
 
 test('prompt resolution favors command mode for server buffers', () => {

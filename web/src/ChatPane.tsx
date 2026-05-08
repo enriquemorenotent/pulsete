@@ -171,6 +171,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           completionContextKey={props.completionContextKey}
           completionCandidates={props.completionCandidates}
           completionCommandCandidates={props.completionCommandCandidates}
+          focusRequestId={props.jumpToLatestRequestId ?? 0}
           onDraftChange={props.onDraftChange}
           onRecallOlderDraft={props.onRecallOlderDraft}
           onRecallNewerDraft={props.onRecallNewerDraft}
