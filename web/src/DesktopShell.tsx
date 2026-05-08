@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useReducer } from 'react';
 import { selectRightSidebarKind, selectSelectedBufferId } from './app-selectors.js';
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
@@ -18,8 +18,6 @@ import {
   PreferencesDialogContainer,
 } from './DesktopShellDialogContainers.js';
 import { DesktopShellLayout } from './DesktopShellLayout.js';
-import { MemoryDiagnosticsDialogContainer } from './MemoryDiagnosticsDialogContainer.js';
-import { useDiagnosticRenderCounter } from './memory-instrumentation.js';
 import { useDesktopHeaderModel } from './useDesktopShellModel.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppActions } from './useAppActions.js';
@@ -35,11 +33,14 @@ type DesktopShellProps = {
 };
 
 export function DesktopShell(props: DesktopShellProps) {
-  useDiagnosticRenderCounter('DesktopShell');
   const dispatch = useAppDispatch();
   const header = useDesktopHeaderModel({ dispatch, ui: props.ui });
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
+  const [jumpToLatestRequestId, requestJumpToLatest] = useReducer(
+    (value: number) => value + 1,
+    0,
+  );
   const commandPalette = useMemo(
     () => ({
       onOpen: props.ui.openCommandPalette,
@@ -75,6 +76,7 @@ export function DesktopShell(props: DesktopShellProps) {
     <DesktopShellLayout
       header={header}
       commandPalette={commandPalette}
+      onJumpChatToLatest={requestJumpToLatest}
       selectedBufferId={selectedBufferId}
       rightSidebarKind={rightSidebarKind}
       sidebar={<ConnectionSidebarContainer actions={props.actions} ui={props.ui} />}
@@ -86,6 +88,7 @@ export function DesktopShell(props: DesktopShellProps) {
           contactNotifications={props.contactNotifications}
           contactRuleHandlers={contactRuleHandlers}
           externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+          jumpToLatestRequestId={jumpToLatestRequestId}
         />
       }
       rightSidebar={
@@ -104,7 +107,6 @@ export function DesktopShell(props: DesktopShellProps) {
       logInspectorDialog={
         <LogInspectorDialogContainer actions={props.actions} ui={props.ui} />
       }
-      memoryDiagnosticsDialog={<MemoryDiagnosticsDialogContainer ui={props.ui} />}
       preferencesDialog={
         <PreferencesDialogContainer
           actions={props.actions}

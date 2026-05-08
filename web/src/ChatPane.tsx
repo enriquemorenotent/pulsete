@@ -19,7 +19,6 @@ import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
-import { useDiagnosticRenderCounter } from './memory-instrumentation.js';
 import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
@@ -37,6 +36,7 @@ export type ChatPaneProps = {
   completionContextKey?: string | null;
   completionCandidates?: string[];
   completionCommandCandidates?: string[];
+  jumpToLatestRequestId?: number;
   onDraftChange: (value: string) => void;
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
@@ -71,7 +71,6 @@ export type ChatPaneProps = {
 };
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
-  useDiagnosticRenderCounter('ChatPane');
   const [followOutputRequestId, requestFollowOutput] = useReducer(
     (value: number) => value + 1,
     0,
@@ -148,6 +147,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         channelUsers={props.workspace.selectedChannel?.users ?? []}
         nickEmojis={props.nickEmojis}
         followOutputRequestId={followOutputRequestId}
+        jumpToLatestRequestId={props.jumpToLatestRequestId ?? 0}
         messages={props.selectedMessages}
         mutedNicks={props.mutedNicks}
         emptyBody={props.workspace.emptyBody}

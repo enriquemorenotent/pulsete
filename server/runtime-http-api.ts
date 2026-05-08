@@ -2,7 +2,6 @@ import type { RuntimeIrcService } from './runtime-irc-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type {
   RuntimeConversationMutations,
-  RuntimeDebugApi,
   RuntimeFriendMutations,
   RuntimeHttpApi,
   RuntimeMutedNickMutations,
@@ -14,7 +13,6 @@ import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
 type CreateRuntimeHttpApiParams = {
   catalog: RuntimeNetworkCatalog;
   conversations: RuntimeConversationMutations;
-  debug: RuntimeDebugApi;
   friends: RuntimeFriendMutations;
   mutedNicks: RuntimeMutedNickMutations;
   nickEmojis: RuntimeNickEmojiMutations;
@@ -26,7 +24,6 @@ type CreateRuntimeHttpApiParams = {
 export const createRuntimeHttpApi = ({
   catalog,
   conversations,
-  debug,
   friends,
   mutedNicks,
   nickEmojis,
@@ -56,9 +53,6 @@ export const createRuntimeHttpApi = ({
   },
   logs: {
     search: (query, limit, filters) => conversations.searchLogs(query, limit, filters),
-  },
-  debug: {
-    memory: () => debug.memory(),
   },
   friends: {
     add: (nick) => friends.upsertFriend(nick),

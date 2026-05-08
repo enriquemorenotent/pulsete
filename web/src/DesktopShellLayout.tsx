@@ -3,6 +3,7 @@ import { FolderSearch, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
+import { shouldJumpChatToLatestFromKeydown } from './desktop-shell-keyboard.js';
 import {
   getDefaultCompactWorkspacePane,
   resolveCompactWorkspacePane,
@@ -29,9 +30,9 @@ export type DesktopShellLayoutProps = {
   commandPaletteDialog: ReactNode;
   header: DesktopShellHeaderModel;
   logInspectorDialog: ReactNode;
-  memoryDiagnosticsDialog: ReactNode;
   networkEditorDialog: ReactNode;
   networkManagerDialog: ReactNode;
+  onJumpChatToLatest: () => void;
   preferencesDialog: ReactNode;
   rightSidebar: ReactNode;
   rightSidebarKind: 'profile' | 'users' | 'notes' | null;
@@ -74,23 +75,33 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
 
   useEffect(() => {
     const handleWindowKeyDown = (event: KeyboardEvent) => {
-      const blockingDialogOpen =
-        !props.commandPalette.open
-        && document.querySelector('[role="dialog"]') !== null;
-      if (
-        !shouldOpenCommandPaletteFromKeydown(event, {
-          blockingDialogOpen,
-          paletteOpen: props.commandPalette.open,
-        })
-      ) {
+      const dialogOpen = document.querySelector('[role="dialog"]') !== null;
+      const menuOpen = document.querySelector('[role="menu"]') !== null;
+      if (shouldOpenCommandPaletteFromKeydown(event, {
+        blockingDialogOpen: !props.commandPalette.open && dialogOpen,
+        paletteOpen: props.commandPalette.open,
+      })) {
+        event.preventDefault();
+        props.commandPalette.onOpen();
         return;
       }
-      event.preventDefault();
-      props.commandPalette.onOpen();
+      if (shouldJumpChatToLatestFromKeydown(event, {
+        blockingDialogOpen: dialogOpen,
+        hasSelectedBuffer: props.selectedBufferId !== null,
+        menuOpen,
+      })) {
+        event.preventDefault();
+        props.onJumpChatToLatest();
+      }
     };
     window.addEventListener('keydown', handleWindowKeyDown);
     return () => window.removeEventListener('keydown', handleWindowKeyDown);
-  }, [props.commandPalette.onOpen, props.commandPalette.open]);
+  }, [
+    props.commandPalette.onOpen,
+    props.commandPalette.open,
+    props.onJumpChatToLatest,
+    props.selectedBufferId,
+  ]);
 
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(87,128,208,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] text-foreground">
@@ -122,7 +133,6 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             Logs
           </Button>
           <DesktopShellToolsMenu
-            onOpenMemoryDiagnostics={props.header.onOpenMemoryDiagnostics}
             onOpenNetworkManager={props.header.onOpenNetworkManager}
             onOpenPreferences={props.header.onOpenPreferences}
           />
@@ -203,7 +213,6 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
       {props.networkManagerDialog}
       {props.commandPaletteDialog}
       {props.logInspectorDialog}
-      {props.memoryDiagnosticsDialog}
       {props.preferencesDialog}
       {props.networkEditorDialog}
     </div>

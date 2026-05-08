@@ -15,7 +15,7 @@ type DesktopHeaderModelParams = {
   dispatch: (action: Action) => void;
   ui: Pick<
     AppUiState,
-    'openLogInspector' | 'openMemoryDiagnostics' | 'openPreferences'
+    'openLogInspector' | 'openPreferences'
   >;
 };
 
@@ -46,14 +46,12 @@ export function useDesktopHeaderModel({
   return useMemo(
     () => ({
       onOpenLogInspector: ui.openLogInspector,
-      onOpenMemoryDiagnostics: ui.openMemoryDiagnostics,
       onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
       onOpenPreferences: ui.openPreferences,
     }),
     [
       dispatch,
       ui.openLogInspector,
-      ui.openMemoryDiagnostics,
       ui.openPreferences,
     ],
   );

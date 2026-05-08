@@ -35,7 +35,6 @@ import {
 } from './useDesktopShellModel.js';
 import { useSelectedBufferHistory } from './transcript/history.js';
 import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
-import { useDiagnosticRenderCounter } from './memory-instrumentation.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
@@ -53,6 +52,7 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
+  jumpToLatestRequestId: number;
 };
 
 type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
@@ -89,8 +89,8 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   contactNotifications,
   contactRuleHandlers,
   externalAvatarsEnabled,
+  jumpToLatestRequestId,
 }: ChatContainerProps) {
-  useDiagnosticRenderCounter('ChatPaneContainer');
   const channels = useAppSelector(selectChannels);
   const channelList = useAppSelector(selectChannelList);
   const channelListNetwork = useAppSelector(selectChannelListNetwork);
@@ -137,7 +137,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     selectedMessages,
     workspace,
   });
-  return <ChatPane {...model} />;
+  return <ChatPane {...model} jumpToLatestRequestId={jumpToLatestRequestId} />;
 });
 
 export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSidebarContainer({

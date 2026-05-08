@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button.js';
 import { DayDivider, TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptModel } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
-import { useDiagnosticRenderCounter } from './memory-instrumentation.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
 import {
@@ -29,6 +28,7 @@ type ChatTranscriptVirtuosoProps = {
   followOutputRequestId: number;
   initialHistoryPending?: boolean;
   initialScrollTarget: TranscriptInitialScrollTarget;
+  jumpToLatestRequestId: number;
   listKind: 'chat' | 'server';
   loadingOlderHistory?: boolean;
   mode: MessageDisplayMode;
@@ -89,7 +89,6 @@ export const resolveTranscriptVirtuosoRow = (
 export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
   props: ChatTranscriptVirtuosoProps,
 ) {
-  useDiagnosticRenderCounter('ChatTranscriptVirtuoso');
   const rowKeys = useMemo(
     () => props.model.flatRows.map((row) => row.key),
     [props.model.flatRows],
@@ -99,6 +98,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     followOutputRequestId: props.followOutputRequestId,
     initialHistoryPending: props.initialHistoryPending ?? false,
     initialScrollTarget: props.initialScrollTarget,
+    jumpToLatestRequestId: props.jumpToLatestRequestId,
     loadingOlderHistory: props.loadingOlderHistory ?? false,
     onLoadOlderHistory: props.onLoadOlderHistory,
     rowKeys,

@@ -13,7 +13,6 @@ import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 
 export type DesktopShellHeaderModel = {
   onOpenLogInspector: () => void;
-  onOpenMemoryDiagnostics: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
 };

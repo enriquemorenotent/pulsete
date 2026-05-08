@@ -22,6 +22,7 @@ type UseTranscriptViewportParams = {
   followOutputRequestId: number;
   initialHistoryPending: boolean;
   initialScrollTarget: TranscriptInitialScrollTarget;
+  jumpToLatestRequestId: number;
   loadingOlderHistory: boolean;
   onLoadOlderHistory?: () => Promise<number>;
   rowKeys: readonly string[];
@@ -38,6 +39,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const pendingSendToLatestRef = useRef(false);
   const positionedBufferIdRef = useRef<string | null>(null);
   const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
+  const previousJumpToLatestRequestIdRef = useRef(params.jumpToLatestRequestId);
   const scrollSnapshotsRef = useRef(new Map<string, TranscriptScrollSnapshot>());
   const visibleAnchorRowKeyRef = useRef<string | null>(null);
   const [firstItemIndex, setFirstItemIndexValue] = useState(firstItemIndexBase);
@@ -78,6 +80,21 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     previousFollowOutputRequestIdRef.current = params.followOutputRequestId;
     pendingSendToLatestRef.current = true;
   }, [params.followOutputRequestId]);
+
+  useEffect(() => {
+    if (params.jumpToLatestRequestId === previousJumpToLatestRequestIdRef.current) {
+      return;
+    }
+    previousJumpToLatestRequestIdRef.current = params.jumpToLatestRequestId;
+    if (!params.bufferId || params.totalItemCount === 0) {
+      return;
+    }
+    scrollSnapshotsRef.current.set(params.bufferId, { kind: 'latest' });
+    visibleAnchorRowKeyRef.current = null;
+    isPinnedToLatestRef.current = true;
+    setIsPinnedToLatest(true);
+    scrollToLatest(virtuosoRef.current);
+  }, [params.bufferId, params.jumpToLatestRequestId, params.totalItemCount]);
 
   useLayoutEffect(() => {
     if (currentBufferIdRef.current === params.bufferId) {
