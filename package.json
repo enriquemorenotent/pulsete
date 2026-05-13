@@ -6,9 +6,10 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web\"",
+    "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web:wait\"",
     "dev:server": "PORT=18487 tsx watch server/index.ts",
     "dev:web": "vite --port 18473",
+    "dev:web:wait": "node scripts/wait_for_tcp_port.mjs 127.0.0.1 18487 60000 && npm run dev:web",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json && tsc -p tsconfig.web.json && tsc -p tsconfig.tests.json",
     "build": "npm run typecheck && vite build",
     "lint:test-names": "node scripts/check_test_file_names.mjs",
