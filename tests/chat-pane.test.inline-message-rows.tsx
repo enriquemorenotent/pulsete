@@ -67,8 +67,8 @@ test('compact chat rows use one grid skeleton for plain text and inline previews
     makeMessage({ id: 'message-2', nick: 'Joby', body: 'Look https://example.test/cat.png', ts: 1 }),
   ]);
 
-  assert.match(plainMarkup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
-  assert.match(previewMarkup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(plainMarkup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
+  assert.match(previewMarkup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1/);
   assert.match(previewMarkup, /Inline image preview: cat\.png/);
   assert.match(previewMarkup, /Look /);
   assert.doesNotMatch(previewMarkup, /col-start-2/);
@@ -197,7 +197,7 @@ test('system rows in channel transcripts use the compact inline timestamp layout
     makeMessage({ id: 'message-1', nick: null, body: '* coco is logged in as coco', kind: 'system', ts: 1 }),
   ]);
 
-  assert.match(markup, /grid items-start grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
+  assert.match(markup, /grid items-baseline grid-cols-\[max-content_minmax\(0,1fr\)\] gap-x-2 gap-y-1 font-sans/);
   assert.match(markup, /class="px-1 py-0\.5 text-\[var\(--transcript-secondary\)\]" data-message-id="message-1"/);
   assert.match(markup, /<p class="min-w-0 break-words font-sans text-\[15px\] leading-6 text-inherit">/);
   assert.doesNotMatch(markup, /flex flex-wrap items-center gap-2 text-\[11px\] uppercase/);

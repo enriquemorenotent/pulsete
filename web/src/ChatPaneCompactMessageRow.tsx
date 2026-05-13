@@ -99,7 +99,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
       className={cn('px-1 py-0.5', messageTone(message))}
       data-message-id={message.id}
     >
-      <div className="grid items-start grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 font-sans">
+      <div className="grid items-baseline grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 font-sans">
         {timeLabel}
         <div className="min-w-0">
           <p className="min-w-0 break-words font-sans text-[15px] leading-6 text-inherit">
