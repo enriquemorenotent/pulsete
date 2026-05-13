@@ -58,11 +58,17 @@ export type RuntimeConversationStore = {
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];
   upsertChannel(input: ChannelInput): ChannelState;
   upsertBuffer(input: BufferInput): BufferState;
-  upsertQuery(networkId: string, target: string, peerIdentity?: NetworkUserIdentity | null): BufferState;
+  upsertQuery(
+    networkId: string,
+    target: string,
+    peerIdentity?: NetworkUserIdentity | null,
+    ircCloudAvatarId?: string,
+  ): BufferState;
   upsertQueryWithMergeResult(
     networkId: string,
     target: string,
     peerIdentity?: NetworkUserIdentity | null,
+    ircCloudAvatarId?: string,
   ): { buffer: BufferState; removedBufferIds: string[]; retargetedFrom?: string | null };
   recordObservedQueryNickChange(
     networkId: string,

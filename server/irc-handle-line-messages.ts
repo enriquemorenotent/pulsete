@@ -6,6 +6,7 @@ import { isChannelTarget, parsePrefixIdentity, stripCtcp } from './irc-parser.js
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
 import type { IrcMessageEventContext } from './irc-contexts.js';
 import { resolveNetworkUserIdentity } from '../shared/user-identity.js';
+import { resolveIrcCloudAvatarId } from '../shared/irccloud-avatar.js';
 
 export const handleTextMessage = (
   connection: IrcMessageEventContext,
@@ -66,10 +67,14 @@ export const handleTextMessage = (
     username: prefixIdentity.username,
     host: prefixIdentity.host,
   });
+  const ircCloudAvatarId = isDirectTarget && !isSelfNick(connection, nick)
+    ? resolveIrcCloudAvatarId(prefixIdentity)
+    : null;
   emitMessage(connection, createMessage(connection, {
     target,
     nick,
     senderIdentity,
+    ...(ircCloudAvatarId ? { ircCloudAvatarId } : {}),
     body,
     kind: command === 'NOTICE' ? 'notice' : isAction ? 'action' : 'line',
     self: isSelfNick(connection, nick),

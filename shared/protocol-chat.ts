@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ircCloudAvatarIdValuePattern } from './irccloud-avatar.js';
 import { networkUserIdentitySchema } from './user-identity.js';
 
 export const historyWindowLimit = 250;
@@ -146,6 +147,7 @@ export const bufferSchema = z.object({
   lastReadTs: z.number().int().nonnegative().nullable().default(null),
   lastReadMessageId: z.string().nullable().default(null),
   peerIdentity: networkUserIdentitySchema.optional(),
+  ircCloudAvatarId: z.string().regex(ircCloudAvatarIdValuePattern).optional(),
   selfNickAliases: z.array(z.string()).default([]).optional(),
 });
 export type BufferState = z.infer<typeof bufferSchema>;

@@ -96,6 +96,7 @@ export const toBufferState = (
   target: row.target,
   notes: row.notes,
   ...(peerIdentity ? { peerIdentity } : {}),
+  ...(row.ircCloudAvatarId ? { ircCloudAvatarId: row.ircCloudAvatarId } : {}),
   selfNickAliases,
 });
 

@@ -28,7 +28,9 @@ export type ChatPaneProps = {
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
   externalAvatarsEnabled: boolean;
-  selectedQueryAvatarUser?: Pick<ChannelUserState, 'host' | 'nick' | 'username'> | null;
+  selectedQueryAvatarUser?: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
+    ircCloudAvatarId?: string | null;
+  }) | null;
   selectedMessages: ChatMessage[];
   draft: string;
   focusContextKey?: string | null;

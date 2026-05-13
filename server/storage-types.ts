@@ -33,6 +33,7 @@ export type BufferRow = {
   priorityUnread: number;
   lastReadTs: number | null;
   lastReadMessageId: string | null;
+  ircCloudAvatarId: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -130,6 +131,7 @@ export type MessageInput = {
   target: string;
   nick: string | null;
   senderIdentity?: NetworkUserIdentity | null;
+  ircCloudAvatarId?: string | null;
   speakerRole?: SpeakerRole;
   speakerNick?: string | null;
   attributionSource?: SpeakerAttributionSource;

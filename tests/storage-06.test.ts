@@ -165,6 +165,7 @@ test('normalized storage migration preserves large transcripts and backfills mis
   const upgraded = openSqliteDatabase(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };
   const networkColumns = upgraded.prepare('PRAGMA table_info(networks)').all() as Array<{ name: string }>;
+  const bufferColumns = upgraded.prepare('PRAGMA table_info(buffers)').all() as Array<{ name: string }>;
   const nickEmojiColumns = upgraded.prepare('PRAGMA table_info(nick_emoji_tags)').all() as Array<{ name: string }>;
   const nickEmojiIndexes = upgraded.prepare('PRAGMA index_list(nick_emoji_tags)').all() as Array<{ name: string }>;
   const messageCount = upgraded.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number };
@@ -195,8 +196,9 @@ test('normalized storage migration preserves large transcripts and backfills mis
   `).all('network-1') as Array<{ target: string; batchCount: number }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 25);
+  assert.equal(version.user_version, 26);
   assert.equal(networkColumns.some((column) => column.name === 'username'), false);
+  assert.equal(bufferColumns.some((column) => column.name === 'ircCloudAvatarId'), true);
   assert.deepEqual(
     nickEmojiColumns.map((column) => column.name),
     ['id', 'networkId', 'nick', 'identityKind', 'identityValue', 'emoji', 'createdAt', 'updatedAt'],

@@ -18,7 +18,9 @@ type ChatPaneHeaderProps = {
   nickEmojis: NickEmojiState[];
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
-  selectedQueryAvatarUser?: Pick<ChannelUserState, 'host' | 'identity' | 'nick' | 'username'> | null;
+  selectedQueryAvatarUser?: (Pick<ChannelUserState, 'host' | 'identity' | 'nick' | 'username'> & {
+    ircCloudAvatarId?: string | null;
+  }) | null;
   selectedQueryContactRule?: ContactRuleState | null;
   onOpenMentionedChannel: (channel: string) => void;
   onWhoisSelectedQuery?: () => void;
@@ -162,7 +164,9 @@ function PaneHeaderActions(props: {
 
 function PaneHeader(props: {
   title: string;
-  avatarUser?: Pick<ChannelUserState, 'host' | 'nick' | 'username'> | null;
+  avatarUser?: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
+    ircCloudAvatarId?: string | null;
+  }) | null;
   emoji?: string | null;
   externalAvatarsEnabled?: boolean;
   subtitle: string;

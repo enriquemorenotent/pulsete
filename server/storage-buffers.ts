@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { SqliteDb } from './storage-sqlite.js';
 import type { BufferState, ChannelState, ChannelUserState } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { normalizeIrcCloudAvatarId } from '../shared/irccloud-avatar.js';
 import { listBufferSelfNickAliases, replaceBufferSelfNickAliases } from './storage-owned-lists.js';
 import { getPrimaryQueryPeerIdentity } from './storage-query-identities.js';
 import type { BufferInput, BufferRow, ChannelInput, ChannelRow } from './storage-types.js';
@@ -22,7 +23,7 @@ const channelSelect = `
 `;
 
 const bufferColumns =
-  'id, networkId, kind, target, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt';
+  'id, networkId, kind, target, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, ircCloudAvatarId, createdAt, updatedAt';
 
 export const listBuffers = (db: SqliteDb, networkId?: string): BufferState[] => {
   const sql = networkId
@@ -65,7 +66,7 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
   if (existing) {
     db.prepare(
       `UPDATE buffers
-       SET networkId = ?, kind = ?, target = ?, targetKey = ?, notes = ?, isOpen = ?, unread = ?, priorityUnread = ?, lastReadTs = ?, lastReadMessageId = ?, updatedAt = ?
+       SET networkId = ?, kind = ?, target = ?, targetKey = ?, notes = ?, isOpen = ?, unread = ?, priorityUnread = ?, lastReadTs = ?, lastReadMessageId = ?, ircCloudAvatarId = ?, updatedAt = ?
        WHERE id = ?`
     ).run(
       input.networkId,
@@ -78,6 +79,7 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
       input.priorityUnread ?? existing.priorityUnread ?? 0,
       input.lastReadTs ?? existing.lastReadTs ?? null,
       input.lastReadMessageId ?? existing.lastReadMessageId ?? null,
+      resolveNextIrcCloudAvatarId(input.ircCloudAvatarId, existing.ircCloudAvatarId),
       now,
       existing.id
     );
@@ -88,8 +90,8 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
   const id = input.id ?? randomUUID();
   db.prepare(
     `INSERT INTO buffers
-       (id, networkId, kind, target, targetKey, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, networkId, kind, target, targetKey, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, ircCloudAvatarId, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.networkId,
@@ -102,6 +104,7 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
     input.priorityUnread ?? 0,
     input.lastReadTs ?? null,
     input.lastReadMessageId ?? null,
+    normalizeIrcCloudAvatarId(input.ircCloudAvatarId),
     now,
     now
   );
@@ -245,3 +248,13 @@ export const updateChannelTopic = (db: SqliteDb, networkId: string, channelName:
 
 const getChannelCreatedAt = (db: SqliteDb, id: string) =>
   (db.prepare('SELECT createdAt FROM channel_details WHERE id = ?').get(id) as { createdAt: number } | undefined)?.createdAt ?? null;
+
+const resolveNextIrcCloudAvatarId = (
+  inputAvatarId: string | null | undefined,
+  existingAvatarId: string | null | undefined,
+) => {
+  if (inputAvatarId === undefined) {
+    return existingAvatarId ?? null;
+  }
+  return normalizeIrcCloudAvatarId(inputAvatarId);
+};

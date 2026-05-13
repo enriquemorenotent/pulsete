@@ -170,17 +170,28 @@ export class StorageConversationsRepository {
     return upsertBuffer(this.db, input);
   }
 
-  upsertQuery(networkId: string, target: string, peerIdentity?: NetworkUserIdentity | null) {
-    return this.upsertQueryWithMergeResult(networkId, target, peerIdentity).buffer;
+  upsertQuery(
+    networkId: string,
+    target: string,
+    peerIdentity?: NetworkUserIdentity | null,
+    ircCloudAvatarId?: string,
+  ) {
+    return this.upsertQueryWithMergeResult(networkId, target, peerIdentity, ircCloudAvatarId).buffer;
   }
 
-  upsertQueryWithMergeResult(networkId: string, target: string, peerIdentity?: NetworkUserIdentity | null) {
+  upsertQueryWithMergeResult(
+    networkId: string,
+    target: string,
+    peerIdentity?: NetworkUserIdentity | null,
+    ircCloudAvatarId?: string,
+  ) {
     return runInTransaction(this.db, () =>
       upsertQueryBufferWithMergeResult(this.db, {
         networkId,
         kind: 'query',
         target,
         peerIdentity,
+        ircCloudAvatarId,
         peerIdentitySource: 'manual',
       })
     );

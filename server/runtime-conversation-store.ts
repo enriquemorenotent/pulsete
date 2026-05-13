@@ -151,24 +151,25 @@ const resolveMessageBuffer = (
     : existing
       ? toBufferResolution(existing)
       : createMessageBuffer(store, input.message);
-  if (!created) {
+  const createdWithAvatar = applyQueryAvatarId(store, created, input.message);
+  if (!createdWithAvatar) {
     return null;
   }
 
   const nextBuffer = resolveNextBufferActivity({
-    buffer: created.buffer,
+    buffer: createdWithAvatar.buffer,
     message: input.message,
     currentNick: input.currentNick,
     altNicks: input.altNicks,
     messageMuted: input.messageMuted,
   });
-  if (nextBuffer === created.buffer) {
-    return created;
+  if (nextBuffer === createdWithAvatar.buffer) {
+    return createdWithAvatar;
   }
   return {
     buffer: store.upsertBuffer(nextBuffer),
-    removedBufferIds: created.removedBufferIds,
-    retargetedFrom: created.retargetedFrom ?? null,
+    removedBufferIds: createdWithAvatar.removedBufferIds,
+    retargetedFrom: createdWithAvatar.retargetedFrom ?? null,
   };
 };
 
@@ -190,6 +191,7 @@ const createMessageBuffer = (store: RuntimeConversationStore, message: MessageIn
       message.networkId,
       message.target,
       message.self ? null : message.senderIdentity,
+      message.self ? undefined : message.ircCloudAvatarId ?? undefined,
     );
   }
   return null;
@@ -201,6 +203,29 @@ const shouldRouteQueryByIdentity = (message: MessageInput) =>
   && message.target !== 'server'
   && !!message.senderIdentity
   && (message.kind === 'line' || message.kind === 'action');
+
+const applyQueryAvatarId = (
+  store: RuntimeConversationStore,
+  resolution: BufferResolution | null,
+  message: MessageInput,
+) => {
+  if (
+    !resolution
+    || message.self
+    || resolution.buffer.kind !== 'query'
+    || !message.ircCloudAvatarId
+    || resolution.buffer.ircCloudAvatarId === message.ircCloudAvatarId
+  ) {
+    return resolution;
+  }
+  return {
+    ...resolution,
+    buffer: store.upsertBuffer({
+      ...resolution.buffer,
+      ircCloudAvatarId: message.ircCloudAvatarId,
+    }),
+  };
+};
 
 const getRequiredBuffer = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = store.getBuffer(bufferId);

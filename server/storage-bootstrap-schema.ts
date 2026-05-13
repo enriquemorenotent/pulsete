@@ -68,6 +68,7 @@ export const storageBootstrapSchemaSql = `
     priorityUnread INTEGER NOT NULL DEFAULT 0,
     lastReadTs INTEGER,
     lastReadMessageId TEXT,
+    ircCloudAvatarId TEXT,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
     UNIQUE(networkId, targetKey)

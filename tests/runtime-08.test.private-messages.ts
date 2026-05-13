@@ -28,6 +28,59 @@ test('incoming private messages open query buffers automatically', () => {
   });
 });
 
+test('incoming private messages persist IRCCloud avatar ids on query buffers', () => {
+  const harness = createRuntimeEventHarness();
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'helper',
+      ircCloudAvatarId: '7',
+      body: 'hello there',
+      kind: 'line',
+      self: false,
+      ts: Date.now(),
+    },
+  });
+
+  const buffer = harness.storage.conversations.getBufferByTarget(harness.network.id, 'helper');
+  assert.equal(buffer?.ircCloudAvatarId, '7');
+  assert.deepEqual(harness.sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer,
+  });
+});
+
+test('incoming private messages update existing query buffers with IRCCloud avatar ids', () => {
+  const harness = createRuntimeEventHarness();
+  const existingQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'helper',
+      ircCloudAvatarId: '12',
+      body: 'hello again',
+      kind: 'line',
+      self: false,
+      ts: Date.now(),
+    },
+  });
+
+  const updated = harness.storage.conversations.getBuffer(existingQuery.id);
+  assert.equal(updated?.ircCloudAvatarId, '12');
+  assert.deepEqual(harness.sent.find((message) => message.type === 'buffer.upsert'), {
+    type: 'buffer.upsert',
+    buffer: updated,
+  });
+});
+
 test('incoming private messages reuse an existing query buffer across IRC nick casing', () => {
   const harness = createRuntimeEventHarness();
   const existingQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'Alice');

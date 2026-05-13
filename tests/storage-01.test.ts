@@ -173,6 +173,25 @@ test('storage preserves query buffer notes when later upserts omit notes', () =>
   assert.equal(storage.conversations.getBuffer(query.id)?.notes, 'Met near the docks');
 });
 
+test('storage preserves query buffer IRCCloud avatar ids when later upserts omit them', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput({ name: 'RoleplayNet' }));
+  const query = storage.conversations.upsertQuery(network.id, 'helper', null, '7');
+
+  const updated = storage.conversations.upsertBuffer({
+    networkId: network.id,
+    kind: 'query',
+    target: 'helper',
+    unread: 2,
+  });
+
+  assert.equal(query.ircCloudAvatarId, '7');
+  assert.equal(updated.id, query.id);
+  assert.equal(updated.ircCloudAvatarId, '7');
+  assert.equal(storage.conversations.getBuffer(query.id)?.ircCloudAvatarId, '7');
+});
+
 test('muted nick storage dedupes case-insensitively per network while allowing other networks', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

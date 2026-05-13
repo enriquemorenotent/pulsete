@@ -248,6 +248,7 @@ const toBufferInput = (input: QueryBufferInput): BufferInput => {
     priorityUnread: input.priorityUnread,
     lastReadTs: input.lastReadTs,
     lastReadMessageId: input.lastReadMessageId,
+    ircCloudAvatarId: input.ircCloudAvatarId,
     selfNickAliases: input.selfNickAliases,
     isOpen: input.isOpen,
   };
@@ -264,6 +265,7 @@ const retargetQueryBuffer = (db: SqliteDb, buffer: BufferState, input: QueryBuff
     priorityUnread: input.priorityUnread ?? buffer.priorityUnread,
     lastReadTs: input.lastReadTs ?? buffer.lastReadTs,
     lastReadMessageId: input.lastReadMessageId ?? buffer.lastReadMessageId,
+    ircCloudAvatarId: input.ircCloudAvatarId ?? buffer.ircCloudAvatarId,
     selfNickAliases: input.selfNickAliases ?? buffer.selfNickAliases,
   });
 
@@ -328,6 +330,7 @@ const mergeQueryBuffers = (
       priorityUnread: buffer.priorityUnread + candidate.priorityUnread,
       ...pickLatestReadState(buffer, candidate),
       notes: pickQueryNotes(buffer, candidate),
+      ircCloudAvatarId: buffer.ircCloudAvatarId ?? candidate.ircCloudAvatarId,
       selfNickAliases: mergeNickAliases(buffer.selfNickAliases ?? [], candidate.selfNickAliases ?? []),
     };
   }

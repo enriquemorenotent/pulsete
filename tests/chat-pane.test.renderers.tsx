@@ -4,6 +4,10 @@ import { ChatPane } from '../web/src/ChatPane.js';
 import type { ContactRuleHandlers, ContactRuleState } from '../web/src/contact-notifications/contact-rules.js';
 import { closedChannelList, makeQueryWorkspace, makeServerWorkspace, makeWorkspace } from './chat-pane.test.fixtures.js';
 
+type QueryAvatarUser = ChannelUserState & {
+  ircCloudAvatarId?: string | null;
+};
+
 export const noopContactRuleHandlers: ContactRuleHandlers = {
   addFriend: async () => true,
   mute: async () => true,
@@ -25,7 +29,7 @@ export const renderChatPane = (
     nickEmojis: NickEmojiState[];
     mutedNicks: MutedNickState[];
     externalAvatarsEnabled: boolean;
-    selectedQueryAvatarUser: ChannelUserState | null;
+    selectedQueryAvatarUser: QueryAvatarUser | null;
     topic: string;
     draft: string;
   }> = {},
@@ -79,7 +83,7 @@ export const renderQueryPane = (
     mutedQueryNick: string;
     mutedNicks: MutedNickState[];
     externalAvatarsEnabled: boolean;
-    selectedQueryAvatarUser: ChannelUserState | null;
+    selectedQueryAvatarUser: QueryAvatarUser | null;
     draft: string;
   }> = {},
 ) =>

@@ -115,6 +115,7 @@ const ensureMessageBufferId = (db: SqliteDb, input: MessageInput, resolvedBuffer
         target: input.target,
         isOpen: false,
         peerIdentity: routingIdentity,
+        ircCloudAvatarId: input.ircCloudAvatarId ?? undefined,
         peerIdentitySource: 'message',
       })
     : upsertBuffer(db, {

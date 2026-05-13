@@ -185,6 +185,69 @@ test('message account tags are stored as sender identity', () => {
   assert.deepEqual(identities, [{ kind: 'account', value: 'aliceaccount' }]);
 });
 
+test('direct messages expose IRCCloud avatar ids from sender prefixes', () => {
+  const avatarIds: unknown[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'message') {
+          avatarIds.push(event.message.ircCloudAvatarId);
+        }
+      },
+    }
+  );
+
+  handleIrcLine(connection, '@account=Alice :alice!uid7@gateway/web/irccloud.com/x-sid9 PRIVMSG tester :hello');
+
+  assert.deepEqual(avatarIds, ['7']);
+});
+
+test('channel messages do not expose IRCCloud avatar ids as query metadata', () => {
+  const avatarIds: unknown[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'message') {
+          avatarIds.push(event.message.ircCloudAvatarId);
+        }
+      },
+    }
+  );
+  handleIrcLine(connection, ':tester!user@host JOIN #help');
+
+  handleIrcLine(connection, ':alice!uid7@gateway/web/irccloud.com/x-sid9 PRIVMSG #help :hello');
+
+  assert.deepEqual(avatarIds, [undefined, undefined]);
+});
+
 test('rejected connected nick changes keep the last accepted nick', () => {
   const writes: string[] = [];
   const statuses: string[] = [];

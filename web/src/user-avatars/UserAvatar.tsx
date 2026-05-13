@@ -13,7 +13,9 @@ type UserAvatarProps = {
   placeholder?: 'initial' | 'none';
   preview?: boolean;
   size?: 'md' | 'sm';
-  user: Pick<ChannelUserState, 'host' | 'nick' | 'username'> | null | undefined;
+  user: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
+    ircCloudAvatarId?: string | null;
+  }) | null | undefined;
 };
 
 const avatarSizeClassName = {

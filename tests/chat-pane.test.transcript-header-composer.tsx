@@ -142,6 +142,23 @@ test('query headers render IRCCloud avatars when external avatars are enabled', 
   assert.match(markup, /cursor-zoom-in/);
 });
 
+test('query headers render persisted PM IRCCloud avatars without channel presence', () => {
+  const markup = renderQueryPane([], {
+    externalAvatarsEnabled: true,
+    selectedQueryAvatarUser: {
+      nick: 'MissD',
+      mode: 'normal',
+      away: false,
+      username: null,
+      host: null,
+      ircCloudAvatarId: '7',
+    },
+  });
+
+  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  assert.match(markup, /aria-label="Avatar for MissD"/);
+});
+
 test('query headers render avatar placeholders when no IRCCloud avatar is available', () => {
   const markup = renderQueryPane([], {
     externalAvatarsEnabled: true,

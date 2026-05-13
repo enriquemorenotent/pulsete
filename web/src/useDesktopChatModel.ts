@@ -67,7 +67,12 @@ export function useDesktopChatModel({
   const selectedQueryAvatarUser = useMemo(() => {
     const selectedBuffer = workspace.selectedBuffer;
     return selectedBuffer?.kind === 'query'
-      ? resolveUserAvatarCandidate(channels, selectedBuffer.networkId, selectedBuffer.target)
+      ? resolveUserAvatarCandidate(
+          channels,
+          selectedBuffer.networkId,
+          selectedBuffer.target,
+          selectedBuffer.ircCloudAvatarId,
+        )
       : null;
   }, [channels, workspace.selectedBuffer]);
   const selectedQueryIdentity = workspace.selectedBuffer?.kind === 'query'

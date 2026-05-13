@@ -16,7 +16,7 @@ export function PreferencesAvatarSection(props: PreferencesAvatarSectionProps) {
           Avatars
         </h3>
         <p className="text-[13px] text-muted-foreground">
-          Show public IRCCloud avatars when Pulsete can identify a user from channel presence.
+          Show public IRCCloud avatars when Pulsete can identify a user from channel presence or private messages.
         </p>
       </div>
 

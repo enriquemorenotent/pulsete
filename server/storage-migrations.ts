@@ -21,7 +21,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 25;
+export const currentStorageSchemaVersion = 26;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -191,6 +191,12 @@ const storageMigrations: readonly StorageMigration[] = [
       backfillQueryPeerIdentities(db);
     },
   },
+  {
+    version: 26,
+    apply: (db) => {
+      ensureColumn(db, 'buffers', 'ircCloudAvatarId', 'TEXT');
+    },
+  },
 ];
 
 export const bootstrapStorageSchema = (db: SqliteDb) => db.exec(storageBootstrapSchemaSql);
@@ -240,6 +246,7 @@ const ensureCurrentNetworkColumns = (db: SqliteDb) => {
 
 const ensureCurrentBufferColumns = (db: SqliteDb) => {
   ensureColumn(db, 'buffers', 'notes', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'buffers', 'ircCloudAvatarId', 'TEXT');
 };
 
 const getUserVersion = (db: SqliteDb) =>
