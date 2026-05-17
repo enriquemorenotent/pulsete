@@ -95,35 +95,37 @@ export function ConnectionSidebarNetworkSection(
 						</div>
 					</div>
 				</button>
-				<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-					<button
-						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
-						onClick={() =>
-							connection.runtime?.phase === 'connected'
-								? props.onDisconnectNetwork(
-										connection.network.id,
-									)
-								: props.onReconnectNetwork(connection.network)
-						}
-						aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${connection.label}`}
-						disabled={connection.runtime?.phase === 'connecting'}
-					>
-						{connection.runtime?.phase === 'connected' ? (
-							<PowerOff className="size-3" />
-						) : (
-							<RefreshCcw className="size-3" />
-						)}
-					</button>
-					<button
-						className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
-						onClick={() =>
-							props.onCloseConnection(connection.network)
-						}
-						aria-label={`Close ${connection.label}`}
-					>
-						<X className="size-3" />
-					</button>
-				</div>
+				{props.variant === 'server-rail' ? null : (
+					<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+						<button
+							className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
+							onClick={() =>
+								connection.runtime?.phase === 'connected'
+									? props.onDisconnectNetwork(
+											connection.network.id,
+										)
+									: props.onReconnectNetwork(connection.network)
+							}
+							aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${connection.label}`}
+							disabled={connection.runtime?.phase === 'connecting'}
+						>
+							{connection.runtime?.phase === 'connected' ? (
+								<PowerOff className="size-3" />
+							) : (
+								<RefreshCcw className="size-3" />
+							)}
+						</button>
+						<button
+							className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
+							onClick={() =>
+								props.onCloseConnection(connection.network)
+							}
+							aria-label={`Close ${connection.label}`}
+						>
+							<X className="size-3" />
+						</button>
+					</div>
+				)}
 			</div>
 			{connection.childBuffers.length > 0 ||
 			connection.pendingChannels.length > 0 ? (

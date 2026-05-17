@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { PowerOff, RefreshCcw, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
@@ -69,6 +70,12 @@ function ConnectionRailDetail(
           {activeConnection ? (
             <>
               <ServerRailBanner connection={activeConnection} />
+              <ServerRailActionBar
+                connection={activeConnection}
+                onReconnectNetwork={props.onReconnectNetwork}
+                onDisconnectNetwork={props.onDisconnectNetwork}
+                onCloseConnection={props.onCloseConnection}
+              />
               <ConnectionSidebarNetworkSection
                 connection={activeConnection}
                 index={0}
@@ -89,6 +96,49 @@ function ConnectionRailDetail(
         </div>
       </ScrollArea>
     </section>
+  );
+}
+
+function ServerRailActionBar(props: {
+  connection: SidebarConnectionView;
+  onReconnectNetwork: ConnectionSidebarProps['onReconnectNetwork'];
+  onDisconnectNetwork: ConnectionSidebarProps['onDisconnectNetwork'];
+  onCloseConnection: ConnectionSidebarProps['onCloseConnection'];
+}) {
+  const phase = props.connection.runtime?.phase ?? 'offline';
+  const actionLabel =
+    phase === 'connected'
+      ? 'Disconnect'
+      : phase === 'connecting'
+        ? 'Connecting'
+        : 'Connect';
+  return (
+    <div className="mb-1 flex items-center justify-between gap-1 px-0.5">
+      <button
+        className="flex h-7 shrink-0 items-center gap-1.5 rounded-sm px-2 text-[11px] font-medium text-muted-foreground/90 transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
+        onClick={() =>
+          phase === 'connected'
+            ? props.onDisconnectNetwork(props.connection.network.id)
+            : props.onReconnectNetwork(props.connection.network)
+        }
+        aria-label={`${actionLabel} ${props.connection.label}`}
+        disabled={phase === 'connecting'}
+      >
+        {phase === 'connected' ? (
+          <PowerOff className="size-3" />
+        ) : (
+          <RefreshCcw className="size-3" />
+        )}
+        <span>{actionLabel}</span>
+      </button>
+      <button
+        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground/80 transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
+        onClick={() => props.onCloseConnection(props.connection.network)}
+        aria-label={`Close ${props.connection.label}`}
+      >
+        <X className="size-3" />
+      </button>
+    </div>
   );
 }
 

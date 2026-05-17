@@ -72,8 +72,30 @@ test('server rail shows all servers but only the active server tabs', () => {
   assert.doesNotMatch(markup, /Alpha<\/h2>/);
   assert.doesNotMatch(markup, /ml-3 min-w-0 space-y-px border-l border-white\/7 pl-2/);
   assert.match(markup, /class="min-w-0 space-y-px w-full"/);
+  assert.match(markup, /aria-label="Connect Alpha \(sofia\)"/);
+  assert.match(markup, /aria-label="Close Alpha \(sofia\)"/);
+  assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
   assert.match(markup, /aria-label="Open #alpha"/);
   assert.doesNotMatch(markup, /aria-label="Open #beta"/);
+});
+
+test('server rail puts server actions above the tab list', () => {
+  const alpha = makeSidebarNetwork({ id: 'alpha', name: 'Alpha' });
+  const markup = renderConnectionSidebar({
+    navigationLayoutMode: 'server-rail',
+    networks: [alpha],
+    networkStates: {
+      alpha: makeSidebarRuntime({ phase: 'connected' }),
+    },
+    buffers: [makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' })],
+    selection: { kind: 'buffer', bufferId: 'alpha-server' },
+  });
+
+  assert.doesNotMatch(markup, />connected<\/span>/);
+  assert.match(markup, /aria-label="Disconnect Alpha \(sofia\)"/);
+  assert.match(markup, />Disconnect<\/span>/);
+  assert.match(markup, /aria-label="Close Alpha \(sofia\)"/);
+  assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
 });
 
 test('server rail aggregates hidden child unread activity on server buttons', () => {
