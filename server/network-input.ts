@@ -12,6 +12,7 @@ const networkInputSchema = z.object({
   tls: z.boolean(),
   nick: z.string().trim().min(1, 'Nick name is required'),
   username: z.string().trim().optional(),
+  iconUrl: z.string().trim().optional(),
   altNicks: z.array(z.string()).optional().default([]),
   historicalSelfNicks: z.array(z.string()).optional().default([]),
   realName: z.string().optional().default(''),
@@ -46,6 +47,9 @@ export const parseNetworkInput = (body: unknown, id?: string): NetworkInput => {
   requireIrcToken(data.nick, 'Nick name cannot contain whitespace');
   if (data.username) {
     requireIrcToken(data.username, 'Username cannot contain whitespace');
+  }
+  if (data.iconUrl) {
+    requireSingleLineValue(data.iconUrl, 'Server image URL cannot contain carriage returns or line feeds');
   }
   for (const altNick of data.altNicks) {
     requireIrcToken(altNick, 'Alternate nick cannot contain whitespace');

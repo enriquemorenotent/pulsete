@@ -25,6 +25,6 @@ test('selected server rows stay prominent for non-priority unread state', () => 
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[12\.5px\] text-foreground font-semibold">Cuff-Link<\/span>/,
+    /class="truncate text-\[12\.5px\] text-foreground font-semibold block min-w-0 flex-1">Cuff-Link<\/span>/,
   );
 });

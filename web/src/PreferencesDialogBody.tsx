@@ -5,11 +5,14 @@ import type {
 } from './contact-notifications/settings.js';
 import { PreferencesAvatarSection } from './PreferencesAvatarSection.js';
 import { PreferencesBackupSection } from './PreferencesBackupSection.js';
+import { PreferencesNavigationSection } from './PreferencesNavigationSection.js';
 import { PreferencesNotificationsPanel } from './PreferencesNotificationsPanel.js';
+import type { NavigationLayoutSettings } from './navigation-layout-settings.js';
 import type { UserAvatarSettings } from './user-avatars/settings.js';
 
 export type PreferencesDialogBodyProps = {
   contactNotifications: ContactNotificationSettings;
+  navigationLayoutSettings: NavigationLayoutSettings;
   userAvatarSettings: UserAvatarSettings;
   mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
@@ -23,6 +26,7 @@ export type PreferencesDialogBodyProps = {
   onPreviewContactNotificationSound: (sound: ContactNotificationSettings['sound']) => void;
   onRemoveContactNotificationContact: (contact: ContactNotificationContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
+  onSetNavigationLayoutMode: (mode: NavigationLayoutSettings['mode']) => void;
   onSetExternalAvatarsEnabled: (enabled: boolean) => void;
   onExportBackup: () => Promise<void>;
   onImportBackup: (file: Blob) => Promise<void>;
@@ -31,6 +35,10 @@ export type PreferencesDialogBodyProps = {
 export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
   return (
     <div className="space-y-6">
+      <PreferencesNavigationSection
+        mode={props.navigationLayoutSettings.mode}
+        onSetMode={props.onSetNavigationLayoutMode}
+      />
       <PreferencesAvatarSection
         settings={props.userAvatarSettings}
         onSetExternalAvatarsEnabled={props.onSetExternalAvatarsEnabled}

@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { badRequest, payloadTooLarge } from './app-error.js';
 
 export const jsonBodyLimitBytes = 64 * 1024;
+export const networkJsonBodyLimitBytes = 8 * 1024 * 1024;
 export const backupBodyLimitBytes = 512 * 1024 * 1024;
 const requestBase = 'http://127.0.0.1';
 

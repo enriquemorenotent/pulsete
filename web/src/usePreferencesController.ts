@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
+import type { NavigationLayoutSettingsController } from './navigation-layout-settings.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol-chat.js';
@@ -12,6 +13,7 @@ type PreferencesControllerParams = {
   >;
   contactNotifications: ContactNotificationsController;
   mutedNicks: MutedNickState[];
+  navigationLayoutSettings: NavigationLayoutSettingsController;
   networks: NetworkProfile[];
   userAvatarSettings: UserAvatarSettingsController;
   ui: Pick<AppUiState, 'closePreferences' | 'openPreferences' | 'preferencesOpen'>;
@@ -21,6 +23,7 @@ export function usePreferencesController({
   actions,
   contactNotifications,
   mutedNicks,
+  navigationLayoutSettings,
   networks,
   userAvatarSettings,
   ui,
@@ -28,6 +31,7 @@ export function usePreferencesController({
   return useMemo(() => ({
     open: ui.preferencesOpen,
     contactNotifications: contactNotifications.settings,
+    navigationLayoutSettings: navigationLayoutSettings.settings,
     userAvatarSettings: userAvatarSettings.settings,
     mutedNicks,
     networks,
@@ -45,6 +49,7 @@ export function usePreferencesController({
     onPreviewContactNotificationSound: contactNotifications.preview,
     onRemoveContactNotificationContact: contactNotifications.removeContact,
     onRemoveMutedNick: actions.removeMutedNick,
+    onSetNavigationLayoutMode: navigationLayoutSettings.setMode,
     onSetExternalAvatarsEnabled: userAvatarSettings.setExternalAvatarsEnabled,
     onExportBackup: actions.exportBackup,
     onImportBackup: actions.importBackup,
@@ -62,6 +67,8 @@ export function usePreferencesController({
     contactNotifications.prime,
     contactNotifications.preview,
     mutedNicks,
+    navigationLayoutSettings.settings,
+    navigationLayoutSettings.setMode,
     networks,
     userAvatarSettings.settings,
     userAvatarSettings.setExternalAvatarsEnabled,

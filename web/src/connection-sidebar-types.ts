@@ -1,11 +1,13 @@
 import type { BufferState, FriendState, NetworkProfile, NickEmojiState, PresenceStatus } from '../../shared/protocol-chat.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
+import type { NavigationLayoutMode } from './navigation-layout-settings.js';
 
 export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
   friends: FriendState[];
   friendPresence: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;
+  navigationLayoutMode?: NavigationLayoutMode;
   nickEmojis: NickEmojiState[];
   queryPresence?: Record<string, PresenceStatus>;
   onAddFriend: (nick: string) => Promise<boolean>;

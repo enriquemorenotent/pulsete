@@ -63,11 +63,14 @@ export function ConnectionSidebarBufferRow(
 					) : null}
 				</span>
 				<span
-					className={connectionSidebarLabelClass(activity, {
-						dimmed: props.dimmed,
-						offline: props.presence === 'offline',
-						selected: props.selected,
-					})}
+					className={cn(
+						connectionSidebarLabelClass(activity, {
+							dimmed: props.dimmed,
+							offline: props.presence === 'offline',
+							selected: props.selected,
+						}),
+						'block min-w-0 flex-1',
+					)}
 				>
 					{props.buffer.target}
 					{props.emoji ? (

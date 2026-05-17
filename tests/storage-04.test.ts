@@ -40,6 +40,24 @@ test('storage persists custom IRC usernames and leaves blank values as nick fall
   assert.equal(storage.networks.getRuntime(defaulted.id)?.username, '');
 });
 
+test('storage persists custom network icon URLs', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+
+  const network = storage.networks.upsert(createNetworkInput({
+    iconUrl: 'https://example.test/icon.png',
+  }));
+  const blankIcon = storage.networks.upsert(createNetworkInput({
+    name: 'BlankIconNet',
+    iconUrl: '',
+  }));
+
+  assert.equal(storage.networks.get(network.id)?.iconUrl, 'https://example.test/icon.png');
+  assert.equal(storage.networks.getRuntime(network.id)?.iconUrl, 'https://example.test/icon.png');
+  assert.equal(storage.networks.get(blankIcon.id)?.iconUrl, undefined);
+  assert.equal(storage.networks.getRuntime(blankIcon.id)?.iconUrl, undefined);
+});
+
 test('storage can toggle workspace state after creation', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

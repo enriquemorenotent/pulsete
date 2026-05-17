@@ -24,13 +24,13 @@ export function ConnectionSidebarPendingChannelRow(props: ConnectionSidebarPendi
         <Hash className="size-3.5 shrink-0 text-muted-foreground/80" />
         <span
           className={cn(
-            'truncate text-[12px] font-medium',
+            'block min-w-0 flex-1 truncate text-[12px] font-medium',
             props.selected ? 'text-foreground' : 'text-muted-foreground/90',
           )}
         >
           {props.pendingChannel.channel}
         </span>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
           <LoaderCircle className="size-2.5 animate-spin" />
           joining
         </span>

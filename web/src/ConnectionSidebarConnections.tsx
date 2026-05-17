@@ -27,8 +27,8 @@ export function ConnectionSidebarConnections(
 					Connections
 				</h2>
 			</div>
-			<ScrollArea className="min-h-0 flex-1">
-				<div className="space-y-1.5 pr-0.5">
+			<ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0 [&_[data-radix-scroll-area-viewport]>div]:!w-full">
+				<div className="min-w-0 space-y-1.5 pr-0.5">
 					{props.connections.length === 0 ? (
 						<div className="rounded-md bg-black/10 px-2 py-1.5 text-[12px] text-muted-foreground ring-1 ring-white/5">
 							No open connections. Use Network Manager to connect.

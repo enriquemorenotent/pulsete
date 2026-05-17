@@ -19,6 +19,7 @@ export const storageBootstrapSchemaSql = `
     tls INTEGER NOT NULL,
     nick TEXT NOT NULL,
     username TEXT NOT NULL DEFAULT '',
+    iconUrl TEXT NOT NULL DEFAULT '',
     realName TEXT NOT NULL DEFAULT '',
     password TEXT,
     authMethod TEXT NOT NULL DEFAULT 'none',

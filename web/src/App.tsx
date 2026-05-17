@@ -11,6 +11,7 @@ import { AppStoreProvider, createAppStore, useAppSelector } from './app-store.js
 import { createComposerStore } from './composer-store.js';
 import { useContactNotifications } from './contact-notifications/controller.js';
 import { DesktopShell } from './DesktopShell.js';
+import { useNavigationLayoutSettings } from './navigation-layout-settings.js';
 import { ToastContainer } from './ToastContainer.js';
 import { useUserAvatarSettings } from './user-avatars/settings.js';
 import { createLiveAppActions } from './useAppActions.js';
@@ -75,7 +76,7 @@ function App() {
 
 type AppBodyProps = Omit<
   Parameters<typeof DesktopShell>[0],
-  'contactNotifications' | 'userAvatarSettings'
+  'contactNotifications' | 'navigationLayoutSettings' | 'userAvatarSettings'
 >;
 
 function AppBody(props: AppBodyProps) {
@@ -91,6 +92,7 @@ function AppBody(props: AppBodyProps) {
     onSelectBuffer: props.actions.selectTabBuffer,
     selectedBufferId,
   });
+  const navigationLayoutSettings = useNavigationLayoutSettings();
   const userAvatarSettings = useUserAvatarSettings();
 
   if (phase === 'loading') {
@@ -106,6 +108,7 @@ function AppBody(props: AppBodyProps) {
       <DesktopShell
         {...props}
         contactNotifications={contactNotifications}
+        navigationLayoutSettings={navigationLayoutSettings}
         userAvatarSettings={userAvatarSettings}
       />
       <ToastContainer />

@@ -87,9 +87,9 @@ test('oversized json bodies are rejected before parsing', async () => {
   const port = await listen(server);
 
   try {
-    const response = await requestJson(port, 'POST', '/api/networks', {
+    const response = await requestJson(port, 'POST', '/api/friends', {
       ...createNetworkInput(),
-      realName: 'x'.repeat(70_000),
+      nick: 'x'.repeat(70_000),
     });
     assert.equal(response.status, 413);
     assert.equal(response.json.message, 'Request body too large');

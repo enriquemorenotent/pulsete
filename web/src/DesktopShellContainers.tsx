@@ -27,6 +27,7 @@ import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
+import type { NavigationLayoutSettingsController } from './navigation-layout-settings.js';
 import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.js';
 import { useDesktopChatModel } from './useDesktopChatModel.js';
 import {
@@ -46,6 +47,10 @@ type SharedProps = {
   ui: AppUiState;
 };
 
+type SidebarContainerProps = SharedProps & {
+  navigationLayoutSettings: NavigationLayoutSettingsController;
+};
+
 type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   applyServerMessages: ApplyServerMessages;
   composer: ComposerStoreApi;
@@ -63,8 +68,9 @@ type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
 
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
   actions,
+  navigationLayoutSettings,
   ui,
-}: SharedProps) {
+}: SidebarContainerProps) {
   const friends = useAppSelector(selectFriends);
   const friendPresence = useAppSelector(selectFriendPresence);
   const nickEmojis = useAppSelector(selectNickEmojis);
@@ -75,6 +81,7 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
     friends,
     friendPresence,
     nickEmojis,
+    navigationLayoutMode: navigationLayoutSettings.settings.mode,
     queryPresence,
     sidebarConnections,
     ui,

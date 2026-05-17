@@ -12,6 +12,7 @@ import {
 import { LogInspectorDialogContainer } from './LogInspectorDialogContainer.js';
 import { createContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
+import type { NavigationLayoutSettingsController } from './navigation-layout-settings.js';
 import {
   NetworkEditorDialogContainer,
   NetworkManagerDialogContainer,
@@ -28,6 +29,7 @@ type DesktopShellProps = {
   applyServerMessages: ApplyServerMessages;
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
+  navigationLayoutSettings: NavigationLayoutSettingsController;
   userAvatarSettings: UserAvatarSettingsController;
   ui: AppUiState;
 };
@@ -79,7 +81,13 @@ export function DesktopShell(props: DesktopShellProps) {
       onJumpChatToLatest={requestJumpToLatest}
       selectedBufferId={selectedBufferId}
       rightSidebarKind={rightSidebarKind}
-      sidebar={<ConnectionSidebarContainer actions={props.actions} ui={props.ui} />}
+      sidebar={
+        <ConnectionSidebarContainer
+          actions={props.actions}
+          navigationLayoutSettings={props.navigationLayoutSettings}
+          ui={props.ui}
+        />
+      }
       chat={
         <ChatPaneContainer
           actions={props.actions}
@@ -111,6 +119,7 @@ export function DesktopShell(props: DesktopShellProps) {
         <PreferencesDialogContainer
           actions={props.actions}
           contactNotifications={props.contactNotifications}
+          navigationLayoutSettings={props.navigationLayoutSettings}
           userAvatarSettings={props.userAvatarSettings}
           ui={props.ui}
         />

@@ -15,12 +15,14 @@ import { useNetworkManagerController } from './useNetworkManagerController.js';
 import { usePreferencesController } from './usePreferencesController.js';
 import type { AppActions } from './useAppActions.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
+import type { NavigationLayoutSettingsController } from './navigation-layout-settings.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppUiState } from './useAppUiState.js';
 
 type PreferencesDialogContainerProps = {
   actions: AppActions;
   contactNotifications: ContactNotificationsController;
+  navigationLayoutSettings: NavigationLayoutSettingsController;
   userAvatarSettings: UserAvatarSettingsController;
   ui: AppUiState;
 };
@@ -28,6 +30,7 @@ type PreferencesDialogContainerProps = {
 export const PreferencesDialogContainer = memo(function PreferencesDialogContainer({
   actions,
   contactNotifications,
+  navigationLayoutSettings,
   userAvatarSettings,
   ui,
 }: PreferencesDialogContainerProps) {
@@ -37,6 +40,7 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
     actions,
     contactNotifications,
     mutedNicks,
+    navigationLayoutSettings,
     networks,
     userAvatarSettings,
     ui,

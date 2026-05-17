@@ -11,6 +11,7 @@ test('network form omits hidden passwords when auth is set to none', () => {
     tls: false,
     nick: 'tester',
     username: 'uid309962',
+    iconUrl: ' https://example.test/icon.png ',
     nick2: 'tester_',
     nick3: 'tester__',
     realName: 'Tester Example',
@@ -30,6 +31,7 @@ test('network form omits hidden passwords when auth is set to none', () => {
   assert.equal(payload.authMethod, 'none');
   assert.equal(payload.authAccount, '');
   assert.equal(payload.username, 'uid309962');
+  assert.equal(payload.iconUrl, 'https://example.test/icon.png');
   assert.equal(payload.notes, 'Character: Mira');
 });
 
@@ -42,6 +44,7 @@ test('network form omits blank username identities', () => {
     tls: false,
     nick: 'tester',
     username: '   ',
+    iconUrl: '   ',
     nick2: '',
     nick3: '',
     realName: '',
@@ -57,6 +60,7 @@ test('network form omits blank username identities', () => {
   });
 
   assert.equal(payload.username, undefined);
+  assert.equal(payload.iconUrl, undefined);
 });
 
 test('network form includes the explicit auth account for sasl', () => {
@@ -68,6 +72,7 @@ test('network form includes the explicit auth account for sasl', () => {
     tls: false,
     nick: 'tester',
     username: '',
+    iconUrl: '',
     nick2: 'tester_',
     nick3: 'tester__',
     realName: 'Tester Example',
@@ -95,6 +100,7 @@ test('network form preserves exact passwords for password-based auth methods', (
     tls: false,
     nick: 'tester',
     username: '',
+    iconUrl: '',
     nick2: 'tester_',
     nick3: 'tester__',
     realName: 'Tester Example',

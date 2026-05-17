@@ -3,6 +3,7 @@ import type { BufferState, FriendState, NetworkProfile, NickEmojiState, Presence
 import { ConnectionSidebar } from '../../web/src/ConnectionSidebar.js';
 import { buildConnectionSidebarView } from '../../web/src/connection-sidebar-view.js';
 import { buildConversationIndex } from '../../web/src/conversation-selectors.js';
+import type { NavigationLayoutMode } from '../../web/src/navigation-layout-settings.js';
 import type { NetworkRuntimeState } from '../../web/src/workspace.js';
 
 type SidebarViewInput = Parameters<typeof buildConnectionSidebarView>[0];
@@ -12,6 +13,7 @@ type RenderConnectionSidebarOptions = {
   friends?: FriendState[];
   friendPresence?: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;
+  navigationLayoutMode?: NavigationLayoutMode;
   nickEmojis?: NickEmojiState[];
   networks?: NetworkProfile[];
   networkStates?: Record<string, NetworkRuntimeState>;
@@ -30,6 +32,7 @@ export const makeSidebarNetwork = (
   nick: overrides.nick ?? 'sofia',
   altNicks: overrides.altNicks ?? ['sofia_', 'sofia__'],
   realName: overrides.realName ?? 'Sofia',
+  iconUrl: overrides.iconUrl,
   hasPassword: overrides.hasPassword ?? false,
   favorite: overrides.favorite ?? false,
   autoJoin: overrides.autoJoin ?? [],
@@ -71,6 +74,7 @@ export const renderConnectionSidebar = (options: RenderConnectionSidebarOptions 
       friends={options.friends ?? []}
       friendPresence={options.friendPresence ?? {}}
       hideOfflineFriends={options.hideOfflineFriends}
+      navigationLayoutMode={options.navigationLayoutMode}
       nickEmojis={options.nickEmojis ?? []}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}

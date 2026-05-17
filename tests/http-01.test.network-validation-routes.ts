@@ -76,6 +76,13 @@ test('network save rejects invalid payloads and IRC-unsafe fields', async () => 
     assert.equal(unsafeUsername.status, 400);
     assert.equal(unsafeUsername.json.message, 'Username cannot contain whitespace');
 
+    const unsafeIconUrl = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      iconUrl: 'https://example.test/icon.png\r\nX-Injected: yes',
+    });
+    assert.equal(unsafeIconUrl.status, 400);
+    assert.equal(unsafeIconUrl.json.message, 'Server image URL cannot contain carriage returns or line feeds');
+
     const unsafeAuthTarget = await requestJson(port, 'POST', '/api/networks', {
       ...createNetworkInput(),
       authMethod: 'nickserv',

@@ -10,6 +10,8 @@ const entries: CommandPaletteEntry[] = [{
   id: 'buffer-unread',
   section: 'unread',
   label: '#ops',
+  networkIconUrl: 'data:image/png;base64,cHVsc2V0ZQ==',
+  networkRuntimePhase: 'offline',
   subtitle: 'Cuff-Link (cubanita)',
   keywords: ['ops'],
   badge: 'channel',
@@ -60,6 +62,10 @@ test('command palette body keeps the top chrome fixed above a flexible results p
   assert.match(markup, /Search channels, people, logs, networks, actions/);
   assert.match(markup, /class="relative overflow-hidden min-h-0 flex-1"/);
   assert.match(markup, /Unread/);
+  assert.match(
+    markup,
+    /<img src="data:image\/png;base64,cHVsc2V0ZQ==" alt="" class="size-8 shrink-0 rounded-sm object-cover grayscale opacity-60"/,
+  );
   assert.match(
     markup,
     /<span aria-hidden="true" class="shrink-0 rounded-full size-2\.5 bg-primary ring-2 ring-primary\/25"><\/span><span class="truncate">#ops<\/span>/,

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import type { NavigationLayoutSettings } from './navigation-layout-settings.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
@@ -24,6 +25,7 @@ type DesktopSidebarModelParams = {
   friends: State['domain']['friends'];
   friendPresence: State['domain']['friendPresence'];
   nickEmojis: State['domain']['nickEmojis'];
+  navigationLayoutMode: NavigationLayoutSettings['mode'];
   queryPresence: State['domain']['queryPresence'];
   sidebarConnections: ConnectionSidebarProps['connections'];
   ui: Pick<AppUiState, 'hideOfflineFriends' | 'toggleHideOfflineFriends'>;
@@ -62,6 +64,7 @@ export function useDesktopSidebarModel({
   friends,
   friendPresence,
   nickEmojis,
+  navigationLayoutMode,
   queryPresence,
   sidebarConnections,
   ui,
@@ -72,6 +75,7 @@ export function useDesktopSidebarModel({
       friends,
       friendPresence,
       hideOfflineFriends: ui.hideOfflineFriends,
+      navigationLayoutMode,
       nickEmojis,
       queryPresence,
       onAddFriend: actions.addFriend,
@@ -102,6 +106,7 @@ export function useDesktopSidebarModel({
       friendPresence,
       friends,
       nickEmojis,
+      navigationLayoutMode,
       queryPresence,
       sidebarConnections,
       ui.hideOfflineFriends,

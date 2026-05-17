@@ -34,6 +34,7 @@ const ensureLegacyWorkspaceColumns = (db: SqliteDb) => {
   ensureColumn(db, 'managerHidden', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'connectionClosed', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'username', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'iconUrl', "TEXT NOT NULL DEFAULT ''");
 };
 
 const ensureColumn = (db: SqliteDb, column: string, definition: string) => {

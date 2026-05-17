@@ -97,6 +97,39 @@ test('command palette keeps watchlist nick emoji separate from searchable labels
   assert.equal(ambiguousFriendEntry?.emoji, null);
 });
 
+test('command palette carries server images for network-backed entries', () => {
+  const iconUrl = 'data:image/png;base64,cHVsc2V0ZQ==';
+  const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
+    connections: [{
+      ...connection,
+      network: { ...network, iconUrl },
+      runtime: {
+        phase: 'offline',
+        serverName: connection.runtime?.serverName ?? null,
+        nick: connection.runtime?.nick ?? network.nick,
+      },
+    }],
+  }));
+
+  assert.deepEqual(
+    entries
+      .filter((entry) => entry.id.startsWith('network:')
+        || entry.id.startsWith('buffer:')
+        || entry.id.startsWith('pending:'))
+      .map((entry) => entry.networkIconUrl),
+    [iconUrl, iconUrl, iconUrl, iconUrl],
+  );
+  assert.deepEqual(
+    entries
+      .filter((entry) => entry.id.startsWith('network:')
+        || entry.id.startsWith('buffer:')
+        || entry.id.startsWith('pending:'))
+      .map((entry) => entry.networkRuntimePhase),
+    ['offline', 'offline', 'offline', 'offline'],
+  );
+  assert.equal(entries.find((entry) => entry.id === `friend:${friend.id}`)?.networkIconUrl, undefined);
+});
+
 test('command palette action dispatcher routes each action to the matching handler', async () => {
   const calls: string[] = [];
   const handlers = {

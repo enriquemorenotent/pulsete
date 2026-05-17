@@ -24,6 +24,7 @@ import {
   type CommandPaletteEntrySection,
 } from './command-palette.js';
 import { scheduleAnimationFrameFocus } from './animation-frame-focus.js';
+import { networkImageRuntimePhaseClass } from './network-image-state.js';
 
 type CommandPaletteDialogProps = {
   open: boolean;
@@ -106,7 +107,6 @@ export function CommandPaletteDialog(props: CommandPaletteDialogProps) {
     }
   };
 
-
   return (
     <Dialog open={props.open} onOpenChange={(open) => !open && props.onClose()}>
       <DialogContent className="h-[min(80dvh,32rem)] max-h-[80dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),40rem)]">
@@ -176,15 +176,22 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
                           void entry.onSelect();
                         }}
                       >
+                        {entry.networkIconUrl ? (
+                          <img
+                            src={entry.networkIconUrl}
+                            alt=""
+                            className={cn('size-8 shrink-0 rounded-sm object-cover', networkImageRuntimePhaseClass(entry.networkRuntimePhase))}
+                            loading="lazy"
+                            decoding="async"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : null}
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium">
                             {hasUnreadPaletteActivity(entry) ? (
                               <span
                                 aria-hidden
-                                className={cn(
-                                  'shrink-0 rounded-full',
-                                  unreadMarkerTone(entry),
-                                )}
+                                className={cn('shrink-0 rounded-full', unreadMarkerTone(entry))}
                               />
                             ) : null}
                             <span className="truncate">{entry.label}</span>

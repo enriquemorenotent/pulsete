@@ -128,7 +128,7 @@ test('connected rows rely on the status dot instead of repeating a connected lab
   assert.match(markup, /text-emerald-400/);
   assert.match(
     markup,
-    /class="truncate text-\[12\.5px\] text-foreground font-semibold">Cuff-Link<\/span>/,
+    /class="truncate text-\[12\.5px\] text-foreground font-semibold block min-w-0 flex-1">Cuff-Link<\/span>/,
   );
 });
 
@@ -212,7 +212,7 @@ test('server rows use the overlaid dot for unread state instead of a trailing ma
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[12\.5px\] text-foreground font-semibold">Cuff-Link<\/span>/,
+    /class="truncate text-\[12\.5px\] text-foreground font-semibold block min-w-0 flex-1">Cuff-Link<\/span>/,
   );
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
 });

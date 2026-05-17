@@ -63,7 +63,7 @@ test('current local databases do not create pre-migration backups', () => {
   assert.equal(existsSync(join(dir, 'backups')), false);
 });
 
-test('current network schema stores configured usernames', () => {
+test('current network schema stores configurable network identity fields', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
 
@@ -75,6 +75,7 @@ test('current network schema stores configured usernames', () => {
   db.close();
 
   assert.equal(columns.some((column) => column.name === 'username'), true);
+  assert.equal(columns.some((column) => column.name === 'iconUrl'), true);
 });
 
 const createLegacyFormattingDatabase = (file: string, now: number) => {
@@ -89,6 +90,7 @@ const createLegacyFormattingDatabase = (file: string, now: number) => {
       tls INTEGER NOT NULL,
       nick TEXT NOT NULL,
       username TEXT NOT NULL,
+      iconUrl TEXT NOT NULL DEFAULT '',
       password TEXT,
       createdAt INTEGER NOT NULL,
       updatedAt INTEGER NOT NULL
@@ -123,9 +125,9 @@ const createLegacyFormattingDatabase = (file: string, now: number) => {
   `);
   existing.prepare(`
     INSERT INTO networks
-      (id, name, host, port, tls, nick, username, password, createdAt, updatedAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run('network-1', 'Instance', 'irc.example.test', 6667, 0, 'tester', 'tester', null, now, now);
+      (id, name, host, port, tls, nick, username, iconUrl, password, createdAt, updatedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run('network-1', 'Instance', 'irc.example.test', 6667, 0, 'tester', 'tester', '', null, now, now);
   existing.prepare(`
     INSERT INTO buffers
       (id, networkId, kind, target, unread, createdAt, updatedAt)

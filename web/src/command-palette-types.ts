@@ -1,4 +1,5 @@
 import type { FriendState, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { NetworkImageRuntimePhase } from './network-image-state.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 
 export type CommandPaletteEntrySection = 'unread' | 'buffers' | 'friends' | 'actions';
@@ -27,6 +28,8 @@ export type CommandPaletteEntrySpec = {
   section: CommandPaletteEntrySection;
   label: string;
   emoji?: string | null;
+  networkIconUrl?: string | null;
+  networkRuntimePhase?: NetworkImageRuntimePhase | null;
   subtitle: string | null;
   keywords: string[];
   badge: string | null;

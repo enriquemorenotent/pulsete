@@ -1,8 +1,9 @@
-import { Hash, MessageSquareMore, PowerOff, RefreshCcw, Server, X } from 'lucide-react';
+import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { ConnectionSidebarBufferRow } from './ConnectionSidebarBufferRow.js';
+import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
 import { ConnectionSidebarPendingChannelRow } from './ConnectionSidebarPendingChannelRow.js';
 import {
 	connectionSidebarLabelClass,
@@ -28,6 +29,7 @@ type ConnectionSidebarNetworkSectionProps = {
 	onCloseConnection: ConnectionSidebarProps['onCloseConnection'];
 	onCloseChannel: ConnectionSidebarProps['onCloseChannel'];
 	onCloseBuffer: ConnectionSidebarProps['onCloseBuffer'];
+	variant?: 'default' | 'server-rail';
 };
 
 export function ConnectionSidebarNetworkSection(
@@ -58,12 +60,14 @@ export function ConnectionSidebarNetworkSection(
 					}
 				>
 					<span className="relative flex size-4 shrink-0 items-center justify-center">
-						<Server
-							aria-hidden
-							className={cn(
-								'size-3.5 shrink-0',
-								serverIconTone(connection.runtime),
-							)}
+						<ConnectionSidebarServerIcon
+							className="size-3.5"
+							iconUrl={
+								props.variant === 'server-rail'
+									? null
+									: connection.network.iconUrl
+							}
+							runtime={connection.runtime}
 						/>
 						{serverActivity.hasUnread ? (
 							<span
@@ -76,12 +80,15 @@ export function ConnectionSidebarNetworkSection(
 						) : null}
 					</span>
 					<div className="min-w-0 flex-1">
-						<div className="flex min-w-0 items-center gap-2">
+						<div className="flex min-w-0 flex-1 items-center gap-2">
 							<span
-								className={connectionSidebarLabelClass(serverActivity, {
-									selected: connection.selectedServer,
-									variant: 'network',
-								})}
+								className={cn(
+									connectionSidebarLabelClass(serverActivity, {
+										selected: connection.selectedServer,
+										variant: 'network',
+									}),
+									'block min-w-0 flex-1',
+								)}
 							>
 								{connection.labelParts.name}
 							</span>
@@ -120,7 +127,7 @@ export function ConnectionSidebarNetworkSection(
 			</div>
 			{connection.childBuffers.length > 0 ||
 			connection.pendingChannels.length > 0 ? (
-				<div className="ml-3 space-y-px border-l border-white/7 pl-2">
+				<div className="ml-3 min-w-0 space-y-px border-l border-white/7 pl-2">
 					{connection.childBuffers.map(({ buffer, selected }) =>
 						buffer.kind === 'channel' ? (
 							<ConnectionSidebarBufferRow
@@ -192,16 +199,6 @@ const resolveQueryPresence = (
 		return runtime?.phase === 'connected' ? 'pending' : null;
 	}
 	return queryPresence[bufferId] ?? null;
-};
-
-const serverIconTone = (runtime: NetworkRuntimeState | null) => {
-	if (runtime?.phase === 'connected') {
-		return 'text-emerald-400';
-	}
-	if (runtime?.phase === 'connecting') {
-		return 'text-amber-300';
-	}
-	return 'text-zinc-500';
 };
 
 const unreadBadgeTone = (activity: { priority: boolean }) =>

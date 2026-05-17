@@ -53,11 +53,14 @@ const buildBufferEntries = (
   const entries: CommandPaletteEntrySpec[] = [];
   for (const connection of connections) {
     const currentNetwork = connection.network.id === selectedNetworkId;
+    const networkRuntimePhase = connection.runtime?.phase ?? 'offline';
     if (connection.serverBuffer) {
       entries.push({
         id: `network:${connection.network.id}`,
         section: 'buffers',
         label: connection.labelParts.name,
+        networkIconUrl: connection.network.iconUrl,
+        networkRuntimePhase,
         subtitle: `Server buffer · as ${connection.labelParts.nick}`,
         keywords: [
           connection.label,
@@ -86,6 +89,8 @@ const buildBufferEntries = (
         id: `buffer:${child.buffer.id}`,
         section: 'buffers',
         label: child.buffer.target,
+        networkIconUrl: connection.network.iconUrl,
+        networkRuntimePhase,
         emoji: child.buffer.kind === 'query'
           ? resolveNickEmoji(nickEmojiByNetworkNick, child.buffer.networkId, child.buffer.target)
           : null,
@@ -115,6 +120,8 @@ const buildBufferEntries = (
         id: `pending:${pending.pendingChannel.networkId}:${pending.pendingChannel.channel}`,
         section: 'buffers',
         label: pending.pendingChannel.channel,
+        networkIconUrl: connection.network.iconUrl,
+        networkRuntimePhase,
         subtitle: `Joining on ${connection.label}`,
         keywords: [
           connection.network.name,

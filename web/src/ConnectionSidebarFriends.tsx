@@ -15,10 +15,13 @@ type ConnectionSidebarFriendsProps = Pick<
 	| 'onRemoveFriend'
 	| 'onSelectFriend'
 	| 'onToggleHideOfflineFriends'
->;
+> & {
+	variant?: 'bottom' | 'panel';
+};
 
 export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 	const hideOfflineFriends = props.hideOfflineFriends ?? false;
+	const variant = props.variant ?? 'bottom';
 	const [menuOpen, setMenuOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement | null>(null);
 	const sortedFriends = [...props.friends].sort(
@@ -65,7 +68,13 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 
 	return (
 		<>
-			<section className="shrink-0 border-t border-white/8 px-2.5 py-1.5">
+			<section
+				className={
+					variant === 'panel'
+						? 'flex min-h-0 flex-1 flex-col px-2.5 py-1.5'
+						: 'shrink-0 border-t border-white/8 px-2.5 py-1.5'
+				}
+			>
 				<div className="flex items-center justify-between gap-2 px-1 py-0.5">
 					<div className="min-w-0">
 						<h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/75">
@@ -109,7 +118,13 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 						) : null}
 					</div>
 				</div>
-				<div className="mt-0.5 max-h-[min(28dvh,14rem)] overflow-y-auto overscroll-contain pr-0.5">
+				<div
+					className={
+						variant === 'panel'
+							? 'mt-0.5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5'
+							: 'mt-0.5 max-h-[min(28dvh,14rem)] overflow-y-auto overscroll-contain pr-0.5'
+					}
+				>
 					{props.friends.length === 0 ? (
 						<div className="px-2 py-1 text-[12px] text-muted-foreground/70">
 							No watched nicks yet.

@@ -175,6 +175,9 @@ const ensureLegacyNetworkUsername = (db: SqliteDb, helpers: MigrationHelpers) =>
   if (!helpers.tableHasColumn(db, 'networks', 'username')) {
     db.exec("ALTER TABLE networks ADD COLUMN username TEXT NOT NULL DEFAULT ''");
   }
+  if (!helpers.tableHasColumn(db, 'networks', 'iconUrl')) {
+    db.exec("ALTER TABLE networks ADD COLUMN iconUrl TEXT NOT NULL DEFAULT ''");
+  }
 };
 
 const addMissingBuffers = (

@@ -49,6 +49,7 @@ export const toNetworkProfile = (
     tls: Boolean(row.tls),
     nick: row.nick,
     username: row.username,
+    iconUrl: row.iconUrl || undefined,
     altNicks: lists.altNicks,
     historicalSelfNicks: lists.historicalSelfNicks,
     realName: row.realName,

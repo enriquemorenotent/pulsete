@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
+import { NetworkServerImageField } from './NetworkServerImageField.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 
 type NetworkEditorDialogProps = {
@@ -100,6 +101,10 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
           value={props.form.username}
           placeholder={props.form.nick || 'Uses Nick name when blank'}
           onChange={(value) => props.onChange({ username: value })}
+        />
+        <NetworkServerImageField
+          value={props.form.iconUrl}
+          onChange={(value) => props.onChange({ iconUrl: value })}
         />
         <TextField label="Second choice" value={props.form.nick2} onChange={(value) => props.onChange({ nick2: value })} />
         <TextField label="Third choice" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />

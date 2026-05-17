@@ -108,7 +108,7 @@ test('open query buffers show saved contact presence cues', () => {
   assert.match(markup, /aria-label="Open carol \(online\)"/);
   assert.match(
     markup,
-    /<span class="truncate text-\[12px\] text-muted-foreground\/88">carol<span class="ml-1 text-\[12px\] leading-none" aria-hidden="true">🌙<\/span><\/span>/,
+    /<span class="truncate text-\[12px\] text-muted-foreground\/88 block min-w-0 flex-1">carol<span class="ml-1 text-\[12px\] leading-none" aria-hidden="true">🌙<\/span><\/span>/,
   );
   assert.match(markup, /text-red-400/);
   assert.match(markup, /text-yellow-400/);
@@ -161,7 +161,7 @@ test('query rows use the overlaid dot for unread state instead of a trailing mar
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[12px\] text-foreground font-semibold">alice<\/span>/,
+    /class="truncate text-\[12px\] text-foreground font-semibold block min-w-0 flex-1">alice<\/span>/,
   );
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
 });
@@ -211,7 +211,7 @@ test('query rows use the same blue overlaid dot for non-priority unread state', 
   assert.match(markup, /bg-primary/);
   assert.match(
     markup,
-    /class="truncate text-\[12px\] text-foreground font-medium">alice<\/span>/,
+    /class="truncate text-\[12px\] text-foreground font-medium block min-w-0 flex-1">alice<\/span>/,
   );
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });

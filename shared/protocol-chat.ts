@@ -78,6 +78,7 @@ export const networkSchema = z.object({
   tls: z.boolean(),
   nick: z.string(),
   username: z.string().optional(),
+  iconUrl: z.string().optional(),
   altNicks: z.array(z.string()).default([]),
   historicalSelfNicks: z.array(z.string()).default([]).optional(),
   realName: z.string().default(''),

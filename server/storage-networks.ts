@@ -17,7 +17,7 @@ import type { NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-
 import { encryptNetworkPassword, toNetworkProfile, toRuntimeNetworkProfile } from './storage-utils.js';
 
 const networkColumns =
-  'id, workspaceOpen, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, notes, createdAt, updatedAt';
+  'id, workspaceOpen, name, host, port, tls, nick, username, iconUrl, realName, password, authMethod, authTarget, authAccount, favorite, notes, createdAt, updatedAt';
 
 export const listNetworks = (db: SqliteDb): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY favorite DESC, createdAt ASC`;
@@ -52,12 +52,13 @@ export const upsertNetwork = (
   const storedAuthTarget = resolveStoredAuthTarget(input, existing);
   const storedAuthAccount = resolveStoredAuthAccount(input, existing);
   const storedUsername = resolveStoredUsername(input, existing);
+  const storedIconUrl = resolveStoredIconUrl(input, existing);
   const storedNotes = input.notes ?? existing?.notes ?? '';
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
   db.prepare(
     `INSERT INTO networks
-       (id, workspaceOpen, name, host, port, tls, nick, username, realName, password, authMethod, authTarget, authAccount, favorite, notes, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, workspaceOpen, name, host, port, tls, nick, username, iconUrl, realName, password, authMethod, authTarget, authAccount, favorite, notes, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        workspaceOpen = excluded.workspaceOpen,
        name = excluded.name,
@@ -66,6 +67,7 @@ export const upsertNetwork = (
        tls = excluded.tls,
        nick = excluded.nick,
        username = excluded.username,
+       iconUrl = excluded.iconUrl,
        realName = excluded.realName,
        password = excluded.password,
        authMethod = excluded.authMethod,
@@ -83,6 +85,7 @@ export const upsertNetwork = (
     input.tls ? 1 : 0,
     input.nick,
     storedUsername,
+    storedIconUrl,
     input.realName,
     storedPassword,
     storedAuthMethod,
@@ -199,6 +202,16 @@ const resolveStoredUsername = (
     return input.username.trim();
   }
   return existing?.username ?? '';
+};
+
+const resolveStoredIconUrl = (
+  input: NetworkInput,
+  existing: NetworkRow | null,
+) => {
+  if (input.iconUrl !== undefined) {
+    return input.iconUrl.trim();
+  }
+  return existing?.iconUrl ?? '';
 };
 
 const requireStoredPasswordForAuthMethod = (authMethod: NetworkRow['authMethod'], storedPassword: string | null) => {

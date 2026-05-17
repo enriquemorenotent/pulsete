@@ -1,4 +1,4 @@
-import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
+import { decodeRouteParam, networkJsonBodyLimitBytes, readJson, writeJson } from './http-utils.js';
 import type { RouteArgs } from './http-types.js';
 
 export const handleNetworkRoutes = async ({ req, res, pathname, context }: RouteArgs) => {
@@ -7,14 +7,14 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
     return true;
   }
   if (req.method === 'POST' && pathname === '/api/networks') {
-    const result = context.networks.save(removeRequestNetworkId(await readJson(req)));
+    const result = context.networks.save(removeRequestNetworkId(await readJson(req, networkJsonBodyLimitBytes)));
     writeJson(res, 200, result);
     return true;
   }
   const networkMatch = pathname.match(/^\/api\/networks\/([^/]+)$/);
   if (networkMatch && req.method === 'PUT') {
     const networkId = decodeRouteParam(networkMatch[1]);
-    const result = context.networks.save(await readJson(req), networkId);
+    const result = context.networks.save(await readJson(req, networkJsonBodyLimitBytes), networkId);
     writeJson(res, 200, result);
     return true;
   }
