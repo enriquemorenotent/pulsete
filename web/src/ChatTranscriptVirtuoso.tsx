@@ -5,11 +5,11 @@ import {
   useMemo,
   type ComponentPropsWithoutRef,
 } from 'react';
-import { GroupedVirtuoso } from 'react-virtuoso';
+import { Virtuoso } from 'react-virtuoso';
 import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { Button } from '@/components/ui/button.js';
-import { DayDivider, TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
+import { TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptModel } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -54,30 +54,10 @@ const TranscriptList = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<'div'
 
 export const resolveTranscriptVirtuosoItemKey = (
   index: number,
-  model: Pick<ChatTranscriptModel, 'flatRows' | 'groupCounts' | 'groups'>,
+  model: Pick<ChatTranscriptModel, 'flatRows'>,
   firstItemIndex: number,
 ) => {
-  const groupedIndex = index - firstItemIndex;
-  if (groupedIndex < 0) {
-    return `transcript:${index}`;
-  }
-
-  let rowOffset = 0;
-  let groupedOffset = 0;
-  for (let groupIndex = 0; groupIndex < model.groupCounts.length; groupIndex += 1) {
-    if (groupedIndex === groupedOffset) {
-      return model.groups[groupIndex]?.key ?? `group:${index}`;
-    }
-    groupedOffset += 1;
-
-    const rowCount = model.groupCounts[groupIndex] ?? 0;
-    if (groupedIndex < groupedOffset + rowCount) {
-      return model.flatRows[rowOffset + groupedIndex - groupedOffset]?.key ?? `transcript:${index}`;
-    }
-    groupedOffset += rowCount;
-    rowOffset += rowCount;
-  }
-  return `transcript:${index}`;
+  return model.flatRows[index - firstItemIndex]?.key ?? `transcript:${index}`;
 };
 
 export const resolveTranscriptVirtuosoRow = (
@@ -190,7 +170,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
 
   return (
     <div className="relative min-h-0 flex-1">
-      <GroupedVirtuoso
+      <Virtuoso
         ref={viewport.virtuosoRef}
         style={{ height: '100%' }}
         alignToBottom
@@ -201,15 +181,12 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         computeItemKey={computeItemKey}
         firstItemIndex={viewport.firstItemIndex}
         followOutput={viewport.followOutput}
-        groupContent={(groupIndex) => (
-          <DayDivider label={props.model.groups[groupIndex]?.label ?? ''} />
-        )}
-        groupCounts={props.model.groupCounts}
         increaseViewportBy={{ bottom: 320, top: 160 }}
         itemContent={renderItemContent}
         itemsRendered={viewport.handleItemsRendered}
         scrollerRef={viewport.scrollerRef}
         startReached={viewport.handleStartReached}
+        totalCount={props.model.flatRows.length}
       />
     </div>
   );

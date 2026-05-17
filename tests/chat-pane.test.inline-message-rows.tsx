@@ -97,11 +97,13 @@ test('channel transcripts render day dividers when the calendar day changes', ()
     makeMessage({ id: 'message-2', body: 'next day', ts: new Date(2000, 0, 2, 0, 3, 0, 0).getTime() }),
   ]);
 
-  assert.match(markup, /2000-01-01/);
-  assert.match(markup, /2000-01-02/);
-  assert.match(markup, /2000-01-01[\s\S]*late night/);
-  assert.match(markup, /2000-01-02[\s\S]*next day/);
-  assert.match(markup, /sticky top-0 z-10 -mx-4 mb-2 bg-background\/92 px-4 py-2 backdrop-blur-sm/);
+  assert.match(markup, /1 January 2000/);
+  assert.match(markup, /2 January 2000/);
+  assert.match(markup, /1 January 2000[\s\S]*late night/);
+  assert.match(markup, /2 January 2000[\s\S]*next day/);
+  assert.match(markup, /py-4 flex items-center gap-3 text-\[12px\] font-semibold leading-none text-muted-foreground\/70/);
+  assert.doesNotMatch(markup, /my-4 flex items-center gap-3/);
+  assert.doesNotMatch(markup, /sticky top-0/);
 });
 
 test('compact rows suppress repeated timestamps for the same sender within the same minute', () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { GroupedVirtuosoHandle, ListItem } from 'react-virtuoso';
+import type { ListItem, VirtuosoHandle } from 'react-virtuoso';
 import {
   firstItemIndexBase,
   resolveFirstUnreadScrollLocation,
@@ -31,7 +31,7 @@ type UseTranscriptViewportParams = {
 };
 
 export function useTranscriptViewport(params: UseTranscriptViewportParams) {
-  const virtuosoRef = useRef<GroupedVirtuosoHandle | null>(null);
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const scrollerRef = useRef<HTMLElement | null>(null);
   const currentBufferIdRef = useRef<string | null>(null);
   const firstItemIndexRef = useRef(firstItemIndexBase);

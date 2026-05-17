@@ -45,8 +45,8 @@ test('channel transcripts keep the unread divider anchored after a day divider',
   );
 
   assert.match(markup, /New messages/);
-  assert.match(markup, /1999-12-31/);
-  assert.match(markup, /2000-01-01[\s\S]*New messages[\s\S]*newer/);
+  assert.match(markup, /31 December 1999/);
+  assert.match(markup, /1 January 2000[\s\S]*New messages[\s\S]*newer/);
   assert.match(markup, /older/);
   assert.match(markup, /newer/);
 });

@@ -27,10 +27,10 @@ test('transcript model inserts an unread divider row before the first unread mes
     unreadDividerKey: 'unread-divider:buffer-1',
   });
 
-  assert.equal(model.unreadRowIndex, 1);
+  assert.equal(model.unreadRowIndex, 2);
   assert.deepEqual(
     model.flatRows.map((row) => row.kind === 'message' ? row.message.id : row.key),
-    ['message-1', 'unread-divider:buffer-1', 'message-2'],
+    ['day-divider:1970-01-01', 'message-1', 'unread-divider:buffer-1', 'message-2'],
   );
 });
 
@@ -49,9 +49,13 @@ test('transcript model groups rows by local calendar day', () => {
   assert.deepEqual(
     model.groups.map((group) => ({ key: group.key, label: group.label, rowCount: group.rows.length })),
     [
-      { key: 'day-2026-03-11', label: '2026-03-11', rowCount: 1 },
-      { key: 'day-2026-03-12', label: '2026-03-12', rowCount: 1 },
+      { key: 'day-2026-03-11', label: '11 March 2026', rowCount: 2 },
+      { key: 'day-2026-03-12', label: '12 March 2026', rowCount: 2 },
     ],
+  );
+  assert.deepEqual(
+    model.flatRows.map((row) => row.kind === 'message' ? row.message.id : row.key),
+    ['day-divider:2026-03-11', 'message-1', 'day-divider:2026-03-12', 'message-2'],
   );
 });
 
@@ -105,6 +109,7 @@ test('server transcript model groups consecutive routine rows by source and tone
       return row.kind === 'message' ? row.message.id : row.kind;
     }),
     [
+      'day-divider',
       'Server:system:message-1,message-2',
       'Notice:notice:message-3',
       'StatServ:system:message-4',
@@ -128,7 +133,7 @@ test('latest follow behavior autoscrolls only while pinned or after sending', ()
   );
 });
 
-test('transcript virtuoso maps grouped header and item indexes to stable keys', () => {
+test('transcript virtuoso maps flat row indexes to stable keys', () => {
   const firstItemIndex = 1_000_000;
   const model = buildChatTranscriptModel({
     firstUnreadDividerIndex: null,
@@ -140,10 +145,9 @@ test('transcript virtuoso maps grouped header and item indexes to stable keys', 
     unreadDividerKey: 'unused',
   });
 
-  assert.deepEqual(model.groupCounts, [1]);
   assert.equal(
     resolveTranscriptVirtuosoItemKey(firstItemIndex, model, firstItemIndex),
-    model.groups[0]?.key,
+    'day-divider:2026-03-11',
   );
   assert.equal(
     resolveTranscriptVirtuosoItemKey(firstItemIndex + 1, model, firstItemIndex),
@@ -163,7 +167,7 @@ test('transcript virtuoso resolves the first item row after a day header', () =>
     unreadDividerKey: 'unused',
   });
 
-  const row = resolveTranscriptVirtuosoRow(firstItemIndex, model, firstItemIndex);
+  const row = resolveTranscriptVirtuosoRow(firstItemIndex + 1, model, firstItemIndex);
 
   assert.equal(row?.kind, 'message');
   assert.equal(row?.kind === 'message' ? row.message.body : null, 'How are you?');

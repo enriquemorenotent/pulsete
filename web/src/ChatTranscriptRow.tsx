@@ -2,7 +2,7 @@ import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { ChatPaneMutedMessageGroupRow } from './ChatPaneMutedMessageGroupRow.js';
 import { ChatPaneServerMessageGroupRow } from './ChatPaneServerMessageGroupRow.js';
-import { UnreadDivider } from './ChatPaneTranscriptDecorations.js';
+import { DayDivider, UnreadDivider } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptRow as TranscriptRow } from './transcript/model.js';
 import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -23,6 +23,10 @@ type ChatTranscriptRowProps = {
 };
 
 export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
+  if (props.row.kind === 'day-divider') {
+    return <DayDivider label={props.row.label} />;
+  }
+
   if (props.row.kind === 'unread-divider') {
     return <UnreadDivider />;
   }

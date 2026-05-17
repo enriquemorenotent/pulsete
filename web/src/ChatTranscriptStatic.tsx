@@ -1,7 +1,7 @@
 import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { Button } from '@/components/ui/button.js';
-import { DayDivider, TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
+import { TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
 import type { ChatTranscriptModel } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -49,25 +49,20 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
         </div>
       ) : null}
       <div className="space-y-1.5 font-mono text-[12px]">
-        {props.model.groups.map((group) => (
-          <div key={group.key}>
-            <DayDivider label={group.label} />
-            {group.rows.map((row) => (
-              <ChatTranscriptRow
-                key={row.key}
-                row={row}
-                channelUserModesByNick={props.channelUserModesByNick}
-                expandedMutedGroupKeys={props.expandedMutedGroupKeys}
-                nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
-                listKind={props.listKind}
-                mode={props.mode}
-                onOpenChannel={props.onOpenChannel}
-                onOpenParticipantQuery={props.onOpenParticipantQuery}
-                onToggleMutedGroup={props.onToggleMutedGroup}
-                participantHighlightMode={props.participantHighlightMode}
-              />
-            ))}
-          </div>
+        {props.model.flatRows.map((row) => (
+          <ChatTranscriptRow
+            key={row.key}
+            row={row}
+            channelUserModesByNick={props.channelUserModesByNick}
+            expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+            nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
+            listKind={props.listKind}
+            mode={props.mode}
+            onOpenChannel={props.onOpenChannel}
+            onOpenParticipantQuery={props.onOpenParticipantQuery}
+            onToggleMutedGroup={props.onToggleMutedGroup}
+            participantHighlightMode={props.participantHighlightMode}
+          />
         ))}
       </div>
     </div>

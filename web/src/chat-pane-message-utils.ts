@@ -26,6 +26,7 @@ export const formatMessageTimestampDateTime = (value: number) => new Date(value)
 
 export const formatDayDividerLabel = (value: number, now = Date.now()) => {
   const dayKey = getLocalDayKey(value);
+  const date = new Date(value);
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
   if (dayKey === getLocalDayKey(today.getTime())) {
@@ -36,7 +37,7 @@ export const formatDayDividerLabel = (value: number, now = Date.now()) => {
   if (dayKey === getLocalDayKey(yesterday.getTime())) {
     return 'Yesterday';
   }
-  return dayKey;
+  return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
 };
 
 export const getServerMessageSourceLabel = (message: ChatMessage) => {
@@ -126,6 +127,21 @@ export const messageTone = (message: ChatMessage) => {
 };
 
 const padDatePart = (value: number) => String(value).padStart(2, '0');
+
+const monthNames = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
 
 const getKickEventSummary = (message: ChatMessage, nick: string) => {
   const match = message.body.match(/^.+? was kicked from \S+ by (.+?)(?: \((.*)\))?$/);

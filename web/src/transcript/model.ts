@@ -38,7 +38,14 @@ export type ChatTranscriptMutedGroupRow = {
   nick: string;
 };
 
+export type ChatTranscriptDayDividerRow = {
+  kind: 'day-divider';
+  key: string;
+  label: string;
+};
+
 export type ChatTranscriptRow =
+  | ChatTranscriptDayDividerRow
   | ChatTranscriptMessageRow
   | ChatTranscriptMutedGroupRow
   | ChatTranscriptServerGroupRow
@@ -55,7 +62,6 @@ export type ChatTranscriptGroup = {
 
 export type ChatTranscriptModel = {
   flatRows: ChatTranscriptRow[];
-  groupCounts: number[];
   groups: ChatTranscriptGroup[];
   unreadRowIndex: number | null;
 };
@@ -110,11 +116,19 @@ export const buildChatTranscriptModel = (
     if (dayKey !== previousDayKey) {
       flushMutedGroup();
       flushServerGroup();
-      groups.push({
+      const group: ChatTranscriptGroup = {
         key: `day-${dayKey}`,
         label: formatDayDividerLabel(message.ts),
         rows: [],
-      });
+      };
+      const dayDividerRow: ChatTranscriptDayDividerRow = {
+        kind: 'day-divider',
+        key: `day-divider:${dayKey}`,
+        label: group.label,
+      };
+      group.rows.push(dayDividerRow);
+      groups.push(group);
+      flatRows.push(dayDividerRow);
       previousDayKey = dayKey;
       previousTimestampGroupKey = null;
     }
@@ -196,7 +210,6 @@ export const buildChatTranscriptModel = (
 
   return {
     flatRows,
-    groupCounts: groups.map((group) => group.rows.length),
     groups,
     unreadRowIndex,
   };

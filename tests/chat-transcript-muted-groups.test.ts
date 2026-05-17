@@ -37,7 +37,7 @@ test('transcript model collapses consecutive muted messages from the same nick',
     unreadDividerKey: 'unused',
   });
 
-  const mutedRow = model.flatRows[0];
+  const mutedRow = model.flatRows[1];
   assert.equal(mutedRow?.kind, 'muted-group');
   assert.equal(mutedRow?.kind === 'muted-group' ? mutedRow.messageCount : null, 2);
   assert.equal(mutedRow?.kind === 'muted-group' ? mutedRow.nick : null, 'MissD');
@@ -45,7 +45,7 @@ test('transcript model collapses consecutive muted messages from the same nick',
     mutedRow?.kind === 'muted-group' ? mutedRow.messageRows.map((row) => row.message.id) : [],
     ['message-1', 'message-2'],
   );
-  assert.deepEqual(model.flatRows.map((row) => row.kind), ['muted-group', 'message']);
+  assert.deepEqual(model.flatRows.map((row) => row.kind), ['day-divider', 'muted-group', 'message']);
 });
 
 test('transcript model splits muted groups by nick and visible rows', () => {
@@ -64,7 +64,7 @@ test('transcript model splits muted groups by nick and visible rows', () => {
 
   assert.deepEqual(
     model.flatRows.map((row) => row.kind === 'muted-group' ? `muted:${row.nick}` : row.kind),
-    ['muted:MissD', 'muted:Ava', 'message', 'muted:MissD'],
+    ['day-divider', 'muted:MissD', 'muted:Ava', 'message', 'muted:MissD'],
   );
 });
 
@@ -82,9 +82,8 @@ test('transcript model does not group muted rows across day or unread dividers',
 
   assert.deepEqual(
     model.flatRows.map((row) => row.kind === 'muted-group' ? row.messageRows[0]?.message.id : row.key),
-    ['message-1', 'unread-divider:buffer-1', 'message-2'],
+    ['day-divider:2026-03-11', 'message-1', 'day-divider:2026-03-12', 'unread-divider:buffer-1', 'message-2'],
   );
-  assert.deepEqual(model.groupCounts, [1, 2]);
 });
 
 test('visible rows after a muted group keep their own timestamp boundary', () => {
