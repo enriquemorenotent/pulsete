@@ -38,8 +38,6 @@ import { useSelectedBufferHistory } from './transcript/history.js';
 import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
-import { findNickEmoji } from './nick-emoji-utils.js';
-import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 import { useDocumentActivityState } from './useDocumentActivityState.js';
 
 type SharedProps = {
@@ -154,7 +152,6 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   externalAvatarsEnabled,
 }: RightSidebarContainerProps) {
   const dispatch = useAppDispatch();
-  const channels = useAppSelector(selectChannels);
   const friends = useAppSelector(selectFriends);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const nickEmojis = useAppSelector(selectNickEmojis);
@@ -184,27 +181,13 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   }), [actions.saveNetworkNotes, dispatch, serverProfileNetwork]);
   const queryProfile = useMemo(() => {
     const buffer = workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null;
-    const user = buffer
-      ? resolveUserAvatarCandidate(channels, buffer.networkId, buffer.target)
-      : null;
-    const identity = user?.identity ?? buffer?.peerIdentity;
     return {
       buffer,
-      identity,
-      nickEmoji: buffer
-        ? findNickEmoji(nickEmojis, buffer.networkId, buffer.target, identity)
-        : null,
-      network: workspace.selectedNetwork,
       onSaveNotes: actions.saveBufferNotes,
-      onSaveNickEmoji: actions.saveNickEmoji,
     };
   }, [
     actions.saveBufferNotes,
-    actions.saveNickEmoji,
-    channels,
-    nickEmojis,
     workspace.selectedBuffer,
-    workspace.selectedNetwork,
   ]);
   return (
     <WorkspaceRightSidebar

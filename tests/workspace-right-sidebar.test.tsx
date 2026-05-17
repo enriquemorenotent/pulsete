@@ -176,25 +176,17 @@ test('query profile sidebar renders the per-DM notes editor', () => {
       nicklist={nicklist}
       queryProfile={{
         buffer: queryBuffer,
-        identity: { kind: 'account', value: 'sofia' },
-        nickEmoji: { id: 'nick-emoji-1', networkId: network.id, nick: 'sofia', emoji: '🌙' },
-        network,
         onSaveNotes: async () => queryBuffer,
-        onSaveNickEmoji: async () => true,
       }}
     />,
   );
 
-  assert.match(markup, /Private message/);
-  assert.match(markup, /Details/);
-  assert.match(markup, /Network[\s\S]*RoleplayNet/);
-  assert.match(markup, /Identity[\s\S]*Account sofia/);
-  assert.doesNotMatch(
-    markup,
-    /<span class="truncate">Sofia<\/span><span aria-hidden="true" class="shrink-0 leading-none">🌙<\/span>/,
-  );
-  assert.match(markup, /Sofia/);
-  assert.match(markup, /aria-label="Edit emoji tag for Sofia"/);
+  assert.match(markup, /Notes/);
+  assert.doesNotMatch(markup, /Private message/);
+  assert.doesNotMatch(markup, /Sofia on RoleplayNet/);
+  assert.doesNotMatch(markup, /Details/);
+  assert.doesNotMatch(markup, /Identity/);
+  assert.doesNotMatch(markup, /aria-label="Edit emoji tag for Sofia"/);
   assert.match(markup, /query-profile-notes/);
   assert.match(markup, /Prefers encrypted routes/);
   assert.match(markup, /Saved/);

@@ -11,7 +11,6 @@ import {
   MetadataRow,
 } from './RightSidebarInspector.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
-import { findNickEmoji } from './nick-emoji-utils.js';
 import {
   getNetworkManagerAuthLabel,
   getNetworkManagerAutoJoinLabel,
@@ -19,7 +18,7 @@ import {
 } from './network-manager-dialog-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
-import type { BufferState, NetworkProfile, NetworkRuntimeCapabilities, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { BufferState, NetworkProfile, NetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
@@ -31,11 +30,7 @@ type WorkspaceRightSidebarProps = {
   };
   queryProfile?: {
     buffer: BufferState | null;
-    identity?: NickEmojiState['identity'] | null;
-    nickEmoji?: NickEmojiState | null;
-    network: NetworkProfile | null;
     onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
-    onSaveNickEmoji: (networkId: string, nick: string, emoji: string | null) => Promise<boolean>;
   };
 };
 
@@ -62,20 +57,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     return (
       <QueryProfileSidebar
         buffer={props.queryProfile?.buffer ?? props.workspace.selectedBuffer}
-        identity={props.queryProfile?.identity}
-        nickEmoji={
-          props.queryProfile?.nickEmoji
-          ?? (props.workspace.selectedBuffer
-            ? findNickEmoji(
-                props.nicklist.nickEmojis,
-                props.workspace.selectedBuffer.networkId,
-                props.workspace.selectedBuffer.target,
-              )
-            : null)
-        }
-        network={props.queryProfile?.network ?? props.workspace.selectedNetwork}
         onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
-        onSaveNickEmoji={props.queryProfile?.onSaveNickEmoji ?? (async () => false)}
       />
     );
   }
