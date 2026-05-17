@@ -139,12 +139,12 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 overflow-hidden px-3 pb-3 pt-2">
+      <main className="flex min-h-0 flex-1 overflow-hidden">
         {compactLayout ? (
           <Tabs
             value={compactPane}
             onValueChange={(value) => setCompactPane(value as CompactWorkspacePane)}
-            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-white/6 bg-black/20 p-3 shadow-[0_20px_70px_rgba(0,0,0,0.42)]"
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-black/20 p-3 shadow-[0_20px_70px_rgba(0,0,0,0.42)]"
           >
             <TabsList className={`grid w-full shrink-0 ${props.rightSidebarKind ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="browse" className="min-w-0">Browse</TabsTrigger>
@@ -175,7 +175,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           <div
             ref={layoutRef}
             style={layoutStyle}
-            className="flex h-full min-h-0 flex-1 overflow-hidden rounded-lg border border-white/6 bg-black/20 shadow-[0_20px_70px_rgba(0,0,0,0.42)] lg:flex-row"
+            className="flex h-full min-h-0 flex-1 overflow-hidden bg-black/20 shadow-[0_20px_70px_rgba(0,0,0,0.42)] lg:flex-row"
           >
             <div className="min-h-0 bg-card/50 backdrop-blur-xl lg:w-(--sidebar-width) lg:shrink-0">
               {props.sidebar}
