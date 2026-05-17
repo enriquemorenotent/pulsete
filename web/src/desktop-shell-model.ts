@@ -10,11 +10,14 @@ import type {
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
+import type { NavigationLayoutMode } from './navigation-layout-settings.js';
 
 export type DesktopShellHeaderModel = {
+  navigationLayoutMode: NavigationLayoutMode;
   onOpenLogInspector: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
+  onToggleNavigationLayoutMode: () => void;
 };
 
 export type DesktopShellCommandPaletteModel = {

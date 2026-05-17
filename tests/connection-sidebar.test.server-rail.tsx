@@ -70,6 +70,8 @@ test('server rail shows all servers but only the active server tabs', () => {
   assert.doesNotMatch(markup, /rounded-r-full bg-primary/);
   assert.doesNotMatch(markup, /ring-2 ring-inset ring-primary/);
   assert.doesNotMatch(markup, /Alpha<\/h2>/);
+  assert.doesNotMatch(markup, /ml-3 min-w-0 space-y-px border-l border-white\/7 pl-2/);
+  assert.match(markup, /class="min-w-0 space-y-px w-full"/);
   assert.match(markup, /aria-label="Open #alpha"/);
   assert.doesNotMatch(markup, /aria-label="Open #beta"/);
 });

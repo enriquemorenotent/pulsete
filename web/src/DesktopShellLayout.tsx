@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { FolderSearch, Search } from 'lucide-react';
+import { FolderSearch, PanelLeft, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
@@ -103,6 +103,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
     props.selectedBufferId,
   ]);
 
+  const showingServerRail = props.header.navigationLayoutMode === 'server-rail';
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(87,128,208,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] text-foreground">
       <header className="relative z-30 flex shrink-0 flex-wrap items-center gap-3 border-b border-white/6 bg-background/80 px-4 py-3 backdrop-blur-xl">
@@ -132,6 +133,16 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             <FolderSearch />
             Logs
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={showingServerRail ? 'Switch to all servers layout' : 'Switch to server rail layout'}
+            title={showingServerRail ? 'All servers layout' : 'Server rail layout'}
+            onClick={props.header.onToggleNavigationLayoutMode}
+          >
+            <PanelLeft />
+            {showingServerRail ? 'Classic' : 'Rail'}
+          </Button>
           <DesktopShellToolsMenu
             onOpenNetworkManager={props.header.onOpenNetworkManager}
             onOpenPreferences={props.header.onOpenPreferences}
@@ -148,9 +159,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           >
             <TabsList className={`grid w-full shrink-0 ${props.rightSidebarKind ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="browse" className="min-w-0">Browse</TabsTrigger>
-              <TabsTrigger value="chat" className="min-w-0" disabled={!props.selectedBufferId}>
-                Chat
-              </TabsTrigger>
+              <TabsTrigger value="chat" className="min-w-0" disabled={!props.selectedBufferId}>Chat</TabsTrigger>
               {props.rightSidebarKind ? (
                 <TabsTrigger value="details" className="min-w-0">
                   {rightSidebarLabel(props.rightSidebarKind)}

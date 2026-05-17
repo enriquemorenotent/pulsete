@@ -127,7 +127,14 @@ export function ConnectionSidebarNetworkSection(
 			</div>
 			{connection.childBuffers.length > 0 ||
 			connection.pendingChannels.length > 0 ? (
-				<div className="ml-3 min-w-0 space-y-px border-l border-white/7 pl-2">
+				<div
+					className={cn(
+						'min-w-0 space-y-px',
+						props.variant === 'server-rail'
+							? 'w-full'
+							: 'ml-3 border-l border-white/7 pl-2',
+					)}
+				>
 					{connection.childBuffers.map(({ buffer, selected }) =>
 						buffer.kind === 'channel' ? (
 							<ConnectionSidebarBufferRow

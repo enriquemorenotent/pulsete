@@ -36,7 +36,14 @@ type DesktopShellProps = {
 
 export function DesktopShell(props: DesktopShellProps) {
   const dispatch = useAppDispatch();
-  const header = useDesktopHeaderModel({ dispatch, ui: props.ui });
+  const header = useDesktopHeaderModel({
+    dispatch,
+    navigationLayoutSettings: {
+      mode: props.navigationLayoutSettings.settings.mode,
+      setMode: props.navigationLayoutSettings.setMode,
+    },
+    ui: props.ui,
+  });
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
   const [jumpToLatestRequestId, requestJumpToLatest] = useReducer(

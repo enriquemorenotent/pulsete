@@ -27,7 +27,25 @@ test('desktop shell renders a visible command palette trigger in the header', ()
   assert.match(markup, /aria-label="Search Pulsete"/);
   assert.match(markup, /Ctrl\/Cmd\+K/);
   assert.match(markup, /Logs/);
+  assert.match(markup, /aria-label="Switch to all servers layout"/);
+  assert.match(markup, />Classic</);
   assert.match(markup, /aria-label="Tools"/);
   assert.doesNotMatch(markup, />Preferences</);
   assert.doesNotMatch(markup, />Network Manager</);
+});
+
+test('desktop shell layout toggle points to server rail from classic mode', () => {
+  const markup = renderToStaticMarkup(
+    <DesktopShellLayout
+      {...createDesktopShellLayoutProps({
+        header: {
+          ...createDesktopShellLayoutProps().header,
+          navigationLayoutMode: 'all-servers-visible',
+        },
+      })}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Switch to server rail layout"/);
+  assert.match(markup, />Rail</);
 });

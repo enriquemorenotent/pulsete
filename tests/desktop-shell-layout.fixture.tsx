@@ -4,9 +4,11 @@ export const createDesktopShellLayoutProps = (
   overrides: Partial<DesktopShellLayoutProps> = {},
 ): DesktopShellLayoutProps => ({
   header: {
+    navigationLayoutMode: 'server-rail',
     onOpenLogInspector: () => undefined,
     onOpenNetworkManager: () => undefined,
     onOpenPreferences: () => undefined,
+    onToggleNavigationLayoutMode: () => undefined,
   },
   commandPalette: {
     onOpen: () => undefined,

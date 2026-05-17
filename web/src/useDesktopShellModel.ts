@@ -14,6 +14,10 @@ export { useDesktopChatModel } from './useDesktopChatModel.js';
 
 type DesktopHeaderModelParams = {
   dispatch: (action: Action) => void;
+  navigationLayoutSettings: {
+    mode: NavigationLayoutSettings['mode'];
+    setMode: (mode: NavigationLayoutSettings['mode']) => void;
+  };
   ui: Pick<
     AppUiState,
     'openLogInspector' | 'openPreferences'
@@ -43,16 +47,26 @@ type DesktopNicklistModelParams = {
 
 export function useDesktopHeaderModel({
   dispatch,
+  navigationLayoutSettings,
   ui,
 }: DesktopHeaderModelParams): DesktopShellModel['header'] {
   return useMemo(
     () => ({
+      navigationLayoutMode: navigationLayoutSettings.mode,
       onOpenLogInspector: ui.openLogInspector,
       onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
       onOpenPreferences: ui.openPreferences,
+      onToggleNavigationLayoutMode: () => {
+        navigationLayoutSettings.setMode(
+          navigationLayoutSettings.mode === 'server-rail'
+            ? 'all-servers-visible'
+            : 'server-rail',
+        );
+      },
     }),
     [
       dispatch,
+      navigationLayoutSettings,
       ui.openLogInspector,
       ui.openPreferences,
     ],
