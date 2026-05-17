@@ -36,7 +36,7 @@ export const buildRegistrationLines = (profile: RuntimeNetworkProfile) => [
   ...buildServerPassLines(profile),
   ...buildCapabilityNegotiationLines(profile),
   `NICK ${profile.nick}`,
-  `USER ${toRegistrationIdent(profile.nick)} 0 * :${profile.realName || profile.name}`,
+  `USER ${toRegistrationIdent(profile.username || profile.nick)} 0 * :${profile.realName || profile.name}`,
 ];
 
 export const toRegistrationIdent = (nick: string) => {

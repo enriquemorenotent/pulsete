@@ -69,6 +69,13 @@ test('network save rejects invalid payloads and IRC-unsafe fields', async () => 
     assert.equal(unsafeResponse.status, 400);
     assert.equal(unsafeResponse.json.message, 'Real name cannot contain carriage returns or line feeds');
 
+    const unsafeUsername = await requestJson(port, 'POST', '/api/networks', {
+      ...createNetworkInput(),
+      username: 'uid 309962',
+    });
+    assert.equal(unsafeUsername.status, 400);
+    assert.equal(unsafeUsername.json.message, 'Username cannot contain whitespace');
+
     const unsafeAuthTarget = await requestJson(port, 'POST', '/api/networks', {
       ...createNetworkInput(),
       authMethod: 'nickserv',

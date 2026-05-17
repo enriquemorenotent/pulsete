@@ -87,6 +87,7 @@ const requiresSessionReconnect = (current: RuntimeNetworkProfile, next: RuntimeN
   || resolveNetworkAuthMethod(current) !== resolveNetworkAuthMethod(next)
   || requiresAuthAccountReconnect(current, next)
   || requiresAuthTargetReconnect(current, next)
+  || current.username !== next.username
   || getReportedRealName(current) !== getReportedRealName(next);
 
 const getReportedRealName = (profile: RuntimeNetworkProfile) => profile.realName || profile.name;

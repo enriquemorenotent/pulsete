@@ -121,6 +121,52 @@ test('system status events stay in the server buffer without banner notification
   assert.equal(storage.conversations.listMessages(network.id, 'server', 5)[0]?.body, 'Connecting to irc.example.test:6667');
 });
 
+test('server error status events stay in the server buffer without banner notifications', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'status',
+      networkId: network.id,
+      message: 'Unable to connect to irc.example.test:6667 (Connection closed)',
+      kind: 'error',
+    }
+  );
+
+  const appended = storage.conversations.listMessages(network.id, 'server', 5);
+  assert.equal(appended[0]?.body, 'Unable to connect to irc.example.test:6667 (Connection closed)');
+  assert.equal(appended[0]?.kind, 'error');
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.ok(!sent.some((message) => message.type === 'notice' || message.type === 'error'));
+});
+
+test('server notice status events stay in the server buffer without banner notifications', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const network = storage.networks.upsert(createNetworkInput());
+  const sent: Array<{ type: string; [key: string]: unknown }> = [];
+
+  handleRuntimeEvent(
+    { store: storage, publish(message) { sent.push(message); } },
+    {
+      type: 'status',
+      networkId: network.id,
+      message: 'Reconnecting (1/3)',
+      kind: 'notice',
+    }
+  );
+
+  const appended = storage.conversations.listMessages(network.id, 'server', 5);
+  assert.equal(appended[0]?.body, 'Reconnecting (1/3)');
+  assert.equal(appended[0]?.kind, 'notice');
+  assert.ok(sent.some((message) => message.type === 'message.append'));
+  assert.ok(!sent.some((message) => message.type === 'notice' || message.type === 'error'));
+});
+
 test('self direct messages create query buffers when none exist', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

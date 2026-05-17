@@ -232,7 +232,7 @@ test('startup repair migrates newer local schemas to workspace networks', () => 
   assert.equal(network?.workspaceOpen, false);
   assert.deepEqual(network?.altNicks, ['tester_']);
   assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
-  assert.equal(columns.some((column) => column.name === 'username'), false);
+  assert.equal(columns.some((column) => column.name === 'username'), true);
   assert.equal(columns.some((column) => column.name === 'templateId'), false);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), false);
 });

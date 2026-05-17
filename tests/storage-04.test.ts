@@ -20,6 +20,26 @@ const createNetworkInput = (overrides: Partial<NetworkInput> = {}) => ({
   ...overrides,
 });
 
+test('storage persists custom IRC usernames and leaves blank values as nick fallback', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+
+  const network = storage.networks.upsert(createNetworkInput({
+    nick: 'tester',
+    username: 'uid309962',
+  }));
+  const defaulted = storage.networks.upsert(createNetworkInput({
+    name: 'DefaultUserNet',
+    nick: 'fallback',
+    username: '',
+  }));
+
+  assert.equal(storage.networks.get(network.id)?.username, 'uid309962');
+  assert.equal(storage.networks.getRuntime(network.id)?.username, 'uid309962');
+  assert.equal(storage.networks.get(defaulted.id)?.username, '');
+  assert.equal(storage.networks.getRuntime(defaulted.id)?.username, '');
+});
+
 test('storage can toggle workspace state after creation', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

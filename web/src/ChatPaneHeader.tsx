@@ -173,14 +173,22 @@ function PaneHeader(props: {
   actions: ReactNode;
   topicBar?: ReactNode;
 }) {
+  const hasQueryAvatar = props.externalAvatarsEnabled === true && Boolean(props.avatarUser);
+
   return (
     <div className="relative z-20 shrink-0 border-b border-white/6 bg-background/90 backdrop-blur-sm">
-      <div className="flex items-start justify-between gap-4 px-4 py-4">
+      <div
+        className={cn(
+          'flex justify-between gap-4',
+          hasQueryAvatar ? 'min-h-[68px] items-center py-0 pl-0 pr-4' : 'items-start px-4 py-4',
+        )}
+      >
         <div className="min-w-0">
           {props.title ? (
             <h2
               className={cn(
-                'flex min-w-0 items-center gap-2 truncate text-lg font-semibold tracking-tight text-foreground',
+                'flex min-w-0 items-center truncate text-lg font-semibold tracking-tight text-foreground',
+                hasQueryAvatar ? 'gap-4' : 'gap-2',
                 props.subtitle && 'mb-1',
               )}
             >
@@ -188,7 +196,8 @@ function PaneHeader(props: {
                 enabled={props.externalAvatarsEnabled === true}
                 placeholder="initial"
                 preview
-                size="md"
+                shape={hasQueryAvatar ? 'square' : 'circle'}
+                size={hasQueryAvatar ? 'lg' : 'md'}
                 user={props.avatarUser}
               />
               <span className="truncate">{props.title}</span>

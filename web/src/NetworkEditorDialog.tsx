@@ -95,6 +95,12 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
         <TextField label="Server" value={props.form.host} onChange={(value) => props.onChange({ host: value })} />
         <TextField label="Port" value={props.form.port} onChange={(value) => props.onChange({ port: value })} />
         <TextField label="Nick name" value={props.form.nick} onChange={(value) => props.onChange({ nick: value })} />
+        <TextField
+          label="Username / ident"
+          value={props.form.username}
+          placeholder={props.form.nick || 'Uses Nick name when blank'}
+          onChange={(value) => props.onChange({ username: value })}
+        />
         <TextField label="Second choice" value={props.form.nick2} onChange={(value) => props.onChange({ nick2: value })} />
         <TextField label="Third choice" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />
         <TextField label="Real name" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />

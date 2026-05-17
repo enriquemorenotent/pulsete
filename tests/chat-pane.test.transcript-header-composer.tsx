@@ -139,6 +139,9 @@ test('query headers render IRCCloud avatars when external avatars are enabled', 
 
   assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
   assert.match(markup, /aria-label="Avatar for MissD"/);
+  assert.match(markup, /gap-4/);
+  assert.match(markup, /min-h-\[68px\] items-center py-0 pl-0 pr-4/);
+  assert.match(markup, /size-\[68px\] text-lg rounded-none/);
   assert.match(markup, /cursor-zoom-in/);
 });
 

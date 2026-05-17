@@ -21,7 +21,7 @@ import {
 } from './storage-schema-helpers.js';
 import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
 
-export const currentStorageSchemaVersion = 26;
+export const currentStorageSchemaVersion = 27;
 
 type StorageMigrationContext = {
   existedBeforeOpen: boolean;
@@ -173,9 +173,7 @@ const storageMigrations: readonly StorageMigration[] = [
   },
   {
     version: 23,
-    apply: (db) => {
-      dropColumnIfPresent(db, 'networks', 'username');
-    },
+    apply: noopMigration,
   },
   {
     version: 24,
@@ -195,6 +193,12 @@ const storageMigrations: readonly StorageMigration[] = [
     version: 26,
     apply: (db) => {
       ensureColumn(db, 'buffers', 'ircCloudAvatarId', 'TEXT');
+    },
+  },
+  {
+    version: 27,
+    apply: (db) => {
+      ensureColumn(db, 'networks', 'username', "TEXT NOT NULL DEFAULT ''");
     },
   },
 ];
@@ -233,14 +237,9 @@ const ensureColumn = (db: SqliteDb, table: string, column: string, definition: s
   return false;
 };
 
-const dropColumnIfPresent = (db: SqliteDb, table: string, column: string) => {
-  if (tableHasColumn(db, table, column)) {
-    db.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
-  }
-};
-
 const ensureCurrentNetworkColumns = (db: SqliteDb) => {
   ensureColumn(db, 'networks', 'workspaceOpen', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'networks', 'username', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'networks', 'notes', "TEXT NOT NULL DEFAULT ''");
 };
 

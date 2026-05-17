@@ -10,6 +10,7 @@ test('network form omits hidden passwords when auth is set to none', () => {
     port: '6667',
     tls: false,
     nick: 'tester',
+    username: 'uid309962',
     nick2: 'tester_',
     nick3: 'tester__',
     realName: 'Tester Example',
@@ -28,7 +29,34 @@ test('network form omits hidden passwords when auth is set to none', () => {
   assert.equal(payload.clearPassword, undefined);
   assert.equal(payload.authMethod, 'none');
   assert.equal(payload.authAccount, '');
+  assert.equal(payload.username, 'uid309962');
   assert.equal(payload.notes, 'Character: Mira');
+});
+
+test('network form omits blank username identities', () => {
+  const payload = toSaveNetworkPayload({
+    id: 'network-1',
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: '6667',
+    tls: false,
+    nick: 'tester',
+    username: '   ',
+    nick2: '',
+    nick3: '',
+    realName: '',
+    authMethod: 'none',
+    authTarget: 'NickServ',
+    authAccount: '',
+    password: '',
+    clearPassword: false,
+    hasSavedPassword: false,
+    favorite: false,
+    autoJoin: '',
+    notes: '',
+  });
+
+  assert.equal(payload.username, undefined);
 });
 
 test('network form includes the explicit auth account for sasl', () => {
@@ -39,6 +67,7 @@ test('network form includes the explicit auth account for sasl', () => {
     port: '6667',
     tls: false,
     nick: 'tester',
+    username: '',
     nick2: 'tester_',
     nick3: 'tester__',
     realName: 'Tester Example',
@@ -65,6 +94,7 @@ test('network form preserves exact passwords for password-based auth methods', (
     port: '6667',
     tls: false,
     nick: 'tester',
+    username: '',
     nick2: 'tester_',
     nick3: 'tester__',
     realName: 'Tester Example',

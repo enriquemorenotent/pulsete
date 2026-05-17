@@ -11,6 +11,7 @@ export type NetworkRow = {
   port: number;
   tls: number;
   nick: string;
+  username: string;
   realName: string;
   password: string | null;
   authMethod: NetworkAuthMethod;
@@ -103,8 +104,8 @@ type NetworkWriteInput = {
   clearPassword?: boolean;
 };
 
-export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword' | 'workspaceOpen'> &
-  Partial<Pick<NetworkProfile, 'workspaceOpen'>> &
+export type NetworkInput = Omit<NetworkProfile, 'id' | 'hasPassword' | 'workspaceOpen' | 'username'> &
+  Partial<Pick<NetworkProfile, 'workspaceOpen' | 'username'>> &
   NetworkWriteInput;
 
 export type ChannelInput = Omit<ChannelState, 'id' | 'topic' | 'users'> &

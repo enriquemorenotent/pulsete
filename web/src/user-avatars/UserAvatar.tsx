@@ -12,15 +12,22 @@ type UserAvatarProps = {
   enabled: boolean;
   placeholder?: 'initial' | 'none';
   preview?: boolean;
-  size?: 'md' | 'sm';
+  shape?: 'circle' | 'square';
+  size?: 'lg' | 'md' | 'sm';
   user: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
     ircCloudAvatarId?: string | null;
   }) | null | undefined;
 };
 
 const avatarSizeClassName = {
+  lg: 'size-[68px] text-lg',
   md: 'size-9 text-sm',
   sm: 'size-5 text-[10px]',
+} as const;
+
+const avatarShapeClassName = {
+  circle: 'rounded-full',
+  square: 'rounded-none',
 } as const;
 
 export function UserAvatar({
@@ -28,6 +35,7 @@ export function UserAvatar({
   enabled,
   placeholder = 'none',
   preview = false,
+  shape = 'circle',
   size = 'sm',
   user,
 }: UserAvatarProps) {
@@ -52,8 +60,9 @@ export function UserAvatar({
   const avatar = (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-muted-foreground',
+        'inline-flex shrink-0 items-center justify-center overflow-hidden bg-secondary text-muted-foreground',
         avatarSizeClassName[size],
+        avatarShapeClassName[shape],
         className,
       )}
       aria-hidden="true"
@@ -66,7 +75,7 @@ export function UserAvatar({
         <img
           src={url}
           alt=""
-          className="size-full rounded-full object-cover"
+          className={cn('size-full object-cover', avatarShapeClassName[shape])}
           referrerPolicy="no-referrer"
           loading="lazy"
           decoding="async"
@@ -88,7 +97,10 @@ export function UserAvatar({
       <button
         type="button"
         aria-label={altText}
-        className="inline-flex shrink-0 cursor-zoom-in rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+        className={cn(
+          'inline-flex shrink-0 cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
+          avatarShapeClassName[shape],
+        )}
         onClick={() => setPreviewOpen(true)}
       >
         {avatar}

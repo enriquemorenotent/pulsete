@@ -16,18 +16,25 @@ import type { MessageInput } from './storage-types.js';
 export const handleRuntimeConversationStatusEvent = (
   options: RuntimeConversationServiceOptions,
   event: Extract<RuntimeEvent, { type: 'status' }>,
-) => event.kind !== 'system'
-  ? [{ type: event.kind === 'error' ? 'error' : 'notice', networkId: event.networkId, message: event.message } satisfies ServerMessage]
-  : appendRuntimeConversationMessage(options, {
+) => {
+  if (event.kind !== 'system' && event.target) {
+    return [{
+      type: event.kind === 'error' ? 'error' : 'notice',
+      networkId: event.networkId,
+      message: event.message,
+    } satisfies ServerMessage];
+  }
+  return appendRuntimeConversationMessage(options, {
     id: randomUUID(),
     networkId: event.networkId,
     target: resolveStatusTarget(options, event),
     nick: null,
     body: event.message,
-    kind: 'system' satisfies MessageKind,
+    kind: event.kind satisfies MessageKind,
     self: false,
     ts: Date.now(),
   });
+};
 
 export const handleRuntimeConversationSendFailure = (
   options: RuntimeConversationServiceOptions,

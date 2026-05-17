@@ -165,6 +165,36 @@ test('saving a connected network reconnects with updated settings', async () => 
   }
 });
 
+test('saving a connected network reconnects when the username changes', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const received: string[] = [];
+  const server = await createRegisteredServer(received);
+  const network = storage.networks.upsert(createNetworkInput({
+    host: '127.0.0.1',
+    port: server.port,
+    nick: 'tester',
+    realName: 'Test User',
+  }));
+
+  try {
+    runtime.sessions.connect(network.id);
+    await waitFor(() => received.includes('USER tester 0 * :Test User'));
+
+    runtime.networks.saveNetwork({
+      ...network,
+      username: 'uid309962',
+    });
+
+    await waitFor(() => received.includes('USER uid309962 0 * :Test User'));
+  } finally {
+    runtime.sessions.disconnect(network.id);
+    server.closeConnections();
+    await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('runtime reconnect restores saved channel buffers', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -225,4 +255,3 @@ test('runtime reconnect deduplicates saved channels against autoJoin', async () 
     await new Promise<void>((resolve, reject) => server.server.close((error) => (error ? reject(error) : resolve())));
   }
 });
-

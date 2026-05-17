@@ -35,6 +35,7 @@ export class NetworkLifecycleService {
       port: network.port,
       tls: network.tls,
       nick: network.nick,
+      username: network.username,
       altNicks: network.altNicks,
       historicalSelfNicks: network.historicalSelfNicks ?? [],
       realName: network.realName,

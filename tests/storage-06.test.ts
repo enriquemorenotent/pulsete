@@ -196,8 +196,8 @@ test('normalized storage migration preserves large transcripts and backfills mis
   `).all('network-1') as Array<{ target: string; batchCount: number }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 26);
-  assert.equal(networkColumns.some((column) => column.name === 'username'), false);
+  assert.equal(version.user_version, 27);
+  assert.equal(networkColumns.some((column) => column.name === 'username'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'ircCloudAvatarId'), true);
   assert.deepEqual(
     nickEmojiColumns.map((column) => column.name),

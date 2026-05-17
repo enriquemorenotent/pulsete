@@ -69,6 +69,7 @@ const parseJson = <T>(value: string, fallback: T): T => {
 };
 
 export const migrateNormalizedStorage = (db: SqliteDb, helpers: MigrationHelpers) => {
+  ensureLegacyNetworkUsername(db, helpers);
   const networkLists = helpers.tableHasColumn(db, 'networks', 'altNicks')
     ? db.prepare('SELECT id, altNicks, historicalSelfNicks, autoJoin FROM networks').all<LegacyListsRow>()
     : [];
@@ -164,6 +165,15 @@ export const migrateNormalizedStorage = (db: SqliteDb, helpers: MigrationHelpers
     throw error;
   } finally {
     db.exec('PRAGMA foreign_keys = ON');
+  }
+};
+
+const ensureLegacyNetworkUsername = (db: SqliteDb, helpers: MigrationHelpers) => {
+  if (!helpers.tableExists(db, 'networks')) {
+    return;
+  }
+  if (!helpers.tableHasColumn(db, 'networks', 'username')) {
+    db.exec("ALTER TABLE networks ADD COLUMN username TEXT NOT NULL DEFAULT ''");
   }
 };
 

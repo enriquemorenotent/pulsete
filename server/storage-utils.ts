@@ -48,6 +48,7 @@ export const toNetworkProfile = (
     port: row.port,
     tls: Boolean(row.tls),
     nick: row.nick,
+    username: row.username,
     altNicks: lists.altNicks,
     historicalSelfNicks: lists.historicalSelfNicks,
     realName: row.realName,

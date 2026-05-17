@@ -105,6 +105,28 @@ test('runtime rejects client commands while the network is still connecting', as
   }
 });
 
+test('runtime uses configured username in registration', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const runtime = createRuntime(storage.runtimeStore);
+  const received: string[] = [];
+  const handshake = await createHandshakeServer(received);
+  const network = storage.networks.upsert(createNetworkInput({
+    host: '127.0.0.1',
+    port: handshake.port,
+    nick: 'tester',
+    username: 'uid309962',
+  }));
+
+  try {
+    runtime.sessions.connect(network.id);
+    await waitFor(() => received.includes('USER uid309962 0 * :Tester Example'));
+  } finally {
+    handshake.closeConnections();
+    await new Promise<void>((resolve, reject) => handshake.server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test('runtime reports a failed channel-list request while disconnected', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
