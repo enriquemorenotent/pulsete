@@ -14,6 +14,9 @@ test('desktop shell header avoids rendering any secondary context line', () => {
     />,
   );
 
-  assert.match(markup, />Pulsete</);
+  assert.match(markup, /src="\/pulsete-logo.svg"/);
+  assert.match(markup, /alt="Pulsete"/);
+  assert.doesNotMatch(markup, />Pulsete</);
+  assert.doesNotMatch(markup, />IRC</);
   assert.doesNotMatch(markup, /<p class="truncate pt-1 font-mono text-\[10px\] uppercase tracking-\[0\.22em\] text-muted-foreground">/);
 });

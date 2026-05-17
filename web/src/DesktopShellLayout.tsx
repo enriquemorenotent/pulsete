@@ -13,6 +13,7 @@ import type {
   DesktopShellCommandPaletteModel,
   DesktopShellHeaderModel,
 } from './desktop-shell-model.js';
+import { DesktopShellBrand } from './DesktopShellBrand.js';
 import { DesktopShellToolsMenu } from './DesktopShellToolsMenu.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
 import {
@@ -107,14 +108,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(87,128,208,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] text-foreground">
       <header className="relative z-30 flex shrink-0 flex-wrap items-center gap-3 border-b border-white/6 bg-background/80 px-4 py-3 backdrop-blur-xl">
-        <div className="mr-auto min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold tracking-tight text-foreground">Pulsete</span>
-            <span className="rounded-md border border-white/8 bg-white/4 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              IRC
-            </span>
-          </div>
-        </div>
+        <DesktopShellBrand />
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           <Button
             variant="secondary"
