@@ -219,15 +219,16 @@ export const recordObservedQueryNickChange = (
   upsertQueryNickAlias(db, { bufferId: source.id, networkId, nick: fromTarget, source: 'nick-change' });
   const destination = getStoredBufferByTarget(db, networkId, toTarget);
   const mergedBuffer = destination?.kind === 'query' && destination.id !== source.id ? destination : null;
+  const bufferOpen = isStoredBufferOpen(db, source.id) || (!!mergedBuffer && isStoredBufferOpen(db, mergedBuffer.id));
   const merged = mergeQueryBuffers(db, source, [mergedBuffer], networkId, 'nick-change');
 
   const updated = upsertBuffer(db, {
     ...merged.buffer,
     target: toTarget,
-    isOpen: true,
+    isOpen: bufferOpen,
   });
   upsertQueryNickAlias(db, { bufferId: updated.id, networkId, nick: toTarget, source: 'nick-change' });
-  return { buffer: updated, removedBufferIds: merged.removedBufferIds, retargetedFrom: source.target };
+  return { buffer: updated, removedBufferIds: merged.removedBufferIds, retargetedFrom: source.target, bufferOpen };
 };
 
 const upsertQueryBufferById = (db: SqliteDb, input: QueryBufferInput) => {
@@ -252,6 +253,11 @@ const toBufferInput = (input: QueryBufferInput): BufferInput => {
     selfNickAliases: input.selfNickAliases,
     isOpen: input.isOpen,
   };
+};
+
+const isStoredBufferOpen = (db: SqliteDb, bufferId: string) => {
+  const row = db.prepare('SELECT isOpen FROM buffers WHERE id = ?').get(bufferId) as { isOpen: number } | undefined;
+  return row?.isOpen === 1;
 };
 
 const retargetQueryBuffer = (db: SqliteDb, buffer: BufferState, input: QueryBufferInput) =>

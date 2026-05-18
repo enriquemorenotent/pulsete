@@ -30,8 +30,9 @@ test('offline channels surface an inline reconnect action', () => {
         selectedPendingChannel: null,
         headerTitle: selectedChannel.name,
         headerSubtitle: 'Offline. History remains available.',
-        composerMode: 'hidden',
-        composerPlaceholder: '',
+        composerMode: 'normal',
+        composerDisabled: true,
+        composerPlaceholder: 'Message #help or /command',
         emptyBody: 'No history yet.',
         showNicklist: false,
       }}
@@ -68,7 +69,66 @@ test('offline channels surface an inline reconnect action', () => {
   assert.match(markup, />Reconnect</);
   assert.match(markup, /role="status"/);
   assert.match(markup, /border-b py-1.5/);
-  assert.doesNotMatch(markup, /rounded-\[1rem\]/);
+  assert.match(markup, /placeholder="Message #help/);
+  assert.match(markup, /<input[^>]*disabled=""/);
+  assert.match(markup, /<button[^>]*disabled=""/);
+});
+
+test('offline private messages keep a disabled composer in place', () => {
+  const network = makeNetwork();
+  const selectedBuffer = makeBuffer({ kind: 'query', target: 'MissD' });
+  const markup = renderToStaticMarkup(
+    <ChatPane
+      workspace={{
+        mode: 'query-offline',
+        selection: { kind: 'buffer', bufferId: selectedBuffer.id },
+        workspaceNetworks: [network],
+        selectedNetwork: network,
+        selectedRuntime: {
+          phase: 'offline',
+          serverName: 'irc.example.test',
+          nick: network.nick,
+        },
+        selectedBuffer,
+        selectedChannel: null,
+        selectedPendingChannel: null,
+        headerTitle: selectedBuffer.target,
+        headerSubtitle: 'Offline. History remains available.',
+        composerMode: 'normal',
+        composerDisabled: true,
+        composerPlaceholder: 'Message MissD or /command',
+        emptyBody: 'No history yet.',
+        showNicklist: false,
+      }}
+      nickEmojis={[]}
+      externalAvatarsEnabled={false}
+      mutedNicks={[]}
+      selectedMessages={[]}
+      draft=""
+      onDraftChange={() => undefined}
+      onRecallOlderDraft={() => undefined}
+      onRecallNewerDraft={() => undefined}
+      onSend={async () => false}
+      contactRuleHandlers={noopContactRuleHandlers}
+      showChannelAutoJoin={false}
+      channelAutoJoinActive={false}
+      onToggleChannelAutoJoin={async () => true}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+      channelList={closedChannelList}
+      channelListNetwork={null}
+      onCloseChannelList={() => undefined}
+      onJoinChannelFromList={async () => undefined}
+      onOpenMentionedChannel={() => undefined}
+      onOpenParticipantQuery={() => undefined}
+      onOpenChannelList={() => undefined}
+      onReconnectNetwork={async () => true}
+    />
+  );
+
+  assert.match(markup, /placeholder="Message MissD/);
+  assert.match(markup, /<input[^>]*disabled=""/);
+  assert.match(markup, /<button[^>]*disabled=""/);
 });
 
 test('saved channels that are no longer joined surface a rejoin action', () => {

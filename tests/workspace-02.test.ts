@@ -84,6 +84,8 @@ test('pending channels stay selectable before the confirmed buffer exists', () =
   assert.equal(workspace.mode, 'channel-pending');
   assert.equal(workspace.selectedPendingChannel?.channel, '#help');
   assert.equal(workspace.selectedBuffer, null);
+  assert.equal(workspace.composerMode, 'normal');
+  assert.equal(workspace.composerDisabled, true);
   assert.equal(workspace.showNicklist, false);
 });
 

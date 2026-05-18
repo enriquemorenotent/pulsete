@@ -154,9 +154,11 @@ export const handleRuntimeConversationPeerNickEvent = (
       event.newNick,
     );
     if (renamed) {
-      queryTarget = renamed.buffer.target;
-      messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });
-      messages.push(...removedBufferMessages(event.networkId, renamed.removedBufferIds, renamed.buffer.id));
+      if (renamed.bufferOpen) {
+        queryTarget = renamed.buffer.target;
+        messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });
+        messages.push(...removedBufferMessages(event.networkId, renamed.removedBufferIds, renamed.buffer.id));
+      }
     }
     const newNickBuffer = findOpenBufferByTarget(options, event.networkId, event.newNick);
     if (!queryTarget && newNickBuffer?.kind === 'query') {

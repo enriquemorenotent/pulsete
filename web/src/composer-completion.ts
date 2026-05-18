@@ -43,7 +43,7 @@ export const dedupeIrcCompletionCandidates = (candidates: string[]) => {
 
 export const buildComposerCompletionModel = (workspace: WorkspaceView): ComposerCompletionModel => {
   const selectedBuffer = workspace.selectedBuffer;
-  if (!selectedBuffer || workspace.composerMode === 'hidden') {
+  if (!selectedBuffer || workspace.composerMode === 'hidden' || workspace.composerDisabled === true) {
     return disabledCompletionModel;
   }
   const commandCandidates = slashIrcClientCommandCompletionCandidates;

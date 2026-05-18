@@ -29,6 +29,20 @@ export const findMutedNickByIdentity = <T extends IdentityScopedEntry>(
   target: NetworkUserIdentityTarget | null | undefined,
 ) => mutedNicks.find((entry) => matchesIdentityScopedEntry(entry, target)) ?? null;
 
+export const findMutedNickByTarget = <T extends IdentityScopedEntry>(
+  mutedNicks: readonly T[],
+  target: NetworkUserIdentityTarget | null | undefined,
+) => {
+  const identityMatch = findMutedNickByIdentity(mutedNicks, target);
+  if (identityMatch || !target?.nick) {
+    return identityMatch;
+  }
+  return mutedNicks.find((entry) =>
+    entry.networkId === target.networkId
+    && isSameIrcIdentifier(entry.nick, target.nick)
+  ) ?? null;
+};
+
 export const isNickMuted = (
   mutedNicks: readonly NickScopedEntry[],
   networkId: string,
@@ -38,7 +52,7 @@ export const isNickMuted = (
 export const isUserMuted = (
   mutedNicks: readonly IdentityScopedEntry[],
   target: NetworkUserIdentityTarget | null | undefined,
-) => !!findMutedNickByIdentity(mutedNicks, target);
+) => !!findMutedNickByTarget(mutedNicks, target);
 
 export const resolveMutedTarget = (
   networkId: string,

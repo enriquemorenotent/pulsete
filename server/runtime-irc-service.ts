@@ -6,6 +6,7 @@ import {
 } from './irc-validate.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { requireStoredNetwork } from './runtime-network-guard.js';
+import { assertNotSelfPrivateMessageTarget } from './runtime-self-target.js';
 import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
 import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
@@ -50,8 +51,14 @@ export class RuntimeIrcService {
     kind: 'message' | 'action' = 'message',
     sourceBufferId?: string,
   ) {
+    const network = requireStoredNetwork(this.options.networks, networkId);
     const normalizedTarget = normalizeMessageTarget(target);
     const normalizedBody = normalizeMessageBody(body);
+    assertNotSelfPrivateMessageTarget(
+      normalizedTarget,
+      network,
+      this.options.connectionManager.getConnectionState(networkId)?.nick ?? null,
+    );
     const connection = this.options.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId, normalizedTarget);
     kind === 'action'

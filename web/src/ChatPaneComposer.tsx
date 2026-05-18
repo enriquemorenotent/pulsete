@@ -55,6 +55,7 @@ export const shouldFocusChatPaneComposerFromRequest = (
 type ChatPaneComposerProps = {
   draft: string;
   mode: ComposerMode;
+  disabled?: boolean;
   placeholder: string;
   target: ChatPaneComposerTarget | null;
   focusContextKey?: string | null;
@@ -89,7 +90,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
       return;
     }
     focusInputAtEnd(inputRef.current);
-  }, [props.focusContextKey]);
+  }, [props.disabled, props.focusContextKey]);
 
   useEffect(() => {
     const nextFocusRequestId = props.focusRequestId ?? 0;
@@ -99,7 +100,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
       return;
     }
     focusInputAtEnd(inputRef.current);
-  }, [props.focusRequestId]);
+  }, [props.disabled, props.focusRequestId]);
 
   useLayoutEffect(() => {
     const pendingSelection = pendingSelectionRef.current;
@@ -166,6 +167,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
           <Input
             ref={inputRef}
             value={props.draft}
+            disabled={props.disabled}
             className="min-w-0 flex-1 border-transparent bg-transparent focus-visible:border-ring/40"
             onBlur={() => {
               completionSessionRef.current = null;
@@ -216,6 +218,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
             size="sm"
             variant={prompt.variant === 'commands' ? 'secondary' : 'default'}
             className="shrink-0"
+            disabled={props.disabled}
             onClick={() => void props.onSend()}
           >
             {prompt.actionIcon === 'terminal' ? <Terminal /> : <SendHorizonal />}
@@ -228,7 +231,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
 }
 
 function focusInputAtEnd(input: HTMLInputElement | null) {
-  if (!input) {
+  if (!input || input.disabled) {
     return;
   }
   input.focus({ preventScroll: true });

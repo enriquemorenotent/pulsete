@@ -39,6 +39,7 @@ export type WorkspaceView = {
   headerTitle: string;
   headerSubtitle: string;
   composerMode: ComposerMode;
+  composerDisabled?: boolean;
   composerPlaceholder: string;
   emptyBody: string;
   showNicklist: boolean;

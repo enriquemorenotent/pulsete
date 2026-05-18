@@ -225,8 +225,9 @@ test('reconnecting channels rely on the inline status banner instead of header m
         selectedPendingChannel: null,
         headerTitle: selectedChannel.name,
         headerSubtitle: 'Reconnecting. History remains available.',
-        composerMode: 'hidden',
-        composerPlaceholder: '',
+        composerMode: 'normal',
+        composerDisabled: true,
+        composerPlaceholder: 'Message #help or /command',
         emptyBody: 'No history yet.',
         showNicklist: false,
       }}
@@ -256,6 +257,8 @@ test('reconnecting channels rely on the inline status banner instead of header m
   );
 
   assert.match(markup, /History stays available while the connection returns\./);
+  assert.match(markup, /placeholder="Message #help/);
+  assert.match(markup, /<input[^>]*disabled=""/);
   assert.doesNotMatch(markup, />Connecting</);
   assert.doesNotMatch(markup, />Host</);
 });

@@ -85,6 +85,8 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.conversations.openQuery(network.id, '   '), /Private-message target is required/);
   assert.throws(() => runtime.conversations.openQuery(network.id, '#help'), /Private-message target is required/);
   assert.throws(() => runtime.conversations.openQuery(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
+  assert.throws(() => runtime.conversations.openQuery(network.id, 'TESTER'), /Private-message target cannot be your own nick/);
+  assert.throws(() => runtime.conversations.openQuery(network.id, 'tester_'), /Private-message target cannot be your own nick/);
   assert.throws(() => runtime.friends.upsertFriend('   '), /Private-message target is required/);
   assert.throws(() => runtime.friends.upsertFriend('#help'), /Private-message target is required/);
   assert.throws(() => runtime.friends.upsertFriend('alice,bob'), /Private-message target must refer to a single nick/);
@@ -106,8 +108,15 @@ test('runtime validation rejects missing networks and invalid targets before tou
     () => runtime.conversations.closeBuffer(storage.conversations.getServerBuffer(network.id)!.id),
     /Only channels and private messages can be closed/
   );
+  setRuntimeConnection(runtime, network.id, {
+    get state() {
+      return { phase: 'connected' as const, serverName: null, nick: 'renamed' };
+    },
+  });
+  assert.throws(() => runtime.conversations.openQuery(network.id, 'RENAMED'), /Private-message target cannot be your own nick/);
   assert.throws(() => runtime.irc.sendMessage(network.id, '   ', 'hello'), /Private-message target is required/);
   assert.throws(() => runtime.irc.sendMessage(network.id, 'alice,bob', 'hello'), /Private-message target must refer to a single nick/);
+  assert.throws(() => runtime.irc.sendMessage(network.id, 'renamed', 'hello'), /Private-message target cannot be your own nick/);
   assert.throws(() => runtime.irc.sendMessage(network.id, '#help', '   '), /Message body is required/);
   assert.throws(
     () => runtime.irc.sendMessage(network.id, '#help', 'hello\r\nOPER root'),

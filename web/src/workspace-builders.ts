@@ -19,6 +19,7 @@ export const buildEmptyWorkspace = (workspaceNetworks: NetworkProfile[]): Worksp
   headerTitle: 'No active connection',
   headerSubtitle: '',
   composerMode: 'hidden',
+  composerDisabled: true,
   composerPlaceholder: '',
   emptyBody: 'Open Network Manager to connect a network.',
   showNicklist: false,
@@ -54,6 +55,7 @@ const createWorkspace = (
   headerTitle: '',
   headerSubtitle: '',
   composerMode: 'hidden',
+  composerDisabled: false,
   composerPlaceholder: '',
   emptyBody: '',
   showNicklist: false,
@@ -92,6 +94,9 @@ const buildPendingChannelWorkspace = (resolved: ResolvedWorkspace): WorkspaceVie
       resolved.connectionStatus === 'connected'
         ? resolved.connectedSubtitle
         : 'Waiting for the connection to become available again.',
+    composerMode: 'normal',
+    composerDisabled: true,
+    composerPlaceholder: `Message ${resolved.activePendingChannel?.channel ?? 'channel'} or /command`,
     emptyBody: 'Joining channel. Wait for the server to confirm the membership.',
   });
 
@@ -101,6 +106,9 @@ const buildOfflineWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => {
       mode: 'channel-offline',
       headerTitle: resolved.selectedChannel?.name ?? resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('offline'),
+      composerMode: 'normal',
+      composerDisabled: true,
+      composerPlaceholder: `Message ${resolved.selectedChannel?.name ?? resolved.activeBuffer.target} or /command`,
       emptyBody: getReadOnlyEmptyBody('channel', 'offline'),
     });
   }
@@ -109,6 +117,9 @@ const buildOfflineWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => {
       mode: 'query-offline',
       headerTitle: resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('offline'),
+      composerMode: 'normal',
+      composerDisabled: true,
+      composerPlaceholder: `Message ${resolved.activeBuffer.target} or /command`,
       emptyBody: getReadOnlyEmptyBody('query', 'offline'),
     });
   }
@@ -116,6 +127,9 @@ const buildOfflineWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => {
     mode: 'server-offline',
     selection: selectionFor(resolved.serverBuffer),
     selectedBuffer: resolved.serverBuffer,
+    composerMode: 'commands',
+    composerDisabled: true,
+    composerPlaceholder: 'Use /join #channel or another /command',
     emptyBody: 'Reconnect to restore channels and private messages.',
   });
 };
@@ -126,6 +140,9 @@ const buildConnectingWorkspace = (resolved: ResolvedWorkspace): WorkspaceView =>
       mode: 'channel-connecting',
       headerTitle: resolved.selectedChannel?.name ?? resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('connecting'),
+      composerMode: 'normal',
+      composerDisabled: true,
+      composerPlaceholder: `Message ${resolved.selectedChannel?.name ?? resolved.activeBuffer.target} or /command`,
       emptyBody: getReadOnlyEmptyBody('channel', 'connecting'),
     });
   }
@@ -134,6 +151,9 @@ const buildConnectingWorkspace = (resolved: ResolvedWorkspace): WorkspaceView =>
       mode: 'query-connecting',
       headerTitle: resolved.activeBuffer.target,
       headerSubtitle: getReadOnlySubtitle('connecting'),
+      composerMode: 'normal',
+      composerDisabled: true,
+      composerPlaceholder: `Message ${resolved.activeBuffer.target} or /command`,
       emptyBody: getReadOnlyEmptyBody('query', 'connecting'),
     });
   }
@@ -141,6 +161,9 @@ const buildConnectingWorkspace = (resolved: ResolvedWorkspace): WorkspaceView =>
     mode: 'server-connecting',
     selection: selectionFor(resolved.serverBuffer),
     selectedBuffer: resolved.serverBuffer,
+    composerMode: 'commands',
+    composerDisabled: true,
+    composerPlaceholder: 'Use /join #channel or another /command',
     emptyBody: 'Waiting for the server connection to finish.',
   });
 };

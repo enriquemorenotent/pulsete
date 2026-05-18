@@ -356,6 +356,33 @@ test('incoming private messages from muted nicks stay in history without opening
   assert.equal(harness.sent.some((message) => message.type === 'buffer.upsert'), false);
 });
 
+test('incoming private messages from strong-identity mutes fall back to nick matching', () => {
+  const harness = createRuntimeEventHarness();
+  harness.storage.mutedNicks.upsert({
+    networkId: harness.network.id,
+    nick: 'helper',
+    identity: { kind: 'account', value: 'helper-account' },
+  });
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'HELPER',
+      body: 'missing account tag',
+      kind: 'line',
+      self: false,
+      ts: Date.now(),
+    },
+  });
+
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'helper'), null);
+  assert.equal(harness.storage.conversations.listMessages(harness.network.id, 'helper', 10)[0]?.body, 'missing account tag');
+  assert.equal(harness.sent.some((message) => message.type === 'buffer.upsert'), false);
+});
+
 test('incoming private messages from muted account identity stay muted after nick changes', () => {
   const harness = createRuntimeEventHarness();
   harness.storage.mutedNicks.upsert({
@@ -384,6 +411,29 @@ test('incoming private messages from muted account identity stay muted after nic
     harness.storage.conversations.listMessages(harness.network.id, 'helper_', 10)[0]?.body,
     'new nick, same account',
   );
+  assert.equal(harness.sent.some((message) => message.type === 'buffer.upsert'), false);
+});
+
+test('incoming private actions from muted nicks stay in history without opening a query buffer', () => {
+  const harness = createRuntimeEventHarness();
+  harness.storage.mutedNicks.upsert({ networkId: harness.network.id, nick: 'helper' });
+
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'helper',
+      body: 'waves',
+      kind: 'action',
+      self: false,
+      ts: Date.now(),
+    },
+  });
+
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'helper'), null);
+  assert.equal(harness.storage.conversations.listMessages(harness.network.id, 'helper', 10)[0]?.kind, 'action');
   assert.equal(harness.sent.some((message) => message.type === 'buffer.upsert'), false);
 });
 

@@ -200,3 +200,44 @@ test('peer nick events without an existing query do not create a private message
     ['helper is now known as guide'],
   );
 });
+
+test('peer nick events do not reopen hidden muted private-message buffers', () => {
+  const harness = createRuntimeEventHarness();
+  harness.storage.mutedNicks.upsert({ networkId: harness.network.id, nick: 'helper' });
+  harness.publishEvent({
+    type: 'message',
+    message: {
+      id: randomUUID(),
+      networkId: harness.network.id,
+      target: 'helper',
+      nick: 'helper',
+      body: 'muted before rename',
+      kind: 'line',
+      self: false,
+      ts: 1,
+    },
+  });
+  harness.sent.length = 0;
+
+  harness.publishEvent({
+    type: 'peer-nick',
+    networkId: harness.network.id,
+    oldNick: 'helper',
+    newNick: 'guide',
+    self: false,
+  });
+
+  const queryBuffers = harness.storage.conversations
+    .listBuffers(harness.network.id)
+    .filter((buffer) => buffer.kind === 'query');
+  assert.deepEqual(queryBuffers, []);
+  assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'guide'), null);
+  assert.deepEqual(
+    harness.storage.conversations.listMessages(harness.network.id, 'guide', 10).map((message) => message.body),
+    ['muted before rename'],
+  );
+  assert.equal(harness.sent.some((message) =>
+    message.type === 'buffer.upsert'
+    && (message.buffer as { kind?: string } | undefined)?.kind === 'query'
+  ), false);
+});

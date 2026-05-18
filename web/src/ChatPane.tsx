@@ -166,6 +166,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         <ChatPaneComposer
           draft={props.draft}
           mode={props.workspace.composerMode}
+          disabled={props.workspace.composerDisabled === true}
           placeholder={props.workspace.composerPlaceholder}
           target={composerTarget}
           focusContextKey={props.focusContextKey}

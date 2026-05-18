@@ -58,6 +58,7 @@ const makeWorkspace = (overrides: Partial<WorkspaceView> = {}): WorkspaceView =>
     headerTitle: overrides.headerTitle ?? selectedBuffer.target,
     headerSubtitle: overrides.headerSubtitle ?? '',
     composerMode: overrides.composerMode ?? 'normal',
+    composerDisabled: overrides.composerDisabled,
     composerPlaceholder: overrides.composerPlaceholder ?? 'Type a message or /command',
     emptyBody: overrides.emptyBody ?? '',
     showNicklist: overrides.showNicklist ?? true,
@@ -122,6 +123,15 @@ test('server command mode completion only exposes slash commands', () => {
     commandCandidates: slashIrcClientCommandCompletionCandidates,
     enabled: true,
     contextKey: 'server-1',
+    candidates: [],
+  });
+});
+
+test('disabled composers do not expose completion candidates', () => {
+  assert.deepEqual(buildComposerCompletionModel(makeWorkspace({ composerDisabled: true })), {
+    commandCandidates: [],
+    enabled: false,
+    contextKey: null,
     candidates: [],
   });
 });

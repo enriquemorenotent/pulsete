@@ -173,6 +173,10 @@ test('query routes validate missing networks and invalid targets', async () => {
     assert.equal(multipleTargets.status, 400);
     assert.equal(multipleTargets.json.message, 'Private-message target must refer to a single nick');
 
+    const selfTarget = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: 'TESTER' });
+    assert.equal(selfTarget.status, 400);
+    assert.equal(selfTarget.json.message, 'Private-message target cannot be your own nick');
+
     const invalidPayload = await requestJson(port, 'POST', `/api/networks/${network.id}/queries`, { target: {} });
     assert.equal(invalidPayload.status, 400);
     assert.equal(invalidPayload.json.message, 'Invalid query payload');

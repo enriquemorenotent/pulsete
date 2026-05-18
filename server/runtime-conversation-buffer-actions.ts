@@ -11,6 +11,7 @@ import {
   searchConversationBufferHistory,
 } from './runtime-conversation-store.js';
 import { normalizeQueryTarget } from './irc-validate.js';
+import { assertNotSelfPrivateMessageTarget } from './runtime-self-target.js';
 import { historySearchContextAfter, historySearchContextBefore } from '../shared/protocol-chat.js';
 import type {
   BufferHistorySearchPayload,
@@ -27,12 +28,15 @@ export const openRuntimeConversationQuery = (
   networkId: string,
   target: string,
   peerIdentity?: NetworkUserIdentity | null,
+  currentNick?: string | null,
 ) => {
-  requireStoredNetwork(options.networks, networkId);
+  const network = requireStoredNetwork(options.networks, networkId);
+  const normalizedTarget = normalizeQueryTarget(target);
+  assertNotSelfPrivateMessageTarget(normalizedTarget, network, currentNick);
   const result = openConversationQuery(
     options.conversations,
     networkId,
-    normalizeQueryTarget(target),
+    normalizedTarget,
     peerIdentity,
   );
   return {

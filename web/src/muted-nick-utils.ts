@@ -1,6 +1,6 @@
 import {
-  findMutedNickByIdentity,
   findMutedNickByNick,
+  findMutedNickByTarget,
   isUserMuted,
   resolveMutedTarget,
 } from '../../shared/muted-nicks.js';
@@ -13,7 +13,7 @@ export const findMutedNick = (
   nick: string,
   identity?: NetworkUserIdentity | null,
 ) =>
-  findMutedNickByIdentity(mutedNicks, { networkId, nick, identity })
+  findMutedNickByTarget(mutedNicks, { networkId, nick, identity })
   ?? findMutedNickByNick(mutedNicks, networkId, nick);
 
 export const isMessageMuted = (
@@ -37,5 +37,5 @@ export const resolveMutedMessageNick = (
   if (!isUserMuted(mutedNicks, target)) {
     return null;
   }
-  return target ? findMutedNickByIdentity(mutedNicks, target)?.nick ?? nick : nick;
+  return target ? findMutedNickByTarget(mutedNicks, target)?.nick ?? nick : nick;
 };

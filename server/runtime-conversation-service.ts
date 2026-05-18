@@ -27,8 +27,9 @@ export class RuntimeConversationService {
     networkId: string,
     target: string,
     peerIdentity?: Parameters<typeof openRuntimeConversationQuery>[3],
+    currentNick?: Parameters<typeof openRuntimeConversationQuery>[4],
   ) {
-    return openRuntimeConversationQuery(this.options, networkId, target, peerIdentity);
+    return openRuntimeConversationQuery(this.options, networkId, target, peerIdentity, currentNick);
   }
 
   closeBuffer(bufferId: string) {

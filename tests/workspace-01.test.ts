@@ -142,7 +142,8 @@ test('offline channel stays selected in read-only mode', () => {
   assert.equal(workspace.mode, 'channel-offline');
   assert.deepEqual(workspace.selection, bufferSelection(channelBuffer.id));
   assert.equal(workspace.selectedBuffer?.target, '#help');
-  assert.equal(workspace.composerMode, 'hidden');
+  assert.equal(workspace.composerMode, 'normal');
+  assert.equal(workspace.composerDisabled, true);
   assert.equal(workspace.showNicklist, false);
   assert.equal(getConnectionStatus(workspace.selectedRuntime), 'offline');
   assert.equal(workspace.headerTitle, '#help');
@@ -159,7 +160,8 @@ test('offline private message stays selected in read-only mode', () => {
   assert.equal(workspace.mode, 'query-offline');
   assert.deepEqual(workspace.selection, bufferSelection(queryBuffer.id));
   assert.equal(workspace.selectedBuffer?.target, 'alice');
-  assert.equal(workspace.composerMode, 'hidden');
+  assert.equal(workspace.composerMode, 'normal');
+  assert.equal(workspace.composerDisabled, true);
   assert.equal(workspace.showNicklist, false);
 });
 
@@ -173,7 +175,8 @@ test('connecting instance keeps channels selected in read-only mode', () => {
   });
 
   assert.equal(workspace.mode, 'channel-connecting');
-  assert.equal(workspace.composerMode, 'hidden');
+  assert.equal(workspace.composerMode, 'normal');
+  assert.equal(workspace.composerDisabled, true);
   assert.equal(workspace.selectedBuffer?.target, '#help');
   assert.equal(workspace.headerTitle, '#help');
   assert.match(workspace.headerSubtitle, /Reconnecting/);
@@ -189,7 +192,8 @@ test('connecting instance keeps private messages selected in read-only mode', ()
   });
 
   assert.equal(workspace.mode, 'query-connecting');
-  assert.equal(workspace.composerMode, 'hidden');
+  assert.equal(workspace.composerMode, 'normal');
+  assert.equal(workspace.composerDisabled, true);
   assert.equal(workspace.selectedBuffer?.target, 'alice');
   assert.equal(workspace.headerTitle, 'alice');
   assert.match(workspace.headerSubtitle, /Reconnecting/);
@@ -208,6 +212,19 @@ test('connected server buffer is command-only and hides the nicklist', () => {
   assert.equal(workspace.showNicklist, false);
   assert.equal(workspace.headerTitle, '');
   assert.equal(workspace.headerSubtitle, 'dbugger @ helix.oftc.net');
+});
+
+test('offline server buffer keeps a disabled command composer', () => {
+  const serverBuffer = makeBuffer({ id: 'server-1' });
+  const workspace = derive({
+    buffers: [serverBuffer],
+    selection: bufferSelection(serverBuffer.id),
+  });
+
+  assert.equal(workspace.mode, 'server-offline');
+  assert.equal(workspace.composerMode, 'commands');
+  assert.equal(workspace.composerDisabled, true);
+  assert.equal(workspace.showNicklist, false);
 });
 
 test('connected channel shows the nicklist and normal composer', () => {

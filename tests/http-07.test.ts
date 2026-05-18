@@ -152,6 +152,10 @@ test('websocket validation returns errors for invalid channel, query, and messag
     socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'alice,bob' }));
     assert.equal((await multiQueryErrorPromise).message, 'Private-message target must refer to a single nick');
 
+    const selfQueryErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'query.open', networkId: network.id, target: 'TESTER' }));
+    assert.equal((await selfQueryErrorPromise).message, 'Private-message target cannot be your own nick');
+
     const messageErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: '   ', body: 'hello', kind: 'message' }));
     assert.equal((await messageErrorPromise).message, 'Private-message target is required');
@@ -159,6 +163,10 @@ test('websocket validation returns errors for invalid channel, query, and messag
     const multiMessageErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: 'alice,bob', body: 'hello', kind: 'message' }));
     assert.equal((await multiMessageErrorPromise).message, 'Private-message target must refer to a single nick');
+
+    const selfMessageErrorPromise = waitForWebSocketMessageType(socket, 'error');
+    socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: 'tester', body: 'hello', kind: 'message' }));
+    assert.equal((await selfMessageErrorPromise).message, 'Private-message target cannot be your own nick');
 
     const blankMessageErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'message.send', networkId: network.id, target: '#help', body: '   ', kind: 'message' }));

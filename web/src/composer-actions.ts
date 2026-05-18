@@ -27,6 +27,9 @@ export async function sendComposerMessage(params: ComposerParams) {
   if (params.workspace.composerMode === 'hidden') {
     return null;
   }
+  if (params.workspace.composerDisabled === true) {
+    return null;
+  }
   if (params.workspace.composerMode === 'commands' && !text.startsWith('/')) {
     params.updateBanner('error', 'The server buffer only accepts commands such as /join');
     return null;

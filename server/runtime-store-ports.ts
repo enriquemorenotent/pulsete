@@ -74,7 +74,7 @@ export type RuntimeConversationStore = {
     networkId: string,
     fromTarget: string,
     toTarget: string,
-  ): { buffer: BufferState; removedBufferIds: string[]; retargetedFrom?: string | null } | null;
+  ): { buffer: BufferState; removedBufferIds: string[]; retargetedFrom?: string | null; bufferOpen: boolean } | null;
   appendMessage(input: MessageInput, bufferId?: string): AppSnapshot['messages'][number];
 };
 

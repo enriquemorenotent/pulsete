@@ -113,7 +113,8 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   };
   const conversations: RuntimeConversationMutations = {
     openQuery: (networkId, target, peerIdentity) => {
-      const result = conversationsService.openQuery(networkId, target, peerIdentity);
+      const currentNick = connectionManager.getConnectionState(networkId)?.nick ?? null;
+      const result = conversationsService.openQuery(networkId, target, peerIdentity, currentNick);
       connectionManager.syncPresenceTracking(networkId);
       const messages: ServerMessage[] = [
         ...result.messages,
