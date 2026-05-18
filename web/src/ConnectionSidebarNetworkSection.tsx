@@ -62,11 +62,7 @@ export function ConnectionSidebarNetworkSection(
 					<span className="relative flex size-4 shrink-0 items-center justify-center">
 						<ConnectionSidebarServerIcon
 							className="size-3.5"
-							iconUrl={
-								props.variant === 'server-rail'
-									? null
-									: connection.network.iconUrl
-							}
+							iconUrl={null}
 							runtime={connection.runtime}
 						/>
 						{serverActivity.hasUnread ? (

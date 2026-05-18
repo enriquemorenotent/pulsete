@@ -37,6 +37,23 @@ test('all-server sidebar layout remains the default rendering mode', () => {
   assert.match(markup, /aria-label="Open #beta"/);
 });
 
+test('all-server sidebar uses the default server row icon when a server image is set', () => {
+  const alpha = makeSidebarNetwork({
+    id: 'alpha',
+    name: 'Alpha',
+    iconUrl: 'https://example.test/alpha.png',
+  });
+  const markup = renderConnectionSidebar({
+    networks: [alpha],
+    buffers: [makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' })],
+    selection: { kind: 'buffer', bufferId: 'alpha-server' },
+  });
+
+  assert.match(markup, /aria-label="Open Alpha"/);
+  assert.match(markup, /lucide-server/);
+  assert.doesNotMatch(markup, /src="https:\/\/example.test\/alpha.png"/);
+});
+
 test('server rail shows all servers but only the active server tabs', () => {
   const alpha = makeSidebarNetwork({ id: 'alpha', name: 'Alpha' });
   const beta = makeSidebarNetwork({ id: 'beta', name: 'Beta' });
