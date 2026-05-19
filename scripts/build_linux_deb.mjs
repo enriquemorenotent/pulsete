@@ -10,7 +10,7 @@ const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
 const packageLock = JSON.parse(await readFile('package-lock.json', 'utf8'));
 
 await prepareStage();
-await run(resolve('node_modules/.bin/electron-builder'), ['--linux', 'deb', '--x64'], { cwd: stageRoot });
+await run(resolve('node_modules/.bin/electron-builder'), ['--linux', 'deb', '--x64', '--publish', 'never'], { cwd: stageRoot });
 await publishArtifacts();
 await rm(stageRoot, { recursive: true, force: true });
 
