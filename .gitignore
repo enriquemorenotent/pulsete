@@ -19,6 +19,7 @@ playwright-report
 test-results
 output/
 release/
+pages/
 .playwright-cli/
 current-ui.png
 main-space-fixed.png

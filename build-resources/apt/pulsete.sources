@@ -1,0 +1,6 @@
+Types: deb
+URIs: https://enriquemorenotent.github.io/pulsete/apt
+Suites: noble
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/pulsete-archive-keyring.gpg

@@ -1,6 +1,6 @@
 {
   "name": "pulsete",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A local IRC client with durable workspace state.",
   "homepage": "https://github.com/enriquemorenotent/pulsete",
   "private": true,
@@ -29,6 +29,7 @@
     "build:electron": "node scripts/build_node_entries.mjs --desktop",
     "build:server": "node scripts/build_node_entries.mjs --server",
     "build:web": "vite build",
+    "dist:apt": "node scripts/build_apt_repository.mjs",
     "dist:linux": "npm run build:desktop && node scripts/build_linux_deb.mjs",
     "lint:test-names": "node scripts/check_test_file_names.mjs",
     "lint:file-length": "python3 scripts/check_source_file_length.py --all --warn-lines 250 --max-lines 500 server shared tests web/src",

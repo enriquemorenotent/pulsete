@@ -17,6 +17,12 @@ files:
   - build-resources/icons/512x512.png
   - package.json
 
+extraResources:
+  - from: build-resources/apt
+    to: apt
+    filter:
+      - "**/*"
+
 linux:
   target:
     - target: deb
@@ -32,6 +38,8 @@ linux:
       StartupWMClass: Pulsete
 
 deb:
+  afterInstall: build-resources/linux/after-install.tpl
+  afterRemove: build-resources/linux/after-remove.tpl
   packageCategory: net
   priority: optional
   depends:

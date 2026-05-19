@@ -10,7 +10,7 @@
   <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/enriquemorenotent/pulsete?style=flat-square">
   </a>
-  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.0/pulsete_0.1.0_amd64.deb">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.1/pulsete_0.1.1_amd64.deb">
     <img alt="Ubuntu deb package" src="https://img.shields.io/badge/Ubuntu%2024.04-.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white">
   </a>
   <a href="./LICENSE">
@@ -41,6 +41,7 @@ packaging are planned, but not part of the current release flow yet.
 | Local-first history | Transcripts are stored in SQLite and remain readable without an IRC connection. |
 | Offline-friendly UI | Disconnected networks stay visible, with channel and query logs still selectable. |
 | Native Ubuntu package | GitHub Releases ship an Electron desktop app as a `.deb` for Ubuntu 24.04. |
+| APT updates | The `.deb` registers the Pulsete APT repository so later updates arrive through `apt upgrade`. |
 | Browser-fast development | The day-to-day development loop runs in the browser before packaging the desktop app. |
 
 ## Install On Ubuntu
@@ -49,8 +50,16 @@ Download the latest package from [GitHub Releases][latest-release], or install
 the current amd64 package directly:
 
 ```sh
-curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.0/pulsete_0.1.0_amd64.deb
-sudo apt install ./pulsete_0.1.0_amd64.deb
+curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.1/pulsete_0.1.1_amd64.deb
+sudo apt install ./pulsete_0.1.1_amd64.deb
+```
+
+Installing the `.deb` also installs the Pulsete APT source and signing key.
+Future releases can be installed with the normal Ubuntu update flow:
+
+```sh
+sudo apt update
+sudo apt upgrade
 ```
 
 [latest-release]: https://github.com/enriquemorenotent/pulsete/releases/latest
