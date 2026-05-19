@@ -92,8 +92,10 @@ export const NetworkManagerDialogContainer = memo(function NetworkManagerDialogC
 
 export const NetworkEditorDialogContainer = memo(function NetworkEditorDialogContainer({
   actions,
+  externalAvatarsEnabled,
 }: {
   actions: AppActions;
+  externalAvatarsEnabled: boolean;
 }) {
   const dispatch = useAppDispatch();
   const networkManager = useAppSelector(selectNetworkManagerState);
@@ -106,8 +108,9 @@ export const NetworkEditorDialogContainer = memo(function NetworkEditorDialogCon
 
   return model.open ? (
     <NetworkEditorDialog
-      form={model.form}
       activeTab={model.activeTab}
+      externalAvatarsEnabled={externalAvatarsEnabled}
+      form={model.form}
       onTabChange={model.onTabChange}
       onClose={model.onClose}
       onSubmit={model.onSubmit}

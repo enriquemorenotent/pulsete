@@ -10,7 +10,7 @@ import {
   resolveNickEmoji,
   resolveUniqueNickEmoji,
 } from './nick-emoji-utils.js';
-import { resolveNetworkServerImageUrl } from './network-server-image.js';
+import { resolveNetworkServerImage } from './network-server-image.js';
 
 export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpecsInput) => {
   const nickEmojiByNetworkNick = buildNickEmojiByNetworkNick(input.nickEmojis);
@@ -60,14 +60,15 @@ const buildBufferEntries = (
   const entries: CommandPaletteEntrySpec[] = [];
   for (const connection of connections) {
     const currentNetwork = connection.network.id === selectedNetworkId;
-    const networkIconUrl = resolveNetworkServerImageUrl(connection.network, externalAvatarsEnabled);
+    const networkImage = resolveNetworkServerImage(connection.network, externalAvatarsEnabled);
     const networkRuntimePhase = connection.runtime?.phase ?? 'offline';
     if (connection.serverBuffer) {
       entries.push({
         id: `network:${connection.network.id}`,
         section: 'buffers',
         label: connection.labelParts.name,
-        networkIconUrl,
+        networkIconSource: networkImage?.source,
+        networkIconUrl: networkImage?.url,
         networkRuntimePhase,
         subtitle: `Server buffer · as ${connection.labelParts.nick}`,
         keywords: [
@@ -97,7 +98,8 @@ const buildBufferEntries = (
         id: `buffer:${child.buffer.id}`,
         section: 'buffers',
         label: child.buffer.target,
-        networkIconUrl,
+        networkIconSource: networkImage?.source,
+        networkIconUrl: networkImage?.url,
         networkRuntimePhase,
         emoji: child.buffer.kind === 'query'
           ? resolveNickEmoji(nickEmojiByNetworkNick, child.buffer.networkId, child.buffer.target)
@@ -128,7 +130,8 @@ const buildBufferEntries = (
         id: `pending:${pending.pendingChannel.networkId}:${pending.pendingChannel.channel}`,
         section: 'buffers',
         label: pending.pendingChannel.channel,
-        networkIconUrl,
+        networkIconSource: networkImage?.source,
+        networkIconUrl: networkImage?.url,
         networkRuntimePhase,
         subtitle: `Joining on ${connection.label}`,
         keywords: [

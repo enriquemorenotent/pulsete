@@ -200,6 +200,7 @@ test('server rail uses IRCCloud avatars when no server image is set', () => {
   });
 
   assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  assert.match(markup, /data-network-image-source="irccloud-fallback"/);
   assert.match(markup, /class="[^"]*size-full[^"]*rounded-\[inherit\][^"]*"/);
 });
 
@@ -219,6 +220,7 @@ test('server rail does not use IRCCloud avatars when external avatars are disabl
   });
 
   assert.doesNotMatch(markup, /avatar-redirect/);
+  assert.doesNotMatch(markup, /data-network-image-source="irccloud-fallback"/);
 });
 
 test('server rail shows connection state separately from unread activity', () => {

@@ -6,16 +6,15 @@ import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { ConnectionSidebarFriends } from './ConnectionSidebarFriends.js';
 import { ConnectionSidebarNetworkSection } from './ConnectionSidebarNetworkSection.js';
 import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
+import { NetworkServerImageFallbackCue } from './NetworkServerImageFallbackCue.js';
 import { networkImageRuntimeClass } from './network-image-state.js';
-import { resolveNetworkServerImageUrl } from './network-server-image.js';
+import { isNetworkServerImageFallback, resolveNetworkServerImage } from './network-server-image.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
 type ConnectionSidebarServerRailProps = ConnectionSidebarProps;
 
-export function ConnectionSidebarServerRail(
-  props: ConnectionSidebarServerRailProps,
-) {
+export function ConnectionSidebarServerRail(props: ConnectionSidebarServerRailProps) {
   const activeConnection = useMemo(
     () => resolveActiveConnection(props.connections),
     [props.connections],
@@ -54,11 +53,9 @@ export function ConnectionSidebarServerRail(
   );
 }
 
-function ConnectionRailDetail(
-  props: ConnectionSidebarServerRailProps & {
-    activeConnection: SidebarConnectionView | null;
-  },
-) {
+function ConnectionRailDetail(props: ConnectionSidebarServerRailProps & {
+  activeConnection: SidebarConnectionView | null;
+}) {
   const activeConnection = props.activeConnection;
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-2.5 py-1.5">
@@ -147,21 +144,18 @@ function ServerRailActionBar(props: {
   );
 }
 
-function ServerRailBanner(props: {
-  connection: SidebarConnectionView;
-  externalAvatarsEnabled?: boolean;
-}) {
-  const iconUrl = resolveNetworkServerImageUrl(
+function ServerRailBanner(props: { connection: SidebarConnectionView; externalAvatarsEnabled?: boolean }) {
+  const serverImage = resolveNetworkServerImage(
     props.connection.network,
     props.externalAvatarsEnabled === true,
   );
-  if (!iconUrl) {
+  if (!serverImage) {
     return null;
   }
   return (
-    <div className="mb-2 overflow-hidden rounded-sm border border-white/10 bg-black/20">
+    <div className="relative mb-2 overflow-hidden rounded-sm border border-white/10 bg-black/20">
       <img
-        src={iconUrl}
+        src={serverImage.url}
         alt=""
         className={cn(
           'block h-auto w-full object-contain',
@@ -171,6 +165,9 @@ function ServerRailBanner(props: {
         decoding="async"
         referrerPolicy="no-referrer"
       />
+      {isNetworkServerImageFallback(serverImage) ? (
+        <NetworkServerImageFallbackCue className="right-1 top-1 size-5" />
+      ) : null}
     </div>
   );
 }
@@ -182,7 +179,7 @@ function ServerRailButton(props: {
   onSelect: () => void;
 }) {
   const activity = resolveConnectionActivity(props.connection);
-  const iconUrl = resolveNetworkServerImageUrl(
+  const serverImage = resolveNetworkServerImage(
     props.connection.network,
     props.externalAvatarsEnabled === true,
   );
@@ -206,10 +203,13 @@ function ServerRailButton(props: {
         title={props.connection.labelParts.name}
       >
         <ConnectionSidebarServerIcon
-          className={iconUrl ? 'size-full rounded-[inherit]' : 'size-4'}
-          iconUrl={iconUrl}
+          className={serverImage ? 'size-full rounded-[inherit]' : 'size-4'}
+          iconUrl={serverImage?.url}
           runtime={props.connection.runtime}
         />
+        {isNetworkServerImageFallback(serverImage) ? (
+          <NetworkServerImageFallbackCue />
+        ) : null}
         {props.active ? (
           <span aria-hidden className="absolute inset-0 bg-white/[0.06]" />
         ) : null}

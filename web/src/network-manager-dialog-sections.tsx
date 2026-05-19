@@ -4,13 +4,17 @@ import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
+import { NetworkServerImageFallbackCue } from './NetworkServerImageFallbackCue.js';
 import {
   getNetworkManagerAuthLabel,
   getNetworkManagerAutoJoinLabel,
   getNetworkManagerRowStatus,
   getNetworkManagerStatusLabel,
 } from './network-manager-dialog-model.js';
-import { resolveNetworkServerImageUrl } from './network-server-image.js';
+import {
+  isNetworkServerImageFallback,
+  resolveNetworkServerImage,
+} from './network-server-image.js';
 
 export function NetworkManagerListRow(props: {
   externalAvatarsEnabled?: boolean;
@@ -20,7 +24,7 @@ export function NetworkManagerListRow(props: {
   onSelect: (networkId: string) => void;
 }) {
   const rowStatus = getNetworkManagerRowStatus(props.runtime);
-  const iconUrl = resolveNetworkServerImageUrl(
+  const serverImage = resolveNetworkServerImage(
     props.network,
     props.externalAvatarsEnabled === true,
   );
@@ -36,12 +40,15 @@ export function NetworkManagerListRow(props: {
       onClick={() => props.onSelect(props.network.id)}
     >
       <div className="flex items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.05] text-muted-foreground">
+        <div className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.05] text-muted-foreground">
           <ConnectionSidebarServerIcon
-            className={iconUrl ? 'size-full rounded-[inherit]' : 'size-3.5'}
-            iconUrl={iconUrl}
+            className={serverImage ? 'size-full rounded-[inherit]' : 'size-3.5'}
+            iconUrl={serverImage?.url}
             runtime={props.runtime}
           />
+          {isNetworkServerImageFallback(serverImage) ? (
+            <NetworkServerImageFallbackCue />
+          ) : null}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +78,7 @@ export function SelectedNetworkPane(props: {
   onRemove: () => void;
 }) {
   const status = getNetworkManagerRowStatus(props.runtime);
-  const iconUrl = resolveNetworkServerImageUrl(
+  const serverImage = resolveNetworkServerImage(
     props.network,
     props.externalAvatarsEnabled === true,
   );
@@ -81,12 +88,15 @@ export function SelectedNetworkPane(props: {
       <div className="space-y-3">
         <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Selected network</p>
         <div className="flex items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.05] text-muted-foreground">
+          <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.05] text-muted-foreground">
             <ConnectionSidebarServerIcon
-              className={iconUrl ? 'size-full rounded-[inherit]' : 'size-4'}
-              iconUrl={iconUrl}
+              className={serverImage ? 'size-full rounded-[inherit]' : 'size-4'}
+              iconUrl={serverImage?.url}
               runtime={props.runtime}
             />
+            {isNetworkServerImageFallback(serverImage) ? (
+              <NetworkServerImageFallbackCue />
+            ) : null}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">

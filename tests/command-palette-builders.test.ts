@@ -124,6 +124,14 @@ test('command palette carries server images for network-backed entries', () => {
       .filter((entry) => entry.id.startsWith('network:')
         || entry.id.startsWith('buffer:')
         || entry.id.startsWith('pending:'))
+      .map((entry) => entry.networkIconSource),
+    ['explicit', 'explicit', 'explicit', 'explicit'],
+  );
+  assert.deepEqual(
+    entries
+      .filter((entry) => entry.id.startsWith('network:')
+        || entry.id.startsWith('buffer:')
+        || entry.id.startsWith('pending:'))
       .map((entry) => entry.networkRuntimePhase),
     ['offline', 'offline', 'offline', 'offline'],
   );
@@ -147,6 +155,14 @@ test('command palette uses IRCCloud avatar fallbacks for network-backed entries'
         || entry.id.startsWith('pending:'))
       .map((entry) => entry.networkIconUrl),
     [avatarUrl, avatarUrl, avatarUrl, avatarUrl],
+  );
+  assert.deepEqual(
+    entries
+      .filter((entry) => entry.id.startsWith('network:')
+        || entry.id.startsWith('buffer:')
+        || entry.id.startsWith('pending:'))
+      .map((entry) => entry.networkIconSource),
+    ['irccloud-fallback', 'irccloud-fallback', 'irccloud-fallback', 'irccloud-fallback'],
   );
 });
 

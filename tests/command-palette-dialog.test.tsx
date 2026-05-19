@@ -64,7 +64,7 @@ test('command palette body keeps the top chrome fixed above a flexible results p
   assert.match(markup, /Unread/);
   assert.match(
     markup,
-    /<img src="data:image\/png;base64,cHVsc2V0ZQ==" alt="" class="size-8 shrink-0 rounded-sm object-cover grayscale opacity-60"/,
+    /<span class="relative size-8 shrink-0 overflow-hidden rounded-sm"><img src="data:image\/png;base64,cHVsc2V0ZQ==" alt="" class="size-full object-cover grayscale opacity-60"/,
   );
   assert.match(
     markup,
@@ -75,4 +75,28 @@ test('command palette body keeps the top chrome fixed above a flexible results p
     markup,
     /<span class="truncate">School-of-O<\/span><span aria-hidden="true" class="shrink-0 text-\[15px\] leading-5">🌙<\/span>/,
   );
+});
+
+test('command palette marks fallback network images', () => {
+  const markup = renderToStaticMarkup(
+    <Dialog open>
+      <CommandPaletteDialogBody
+        activeIndex={0}
+        filteredEntries={[{
+          ...entries[0],
+          networkIconSource: 'irccloud-fallback',
+          networkIconUrl: 'https://static.irccloud-cdn.com/avatar-redirect/7',
+        }]}
+        inputRef={createRef<HTMLInputElement>()}
+        onClose={() => undefined}
+        onQueryChange={() => undefined}
+        onQueryKeyDown={() => undefined}
+        onSetActiveIndex={() => undefined}
+        query=""
+      />
+    </Dialog>
+  );
+
+  assert.match(markup, /data-network-image-source="irccloud-fallback"/);
+  assert.match(markup, /title="Using IRCCloud avatar fallback"/);
 });

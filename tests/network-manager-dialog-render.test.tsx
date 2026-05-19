@@ -33,6 +33,7 @@ test('network manager rows use IRCCloud avatar fallbacks when enabled', () => {
   );
 
   assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  assert.match(markup, /data-network-image-source="irccloud-fallback"/);
 });
 
 test('network manager rows keep generated icons when external avatars are disabled', () => {
@@ -47,4 +48,5 @@ test('network manager rows keep generated icons when external avatars are disabl
   );
 
   assert.doesNotMatch(markup, /avatar-redirect/);
+  assert.doesNotMatch(markup, /data-network-image-source="irccloud-fallback"/);
 });

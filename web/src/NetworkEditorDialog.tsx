@@ -1,12 +1,6 @@
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog.js';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -15,6 +9,7 @@ import { NetworkServerImageField } from './NetworkServerImageField.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 
 type NetworkEditorDialogProps = {
+  externalAvatarsEnabled?: boolean;
   form: NetworkForm;
   activeTab: EditorTab;
   onTabChange: (tab: EditorTab) => void;
@@ -54,7 +49,11 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
             <ScrollArea className="min-h-0 h-full flex-1">
               <div className="px-4 py-3">
                 <TabsContent value="servers" className="mt-0">
-                  <ServerTab form={props.form} onChange={props.onChange} />
+                  <ServerTab
+                    externalAvatarsEnabled={props.externalAvatarsEnabled}
+                    form={props.form}
+                    onChange={props.onChange}
+                  />
                 </TabsContent>
                 <TabsContent value="autojoin" className="mt-0">
                   <AutojoinTab form={props.form} onChange={props.onChange} />
@@ -79,7 +78,11 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
   );
 }
 
-function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void }) {
+function ServerTab(props: {
+  externalAvatarsEnabled?: boolean;
+  form: NetworkForm;
+  onChange: (form: Partial<NetworkForm>) => void;
+}) {
   const showPassword = props.form.authMethod !== 'none';
   const showAuthTarget = props.form.authMethod === 'nickserv';
   const showAuthAccount = props.form.authMethod === 'nickserv' || props.form.authMethod === 'sasl-plain';
@@ -103,6 +106,8 @@ function ServerTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkF
           onChange={(value) => props.onChange({ username: value })}
         />
         <NetworkServerImageField
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
+          username={props.form.username}
           value={props.form.iconUrl}
           onChange={(value) => props.onChange({ iconUrl: value })}
         />

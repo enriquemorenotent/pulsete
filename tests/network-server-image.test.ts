@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { NetworkProfile } from '../shared/protocol-chat.js';
-import { resolveNetworkServerImageUrl } from '../web/src/network-server-image.js';
+import {
+  resolveNetworkServerImage,
+  resolveNetworkServerImageUrl,
+} from '../web/src/network-server-image.js';
 
 const network = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: 'network-1',
@@ -21,6 +24,18 @@ const network = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
 });
 
 test('network server image uses the explicit saved image first', () => {
+  const explicitImage = resolveNetworkServerImage(
+    network({
+      iconUrl: ' https://example.test/server.png ',
+      username: 'uid7',
+    }),
+    true,
+  );
+
+  assert.deepEqual(explicitImage, {
+    source: 'explicit',
+    url: 'https://example.test/server.png',
+  });
   assert.equal(
     resolveNetworkServerImageUrl(
       network({
@@ -34,6 +49,13 @@ test('network server image uses the explicit saved image first', () => {
 });
 
 test('network server image falls back to IRCCloud identity avatars when enabled', () => {
+  assert.deepEqual(
+    resolveNetworkServerImage(network({ username: 'uid7' }), true),
+    {
+      source: 'irccloud-fallback',
+      url: 'https://static.irccloud-cdn.com/avatar-redirect/7',
+    },
+  );
   assert.equal(
     resolveNetworkServerImageUrl(network({ username: 'uid7' }), true),
     'https://static.irccloud-cdn.com/avatar-redirect/7',

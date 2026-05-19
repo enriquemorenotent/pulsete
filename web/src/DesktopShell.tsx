@@ -142,7 +142,12 @@ export function DesktopShell(props: DesktopShellProps) {
           externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
         />
       }
-      networkEditorDialog={<NetworkEditorDialogContainer actions={props.actions} />}
+      networkEditorDialog={
+        <NetworkEditorDialogContainer
+          actions={props.actions}
+          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+        />
+      }
     />
   );
 }
