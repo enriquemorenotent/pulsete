@@ -60,7 +60,33 @@ test('network form omits blank username identities', () => {
   });
 
   assert.equal(payload.username, undefined);
-  assert.equal(payload.iconUrl, undefined);
+});
+
+test('network form sends blank server images so saved images can be cleared', () => {
+  const payload = toSaveNetworkPayload({
+    id: 'network-1',
+    name: 'TestNet',
+    host: 'irc.example.test',
+    port: '6667',
+    tls: false,
+    nick: 'tester',
+    username: '',
+    iconUrl: '   ',
+    nick2: '',
+    nick3: '',
+    realName: '',
+    authMethod: 'none',
+    authTarget: 'NickServ',
+    authAccount: '',
+    password: '',
+    clearPassword: false,
+    hasSavedPassword: false,
+    favorite: false,
+    autoJoin: '',
+    notes: '',
+  });
+
+  assert.equal(payload.iconUrl, '');
 });
 
 test('network form includes the explicit auth account for sasl', () => {

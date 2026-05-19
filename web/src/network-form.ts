@@ -114,7 +114,7 @@ export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
     tls: form.tls,
     nick: form.nick.trim(),
     username: form.username.trim() || undefined,
-    iconUrl: form.iconUrl.trim() || undefined,
+    iconUrl: form.iconUrl.trim(),
     altNicks: [form.nick2.trim(), form.nick3.trim()].filter(Boolean),
     realName: form.realName.trim() || form.nick.trim(),
     authMethod: form.authMethod,
