@@ -130,6 +130,26 @@ test('command palette carries server images for network-backed entries', () => {
   assert.equal(entries.find((entry) => entry.id === `friend:${friend.id}`)?.networkIconUrl, undefined);
 });
 
+test('command palette uses IRCCloud avatar fallbacks for network-backed entries', () => {
+  const avatarUrl = 'https://static.irccloud-cdn.com/avatar-redirect/7';
+  const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
+    externalAvatarsEnabled: true,
+    connections: [{
+      ...connection,
+      network: { ...network, username: 'uid7' },
+    }],
+  }));
+
+  assert.deepEqual(
+    entries
+      .filter((entry) => entry.id.startsWith('network:')
+        || entry.id.startsWith('buffer:')
+        || entry.id.startsWith('pending:'))
+      .map((entry) => entry.networkIconUrl),
+    [avatarUrl, avatarUrl, avatarUrl, avatarUrl],
+  );
+});
+
 test('command palette action dispatcher routes each action to the matching handler', async () => {
   const calls: string[] = [];
   const handlers = {

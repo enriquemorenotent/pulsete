@@ -26,6 +26,7 @@ type DesktopHeaderModelParams = {
 
 type DesktopSidebarModelParams = {
   actions: SidebarActionSet;
+  externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
   friendPresence: State['domain']['friendPresence'];
   nickEmojis: State['domain']['nickEmojis'];
@@ -75,6 +76,7 @@ export function useDesktopHeaderModel({
 
 export function useDesktopSidebarModel({
   actions,
+  externalAvatarsEnabled,
   friends,
   friendPresence,
   nickEmojis,
@@ -86,6 +88,7 @@ export function useDesktopSidebarModel({
   return useMemo(
     () => ({
       connections: sidebarConnections,
+      externalAvatarsEnabled,
       friends,
       friendPresence,
       hideOfflineFriends: ui.hideOfflineFriends,
@@ -117,6 +120,7 @@ export function useDesktopSidebarModel({
       actions.selectNetworkBuffer,
       actions.selectPendingTab,
       actions.selectTabBuffer,
+      externalAvatarsEnabled,
       friendPresence,
       friends,
       nickEmojis,

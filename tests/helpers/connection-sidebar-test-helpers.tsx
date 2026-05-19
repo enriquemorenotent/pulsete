@@ -10,6 +10,7 @@ type SidebarViewInput = Parameters<typeof buildConnectionSidebarView>[0];
 
 type RenderConnectionSidebarOptions = {
   buffers?: BufferState[];
+  externalAvatarsEnabled?: boolean;
   friends?: FriendState[];
   friendPresence?: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;
@@ -30,6 +31,7 @@ export const makeSidebarNetwork = (
   port: overrides.port ?? 6697,
   tls: overrides.tls ?? true,
   nick: overrides.nick ?? 'sofia',
+  username: overrides.username,
   altNicks: overrides.altNicks ?? ['sofia_', 'sofia__'],
   realName: overrides.realName ?? 'Sofia',
   iconUrl: overrides.iconUrl,
@@ -71,6 +73,7 @@ export const renderConnectionSidebar = (options: RenderConnectionSidebarOptions 
         networkStates: options.networkStates ?? {},
         selection: options.selection ?? null,
       })}
+      externalAvatarsEnabled={options.externalAvatarsEnabled}
       friends={options.friends ?? []}
       friendPresence={options.friendPresence ?? {}}
       hideOfflineFriends={options.hideOfflineFriends}

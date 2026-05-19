@@ -184,6 +184,43 @@ test('server rail renders assigned server images', () => {
   assert.match(markup, /referrerPolicy="no-referrer"/);
 });
 
+test('server rail uses IRCCloud avatars when no server image is set', () => {
+  const markup = renderConnectionSidebar({
+    navigationLayoutMode: 'server-rail',
+    externalAvatarsEnabled: true,
+    networks: [
+      makeSidebarNetwork({
+        id: 'alpha',
+        name: 'Alpha',
+        username: 'uid7',
+      }),
+    ],
+    buffers: [makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' })],
+    selection: { kind: 'buffer', bufferId: 'alpha-server' },
+  });
+
+  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  assert.match(markup, /class="[^"]*size-full[^"]*rounded-\[inherit\][^"]*"/);
+});
+
+test('server rail does not use IRCCloud avatars when external avatars are disabled', () => {
+  const markup = renderConnectionSidebar({
+    navigationLayoutMode: 'server-rail',
+    externalAvatarsEnabled: false,
+    networks: [
+      makeSidebarNetwork({
+        id: 'alpha',
+        name: 'Alpha',
+        username: 'uid7',
+      }),
+    ],
+    buffers: [makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' })],
+    selection: { kind: 'buffer', bufferId: 'alpha-server' },
+  });
+
+  assert.doesNotMatch(markup, /avatar-redirect/);
+});
+
 test('server rail shows connection state separately from unread activity', () => {
   const online = makeSidebarNetwork({
     id: 'online',

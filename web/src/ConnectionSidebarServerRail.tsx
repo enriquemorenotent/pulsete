@@ -7,6 +7,7 @@ import { ConnectionSidebarFriends } from './ConnectionSidebarFriends.js';
 import { ConnectionSidebarNetworkSection } from './ConnectionSidebarNetworkSection.js';
 import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
 import { networkImageRuntimeClass } from './network-image-state.js';
+import { resolveNetworkServerImageUrl } from './network-server-image.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
@@ -30,6 +31,7 @@ export function ConnectionSidebarServerRail(
                 key={connection.network.id}
                 connection={connection}
                 active={connection.network.id === activeConnection?.network.id}
+                externalAvatarsEnabled={props.externalAvatarsEnabled}
                 onSelect={() => props.onSelectNetwork(connection.network)}
               />
             ))}
@@ -69,7 +71,10 @@ function ConnectionRailDetail(
           ) : null}
           {activeConnection ? (
             <>
-              <ServerRailBanner connection={activeConnection} />
+              <ServerRailBanner
+                connection={activeConnection}
+                externalAvatarsEnabled={props.externalAvatarsEnabled}
+              />
               <ServerRailActionBar
                 connection={activeConnection}
                 onReconnectNetwork={props.onReconnectNetwork}
@@ -142,8 +147,14 @@ function ServerRailActionBar(props: {
   );
 }
 
-function ServerRailBanner(props: { connection: SidebarConnectionView }) {
-  const iconUrl = props.connection.network.iconUrl;
+function ServerRailBanner(props: {
+  connection: SidebarConnectionView;
+  externalAvatarsEnabled?: boolean;
+}) {
+  const iconUrl = resolveNetworkServerImageUrl(
+    props.connection.network,
+    props.externalAvatarsEnabled === true,
+  );
   if (!iconUrl) {
     return null;
   }
@@ -167,9 +178,14 @@ function ServerRailBanner(props: { connection: SidebarConnectionView }) {
 function ServerRailButton(props: {
   active: boolean;
   connection: SidebarConnectionView;
+  externalAvatarsEnabled?: boolean;
   onSelect: () => void;
 }) {
   const activity = resolveConnectionActivity(props.connection);
+  const iconUrl = resolveNetworkServerImageUrl(
+    props.connection.network,
+    props.externalAvatarsEnabled === true,
+  );
   return (
     <div className="relative flex w-full justify-center">
       <button
@@ -190,17 +206,12 @@ function ServerRailButton(props: {
         title={props.connection.labelParts.name}
       >
         <ConnectionSidebarServerIcon
-          className={props.connection.network.iconUrl ? 'size-full rounded-[inherit]' : 'size-4'}
-          iconUrl={props.connection.network.iconUrl}
+          className={iconUrl ? 'size-full rounded-[inherit]' : 'size-4'}
+          iconUrl={iconUrl}
           runtime={props.connection.runtime}
         />
         {props.active ? (
-          <>
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-white/[0.06]"
-            />
-          </>
+          <span aria-hidden className="absolute inset-0 bg-white/[0.06]" />
         ) : null}
         {activity.hasUnread ? (
           <span

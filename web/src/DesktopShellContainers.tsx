@@ -46,6 +46,7 @@ type SharedProps = {
 };
 
 type SidebarContainerProps = SharedProps & {
+  externalAvatarsEnabled: boolean;
   navigationLayoutSettings: NavigationLayoutSettingsController;
 };
 
@@ -64,8 +65,13 @@ type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
   externalAvatarsEnabled: boolean;
 };
 
+type CommandPaletteContainerProps = SharedProps & {
+  externalAvatarsEnabled: boolean;
+};
+
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
   actions,
+  externalAvatarsEnabled,
   navigationLayoutSettings,
   ui,
 }: SidebarContainerProps) {
@@ -76,6 +82,7 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
   const sidebarConnections = useAppSelector(selectSidebarConnections);
   const model = useDesktopSidebarModel({
     actions,
+    externalAvatarsEnabled,
     friends,
     friendPresence,
     nickEmojis,
@@ -201,8 +208,9 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
 
 export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogContainer({
   actions,
+  externalAvatarsEnabled,
   ui,
-}: SharedProps) {
+}: CommandPaletteContainerProps) {
   const dispatch = useAppDispatch();
   const friends = useAppSelector(selectFriends);
   const nickEmojis = useAppSelector(selectNickEmojis);
@@ -212,6 +220,7 @@ export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogC
   const model = useDesktopCommandPaletteModel({
     actions,
     dispatch,
+    externalAvatarsEnabled,
     friends,
     nickEmojis,
     networks,

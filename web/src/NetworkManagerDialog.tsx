@@ -20,6 +20,7 @@ import {
 } from './network-manager-dialog-sections.js';
 
 type NetworkManagerDialogProps = {
+  externalAvatarsEnabled?: boolean;
   networks: NetworkProfile[];
   selected: NetworkProfile | null;
   runtime: NetworkRuntimeState | null;
@@ -100,6 +101,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                       key={network.id}
                       network={network}
                       selected={props.selected?.id === network.id}
+                      externalAvatarsEnabled={props.externalAvatarsEnabled}
                       runtime={props.runtimes[network.id] ?? null}
                       onSelect={props.onSelect}
                     />
@@ -113,6 +115,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                 {props.selected ? (
                   <SelectedNetworkPane
                     network={props.selected}
+                    externalAvatarsEnabled={props.externalAvatarsEnabled}
                     runtime={props.runtime}
                     onEdit={props.onEdit}
                     onDuplicate={props.onDuplicate}

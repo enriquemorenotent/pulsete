@@ -25,6 +25,7 @@ type DesktopCommandPaletteModelParams = {
     | 'toggleCurrentChannelAutoJoin'
   >;
   dispatch: (action: Action) => void;
+  externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
   nickEmojis: State['domain']['nickEmojis'];
   networks: State['domain']['networks'];
@@ -43,6 +44,7 @@ type DesktopCommandPaletteModelParams = {
 export function useDesktopCommandPaletteModel({
   actions,
   dispatch,
+  externalAvatarsEnabled,
   friends,
   nickEmojis,
   networks,
@@ -102,11 +104,13 @@ export function useDesktopCommandPaletteModel({
         channelAutoJoinActive: channelAutoJoin.active,
         canDownloadHistory: canUseBufferHistoryTools,
       },
+      externalAvatarsEnabled,
     }),
     [
       canUseBufferHistoryTools,
       channelAutoJoin.active,
       channelAutoJoin.available,
+      externalAvatarsEnabled,
       friends,
       nickEmojis,
       selectedBufferId,

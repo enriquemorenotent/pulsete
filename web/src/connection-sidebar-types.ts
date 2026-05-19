@@ -4,6 +4,7 @@ import type { NavigationLayoutMode } from './navigation-layout-settings.js';
 
 export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
+  externalAvatarsEnabled?: boolean;
   friends: FriendState[];
   friendPresence: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;

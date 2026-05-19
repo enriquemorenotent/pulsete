@@ -50,8 +50,10 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
 
 export const NetworkManagerDialogContainer = memo(function NetworkManagerDialogContainer({
   actions,
+  externalAvatarsEnabled,
 }: {
   actions: AppActions;
+  externalAvatarsEnabled: boolean;
 }) {
   const dispatch = useAppDispatch();
   const managedNetworkModel = useAppSelector(selectManagedNetworkModel);
@@ -69,6 +71,7 @@ export const NetworkManagerDialogContainer = memo(function NetworkManagerDialogC
 
   return model.open ? (
     <NetworkManagerDialog
+      externalAvatarsEnabled={externalAvatarsEnabled}
       networks={model.networks}
       selected={model.selected}
       runtime={model.runtime}

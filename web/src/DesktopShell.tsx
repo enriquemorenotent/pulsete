@@ -91,6 +91,7 @@ export function DesktopShell(props: DesktopShellProps) {
       sidebar={
         <ConnectionSidebarContainer
           actions={props.actions}
+          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
           navigationLayoutSettings={props.navigationLayoutSettings}
           ui={props.ui}
         />
@@ -117,7 +118,11 @@ export function DesktopShell(props: DesktopShellProps) {
         ) : null
       }
       commandPaletteDialog={
-        <CommandPaletteDialogContainer actions={props.actions} ui={props.ui} />
+        <CommandPaletteDialogContainer
+          actions={props.actions}
+          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+          ui={props.ui}
+        />
       }
       logInspectorDialog={
         <LogInspectorDialogContainer actions={props.actions} ui={props.ui} />
@@ -131,7 +136,12 @@ export function DesktopShell(props: DesktopShellProps) {
           ui={props.ui}
         />
       }
-      networkManagerDialog={<NetworkManagerDialogContainer actions={props.actions} />}
+      networkManagerDialog={
+        <NetworkManagerDialogContainer
+          actions={props.actions}
+          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+        />
+      }
       networkEditorDialog={<NetworkEditorDialogContainer actions={props.actions} />}
     />
   );

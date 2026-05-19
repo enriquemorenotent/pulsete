@@ -10,10 +10,16 @@ import {
   resolveNickEmoji,
   resolveUniqueNickEmoji,
 } from './nick-emoji-utils.js';
+import { resolveNetworkServerImageUrl } from './network-server-image.js';
 
 export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpecsInput) => {
   const nickEmojiByNetworkNick = buildNickEmojiByNetworkNick(input.nickEmojis);
-  const bufferEntries = buildBufferEntries(input.connections, input.selectedNetwork.id, nickEmojiByNetworkNick);
+  const bufferEntries = buildBufferEntries(
+    input.connections,
+    input.externalAvatarsEnabled === true,
+    input.selectedNetwork.id,
+    nickEmojiByNetworkNick,
+  );
   return [
     ...buildUnreadBufferEntries(bufferEntries),
     ...bufferEntries.filter((entry) => !hasUnreadCommandPaletteActivity(entry)),
@@ -47,19 +53,21 @@ const compareUnreadCommandPaletteEntries = (
 
 const buildBufferEntries = (
   connections: BuildCommandPaletteEntrySpecsInput['connections'],
+  externalAvatarsEnabled: boolean,
   selectedNetworkId: string | null,
   nickEmojiByNetworkNick: ReadonlyMap<string, string>,
 ): CommandPaletteEntrySpec[] => {
   const entries: CommandPaletteEntrySpec[] = [];
   for (const connection of connections) {
     const currentNetwork = connection.network.id === selectedNetworkId;
+    const networkIconUrl = resolveNetworkServerImageUrl(connection.network, externalAvatarsEnabled);
     const networkRuntimePhase = connection.runtime?.phase ?? 'offline';
     if (connection.serverBuffer) {
       entries.push({
         id: `network:${connection.network.id}`,
         section: 'buffers',
         label: connection.labelParts.name,
-        networkIconUrl: connection.network.iconUrl,
+        networkIconUrl,
         networkRuntimePhase,
         subtitle: `Server buffer · as ${connection.labelParts.nick}`,
         keywords: [
@@ -89,7 +97,7 @@ const buildBufferEntries = (
         id: `buffer:${child.buffer.id}`,
         section: 'buffers',
         label: child.buffer.target,
-        networkIconUrl: connection.network.iconUrl,
+        networkIconUrl,
         networkRuntimePhase,
         emoji: child.buffer.kind === 'query'
           ? resolveNickEmoji(nickEmojiByNetworkNick, child.buffer.networkId, child.buffer.target)
@@ -120,7 +128,7 @@ const buildBufferEntries = (
         id: `pending:${pending.pendingChannel.networkId}:${pending.pendingChannel.channel}`,
         section: 'buffers',
         label: pending.pendingChannel.channel,
-        networkIconUrl: connection.network.iconUrl,
+        networkIconUrl,
         networkRuntimePhase,
         subtitle: `Joining on ${connection.label}`,
         keywords: [

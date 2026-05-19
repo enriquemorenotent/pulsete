@@ -56,6 +56,7 @@ export type CommandPaletteActionHandlers = {
 
 export type BuildCommandPaletteEntrySpecsInput = {
   connections: SidebarConnectionView[];
+  externalAvatarsEnabled?: boolean;
   friends: FriendState[];
   nickEmojis: NickEmojiState[];
   selectedBuffer: {
