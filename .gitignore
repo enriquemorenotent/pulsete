@@ -2,6 +2,10 @@ node_modules
 build
 dist
 .vite
+.agents/
+skills-lock.json
+.env
+.env.*
 *.sqlite
 *.sqlite.*
 *.sqlite-wal
