@@ -1,24 +1,61 @@
-# Pulsete
+<p align="center">
+  <img src="build-resources/icons/256x256.png" width="112" alt="Pulsete app icon">
+</p>
 
-Pulsete is a local IRC client with durable workspace state. It preserves
-workspace structure, transcripts, watchlist entries, muted nicks, and saved IRC
-network profiles across disconnects and app restarts.
+<h1 align="center">Pulsete</h1>
+
+<p align="center">
+  <strong>A local-first IRC client that keeps your workspace and history alive through disconnects.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/enriquemorenotent/pulsete?style=flat-square">
+  </a>
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.0/pulsete_0.1.0_amd64.deb">
+    <img alt="Ubuntu deb package" src="https://img.shields.io/badge/Ubuntu%2024.04-.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white">
+  </a>
+  <a href="./LICENSE">
+    <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">Download</a>
+  ·
+  <a href="./docs/product-model.md">Product model</a>
+  ·
+  <a href="./.github/workflows/desktop-release.yml">Release workflow</a>
+</p>
+
+Pulsete is built for IRC users who want a desktop workspace that belongs to
+them, not to the current socket connection. Networks can disconnect, reconnect,
+or stay offline without hiding the local transcript and workspace state.
 
 The current packaged desktop target is Ubuntu 24.04 on amd64. Windows and macOS
 packaging are planned, but not part of the current release flow yet.
 
-## Download
+## Highlights
 
-Ubuntu packages are available from GitHub Releases:
+| | |
+| --- | --- |
+| Durable workspace | Saved networks, buffers, watchlist entries, muted nicks, and history survive restarts. |
+| Local-first history | Transcripts are stored in SQLite and remain readable without an IRC connection. |
+| Offline-friendly UI | Disconnected networks stay visible, with channel and query logs still selectable. |
+| Native Ubuntu package | GitHub Releases ship an Electron desktop app as a `.deb` for Ubuntu 24.04. |
+| Browser-fast development | The day-to-day development loop runs in the browser before packaging the desktop app. |
 
-- [Latest release](https://github.com/enriquemorenotent/pulsete/releases/latest)
-- [pulsete_0.1.0_amd64.deb](https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.0/pulsete_0.1.0_amd64.deb)
+## Install On Ubuntu
 
-Install the downloaded package with:
+Download the latest package from [GitHub Releases][latest-release], or install
+the current amd64 package directly:
 
 ```sh
+curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.0/pulsete_0.1.0_amd64.deb
 sudo apt install ./pulsete_0.1.0_amd64.deb
 ```
+
+[latest-release]: https://github.com/enriquemorenotent/pulsete/releases/latest
 
 ## Development
 
