@@ -1,0 +1,43 @@
+appId: io.github.enriquemorenotent.pulsete
+productName: Pulsete
+copyright: Copyright 2026 Enrique Moreno
+
+asar: true
+asarUnpack:
+  - "**/*.node"
+nativeRebuilder: sequential
+
+directories:
+  buildResources: build-resources
+  output: release
+
+files:
+  - dist/**/*
+  - build/**/*
+  - build-resources/icons/512x512.png
+  - package.json
+
+linux:
+  target:
+    - target: deb
+      arch:
+        - x64
+  category: Network
+  icon: build-resources/icons
+  maintainer: Enrique Moreno <enriquemorenotent@gmail.com>
+  synopsis: Local IRC client with durable workspace state
+  description: Pulsete is a local IRC client that preserves workspace state, transcripts, and organization across disconnects and app restarts.
+  desktop:
+    entry:
+      StartupWMClass: Pulsete
+
+deb:
+  packageCategory: net
+  priority: optional
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils

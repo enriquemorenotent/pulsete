@@ -11,7 +11,14 @@ import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js
 import type { HttpContext, HttpHandlerContext } from './http-types.js';
 import { serveStatic } from './static-handler.js';
 
-export const createHttpHandler = (context: HttpHandlerContext) => async (req: IncomingMessage, res: ServerResponse) => {
+export type HttpHandlerOptions = {
+  assetRoot?: string;
+};
+
+export const createHttpHandler = (
+  context: HttpHandlerContext,
+  options: HttpHandlerOptions = {}
+) => async (req: IncomingMessage, res: ServerResponse) => {
   try {
     const url = parseRequestUrl(req.url);
     const pathname = url.pathname;
@@ -33,7 +40,7 @@ export const createHttpHandler = (context: HttpHandlerContext) => async (req: In
       return;
     }
     if (!isApi(pathname)) {
-      await serveStatic(pathname, res);
+      await serveStatic(pathname, res, { assetRoot: options.assetRoot });
       return;
     }
     writeJson(res, 404, { message: 'Not found' });

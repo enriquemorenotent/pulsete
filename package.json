@@ -1,7 +1,20 @@
 {
   "name": "pulsete",
+  "version": "0.1.0",
+  "description": "A local IRC client with durable workspace state.",
+  "homepage": "https://github.com/enriquemorenotent/pulsete",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/enriquemorenotent/pulsete.git"
+  },
   "type": "module",
+  "main": "build/desktop/main.cjs",
+  "author": {
+    "name": "Enrique Moreno",
+    "email": "enriquemorenotent@gmail.com"
+  },
+  "license": "MIT",
   "engines": {
     "node": "24.x"
   },
@@ -10,15 +23,23 @@
     "dev:server": "PORT=18487 tsx watch server/index.ts",
     "dev:web": "vite --port 18473",
     "dev:web:wait": "node scripts/wait_for_tcp_port.mjs 127.0.0.1 18487 60000 && npm run dev:web",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json && tsc -p tsconfig.web.json && tsc -p tsconfig.tests.json",
-    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json && tsc -p tsconfig.web.json && tsc -p tsconfig.desktop.json && tsc -p tsconfig.tests.json",
+    "build": "npm run typecheck && npm run build:web && npm run build:server",
+    "build:desktop": "npm run typecheck && npm run build:web && npm run build:server && npm run build:electron",
+    "build:electron": "node scripts/build_node_entries.mjs --desktop",
+    "build:server": "node scripts/build_node_entries.mjs --server",
+    "build:web": "vite build",
+    "dist:linux": "npm run build:desktop && node scripts/build_linux_deb.mjs",
     "lint:test-names": "node scripts/check_test_file_names.mjs",
     "lint:file-length": "python3 scripts/check_source_file_length.py --all --warn-lines 250 --max-lines 500 server shared tests web/src",
     "prestart": "npm run build",
-    "start": "PORT=18487 tsx server/index.ts",
+    "start": "PORT=18487 node build/server/index.cjs",
     "test": "npm run lint:test-names && TSX_TSCONFIG_PATH=tsconfig.tests.json node --import tsx --test"
   },
   "dependencies": {
+    "better-sqlite3": "^12.10.0"
+  },
+  "devDependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/ibm-plex-sans": "^5.2.8",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -27,7 +48,6 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@tailwindcss/vite": "^4.2.2",
-    "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
@@ -37,10 +57,6 @@
     "react-virtuoso": "^4.18.5",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
-    "ws": "^8.18.3",
-    "zod": "^3.25.76"
-  },
-  "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.11",
@@ -48,8 +64,13 @@
     "@types/ws": "^8.5.12",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
+    "electron": "^41.6.1",
+    "electron-builder": "^26.8.1",
+    "esbuild": "^0.28.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
-    "vite": "^7.1.0"
+    "vite": "^7.1.0",
+    "ws": "^8.18.3",
+    "zod": "^3.25.76"
   }
 }

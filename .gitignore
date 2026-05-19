@@ -1,4 +1,5 @@
 node_modules
+build
 dist
 .vite
 *.sqlite
@@ -13,6 +14,7 @@ coverage
 playwright-report
 test-results
 output/
+release/
 .playwright-cli/
 current-ui.png
 main-space-fixed.png
