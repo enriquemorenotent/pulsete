@@ -125,6 +125,17 @@ test('nicklist renders one-click contact controls beside away users', () => {
   assert.match(markup, /aria-label="Away"[\s\S]*aria-label="Mute alice"/);
 });
 
+test('nicklist rows let the emoji picker escape row clipping', () => {
+  const channel = makeChannel([makeUser('alice')]);
+  const markup = renderNicklist(channel, {
+    contactNotificationSettings: { contacts: [{ networkId: network.id, nick: 'alice' }] },
+  });
+
+  assert.match(markup, /overflow-visible rounded-sm/);
+  assert.match(markup, /aria-label="Edit emoji tag for alice"/);
+  assert.doesNotMatch(markup, /items-center overflow-hidden rounded-sm/);
+});
+
 test('nicklist shows the unmute control for muted users', () => {
   const channel = makeChannel([makeUser('alice')]);
   const markup = renderNicklist(channel, {

@@ -114,7 +114,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                         return (
                           <div
                             key={user.nick}
-                            className="group flex w-full min-w-0 items-center overflow-hidden rounded-sm hover:bg-accent/60 focus-within:bg-accent/60"
+                            className="group flex w-full min-w-0 items-center overflow-visible rounded-sm hover:bg-accent/60 focus-within:bg-accent/60"
                           >
                             <button
                               type="button"
