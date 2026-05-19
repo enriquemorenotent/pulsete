@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="build-resources/icons/256x256.png" width="112" alt="Pulsete app icon">
+  <img src="public/pulsete-logo.svg" width="280" alt="Pulsete">
 </p>
-
-<h1 align="center">Pulsete</h1>
 
 <p align="center">
   <strong>A local-first IRC client that keeps your workspace and history alive through disconnects.</strong>
