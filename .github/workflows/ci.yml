@@ -27,5 +27,8 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build Landing Site
+        run: npm run build:site
+
       - name: Test
         run: npm test

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { gzipSync } from 'node:zlib';
-import { chmod, cp, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, cp, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -18,9 +18,11 @@ await buildRepository();
 
 async function buildRepository() {
   const deb = await findDebianPackage();
-  await rm(siteRoot, { recursive: true, force: true });
+  await rm(aptRoot, { recursive: true, force: true });
   await mkdir(aptRoot, { recursive: true });
-  await writeSiteIndex();
+  await copySiteFavicon();
+  await writeFallbackSiteIndex();
+  await writeAptIndex();
   await copyBootstrapFiles();
   await copyPackage(deb);
   await writePackagesIndex();
@@ -42,13 +44,46 @@ async function findDebianPackage() {
   return join(releaseDir, debs[0]);
 }
 
-async function writeSiteIndex() {
+async function writeFallbackSiteIndex() {
+  try {
+    await access(join(siteRoot, 'index.html'));
+    return;
+  } catch {
+    // Keep direct script usage useful even when the landing site was not built first.
+  }
+
   await writeFile(join(siteRoot, 'index.html'), `<!doctype html>
 <meta charset="utf-8">
 <title>Pulsete APT Repository</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <h1>Pulsete APT Repository</h1>
 <p>Ubuntu packages are available under <a href="./apt/">./apt/</a>.</p>
 <pre>deb [arch=${arch} signed-by=/usr/share/keyrings/pulsete-archive-keyring.gpg] https://enriquemorenotent.github.io/pulsete/apt ${suite} ${component}</pre>
+`);
+}
+
+async function copySiteFavicon() {
+  try {
+    await access(join(siteRoot, 'favicon.svg'));
+    return;
+  } catch {
+    await cp('public/favicon.svg', join(siteRoot, 'favicon.svg'));
+  }
+}
+
+async function writeAptIndex() {
+  await writeFile(join(aptRoot, 'index.html'), `<!doctype html>
+<meta charset="utf-8">
+<title>Pulsete APT Repository</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<h1>Pulsete APT Repository</h1>
+<p>Ubuntu package metadata and bootstrap files for Pulsete are published here.</p>
+<pre>deb [arch=${arch} signed-by=/usr/share/keyrings/pulsete-archive-keyring.gpg] https://enriquemorenotent.github.io/pulsete/apt ${suite} ${component}</pre>
+<ul>
+  <li><a href="./pulsete.sources">pulsete.sources</a></li>
+  <li><a href="./pulsete-archive-keyring.asc">pulsete-archive-keyring.asc</a></li>
+  <li><a href="./dists/${suite}/Release">Release metadata</a></li>
+</ul>
 `);
 }
 

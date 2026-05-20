@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pulsete - Local-first IRC desktop client</title>
+    <meta
+      name="description"
+      content="Pulsete is a local-first IRC desktop client that keeps workspace state and readable history available through disconnects."
+    >
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Pulsete home">
+        <img src="./favicon.svg" alt="" width="32" height="32">
+        <span>Pulsete</span>
+      </a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="#architecture">Architecture</a>
+        <a href="https://github.com/enriquemorenotent/pulsete">GitHub</a>
+      </nav>
+      <a class="button button-primary header-action" href="https://github.com/enriquemorenotent/pulsete/releases/latest">
+        Download
+      </a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>Pulsete</h1>
+          <p class="hero-lede">A local-first IRC desktop client. Your workspace stays alive.</p>
+          <p class="hero-body">
+            Pulsete keeps networks, buffers, muted nicks, notes, and transcripts on your machine,
+            so disconnects do not erase the working context around your conversations.
+          </p>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button button-primary" href="https://github.com/enriquemorenotent/pulsete/releases/latest">
+              Download for Ubuntu
+            </a>
+            <a class="button button-secondary" href="https://github.com/enriquemorenotent/pulsete">
+              View source
+            </a>
+          </div>
+          <dl class="proof-points" aria-label="Project facts">
+            <div>
+              <dt>Current package</dt>
+              <dd>Ubuntu 24.04 amd64</dd>
+            </div>
+            <div>
+              <dt>Updates</dt>
+              <dd>APT after install</dd>
+            </div>
+            <div>
+              <dt>License</dt>
+              <dd>MIT</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="product-window" aria-label="Pulsete workspace preview">
+          <div class="window-bar">
+            <span class="window-title">Pulsete</span>
+            <span class="window-controls" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+          </div>
+          <div class="workspace-preview">
+            <aside class="network-list">
+              <p>Networks</p>
+              <a class="network-item active" href="#features"><span></span> libera.chat</a>
+              <a class="network-item" href="#features"><span></span> oftc</a>
+              <a class="network-item muted" href="#features"><span></span> freenode</a>
+              <p>Buffers</p>
+              <a class="buffer active" href="#features">#pulsete</a>
+              <a class="buffer" href="#features">#opensource</a>
+              <a class="buffer" href="#features">Dana</a>
+            </aside>
+            <section class="chat-preview" aria-label="Chat transcript preview">
+              <div class="channel-heading">
+                <strong>#pulsete</strong>
+                <span>Local history available offline</span>
+              </div>
+              <ol class="messages">
+                <li><time>09:12</time><b class="nick-a">&lt;Alice&gt;</b><span>morning!</span></li>
+                <li><time>09:13</time><b class="nick-b">&lt;Dana&gt;</b><span>reconnect finished and the log is still here.</span></li>
+                <li><time>09:14</time><b class="system">--</b><span>Disconnected from libera.chat</span></li>
+                <li><time>09:15</time><b class="system">--</b><span>Reading history while offline</span></li>
+                <li><time>09:16</time><b class="system">--</b><span>Reconnected to libera.chat</span></li>
+                <li><time>09:17</time><b class="nick-a">&lt;Alice&gt;</b><span>back, no missing lines.</span></li>
+              </ol>
+              <div class="composer">Message #pulsete</div>
+            </section>
+            <aside class="member-list">
+              <p>People</p>
+              <span>Alice</span>
+              <span>Dana</span>
+              <span>ChanServ</span>
+              <span>Trent</span>
+              <span>Zoe</span>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="feature-strip" aria-labelledby="features-title">
+        <h2 id="features-title">Built for IRC sessions that do not always stay connected.</h2>
+        <div class="feature-grid">
+          <article>
+            <h3>Durable workspace</h3>
+            <p>Saved networks, buffers, watchlist entries, muted nicks, and notes survive restarts.</p>
+          </article>
+          <article>
+            <h3>Local-first history</h3>
+            <p>SQLite transcripts remain readable even when the current socket is offline.</p>
+          </article>
+          <article>
+            <h3>Offline-friendly UI</h3>
+            <p>Disconnected networks stay visible, with channel and query logs still selectable.</p>
+          </article>
+          <article>
+            <h3>Native package</h3>
+            <p>GitHub Releases ship an Electron desktop app as a `.deb` for Ubuntu 24.04.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="install" class="install-section" aria-labelledby="install-title">
+        <div>
+          <h2 id="install-title">Install on Ubuntu</h2>
+          <p>
+            The current packaged desktop target is Ubuntu 24.04 on amd64.
+            Installing the `.deb` also registers the Pulsete APT source and signing key.
+          </p>
+          <pre><code>curl -L -o pulsete_0.1.2_amd64.deb \
+  https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.2/pulsete_0.1.2_amd64.deb
+sudo apt install ./pulsete_0.1.2_amd64.deb</code></pre>
+          <p>
+            Future releases then arrive through the normal Ubuntu update flow:
+            <code>sudo apt update</code> and <code>sudo apt upgrade</code>.
+          </p>
+        </div>
+        <aside class="release-panel">
+          <h3>Release channels</h3>
+          <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">Latest GitHub release</a>
+          <a href="./apt/">APT repository files</a>
+          <a href="https://github.com/enriquemorenotent/pulsete/actions/workflows/desktop-release.yml">Release workflow</a>
+        </aside>
+      </section>
+
+      <section id="architecture" class="architecture-section" aria-labelledby="architecture-title">
+        <div class="architecture-copy">
+          <h2 id="architecture-title">Local state stays useful when the network does not.</h2>
+          <p>
+            Pulsete separates the desktop workspace from the IRC connection lifecycle. The app can
+            reconnect, stay offline, or restart without hiding the local transcript and workspace state.
+          </p>
+        </div>
+        <div class="architecture-diagram" aria-label="Pulsete local-first architecture">
+          <div class="diagram-box">
+            <strong>IRC networks</strong>
+            <span>libera.chat</span>
+            <span>oftc</span>
+            <span>channels and queries</span>
+          </div>
+          <div class="diagram-flow">
+            <span>connect</span>
+            <span>reconnect</span>
+            <span>read offline</span>
+          </div>
+          <div class="diagram-box local">
+            <strong>Pulsete local runtime</strong>
+            <span>workspace state</span>
+            <span>SQLite history</span>
+            <span>desktop shell</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="platform-section" aria-labelledby="platform-title">
+        <h2 id="platform-title">Releases and platform status</h2>
+        <div class="platform-grid">
+          <article>
+            <h3>Ubuntu</h3>
+            <p>Supported today with an amd64 `.deb` package for Ubuntu 24.04.</p>
+            <span class="status supported">Supported</span>
+          </article>
+          <article>
+            <h3>Windows</h3>
+            <p>Planned, but not part of the current release flow.</p>
+            <span class="status planned">Planned</span>
+          </article>
+          <article>
+            <h3>macOS</h3>
+            <p>Planned, but not part of the current release flow.</p>
+            <span class="status planned">Planned</span>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <a class="brand" href="./" aria-label="Pulsete home">
+          <img src="./favicon.svg" alt="" width="28" height="28">
+          <span>Pulsete</span>
+        </a>
+        <p>A local-first IRC desktop client released under the MIT License.</p>
+      </div>
+      <nav aria-label="Footer navigation">
+        <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">Download</a>
+        <a href="https://github.com/enriquemorenotent/pulsete">Source</a>
+        <a href="https://github.com/enriquemorenotent/pulsete/blob/main/docs/product-model.md">Product model</a>
+        <a href="https://github.com/enriquemorenotent/pulsete/blob/main/LICENSE">License</a>
+      </nav>
+    </footer>
+  </body>
+</html>

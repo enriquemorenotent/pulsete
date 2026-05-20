@@ -10,7 +10,7 @@
   <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/enriquemorenotent/pulsete?style=flat-square">
   </a>
-  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.1/pulsete_0.1.1_amd64.deb">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.2/pulsete_0.1.2_amd64.deb">
     <img alt="Ubuntu deb package" src="https://img.shields.io/badge/Ubuntu%2024.04-.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white">
   </a>
   <a href="./LICENSE">
@@ -19,6 +19,8 @@
 </p>
 
 <p align="center">
+  <a href="https://enriquemorenotent.github.io/pulsete/">Website</a>
+  ·
   <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">Download</a>
   ·
   <a href="./docs/product-model.md">Product model</a>
@@ -50,8 +52,8 @@ Download the latest package from [GitHub Releases][latest-release], or install
 the current amd64 package directly:
 
 ```sh
-curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.1/pulsete_0.1.1_amd64.deb
-sudo apt install ./pulsete_0.1.1_amd64.deb
+curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.2/pulsete_0.1.2_amd64.deb
+sudo apt install ./pulsete_0.1.2_amd64.deb
 ```
 
 Installing the `.deb` also installs the Pulsete APT source and signing key.
@@ -120,10 +122,10 @@ For a new release:
 ```sh
 npm version patch --no-git-tag-version
 git add package.json package-lock.json
-git commit -m "Release v0.1.1"
-git tag -a v0.1.1 -m "Pulsete v0.1.1"
+git commit -m "Release v0.1.2"
+git tag -a v0.1.2 -m "Pulsete v0.1.2"
 git push origin main
-git push origin v0.1.1
+git push origin v0.1.2
 ```
 
 The `Desktop Release` workflow builds the Ubuntu `.deb`, uploads it as a CI
@@ -134,6 +136,7 @@ artifact, and attaches it to the GitHub Release.
 - `web/` - React client
 - `server/` - local API server, persistence, and IRC integration
 - `desktop/` - Electron shell
+- `site/` - GitHub Pages landing page
 - `shared/` - shared types and protocol helpers
 - `tests/` - Node test suite
 - `docs/` - product and code organization notes
