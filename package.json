@@ -1,6 +1,6 @@
 {
   "name": "pulsete",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A local IRC client with durable workspace state.",
   "homepage": "https://enriquemorenotent.github.io/pulsete/",
   "private": true,

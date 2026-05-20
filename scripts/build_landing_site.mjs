@@ -11,6 +11,7 @@ async function buildLandingSite() {
   await mkdir(outputRoot, { recursive: true });
   await cp(sourceRoot, outputRoot, { recursive: true });
   await cp('public/favicon.svg', join(outputRoot, 'favicon.svg'));
+  await cp('public/pulsete-logo.svg', join(outputRoot, 'pulsete-logo.svg'));
   await writeFile(join(outputRoot, '.nojekyll'), '');
   console.log(`Landing site written to ${outputRoot}`);
 }

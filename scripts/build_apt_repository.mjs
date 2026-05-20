@@ -20,7 +20,7 @@ async function buildRepository() {
   const deb = await findDebianPackage();
   await rm(aptRoot, { recursive: true, force: true });
   await mkdir(aptRoot, { recursive: true });
-  await copySiteFavicon();
+  await copySiteAssets();
   await writeFallbackSiteIndex();
   await writeAptIndex();
   await copyBootstrapFiles();
@@ -62,12 +62,17 @@ async function writeFallbackSiteIndex() {
 `);
 }
 
-async function copySiteFavicon() {
+async function copySiteAssets() {
   try {
     await access(join(siteRoot, 'favicon.svg'));
-    return;
   } catch {
     await cp('public/favicon.svg', join(siteRoot, 'favicon.svg'));
+  }
+
+  try {
+    await access(join(siteRoot, 'pulsete-logo.svg'));
+  } catch {
+    await cp('public/pulsete-logo.svg', join(siteRoot, 'pulsete-logo.svg'));
   }
 }
 

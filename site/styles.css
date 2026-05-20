@@ -57,15 +57,16 @@ pre {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  border: 1px solid #203349;
+  border-radius: 8px;
+  background: #08101e;
+  padding: 6px 10px;
   text-decoration: none;
 }
 
-.brand span {
-  color: var(--ink);
-  font-size: 22px;
-  font-weight: 750;
-  line-height: 1;
+.brand img {
+  display: block;
+  height: auto;
 }
 
 .nav-links {
@@ -632,8 +633,12 @@ pre {
     display: none;
   }
 
-  .brand span {
-    font-size: 20px;
+  .brand {
+    padding: 5px 8px;
+  }
+
+  .brand img {
+    width: 124px;
   }
 
   .hero,

@@ -1,5 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="18" fill="#08101E"/>
-  <rect x="7" y="7" width="50" height="50" rx="16" fill="#0E1728" stroke="#203349"/>
-  <path d="M21 18H33C40.732 18 46 22.858 46 29.994C46 37.13 40.732 42 33 42H28V49H21V18ZM32.509 36.231C36.52 36.231 39 33.941 39 30.024C39 26.107 36.52 23.768 32.509 23.768H28V36.231H32.509Z" fill="#19D6FF"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 156" fill="none">
+  <defs>
+    <linearGradient id="pulsete-signal" x1="18" y1="40" x2="128" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+  <rect width="156" height="156" rx="34" fill="#08101E"/>
+  <rect x="10" y="10" width="136" height="136" rx="30" fill="#0E1728" stroke="#203349" stroke-width="2"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 12)">
+    <path
+      d="M28 69h29l10-20 19 41 14-21h24"
+      stroke="url(#pulsete-signal)"
+      stroke-width="9"
+    />
+    <path
+      d="M23 42c0-10 8-18 18-18h73c10 0 18 8 18 18v48c0 10-8 18-18 18H68l-28 17v-17"
+      stroke="#e5e7eb"
+      stroke-opacity=".78"
+      stroke-width="7"
+    />
+    <circle cx="124" cy="69" r="6" fill="#34d399" stroke="none"/>
+  </g>
 </svg>
