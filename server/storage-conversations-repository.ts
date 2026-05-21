@@ -16,6 +16,7 @@ import {
   searchMessages,
   searchMessagesByBufferId,
 } from './storage-messages.js';
+import { listLogSources } from './storage-log-sources.js';
 import {
   deleteChannelByName,
   getBuffer,
@@ -41,6 +42,7 @@ import {
   upsertQueryBuffer,
   upsertQueryBufferWithMergeResult,
 } from './storage-query-aliases.js';
+import type { LogSourceKind } from '../shared/protocol-chat.js';
 import type { BufferInput, ChannelInput, MessageInput, MessageSearchFilters } from './storage-types.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 
@@ -57,6 +59,14 @@ export class StorageConversationsRepository {
 
   listQueryNickAliases(networkId?: string) {
     return listQueryNickAliases(this.db, networkId);
+  }
+
+  listLogSources(filters: {
+    kind?: LogSourceKind;
+    networkId?: string;
+    q?: string;
+  }, limit: number) {
+    return listLogSources(this.db, filters, limit);
   }
 
   getBuffer(bufferId: string) {

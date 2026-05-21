@@ -52,6 +52,7 @@ export const createRuntimeHttpApi = ({
     exportHistory: (bufferId) => conversations.exportHistory(bufferId),
   },
   logs: {
+    listSources: (filters, limit) => conversations.listLogSources(filters, limit),
     search: (query, limit, filters) => conversations.searchLogs(query, limit, filters),
   },
   friends: {

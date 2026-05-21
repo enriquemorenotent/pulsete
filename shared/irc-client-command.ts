@@ -3,6 +3,7 @@ const commandDefinitions = [
   { name: 'part', slash: ['part', 'p'], raw: ['PART'] },
   { name: 'msg', slash: ['msg', 'm'], raw: ['PRIVMSG'] },
   { name: 'query', slash: ['query', 'q'], raw: [] },
+  { name: 'invite', slash: ['invite'], raw: ['INVITE'] },
   { name: 'list', slash: ['list'], raw: ['LIST'] },
   { name: 'whois', slash: ['whois', 'w'], raw: ['WHOIS'] },
   { name: 'nickserv', slash: ['nickserv', 'ns'], raw: [] },

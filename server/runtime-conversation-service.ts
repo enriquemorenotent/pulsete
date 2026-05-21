@@ -4,6 +4,7 @@ import {
   closeRuntimeConversationBuffer,
   exportRuntimeConversationBufferHistory,
   listRuntimeConversationBufferHistory,
+  listRuntimeConversationLogSources,
   markRuntimeConversationBufferRead,
   openRuntimeConversationQuery,
   saveRuntimeConversationBufferNotes,
@@ -62,6 +63,13 @@ export class RuntimeConversationService {
     filters?: Parameters<typeof searchRuntimeConversationLogs>[3],
   ) {
     return searchRuntimeConversationLogs(this.options, query, limit, filters);
+  }
+
+  listLogSources(
+    filters: Parameters<typeof listRuntimeConversationLogSources>[1],
+    limit: number,
+  ) {
+    return listRuntimeConversationLogSources(this.options, filters, limit);
   }
 
   exportBufferHistory(bufferId: string) {

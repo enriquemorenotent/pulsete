@@ -3,8 +3,11 @@ import type {
   BufferState,
   LogHistorySearchFilters,
   LogHistorySearchPayload,
+  LogSourceListFilters,
+  LogSourceListPayload,
   NetworkProfile,
 } from '../../shared/protocol-chat.js';
+import type { BufferHistoryPayload } from './client.js';
 import type { ClientMessage, ServerMessage } from '../../shared/protocol-messages.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { selectConversation, selectWorkspace } from './app-selectors.js';
@@ -65,6 +68,15 @@ export type ConversationActions = {
     filters?: LogHistorySearchFilters,
     init?: Pick<RequestInit, 'signal'>,
   ) => Promise<LogHistorySearchPayload>;
+  listLogSources: (
+    filters?: LogSourceListFilters,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => Promise<LogSourceListPayload>;
+  loadBufferHistory: (
+    bufferId: string,
+    beforeMessageId?: string,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => Promise<BufferHistoryPayload>;
   saveBufferNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
   openOrSelectQueryBuffer: (
     network: NetworkProfile,

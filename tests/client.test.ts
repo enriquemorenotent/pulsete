@@ -259,6 +259,44 @@ test('searchLogs calls the global log search endpoint with filters', async () =>
   }
 });
 
+test('listLogSources calls the source listing endpoint with filters', async () => {
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: string[] = [];
+  const controller = new AbortController();
+  let receivedSignal: AbortSignal | null | undefined;
+  globalThis.fetch = (async (input, init) => {
+    fetchCalls.push(String(input));
+    receivedSignal = init?.signal;
+    return new Response(JSON.stringify({
+      kind: 'query',
+      networkId: 'network-1',
+      q: 'missd',
+      sources: [],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+
+  try {
+    const payload = await api.listLogSources({
+      kind: 'query',
+      networkId: 'network-1',
+      q: 'missd',
+    }, 7, {
+      signal: controller.signal,
+    });
+
+    assert.deepEqual(fetchCalls, ['/api/logs/sources?limit=7&q=missd&networkId=network-1&kind=query']);
+    assert.equal(receivedSignal, controller.signal);
+    assert.deepEqual(payload, {
+      kind: 'query',
+      networkId: 'network-1',
+      q: 'missd',
+      sources: [],
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('clearBufferHistory calls the buffer-scoped history delete endpoint', async () => {
   const originalFetch = globalThis.fetch;
   const fetchCalls: Array<{ body: string; method: string; url: string }> = [];

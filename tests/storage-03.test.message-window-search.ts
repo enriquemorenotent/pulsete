@@ -228,6 +228,83 @@ test('message history search can scan all stored logs with filters', () => {
   assert.equal(capped.hasMore, true);
 });
 
+test('log source listing includes closed channel and PM logs by alias', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const storage = new Storage(join(dir, 'db.sqlite'));
+  const firstNetwork = createConnectionInstance(storage, { name: 'FirstNet' });
+  const secondNetwork = createConnectionInstance(storage, { name: 'SecondNet', host: 'irc2.example.test' });
+
+  storage.conversations.appendMessage({
+    id: 'closed-channel',
+    networkId: firstNetwork.id,
+    target: '#OldRoom',
+    nick: 'alice',
+    body: 'old channel log',
+    kind: 'line',
+    self: false,
+    ts: 10,
+  });
+  storage.conversations.appendMessage({
+    id: 'query-before-rename',
+    networkId: firstNetwork.id,
+    target: 'MissD',
+    nick: 'MissD',
+    body: 'private log',
+    kind: 'line',
+    self: false,
+    ts: 20,
+  });
+  storage.conversations.recordObservedQueryNickChange(firstNetwork.id, 'MissD', 'Guide');
+  storage.conversations.appendMessage({
+    id: 'other-network-channel',
+    networkId: secondNetwork.id,
+    target: '#OldRoom',
+    nick: 'bob',
+    body: 'other network log',
+    kind: 'line',
+    self: false,
+    ts: 30,
+  });
+  storage.conversations.upsertBuffer({
+    networkId: firstNetwork.id,
+    kind: 'channel',
+    target: '#empty',
+  });
+  storage.conversations.appendMessage({
+    id: 'server-log',
+    networkId: firstNetwork.id,
+    target: 'server',
+    nick: null,
+    body: 'server log',
+    kind: 'system',
+    self: false,
+    ts: 40,
+  });
+
+  const allSources = storage.conversations.listLogSources({}, 10);
+  assert.deepEqual(allSources.map((source) => source.buffer.target), ['#OldRoom', 'Guide', '#OldRoom']);
+  assert.deepEqual(allSources.map((source) => source.buffer.kind), ['channel', 'query', 'channel']);
+  assert.equal(allSources.some((source) => source.buffer.target === '#empty'), false);
+  assert.equal(allSources.some((source) => source.buffer.target === 'server'), false);
+
+  const aliasMatch = storage.conversations.listLogSources({ q: 'missd' }, 10);
+  assert.deepEqual(aliasMatch.map((source) => ({
+    aliases: source.aliases,
+    target: source.buffer.target,
+  })), [{ aliases: ['MissD'], target: 'Guide' }]);
+
+  assert.deepEqual(
+    storage.conversations.listLogSources({ networkId: firstNetwork.id, kind: 'channel' }, 10)
+      .map((source) => source.buffer.target),
+    ['#OldRoom'],
+  );
+  assert.deepEqual(
+    storage.conversations.listLogSources({ q: 'oldroom' }, 1)
+      .map((source) => source.buffer.networkId),
+    [secondNetwork.id],
+  );
+});
+
 test('deleteMessagesByIdPrefixes removes matching rows without touching normal messages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const storage = new Storage(join(dir, 'db.sqlite'));

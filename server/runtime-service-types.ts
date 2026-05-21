@@ -36,6 +36,7 @@ export type RuntimeConversationMutations = {
   history: RuntimeConversationService['listBufferHistory'];
   searchHistory: RuntimeConversationService['searchBufferHistory'];
   searchLogs: RuntimeConversationService['searchLogs'];
+  listLogSources: RuntimeConversationService['listLogSources'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
 };
 
@@ -83,6 +84,7 @@ export type RuntimeHttpApi = {
     exportHistory: RuntimeConversationMutations['exportHistory'];
   };
   logs: {
+    listSources: RuntimeConversationMutations['listLogSources'];
     search: RuntimeConversationMutations['searchLogs'];
   };
   friends: {

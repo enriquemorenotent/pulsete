@@ -74,6 +74,8 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
       ...actionContext,
     }),
     saveBufferNotes: conversation.saveBufferNotes,
+    listLogSources: conversation.listLogSources,
+    loadBufferHistory: conversation.loadBufferHistory,
     searchLogs: conversation.searchLogs,
     ...createFriendActions({
       ...actionContext,

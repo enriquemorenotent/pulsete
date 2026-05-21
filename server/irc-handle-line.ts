@@ -1,5 +1,5 @@
 import { emitSendFailure, emitStatus } from './irc-emit.js';
-import { formatPingReply } from './irc-handle-line-helpers.js';
+import { formatPingReply, isSelfNick } from './irc-handle-line-helpers.js';
 import {
   handleAccount,
   handleAway,
@@ -94,6 +94,8 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     handleSetname(connection, params, nick);
   } else if (command === 'TOPIC') {
     handleTopic(connection, params, nick);
+  } else if (command === 'INVITE') {
+    handleInvite(connection, params, nick);
   } else if (command === 'MODE') {
     handleMode(connection, params);
   } else if (command === '352') {
@@ -108,6 +110,15 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
       connection.sendRaw(`WHO ${channel}`);
     }
   }
+};
+
+const handleInvite = (connection: IrcConnectionState, params: string[], nick: string | null) => {
+  const invitedNick = params[0] ?? null;
+  const channel = params[1] ?? '';
+  if (!channel || !isSelfNick(connection, invitedNick)) {
+    return;
+  }
+  emitStatus(connection, `${nick ?? 'Someone'} invited you to ${channel}`, 'notice');
 };
 
 const parseIsonReplyNicks = (params: string[]) =>

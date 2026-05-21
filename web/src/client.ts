@@ -7,6 +7,8 @@ import type {
   FriendState,
   LogHistorySearchFilters,
   LogHistorySearchPayload,
+  LogSourceListFilters,
+  LogSourceListPayload,
   MutedNickState,
   NetworkProfile,
   NickEmojiState,
@@ -80,12 +82,20 @@ export const api = {
       method: 'POST',
       body: '{}',
     }),
-  loadHistory: (bufferId: string, limit = historyWindowLimit, beforeMessageId?: string) => {
+  loadHistory: (
+    bufferId: string,
+    limit = historyWindowLimit,
+    beforeMessageId?: string,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => {
     const searchParams = new URLSearchParams({ limit: String(limit) });
     if (beforeMessageId) {
       searchParams.set('before', beforeMessageId);
     }
-    return apiRequest<BufferHistoryPayload>(`/api/buffers/${bufferId}/history?${searchParams.toString()}`);
+    return apiRequest<BufferHistoryPayload>(
+      `/api/buffers/${bufferId}/history?${searchParams.toString()}`,
+      { signal: init?.signal },
+    );
   },
   searchBufferHistory: (
     bufferId: string,
@@ -114,6 +124,26 @@ export const api = {
     }
     return apiRequest<LogHistorySearchPayload>(
       `/api/logs/search?${searchParams.toString()}`,
+      { signal: init?.signal },
+    );
+  },
+  listLogSources: (
+    filters: LogSourceListFilters = {},
+    limit = historySearchLimit,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => {
+    const searchParams = new URLSearchParams({ limit: String(limit) });
+    if (filters.q) {
+      searchParams.set('q', filters.q);
+    }
+    if (filters.networkId) {
+      searchParams.set('networkId', filters.networkId);
+    }
+    if (filters.kind) {
+      searchParams.set('kind', filters.kind);
+    }
+    return apiRequest<LogSourceListPayload>(
+      `/api/logs/sources?${searchParams.toString()}`,
       { signal: init?.signal },
     );
   },

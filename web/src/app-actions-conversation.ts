@@ -123,6 +123,17 @@ export const createConversationActions = ({
     init,
   ) => api.searchLogs(query, filters, undefined, init);
 
+  const listLogSources: ConversationActions['listLogSources'] = (
+    filters,
+    init,
+  ) => api.listLogSources(filters, undefined, init);
+
+  const loadBufferHistory: ConversationActions['loadBufferHistory'] = (
+    bufferId,
+    beforeMessageId,
+    init,
+  ) => api.loadHistory(bufferId, undefined, beforeMessageId, init);
+
   const saveBufferNotes = async (buffer: BufferState, notes: string) =>
     executeMutation({
       request: () => api.saveBufferNotes(buffer.id, notes),
@@ -138,6 +149,8 @@ export const createConversationActions = ({
     joinChannel,
     openOrSelectQueryBuffer,
     openChannelListForNetwork,
+    listLogSources,
+    loadBufferHistory,
     saveBufferNotes,
     searchBufferHistory,
     searchLogs,

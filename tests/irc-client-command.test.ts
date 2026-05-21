@@ -25,3 +25,11 @@ test('/q normalizes to the query command', () => {
     remainder: 'alice',
   });
 });
+
+test('/invite keeps the canonical invite command name', () => {
+  assert.deepEqual(parseSlashIrcClientCommand('/invite alice #ops'), {
+    name: 'invite',
+    args: ['alice', '#ops'],
+    remainder: 'alice #ops',
+  });
+});

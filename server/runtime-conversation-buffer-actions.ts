@@ -15,6 +15,9 @@ import { assertNotSelfPrivateMessageTarget } from './runtime-self-target.js';
 import { historySearchContextAfter, historySearchContextBefore } from '../shared/protocol-chat.js';
 import type {
   BufferHistorySearchPayload,
+  LogSourceKind,
+  LogSourceListFilters,
+  LogSourceListPayload,
   LogHistorySearchFilters,
   LogHistorySearchPayload,
 } from '../shared/protocol-chat.js';
@@ -151,6 +154,29 @@ export const searchRuntimeConversationLogs = (
   };
 };
 
+export const listRuntimeConversationLogSources = (
+  options: RuntimeConversationServiceOptions,
+  filters: LogSourceListFilters = {},
+  limit: number,
+): LogSourceListPayload => {
+  const networkId = normalizeOptionalFilter(filters.networkId);
+  const q = normalizeOptionalFilter(filters.q);
+  const kind = normalizeLogSourceKind(filters.kind);
+  if (networkId) {
+    requireStoredNetwork(options.networks, networkId);
+  }
+  return {
+    kind: kind ?? null,
+    networkId: networkId ?? null,
+    q: q ?? null,
+    sources: options.conversations.listLogSources({
+      ...(kind ? { kind } : {}),
+      ...(networkId ? { networkId } : {}),
+      ...(q ? { q } : {}),
+    }, limit),
+  };
+};
+
 export const exportRuntimeConversationBufferHistory = (
   options: RuntimeConversationServiceOptions,
   bufferId: string,
@@ -175,3 +201,8 @@ const normalizeOptionalFilter = (value: string | null | undefined) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 };
+
+const normalizeLogSourceKind = (
+  value: LogSourceListFilters['kind'],
+): LogSourceKind | undefined =>
+  value === 'channel' || value === 'query' ? value : undefined;

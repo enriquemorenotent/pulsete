@@ -146,6 +146,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     searchHistory: (bufferId, query, limit) => conversationsService.searchBufferHistory(bufferId, query, limit),
     searchLogs: (query, limit, filters) => conversationsService.searchLogs(query, limit, filters),
+    listLogSources: (filters, limit) => conversationsService.listLogSources(filters, limit),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),
   };
   const friends: RuntimeFriendMutations = {

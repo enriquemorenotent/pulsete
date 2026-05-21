@@ -154,6 +154,27 @@ export const bufferSchema = z.object({
 });
 export type BufferState = z.infer<typeof bufferSchema>;
 
+export type LogSourceKind = Extract<BufferState['kind'], 'channel' | 'query'>;
+
+export type LogSource = {
+  aliases: string[];
+  buffer: BufferState;
+  firstMessageTs: number | null;
+  lastMessageTs: number | null;
+  messageCount: number;
+  open: boolean;
+};
+
+export type LogSourceListFilters = {
+  kind?: LogSourceKind | null;
+  networkId?: string | null;
+  q?: string | null;
+};
+
+export type LogSourceListPayload = LogSourceListFilters & {
+  sources: LogSource[];
+};
+
 export const channelSchema = z.object({
   id: z.string(),
   networkId: z.string(),

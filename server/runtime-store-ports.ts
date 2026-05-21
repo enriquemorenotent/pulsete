@@ -2,7 +2,16 @@ import type {
   StoredNetworkProfile,
 } from '../shared/network-model.js';
 import type { AppSnapshot } from '../shared/protocol-app.js';
-import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol-chat.js';
+import type {
+  BufferState,
+  ChannelState,
+  ChannelUserState,
+  FriendState,
+  LogSource,
+  LogSourceKind,
+  MutedNickState,
+  NickEmojiState,
+} from '../shared/protocol-chat.js';
 import type {
   BufferInput,
   ChannelInput,
@@ -33,6 +42,11 @@ export type RuntimeSnapshotSource = {
 export type RuntimeConversationStore = {
   listBuffers(networkId?: string): BufferState[];
   listChannels(networkId?: string): ChannelState[];
+  listLogSources(filters: {
+    kind?: LogSourceKind;
+    networkId?: string;
+    q?: string;
+  }, limit: number): LogSource[];
   listQueryNickAliases(networkId?: string): QueryNickAliasRecord[];
   getBuffer(bufferId: string): BufferState | null;
   getBufferByTarget(networkId: string, target: string): BufferState | null;

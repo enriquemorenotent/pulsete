@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { selectNetworks } from './app-selectors.js';
+import { selectMutedNicks, selectNetworks, selectNickEmojis } from './app-selectors.js';
 import { useAppSelector } from './app-store.js';
 import { LogInspectorDialog } from './LogInspectorDialog.js';
 import type { AppActions } from './useAppActions.js';
@@ -15,10 +15,16 @@ export const LogInspectorDialogContainer = memo(function LogInspectorDialogConta
   ui,
 }: LogInspectorDialogContainerProps) {
   const networks = useAppSelector(selectNetworks);
+  const mutedNicks = useAppSelector(selectMutedNicks);
+  const nickEmojis = useAppSelector(selectNickEmojis);
   return (
     <LogInspectorDialog
       open={ui.logInspectorOpen}
+      mutedNicks={mutedNicks}
       networks={networks}
+      nickEmojis={nickEmojis}
+      onListLogSources={actions.listLogSources}
+      onLoadHistory={actions.loadBufferHistory}
       onOpenChange={(open) => {
         if (!open) {
           ui.closeLogInspector();

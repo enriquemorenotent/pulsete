@@ -204,6 +204,75 @@ test('log search returns hits across stored buffers with nearby context and filt
   }
 });
 
+test('log source listing returns saved channel and PM transcripts', async () => {
+  const context = await createHttpRuntimeContext();
+  const network = context.storage.networks.upsert(createNetworkInput());
+  context.storage.conversations.appendMessage({
+    id: 'source-channel-hit',
+    networkId: network.id,
+    target: '#InviteOnly',
+    nick: 'alice',
+    body: 'saved channel source',
+    kind: 'line',
+    self: false,
+    ts: 1,
+  });
+  context.storage.conversations.appendMessage({
+    id: 'source-query-hit',
+    networkId: network.id,
+    target: 'MissD',
+    nick: 'MissD',
+    body: 'saved query source',
+    kind: 'line',
+    self: false,
+    ts: 2,
+  });
+  context.storage.conversations.recordObservedQueryNickChange(network.id, 'MissD', 'Guide');
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${context.port}/api/logs/sources?q=missd&kind=query&networkId=${network.id}`,
+    );
+    const body = await response.json() as {
+      kind: string | null;
+      networkId: string | null;
+      q: string | null;
+      sources: Array<{
+        aliases: string[];
+        buffer: { kind: string; target: string };
+        lastMessageTs: number | null;
+        messageCount: number;
+        open: boolean;
+      }>;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.kind, 'query');
+    assert.equal(body.networkId, network.id);
+    assert.equal(body.q, 'missd');
+    assert.deepEqual(body.sources.map((source) => ({
+      aliases: source.aliases,
+      kind: source.buffer.kind,
+      lastMessageTs: source.lastMessageTs,
+      messageCount: source.messageCount,
+      open: source.open,
+      target: source.buffer.target,
+    })), [{
+      aliases: ['MissD'],
+      kind: 'query',
+      lastMessageTs: 2,
+      messageCount: 1,
+      open: false,
+      target: 'Guide',
+    }]);
+
+    const invalid = await fetch(`http://127.0.0.1:${context.port}/api/logs/sources?kind=server`);
+    assert.equal(invalid.status, 400);
+  } finally {
+    await context.close();
+  }
+});
+
 test('buffer history search handles empty, capped, missing, and server-buffer searches', async () => {
   const context = await createHttpRuntimeContext();
   const network = context.storage.networks.upsert(createNetworkInput());

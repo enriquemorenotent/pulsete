@@ -134,6 +134,25 @@ async function runSlashCommand(text: string, params: ComposerParams) {
       }
       await params.onOpenQuery(selection.networkId, remainder);
       break;
+    case 'invite': {
+      const [nick, channelArg, ...extraArgs] = args;
+      const channel = channelArg ?? (selection.kind === 'channel' ? selection.target : '');
+      if (!nick || !channel || extraArgs.length > 0) {
+        params.updateBanner('error', 'Usage: /invite nick [#channel]');
+        return null;
+      }
+      if (!isChannelTarget(channel)) {
+        params.updateBanner('error', 'Channel name must start with #, &, +, or !');
+        return null;
+      }
+      socket.send({
+        type: 'raw.send',
+        networkId: selection.networkId,
+        raw: `INVITE ${nick} ${channel}`,
+        sourceBufferId: selection.id,
+      });
+      break;
+    }
     case 'list':
       if (remainder) {
         params.updateBanner('error', 'Usage: /list');
