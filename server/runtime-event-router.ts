@@ -105,6 +105,18 @@ export class RuntimeEventRouter {
       );
     }
 
+    if (event.type === 'peer-quit' && !event.self) {
+      this.publishAndCollect(
+        routedMessages,
+        this.friendPresence.markNickOffline(
+          event.networkId,
+          event.nick,
+          this.options.friends.list(),
+          this.options.buffers.listBuffers(),
+        ),
+      );
+    }
+
     if (
       event.type === 'channel-list-entry'
       || event.type === 'channel-list-completed'

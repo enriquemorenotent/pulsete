@@ -52,6 +52,21 @@ export class RuntimeFriendPresenceProjector {
     return this.collectDiffs(friends, buffers);
   }
 
+  markNickOffline(
+    networkId: string,
+    nick: string,
+    friends: FriendState[],
+    buffers: BufferState[],
+  ) {
+    const normalizedNick = normalizeIrcIdentifier(nick);
+    const networkPresence = this.friendPresenceByNetwork.get(networkId) ?? new Map<string, PresenceStatus>();
+    if (networkPresence.get(normalizedNick) !== 'offline') {
+      networkPresence.set(normalizedNick, 'offline');
+      this.friendPresenceByNetwork.set(networkId, networkPresence);
+    }
+    return this.collectDiffs(friends, buffers);
+  }
+
   snapshot(friends: FriendState[]): Record<string, PresenceStatus> {
     return Object.fromEntries(
       friends.map((friend) => [friend.id, this.resolveNickPresenceAnywhere(friend.nick)])
