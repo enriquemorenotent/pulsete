@@ -12,6 +12,7 @@ import {
   formatConnectionFailure,
   prepareConnectAttempt,
 } from './irc-connection-lifecycle-transitions.js';
+import { startIrcHeartbeat } from './irc-connection-heartbeat.js';
 import { resetRuntimeSessionState } from './irc-connection-lifecycle-state.js';
 import type { IrcConnectContext, IrcLifecycleContext } from './irc-contexts.js';
 import { emitState, emitStatus } from './irc-emit.js';
@@ -76,6 +77,7 @@ export const handleSocketClosed = (
 
 export const markRegistered = (connection: IrcLifecycleContext, serverName: string | null, nick: string | null) => {
   applyRegisteredTransition(connection, serverName, nick);
+  startIrcHeartbeat(connection);
   discardPendingNickReplyContexts(connection);
   emitState(connection);
 };

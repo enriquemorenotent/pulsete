@@ -10,6 +10,7 @@ import type {
 } from './irc-state-types.js';
 import type { Handlers, IrcConnectionData } from './irc-types.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
+import { createIrcHeartbeatState } from './irc-connection-heartbeat.js';
 
 const defaultChannelJoinTimeoutMs = 15_000;
 const defaultChannelListTimeoutMs = 60_000;
@@ -19,6 +20,8 @@ export type IrcConnectionOptions = {
   channelJoinTimeoutMs?: number;
   channelListTimeoutMs?: number;
   channelListDrainGraceMs?: number;
+  heartbeatIdleMs?: number;
+  heartbeatTimeoutMs?: number;
 };
 
 export const createIrcConnectionState = (
@@ -30,6 +33,10 @@ export const createIrcConnectionState = (
     socket: null,
     buffer: '',
     connectDeadlineTimer: null,
+    heartbeat: createIrcHeartbeatState({
+      idleMs: options.heartbeatIdleMs,
+      timeoutMs: options.heartbeatTimeoutMs,
+    }),
     manualDisconnect: false,
     reconnectAttempts: 0,
     reconnectTimer: null,

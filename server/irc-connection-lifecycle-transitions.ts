@@ -4,12 +4,14 @@ import {
 } from './irc-connection-lifecycle-state.js';
 import type { IrcConnectContext, IrcLifecycleContext } from './irc-contexts.js';
 import { clearConnectDeadlineTimer, clearReconnectTimer } from './irc-connection-lifecycle-retry.js';
+import { clearIrcHeartbeat } from './irc-connection-heartbeat.js';
 
 export const formatConnectionFailure = (connection: IrcLifecycleContext, detail: string) =>
   `Unable to connect to ${connection.profile.host}:${connection.profile.port} (${detail})`;
 
 export const prepareConnectAttempt = (connection: IrcConnectContext, resetRetryBudget: boolean) => {
   clearReconnectTimer(connection);
+  clearIrcHeartbeat(connection);
   connection.lifecycle.manualDisconnect = false;
   if (resetRetryBudget) {
     connection.lifecycle.reconnectAttempts = 0;
@@ -23,6 +25,7 @@ export const applyOpenedSocketTransition = (
   socket: NonNullable<IrcLifecycleContext['lifecycle']['socket']>
 ) => {
   clearReconnectTimer(connection);
+  clearIrcHeartbeat(connection);
   connection.lifecycle.manualDisconnect = false;
   connection.lifecycle.lastFailureMessage = null;
   connection.lifecycle.socket = socket;
@@ -51,6 +54,7 @@ export const applyOfflineTransition = (
 ) => {
   clearConnectDeadlineTimer(connection);
   clearReconnectTimer(connection);
+  clearIrcHeartbeat(connection);
   connection.lifecycle.socket = null;
   resetRuntimeSessionState(connection);
   applyOfflineLifecycleState(connection);

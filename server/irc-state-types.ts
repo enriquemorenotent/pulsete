@@ -40,10 +40,18 @@ export type IrcCapabilityState = {
   nextLabelId: number;
 };
 
+export type IrcHeartbeatState = {
+  timer: ReturnType<typeof setTimeout> | null;
+  awaitingActivity: boolean;
+  idleMs: number;
+  timeoutMs: number;
+};
+
 export type IrcLifecycleState = {
   socket: IrcSocket | null;
   buffer: string;
   connectDeadlineTimer: ReturnType<typeof setTimeout> | null;
+  heartbeat: IrcHeartbeatState;
   manualDisconnect: boolean;
   reconnectAttempts: number;
   reconnectTimer: ReturnType<typeof setTimeout> | null;

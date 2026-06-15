@@ -30,6 +30,10 @@ export const createMockSocket = (writes: string[] = [], options: MockSocketOptio
       return this;
     }
 
+    setKeepAlive(_enable?: boolean, _initialDelay?: number) {
+      return this;
+    }
+
     destroy() {
       this.destroyed = true;
       if (options.emitCloseOnDestroy ?? true) {

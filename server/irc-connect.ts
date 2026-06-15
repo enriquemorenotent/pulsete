@@ -4,6 +4,10 @@ import type { IrcConnectContext } from './irc-contexts.js';
 import { buildRegistrationLines } from './irc-auth.js';
 import { formatTlsStatusLines } from './irc-server-log.js';
 import { emitStatus } from './irc-emit.js';
+import {
+  enableIrcSocketKeepAlive,
+  recordIrcHeartbeatActivity,
+} from './irc-connection-heartbeat.js';
 
 const defaultConnectTimeoutMs = 15_000;
 
@@ -19,6 +23,7 @@ export const connectSocket = (connection: IrcConnectContext) => {
   connection.openSocket(socket);
   const isCurrentSocket = () => connection.lifecycle.socket === socket;
   socket.setEncoding('utf8');
+  enableIrcSocketKeepAlive(socket, connection.lifecycle.heartbeat.idleMs);
   const connectDeadline = setTimeout(() => {
     if (!isCurrentSocket() || connection.lifecycle.connected) {
       return;
@@ -63,6 +68,7 @@ export const connectSocket = (connection: IrcConnectContext) => {
   }
   socket.on('data', (chunk) => {
     if (isCurrentSocket()) {
+      recordIrcHeartbeatActivity(connection);
       connection.consume(chunk);
     }
   });
