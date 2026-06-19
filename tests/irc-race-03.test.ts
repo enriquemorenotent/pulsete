@@ -109,6 +109,62 @@ test('connected nick changes wait for server confirmation before mutating curren
   assert.deepEqual(peerNickEvents, [{ oldNick: 'tester', newNick: 'newnick', self: true }]);
 });
 
+test('connected nick echoes using the accepted nick still report the previous nick', () => {
+  const writes: string[] = [];
+  const peerNickEvents: Array<{ oldNick: string; newNick: string; self: boolean }> = [];
+  const channelSnapshots: Array<Array<{ nick: string; mode: string; away: boolean }>> = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        if (event.type === 'channel' && event.users) {
+          channelSnapshots.push(event.users.map((user) => ({
+            nick: user.nick,
+            mode: user.mode,
+            away: user.away,
+          })));
+        }
+        if (event.type === 'peer-nick') {
+          peerNickEvents.push({
+            oldNick: event.oldNick,
+            newNick: event.newNick,
+            self: event.self,
+          });
+        }
+      },
+    }
+  );
+
+  connection.lifecycle.connected = true;
+  attachMockSocket(connection, createMockSocket(writes));
+  connection.channels.users.set('#Help', [makeUser('tester'), makeUser('alice')]);
+  connection.setNick('newnick');
+
+  handleIrcLine(connection, ':newnick!user@host NICK newnick');
+
+  assert.equal(connection.lifecycle.currentNick, 'newnick');
+  assert.equal(connection.replyTracker.pendingNick, null);
+  assert.deepEqual(
+    connection.channels.users.get('#Help')?.map((user) => ({ nick: user.nick, mode: user.mode, away: user.away })),
+    [makeUser('alice'), makeUser('newnick')]
+  );
+  assert.deepEqual(channelSnapshots.at(-1), [makeUser('alice'), makeUser('newnick')]);
+  assert.deepEqual(peerNickEvents, [{ oldNick: 'tester', newNick: 'newnick', self: true }]);
+});
+
 test('pending nick self events are handled before the nick echo arrives', () => {
   const messages: Array<{ target: string; body: string; self: boolean }> = [];
   const connection = new IrcConnection(

@@ -152,11 +152,12 @@ export const handleNick = (connection: IrcChannelEventContext, params: string[],
     return;
   }
   const selfNick = isSelfNick(connection, nick);
+  const previousNick = selfNick ? connection.lifecycle.currentNick : nick;
   for (const [channel, users] of connection.getTrackedChannelUserEntries()) {
-    if (!nick) {
+    if (!previousNick) {
       continue;
     }
-    const nextUsers = renameChannelUser(users, nick, newNick);
+    const nextUsers = renameChannelUser(users, previousNick, newNick);
     if (nextUsers.length !== users.length || nextUsers.some((user, index) => user !== users[index])) {
       connection.setTrackedChannelUsers(channel, nextUsers);
       emitChannel(connection, channel, { users: nextUsers });
@@ -165,8 +166,8 @@ export const handleNick = (connection: IrcChannelEventContext, params: string[],
   if (selfNick) {
     connection.confirmNick(newNick);
   }
-  if (nick) {
-    emitPeerNick(connection, { oldNick: nick, newNick, self: selfNick });
+  if (previousNick) {
+    emitPeerNick(connection, { oldNick: previousNick, newNick, self: selfNick });
   }
 };
 
