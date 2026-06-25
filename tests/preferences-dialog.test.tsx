@@ -27,6 +27,7 @@ const contactNotifications: ContactNotificationSettings = {
   systemEnabled: false,
   sound: 'bell',
   contacts: [{ networkId: 'network-1', nick: 'Alice' }],
+  channels: [{ networkId: 'network-1', channel: '#help' }],
 };
 
 const userAvatarSettings: UserAvatarSettings = {
@@ -51,6 +52,7 @@ test('preferences dialog renders notification controls and muted nick management
       onRequestContactNotificationSystemPermission={async () => 'default'}
       onSetContactNotificationSound={() => {}}
       onPreviewContactNotificationSound={() => {}}
+      onRemoveContactNotificationChannel={() => {}}
       onRemoveContactNotificationContact={() => {}}
       onRemoveMutedNick={async () => true}
       onSetNavigationLayoutMode={() => {}}
@@ -68,10 +70,10 @@ test('preferences dialog renders notification controls and muted nick management
   assert.match(markup, /Show external avatars/);
   assert.match(markup, /IRCCloud/);
   assert.match(markup, /Notifications/);
-  assert.match(markup, /Private Message Notifications/);
+  assert.match(markup, /Conversation Notifications/);
   assert.match(markup, /Delivery Methods/);
   assert.match(markup, /Play sound cue/);
-  assert.match(markup, /Play sound cues for allowed private messages/);
+  assert.match(markup, /Play sound cues for allowed conversations/);
   assert.match(markup, /Show system notifications/);
   assert.match(markup, /Allow notifications in the browser first/);
   assert.match(markup, />Allow in Browser</);
@@ -80,8 +82,10 @@ test('preferences dialog renders notification controls and muted nick management
   assert.match(markup, /Preview notification sound/);
   assert.match(markup, />Preview</);
   assert.match(markup, /Notification Contacts/);
-  assert.match(markup, /Notification contacts can use one or both delivery methods below/);
+  assert.match(markup, /Notification conversations can use one or both delivery methods below/);
   assert.match(markup, />Alice</);
+  assert.match(markup, /Notification Channels/);
+  assert.match(markup, />#help</);
   assert.match(markup, />TestNet</);
   assert.match(markup, /Muted Nicks/);
   assert.match(markup, />MissD</);

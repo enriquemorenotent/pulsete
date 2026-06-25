@@ -84,6 +84,66 @@ test('profile updates retry a rejected connected nick change when the desired ni
   ]);
 });
 
+test('profile updates that keep the saved nick do not revert a changed runtime nick', () => {
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    { onEvent() {} }
+  );
+
+  connection.lifecycle.connected = true;
+  connection.lifecycle.currentNick = 'newnick';
+  attachMockSocket(connection, createMockSocket(writes));
+
+  connection.updateProfile({ ...connection.profile, autoJoin: ['#help'] });
+
+  assert.equal(connection.lifecycle.currentNick, 'newnick');
+  assert.deepEqual(writes, []);
+});
+
+test('profile updates do not keep a nick sync target when the runtime nick already matches', () => {
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    { onEvent() {} }
+  );
+
+  connection.lifecycle.connected = true;
+  connection.lifecycle.currentNick = 'newnick';
+  attachMockSocket(connection, createMockSocket(writes));
+
+  connection.updateProfile({ ...connection.profile, nick: 'newnick' });
+
+  assert.equal(connection.lifecycle.profileNickSyncTarget, null);
+  assert.deepEqual(writes, []);
+});
+
 test('connected profiles do not reconnect when only an unused password changes', () => {
   const writes: string[] = [];
   const statuses: string[] = [];

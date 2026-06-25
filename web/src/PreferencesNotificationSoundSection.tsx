@@ -32,7 +32,7 @@ export function PreferencesNotificationSoundSection(
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Play sound cue</p>
           <p className="text-muted-foreground">
-            Play a short sound when an allowed private-message contact writes in another buffer.
+            Play a short sound when an allowed conversation has new unread messages.
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
@@ -40,7 +40,7 @@ export function PreferencesNotificationSoundSection(
             id={soundEnabledId}
             checked={props.enabled}
             onCheckedChange={(checked) => props.onSetEnabled(checked === true)}
-            aria-label="Play sound cues for allowed private messages"
+            aria-label="Play sound cues for allowed conversations"
           />
           <label htmlFor={soundEnabledId} className="cursor-pointer">Sound</label>
         </div>

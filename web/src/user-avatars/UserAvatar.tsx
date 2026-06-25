@@ -4,17 +4,24 @@ import { cn } from '@/lib/utils.js';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog.js';
 import { InlineImagePreviewDialogBody } from '../InlineImagePreviewDialogBody.js';
 import { resolveIrcCloudAvatarUrl } from './irccloud.js';
+import {
+  useUserAvatarOverrideUrl,
+  type UserAvatarOverrideTarget,
+} from './query-overrides.js';
 
 const failedAvatarUrls = new Set<string>();
 
 type UserAvatarProps = {
   className?: string;
+  customAvatarAllowNickFallback?: boolean;
+  customAvatarTarget?: UserAvatarOverrideTarget | null;
+  customAvatarUrl?: string | null;
   enabled: boolean;
   placeholder?: 'initial' | 'none';
   preview?: boolean;
   shape?: 'circle' | 'square';
   size?: 'lg' | 'md' | 'sm';
-  user: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
+  user: (Pick<ChannelUserState, 'account' | 'host' | 'identity' | 'nick' | 'username'> & {
     ircCloudAvatarId?: string | null;
   }) | null | undefined;
 };
@@ -32,6 +39,9 @@ const avatarShapeClassName = {
 
 export function UserAvatar({
   className,
+  customAvatarAllowNickFallback = false,
+  customAvatarTarget = null,
+  customAvatarUrl,
   enabled,
   placeholder = 'none',
   preview = false,
@@ -39,15 +49,22 @@ export function UserAvatar({
   size = 'sm',
   user,
 }: UserAvatarProps) {
-  const url = useMemo(
+  const storedCustomAvatarUrl = useUserAvatarOverrideUrl(customAvatarTarget, {
+    allowNickFallback: customAvatarAllowNickFallback,
+  });
+  const resolvedCustomAvatarUrl = customAvatarUrl === undefined
+    ? storedCustomAvatarUrl
+    : customAvatarUrl?.trim() || null;
+  const externalUrl = useMemo(
     () => (enabled && user ? resolveIrcCloudAvatarUrl(user) : null),
     [enabled, user],
   );
+  const url = resolvedCustomAvatarUrl || externalUrl;
   const [failedUrl, setFailedUrl] = useState<string | null>(() =>
     url && failedAvatarUrls.has(url) ? url : null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  if (!enabled || !user) {
+  if (!user || (!enabled && !resolvedCustomAvatarUrl)) {
     return null;
   }
 

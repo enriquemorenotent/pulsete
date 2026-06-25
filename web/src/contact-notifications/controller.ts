@@ -3,15 +3,18 @@ import type { BufferState } from '../../../shared/protocol-chat.js';
 import type { ConversationMessages } from '../conversation-message-state.js';
 import {
   CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
+  addContactNotificationChannel,
   addContactNotificationContact,
   canPlayContactNotificationCue,
   findEligibleContactNotificationBuffer,
+  removeContactNotificationChannel,
   removeContactNotificationContact,
   serializeContactNotificationSettings,
+  type ContactNotificationChannel,
   type ContactNotificationContact,
-  type ContactNotificationSettings,
   type ContactNotificationSound,
 } from './settings.js';
+import type { ContactNotificationsController } from './controller-types.js';
 import {
   getAudioContextConstructor,
   getBufferMap,
@@ -25,19 +28,7 @@ import {
   showContactSystemNotification,
   type ContactSystemNotificationHandle,
 } from './system-notification.js';
-
-export type ContactNotificationsController = {
-  settings: ContactNotificationSettings;
-  systemPermission: NotificationPermission | 'unsupported';
-  setEnabled: (enabled: boolean) => void;
-  setSystemEnabled: (enabled: boolean) => void;
-  setSound: (sound: ContactNotificationSound) => void;
-  addContact: (contact: ContactNotificationContact) => void;
-  removeContact: (contact: ContactNotificationContact) => void;
-  preview: (sound: ContactNotificationSound) => void;
-  prime: () => void;
-  requestSystemPermission: () => Promise<NotificationPermission | 'unsupported'>;
-};
+export type { ContactNotificationsController } from './controller-types.js';
 
 export function useContactNotifications(input: {
   buffers: readonly BufferState[];
@@ -110,8 +101,16 @@ export function useContactNotifications(input: {
       current.sound === sound ? current : { ...current, sound });
   }, []);
 
+  const addChannel = useCallback((channel: ContactNotificationChannel) => {
+    setSettings((current) => addContactNotificationChannel(current, channel));
+  }, []);
+
   const addContact = useCallback((contact: ContactNotificationContact) => {
     setSettings((current) => addContactNotificationContact(current, contact));
+  }, []);
+
+  const removeChannel = useCallback((channel: ContactNotificationChannel) => {
+    setSettings((current) => removeContactNotificationChannel(current, channel));
   }, []);
 
   const removeContact = useCallback((contact: ContactNotificationContact) => {
@@ -231,7 +230,9 @@ export function useContactNotifications(input: {
     setEnabled,
     setSystemEnabled,
     setSound,
+    addChannel,
     addContact,
+    removeChannel,
     removeContact,
     preview,
     prime,

@@ -1,6 +1,13 @@
 import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
-import type { BufferState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
+import type {
+  BufferState,
+  ChannelUserState,
+  FriendState,
+  MutedNickState,
+  NetworkProfile,
+  NickEmojiState,
+} from '../../shared/protocol-chat.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
@@ -82,17 +89,12 @@ export type DesktopShellServerProfileModel = {
 };
 
 export type DesktopShellQueryProfileModel = {
+  avatarUser?: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
+    ircCloudAvatarId?: string | null;
+  }) | null;
   buffer: BufferState | null;
-  identity?: NetworkUserIdentity | null;
-  nickEmoji?: NickEmojiState | null;
-  network: NetworkProfile | null;
+  externalAvatarsEnabled: boolean;
   onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
-  onSaveNickEmoji: (
-    networkId: string,
-    nick: string,
-    emoji: string | null,
-    identity?: NetworkUserIdentity | null,
-  ) => Promise<boolean>;
 };
 
 export type DesktopShellModel = {

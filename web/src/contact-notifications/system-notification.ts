@@ -1,4 +1,10 @@
 import type { BufferState } from '../../../shared/protocol-chat.js';
+import { resolveUserAvatarTarget } from '../user-avatars/override-model.js';
+import {
+  readStoredQueryAvatarOverrides,
+  readStoredUserAvatarOverrides,
+  resolveUserAvatarOverrideUrl,
+} from '../user-avatars/query-overrides.js';
 
 export type ContactSystemNotificationHandle = {
   close: () => void;
@@ -12,6 +18,7 @@ type ContactSystemNotificationConstructor = new (
 ) => ContactSystemNotificationHandle;
 
 type ContactSystemNotificationInput = {
+  avatarIconUrl?: string | null;
   buffer: BufferState;
   focusWindow?: () => void;
   networkName: string;
@@ -54,9 +61,11 @@ export const createContactSystemNotification = (
   if (!NotificationClass) {
     return null;
   }
+  const icon = input.avatarIconUrl ?? resolveContactSystemNotificationIconUrl(input.buffer);
   const notification = new NotificationClass(input.buffer.target, {
-    body: `New private message on ${input.networkName}`,
-    tag: `pulsete-dm:${input.buffer.id}`,
+    body: resolveContactSystemNotificationBody(input.buffer, input.networkName),
+    ...(icon ? { icon } : {}),
+    tag: resolveContactSystemNotificationTag(input.buffer),
   });
   let released = false;
   const cleanup = () => {
@@ -108,4 +117,30 @@ const resolveNotificationConstructor = () => {
     return null;
   }
   return window.Notification;
+};
+
+const resolveContactSystemNotificationBody = (buffer: BufferState, networkName: string) =>
+  buffer.kind === 'channel'
+    ? `New message in ${buffer.target} on ${networkName}`
+    : `New private message on ${networkName}`;
+
+const resolveContactSystemNotificationTag = (buffer: BufferState) =>
+  buffer.kind === 'channel'
+    ? `pulsete-channel:${buffer.id}`
+    : `pulsete-dm:${buffer.id}`;
+
+const resolveContactSystemNotificationIconUrl = (buffer: BufferState) => {
+  if (buffer.kind !== 'query') {
+    return null;
+  }
+  return resolveUserAvatarOverrideUrl({
+    allowNickFallback: true,
+    legacyBufferId: buffer.id,
+    queryAvatarOverrides: readStoredQueryAvatarOverrides(),
+    target: resolveUserAvatarTarget(buffer.networkId, {
+      identity: buffer.peerIdentity,
+      nick: buffer.target,
+    }),
+    userAvatarOverrides: readStoredUserAvatarOverrides(),
+  });
 };

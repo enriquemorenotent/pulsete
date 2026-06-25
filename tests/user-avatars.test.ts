@@ -10,6 +10,10 @@ import {
   parseUserAvatarSettings,
   serializeUserAvatarSettings,
 } from '../web/src/user-avatars/settings.js';
+import {
+  parseQueryAvatarOverrides,
+  serializeQueryAvatarOverrides,
+} from '../web/src/user-avatars/query-overrides.js';
 
 test('IRCCloud avatar resolver extracts public uid and sid identities', () => {
   assert.equal(extractIrcCloudAvatarId('uid7'), '7');
@@ -149,5 +153,30 @@ test('user avatar settings are disabled by default and serialize explicitly', ()
   assert.equal(
     serializeUserAvatarSettings({ externalAvatarsEnabled: true }),
     '{"externalAvatarsEnabled":true}',
+  );
+});
+
+test('query avatar overrides parse and serialize valid custom images', () => {
+  assert.deepEqual(parseQueryAvatarOverrides(null), {});
+  assert.deepEqual(parseQueryAvatarOverrides('not-json'), {});
+  assert.deepEqual(
+    parseQueryAvatarOverrides(JSON.stringify({
+      ' buffer-b ': ' https://example.test/b.png ',
+      'buffer-a': 'data:image/png;base64,a',
+      'buffer-empty': '   ',
+      'buffer-invalid': 7,
+    })),
+    {
+      'buffer-a': 'data:image/png;base64,a',
+      'buffer-b': 'https://example.test/b.png',
+    },
+  );
+  assert.equal(
+    serializeQueryAvatarOverrides({
+      ' buffer-b ': 'https://example.test/b.png',
+      'buffer-a': 'data:image/png;base64,a',
+      'buffer-empty': '',
+    }),
+    '{"buffer-a":"data:image/png;base64,a","buffer-b":"https://example.test/b.png"}',
   );
 });

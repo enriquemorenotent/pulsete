@@ -37,7 +37,6 @@ test('offline channels surface an inline reconnect action', () => {
         showNicklist: false,
       }}
       nickEmojis={[]}
-      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""
@@ -101,7 +100,6 @@ test('offline private messages keep a disabled composer in place', () => {
         showNicklist: false,
       }}
       nickEmojis={[]}
-      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""
@@ -157,7 +155,6 @@ test('saved channels that are no longer joined surface a rejoin action', () => {
         showNicklist: false,
       }}
       nickEmojis={[]}
-      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""

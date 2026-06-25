@@ -10,6 +10,10 @@ import {
   type ContactRuleHandlers,
 } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
+import {
+  isContactNotificationChannelAllowed,
+  type ContactNotificationChannel,
+} from './contact-notifications/settings.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
@@ -21,10 +25,12 @@ import type { WorkspaceView } from './workspace-types.js';
 export type DesktopChatModelParams = {
   actions: ChatActionSet;
   composer: ComposerStoreApi;
-  contactNotifications: Pick<ContactNotificationsController, 'settings'>;
+  contactNotifications: Pick<
+    ContactNotificationsController,
+    'addChannel' | 'prime' | 'removeChannel' | 'settings'
+  >;
   contactRuleHandlers: ContactRuleHandlers;
   channels: State['domain']['channels'];
-  externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
   mutedNicks: State['domain']['mutedNicks'];
   nickEmojis: State['domain']['nickEmojis'];
@@ -42,7 +48,6 @@ export function useDesktopChatModel({
   contactNotifications,
   contactRuleHandlers,
   channels,
-  externalAvatarsEnabled,
   friends,
   mutedNicks,
   nickEmojis,
@@ -64,7 +69,7 @@ export function useDesktopChatModel({
   const selectedQueryBuffer = workspace.selectedBuffer?.kind === 'query'
     ? workspace.selectedBuffer
     : null;
-  const selectedQueryAvatarUser = useMemo(() => {
+  const selectedQueryUser = useMemo(() => {
     const selectedBuffer = workspace.selectedBuffer;
     return selectedBuffer?.kind === 'query'
       ? resolveUserAvatarCandidate(
@@ -76,7 +81,7 @@ export function useDesktopChatModel({
       : null;
   }, [channels, workspace.selectedBuffer]);
   const selectedQueryIdentity = workspace.selectedBuffer?.kind === 'query'
-    ? selectedQueryAvatarUser?.identity ?? workspace.selectedBuffer.peerIdentity
+    ? selectedQueryUser?.identity ?? workspace.selectedBuffer.peerIdentity
     : null;
   const selectedQueryContactRule = workspace.selectedBuffer?.kind === 'query'
     ? resolveContactRuleState({
@@ -88,6 +93,19 @@ export function useDesktopChatModel({
         contactNotifications: contactNotifications.settings,
       })
     : null;
+  const selectedChannelNotificationTarget: ContactNotificationChannel | null =
+    workspace.selectedBuffer?.kind === 'channel'
+      ? {
+          channel: workspace.selectedBuffer.target,
+          networkId: workspace.selectedBuffer.networkId,
+        }
+      : null;
+  const selectedChannelNotificationsEnabled = selectedChannelNotificationTarget
+    ? isContactNotificationChannelAllowed(
+        contactNotifications.settings,
+        selectedChannelNotificationTarget,
+      )
+    : false;
   const participantQueryNetwork = workspace.selectedBuffer?.kind === 'channel'
     ? workspace.selectedNetwork
     : null;
@@ -97,8 +115,7 @@ export function useDesktopChatModel({
     () => ({
       workspace,
       nickEmojis,
-      externalAvatarsEnabled,
-      selectedQueryAvatarUser,
+      selectedQueryIdentity,
       selectedMessages,
       mutedNicks,
       contactRuleHandlers,
@@ -113,6 +130,19 @@ export function useDesktopChatModel({
       onRecallNewerDraft: () => composer.recallNewerDraft(composerContextKey),
       onSend: actions.sendComposer,
       selectedQueryContactRule,
+      selectedChannelNotificationsEnabled,
+      onToggleSelectedChannelNotifications: selectedChannelNotificationTarget
+        ? () => {
+            if (selectedChannelNotificationsEnabled) {
+              contactNotifications.removeChannel(selectedChannelNotificationTarget);
+              return;
+            }
+            contactNotifications.addChannel(selectedChannelNotificationTarget);
+            if (contactNotifications.settings.enabled) {
+              contactNotifications.prime();
+            }
+          }
+        : undefined,
       mutedQueryNick: selectedQueryContactRule?.mutedNick?.nick ?? null,
       onWhoisSelectedQuery: selectedQueryContactRule
         ? () =>
@@ -159,16 +189,19 @@ export function useDesktopChatModel({
       composer,
       composerCompletion,
       composerContextKey,
+      contactNotifications.addChannel,
+      contactNotifications.prime,
+      contactNotifications.removeChannel,
       contactNotifications.settings,
       draft,
-      externalAvatarsEnabled,
       friends,
       mutedNicks,
       nickEmojis,
       participantQueryNetwork,
-      selectedQueryIdentity,
       selectedQueryContactRule,
-      selectedQueryAvatarUser,
+      selectedQueryIdentity,
+      selectedChannelNotificationTarget,
+      selectedChannelNotificationsEnabled,
       selectedQueryBuffer,
       selectedBufferHistory,
       selectedBufferId,

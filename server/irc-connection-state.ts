@@ -43,6 +43,7 @@ export const createIrcConnectionState = (
     connected: false,
     serverName: null,
     currentNick: profile.nick,
+    profileNickSyncTarget: null,
     lastFailureMessage: null,
     sasl: createIdleSaslState(),
     capabilities: {

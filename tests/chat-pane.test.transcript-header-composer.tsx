@@ -20,7 +20,6 @@ test('channel transcripts keep the unread divider anchored after a day divider',
         }),
       }}
       nickEmojis={[]}
-      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={messages}
       draft=""
@@ -77,6 +76,22 @@ test('channel headers hide the overflow trigger when no secondary actions are av
   assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
 
+test('channel headers expose one-click notification controls', () => {
+  const markup = renderChatPane([]);
+
+  assert.match(markup, /aria-label="Enable notifications for #help"/);
+  assert.doesNotMatch(markup, /aria-label="Disable notifications for #help"/);
+});
+
+test('channel headers expose the active notification toggle state', () => {
+  const markup = renderChatPane([], {
+    channelNotificationsEnabled: true,
+  });
+
+  assert.match(markup, /aria-label="Disable notifications for #help"/);
+  assert.doesNotMatch(markup, /aria-label="Enable notifications for #help"/);
+});
+
 test('connected channel headers keep only the title and topic context', () => {
   const markup = renderChatPane([], {
     channelUsers: [
@@ -123,60 +138,6 @@ test('query headers expose one-click contact controls', () => {
   assert.doesNotMatch(markup, /aria-label="Edit emoji tag for MissD"/);
   assert.doesNotMatch(markup, /aria-label="Contact settings for MissD"/);
   assert.doesNotMatch(markup, /aria-label="More actions"/);
-});
-
-test('query headers render IRCCloud avatars when external avatars are enabled', () => {
-  const markup = renderQueryPane([], {
-    externalAvatarsEnabled: true,
-    selectedQueryAvatarUser: {
-      nick: 'MissD',
-      mode: 'normal',
-      away: false,
-      username: 'uid7',
-      host: null,
-    },
-  });
-
-  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
-  assert.match(markup, /aria-label="Avatar for MissD"/);
-  assert.match(markup, /gap-4/);
-  assert.match(markup, /min-h-\[68px\] items-center py-0 pl-0 pr-4/);
-  assert.match(markup, /size-\[68px\] text-lg rounded-none/);
-  assert.match(markup, /cursor-zoom-in/);
-});
-
-test('query headers render persisted PM IRCCloud avatars without channel presence', () => {
-  const markup = renderQueryPane([], {
-    externalAvatarsEnabled: true,
-    selectedQueryAvatarUser: {
-      nick: 'MissD',
-      mode: 'normal',
-      away: false,
-      username: null,
-      host: null,
-      ircCloudAvatarId: '7',
-    },
-  });
-
-  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
-  assert.match(markup, /aria-label="Avatar for MissD"/);
-});
-
-test('query headers render avatar placeholders when no IRCCloud avatar is available', () => {
-  const markup = renderQueryPane([], {
-    externalAvatarsEnabled: true,
-    selectedQueryAvatarUser: {
-      nick: 'MissD',
-      mode: 'normal',
-      away: false,
-      username: null,
-      host: null,
-    },
-  });
-
-  assert.match(markup, /font-medium leading-none">M</);
-  assert.doesNotMatch(markup, /avatar-redirect/);
-  assert.doesNotMatch(markup, /cursor-zoom-in/);
 });
 
 test('query headers expose the active notification toggle state', () => {
@@ -232,7 +193,6 @@ test('reconnecting channels rely on the inline status banner instead of header m
         showNicklist: false,
       }}
       nickEmojis={[]}
-      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={[]}
       draft=""

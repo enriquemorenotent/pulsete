@@ -4,10 +4,6 @@ import { ChatPane } from '../web/src/ChatPane.js';
 import type { ContactRuleHandlers, ContactRuleState } from '../web/src/contact-notifications/contact-rules.js';
 import { closedChannelList, makeQueryWorkspace, makeServerWorkspace, makeWorkspace } from './chat-pane.test.fixtures.js';
 
-type QueryAvatarUser = ChannelUserState & {
-  ircCloudAvatarId?: string | null;
-};
-
 export const noopContactRuleHandlers: ContactRuleHandlers = {
   addFriend: async () => true,
   mute: async () => true,
@@ -28,10 +24,9 @@ export const renderChatPane = (
     friends: FriendState[];
     nickEmojis: NickEmojiState[];
     mutedNicks: MutedNickState[];
-    externalAvatarsEnabled: boolean;
-    selectedQueryAvatarUser: QueryAvatarUser | null;
     topic: string;
     draft: string;
+    channelNotificationsEnabled: boolean;
   }> = {},
 ) =>
   renderToStaticMarkup(
@@ -41,8 +36,6 @@ export const renderChatPane = (
         topic: overrides.topic,
       })}
       nickEmojis={overrides.nickEmojis ?? []}
-      externalAvatarsEnabled={overrides.externalAvatarsEnabled ?? false}
-      selectedQueryAvatarUser={overrides.selectedQueryAvatarUser}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft={overrides.draft ?? ''}
@@ -51,6 +44,8 @@ export const renderChatPane = (
       onRecallNewerDraft={() => undefined}
       onSend={async () => false}
       contactRuleHandlers={noopContactRuleHandlers}
+      selectedChannelNotificationsEnabled={overrides.channelNotificationsEnabled ?? false}
+      onToggleSelectedChannelNotifications={() => undefined}
       showChannelAutoJoin={overrides.showChannelAutoJoin ?? false}
       channelAutoJoinActive={overrides.channelAutoJoinActive ?? false}
       onToggleChannelAutoJoin={async () => true}
@@ -82,8 +77,6 @@ export const renderQueryPane = (
     selectedQueryMuted: boolean;
     mutedQueryNick: string;
     mutedNicks: MutedNickState[];
-    externalAvatarsEnabled: boolean;
-    selectedQueryAvatarUser: QueryAvatarUser | null;
     draft: string;
   }> = {},
 ) =>
@@ -91,8 +84,6 @@ export const renderQueryPane = (
     <ChatPane
       workspace={makeQueryWorkspace()}
       nickEmojis={overrides.nickEmojis ?? []}
-      externalAvatarsEnabled={overrides.externalAvatarsEnabled ?? false}
-      selectedQueryAvatarUser={overrides.selectedQueryAvatarUser}
       mutedNicks={overrides.mutedNicks ?? []}
       selectedMessages={selectedMessages}
       draft={overrides.draft ?? ''}
@@ -134,7 +125,6 @@ export const renderServerPane = (
     <ChatPane
       workspace={makeServerWorkspace()}
       nickEmojis={[]}
-      externalAvatarsEnabled={false}
       mutedNicks={[]}
       selectedMessages={selectedMessages}
       draft={overrides.draft ?? ''}

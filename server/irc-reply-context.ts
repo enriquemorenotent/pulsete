@@ -90,6 +90,11 @@ export const consumeReplyContext = (
         continue;
       }
     }
+    const messageAwayResolution = resolveMessageAwayReplyContext(context, command, params);
+    if (messageAwayResolution.matched) {
+      matches.push({ index, context, resolution: messageAwayResolution });
+      continue;
+    }
     const resolution = resolveReplyContext(context, command, params, nick);
     if (!resolution.matched) {
       continue;
@@ -119,7 +124,26 @@ export const consumeReplyContext = (
   } else {
     refreshReplyContextAfterMatch(selected.context, nick);
   }
+  retargetMessageAwayContext(selected.context, command);
   return selected.context;
+};
+
+const resolveMessageAwayReplyContext = (
+  context: PendingReplyContext,
+  command: string,
+  params: string[],
+) => (
+  context.kind === 'message'
+  && command === '301'
+  && isSameIrcIdentifier(params[1] ?? '', context.target)
+    ? { matched: true, done: true }
+    : { matched: false, done: false }
+);
+
+const retargetMessageAwayContext = (context: PendingReplyContext, command: string) => {
+  if (context.kind === 'message' && command === '301') {
+    context.sourceTarget = context.target;
+  }
 };
 
 const resolveLabeledReplyContext = (

@@ -1,5 +1,5 @@
 import { memo, useCallback, useReducer, useState } from 'react';
-import type { BufferState, ChannelUserState, ChatMessage, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { BufferState, ChatMessage, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { Button } from '@/components/ui/button.js';
 import {
@@ -27,10 +27,7 @@ export type ChatPaneProps = {
   workspace: WorkspaceView;
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
-  externalAvatarsEnabled: boolean;
-  selectedQueryAvatarUser?: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
-    ircCloudAvatarId?: string | null;
-  }) | null;
+  selectedQueryIdentity?: NetworkUserIdentity | null;
   selectedMessages: ChatMessage[];
   draft: string;
   focusContextKey?: string | null;
@@ -45,6 +42,8 @@ export type ChatPaneProps = {
   onSend: () => Promise<boolean>;
   contactRuleHandlers: ContactRuleHandlers;
   selectedQueryContactRule?: ContactRuleState | null;
+  selectedChannelNotificationsEnabled?: boolean;
+  onToggleSelectedChannelNotifications?: () => void;
   mutedQueryNick?: string | null;
   onWhoisSelectedQuery?: () => void;
   showChannelAutoJoin: boolean;
@@ -81,10 +80,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
     props.workspace.mode === 'server-offline';
-  const [historySearchOpen, setHistorySearchOpen] = useReducer(
-    (_open: boolean, nextOpen: boolean) => nextOpen,
-    false,
-  );
+  const [historySearchOpen, setHistorySearchOpen] =
+    useReducer((_open: boolean, nextOpen: boolean) => nextOpen, false);
   const [deleteHistoryBuffer, setDeleteHistoryBuffer] = useState<BufferState | null>(null);
   const [deleteHistoryPending, setDeleteHistoryPending] = useState(false);
   const searchableBuffer = props.canSearchHistory ? props.workspace.selectedBuffer : null;
@@ -119,10 +116,11 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneHeader
         workspace={props.workspace}
         nickEmojis={props.nickEmojis}
+        selectedQueryIdentity={props.selectedQueryIdentity}
         contactRuleHandlers={props.contactRuleHandlers}
-        externalAvatarsEnabled={props.externalAvatarsEnabled}
-        selectedQueryAvatarUser={props.selectedQueryAvatarUser}
         selectedQueryContactRule={props.selectedQueryContactRule}
+        selectedChannelNotificationsEnabled={props.selectedChannelNotificationsEnabled}
+        onToggleSelectedChannelNotifications={props.onToggleSelectedChannelNotifications}
         onOpenMentionedChannel={props.onOpenMentionedChannel}
         onWhoisSelectedQuery={props.onWhoisSelectedQuery}
         showChannelAutoJoin={props.showChannelAutoJoin}

@@ -12,6 +12,10 @@ import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { AppActions } from './useAppActions.js';
 import type { WorkspaceView } from './workspace-types.js';
+import {
+  useQueryAvatarOverrides,
+  useUserAvatarOverrides,
+} from './user-avatars/query-overrides.js';
 
 type DesktopCommandPaletteModelParams = {
   actions: Pick<
@@ -81,6 +85,8 @@ export function useDesktopCommandPaletteModel({
   const selectedBufferKind = workspace.selectedBuffer?.kind ?? null;
   const selectedBufferId = workspace.selectedBuffer?.id ?? null;
   const selectedBufferLabel = workspace.selectedBuffer?.target ?? null;
+  const queryAvatarOverrides = useQueryAvatarOverrides();
+  const userAvatarOverrides = useUserAvatarOverrides();
   const canUseBufferHistoryTools =
     selectedBufferKind === 'channel' || selectedBufferKind === 'query';
   const channelAutoJoin = resolveCurrentChannelAutoJoinState(networks, workspace);
@@ -105,6 +111,8 @@ export function useDesktopCommandPaletteModel({
         canDownloadHistory: canUseBufferHistoryTools,
       },
       externalAvatarsEnabled,
+      queryAvatarOverrides,
+      userAvatarOverrides,
     }),
     [
       canUseBufferHistoryTools,
@@ -113,10 +121,12 @@ export function useDesktopCommandPaletteModel({
       externalAvatarsEnabled,
       friends,
       nickEmojis,
+      queryAvatarOverrides,
       selectedBufferId,
       selectedBufferKind,
       selectedBufferLabel,
       sidebarConnections,
+      userAvatarOverrides,
       workspace.selectedNetwork,
     ],
   );

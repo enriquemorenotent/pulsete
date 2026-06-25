@@ -36,6 +36,7 @@ import {
 } from './useDesktopShellModel.js';
 import { useSelectedBufferHistory } from './transcript/history.js';
 import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
+import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { useDocumentActivityState } from './useDocumentActivityState.js';
@@ -55,7 +56,6 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
-  externalAvatarsEnabled: boolean;
   jumpToLatestRequestId: number;
 };
 
@@ -100,7 +100,6 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   composer,
   contactNotifications,
   contactRuleHandlers,
-  externalAvatarsEnabled,
   jumpToLatestRequestId,
 }: ChatContainerProps) {
   const channels = useAppSelector(selectChannels);
@@ -138,7 +137,6 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     contactNotifications,
     contactRuleHandlers,
     channels,
-    externalAvatarsEnabled,
     friends,
     mutedNicks,
     nickEmojis,
@@ -159,6 +157,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   externalAvatarsEnabled,
 }: RightSidebarContainerProps) {
   const dispatch = useAppDispatch();
+  const channels = useAppSelector(selectChannels);
   const friends = useAppSelector(selectFriends);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const nickEmojis = useAppSelector(selectNickEmojis);
@@ -189,11 +188,22 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   const queryProfile = useMemo(() => {
     const buffer = workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null;
     return {
+      avatarUser: buffer
+        ? resolveUserAvatarCandidate(
+            channels,
+            buffer.networkId,
+            buffer.target,
+            buffer.ircCloudAvatarId,
+          )
+        : null,
       buffer,
+      externalAvatarsEnabled,
       onSaveNotes: actions.saveBufferNotes,
     };
   }, [
     actions.saveBufferNotes,
+    channels,
+    externalAvatarsEnabled,
     workspace.selectedBuffer,
   ]);
   return (

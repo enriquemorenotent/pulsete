@@ -1,11 +1,13 @@
-import type { ReactNode } from 'react';
-import { X } from 'lucide-react';
-import type { BufferState, ChannelUserState, NickEmojiState } from '../../shared/protocol-chat.js';
-import { Button } from '@/components/ui/button.js';
-import { cn } from '@/lib/utils.js';
-import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
+import type { BufferState, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { NetworkUserIdentity } from '../../shared/user-identity.js';
+import { ChannelNotificationButton } from './ChannelNotificationButton.js';
 import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
-import { resolveChatPaneHeaderActions, type ChatPaneHeaderAction } from './chat-pane-header-actions.js';
+import { resolveChatPaneHeaderActions } from './chat-pane-header-actions.js';
+import {
+  PaneHeader,
+  PaneHeaderActions,
+  shouldShowChatPaneHeaderSubtitle,
+} from './ChatPaneHeaderLayout.js';
 import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import { ContactRuleControls } from './contact-notifications/ContactRuleControls.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
@@ -16,12 +18,11 @@ import type { WorkspaceView } from './workspace.js';
 type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
   nickEmojis: NickEmojiState[];
+  selectedQueryIdentity?: NetworkUserIdentity | null;
   contactRuleHandlers: ContactRuleHandlers;
-  externalAvatarsEnabled: boolean;
-  selectedQueryAvatarUser?: (Pick<ChannelUserState, 'host' | 'identity' | 'nick' | 'username'> & {
-    ircCloudAvatarId?: string | null;
-  }) | null;
   selectedQueryContactRule?: ContactRuleState | null;
+  selectedChannelNotificationsEnabled?: boolean;
+  onToggleSelectedChannelNotifications?: () => void;
   onOpenMentionedChannel: (channel: string) => void;
   onWhoisSelectedQuery?: () => void;
   showChannelAutoJoin: boolean;
@@ -46,9 +47,16 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           props.nickEmojis,
           selectedBuffer.networkId,
           selectedBuffer.target,
-          props.selectedQueryAvatarUser?.identity,
+          props.selectedQueryIdentity,
         )
       : null;
+  const selectedQueryAvatarTarget = selectedBuffer?.kind === 'query'
+    ? {
+        identity: props.selectedQueryIdentity ?? selectedBuffer.peerIdentity,
+        networkId: selectedBuffer.networkId,
+        nick: selectedBuffer.target,
+      }
+    : null;
   const topic = props.workspace.selectedChannel?.topic.trim() ?? '';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
     && !resolveChatPaneStatusBanner(props.workspace)
@@ -58,6 +66,9 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
     props.workspace.mode === 'server-offline';
+  const selectedChannelName = selectedBuffer?.kind === 'channel'
+    ? props.workspace.selectedChannel?.name ?? selectedBuffer.target
+    : null;
   const actions = resolveChatPaneHeaderActions({
     workspace: props.workspace,
     showChannelAutoJoin: props.showChannelAutoJoin,
@@ -96,14 +107,24 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   }
   return (
     <PaneHeader
+      avatar={selectedQueryAvatarTarget ? (
+        <UserAvatar
+          customAvatarAllowNickFallback
+          customAvatarTarget={selectedQueryAvatarTarget}
+          enabled={false}
+          placeholder="none"
+          size="md"
+          user={{
+            account: null,
+            host: null,
+            identity: selectedQueryAvatarTarget.identity,
+            nick: selectedQueryAvatarTarget.nick,
+            username: null,
+          }}
+        />
+      ) : null}
       title={props.workspace.headerTitle}
       emoji={selectedNickEmoji?.emoji ?? null}
-      externalAvatarsEnabled={props.externalAvatarsEnabled}
-      avatarUser={
-        selectedBuffer?.kind === 'query'
-          ? props.selectedQueryAvatarUser ?? null
-          : null
-      }
       subtitle={subtitle}
       topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
       actions={(
@@ -116,6 +137,12 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
                 state={props.selectedQueryContactRule}
                 handlers={props.contactRuleHandlers}
               />
+            ) : selectedChannelName && props.onToggleSelectedChannelNotifications ? (
+              <ChannelNotificationButton
+                active={props.selectedChannelNotificationsEnabled === true}
+                channel={selectedChannelName}
+                onToggle={props.onToggleSelectedChannelNotifications}
+              />
             ) : null
           }
           overflow={actions.overflow}
@@ -123,122 +150,4 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       )}
     />
   );
-}
-
-function PaneHeaderActions(props: {
-  title: string;
-  primary: ChatPaneHeaderAction[];
-  contactControls?: ReactNode;
-  overflow: ChatPaneHeaderAction[];
-}) {
-  if (props.primary.length === 0 && !props.contactControls && props.overflow.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-      {props.primary.map((action) =>
-        action.id === 'close-query' ? (
-          <Button
-            key={action.id}
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="size-7 text-muted-foreground"
-            aria-label={`Close ${props.title}`}
-            onClick={action.onSelect}
-          >
-            <X className="size-3.5" />
-          </Button>
-        ) : (
-          <Button key={action.id} variant="outline" size="sm" onClick={action.onSelect}>
-            {action.label}
-          </Button>
-        ),
-      )}
-      {props.contactControls}
-      <ChatPaneHeaderActionMenu actions={props.overflow} />
-    </div>
-  );
-}
-
-function PaneHeader(props: {
-  title: string;
-  avatarUser?: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
-    ircCloudAvatarId?: string | null;
-  }) | null;
-  emoji?: string | null;
-  externalAvatarsEnabled?: boolean;
-  subtitle: string;
-  actions: ReactNode;
-  topicBar?: ReactNode;
-}) {
-  const hasQueryAvatar = props.externalAvatarsEnabled === true && Boolean(props.avatarUser);
-
-  return (
-    <div className="relative z-20 shrink-0 border-b border-white/6 bg-background/90 backdrop-blur-sm">
-      <div
-        className={cn(
-          'flex justify-between gap-4',
-          hasQueryAvatar ? 'min-h-[68px] items-center py-0 pl-0 pr-4' : 'items-start px-4 py-4',
-        )}
-      >
-        <div className="min-w-0">
-          {props.title ? (
-            <h2
-              className={cn(
-                'flex min-w-0 items-center truncate text-lg font-semibold tracking-tight text-foreground',
-                hasQueryAvatar ? 'gap-4' : 'gap-2',
-                props.subtitle && 'mb-1',
-              )}
-            >
-              <UserAvatar
-                enabled={props.externalAvatarsEnabled === true}
-                placeholder="initial"
-                preview
-                shape={hasQueryAvatar ? 'square' : 'circle'}
-                size={hasQueryAvatar ? 'lg' : 'md'}
-                user={props.avatarUser}
-              />
-              <span className="truncate">{props.title}</span>
-              {props.emoji ? (
-                <span aria-hidden className="shrink-0 leading-none">
-                  {props.emoji}
-                </span>
-              ) : null}
-            </h2>
-          ) : null}
-          {props.subtitle ? (
-            <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">
-              {props.subtitle}
-            </p>
-          ) : null}
-        </div>
-        {props.actions}
-      </div>
-      {props.topicBar ? props.topicBar : null}
-    </div>
-  );
-}
-
-function shouldShowChatPaneHeaderSubtitle(
-  workspace: WorkspaceView,
-  subtitle: string,
-) {
-  if (!subtitle) {
-    return false;
-  }
-
-  return subtitle !== resolveConnectedRuntimeSubtitle(workspace);
-}
-
-function resolveConnectedRuntimeSubtitle(workspace: WorkspaceView) {
-  const network = workspace.selectedNetwork;
-  if (!network) {
-    return null;
-  }
-
-  const runtimeNick = workspace.selectedRuntime?.nick ?? network.nick;
-  const runtimeHost = workspace.selectedRuntime?.serverName ?? 'server';
-  return `${runtimeNick} @ ${runtimeHost}`;
 }

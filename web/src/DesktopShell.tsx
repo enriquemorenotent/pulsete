@@ -103,7 +103,6 @@ export function DesktopShell(props: DesktopShellProps) {
           composer={props.composer}
           contactNotifications={props.contactNotifications}
           contactRuleHandlers={contactRuleHandlers}
-          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
           jumpToLatestRequestId={jumpToLatestRequestId}
         />
       }

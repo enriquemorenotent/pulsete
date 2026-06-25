@@ -22,6 +22,7 @@ const makeSettings = (
   systemEnabled: false,
   sound: 'chirp',
   contacts,
+  channels: [],
 });
 
 test('query notifications are inactive while the selected PM nick is muted', () => {

@@ -58,6 +58,7 @@ export type IrcLifecycleState = {
   connected: boolean;
   serverName: string | null;
   currentNick: string;
+  profileNickSyncTarget: string | null;
   lastFailureMessage: string | null;
   sasl: IrcSaslState;
   capabilities: IrcCapabilityState;

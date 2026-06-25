@@ -2,6 +2,10 @@ import type { FriendState, NickEmojiState } from '../../shared/protocol-chat.js'
 import type { NetworkImageRuntimePhase } from './network-image-state.js';
 import type { NetworkServerImageSource } from './network-server-image.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
+import type {
+  QueryAvatarOverrides,
+  UserAvatarOverrides,
+} from './user-avatars/query-overrides.js';
 
 export type CommandPaletteEntrySection = 'unread' | 'buffers' | 'friends' | 'actions';
 
@@ -61,6 +65,7 @@ export type BuildCommandPaletteEntrySpecsInput = {
   externalAvatarsEnabled?: boolean;
   friends: FriendState[];
   nickEmojis: NickEmojiState[];
+  queryAvatarOverrides?: QueryAvatarOverrides;
   selectedBuffer: {
     id: string | null;
     label: string | null;
@@ -75,6 +80,7 @@ export type BuildCommandPaletteEntrySpecsInput = {
     channelAutoJoinActive: boolean;
     canDownloadHistory: boolean;
   };
+  userAvatarOverrides?: UserAvatarOverrides;
 };
 
 export type CommandPaletteHotkeyEvent = {

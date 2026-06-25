@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol-chat.js';
 import type {
+  ContactNotificationChannel,
   ContactNotificationContact,
   ContactNotificationSettings,
 } from './contact-notifications/settings.js';
+import { PreferencesNotificationAllowedChannels } from './PreferencesNotificationAllowedChannels.js';
 import { PreferencesNotificationAllowedContacts } from './PreferencesNotificationAllowedContacts.js';
 import { PreferencesNotificationMutedNicks } from './PreferencesNotificationMutedNicks.js';
 import { PreferencesNotificationSoundSection } from './PreferencesNotificationSoundSection.js';
@@ -18,6 +20,7 @@ type PreferencesNotificationsPanelProps = {
   mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
   onPreviewContactNotificationSound: (sound: ContactNotificationSettings['sound']) => void;
+  onRemoveContactNotificationChannel: (channel: ContactNotificationChannel) => void;
   onRemoveContactNotificationContact: (contact: ContactNotificationContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
   onRequestContactNotificationSystemPermission: () => Promise<NotificationPermissionState>;
@@ -36,6 +39,11 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
       compareNetworkNicks(left, right, networkNameById)),
     [networkNameById, props.contactNotifications.contacts],
   );
+  const sortedAudioChannels = useMemo(
+    () => [...props.contactNotifications.channels].sort((left, right) =>
+      compareNetworkChannels(left, right, networkNameById)),
+    [networkNameById, props.contactNotifications.channels],
+  );
   const sortedMutedNicks = useMemo(
     () => [...props.mutedNicks].sort((left, right) =>
       compareNetworkNicks(left, right, networkNameById)),
@@ -46,10 +54,10 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
     <section className="space-y-4">
       <div className="space-y-1">
         <h3 className="text-sm font-semibold tracking-tight text-foreground">
-          Private Message Notifications
+          Conversation Notifications
         </h3>
         <p className="text-[13px] text-muted-foreground">
-          Turn notifications on from a contact button, then choose how they should be delivered here.
+          Turn notifications on from a PM or channel header, then choose how they should be delivered here.
         </p>
       </div>
 
@@ -59,7 +67,7 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
             Delivery Methods
           </p>
           <p className="text-muted-foreground">
-            Notification contacts can use one or both delivery methods below.
+            Notification conversations can use one or both delivery methods below.
           </p>
         </div>
         <PreferencesNotificationSoundSection
@@ -80,6 +88,11 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
           networkNameById={networkNameById}
           onRemoveContact={props.onRemoveContactNotificationContact}
         />
+        <PreferencesNotificationAllowedChannels
+          channels={sortedAudioChannels}
+          networkNameById={networkNameById}
+          onRemoveChannel={props.onRemoveContactNotificationChannel}
+        />
         <PreferencesNotificationMutedNicks
           mutedNicks={sortedMutedNicks}
           networkNameById={networkNameById}
@@ -99,5 +112,17 @@ const compareNetworkNicks = (
   const rightNetwork = networkNameById.get(right.networkId) ?? right.networkId;
   return leftNetwork === rightNetwork
     ? left.nick.localeCompare(right.nick)
+    : leftNetwork.localeCompare(rightNetwork);
+};
+
+const compareNetworkChannels = (
+  left: ContactNotificationChannel,
+  right: ContactNotificationChannel,
+  networkNameById: Map<string, string>,
+) => {
+  const leftNetwork = networkNameById.get(left.networkId) ?? left.networkId;
+  const rightNetwork = networkNameById.get(right.networkId) ?? right.networkId;
+  return leftNetwork === rightNetwork
+    ? left.channel.localeCompare(right.channel)
     : leftNetwork.localeCompare(rightNetwork);
 };

@@ -1,5 +1,6 @@
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol-chat.js';
 import type {
+  ContactNotificationChannel,
   ContactNotificationContact,
   ContactNotificationSettings,
 } from './contact-notifications/settings.js';
@@ -24,6 +25,7 @@ export type PreferencesDialogBodyProps = {
   >;
   onSetContactNotificationSound: (sound: ContactNotificationSettings['sound']) => void;
   onPreviewContactNotificationSound: (sound: ContactNotificationSettings['sound']) => void;
+  onRemoveContactNotificationChannel: (channel: ContactNotificationChannel) => void;
   onRemoveContactNotificationContact: (contact: ContactNotificationContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
   onSetNavigationLayoutMode: (mode: NavigationLayoutSettings['mode']) => void;
@@ -53,6 +55,7 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
         onRequestContactNotificationSystemPermission={props.onRequestContactNotificationSystemPermission}
         onSetContactNotificationSound={props.onSetContactNotificationSound}
         onPreviewContactNotificationSound={props.onPreviewContactNotificationSound}
+        onRemoveContactNotificationChannel={props.onRemoveContactNotificationChannel}
         onRemoveContactNotificationContact={props.onRemoveContactNotificationContact}
         onRemoveMutedNick={props.onRemoveMutedNick}
       />

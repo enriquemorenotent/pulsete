@@ -1,6 +1,4 @@
-import {
-  buildCommandPaletteActionEntries,
-} from './command-palette-actions.js';
+import { buildCommandPaletteActionEntries } from './command-palette-actions.js';
 import type {
   BuildCommandPaletteEntrySpecsInput,
   CommandPaletteEntrySpec,
@@ -11,6 +9,7 @@ import {
   resolveUniqueNickEmoji,
 } from './nick-emoji-utils.js';
 import { resolveNetworkServerImage } from './network-server-image.js';
+import { resolveUserAvatarOverrideUrl, resolveUserAvatarTarget } from './user-avatars/override-model.js';
 
 export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpecsInput) => {
   const nickEmojiByNetworkNick = buildNickEmojiByNetworkNick(input.nickEmojis);
@@ -19,6 +18,8 @@ export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpe
     input.externalAvatarsEnabled === true,
     input.selectedNetwork.id,
     nickEmojiByNetworkNick,
+    input.userAvatarOverrides,
+    input.queryAvatarOverrides,
   );
   return [
     ...buildUnreadBufferEntries(bufferEntries),
@@ -56,6 +57,8 @@ const buildBufferEntries = (
   externalAvatarsEnabled: boolean,
   selectedNetworkId: string | null,
   nickEmojiByNetworkNick: ReadonlyMap<string, string>,
+  userAvatarOverrides: BuildCommandPaletteEntrySpecsInput['userAvatarOverrides'],
+  queryAvatarOverrides: BuildCommandPaletteEntrySpecsInput['queryAvatarOverrides'],
 ): CommandPaletteEntrySpec[] => {
   const entries: CommandPaletteEntrySpec[] = [];
   for (const connection of connections) {
@@ -94,12 +97,24 @@ const buildBufferEntries = (
 
     for (const child of connection.childBuffers) {
       const badge = child.buffer.kind === 'channel' ? 'channel' : 'pm';
+      const queryAvatarUrl = child.buffer.kind === 'query'
+        ? resolveUserAvatarOverrideUrl({
+            allowNickFallback: true,
+            legacyBufferId: child.buffer.id,
+            queryAvatarOverrides,
+            target: resolveUserAvatarTarget(child.buffer.networkId, {
+              identity: child.buffer.peerIdentity,
+              nick: child.buffer.target,
+            }),
+            userAvatarOverrides,
+          })
+        : null;
       entries.push({
         id: `buffer:${child.buffer.id}`,
         section: 'buffers',
         label: child.buffer.target,
-        networkIconSource: networkImage?.source,
-        networkIconUrl: networkImage?.url,
+        networkIconSource: queryAvatarUrl ? null : networkImage?.source,
+        networkIconUrl: queryAvatarUrl ?? networkImage?.url,
         networkRuntimePhase,
         emoji: child.buffer.kind === 'query'
           ? resolveNickEmoji(nickEmojiByNetworkNick, child.buffer.networkId, child.buffer.target)

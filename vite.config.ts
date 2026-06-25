@@ -3,8 +3,9 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 
-const isExpectedProxySocketClose = (error: Error & { code?: string }) =>
-  error.code === 'ECONNRESET' || error.code === 'EPIPE';
+const backendHost = '127.0.0.1';
+const backendPort = 18487;
+const webPort = 18473;
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -14,21 +15,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 18473,
+    port: webPort,
     proxy: {
-      '/api': 'http://127.0.0.1:18487',
-      '/ws': {
-        target: 'ws://127.0.0.1:18487',
-        ws: true,
-        configure(proxy) {
-          proxy.on('error', (error) => {
-            if (isExpectedProxySocketClose(error)) {
-              return;
-            }
-            console.error(error);
-          });
-        },
-      },
+      '/api': `http://${backendHost}:${backendPort}`,
     },
   },
   build: {

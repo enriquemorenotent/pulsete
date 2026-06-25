@@ -67,6 +67,7 @@ test('stored settings can be read from the legacy preference key', () => {
       systemEnabled: true,
       sound: 'bell',
       contacts: [{ identity: { kind: 'nick', value: 'alice' }, networkId: 'network-1', nick: 'Alice' }],
+      channels: [],
     });
   } finally {
     if (originalWindow) {

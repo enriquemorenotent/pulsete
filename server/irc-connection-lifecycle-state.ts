@@ -50,8 +50,20 @@ export const applyOfflineLifecycleState = (connection: IrcLifecycleContext) => {
   connection.lifecycle.connected = false;
   connection.lifecycle.serverName = null;
   connection.lifecycle.currentNick = connection.profile.nick;
+  connection.lifecycle.profileNickSyncTarget = null;
   connection.lifecycle.lastFailureMessage = null;
   connection.lifecycle.accountName = null;
+};
+
+export const resolveProfileNickSyncTarget = (
+  connection: IrcConnectContext,
+  nextProfile: RuntimeNetworkProfile,
+) => {
+  if (connection.profile.nick !== nextProfile.nick) {
+    return nextProfile.nick;
+  }
+  const syncTarget = connection.lifecycle.profileNickSyncTarget;
+  return syncTarget && isSameIrcIdentifier(syncTarget, nextProfile.nick) ? syncTarget : null;
 };
 
 export const resolveProfileUpdateStrategy = (
@@ -59,6 +71,7 @@ export const resolveProfileUpdateStrategy = (
   nextProfile: RuntimeNetworkProfile
 ): IrcProfileUpdateStrategy => {
   const { lifecycle, profile, replyTracker } = connection;
+  const profileNickSyncTarget = resolveProfileNickSyncTarget(connection, nextProfile);
   const reconnectPending = !lifecycle.connected && lifecycle.socket !== null;
   if (reconnectPending && requiresConnectingReconnect(profile, nextProfile)) {
     return 'restart-connecting-socket';
@@ -68,7 +81,8 @@ export const resolveProfileUpdateStrategy = (
   }
   if (
     lifecycle.connected
-    && !isSameIrcIdentifier(replyTracker.pendingNick ?? lifecycle.currentNick, nextProfile.nick)
+    && profileNickSyncTarget
+    && !isSameIrcIdentifier(replyTracker.pendingNick ?? lifecycle.currentNick, profileNickSyncTarget)
   ) {
     return 'update-live-nick';
   }

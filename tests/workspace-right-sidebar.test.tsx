@@ -86,6 +86,21 @@ const nicklist: DesktopShellNicklistModel = {
   onSelectNick: () => undefined,
 };
 
+const renderQueryProfileSidebar = (
+  queryProfile: Partial<NonNullable<Parameters<typeof WorkspaceRightSidebar>[0]['queryProfile']>> = {},
+) =>
+  renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={queryWorkspace}
+      nicklist={{ ...nicklist, externalAvatarsEnabled: queryProfile.externalAvatarsEnabled ?? false }}
+      queryProfile={{
+        buffer: queryBuffer,
+        onSaveNotes: async () => queryBuffer,
+        ...queryProfile,
+      }}
+    />,
+  );
+
 test('server profile sidebar renders the per-network notes editor', () => {
   const markup = renderToStaticMarkup(
     <WorkspaceRightSidebar
@@ -170,16 +185,7 @@ test('server profile sidebar hides empty capabilities', () => {
 });
 
 test('query profile sidebar renders the per-DM notes editor', () => {
-  const markup = renderToStaticMarkup(
-    <WorkspaceRightSidebar
-      workspace={queryWorkspace}
-      nicklist={nicklist}
-      queryProfile={{
-        buffer: queryBuffer,
-        onSaveNotes: async () => queryBuffer,
-      }}
-    />,
-  );
+  const markup = renderQueryProfileSidebar();
 
   assert.match(markup, /Notes/);
   assert.doesNotMatch(markup, /Private message/);
@@ -190,4 +196,41 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   assert.match(markup, /query-profile-notes/);
   assert.match(markup, /Prefers encrypted routes/);
   assert.match(markup, /Saved/);
+});
+
+test('query profile sidebar renders IRCCloud avatars above notes when enabled', () => {
+  const markup = renderQueryProfileSidebar({
+    avatarUser: { nick: 'Sofia', username: 'uid7', host: null },
+    externalAvatarsEnabled: true,
+  });
+
+  assert.match(markup, /aria-label="Avatar for Sofia"[\s\S]*Notes/);
+  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  assert.match(markup, /flex h-full min-h-0 flex-col gap-5 py-4 px-0/);
+  assert.match(markup, /flex min-h-0 flex-1 flex-col px-4/);
+  assert.match(markup, /block h-auto w-full object-contain/);
+  assert.match(markup, /cursor-zoom-in/);
+});
+
+test('query profile sidebar renders persisted PM IRCCloud avatars without channel presence', () => {
+  const markup = renderQueryProfileSidebar({
+    avatarUser: { nick: 'Sofia', username: null, host: null, ircCloudAvatarId: '7' },
+    externalAvatarsEnabled: true,
+  });
+
+  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  assert.match(markup, /aria-label="Avatar for Sofia"/);
+});
+
+test('query profile sidebar renders avatar placeholders when no IRCCloud avatar is available', () => {
+  const markup = renderQueryProfileSidebar({
+    avatarUser: { nick: 'Sofia', username: null, host: null },
+    externalAvatarsEnabled: true,
+  });
+
+  assert.match(markup, /font-medium leading-none">S/);
+  assert.match(markup, /aspect-square w-full/);
+  assert.match(markup, /Sofia[\s\S]*Notes/);
+  assert.doesNotMatch(markup, /avatar-redirect/);
+  assert.doesNotMatch(markup, /cursor-zoom-in/);
 });

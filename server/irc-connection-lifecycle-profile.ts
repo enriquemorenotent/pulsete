@@ -1,7 +1,11 @@
 import { connectSocket } from './irc-connect.js';
-import { resolveProfileUpdateStrategy } from './irc-connection-lifecycle-state.js';
+import {
+  resolveProfileNickSyncTarget,
+  resolveProfileUpdateStrategy,
+} from './irc-connection-lifecycle-state.js';
 import type { IrcConnectContext, IrcLifecycleContext } from './irc-contexts.js';
 import { emitState, emitStatus } from './irc-emit.js';
+import { isSameIrcIdentifier } from './irc-parser.js';
 import { createNickReplyContext } from './irc-reply-context.js';
 import { consumePendingNickReplyContexts } from './irc-reply-state.js';
 import { applyOfflineTransition } from './irc-connection-lifecycle-transitions.js';
@@ -29,6 +33,12 @@ export const applyNickFallback = (
 export const confirmNick = (connection: IrcLifecycleContext, newNick: string) => {
   consumePendingNickReplyContexts(connection, newNick);
   connection.lifecycle.currentNick = newNick;
+  if (
+    connection.lifecycle.profileNickSyncTarget
+    && isSameIrcIdentifier(connection.lifecycle.profileNickSyncTarget, newNick)
+  ) {
+    connection.lifecycle.profileNickSyncTarget = null;
+  }
   emitState(connection);
 };
 
@@ -52,6 +62,7 @@ export const reconnectWithUpdatedProfile = (connection: IrcConnectContext) => {
 
 export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNetworkProfile) => {
   const lifecycle = connection.lifecycle;
+  const profileNickSyncTarget = resolveProfileNickSyncTarget(connection, profile);
   const strategy = resolveProfileUpdateStrategy(connection, profile);
   if (strategy === 'restart-connecting-socket') {
     const socket = lifecycle.socket;
@@ -62,8 +73,17 @@ export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNet
     socket?.destroy();
   }
   connection.profile = profile;
+  lifecycle.profileNickSyncTarget = profileNickSyncTarget;
   if (!lifecycle.connected) {
     lifecycle.currentNick = profile.nick;
+    lifecycle.profileNickSyncTarget = null;
+  }
+  if (
+    lifecycle.profileNickSyncTarget
+    && !connection.replyTracker.pendingNick
+    && isSameIrcIdentifier(lifecycle.currentNick, lifecycle.profileNickSyncTarget)
+  ) {
+    lifecycle.profileNickSyncTarget = null;
   }
   if (strategy === 'restart-connecting-socket') {
     connectSocket(connection);

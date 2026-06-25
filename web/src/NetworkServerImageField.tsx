@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { NetworkServerImageCropDialog } from './NetworkServerImageCropDialog.js';
 import { NetworkServerImageFallbackCue } from './NetworkServerImageFallbackCue.js';
+import { readSelectedImageDataUrl } from './user-avatars/image-selection.js';
 import {
   isNetworkServerImageFallback,
   resolveNetworkServerImage,
@@ -17,8 +18,6 @@ type NetworkServerImageFieldProps = {
   onChange: (value: string) => void;
 };
 
-const maxSelectedImageBytes = 4 * 1024 * 1024;
-
 export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
   const inputId = useId();
   const [cropSource, setCropSource] = useState<string | null>(null);
@@ -29,24 +28,18 @@ export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
     props.externalAvatarsEnabled === true,
   );
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
-    if (!file || !file.type.startsWith('image/')) {
+    if (!file) {
       return;
     }
-    if (file.size > maxSelectedImageBytes) {
-      setError('Choose an image smaller than 4 MB.');
-      return;
+    try {
+      setCropSource(await readSelectedImageDataUrl(file));
+      setError(null);
+    } catch (readError) {
+      setError(readError instanceof Error ? readError.message : 'Image could not be read.');
     }
-    const reader = new FileReader();
-    reader.addEventListener('load', () => {
-      if (typeof reader.result === 'string') {
-        setError(null);
-        setCropSource(reader.result);
-      }
-    });
-    reader.readAsDataURL(file);
   };
 
   return (

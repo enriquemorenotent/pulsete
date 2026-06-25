@@ -18,6 +18,7 @@ import {
 
 type NetworkServerImageCropDialogProps = {
   source: string;
+  title?: string;
   onCancel: () => void;
   onConfirm: (value: string) => void;
 };
@@ -73,7 +74,7 @@ export function NetworkServerImageCropDialog(
         className="w-[min(calc(100vw-1rem),28rem)]"
       >
         <DialogHeader>
-          <DialogTitle>Crop Server Image</DialogTitle>
+          <DialogTitle>{props.title ?? 'Crop Server Image'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div

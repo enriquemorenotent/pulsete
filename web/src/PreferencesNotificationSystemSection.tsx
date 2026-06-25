@@ -28,7 +28,7 @@ export function PreferencesNotificationSystemSection(
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Show system notifications</p>
           <p className="text-muted-foreground">
-            Show OS-level alerts when an allowed private-message contact writes while this app is in the background.
+            Show OS-level alerts for allowed conversations while this app is in the background.
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
@@ -37,7 +37,7 @@ export function PreferencesNotificationSystemSection(
             checked={props.enabled}
             disabled={props.permission !== 'granted'}
             onCheckedChange={(checked) => props.onSetEnabled(checked === true)}
-            aria-label="Show system notifications for allowed private messages"
+            aria-label="Show system notifications for allowed conversations"
           />
           <label htmlFor={systemEnabledId} className="cursor-pointer">System</label>
         </div>

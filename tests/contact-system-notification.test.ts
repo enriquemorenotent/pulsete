@@ -85,6 +85,43 @@ test('system notification click focuses, selects, and clears handlers', () => {
   assert.equal(notification.onclose, null);
 });
 
+test('system notification can use the query custom avatar as its icon', () => {
+  const notification = createContactSystemNotification({
+    avatarIconUrl: 'data:image/png;base64,custom',
+    buffer,
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: () => undefined,
+  }) as FakeNotification;
+
+  assert.deepEqual(notification.options, {
+    body: 'New private message on ExampleNet',
+    icon: 'data:image/png;base64,custom',
+    tag: 'pulsete-dm:query-alice',
+  });
+});
+
+test('system notification labels channel messages with a channel tag', () => {
+  const channelBuffer: BufferState = {
+    ...buffer,
+    id: 'channel-help',
+    kind: 'channel',
+    target: '#help',
+  };
+  const notification = createContactSystemNotification({
+    buffer: channelBuffer,
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: () => undefined,
+  }) as FakeNotification;
+
+  assert.equal(notification.title, '#help');
+  assert.deepEqual(notification.options, {
+    body: 'New message in #help on ExampleNet',
+    tag: 'pulsete-channel:channel-help',
+  });
+});
+
 test('system notification owner can close without retaining click handlers', () => {
   let selected = false;
   const notification = createContactSystemNotification({

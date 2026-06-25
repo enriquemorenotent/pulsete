@@ -20,6 +20,7 @@ import {
   InspectorPanel,
   InspectorSection,
 } from './RightSidebarInspector.js';
+import { resolveUserAvatarTarget } from './user-avatars/override-model.js';
 import { UserAvatar } from './user-avatars/UserAvatar.js';
 
 type NicklistPanelProps = {
@@ -111,6 +112,9 @@ export function NicklistPanel(props: NicklistPanelProps) {
                         const userNickEmoji = props.network
                           ? findNickEmoji(props.nickEmojis, props.network.id, user.nick, user.identity)
                           : null;
+                        const avatarTarget = props.network
+                          ? resolveUserAvatarTarget(props.network.id, user)
+                          : null;
                         return (
                           <div
                             key={user.nick}
@@ -122,6 +126,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                               onClick={() => props.network && props.onSelectNick(props.network, user.nick, user.identity)}
                             >
                               <UserAvatar
+                                customAvatarTarget={avatarTarget}
                                 enabled={props.externalAvatarsEnabled}
                                 placeholder="initial"
                                 user={user}

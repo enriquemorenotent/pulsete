@@ -18,7 +18,16 @@ import {
 } from './network-manager-dialog-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
-import type { BufferState, NetworkProfile, NetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
+import type {
+  BufferState,
+  ChannelUserState,
+  NetworkProfile,
+  NetworkRuntimeCapabilities,
+} from '../../shared/protocol-chat.js';
+
+type QueryProfileAvatarUser = Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
+  ircCloudAvatarId?: string | null;
+};
 
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
@@ -26,10 +35,15 @@ type WorkspaceRightSidebarProps = {
   serverProfile?: {
     network: WorkspaceView['selectedNetwork'];
     onEdit: () => void;
-    onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<NetworkProfile | null>;
+    onSaveNotes: (
+      network: NonNullable<WorkspaceView['selectedNetwork']>,
+      notes: string,
+    ) => Promise<NetworkProfile | null>;
   };
   queryProfile?: {
+    avatarUser?: QueryProfileAvatarUser | null;
     buffer: BufferState | null;
+    externalAvatarsEnabled?: boolean;
     onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
   };
 };
@@ -56,7 +70,11 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   if (isQueryProfileWorkspace(props.workspace)) {
     return (
       <QueryProfileSidebar
+        avatarUser={props.queryProfile?.avatarUser ?? null}
         buffer={props.queryProfile?.buffer ?? props.workspace.selectedBuffer}
+        externalAvatarsEnabled={
+          props.queryProfile?.externalAvatarsEnabled ?? props.nicklist.externalAvatarsEnabled
+        }
         onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
       />
     );
@@ -89,7 +107,10 @@ function ServerProfileSidebar(props: {
   fallbackNetwork: WorkspaceView['selectedNetwork'];
   runtime: WorkspaceView['selectedRuntime'];
   onEdit: () => void;
-  onSaveNotes: (network: NonNullable<WorkspaceView['selectedNetwork']>, notes: string) => Promise<NetworkProfile | null>;
+  onSaveNotes: (
+    network: NonNullable<WorkspaceView['selectedNetwork']>,
+    notes: string,
+  ) => Promise<NetworkProfile | null>;
 }) {
   const network = props.network ?? props.fallbackNetwork;
 

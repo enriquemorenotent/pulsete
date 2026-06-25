@@ -7,6 +7,9 @@ import {
 	connectionSidebarLabelClass,
 	connectionSidebarRowClass,
 } from './connection-sidebar-label-class.js';
+import { resolveUserAvatarTarget } from './user-avatars/override-model.js';
+import { useUserAvatarOverrideUrl } from './user-avatars/query-overrides.js';
+import { UserAvatar } from './user-avatars/UserAvatar.js';
 
 type BufferPresenceDisplay = PresenceStatus | 'pending';
 
@@ -26,6 +29,16 @@ export function ConnectionSidebarBufferRow(
 ) {
 	const Icon = props.icon;
 	const activity = resolveBufferActivityState(props.buffer);
+	const avatarTarget = props.buffer.kind === 'query'
+		? resolveUserAvatarTarget(props.buffer.networkId, {
+				identity: props.buffer.peerIdentity,
+				nick: props.buffer.target,
+			})
+		: null;
+	const customAvatarUrl = useUserAvatarOverrideUrl(avatarTarget, {
+		allowNickFallback: true,
+		legacyBufferId: props.buffer.id,
+	});
 
 	return (
 		<div
@@ -44,14 +57,29 @@ export function ConnectionSidebarBufferRow(
 				)}
 			>
 				<span className="relative flex size-4 shrink-0 items-center justify-center">
-					<Icon
-						className={cn(
-							'size-3.5 shrink-0',
-							props.presence
-								? presenceIconTone(props.presence)
-								: 'text-muted-foreground',
-						)}
-					/>
+					{customAvatarUrl ? (
+						<UserAvatar
+							className="size-4"
+							customAvatarUrl={customAvatarUrl}
+							enabled={false}
+							user={{
+								account: null,
+								host: null,
+								identity: props.buffer.peerIdentity,
+								nick: props.buffer.target,
+								username: null,
+							}}
+						/>
+					) : (
+						<Icon
+							className={cn(
+								'size-3.5 shrink-0',
+								props.presence
+									? presenceIconTone(props.presence)
+									: 'text-muted-foreground',
+							)}
+						/>
+					)}
 					{activity.hasUnread ? (
 						<span
 							aria-hidden
