@@ -13,6 +13,7 @@ import { ContactRuleControls } from './contact-notifications/ContactRuleControls
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import { UserAvatar } from './user-avatars/UserAvatar.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 import type { WorkspaceView } from './workspace.js';
 
 type ChatPaneHeaderProps = {
@@ -22,6 +23,8 @@ type ChatPaneHeaderProps = {
   contactRuleHandlers: ContactRuleHandlers;
   selectedQueryContactRule?: ContactRuleState | null;
   selectedChannelNotificationsEnabled?: boolean;
+  inlineImageRendering: InlineImageRenderingMode;
+  userAvatarsVisible: boolean;
   onToggleSelectedChannelNotifications?: () => void;
   onOpenMentionedChannel: (channel: string) => void;
   onWhoisSelectedQuery?: () => void;
@@ -91,7 +94,13 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       <PaneHeader
         title={props.workspace.selectedNetwork?.name ?? 'Server'}
         subtitle={subtitle}
-        topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
+        topicBar={(
+          <ChatPaneTopicBar
+            inlineImageRendering={props.inlineImageRendering}
+            topic={topic}
+            onOpenChannel={props.onOpenMentionedChannel}
+          />
+        )}
         actions={(
           <PaneHeaderActions
             title={props.workspace.selectedNetwork?.name ?? 'Server'}
@@ -107,7 +116,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   }
   return (
     <PaneHeader
-      avatar={selectedQueryAvatarTarget ? (
+      avatar={props.userAvatarsVisible && selectedQueryAvatarTarget ? (
         <UserAvatar
           customAvatarAllowNickFallback
           customAvatarTarget={selectedQueryAvatarTarget}
@@ -126,7 +135,13 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
       title={props.workspace.headerTitle}
       emoji={selectedNickEmoji?.emoji ?? null}
       subtitle={subtitle}
-      topicBar={<ChatPaneTopicBar topic={topic} onOpenChannel={props.onOpenMentionedChannel} />}
+      topicBar={(
+        <ChatPaneTopicBar
+          inlineImageRendering={props.inlineImageRendering}
+          topic={topic}
+          onOpenChannel={props.onOpenMentionedChannel}
+        />
+      )}
       actions={(
         <PaneHeaderActions
           title={props.workspace.headerTitle}

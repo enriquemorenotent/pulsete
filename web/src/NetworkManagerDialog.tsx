@@ -35,6 +35,7 @@ type NetworkManagerDialogProps = {
   onRemove: (network: NetworkProfile) => void;
   onConnect: () => void;
   onFavorite: () => void;
+  serverImagesVisible?: boolean;
 };
 
 export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
@@ -102,6 +103,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                       network={network}
                       selected={props.selected?.id === network.id}
                       externalAvatarsEnabled={props.externalAvatarsEnabled}
+                      serverImagesVisible={props.serverImagesVisible}
                       runtime={props.runtimes[network.id] ?? null}
                       onSelect={props.onSelect}
                     />
@@ -116,6 +118,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                   <SelectedNetworkPane
                     network={props.selected}
                     externalAvatarsEnabled={props.externalAvatarsEnabled}
+                    serverImagesVisible={props.serverImagesVisible}
                     runtime={props.runtime}
                     onEdit={props.onEdit}
                     onDuplicate={props.onDuplicate}

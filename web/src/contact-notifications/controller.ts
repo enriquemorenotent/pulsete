@@ -36,6 +36,7 @@ export function useContactNotifications(input: {
   networkNamesById: ReadonlyMap<string, string>;
   onSelectBuffer: (buffer: BufferState) => void;
   selectedBufferId: string | null;
+  systemNotificationIconsEnabled?: boolean;
 }): ContactNotificationsController {
   const [settings, setSettings] = useState(readStoredContactNotificationSettings);
   const [systemPermission, setSystemPermission] = useState<
@@ -210,6 +211,7 @@ export function useContactNotifications(input: {
       showContactSystemNotification({
         activeNotifications: activeNotificationsRef.current,
         buffer: eligibleBuffer,
+        iconsEnabled: input.systemNotificationIconsEnabled,
         networkNamesById: input.networkNamesById,
         onSelectBuffer: input.onSelectBuffer,
       });
@@ -220,6 +222,7 @@ export function useContactNotifications(input: {
     input.networkNamesById,
     input.onSelectBuffer,
     input.selectedBufferId,
+    input.systemNotificationIconsEnabled,
     settings,
     ensureAudioContext,
   ]);

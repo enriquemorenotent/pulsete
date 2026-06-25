@@ -14,6 +14,7 @@ import type { ChatTranscriptModel } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 import {
   useTranscriptViewport,
   type TranscriptInitialScrollTarget,
@@ -28,6 +29,7 @@ type ChatTranscriptVirtuosoProps = {
   followOutputRequestId: number;
   initialHistoryPending?: boolean;
   initialScrollTarget: TranscriptInitialScrollTarget;
+  inlineImageRendering?: InlineImageRenderingMode;
   jumpToLatestRequestId: number;
   listKind: 'chat' | 'server';
   loadingOlderHistory?: boolean;
@@ -133,6 +135,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
           row={row}
           channelUserModesByNick={props.channelUserModesByNick}
           expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+          inlineImageRendering={props.inlineImageRendering}
           nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
           listKind={props.listKind}
           mode={props.mode}
@@ -147,6 +150,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     [
       props.channelUserModesByNick,
       props.expandedMutedGroupKeys,
+      props.inlineImageRendering,
       props.nickEmojiByNetworkNick,
       props.listKind,
       props.mode,

@@ -12,13 +12,16 @@ import {
 import { LogInspectorDialogContainer } from './LogInspectorDialogContainer.js';
 import { createContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
-import type { NavigationLayoutSettingsController } from './navigation-layout-settings.js';
 import {
   NetworkEditorDialogContainer,
   NetworkManagerDialogContainer,
   PreferencesDialogContainer,
 } from './DesktopShellDialogContainers.js';
 import { DesktopShellLayout } from './DesktopShellLayout.js';
+import {
+  resolveMediaVisibilityPolicy,
+  type MediaVisibilitySettingsController,
+} from './media-visibility-settings.js';
 import { useDesktopHeaderModel } from './useDesktopShellModel.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppActions } from './useAppActions.js';
@@ -29,18 +32,22 @@ type DesktopShellProps = {
   applyServerMessages: ApplyServerMessages;
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
-  navigationLayoutSettings: NavigationLayoutSettingsController;
+  mediaVisibilitySettings: MediaVisibilitySettingsController;
   userAvatarSettings: UserAvatarSettingsController;
   ui: AppUiState;
 };
 
 export function DesktopShell(props: DesktopShellProps) {
   const dispatch = useAppDispatch();
+  const mediaPolicy = useMemo(
+    () => resolveMediaVisibilityPolicy(props.mediaVisibilitySettings.settings),
+    [props.mediaVisibilitySettings.settings],
+  );
   const header = useDesktopHeaderModel({
     dispatch,
-    navigationLayoutSettings: {
-      mode: props.navigationLayoutSettings.settings.mode,
-      setMode: props.navigationLayoutSettings.setMode,
+    mediaVisibilitySettings: {
+      mode: props.mediaVisibilitySettings.settings.mode,
+      setMode: props.mediaVisibilitySettings.setMode,
     },
     ui: props.ui,
   });
@@ -92,7 +99,7 @@ export function DesktopShell(props: DesktopShellProps) {
         <ConnectionSidebarContainer
           actions={props.actions}
           externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
-          navigationLayoutSettings={props.navigationLayoutSettings}
+          mediaPolicy={mediaPolicy}
           ui={props.ui}
         />
       }
@@ -103,6 +110,7 @@ export function DesktopShell(props: DesktopShellProps) {
           composer={props.composer}
           contactNotifications={props.contactNotifications}
           contactRuleHandlers={contactRuleHandlers}
+          mediaPolicy={mediaPolicy}
           jumpToLatestRequestId={jumpToLatestRequestId}
         />
       }
@@ -113,6 +121,7 @@ export function DesktopShell(props: DesktopShellProps) {
             contactNotifications={props.contactNotifications}
             contactRuleHandlers={contactRuleHandlers}
             externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+            mediaPolicy={mediaPolicy}
           />
         ) : null
       }
@@ -120,6 +129,7 @@ export function DesktopShell(props: DesktopShellProps) {
         <CommandPaletteDialogContainer
           actions={props.actions}
           externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+          mediaPolicy={mediaPolicy}
           ui={props.ui}
         />
       }
@@ -130,7 +140,7 @@ export function DesktopShell(props: DesktopShellProps) {
         <PreferencesDialogContainer
           actions={props.actions}
           contactNotifications={props.contactNotifications}
-          navigationLayoutSettings={props.navigationLayoutSettings}
+          mediaVisibilitySettings={props.mediaVisibilitySettings}
           userAvatarSettings={props.userAvatarSettings}
           ui={props.ui}
         />
@@ -139,6 +149,7 @@ export function DesktopShell(props: DesktopShellProps) {
         <NetworkManagerDialogContainer
           actions={props.actions}
           externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+          mediaPolicy={mediaPolicy}
         />
       }
       networkEditorDialog={

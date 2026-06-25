@@ -101,6 +101,22 @@ test('system notification can use the query custom avatar as its icon', () => {
   });
 });
 
+test('system notification omits icons when media is hidden', () => {
+  const notification = createContactSystemNotification({
+    avatarIconUrl: 'data:image/png;base64,custom',
+    buffer,
+    iconsEnabled: false,
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: () => undefined,
+  }) as FakeNotification;
+
+  assert.deepEqual(notification.options, {
+    body: 'New private message on ExampleNet',
+    tag: 'pulsete-dm:query-alice',
+  });
+});
+
 test('system notification labels channel messages with a channel tag', () => {
   const channelBuffer: BufferState = {
     ...buffer,

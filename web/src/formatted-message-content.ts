@@ -10,6 +10,8 @@ export type ParsedFormattedMessageContent = {
   tokens: ReturnType<typeof tokenizeFormattedMessage>;
 };
 
+export type InlineImageRenderingMode = 'hidden' | 'link' | 'preview';
+
 export const parseFormattedMessageContent = (
   text: string,
   mode: MessageDisplayMode | undefined,
@@ -33,14 +35,21 @@ export const parseFormattedMessageContent = (
   };
 };
 
-export const hasVisibleFormattedMessageText = (content: ParsedFormattedMessageContent) => {
+export const hasVisibleFormattedMessageText = (
+  content: ParsedFormattedMessageContent,
+  options: { inlineImageRendering?: InlineImageRenderingMode } = {},
+) => {
   if (content.rawMode) {
     return content.rawText.trim().length > 0;
   }
+  const inlineImageRendering = options.inlineImageRendering ?? 'preview';
   return content.tokens.some((token) => {
     if (token.type === 'text' || token.type === 'channel') {
       return token.parts.some((part) => part.text.trim().length > 0);
     }
-    return !isInlineImageHref(token.href) && token.parts.some((part) => part.text.trim().length > 0);
+    return (
+      (!isInlineImageHref(token.href) || inlineImageRendering === 'link')
+      && token.parts.some((part) => part.text.trim().length > 0)
+    );
   });
 };

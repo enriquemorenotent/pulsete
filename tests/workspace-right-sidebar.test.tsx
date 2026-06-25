@@ -212,6 +212,18 @@ test('query profile sidebar renders IRCCloud avatars above notes when enabled', 
   assert.match(markup, /cursor-zoom-in/);
 });
 
+test('query profile sidebar hides avatar banners when media is hidden', () => {
+  const markup = renderQueryProfileSidebar({
+    avatarUser: { nick: 'Sofia', username: 'uid7', host: null },
+    externalAvatarsEnabled: true,
+    profileImagesVisible: false,
+  });
+
+  assert.doesNotMatch(markup, /aria-label="Avatar for Sofia"/);
+  assert.doesNotMatch(markup, /avatar-redirect/);
+  assert.match(markup, /Sofia[\s\S]*Notes/);
+});
+
 test('query profile sidebar renders persisted PM IRCCloud avatars without channel presence', () => {
   const markup = renderQueryProfileSidebar({
     avatarUser: { nick: 'Sofia', username: null, host: null, ircCloudAvatarId: '7' },

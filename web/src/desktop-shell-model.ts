@@ -17,14 +17,17 @@ import type {
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { NetworkRuntimeState, WorkspaceView } from './workspace.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
-import type { NavigationLayoutMode } from './navigation-layout-settings.js';
+import type {
+  MediaVisibilityMode,
+  MediaVisibilityPolicy,
+} from './media-visibility-settings.js';
 
 export type DesktopShellHeaderModel = {
-  navigationLayoutMode: NavigationLayoutMode;
+  mediaVisibilityMode: MediaVisibilityMode;
   onOpenLogInspector: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
-  onToggleNavigationLayoutMode: () => void;
+  onToggleMediaVisibilityMode: () => void;
 };
 
 export type DesktopShellCommandPaletteModel = {
@@ -41,6 +44,7 @@ export type DesktopShellNicklistModel = {
   contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
+  mediaPolicy?: MediaVisibilityPolicy;
   onSaveNickEmoji: (
     networkId: string,
     nick: string,
@@ -94,6 +98,7 @@ export type DesktopShellQueryProfileModel = {
   }) | null;
   buffer: BufferState | null;
   externalAvatarsEnabled: boolean;
+  profileImagesVisible: boolean;
   onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
 };
 

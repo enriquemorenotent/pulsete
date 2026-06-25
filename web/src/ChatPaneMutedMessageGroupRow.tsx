@@ -6,10 +6,12 @@ import type { ChatTranscriptMutedGroupRow } from './transcript/model.js';
 import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 
 type ChatPaneMutedMessageGroupRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   expanded: boolean;
+  inlineImageRendering?: InlineImageRenderingMode;
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
@@ -56,6 +58,7 @@ export function ChatPaneMutedMessageGroupRow(props: ChatPaneMutedMessageGroupRow
               key={row.key}
               row={row}
               channelUserModesByNick={props.channelUserModesByNick}
+              inlineImageRendering={props.inlineImageRendering}
               nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
               listKind={props.listKind}
               mode={props.mode}

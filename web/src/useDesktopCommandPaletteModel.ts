@@ -9,6 +9,7 @@ import {
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { AppActions } from './useAppActions.js';
 import type { WorkspaceView } from './workspace-types.js';
@@ -31,6 +32,7 @@ type DesktopCommandPaletteModelParams = {
   dispatch: (action: Action) => void;
   externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
+  mediaPolicy: MediaVisibilityPolicy;
   nickEmojis: State['domain']['nickEmojis'];
   networks: State['domain']['networks'];
   sidebarConnections: SidebarConnectionView[];
@@ -50,6 +52,7 @@ export function useDesktopCommandPaletteModel({
   dispatch,
   externalAvatarsEnabled,
   friends,
+  mediaPolicy,
   nickEmojis,
   networks,
   sidebarConnections,
@@ -111,6 +114,7 @@ export function useDesktopCommandPaletteModel({
         canDownloadHistory: canUseBufferHistoryTools,
       },
       externalAvatarsEnabled,
+      mediaPolicy,
       queryAvatarOverrides,
       userAvatarOverrides,
     }),
@@ -120,6 +124,7 @@ export function useDesktopCommandPaletteModel({
       channelAutoJoin.available,
       externalAvatarsEnabled,
       friends,
+      mediaPolicy,
       nickEmojis,
       queryAvatarOverrides,
       selectedBufferId,

@@ -6,11 +6,13 @@ import type { ChatTranscriptModel } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 
 type ChatTranscriptStaticProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   emptyBody: string;
   expandedMutedGroupKeys: ReadonlySet<string>;
+  inlineImageRendering?: InlineImageRenderingMode;
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   loadingOlderHistory?: boolean;
@@ -55,6 +57,7 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
             row={row}
             channelUserModesByNick={props.channelUserModesByNick}
             expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+            inlineImageRendering={props.inlineImageRendering}
             nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
             listKind={props.listKind}
             mode={props.mode}

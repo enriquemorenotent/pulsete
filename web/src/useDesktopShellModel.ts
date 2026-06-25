@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import type { ConnectionSidebarProps } from './ConnectionSidebar.js';
 import type { Action, State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
-import type { NavigationLayoutSettings } from './navigation-layout-settings.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
@@ -10,13 +9,17 @@ import type {
   NicklistActionSet,
   SidebarActionSet,
 } from './useAppActions.js';
+import type {
+  MediaVisibilityMode,
+  MediaVisibilityPolicy,
+} from './media-visibility-settings.js';
 export { useDesktopChatModel } from './useDesktopChatModel.js';
 
 type DesktopHeaderModelParams = {
   dispatch: (action: Action) => void;
-  navigationLayoutSettings: {
-    mode: NavigationLayoutSettings['mode'];
-    setMode: (mode: NavigationLayoutSettings['mode']) => void;
+  mediaVisibilitySettings: {
+    mode: MediaVisibilityMode;
+    setMode: (mode: MediaVisibilityMode) => void;
   };
   ui: Pick<
     AppUiState,
@@ -29,8 +32,8 @@ type DesktopSidebarModelParams = {
   externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
   friendPresence: State['domain']['friendPresence'];
+  mediaPolicy: MediaVisibilityPolicy;
   nickEmojis: State['domain']['nickEmojis'];
-  navigationLayoutMode: NavigationLayoutSettings['mode'];
   queryPresence: State['domain']['queryPresence'];
   sidebarConnections: ConnectionSidebarProps['connections'];
   ui: Pick<AppUiState, 'hideOfflineFriends' | 'toggleHideOfflineFriends'>;
@@ -42,32 +45,35 @@ type DesktopNicklistModelParams = {
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
   friends: State['domain']['friends'];
+  mediaPolicy: MediaVisibilityPolicy;
   mutedNicks: State['domain']['mutedNicks'];
   nickEmojis: State['domain']['nickEmojis'];
 };
 
 export function useDesktopHeaderModel({
   dispatch,
-  navigationLayoutSettings,
+  mediaVisibilitySettings,
   ui,
 }: DesktopHeaderModelParams): DesktopShellModel['header'] {
+  const { mode, setMode } = mediaVisibilitySettings;
   return useMemo(
     () => ({
-      navigationLayoutMode: navigationLayoutSettings.mode,
+      mediaVisibilityMode: mode,
       onOpenLogInspector: ui.openLogInspector,
       onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
       onOpenPreferences: ui.openPreferences,
-      onToggleNavigationLayoutMode: () => {
-        navigationLayoutSettings.setMode(
-          navigationLayoutSettings.mode === 'server-rail'
-            ? 'all-servers-visible'
-            : 'server-rail',
+      onToggleMediaVisibilityMode: () => {
+        setMode(
+          mode === 'show-media'
+            ? 'hide-media'
+            : 'show-media',
         );
       },
     }),
     [
       dispatch,
-      navigationLayoutSettings,
+      mode,
+      setMode,
       ui.openLogInspector,
       ui.openPreferences,
     ],
@@ -79,8 +85,8 @@ export function useDesktopSidebarModel({
   externalAvatarsEnabled,
   friends,
   friendPresence,
+  mediaPolicy,
   nickEmojis,
-  navigationLayoutMode,
   queryPresence,
   sidebarConnections,
   ui,
@@ -92,7 +98,7 @@ export function useDesktopSidebarModel({
       friends,
       friendPresence,
       hideOfflineFriends: ui.hideOfflineFriends,
-      navigationLayoutMode,
+      mediaPolicy,
       nickEmojis,
       queryPresence,
       onAddFriend: actions.addFriend,
@@ -123,8 +129,8 @@ export function useDesktopSidebarModel({
       externalAvatarsEnabled,
       friendPresence,
       friends,
+      mediaPolicy,
       nickEmojis,
-      navigationLayoutMode,
       queryPresence,
       sidebarConnections,
       ui.hideOfflineFriends,
@@ -139,6 +145,7 @@ export function useDesktopNicklistModel({
   contactRuleHandlers,
   externalAvatarsEnabled,
   friends,
+  mediaPolicy,
   mutedNicks,
   nickEmojis,
 }: DesktopNicklistModelParams): DesktopShellModel['nicklist'] {
@@ -148,6 +155,7 @@ export function useDesktopNicklistModel({
       contactRuleHandlers,
       externalAvatarsEnabled,
       friends,
+      mediaPolicy,
       mutedNicks,
       nickEmojis,
       onSaveNickEmoji: actions.saveNickEmoji,
@@ -160,6 +168,7 @@ export function useDesktopNicklistModel({
       contactRuleHandlers,
       externalAvatarsEnabled,
       friends,
+      mediaPolicy,
       mutedNicks,
       nickEmojis,
     ],

@@ -44,6 +44,7 @@ type WorkspaceRightSidebarProps = {
     avatarUser?: QueryProfileAvatarUser | null;
     buffer: BufferState | null;
     externalAvatarsEnabled?: boolean;
+    profileImagesVisible?: boolean;
     onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
   };
 };
@@ -75,6 +76,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         externalAvatarsEnabled={
           props.queryProfile?.externalAvatarsEnabled ?? props.nicklist.externalAvatarsEnabled
         }
+        profileImagesVisible={props.queryProfile?.profileImagesVisible}
         onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
       />
     );
@@ -95,6 +97,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         contactNotificationSettings={props.nicklist.contactNotificationSettings}
         contactRuleHandlers={props.nicklist.contactRuleHandlers}
         externalAvatarsEnabled={props.nicklist.externalAvatarsEnabled}
+        mediaPolicy={props.nicklist.mediaPolicy}
         onSaveNickEmoji={props.nicklist.onSaveNickEmoji}
         onSelectNick={props.nicklist.onSelectNick}
       />

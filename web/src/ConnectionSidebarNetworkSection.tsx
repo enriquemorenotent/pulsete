@@ -12,6 +12,7 @@ import {
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
+import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
 type QueryPresenceDisplay = PresenceStatus | 'pending';
@@ -19,6 +20,7 @@ type QueryPresenceDisplay = PresenceStatus | 'pending';
 type ConnectionSidebarNetworkSectionProps = {
 	connection: SidebarConnectionView;
 	index: number;
+	mediaPolicy?: MediaVisibilityPolicy;
 	nickEmojis: ConnectionSidebarProps['nickEmojis'];
 	queryPresence: Record<string, PresenceStatus>;
 	onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
@@ -29,7 +31,7 @@ type ConnectionSidebarNetworkSectionProps = {
 	onCloseConnection: ConnectionSidebarProps['onCloseConnection'];
 	onCloseChannel: ConnectionSidebarProps['onCloseChannel'];
 	onCloseBuffer: ConnectionSidebarProps['onCloseBuffer'];
-	variant?: 'default' | 'server-rail';
+	variant?: 'default' | 'server-switcher';
 };
 
 export function ConnectionSidebarNetworkSection(
@@ -37,6 +39,7 @@ export function ConnectionSidebarNetworkSection(
 ) {
 	const { connection } = props;
 	const serverActivity = resolveBufferActivityState(connection.serverBuffer);
+	const userAvatarsVisible = props.mediaPolicy?.showUserAvatars !== false;
 
 	return (
 		<section
@@ -91,7 +94,7 @@ export function ConnectionSidebarNetworkSection(
 						</div>
 					</div>
 				</button>
-				{props.variant === 'server-rail' ? null : (
+				{props.variant === 'server-switcher' ? null : (
 					<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
 						<button
 							className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
@@ -128,7 +131,7 @@ export function ConnectionSidebarNetworkSection(
 				<div
 					className={cn(
 						'min-w-0 space-y-px',
-						props.variant === 'server-rail'
+						props.variant === 'server-switcher'
 							? 'w-full'
 							: 'ml-3 border-l border-white/7 pl-2',
 					)}
@@ -142,6 +145,7 @@ export function ConnectionSidebarNetworkSection(
 								selected={selected}
 								icon={Hash}
 								presence={null}
+								userAvatarsVisible={userAvatarsVisible}
 								onSelect={() => props.onSelectBuffer(buffer)}
 								onClose={() =>
 									props.onCloseChannel(
@@ -162,6 +166,7 @@ export function ConnectionSidebarNetworkSection(
 									props.queryPresence,
 									buffer.id,
 								)}
+								userAvatarsVisible={userAvatarsVisible}
 								emoji={
 									findNickEmoji(
 										props.nickEmojis,

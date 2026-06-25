@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { HistorySearchResults } from './HistorySearchDialogResults.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 import { scheduleAnimationFrameFocus } from './animation-frame-focus.js';
 import { runHistorySearchRequest, type SearchBufferHistory } from './history-search-request.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -25,6 +26,7 @@ import type { MessageDisplayMode } from './message-display-mode.js';
 type HistorySearchDialogProps = {
   open: boolean;
   buffer: BufferState | null;
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   onOpenChange: (open: boolean) => void;
   onOpenChannel: (channel: string) => void;
@@ -41,6 +43,7 @@ export type HistorySearchState = {
 
 export type HistorySearchDialogBodyProps = {
   expandedMessageId: string | null;
+  inlineImageRendering?: InlineImageRenderingMode;
   inputRef: RefObject<HTMLInputElement | null>;
   mode: MessageDisplayMode;
   query: string;
@@ -150,6 +153,7 @@ export function HistorySearchDialog(props: HistorySearchDialogProps) {
       <DialogContent className="h-[min(84dvh,40rem)] max-h-[84dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),44rem)]">
         <HistorySearchDialogBody
           expandedMessageId={expandedMessageId}
+          inlineImageRendering={props.inlineImageRendering}
           inputRef={inputRef}
           mode={props.mode}
           query={query}
@@ -189,6 +193,7 @@ export function HistorySearchDialogBody(props: HistorySearchDialogBodyProps) {
       <ScrollArea className="min-h-0 flex-1">
         <HistorySearchResults
           expandedMessageId={props.expandedMessageId}
+          inlineImageRendering={props.inlineImageRendering}
           mode={props.mode}
           searchState={props.searchState}
           onOpenChannel={props.onOpenChannel}

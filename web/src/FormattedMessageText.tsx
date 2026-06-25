@@ -1,6 +1,7 @@
 import { Fragment, memo, useMemo } from 'react';
 import {
   parseFormattedMessageContent,
+  type InlineImageRenderingMode,
   type ParsedFormattedMessageContent,
 } from './formatted-message-content.js';
 import { isInlineImageHref } from './formatted-message-inline-images.js';
@@ -13,10 +14,12 @@ export {
   parseFormattedMessageContent,
 } from './formatted-message-content.js';
 export type { ParsedFormattedMessageContent } from './formatted-message-content.js';
+export type { InlineImageRenderingMode } from './formatted-message-content.js';
 export { FormattedMessageInlinePreviews } from './FormattedMessageInlinePreviews.js';
 export { InlineImagePreviewDialogBody } from './InlineImagePreviewDialogBody.js';
 
 type FormattedMessageTextProps = {
+  inlineImageRendering?: InlineImageRenderingMode;
   onInlinePreviewLoad?: () => void;
   parsedContent?: ParsedFormattedMessageContent;
   renderInlinePreviews?: boolean;
@@ -31,6 +34,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
     [props.mode, props.text]
   );
   const content = props.parsedContent ?? memoizedContent;
+  const inlineImageRendering = props.inlineImageRendering ?? 'preview';
 
   if (content.rawMode) {
     return <span className="font-mono">{content.rawText}</span>;
@@ -59,7 +63,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
             </button>
           );
         }
-        if (isInlineImageHref(token.href)) {
+        if (isInlineImageHref(token.href) && inlineImageRendering !== 'link') {
           return null;
         }
         return (
@@ -74,7 +78,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
           </a>
         );
       })}
-      {props.renderInlinePreviews === false ? null : (
+      {props.renderInlinePreviews === false || inlineImageRendering !== 'preview' ? null : (
         <FormattedMessageInlinePreviews
           hrefs={content.inlineImageHrefs}
           onInlinePreviewLoad={props.onInlinePreviewLoad}

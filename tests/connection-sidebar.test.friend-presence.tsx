@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderConnectionSidebar } from './helpers/connection-sidebar-test-helpers.js';
 
-test('friend rows expose online and away cues when the rail defaults open', () => {
+test('friend rows expose online and away cues when the server switcher is open', () => {
   const friend = { id: 'friend-1', nick: 'Alice' };
   const markup = renderConnectionSidebar({
     friends: [friend],

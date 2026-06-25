@@ -8,6 +8,7 @@ import {
   FormattedMessageInlinePreviews,
   FormattedMessageText,
   hasVisibleFormattedMessageText,
+  type InlineImageRenderingMode,
   parseFormattedMessageContent,
 } from './FormattedMessageText.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -26,6 +27,7 @@ type ChatPaneCompactMessageRowProps = {
   message: ChatMessage;
   participant: MessageParticipantPresentation;
   hideTimestamp?: boolean;
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
@@ -41,7 +43,10 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
     () => parseFormattedMessageContent(displayText, props.mode),
     [displayText, props.mode]
   );
-  const hasVisibleText = hasVisibleFormattedMessageText(parsedContent);
+  const inlineImageRendering = props.inlineImageRendering ?? 'preview';
+  const hasVisibleText = hasVisibleFormattedMessageText(parsedContent, {
+    inlineImageRendering,
+  });
   const lifecycleEventLabel = getLifecycleEventLabel(message);
   const bodyClassName = cn(isAction && 'italic');
   const timeLabel = (
@@ -108,6 +113,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
               <span className={bodyClassName}>
                 <FormattedMessageText
                   text={displayText}
+                  inlineImageRendering={inlineImageRendering === 'link' ? 'link' : 'hidden'}
                   mode={props.mode}
                   onInlinePreviewLoad={props.onInlinePreviewLoad}
                   onOpenChannel={props.onOpenChannel}
@@ -117,10 +123,12 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
               </span>
             ) : null}
           </p>
-          <FormattedMessageInlinePreviews
-            hrefs={parsedContent.inlineImageHrefs}
-            onInlinePreviewLoad={props.onInlinePreviewLoad}
-          />
+          {inlineImageRendering === 'preview' ? (
+            <FormattedMessageInlinePreviews
+              hrefs={parsedContent.inlineImageHrefs}
+              onInlinePreviewLoad={props.onInlinePreviewLoad}
+            />
+          ) : null}
         </div>
       </div>
     </article>

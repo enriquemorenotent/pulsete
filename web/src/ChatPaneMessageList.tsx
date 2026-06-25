@@ -15,6 +15,7 @@ import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
 import { TranscriptLoadingState } from './ChatPaneTranscriptDecorations.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import { buildNickEmojiByNetworkNick } from './nick-emoji-utils.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 
 type ChatPaneMessageListProps = {
   selectedBuffer: BufferState | null;
@@ -25,6 +26,7 @@ type ChatPaneMessageListProps = {
   messages: ChatMessage[];
   mutedNicks: MutedNickState[];
   emptyBody: string;
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   listKind: 'chat' | 'server';
   canLoadOlderHistory?: boolean;
@@ -128,6 +130,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
         nickEmojiByNetworkNick={nickEmojiByNetworkNick}
         listKind={props.listKind}
         loadingOlderHistory={props.loadingOlderHistory}
+        inlineImageRendering={props.inlineImageRendering}
         mode={props.mode}
         model={transcriptModel}
         expandedMutedGroupKeys={expandedMutedGroupKeys}
@@ -150,6 +153,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       jumpToLatestRequestId={props.jumpToLatestRequestId ?? 0}
       initialHistoryPending={props.initialHistoryPending}
       initialScrollTarget={initialScrollTarget}
+      inlineImageRendering={props.inlineImageRendering}
       listKind={props.listKind}
       loadingOlderHistory={props.loadingOlderHistory}
       mode={props.mode}

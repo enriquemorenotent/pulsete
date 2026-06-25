@@ -17,6 +17,7 @@ import {
 import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
 import type { DesktopShellModel } from './desktop-shell-model.js';
+import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 import type { ChatActionSet } from './useAppActions.js';
 import type { SelectedBufferHistoryControls } from './transcript/history.js';
@@ -32,6 +33,7 @@ export type DesktopChatModelParams = {
   contactRuleHandlers: ContactRuleHandlers;
   channels: State['domain']['channels'];
   friends: State['domain']['friends'];
+  mediaPolicy: MediaVisibilityPolicy;
   mutedNicks: State['domain']['mutedNicks'];
   nickEmojis: State['domain']['nickEmojis'];
   networks: State['domain']['networks'];
@@ -49,6 +51,7 @@ export function useDesktopChatModel({
   contactRuleHandlers,
   channels,
   friends,
+  mediaPolicy,
   mutedNicks,
   nickEmojis,
   networks,
@@ -119,6 +122,7 @@ export function useDesktopChatModel({
       selectedMessages,
       mutedNicks,
       contactRuleHandlers,
+      mediaPolicy,
       draft,
       focusContextKey: composerContextKey,
       completionEnabled: composerCompletion.enabled,
@@ -195,6 +199,7 @@ export function useDesktopChatModel({
       contactNotifications.settings,
       draft,
       friends,
+      mediaPolicy,
       mutedNicks,
       nickEmojis,
       participantQueryNetwork,

@@ -13,9 +13,13 @@ import { resolveUserAvatarOverrideUrl, resolveUserAvatarTarget } from './user-av
 
 export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpecsInput) => {
   const nickEmojiByNetworkNick = buildNickEmojiByNetworkNick(input.nickEmojis);
+  const showImages = input.mediaPolicy?.showCommandPaletteImages !== false;
   const bufferEntries = buildBufferEntries(
     input.connections,
-    input.externalAvatarsEnabled === true,
+    showImages
+      && input.externalAvatarsEnabled === true
+      && input.mediaPolicy?.showExternalMedia !== false,
+    showImages,
     input.selectedNetwork.id,
     nickEmojiByNetworkNick,
     input.userAvatarOverrides,
@@ -55,6 +59,7 @@ const compareUnreadCommandPaletteEntries = (
 const buildBufferEntries = (
   connections: BuildCommandPaletteEntrySpecsInput['connections'],
   externalAvatarsEnabled: boolean,
+  showImages: boolean,
   selectedNetworkId: string | null,
   nickEmojiByNetworkNick: ReadonlyMap<string, string>,
   userAvatarOverrides: BuildCommandPaletteEntrySpecsInput['userAvatarOverrides'],
@@ -63,7 +68,9 @@ const buildBufferEntries = (
   const entries: CommandPaletteEntrySpec[] = [];
   for (const connection of connections) {
     const currentNetwork = connection.network.id === selectedNetworkId;
-    const networkImage = resolveNetworkServerImage(connection.network, externalAvatarsEnabled);
+    const networkImage = showImages
+      ? resolveNetworkServerImage(connection.network, externalAvatarsEnabled)
+      : null;
     const networkRuntimePhase = connection.runtime?.phase ?? 'offline';
     if (connection.serverBuffer) {
       entries.push({
@@ -97,7 +104,7 @@ const buildBufferEntries = (
 
     for (const child of connection.childBuffers) {
       const badge = child.buffer.kind === 'channel' ? 'channel' : 'pm';
-      const queryAvatarUrl = child.buffer.kind === 'query'
+      const queryAvatarUrl = showImages && child.buffer.kind === 'query'
         ? resolveUserAvatarOverrideUrl({
             allowNickFallback: true,
             legacyBufferId: child.buffer.id,

@@ -1,5 +1,8 @@
 import { cn } from '@/lib/utils.js';
-import { FormattedMessageText } from './FormattedMessageText.js';
+import {
+  FormattedMessageText,
+  type InlineImageRenderingMode,
+} from './FormattedMessageText.js';
 import { ParticipantNickLabel } from './ParticipantNickLabel.js';
 import {
   formatMessageTime,
@@ -15,6 +18,7 @@ import type { MessageParticipantPresentation } from './message-participant-prese
 
 export const ChatPaneExpandedMessageRow = (props: {
   message: ChatMessage;
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
@@ -54,6 +58,7 @@ export const ChatPaneExpandedMessageRow = (props: {
       >
         <FormattedMessageText
           text={props.message.body}
+          inlineImageRendering={props.inlineImageRendering}
           mode={props.mode}
           onInlinePreviewLoad={props.onInlinePreviewLoad}
           onOpenChannel={props.onOpenChannel}

@@ -4,6 +4,7 @@ import {
   buildCommandPaletteEntrySpecs,
   runCommandPaletteAction,
 } from '../web/src/command-palette.js';
+import { resolveMediaVisibilityPolicy } from '../web/src/media-visibility-settings.js';
 import {
   buildPaletteInput,
   channelBuffer,
@@ -136,6 +137,26 @@ test('command palette carries server images for network-backed entries', () => {
     ['offline', 'offline', 'offline', 'offline'],
   );
   assert.equal(entries.find((entry) => entry.id === `friend:${friend.id}`)?.networkIconUrl, undefined);
+});
+
+test('command palette omits network-backed images when media is hidden', () => {
+  const iconUrl = 'data:image/png;base64,cHVsc2V0ZQ==';
+  const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
+    mediaPolicy: resolveMediaVisibilityPolicy({ mode: 'hide-media' }),
+    connections: [{
+      ...connection,
+      network: { ...network, iconUrl },
+    }],
+  }));
+
+  assert.deepEqual(
+    entries
+      .filter((entry) => entry.id.startsWith('network:')
+        || entry.id.startsWith('buffer:')
+        || entry.id.startsWith('pending:'))
+      .map((entry) => entry.networkIconUrl),
+    [undefined, undefined, undefined, undefined],
+  );
 });
 
 test('command palette uses IRCCloud avatar fallbacks for network-backed entries', () => {

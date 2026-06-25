@@ -12,9 +12,11 @@ import { isNetworkServerImageFallback, resolveNetworkServerImage } from './netwo
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
-type ConnectionSidebarServerRailProps = ConnectionSidebarProps;
+type ConnectionSidebarServerSwitcherProps = ConnectionSidebarProps;
 
-export function ConnectionSidebarServerRail(props: ConnectionSidebarServerRailProps) {
+export function ConnectionSidebarServerSwitcher(
+  props: ConnectionSidebarServerSwitcherProps,
+) {
   const activeConnection = useMemo(
     () => resolveActiveConnection(props.connections),
     [props.connections],
@@ -26,11 +28,12 @@ export function ConnectionSidebarServerRail(props: ConnectionSidebarServerRailPr
         <ScrollArea className="min-h-0 w-full flex-1">
           <div className="flex flex-col items-center gap-1.5">
             {props.connections.map((connection) => (
-              <ServerRailButton
+              <ServerSwitcherButton
                 key={connection.network.id}
                 connection={connection}
                 active={connection.network.id === activeConnection?.network.id}
                 externalAvatarsEnabled={props.externalAvatarsEnabled}
+                mediaPolicy={props.mediaPolicy}
                 onSelect={() => props.onSelectNetwork(connection.network)}
               />
             ))}
@@ -38,7 +41,7 @@ export function ConnectionSidebarServerRail(props: ConnectionSidebarServerRailPr
         </ScrollArea>
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <ConnectionRailDetail {...props} activeConnection={activeConnection} />
+        <ConnectionSwitcherDetail {...props} activeConnection={activeConnection} />
         <ConnectionSidebarFriends
           friends={props.friends}
           friendPresence={props.friendPresence}
@@ -53,7 +56,7 @@ export function ConnectionSidebarServerRail(props: ConnectionSidebarServerRailPr
   );
 }
 
-function ConnectionRailDetail(props: ConnectionSidebarServerRailProps & {
+function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & {
   activeConnection: SidebarConnectionView | null;
 }) {
   const activeConnection = props.activeConnection;
@@ -68,11 +71,12 @@ function ConnectionRailDetail(props: ConnectionSidebarServerRailProps & {
           ) : null}
           {activeConnection ? (
             <>
-              <ServerRailBanner
+              <ServerSwitcherBanner
                 connection={activeConnection}
                 externalAvatarsEnabled={props.externalAvatarsEnabled}
+                mediaPolicy={props.mediaPolicy}
               />
-              <ServerRailActionBar
+              <ServerSwitcherActionBar
                 connection={activeConnection}
                 onReconnectNetwork={props.onReconnectNetwork}
                 onDisconnectNetwork={props.onDisconnectNetwork}
@@ -91,7 +95,8 @@ function ConnectionRailDetail(props: ConnectionSidebarServerRailProps & {
                 onCloseConnection={props.onCloseConnection}
                 onCloseChannel={props.onCloseChannel}
                 onCloseBuffer={props.onCloseBuffer}
-                variant="server-rail"
+                mediaPolicy={props.mediaPolicy}
+                variant="server-switcher"
               />
             </>
           ) : null}
@@ -101,7 +106,7 @@ function ConnectionRailDetail(props: ConnectionSidebarServerRailProps & {
   );
 }
 
-function ServerRailActionBar(props: {
+function ServerSwitcherActionBar(props: {
   connection: SidebarConnectionView;
   onReconnectNetwork: ConnectionSidebarProps['onReconnectNetwork'];
   onDisconnectNetwork: ConnectionSidebarProps['onDisconnectNetwork'];
@@ -144,10 +149,18 @@ function ServerRailActionBar(props: {
   );
 }
 
-function ServerRailBanner(props: { connection: SidebarConnectionView; externalAvatarsEnabled?: boolean }) {
+function ServerSwitcherBanner(props: {
+  connection: SidebarConnectionView;
+  externalAvatarsEnabled?: boolean;
+  mediaPolicy?: ConnectionSidebarProps['mediaPolicy'];
+}) {
+  if (props.mediaPolicy?.showServerImages === false) {
+    return null;
+  }
   const serverImage = resolveNetworkServerImage(
     props.connection.network,
-    props.externalAvatarsEnabled === true,
+    props.externalAvatarsEnabled === true
+      && props.mediaPolicy?.showExternalMedia !== false,
   );
   if (!serverImage) {
     return null;
@@ -172,17 +185,21 @@ function ServerRailBanner(props: { connection: SidebarConnectionView; externalAv
   );
 }
 
-function ServerRailButton(props: {
+function ServerSwitcherButton(props: {
   active: boolean;
   connection: SidebarConnectionView;
   externalAvatarsEnabled?: boolean;
+  mediaPolicy?: ConnectionSidebarProps['mediaPolicy'];
   onSelect: () => void;
 }) {
   const activity = resolveConnectionActivity(props.connection);
-  const serverImage = resolveNetworkServerImage(
-    props.connection.network,
-    props.externalAvatarsEnabled === true,
-  );
+  const serverImage = props.mediaPolicy?.showServerImages === false
+    ? null
+    : resolveNetworkServerImage(
+        props.connection.network,
+        props.externalAvatarsEnabled === true
+          && props.mediaPolicy?.showExternalMedia !== false,
+      );
   return (
     <div className="relative flex w-full justify-center">
       <button

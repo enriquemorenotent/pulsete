@@ -6,14 +6,14 @@ import type {
 } from './contact-notifications/settings.js';
 import { PreferencesAvatarSection } from './PreferencesAvatarSection.js';
 import { PreferencesBackupSection } from './PreferencesBackupSection.js';
-import { PreferencesNavigationSection } from './PreferencesNavigationSection.js';
+import { PreferencesMediaSection } from './PreferencesMediaSection.js';
 import { PreferencesNotificationsPanel } from './PreferencesNotificationsPanel.js';
-import type { NavigationLayoutSettings } from './navigation-layout-settings.js';
+import type { MediaVisibilitySettings } from './media-visibility-settings.js';
 import type { UserAvatarSettings } from './user-avatars/settings.js';
 
 export type PreferencesDialogBodyProps = {
   contactNotifications: ContactNotificationSettings;
-  navigationLayoutSettings: NavigationLayoutSettings;
+  mediaVisibilitySettings: MediaVisibilitySettings;
   userAvatarSettings: UserAvatarSettings;
   mutedNicks: MutedNickState[];
   networks: NetworkProfile[];
@@ -28,7 +28,7 @@ export type PreferencesDialogBodyProps = {
   onRemoveContactNotificationChannel: (channel: ContactNotificationChannel) => void;
   onRemoveContactNotificationContact: (contact: ContactNotificationContact) => void;
   onRemoveMutedNick: (mutedNickId: string) => Promise<boolean>;
-  onSetNavigationLayoutMode: (mode: NavigationLayoutSettings['mode']) => void;
+  onSetMediaVisibilityMode: (mode: MediaVisibilitySettings['mode']) => void;
   onSetExternalAvatarsEnabled: (enabled: boolean) => void;
   onExportBackup: () => Promise<void>;
   onImportBackup: (file: Blob) => Promise<void>;
@@ -37,9 +37,9 @@ export type PreferencesDialogBodyProps = {
 export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
   return (
     <div className="space-y-6">
-      <PreferencesNavigationSection
-        mode={props.navigationLayoutSettings.mode}
-        onSetMode={props.onSetNavigationLayoutMode}
+      <PreferencesMediaSection
+        mode={props.mediaVisibilitySettings.mode}
+        onSetMode={props.onSetMediaVisibilityMode}
       />
       <PreferencesAvatarSection
         settings={props.userAvatarSettings}

@@ -21,6 +21,7 @@ type ContactSystemNotificationInput = {
   avatarIconUrl?: string | null;
   buffer: BufferState;
   focusWindow?: () => void;
+  iconsEnabled?: boolean;
   networkName: string;
   notificationConstructor?: ContactSystemNotificationConstructor;
   onRelease?: (notification: ContactSystemNotificationHandle) => void;
@@ -30,6 +31,7 @@ type ContactSystemNotificationInput = {
 type ContactSystemNotificationDispatchInput = {
   activeNotifications: Set<ContactSystemNotificationHandle>;
   buffer: BufferState;
+  iconsEnabled?: boolean;
   networkNamesById: ReadonlyMap<string, string>;
   notificationConstructor?: ContactSystemNotificationConstructor;
   onSelectBuffer: (buffer: BufferState) => void;
@@ -61,7 +63,9 @@ export const createContactSystemNotification = (
   if (!NotificationClass) {
     return null;
   }
-  const icon = input.avatarIconUrl ?? resolveContactSystemNotificationIconUrl(input.buffer);
+  const icon = input.iconsEnabled === false
+    ? null
+    : input.avatarIconUrl ?? resolveContactSystemNotificationIconUrl(input.buffer);
   const notification = new NotificationClass(input.buffer.target, {
     body: resolveContactSystemNotificationBody(input.buffer, input.networkName),
     ...(icon ? { icon } : {}),
@@ -97,6 +101,7 @@ export const showContactSystemNotification = (
       input.networkNamesById.get(input.buffer.networkId) ?? input.buffer.networkId;
     const notification = createContactSystemNotification({
       buffer: input.buffer,
+      iconsEnabled: input.iconsEnabled,
       networkName,
       notificationConstructor: input.notificationConstructor,
       onRelease: (releasedNotification) => {

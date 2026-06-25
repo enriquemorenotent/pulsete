@@ -27,7 +27,7 @@ import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
-import type { NavigationLayoutSettingsController } from './navigation-layout-settings.js';
+import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.js';
 import { useDesktopChatModel } from './useDesktopChatModel.js';
 import {
@@ -48,7 +48,7 @@ type SharedProps = {
 
 type SidebarContainerProps = SharedProps & {
   externalAvatarsEnabled: boolean;
-  navigationLayoutSettings: NavigationLayoutSettingsController;
+  mediaPolicy: MediaVisibilityPolicy;
 };
 
 type ChatContainerProps = Pick<SharedProps, 'actions'> & {
@@ -56,6 +56,7 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
+  mediaPolicy: MediaVisibilityPolicy;
   jumpToLatestRequestId: number;
 };
 
@@ -63,16 +64,18 @@ type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
+  mediaPolicy: MediaVisibilityPolicy;
 };
 
 type CommandPaletteContainerProps = SharedProps & {
   externalAvatarsEnabled: boolean;
+  mediaPolicy: MediaVisibilityPolicy;
 };
 
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
   actions,
   externalAvatarsEnabled,
-  navigationLayoutSettings,
+  mediaPolicy,
   ui,
 }: SidebarContainerProps) {
   const friends = useAppSelector(selectFriends);
@@ -85,8 +88,8 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
     externalAvatarsEnabled,
     friends,
     friendPresence,
+    mediaPolicy,
     nickEmojis,
-    navigationLayoutMode: navigationLayoutSettings.settings.mode,
     queryPresence,
     sidebarConnections,
     ui,
@@ -100,6 +103,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   composer,
   contactNotifications,
   contactRuleHandlers,
+  mediaPolicy,
   jumpToLatestRequestId,
 }: ChatContainerProps) {
   const channels = useAppSelector(selectChannels);
@@ -138,6 +142,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     contactRuleHandlers,
     channels,
     friends,
+    mediaPolicy,
     mutedNicks,
     nickEmojis,
     networks,
@@ -155,6 +160,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   contactNotifications,
   contactRuleHandlers,
   externalAvatarsEnabled,
+  mediaPolicy,
 }: RightSidebarContainerProps) {
   const dispatch = useAppDispatch();
   const channels = useAppSelector(selectChannels);
@@ -169,6 +175,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     contactRuleHandlers,
     externalAvatarsEnabled,
     friends,
+    mediaPolicy,
     mutedNicks,
     nickEmojis,
   });
@@ -198,12 +205,14 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
         : null,
       buffer,
       externalAvatarsEnabled,
+      profileImagesVisible: mediaPolicy.showProfileImages,
       onSaveNotes: actions.saveBufferNotes,
     };
   }, [
     actions.saveBufferNotes,
     channels,
     externalAvatarsEnabled,
+    mediaPolicy.showProfileImages,
     workspace.selectedBuffer,
   ]);
   return (
@@ -219,6 +228,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
 export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogContainer({
   actions,
   externalAvatarsEnabled,
+  mediaPolicy,
   ui,
 }: CommandPaletteContainerProps) {
   const dispatch = useAppDispatch();
@@ -232,6 +242,7 @@ export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogC
     dispatch,
     externalAvatarsEnabled,
     friends,
+    mediaPolicy,
     nickEmojis,
     networks,
     sidebarConnections,

@@ -12,6 +12,7 @@ export function QueryProfileSidebar(props: {
   customAvatarUrl?: string | null;
   externalAvatarsEnabled: boolean;
   onSetCustomAvatarUrl?: (url: string | null) => void;
+  profileImagesVisible?: boolean;
   onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
 }) {
   const buffer = props.buffer;
@@ -23,14 +24,16 @@ export function QueryProfileSidebar(props: {
   return (
     <InspectorPanel className="px-0">
       <header className="shrink-0 space-y-3 border-b border-white/[0.045] pb-4">
-        <QueryProfileAvatarBanner
-          bufferId={buffer.id}
-          customAvatarUrl={props.customAvatarUrl}
-          enabled={props.externalAvatarsEnabled}
-          networkId={buffer.networkId}
-          onSetCustomAvatarUrl={props.onSetCustomAvatarUrl}
-          user={props.avatarUser}
-        />
+        {props.profileImagesVisible === false ? null : (
+          <QueryProfileAvatarBanner
+            bufferId={buffer.id}
+            customAvatarUrl={props.customAvatarUrl}
+            enabled={props.externalAvatarsEnabled}
+            networkId={buffer.networkId}
+            onSetCustomAvatarUrl={props.onSetCustomAvatarUrl}
+            user={props.avatarUser}
+          />
+        )}
         <h2 className="min-w-0 truncate px-4 text-sm font-semibold tracking-tight text-foreground/92">
           {buffer.target}
         </h2>

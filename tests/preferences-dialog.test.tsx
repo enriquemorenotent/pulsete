@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { NetworkProfile } from '../shared/protocol-chat.js';
 import { PreferencesDialogBody } from '../web/src/PreferencesDialogBody.js';
 import type { ContactNotificationSettings } from '../web/src/contact-notifications/settings.js';
-import type { NavigationLayoutSettings } from '../web/src/navigation-layout-settings.js';
+import type { MediaVisibilitySettings } from '../web/src/media-visibility-settings.js';
 import type { UserAvatarSettings } from '../web/src/user-avatars/settings.js';
 
 const networks: NetworkProfile[] = [{
@@ -34,15 +34,15 @@ const userAvatarSettings: UserAvatarSettings = {
   externalAvatarsEnabled: false,
 };
 
-const navigationLayoutSettings: NavigationLayoutSettings = {
-  mode: 'all-servers-visible',
+const mediaVisibilitySettings: MediaVisibilitySettings = {
+  mode: 'show-media',
 };
 
 test('preferences dialog renders notification controls and muted nick management', () => {
   const markup = renderToStaticMarkup(
     <PreferencesDialogBody
       contactNotifications={contactNotifications}
-      navigationLayoutSettings={navigationLayoutSettings}
+      mediaVisibilitySettings={mediaVisibilitySettings}
       userAvatarSettings={userAvatarSettings}
       mutedNicks={[{ id: 'mute-1', networkId: 'network-1', nick: 'MissD' }]}
       networks={networks}
@@ -55,17 +55,17 @@ test('preferences dialog renders notification controls and muted nick management
       onRemoveContactNotificationChannel={() => {}}
       onRemoveContactNotificationContact={() => {}}
       onRemoveMutedNick={async () => true}
-      onSetNavigationLayoutMode={() => {}}
+      onSetMediaVisibilityMode={() => {}}
       onSetExternalAvatarsEnabled={() => {}}
       onExportBackup={async () => {}}
       onImportBackup={async () => {}}
     />
   );
 
-  assert.match(markup, /Navigation/);
-  assert.match(markup, /Navigation layout/);
-  assert.match(markup, /aria-label="Navigation layout"/);
-  assert.match(markup, /server rail keeps the server list separate/i);
+  assert.match(markup, /Media/);
+  assert.match(markup, /Media display/);
+  assert.match(markup, /aria-label="Media display"/);
+  assert.match(markup, /Hide media keeps server artwork/i);
   assert.match(markup, /Avatars/);
   assert.match(markup, /Show external avatars/);
   assert.match(markup, /IRCCloud/);

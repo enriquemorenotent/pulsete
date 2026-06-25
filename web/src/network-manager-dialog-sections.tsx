@@ -20,14 +20,17 @@ export function NetworkManagerListRow(props: {
   externalAvatarsEnabled?: boolean;
   network: NetworkProfile;
   selected: boolean;
+  serverImagesVisible?: boolean;
   runtime: NetworkRuntimeState | null;
   onSelect: (networkId: string) => void;
 }) {
   const rowStatus = getNetworkManagerRowStatus(props.runtime);
-  const serverImage = resolveNetworkServerImage(
-    props.network,
-    props.externalAvatarsEnabled === true,
-  );
+  const serverImage = props.serverImagesVisible === false
+    ? null
+    : resolveNetworkServerImage(
+        props.network,
+        props.externalAvatarsEnabled === true,
+      );
 
   return (
     <button
@@ -71,6 +74,7 @@ export function NetworkManagerListRow(props: {
 export function SelectedNetworkPane(props: {
   externalAvatarsEnabled?: boolean;
   network: NetworkProfile;
+  serverImagesVisible?: boolean;
   runtime: NetworkRuntimeState | null;
   onEdit: () => void;
   onDuplicate: () => void;
@@ -78,10 +82,12 @@ export function SelectedNetworkPane(props: {
   onRemove: () => void;
 }) {
   const status = getNetworkManagerRowStatus(props.runtime);
-  const serverImage = resolveNetworkServerImage(
-    props.network,
-    props.externalAvatarsEnabled === true,
-  );
+  const serverImage = props.serverImagesVisible === false
+    ? null
+    : resolveNetworkServerImage(
+        props.network,
+        props.externalAvatarsEnabled === true,
+      );
 
   return (
     <div className="space-y-6 px-5 py-5">

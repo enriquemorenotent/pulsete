@@ -3,6 +3,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ChannelState, ChannelUserState, NetworkProfile } from '../shared/protocol-chat.js';
 import { NicklistPanel } from '../web/src/NicklistPanel.js';
+import { resolveMediaVisibilityPolicy } from '../web/src/media-visibility-settings.js';
 import { buildNicklistGroups } from '../web/src/nicklist-groups.js';
 import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
 
@@ -38,6 +39,7 @@ type NicklistRenderOptions = Partial<Pick<
   'contactNotificationSettings'
   | 'externalAvatarsEnabled'
   | 'friends'
+  | 'mediaPolicy'
   | 'mutedNicks'
   | 'nickEmojis'
 >>;
@@ -63,6 +65,7 @@ const renderNicklist = (
     contactNotificationSettings={options.contactNotificationSettings ?? { contacts: [] }}
     contactRuleHandlers={noopContactRuleHandlers}
     externalAvatarsEnabled={options.externalAvatarsEnabled ?? false}
+    mediaPolicy={options.mediaPolicy}
     onSaveNickEmoji={async () => true}
     onSelectNick={() => undefined}
   />
@@ -158,6 +161,20 @@ test('nicklist renders IRCCloud avatars only when external avatars are enabled',
 
   assert.doesNotMatch(disabledMarkup, /avatar-redirect/);
   assert.match(enabledMarkup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+});
+
+test('nicklist hides user avatars when media is hidden', () => {
+  const channel = makeChannel([
+    makeUser('alice', 'normal', false, { username: 'uid7' }),
+  ]);
+  const markup = renderNicklist(channel, {
+    externalAvatarsEnabled: true,
+    mediaPolicy: resolveMediaVisibilityPolicy({ mode: 'hide-media' }),
+  });
+
+  assert.doesNotMatch(markup, /avatar-redirect/);
+  assert.doesNotMatch(markup, /font-medium leading-none">a</);
+  assert.match(markup, /alice/);
 });
 
 test('nicklist reserves avatar slots for users without IRCCloud avatar identity', () => {

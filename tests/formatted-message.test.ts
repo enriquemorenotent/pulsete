@@ -231,6 +231,21 @@ test('can suppress inline previews when a parent renderer places them separately
   assert.doesNotMatch(html, /<img/);
 });
 
+test('can render inline image URLs as links when media previews are hidden', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Look https://cdn.example.com/cat.PNG?size=full',
+      inlineImageRendering: 'link',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /Look/);
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assert.match(html, />https:\/\/cdn\.example\.com\/cat\.PNG\?size=full</);
+  assert.doesNotMatch(html, /<img/);
+});
+
 test('renders raw mode with visible escape sequences instead of hidden control characters', () => {
   const html = renderToStaticMarkup(
     createElement(FormattedMessageText, {

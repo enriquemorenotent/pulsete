@@ -1,9 +1,13 @@
 import { memo, useId, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
-import { FormattedMessageText } from './FormattedMessageText.js';
+import {
+  FormattedMessageText,
+  type InlineImageRenderingMode,
+} from './FormattedMessageText.js';
 
 type ChatPaneTopicBarProps = {
+  inlineImageRendering?: InlineImageRenderingMode;
   topic: string;
   onOpenChannel: (channel: string) => void;
 };
@@ -35,6 +39,7 @@ export const ChatPaneTopicBar = memo(function ChatPaneTopicBar(props: ChatPaneTo
           {expanded || !expandable ? (
             <FormattedMessageText
               text={topic}
+              inlineImageRendering={props.inlineImageRendering}
               onOpenChannel={props.onOpenChannel}
               renderInlinePreviews={false}
             />
@@ -43,6 +48,7 @@ export const ChatPaneTopicBar = memo(function ChatPaneTopicBar(props: ChatPaneTo
               <span className="sm:hidden">
                 <FormattedMessageText
                   text={getTopicPreview(topic, compactTopicPreviewLength)}
+                  inlineImageRendering={props.inlineImageRendering}
                   onOpenChannel={props.onOpenChannel}
                   renderInlinePreviews={false}
                 />
@@ -50,6 +56,7 @@ export const ChatPaneTopicBar = memo(function ChatPaneTopicBar(props: ChatPaneTo
               <span className="hidden sm:inline">
                 <FormattedMessageText
                   text={getTopicPreview(topic, desktopTopicPreviewLength)}
+                  inlineImageRendering={props.inlineImageRendering}
                   onOpenChannel={props.onOpenChannel}
                   renderInlinePreviews={false}
                 />

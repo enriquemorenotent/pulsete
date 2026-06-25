@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FriendState } from '../shared/protocol-chat.js';
+import { resolveMediaVisibilityPolicy } from '../web/src/media-visibility-settings.js';
 import {
   makeSidebarBuffer,
   makeSidebarNetwork,
@@ -8,57 +9,10 @@ import {
   renderConnectionSidebar,
 } from './helpers/connection-sidebar-test-helpers.js';
 
-test('all-server sidebar layout remains the default rendering mode', () => {
+test('connection sidebar shows all servers but only the active server tabs', () => {
   const alpha = makeSidebarNetwork({ id: 'alpha', name: 'Alpha' });
   const beta = makeSidebarNetwork({ id: 'beta', name: 'Beta' });
   const markup = renderConnectionSidebar({
-    networks: [alpha, beta],
-    buffers: [
-      makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' }),
-      makeSidebarBuffer({
-        id: 'alpha-channel',
-        networkId: 'alpha',
-        kind: 'channel',
-        target: '#alpha',
-      }),
-      makeSidebarBuffer({ id: 'beta-server', networkId: 'beta' }),
-      makeSidebarBuffer({
-        id: 'beta-channel',
-        networkId: 'beta',
-        kind: 'channel',
-        target: '#beta',
-      }),
-    ],
-    selection: { kind: 'buffer', bufferId: 'alpha-server' },
-  });
-
-  assert.match(markup, /Connections<\/h2>/);
-  assert.match(markup, /aria-label="Open #alpha"/);
-  assert.match(markup, /aria-label="Open #beta"/);
-});
-
-test('all-server sidebar uses the default server row icon when a server image is set', () => {
-  const alpha = makeSidebarNetwork({
-    id: 'alpha',
-    name: 'Alpha',
-    iconUrl: 'https://example.test/alpha.png',
-  });
-  const markup = renderConnectionSidebar({
-    networks: [alpha],
-    buffers: [makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' })],
-    selection: { kind: 'buffer', bufferId: 'alpha-server' },
-  });
-
-  assert.match(markup, /aria-label="Open Alpha"/);
-  assert.match(markup, /lucide-server/);
-  assert.doesNotMatch(markup, /src="https:\/\/example.test\/alpha.png"/);
-});
-
-test('server rail shows all servers but only the active server tabs', () => {
-  const alpha = makeSidebarNetwork({ id: 'alpha', name: 'Alpha' });
-  const beta = makeSidebarNetwork({ id: 'beta', name: 'Beta' });
-  const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     networks: [alpha, beta],
     buffers: [
       makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' }),
@@ -96,10 +50,9 @@ test('server rail shows all servers but only the active server tabs', () => {
   assert.doesNotMatch(markup, /aria-label="Open #beta"/);
 });
 
-test('server rail puts server actions above the tab list', () => {
+test('connection sidebar puts server actions above the tab list', () => {
   const alpha = makeSidebarNetwork({ id: 'alpha', name: 'Alpha' });
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     networks: [alpha],
     networkStates: {
       alpha: makeSidebarRuntime({ phase: 'connected' }),
@@ -115,11 +68,10 @@ test('server rail puts server actions above the tab list', () => {
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
 });
 
-test('server rail aggregates hidden child unread activity on server buttons', () => {
+test('connection sidebar aggregates hidden child unread activity on server buttons', () => {
   const alpha = makeSidebarNetwork({ id: 'alpha', name: 'Alpha' });
   const beta = makeSidebarNetwork({ id: 'beta', name: 'Beta' });
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     networks: [alpha, beta],
     networkStates: {
       alpha: makeSidebarRuntime({ phase: 'connected' }),
@@ -145,13 +97,12 @@ test('server rail aggregates hidden child unread activity on server buttons', ()
   assert.doesNotMatch(markup, /aria-label="Open #hidden"/);
 });
 
-test('server rail keeps watchlist visible below active server tabs', () => {
+test('connection sidebar keeps watchlist visible below active server tabs', () => {
   const friend: FriendState = {
     id: 'friend-1',
     nick: 'Alice',
   };
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     friends: [friend],
     friendPresence: { [friend.id]: 'online' },
     networks: [makeSidebarNetwork({ id: 'alpha', name: 'Alpha' })],
@@ -164,9 +115,8 @@ test('server rail keeps watchlist visible below active server tabs', () => {
   assert.match(markup, /Alice/);
 });
 
-test('server rail renders assigned server images', () => {
+test('connection sidebar renders assigned server images when media is shown', () => {
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     networks: [
       makeSidebarNetwork({
         id: 'alpha',
@@ -184,9 +134,51 @@ test('server rail renders assigned server images', () => {
   assert.match(markup, /referrerPolicy="no-referrer"/);
 });
 
-test('server rail uses IRCCloud avatars when no server image is set', () => {
+test('connection sidebar uses the tree view and hides server images when media is hidden', () => {
+  const alpha = makeSidebarNetwork({
+    id: 'alpha',
+    name: 'Alpha',
+    iconUrl: 'https://example.test/alpha.png',
+  });
+  const beta = makeSidebarNetwork({
+    id: 'beta',
+    name: 'Beta',
+    iconUrl: 'https://example.test/beta.png',
+  });
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
+    mediaPolicy: resolveMediaVisibilityPolicy({ mode: 'hide-media' }),
+    networks: [alpha, beta],
+    buffers: [
+      makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' }),
+      makeSidebarBuffer({
+        id: 'alpha-channel',
+        networkId: 'alpha',
+        kind: 'channel',
+        target: '#alpha',
+      }),
+      makeSidebarBuffer({ id: 'beta-server', networkId: 'beta' }),
+      makeSidebarBuffer({
+        id: 'beta-channel',
+        networkId: 'beta',
+        kind: 'channel',
+        target: '#beta',
+      }),
+    ],
+    selection: { kind: 'buffer', bufferId: 'alpha-server' },
+  });
+
+  assert.match(markup, /Connections<\/h2>/);
+  assert.match(markup, /aria-label="Open Alpha"/);
+  assert.match(markup, /aria-label="Open #alpha"/);
+  assert.match(markup, /aria-label="Open #beta"/);
+  assert.match(markup, /ml-3 border-l border-white\/7 pl-2/);
+  assert.doesNotMatch(markup, /class="min-w-0 space-y-px w-full"/);
+  assert.doesNotMatch(markup, /src="https:\/\/example.test\/alpha.png"/);
+  assert.doesNotMatch(markup, /src="https:\/\/example.test\/beta.png"/);
+});
+
+test('connection sidebar uses IRCCloud avatars when no server image is set', () => {
+  const markup = renderConnectionSidebar({
     externalAvatarsEnabled: true,
     networks: [
       makeSidebarNetwork({
@@ -204,9 +196,8 @@ test('server rail uses IRCCloud avatars when no server image is set', () => {
   assert.match(markup, /class="[^"]*size-full[^"]*rounded-\[inherit\][^"]*"/);
 });
 
-test('server rail does not use IRCCloud avatars when external avatars are disabled', () => {
+test('connection sidebar does not use IRCCloud avatars when external avatars are disabled', () => {
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     externalAvatarsEnabled: false,
     networks: [
       makeSidebarNetwork({
@@ -223,7 +214,7 @@ test('server rail does not use IRCCloud avatars when external avatars are disabl
   assert.doesNotMatch(markup, /data-network-image-source="irccloud-fallback"/);
 });
 
-test('server rail shows connection state separately from unread activity', () => {
+test('connection sidebar shows connection state separately from unread activity', () => {
   const online = makeSidebarNetwork({
     id: 'online',
     name: 'Online',
@@ -240,7 +231,6 @@ test('server rail shows connection state separately from unread activity', () =>
     iconUrl: 'https://example.test/offline.png',
   });
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     networks: [online, connecting, offline],
     networkStates: {
       online: makeSidebarRuntime({ phase: 'connected' }),
@@ -267,14 +257,13 @@ test('server rail shows connection state separately from unread activity', () =>
   assert.match(markup, /aria-label="Open Offline \(unread\)"/);
 });
 
-test('server rail applies connection image state to the active banner', () => {
+test('connection sidebar applies connection image state to the active banner', () => {
   const offline = makeSidebarNetwork({
     id: 'offline',
     name: 'Offline',
     iconUrl: 'https://example.test/offline.png',
   });
   const markup = renderConnectionSidebar({
-    navigationLayoutMode: 'server-rail',
     networks: [offline],
     networkStates: {
       offline: makeSidebarRuntime({ phase: 'offline' }),

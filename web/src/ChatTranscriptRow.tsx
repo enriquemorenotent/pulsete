@@ -7,10 +7,12 @@ import type { ChatTranscriptRow as TranscriptRow } from './transcript/model.js';
 import { ChatTranscriptMessageRow } from './ChatTranscriptMessageRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 
 type ChatTranscriptRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   expandedMutedGroupKeys: ReadonlySet<string>;
+  inlineImageRendering?: InlineImageRenderingMode;
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
@@ -37,6 +39,7 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
         row={props.row}
         channelUserModesByNick={props.channelUserModesByNick}
         expanded={props.expandedMutedGroupKeys.has(props.row.key)}
+        inlineImageRendering={props.inlineImageRendering}
         nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
         listKind={props.listKind}
         mode={props.mode}
@@ -53,6 +56,7 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
     return (
       <ChatPaneServerMessageGroupRow
         row={props.row}
+        inlineImageRendering={props.inlineImageRendering}
         mode={props.mode}
         onInlinePreviewLoad={props.onInlinePreviewLoad}
         onOpenChannel={props.onOpenChannel}
@@ -66,6 +70,7 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
       channelUserModesByNick={props.channelUserModesByNick}
       nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
       listKind={props.listKind}
+      inlineImageRendering={props.inlineImageRendering}
       mode={props.mode}
       onInlinePreviewLoad={props.onInlinePreviewLoad}
       onOpenChannel={props.onOpenChannel}

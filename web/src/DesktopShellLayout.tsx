@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { FolderSearch, PanelLeft, Search } from 'lucide-react';
+import { FolderSearch, Image as ImageIcon, ImageOff, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
@@ -104,7 +104,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
     props.selectedBufferId,
   ]);
 
-  const showingServerRail = props.header.navigationLayoutMode === 'server-rail';
+  const showingMedia = props.header.mediaVisibilityMode === 'show-media';
   return (
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(87,128,208,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] text-foreground">
       <header className="relative z-30 flex shrink-0 flex-wrap items-center gap-3 border-b border-white/6 bg-background/80 px-4 py-3 backdrop-blur-xl">
@@ -130,12 +130,12 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           <Button
             variant="ghost"
             size="sm"
-            aria-label={showingServerRail ? 'Switch to all servers layout' : 'Switch to server rail layout'}
-            title={showingServerRail ? 'All servers layout' : 'Server rail layout'}
-            onClick={props.header.onToggleNavigationLayoutMode}
+            aria-label={showingMedia ? 'Hide media' : 'Show media'}
+            title={showingMedia ? 'Hide media' : 'Show media'}
+            onClick={props.header.onToggleMediaVisibilityMode}
           >
-            <PanelLeft />
-            {showingServerRail ? 'Classic' : 'Rail'}
+            {showingMedia ? <ImageOff /> : <ImageIcon />}
+            {showingMedia ? 'Hide media' : 'Show media'}
           </Button>
           <DesktopShellToolsMenu
             onOpenNetworkManager={props.header.onOpenNetworkManager}

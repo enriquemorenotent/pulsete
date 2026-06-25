@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
-import type { NavigationLayoutSettingsController } from './navigation-layout-settings.js';
+import type { MediaVisibilitySettingsController } from './media-visibility-settings.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol-chat.js';
@@ -12,8 +12,8 @@ type PreferencesControllerParams = {
     'exportBackup' | 'importBackup' | 'removeMutedNick'
   >;
   contactNotifications: ContactNotificationsController;
+  mediaVisibilitySettings: MediaVisibilitySettingsController;
   mutedNicks: MutedNickState[];
-  navigationLayoutSettings: NavigationLayoutSettingsController;
   networks: NetworkProfile[];
   userAvatarSettings: UserAvatarSettingsController;
   ui: Pick<AppUiState, 'closePreferences' | 'openPreferences' | 'preferencesOpen'>;
@@ -22,8 +22,8 @@ type PreferencesControllerParams = {
 export function usePreferencesController({
   actions,
   contactNotifications,
+  mediaVisibilitySettings,
   mutedNicks,
-  navigationLayoutSettings,
   networks,
   userAvatarSettings,
   ui,
@@ -31,7 +31,7 @@ export function usePreferencesController({
   return useMemo(() => ({
     open: ui.preferencesOpen,
     contactNotifications: contactNotifications.settings,
-    navigationLayoutSettings: navigationLayoutSettings.settings,
+    mediaVisibilitySettings: mediaVisibilitySettings.settings,
     userAvatarSettings: userAvatarSettings.settings,
     mutedNicks,
     networks,
@@ -50,7 +50,7 @@ export function usePreferencesController({
     onRemoveContactNotificationChannel: contactNotifications.removeChannel,
     onRemoveContactNotificationContact: contactNotifications.removeContact,
     onRemoveMutedNick: actions.removeMutedNick,
-    onSetNavigationLayoutMode: navigationLayoutSettings.setMode,
+    onSetMediaVisibilityMode: mediaVisibilitySettings.setMode,
     onSetExternalAvatarsEnabled: userAvatarSettings.setExternalAvatarsEnabled,
     onExportBackup: actions.exportBackup,
     onImportBackup: actions.importBackup,
@@ -68,9 +68,9 @@ export function usePreferencesController({
     contactNotifications.requestSystemPermission,
     contactNotifications.prime,
     contactNotifications.preview,
+    mediaVisibilitySettings.settings,
+    mediaVisibilitySettings.setMode,
     mutedNicks,
-    navigationLayoutSettings.settings,
-    navigationLayoutSettings.setMode,
     networks,
     userAvatarSettings.settings,
     userAvatarSettings.setExternalAvatarsEnabled,

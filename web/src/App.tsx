@@ -11,7 +11,10 @@ import { AppStoreProvider, createAppStore, useAppSelector } from './app-store.js
 import { createComposerStore } from './composer-store.js';
 import { useContactNotifications } from './contact-notifications/controller.js';
 import { DesktopShell } from './DesktopShell.js';
-import { useNavigationLayoutSettings } from './navigation-layout-settings.js';
+import {
+  resolveMediaVisibilityPolicy,
+  useMediaVisibilitySettings,
+} from './media-visibility-settings.js';
 import { ToastContainer } from './ToastContainer.js';
 import { useUserAvatarSettings } from './user-avatars/settings.js';
 import { createLiveAppActions } from './useAppActions.js';
@@ -76,7 +79,7 @@ function App() {
 
 type AppBodyProps = Omit<
   Parameters<typeof DesktopShell>[0],
-  'contactNotifications' | 'navigationLayoutSettings' | 'userAvatarSettings'
+  'contactNotifications' | 'mediaVisibilitySettings' | 'userAvatarSettings'
 >;
 
 function AppBody(props: AppBodyProps) {
@@ -85,14 +88,19 @@ function AppBody(props: AppBodyProps) {
   const messagesByConversation = useAppSelector(selectMessagesByConversation);
   const networkNamesById = useAppSelector(selectNetworkNamesById);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
+  const mediaVisibilitySettings = useMediaVisibilitySettings();
+  const mediaPolicy = useMemo(
+    () => resolveMediaVisibilityPolicy(mediaVisibilitySettings.settings),
+    [mediaVisibilitySettings.settings],
+  );
   const contactNotifications = useContactNotifications({
     buffers,
+    systemNotificationIconsEnabled: mediaPolicy.showNotificationIcons,
     messagesByConversation,
     networkNamesById,
     onSelectBuffer: props.actions.selectTabBuffer,
     selectedBufferId,
   });
-  const navigationLayoutSettings = useNavigationLayoutSettings();
   const userAvatarSettings = useUserAvatarSettings();
 
   if (phase === 'loading') {
@@ -108,7 +116,7 @@ function AppBody(props: AppBodyProps) {
       <DesktopShell
         {...props}
         contactNotifications={contactNotifications}
-        navigationLayoutSettings={navigationLayoutSettings}
+        mediaVisibilitySettings={mediaVisibilitySettings}
         userAvatarSettings={userAvatarSettings}
       />
       <ToastContainer />

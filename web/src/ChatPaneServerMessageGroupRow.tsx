@@ -5,6 +5,7 @@ import {
   FormattedMessageInlinePreviews,
   FormattedMessageText,
   hasVisibleFormattedMessageText,
+  type InlineImageRenderingMode,
   parseFormattedMessageContent,
 } from './FormattedMessageText.js';
 import {
@@ -21,6 +22,7 @@ import type {
 } from './transcript/model.js';
 
 type ChatPaneServerMessageGroupRowProps = {
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
@@ -48,6 +50,7 @@ export function ChatPaneServerMessageGroupRow(props: ChatPaneServerMessageGroupR
         {props.row.messageRows.map((messageRow) => (
           <ServerMessageGroupLine
             key={messageRow.key}
+            inlineImageRendering={props.inlineImageRendering}
             mode={props.mode}
             onInlinePreviewLoad={props.onInlinePreviewLoad}
             onOpenChannel={props.onOpenChannel}
@@ -60,6 +63,7 @@ export function ChatPaneServerMessageGroupRow(props: ChatPaneServerMessageGroupR
 }
 
 function ServerMessageGroupLine(props: {
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
@@ -71,7 +75,10 @@ function ServerMessageGroupLine(props: {
     () => parseFormattedMessageContent(displayText, props.mode),
     [displayText, props.mode],
   );
-  const hasVisibleText = hasVisibleFormattedMessageText(parsedContent);
+  const inlineImageRendering = props.inlineImageRendering ?? 'preview';
+  const hasVisibleText = hasVisibleFormattedMessageText(parsedContent, {
+    inlineImageRendering,
+  });
 
   return (
     <div
@@ -84,6 +91,7 @@ function ServerMessageGroupLine(props: {
           <p className={cn('min-w-0 break-words text-[13px] leading-5', messageTone(message))}>
             <FormattedMessageText
               text={displayText}
+              inlineImageRendering={inlineImageRendering === 'link' ? 'link' : 'hidden'}
               mode={props.mode}
               onInlinePreviewLoad={props.onInlinePreviewLoad}
               onOpenChannel={props.onOpenChannel}
@@ -92,10 +100,12 @@ function ServerMessageGroupLine(props: {
             />
           </p>
         ) : null}
-        <FormattedMessageInlinePreviews
-          hrefs={parsedContent.inlineImageHrefs}
-          onInlinePreviewLoad={props.onInlinePreviewLoad}
-        />
+        {inlineImageRendering === 'preview' ? (
+          <FormattedMessageInlinePreviews
+            hrefs={parsedContent.inlineImageHrefs}
+            onInlinePreviewLoad={props.onInlinePreviewLoad}
+          />
+        ) : null}
       </div>
     </div>
   );

@@ -19,6 +19,11 @@ import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
+import type { InlineImageRenderingMode } from './FormattedMessageText.js';
+import {
+  defaultMediaVisibilityPolicy,
+  type MediaVisibilityPolicy,
+} from './media-visibility-settings.js';
 import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
 import type { WorkspaceView } from './workspace.js';
@@ -41,6 +46,7 @@ export type ChatPaneProps = {
   onRecallNewerDraft: () => void;
   onSend: () => Promise<boolean>;
   contactRuleHandlers: ContactRuleHandlers;
+  mediaPolicy?: MediaVisibilityPolicy;
   selectedQueryContactRule?: ContactRuleState | null;
   selectedChannelNotificationsEnabled?: boolean;
   onToggleSelectedChannelNotifications?: () => void;
@@ -89,6 +95,9 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     ? props.workspace.selectedBuffer
     : null;
   const composerTarget = resolveChatPaneComposerTarget(props.workspace);
+  const mediaPolicy = props.mediaPolicy ?? defaultMediaVisibilityPolicy;
+  const inlineImageRendering: InlineImageRenderingMode =
+    mediaPolicy.showChatImagePreviews ? 'preview' : 'link';
   const handleSend = useCallback(async () => {
     const submitted = await props.onSend();
     if (submitted) {
@@ -135,6 +144,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onCloseChannel={props.onCloseChannel}
         onCloseBuffer={props.onCloseBuffer}
         onOpenChannelList={props.onOpenChannelList}
+        inlineImageRendering={inlineImageRendering}
+        userAvatarsVisible={mediaPolicy.showUserAvatars}
       />
       <ChatPaneStatusBanner
         workspace={props.workspace}
@@ -152,6 +163,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         mutedNicks={props.mutedNicks}
         emptyBody={props.workspace.emptyBody}
         mode={defaultMessageDisplayMode}
+        inlineImageRendering={inlineImageRendering}
         listKind={isServerBuffer ? 'server' : 'chat'}
         canLoadOlderHistory={props.canLoadOlderHistory}
         initialHistoryPending={props.initialHistoryPending}
@@ -189,6 +201,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         open={historySearchOpen && Boolean(searchableBuffer && props.onSearchHistory)}
         buffer={searchableBuffer}
         mode={defaultMessageDisplayMode}
+        inlineImageRendering={inlineImageRendering}
         onOpenChange={setHistorySearchOpen}
         onOpenChannel={props.onOpenMentionedChannel}
         onSearch={props.onSearchHistory}

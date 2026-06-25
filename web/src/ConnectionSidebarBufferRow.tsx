@@ -19,6 +19,7 @@ type ConnectionSidebarBufferRowProps = {
 	selected: boolean;
 	icon: ComponentType<{ className?: string }>;
 	presence: BufferPresenceDisplay | null;
+	userAvatarsVisible?: boolean;
 	emoji?: string | null;
 	onSelect: () => void;
 	onClose: () => void;
@@ -39,6 +40,8 @@ export function ConnectionSidebarBufferRow(
 		allowNickFallback: true,
 		legacyBufferId: props.buffer.id,
 	});
+	const visibleCustomAvatarUrl =
+		props.userAvatarsVisible === false ? null : customAvatarUrl;
 
 	return (
 		<div
@@ -57,10 +60,10 @@ export function ConnectionSidebarBufferRow(
 				)}
 			>
 				<span className="relative flex size-4 shrink-0 items-center justify-center">
-					{customAvatarUrl ? (
+					{visibleCustomAvatarUrl ? (
 						<UserAvatar
 							className="size-4"
-							customAvatarUrl={customAvatarUrl}
+							customAvatarUrl={visibleCustomAvatarUrl}
 							enabled={false}
 							user={{
 								account: null,

@@ -7,12 +7,16 @@ import {
   formatMessageTimestampTitle,
   messageTone,
 } from './chat-pane-message-utils.js';
-import { FormattedMessageText } from './FormattedMessageText.js';
+import {
+  FormattedMessageText,
+  type InlineImageRenderingMode,
+} from './FormattedMessageText.js';
 import type { HistorySearchState } from './HistorySearchDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
 export function HistorySearchResults(props: {
   expandedMessageId: string | null;
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   searchState: HistorySearchState;
   renderResultMeta?: (message: ChatMessage) => ReactNode;
@@ -38,6 +42,7 @@ export function HistorySearchResults(props: {
         <HistorySearchResultRow
           key={result.message.id}
           expanded={props.expandedMessageId === result.message.id}
+          inlineImageRendering={props.inlineImageRendering}
           mode={props.mode}
           result={result}
           resultMeta={props.renderResultMeta?.(result.message)}
@@ -56,6 +61,7 @@ export function HistorySearchResults(props: {
 
 function HistorySearchResultRow(props: {
   expanded: boolean;
+  inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
   result: BufferHistorySearchResult;
   resultMeta?: ReactNode;
@@ -76,6 +82,7 @@ function HistorySearchResultRow(props: {
         <MessageTimestamp message={props.result.message} />
         <MessageSummary
           meta={props.resultMeta}
+          inlineImageRendering={props.inlineImageRendering}
           message={props.result.message}
           mode={props.mode}
           onOpenChannel={props.onOpenChannel}
@@ -87,6 +94,7 @@ function HistorySearchResultRow(props: {
             <HistorySearchContextLine
               key={message.id}
               active={message.id === props.result.message.id}
+              inlineImageRendering={props.inlineImageRendering}
               message={message}
               mode={props.mode}
               onOpenChannel={props.onOpenChannel}
@@ -100,6 +108,7 @@ function HistorySearchResultRow(props: {
 
 function HistorySearchContextLine(props: {
   active: boolean;
+  inlineImageRendering?: InlineImageRenderingMode;
   message: ChatMessage;
   mode: MessageDisplayMode;
   onOpenChannel: (channel: string) => void;
@@ -116,6 +125,7 @@ function HistorySearchContextLine(props: {
       <MessageTimestamp message={props.message} />
       <MessageSummary
         message={props.message}
+        inlineImageRendering={props.inlineImageRendering}
         mode={props.mode}
         onOpenChannel={props.onOpenChannel}
       />
@@ -125,6 +135,7 @@ function HistorySearchContextLine(props: {
 
 function MessageSummary(props: {
   meta?: ReactNode;
+  inlineImageRendering?: InlineImageRenderingMode;
   message: ChatMessage;
   mode: MessageDisplayMode;
   onOpenChannel: (channel: string) => void;
@@ -141,6 +152,7 @@ function MessageSummary(props: {
       <span className="text-foreground">
         <FormattedMessageText
           text={props.message.body}
+          inlineImageRendering={props.inlineImageRendering}
           mode={props.mode}
           renderInlinePreviews={false}
           onOpenChannel={props.onOpenChannel}

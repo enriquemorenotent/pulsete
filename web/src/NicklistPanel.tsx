@@ -20,6 +20,7 @@ import {
   InspectorPanel,
   InspectorSection,
 } from './RightSidebarInspector.js';
+import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { resolveUserAvatarTarget } from './user-avatars/override-model.js';
 import { UserAvatar } from './user-avatars/UserAvatar.js';
 
@@ -32,6 +33,7 @@ type NicklistPanelProps = {
   contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
+  mediaPolicy?: MediaVisibilityPolicy;
   onSaveNickEmoji: (
     networkId: string,
     nick: string,
@@ -52,6 +54,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
     () => buildNicklistGroups(props.channel.users, props.friends, deferredQuery),
     [deferredQuery, props.channel.users, props.friends],
   );
+  const userAvatarsVisible = props.mediaPolicy?.showUserAvatars !== false;
 
   useEffect(() => {
     setQuery('');
@@ -125,12 +128,14 @@ export function NicklistPanel(props: NicklistPanelProps) {
                               className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-2 py-1.5 text-left text-[13px] text-foreground"
                               onClick={() => props.network && props.onSelectNick(props.network, user.nick, user.identity)}
                             >
-                              <UserAvatar
-                                customAvatarTarget={avatarTarget}
-                                enabled={props.externalAvatarsEnabled}
-                                placeholder="initial"
-                                user={user}
-                              />
+                              {userAvatarsVisible ? (
+                                <UserAvatar
+                                  customAvatarTarget={avatarTarget}
+                                  enabled={props.externalAvatarsEnabled}
+                                  placeholder="initial"
+                                  user={user}
+                                />
+                              ) : null}
                               <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
                               {userNickEmoji?.emoji ? (
                                 <span aria-hidden className="shrink-0 leading-none">
