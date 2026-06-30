@@ -26,8 +26,11 @@ export const resetRuntimeSessionState = (connection: IrcLifecycleContext) => {
   connection.lifecycle.capabilities.offered.clear();
   connection.lifecycle.capabilities.negotiated.clear();
   connection.lifecycle.capabilities.pendingRequest.clear();
+  connection.lifecycle.capabilities.values.clear();
   connection.lifecycle.capabilities.batchLabelById.clear();
   connection.lifecycle.capabilities.nextLabelId = 0;
+  connection.history.batchTargetById.clear();
+  connection.history.pendingTargets.clear();
   connection.lifecycle.accountName = null;
   connection.lifecycle.pendingNickservAutoJoinTarget = null;
   clearChannelSessions(connection);

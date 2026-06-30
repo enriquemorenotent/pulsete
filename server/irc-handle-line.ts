@@ -1,4 +1,4 @@
-import { emitSendFailure, emitStatus } from './irc-emit.js';
+import { emitSendFailure, emitState, emitStatus } from './irc-emit.js';
 import { formatPingReply, isSelfNick } from './irc-handle-line-helpers.js';
 import {
   handleAccount,
@@ -19,6 +19,7 @@ import { handleMode } from './irc-handle-line-mode.js';
 import { handleTextMessage } from './irc-handle-line-messages.js';
 import { handleRegistrationLine } from './irc-handle-line-registration.js';
 import { hasNegotiatedCapability } from './irc-capabilities.js';
+import { recordChatHistoryBatchEnd, recordChatHistoryBatchStart, recordChatHistoryIsupport } from './irc-history.js';
 import { formatServerNumeric, getServerNumericStatusKind } from './irc-server-log.js';
 import { formatStandardReply, getStandardReplyStatusKind, isStandardReplyCommand } from './irc-standard-replies.js';
 import { nickFromPrefix, parseLine } from './irc-parser.js';
@@ -143,6 +144,9 @@ const handleNumericReply = (
   isonReplyContext: ReturnType<IrcConnectionState['consumeReplyContext']>,
   replyLabel: string | null
 ) => {
+  if (command === '005' && recordChatHistoryIsupport(connection, params)) {
+    emitState(connection);
+  }
   const replyContext = isonReplyContext && 'sourceTarget' in isonReplyContext
     ? isonReplyContext
     : connection.consumeReplyContext(command, params, nick, undefined, replyLabel);
@@ -212,12 +216,16 @@ const handleBatchCommand = (
     return false;
   }
   if (isStart) {
+    if ((params[1] ?? '') === 'chathistory' && params[2]) {
+      recordChatHistoryBatchStart(connection, batchId, params[2]);
+    }
     if ((params[1] ?? '') === 'labeled-response' && label) {
       connection.lifecycle.capabilities.batchLabelById.set(batchId, label);
     }
     return true;
   }
   if (isEnd) {
+    recordChatHistoryBatchEnd(connection, batchId);
     connection.lifecycle.capabilities.batchLabelById.delete(batchId);
     return true;
   }

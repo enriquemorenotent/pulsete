@@ -51,6 +51,7 @@ export const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =
     networkId,
     target,
     nick: overrides.nick ?? 'alice',
+    ...(overrides.delivery ? { delivery: overrides.delivery } : {}),
     body: overrides.body ?? 'hello',
     kind: overrides.kind ?? 'line',
     self: overrides.self ?? false,

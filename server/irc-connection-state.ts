@@ -6,6 +6,7 @@ import type {
   IrcChannelListState,
   IrcChannelTrackingState,
   IrcFriendPresenceState,
+  IrcHistoryState,
   IrcLifecycleState,
 } from './irc-state-types.js';
 import type { Handlers, IrcConnectionData } from './irc-types.js';
@@ -50,6 +51,7 @@ export const createIrcConnectionState = (
       offered: new Set<string>(),
       negotiated: new Set<string>(),
       pendingRequest: new Set<string>(),
+      values: new Map<string, string>(),
       batchLabelById: new Map<string, string>(),
       nextLabelId: 0,
     },
@@ -76,6 +78,10 @@ export const createIrcConnectionState = (
     activeTransport: null,
     registeredMonitorNicks: new Map<string, string>(),
   };
+  const history: IrcHistoryState = {
+    batchTargetById: new Map<string, string>(),
+    pendingTargets: new Set<string>(),
+  };
   const channelList: IrcChannelListState = {
     session: { phase: 'idle' },
     timeoutTimer: null,
@@ -88,6 +94,7 @@ export const createIrcConnectionState = (
     handlers,
     lifecycle,
     channels,
+    history,
     friendPresence,
     channelList,
     replyTracker: new ReplyTracker(),

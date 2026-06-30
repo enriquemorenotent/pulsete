@@ -126,6 +126,11 @@ export const messageTone = (message: ChatMessage) => {
   return 'text-[var(--transcript-message)]';
 };
 
+export const messageDeliveryTone = (message: ChatMessage) =>
+  message.delivery === 'server-history'
+    ? 'bg-cyan-400/[0.045] shadow-[inset_2px_0_0_rgb(103_232_249_/_0.28)]'
+    : null;
+
 const padDatePart = (value: number) => String(value).padStart(2, '0');
 
 const monthNames = [
@@ -166,30 +171,6 @@ const isDefaultLifecycleReason = (reason: string, kind: ChatMessage['kind']) => 
     (kind === 'part' && (normalizedReason === 'left' || normalizedReason === 'kicked'))
     || (kind === 'quit' && normalizedReason === 'quit')
   );
-};
-
-const resolveTimestampGroupKey = (
-  message: ChatMessage,
-  listKind: 'chat' | 'server',
-) => {
-  const senderKey = resolveTimestampGroupSenderKey(message, listKind);
-  if (!senderKey) {
-    return null;
-  }
-  return `${senderKey}:${Math.floor(message.ts / 60_000)}`;
-};
-
-const resolveTimestampGroupSenderKey = (
-  message: ChatMessage,
-  listKind: 'chat' | 'server',
-) => {
-  if (listKind === 'server') {
-    return getServerMessageSourceLabel(message);
-  }
-  if (!isCompactMessage(message)) {
-    return null;
-  }
-  return message.nick ?? null;
 };
 
 const getLocalDayKey = (value: number) => {

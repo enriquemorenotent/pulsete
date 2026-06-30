@@ -1,6 +1,7 @@
 import { resolveNetworkAuthMethod } from '../shared/network-model.js';
 import type { NetworkRuntimeCapabilities } from '../shared/protocol-chat.js';
 import type { RuntimeNetworkProfile } from './storage-types.js';
+import { shouldRequestBatchCapability } from './irc-history.js';
 import type { IrcCapabilityState } from './irc-state-types.js';
 
 const passiveCapabilityNames = [
@@ -19,9 +20,15 @@ const passiveCapabilityNames = [
   'userhost-in-names',
 ] as const;
 
-type SupportedCapabilityName = (typeof passiveCapabilityNames)[number] | 'batch' | 'labeled-response' | 'sasl';
+type SupportedCapabilityName =
+  | (typeof passiveCapabilityNames)[number]
+  | 'batch'
+  | 'chathistory'
+  | 'draft/chathistory'
+  | 'labeled-response'
+  | 'sasl';
 
-type CapabilityOfferTarget = Pick<IrcCapabilityState, 'offered'> | Set<string>;
+type CapabilityOfferTarget = Pick<IrcCapabilityState, 'offered' | 'values'> | Set<string>;
 
 export const parseCapabilityTokens = (value: string | undefined) =>
   (value ?? '')
@@ -32,12 +39,21 @@ export const parseCapabilityTokens = (value: string | undefined) =>
 export const normalizeCapabilityName = (token: string) =>
   token.replace(/^-/, '').split('=', 1)[0]?.trim().toLowerCase() ?? '';
 
+const parseCapabilityValue = (token: string) => {
+  const separatorIndex = token.indexOf('=');
+  return separatorIndex === -1 ? null : token.slice(separatorIndex + 1).trim();
+};
+
 export const recordAdvertisedCapabilities = (target: CapabilityOfferTarget, tokens: readonly string[]) => {
   const offered = target instanceof Set ? target : target.offered;
   for (const token of tokens) {
     const name = normalizeCapabilityName(token);
     if (name) {
       offered.add(name);
+      const value = parseCapabilityValue(token);
+      if (!(target instanceof Set) && value !== null) {
+        target.values.set(name, value);
+      }
     }
   }
 };
@@ -52,8 +68,15 @@ export const resolveRequestedCapabilities = (
       requested.add(capability);
     }
   }
-  if (offered.has('labeled-response') && offered.has('batch')) {
+  if (offered.has('batch') && offered.has('draft/chathistory')) {
+    requested.add('draft/chathistory');
+  } else if (offered.has('batch') && offered.has('chathistory')) {
+    requested.add('chathistory');
+  }
+  if (shouldRequestBatchCapability(offered, requested)) {
     requested.add('batch');
+  }
+  if (offered.has('labeled-response') && requested.has('batch')) {
     requested.add('labeled-response');
   }
   if (usesSaslPlain(profile) && offered.has('sasl')) {
@@ -75,8 +98,13 @@ export const applyAcknowledgedCapabilities = (
     state.pendingRequest.delete(name);
     if (removed) {
       state.negotiated.delete(name);
+      state.values.delete(name);
     } else {
       state.negotiated.add(name);
+      const value = parseCapabilityValue(token);
+      if (value !== null) {
+        state.values.set(name, value);
+      }
     }
   }
 };
@@ -90,12 +118,23 @@ export const hasNegotiatedCapability = (
 ) => state.negotiated.has(capability);
 
 export const snapshotIrcCapabilities = (
-  state: Pick<IrcCapabilityState, 'negotiated' | 'offered' | 'pendingRequest'>,
-): NetworkRuntimeCapabilities => ({
-  offered: listSortedCapabilityNames(state.offered),
-  negotiated: listSortedCapabilityNames(state.negotiated),
-  pending: listSortedCapabilityNames(state.pendingRequest),
-});
+  state: Pick<IrcCapabilityState, 'negotiated' | 'offered' | 'pendingRequest'> & {
+    values?: ReadonlyMap<string, string>;
+  },
+): NetworkRuntimeCapabilities => {
+  const values = state.values ? listCapabilityValues(state.values) : {};
+  return {
+    offered: listSortedCapabilityNames(state.offered),
+    negotiated: listSortedCapabilityNames(state.negotiated),
+    pending: listSortedCapabilityNames(state.pendingRequest),
+    ...(Object.keys(values).length > 0 ? { values } : {}),
+  };
+};
 
 const listSortedCapabilityNames = (capabilities: ReadonlySet<string>) =>
   Array.from(capabilities).sort((left, right) => left.localeCompare(right));
+
+const listCapabilityValues = (values: ReadonlyMap<string, string>) =>
+  Object.fromEntries(
+    Array.from(values.entries()).sort(([left], [right]) => left.localeCompare(right))
+  );

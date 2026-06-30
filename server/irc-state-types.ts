@@ -36,8 +36,14 @@ export type IrcCapabilityState = {
   offered: Set<string>;
   negotiated: Set<string>;
   pendingRequest: Set<string>;
+  values: Map<string, string>;
   batchLabelById: Map<string, string>;
   nextLabelId: number;
+};
+
+export type IrcHistoryState = {
+  batchTargetById: Map<string, string>;
+  pendingTargets: Set<string>;
 };
 
 export type IrcHeartbeatState = {

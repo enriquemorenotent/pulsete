@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { BufferState, ChannelState } from '../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
-import { badRequest, notFound } from './app-error.js';
+import { badRequest } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
+import { getRequiredBuffer } from './runtime-conversation-store-helpers.js';
 import type { RuntimeConversationStore } from './runtime-store-ports.js';
 import type { MessageInput } from './storage-types.js';
 
@@ -106,6 +107,15 @@ export const appendConversationMessage = (
     allowCreateBuffer?: boolean;
   },
 ) => {
+  const existing = input.message.historical ? store.getMessageById(input.message.id) : null;
+  if (existing) {
+    return {
+      saved: existing,
+      bufferUpdate: null,
+      removedBufferIds: [],
+      retargetedFrom: null,
+    };
+  }
   const resolvedBuffer = resolveMessageBuffer(store, input);
   return {
     saved: store.appendMessage(input.message, resolvedBuffer?.buffer.id),
@@ -225,14 +235,6 @@ const applyQueryAvatarId = (
       ircCloudAvatarId: message.ircCloudAvatarId,
     }),
   };
-};
-
-const getRequiredBuffer = (store: RuntimeConversationStore, bufferId: string) => {
-  const buffer = store.getBuffer(bufferId);
-  if (!buffer) {
-    throw notFound('Buffer not found');
-  }
-  return buffer;
 };
 
 const toBufferResolution = (buffer: BufferState): BufferResolution => ({

@@ -67,6 +67,7 @@ export type RuntimeConversationStore = {
   listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
   searchMessages(query: string, limit: number, filters?: MessageSearchFilters): MessageSearchPage;
   searchMessagesByBufferId(bufferId: string, query: string, limit: number): MessageSearchPage;
+  getMessageById(messageId: string): AppSnapshot['messages'][number] | null;
   getMessageWindow(messageId: string, before: number, after: number): AppSnapshot['messages'];
   deleteMessages(networkId: string, target: string): AppSnapshot['messages'];
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];

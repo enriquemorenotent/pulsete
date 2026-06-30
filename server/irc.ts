@@ -9,6 +9,7 @@ import type {
   IrcChannelListState,
   IrcChannelTrackingState,
   IrcFriendPresenceState,
+  IrcHistoryState,
   IrcLifecycleState,
   IrcReplyTracker,
   IrcSocket,
@@ -24,6 +25,7 @@ export class IrcConnection implements IrcConnectionState {
   readonly handlers: Handlers;
   readonly lifecycle: IrcLifecycleState;
   readonly channels: IrcChannelTrackingState;
+  readonly history: IrcHistoryState;
   readonly friendPresence: IrcFriendPresenceState;
   readonly channelList: IrcChannelListState;
   readonly replyTracker: IrcReplyTracker;
@@ -35,6 +37,7 @@ export class IrcConnection implements IrcConnectionState {
     this.handlers = state.handlers;
     this.lifecycle = state.lifecycle;
     this.channels = state.channels;
+    this.history = state.history;
     this.friendPresence = state.friendPresence;
     this.channelList = state.channelList;
     this.replyTracker = state.replyTracker;

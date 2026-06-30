@@ -5,8 +5,10 @@ import {
   updateChannelUserAway,
   upsertChannelUser,
 } from '../shared/channel-users.js';
+import { normalizeAccountName, parseWhoRealname } from './irc-channel-line-details.js';
 import { isSameIrcIdentifier, parseChannelUserToken, parsePrefixIdentity } from './irc-parser.js';
 import { createMessage, isSelfNick } from './irc-handle-line-helpers.js';
+import { requestLatestChatHistory } from './irc-history.js';
 import type { IrcChannelEventContext } from './irc-contexts.js';
 export {
   handleAccount,
@@ -53,6 +55,9 @@ export const handleJoin = (connection: IrcChannelEventContext, params: string[],
   emitChannel(connection, channel, { users });
   if (selfJoin && pendingSession) {
     connection.setChannelSession(channel, 'joined', { sourceTarget: pendingSession.sourceTarget });
+  }
+  if (selfJoin) {
+    requestLatestChatHistory(connection, channel);
   }
 };
 
@@ -240,11 +245,3 @@ export const handleWhoNumeric = (connection: IrcChannelEventContext, params: str
   connection.setTrackedChannelUsers(channel, users);
   emitChannel(connection, channel, { users });
 };
-
-const normalizeAccountName = (value: string | null) => {
-  const account = value?.trim();
-  return account && account !== '*' ? account : null;
-};
-
-const parseWhoRealname = (value: string | null) =>
-  value?.replace(/^\d+\s+/, '').trim() || null;

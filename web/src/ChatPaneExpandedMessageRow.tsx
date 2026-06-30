@@ -9,6 +9,7 @@ import {
   formatMessageTimestampDateTime,
   formatMessageTimestampTitle,
   isActionMessage,
+  messageDeliveryTone,
   messageTone,
 } from './chat-pane-message-utils.js';
 import type { ChatMessage } from '../../shared/protocol-chat.js';
@@ -26,7 +27,8 @@ export const ChatPaneExpandedMessageRow = (props: {
   participant: MessageParticipantPresentation;
 }) => (
   <article
-    className={cn('px-1 py-0.5', messageTone(props.message))}
+    className={cn('px-1 py-0.5', messageTone(props.message), messageDeliveryTone(props.message))}
+    data-message-delivery={props.message.delivery === 'server-history' ? props.message.delivery : undefined}
     data-message-id={props.message.id}
   >
     <div className="min-w-0">

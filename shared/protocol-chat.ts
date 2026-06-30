@@ -10,6 +10,9 @@ export const historySearchContextAfter = 2;
 export const messageKindSchema = z.enum(['line', 'action', 'join', 'part', 'quit', 'notice', 'error', 'system']);
 export type MessageKind = z.infer<typeof messageKindSchema>;
 
+export const messageDeliverySchema = z.enum(['live', 'server-history']);
+export type MessageDelivery = z.infer<typeof messageDeliverySchema>;
+
 export const speakerRoleSchema = z.enum(['self', 'peer', 'other', 'unknown']);
 export type SpeakerRole = z.infer<typeof speakerRoleSchema>;
 
@@ -37,6 +40,7 @@ export const chatMessageSchema = z.object({
   attributionSource: speakerAttributionSourceSchema.optional(),
   attributionConfidence: speakerAttributionConfidenceSchema.optional(),
   importBatchId: z.string().nullable().optional(),
+  delivery: messageDeliverySchema.optional(),
   body: z.string(),
   kind: messageKindSchema,
   self: z.boolean(),
@@ -44,27 +48,16 @@ export const chatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
-export type BufferHistorySearchResult = {
-  message: ChatMessage;
-  context: ChatMessage[];
-};
-
-export type BufferHistorySearchPayload = {
-  query: string;
-  results: BufferHistorySearchResult[];
-  hasMore: boolean;
-};
-
-export type LogHistorySearchFilters = {
-  networkId?: string | null;
-  target?: string | null;
-};
-
-export type LogHistorySearchPayload = LogHistorySearchFilters & {
-  query: string;
-  results: BufferHistorySearchResult[];
-  hasMore: boolean;
-};
+export type {
+  BufferHistorySearchPayload,
+  BufferHistorySearchResult,
+  LogHistorySearchFilters,
+  LogHistorySearchPayload,
+  LogSource,
+  LogSourceKind,
+  LogSourceListFilters,
+  LogSourceListPayload,
+} from './protocol-log.js';
 
 export const networkAuthMethodSchema = z.enum(['none', 'server-pass', 'nickserv', 'sasl-plain']);
 export type NetworkAuthMethod = z.infer<typeof networkAuthMethodSchema>;
@@ -154,27 +147,6 @@ export const bufferSchema = z.object({
 });
 export type BufferState = z.infer<typeof bufferSchema>;
 
-export type LogSourceKind = Extract<BufferState['kind'], 'channel' | 'query'>;
-
-export type LogSource = {
-  aliases: string[];
-  buffer: BufferState;
-  firstMessageTs: number | null;
-  lastMessageTs: number | null;
-  messageCount: number;
-  open: boolean;
-};
-
-export type LogSourceListFilters = {
-  kind?: LogSourceKind | null;
-  networkId?: string | null;
-  q?: string | null;
-};
-
-export type LogSourceListPayload = LogSourceListFilters & {
-  sources: LogSource[];
-};
-
 export const channelSchema = z.object({
   id: z.string(),
   networkId: z.string(),
@@ -204,6 +176,7 @@ export const networkRuntimeCapabilitiesSchema = z.object({
   offered: z.array(z.string()).default([]),
   negotiated: z.array(z.string()).default([]),
   pending: z.array(z.string()).default([]),
+  values: z.record(z.string()).optional(),
 });
 export type NetworkRuntimeCapabilities = z.infer<typeof networkRuntimeCapabilitiesSchema>;
 

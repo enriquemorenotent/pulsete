@@ -19,6 +19,7 @@ export const messageColumns = [
   'm.attributionSource',
   'm.attributionConfidence',
   'm.importBatchId',
+  'm.delivery',
   'm.body',
   'm.kind',
   'm.self',

@@ -13,7 +13,7 @@ type BufferActivityInput = {
 const channelPriorityKinds = new Set<MessageInput['kind']>(['line', 'action', 'notice']);
 
 export const shouldIncrementUnread = (message: MessageInput, messageMuted = false) =>
-  !messageMuted && !message.self && (message.target === 'server' || message.kind !== 'system');
+  !message.historical && !messageMuted && !message.self && (message.target === 'server' || message.kind !== 'system');
 
 export const shouldIncrementPriorityUnread = (input: BufferActivityInput) => {
   if (!shouldIncrementUnread(input.message, input.messageMuted)) {

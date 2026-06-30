@@ -81,6 +81,7 @@ export const createWorkspaceMigrationTablesSql = `
     attributionSource TEXT NOT NULL DEFAULT 'unknown',
     attributionConfidence TEXT NOT NULL DEFAULT 'low',
     importBatchId TEXT,
+    delivery TEXT NOT NULL DEFAULT 'live',
     body TEXT NOT NULL,
     kind TEXT NOT NULL,
     self INTEGER NOT NULL,

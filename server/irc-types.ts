@@ -7,6 +7,7 @@ import type {
   IrcChannelListState,
   IrcChannelTrackingState,
   IrcFriendPresenceState,
+  IrcHistoryState,
   IrcLifecycleState,
   IrcReplyTracker,
   IrcSocket,
@@ -75,6 +76,7 @@ export type IrcConnectionData = {
   handlers: Handlers;
   lifecycle: IrcLifecycleState;
   channels: IrcChannelTrackingState;
+  history: IrcHistoryState;
   friendPresence: IrcFriendPresenceState;
   channelList: IrcChannelListState;
   replyTracker: IrcReplyTracker;

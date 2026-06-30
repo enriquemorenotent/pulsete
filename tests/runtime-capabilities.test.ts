@@ -25,6 +25,23 @@ test('IRC capability snapshots expose sorted offered negotiated and pending name
   );
 });
 
+test('IRC capability snapshots expose advertised capability values', () => {
+  assert.deepEqual(
+    snapshotIrcCapabilities({
+      offered: new Set(['draft/chathistory', 'echo-message']),
+      negotiated: new Set(['echo-message']),
+      pendingRequest: new Set<string>(),
+      values: new Map([['draft/chathistory', '50']]),
+    }),
+    {
+      offered: ['draft/chathistory', 'echo-message'],
+      negotiated: ['echo-message'],
+      pending: [],
+      values: { 'draft/chathistory': '50' },
+    },
+  );
+});
+
 test('runtime snapshots include negotiated IRC capabilities', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-capabilities-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
@@ -42,11 +59,31 @@ test('runtime snapshots include negotiated IRC capabilities', async () => {
   try {
     runtime.sessions.connect(network.id);
     await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
+    await waitFor(() =>
+      runtime.gateway.snapshot().networkStates[network.id]?.capabilities?.values?.['isupport/chathistory'] === '25'
+    );
 
     assert.deepEqual(runtime.gateway.snapshot().networkStates[network.id]?.capabilities, {
-      offered: ['account-tag', 'echo-message', 'extended-monitor', 'multi-prefix', 'userhost-in-names'],
-      negotiated: ['account-tag', 'echo-message', 'extended-monitor', 'multi-prefix', 'userhost-in-names'],
+      offered: [
+        'account-tag',
+        'batch',
+        'draft/chathistory',
+        'echo-message',
+        'extended-monitor',
+        'multi-prefix',
+        'userhost-in-names',
+      ],
+      negotiated: [
+        'account-tag',
+        'batch',
+        'draft/chathistory',
+        'echo-message',
+        'extended-monitor',
+        'multi-prefix',
+        'userhost-in-names',
+      ],
       pending: [],
+      values: { 'draft/chathistory': '50', 'isupport/chathistory': '25' },
     });
     assert.equal(received.some((line) => line.startsWith('CAP REQ :')), true);
   } finally {
@@ -97,6 +134,7 @@ const createCapabilityServer = async (received: string[]) => {
       if (nick && sawUser && capEnded && !welcomed) {
         welcomed = true;
         socket.write(`:irc.example 001 ${nick} :Welcome\r\n`);
+        socket.write(`:irc.example 005 ${nick} CHATHISTORY=25 :are supported by this server\r\n`);
       }
     };
     socket.on('error', () => {});
@@ -110,7 +148,7 @@ const createCapabilityServer = async (received: string[]) => {
         received.push(line);
         if (line === 'CAP LS 302') {
           socket.write(
-            ':irc.example CAP * LS :multi-prefix echo-message userhost-in-names account-tag extended-monitor\r\n',
+            ':irc.example CAP * LS :multi-prefix echo-message userhost-in-names account-tag extended-monitor batch draft/chathistory=50\r\n',
           );
         } else if (line.startsWith('CAP REQ :')) {
           socket.write(`:irc.example CAP * ACK :${line.slice('CAP REQ :'.length)}\r\n`);

@@ -1,5 +1,5 @@
 import type { StoredNetworkProfile } from '../shared/network-model.js';
-import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole, BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NetworkAuthMethod, NetworkProfile, NickEmojiState } from '../shared/protocol-chat.js';
+import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole, BufferState, ChannelState, ChannelUserState, FriendState, MessageDelivery, MutedNickState, NetworkAuthMethod, NetworkProfile, NickEmojiState } from '../shared/protocol-chat.js';
 import type { AppSnapshot } from '../shared/protocol-app.js';
 import type { NetworkUserIdentity, UserIdentityKind } from '../shared/user-identity.js';
 
@@ -61,6 +61,7 @@ export type MessageRow = {
   attributionSource: SpeakerAttributionSource | null;
   attributionConfidence: SpeakerAttributionConfidence | null;
   importBatchId: string | null;
+  delivery: MessageDelivery | null;
   body: string;
   kind: string;
   self: number;
@@ -139,9 +140,11 @@ export type MessageInput = {
   attributionSource?: SpeakerAttributionSource;
   attributionConfidence?: SpeakerAttributionConfidence;
   importBatchId?: string | null;
+  delivery?: MessageDelivery;
   body: string;
   kind: AppSnapshot['messages'][number]['kind'];
   self: boolean;
+  historical?: boolean;
   ts: number;
 };
 

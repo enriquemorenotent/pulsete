@@ -1,4 +1,4 @@
-import type { ChatMessage, SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol-chat.js';
+import type { ChatMessage, MessageDelivery, SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol-chat.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import type { BufferState, ChannelState, ChannelUserState, FriendState, MutedNickState, NickEmojiState } from '../shared/protocol-chat.js';
 import { parseChannelUser, sortChannelUsers } from '../shared/channel-users.js';
@@ -144,6 +144,7 @@ export const toChannelState = (
 export const toMessage = (row: MessageRow): ChatMessage => {
   const speakerRole = normalizeSpeakerRole(row.speakerRole, row.self);
   const attributionConfidence = normalizeAttributionConfidence(row.attributionConfidence);
+  const delivery = normalizeMessageDelivery(row.delivery);
   return {
     id: row.id,
     bufferId: row.bufferId,
@@ -160,12 +161,16 @@ export const toMessage = (row: MessageRow): ChatMessage => {
     attributionSource: normalizeAttributionSource(row.attributionSource),
     attributionConfidence,
     importBatchId: row.importBatchId,
+    ...(delivery === 'server-history' ? { delivery } : {}),
     body: row.body,
     kind: row.kind as ChatMessage['kind'],
     self: Boolean(row.self) || (speakerRole === 'self' && attributionConfidence === 'high'),
     ts: row.ts,
   };
 };
+
+const normalizeMessageDelivery = (value: string | null): MessageDelivery =>
+  value === 'server-history' ? value : 'live';
 
 const normalizeSpeakerRole = (value: string | null, self: number): SpeakerRole =>
   value === 'self' || value === 'peer' || value === 'other' || value === 'unknown'

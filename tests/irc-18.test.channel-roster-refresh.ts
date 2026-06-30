@@ -67,6 +67,44 @@ test('irc connection refreshes away status from WHO after joining a tracked chan
   );
 });
 
+test('irc connection requests latest server history after a confirmed self join', () => {
+  const events: Array<{ type: string; [key: string]: unknown }> = [];
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'TestNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: false,
+      favorite: false,
+      autoJoin: [],
+    },
+    {
+      onEvent: (event) => {
+        events.push(event);
+      },
+    }
+  );
+
+  connection.lifecycle.connected = true;
+  connection.lifecycle.capabilities.negotiated.add('batch');
+  connection.lifecycle.capabilities.negotiated.add('draft/chathistory');
+  connection.lifecycle.capabilities.values.set('isupport/chathistory', '25');
+  attachMockSocket(connection, createMockSocket(writes));
+
+  connection.join('#help');
+  connection.consume(':tester!user@example JOIN :#help\r\n');
+
+  assert.deepEqual(writes, ['JOIN #help\r\n', 'CHATHISTORY LATEST #help * 25\r\n']);
+  assert.equal(events.some((event) => event.type === 'message'), true);
+});
+
 test('irc connection updates channel roster details from modern server events without a WHO fallback', () => {
   const events: Array<{ type: string; [key: string]: unknown }> = [];
   const writes: string[] = [];

@@ -109,7 +109,7 @@ test('versioned storage migrations rebuild networks as workspace-owned rows', ()
   assert.deepEqual(network?.historicalSelfNicks, []);
   assert.deepEqual(network?.autoJoin, []);
   assert.equal(network?.notes, '');
-  assert.equal(version.user_version, 28);
+  assert.equal(version.user_version, 29);
   assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
   assert.equal(columns.some((column) => column.name === 'templateId'), false);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), false);

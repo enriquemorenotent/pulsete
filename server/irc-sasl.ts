@@ -94,7 +94,7 @@ const handleCapList = (connection: IrcRegistrationContext, params: string[]) => 
   }
   const tokens = parseCapabilityTokens(params.at(-1));
   recordAdvertisedCapabilities(sasl.offeredCapabilities, tokens);
-  recordAdvertisedCapabilities(connection.lifecycle.capabilities.offered, tokens);
+  recordAdvertisedCapabilities(connection.lifecycle.capabilities, tokens);
   emitState(connection);
   if ([...sasl.offeredCapabilities].some((capability) => normalizeCapabilityName(capability) === 'sasl')) {
     sasl.capabilityAdvertised = true;

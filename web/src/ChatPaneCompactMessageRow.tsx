@@ -20,6 +20,7 @@ import {
   getLifecycleEventSummary,
   getLifecycleEventTone,
   isActionMessage,
+  messageDeliveryTone,
   messageTone,
 } from './chat-pane-message-utils.js';
 
@@ -101,7 +102,8 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
 
   return (
     <article
-      className={cn('px-1 py-0.5', messageTone(message))}
+      className={cn('px-1 py-0.5', messageTone(message), messageDeliveryTone(message))}
+      data-message-delivery={message.delivery === 'server-history' ? message.delivery : undefined}
       data-message-id={message.id}
     >
       <div className="grid items-baseline grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 font-sans">

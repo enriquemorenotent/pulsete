@@ -1,5 +1,6 @@
 import { emitMessage } from './irc-emit.js';
 import { handleNickservAutoJoinMessage } from './irc-auth.js';
+import { isChatHistoryBatchMessage } from './irc-history.js';
 import { isServiceNick } from './irc-services.js';
 import { parseServerTimeTag, type IrcMessageTags } from './irc-message-tags.js';
 import { isChannelTarget, parsePrefixIdentity, stripCtcp } from './irc-parser.js';
@@ -70,7 +71,9 @@ export const handleTextMessage = (
   const ircCloudAvatarId = isDirectTarget && !isSelfNick(connection, nick)
     ? resolveIrcCloudAvatarId(prefixIdentity)
     : null;
+  const historical = isChatHistoryBatchMessage(connection, tags.batch);
   emitMessage(connection, createMessage(connection, {
+    id: resolveTaggedMessageId(connection.profile.id, tags.msgid),
     target,
     nick,
     senderIdentity,
@@ -78,9 +81,15 @@ export const handleTextMessage = (
     body,
     kind: command === 'NOTICE' ? 'notice' : isAction ? 'action' : 'line',
     self: isSelfNick(connection, nick),
+    historical,
     ts: parseServerTimeTag(tags) ?? undefined,
   }));
   if (prefix) {
     handleNickservAutoJoinMessage(connection, rawTarget, nick, payload);
   }
+};
+
+const resolveTaggedMessageId = (networkId: string, msgid: string | null | undefined) => {
+  const normalizedMsgid = msgid?.trim();
+  return normalizedMsgid ? `ircv3:${networkId}:${normalizedMsgid}` : undefined;
 };

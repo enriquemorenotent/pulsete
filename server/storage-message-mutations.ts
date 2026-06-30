@@ -31,8 +31,8 @@ export const appendMessage = (
   db.prepare(`
     INSERT INTO messages
       (id, bufferId, nick, senderIdentityKind, senderIdentityValue, speakerRole, speakerNick,
-       attributionSource, attributionConfidence, importBatchId, body, kind, self, ts)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       attributionSource, attributionConfidence, importBatchId, delivery, body, kind, self, ts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     input.id,
     bufferId,
@@ -44,6 +44,7 @@ export const appendMessage = (
     attribution.attributionSource,
     attribution.attributionConfidence,
     input.importBatchId ?? null,
+    resolveMessageDelivery(input),
     input.body,
     input.kind,
     attribution.self ? 1 : 0,
@@ -94,6 +95,9 @@ const shouldRespectInputAttribution = (input: MessageInput) =>
   || input.speakerNick !== undefined
   || input.attributionSource !== undefined
   || input.attributionConfidence !== undefined;
+
+const resolveMessageDelivery = (input: MessageInput) =>
+  input.delivery ?? (input.historical ? 'server-history' : 'live');
 
 const ensureMessageBufferId = (db: SqliteDb, input: MessageInput, resolvedBufferId?: string) => {
   if (resolvedBufferId) {
