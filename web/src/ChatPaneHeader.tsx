@@ -37,6 +37,8 @@ type ChatPaneHeaderProps = {
   onDeleteHistory?: () => void;
   canSearchHistory?: boolean;
   onOpenHistorySearch?: () => void;
+  canUseAssistant?: boolean;
+  onOpenAssistant?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -79,11 +81,13 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     canDownloadHistory: props.canDownloadHistory,
     canDeleteHistory: props.canDeleteHistory,
     canSearchHistory: props.canSearchHistory,
+    canUseAssistant: props.canUseAssistant,
     onWhoisSelectedQuery: props.onWhoisSelectedQuery,
     onToggleChannelAutoJoin: props.onToggleChannelAutoJoin,
     onDownloadHistory: props.onDownloadHistory,
     onDeleteHistory: props.onDeleteHistory,
     onOpenHistorySearch: props.onOpenHistorySearch,
+    onOpenAssistant: props.onOpenAssistant,
     onCloseChannel: props.onCloseChannel,
     onCloseBuffer: props.onCloseBuffer,
     onOpenChannelList: props.onOpenChannelList,

@@ -3,6 +3,7 @@ import type { BufferState, NetworkProfile } from '../shared/protocol-chat.js';
 import type { ClientMessage, ServerMessage } from '../shared/protocol-messages.js';
 import type { NetworkLifecycleService } from './network-lifecycle-service.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
+import type { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
 import type { RuntimeFriendService } from './runtime-friend-service.js';
 import type { RuntimeIrcService } from './runtime-irc-service.js';
@@ -63,6 +64,10 @@ export type RuntimeNetworkMutations = {
 };
 
 export type RuntimeHttpApi = {
+  assistant: {
+    ask: RuntimeAiAssistantService['ask'];
+    status: RuntimeAiAssistantService['status'];
+  };
   networks: {
     list: RuntimeNetworkCatalog['list'];
     save: RuntimeNetworkMutations['saveNetwork'];

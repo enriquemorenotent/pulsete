@@ -1,22 +1,15 @@
 import { memo, useCallback, useReducer, useState } from 'react';
 import type { BufferState, ChatMessage, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
-import { Button } from '@/components/ui/button.js';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog.js';
 import type { ChannelListState } from './app-types.js';
+import { AiAssistantDialog } from './AiAssistantDialog.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
 import type { ChatPaneComposerTarget } from './ChatPaneComposerTargetChip.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
+import { DeleteHistoryDialog } from './DeleteHistoryDialog.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
 import type { InlineImageRenderingMode } from './FormattedMessageText.js';
@@ -88,9 +81,15 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     props.workspace.mode === 'server-offline';
   const [historySearchOpen, setHistorySearchOpen] =
     useReducer((_open: boolean, nextOpen: boolean) => nextOpen, false);
+  const [assistantOpen, setAssistantOpen] =
+    useReducer((_open: boolean, nextOpen: boolean) => nextOpen, false);
   const [deleteHistoryBuffer, setDeleteHistoryBuffer] = useState<BufferState | null>(null);
   const [deleteHistoryPending, setDeleteHistoryPending] = useState(false);
   const searchableBuffer = props.canSearchHistory ? props.workspace.selectedBuffer : null;
+  const assistantBuffer = props.workspace.selectedBuffer?.kind === 'channel'
+    || props.workspace.selectedBuffer?.kind === 'query'
+    ? props.workspace.selectedBuffer
+    : null;
   const clearableBuffer = props.canDeleteHistory && props.workspace.selectedBuffer?.kind === 'query'
     ? props.workspace.selectedBuffer
     : null;
@@ -141,6 +140,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onDeleteHistory={clearableBuffer ? () => setDeleteHistoryBuffer(clearableBuffer) : undefined}
         canSearchHistory={props.canSearchHistory}
         onOpenHistorySearch={() => setHistorySearchOpen(true)}
+        canUseAssistant={Boolean(assistantBuffer)}
+        onOpenAssistant={() => setAssistantOpen(true)}
         onCloseChannel={props.onCloseChannel}
         onCloseBuffer={props.onCloseBuffer}
         onOpenChannelList={props.onOpenChannelList}
@@ -206,6 +207,12 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onOpenChannel={props.onOpenMentionedChannel}
         onSearch={props.onSearchHistory}
       />
+      <AiAssistantDialog
+        buffer={assistantBuffer}
+        open={assistantOpen && Boolean(assistantBuffer)}
+        onOpenChange={setAssistantOpen}
+        onUseSuggestion={props.onDraftChange}
+      />
       <DeleteHistoryDialog
         buffer={deleteHistoryBuffer}
         pending={deleteHistoryPending}
@@ -233,31 +240,4 @@ function resolveChatPaneComposerTarget(workspace: WorkspaceView): ChatPaneCompos
     return { kind: 'query', label: workspace.selectedBuffer.target };
   }
   return null;
-}
-
-function DeleteHistoryDialog(
-  props: { buffer: BufferState | null; pending: boolean; onCancel: () => void; onConfirm: () => Promise<void> },
-) {
-  return (
-    <Dialog open={Boolean(props.buffer)} onOpenChange={(open) => !open && props.onCancel()}>
-      <DialogContent className="sm:w-[min(calc(100vw-1rem),28rem)]">
-        <DialogHeader>
-          <DialogTitle>Delete PM history?</DialogTitle>
-          <DialogDescription>
-            {props.buffer
-              ? `This deletes all saved messages with ${props.buffer.target}. The PM stays open.`
-              : 'This deletes the saved messages for this private message. The PM stays open.'}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={props.onCancel} disabled={props.pending}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={props.onConfirm} disabled={props.pending}>
-            Delete history
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 }

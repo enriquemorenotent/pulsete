@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ServerMessage } from '../shared/protocol-messages.js';
+import { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -54,6 +55,9 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     conversations: store.conversations,
     mutedNicks: store.mutedNicks,
     networks: store.networks,
+  });
+  const assistantService = new RuntimeAiAssistantService({
+    conversations: store.conversations,
   });
   const eventRouter = new RuntimeEventRouter({
     buffers: store.conversations,
@@ -184,6 +188,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     disconnect: (networkId: string) => sessions.disconnect(networkId),
   };
   const http = createRuntimeHttpApi({
+    assistant: {
+      ask: (bufferId, request) => assistantService.ask(bufferId, request),
+      status: () => assistantService.status(),
+    },
     catalog: store.networks,
     conversations,
     friends,

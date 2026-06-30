@@ -52,6 +52,10 @@ export class RuntimeHost {
 
   private createHttpApi(): RuntimeHost['http'] {
     return {
+      assistant: {
+        ask: (bufferId, request) => this.runtime.http.assistant.ask(bufferId, request),
+        status: () => this.runtime.http.assistant.status(),
+      },
       networks: {
         list: () => this.runtime.http.networks.list(),
         save: (data, networkId) => this.runtime.http.networks.save(data, networkId),

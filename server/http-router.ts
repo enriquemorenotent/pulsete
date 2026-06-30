@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toAppError } from './app-error.js';
+import { handleAiAssistantRoutes } from './http-ai-assistant.js';
 import { handleBackupRoutes } from './http-backups.js';
 import { handleBufferRoutes } from './http-buffers.js';
 import { handleFriendRoutes } from './http-friends.js';
@@ -25,6 +26,7 @@ export const createHttpHandler = (
     const args = { req, res, url, pathname, context };
     if (
       (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))
+      || await handleAiAssistantRoutes(args)
       || await handleNetworkRoutes(args)
       || await handleNickEmojiRoutes(args)
       || await handleFriendRoutes(args)

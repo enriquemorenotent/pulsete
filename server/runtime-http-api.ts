@@ -11,6 +11,7 @@ import type {
 import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
 
 type CreateRuntimeHttpApiParams = {
+  assistant: RuntimeHttpApi['assistant'];
   catalog: RuntimeNetworkCatalog;
   conversations: RuntimeConversationMutations;
   friends: RuntimeFriendMutations;
@@ -22,6 +23,7 @@ type CreateRuntimeHttpApiParams = {
 };
 
 export const createRuntimeHttpApi = ({
+  assistant,
   catalog,
   conversations,
   friends,
@@ -31,6 +33,7 @@ export const createRuntimeHttpApi = ({
   networks,
   sessions,
 }: CreateRuntimeHttpApiParams): RuntimeHttpApi => ({
+  assistant,
   networks: {
     list: () => catalog.list(),
     save: (data, networkId) => networks.saveNetwork(data, networkId),
