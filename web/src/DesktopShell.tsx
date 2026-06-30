@@ -7,8 +7,8 @@ import {
   ChatPaneContainer,
   CommandPaletteDialogContainer,
   ConnectionSidebarContainer,
-  WorkspaceRightSidebarContainer,
 } from './DesktopShellContainers.js';
+import { WorkspaceRightSidebarContainer } from './WorkspaceRightSidebarContainer.js';
 import { LogInspectorDialogContainer } from './LogInspectorDialogContainer.js';
 import { createContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
@@ -118,6 +118,7 @@ export function DesktopShell(props: DesktopShellProps) {
         rightSidebarKind ? (
           <WorkspaceRightSidebarContainer
             actions={props.actions}
+            composer={props.composer}
             contactNotifications={props.contactNotifications}
             contactRuleHandlers={contactRuleHandlers}
             externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}

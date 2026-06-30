@@ -54,6 +54,7 @@ export class RuntimeHost {
     return {
       assistant: {
         ask: (bufferId, request) => this.runtime.http.assistant.ask(bufferId, request),
+        startLogin: () => this.runtime.http.assistant.startLogin(),
         status: () => this.runtime.http.assistant.status(),
       },
       networks: {

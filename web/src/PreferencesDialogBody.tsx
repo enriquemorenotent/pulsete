@@ -5,6 +5,7 @@ import type {
   ContactNotificationSettings,
 } from './contact-notifications/settings.js';
 import { PreferencesAvatarSection } from './PreferencesAvatarSection.js';
+import { PreferencesAiSection } from './PreferencesAiSection.js';
 import { PreferencesBackupSection } from './PreferencesBackupSection.js';
 import { PreferencesMediaSection } from './PreferencesMediaSection.js';
 import { PreferencesNotificationsPanel } from './PreferencesNotificationsPanel.js';
@@ -45,6 +46,7 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
         settings={props.userAvatarSettings}
         onSetExternalAvatarsEnabled={props.onSetExternalAvatarsEnabled}
       />
+      <PreferencesAiSection />
       <PreferencesNotificationsPanel
         contactNotifications={props.contactNotifications}
         mutedNicks={props.mutedNicks}

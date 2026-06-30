@@ -1,4 +1,6 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
+import { AiAssistantPanel } from './AiAssistantPanel.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import { ServerProfileSidebar } from './ServerProfileSidebar.js';
@@ -13,6 +15,10 @@ type QueryProfileAvatarUser = Pick<ChannelUserState, 'host' | 'nick' | 'username
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
   nicklist: DesktopShellNicklistModel;
+  assistant?: {
+    buffer: BufferState | null;
+    onUseSuggestion: (value: string) => void;
+  };
   serverProfile?: {
     network: WorkspaceView['selectedNetwork'];
     onEdit: () => void;
@@ -50,15 +56,38 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   }
 
   if (isQueryProfileWorkspace(props.workspace)) {
+    const buffer = props.queryProfile?.buffer ?? props.workspace.selectedBuffer;
     return (
-      <QueryProfileSidebar
-        avatarUser={props.queryProfile?.avatarUser ?? null}
-        buffer={props.queryProfile?.buffer ?? props.workspace.selectedBuffer}
-        externalAvatarsEnabled={
-          props.queryProfile?.externalAvatarsEnabled ?? props.nicklist.externalAvatarsEnabled
-        }
-        profileImagesVisible={props.queryProfile?.profileImagesVisible}
-        onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
+      <RightSidebarTabs
+        key={buffer?.id}
+        defaultValue="info"
+        tabs={[
+          {
+            label: 'Info',
+            value: 'info',
+            content: (
+              <QueryProfileSidebar
+                avatarUser={props.queryProfile?.avatarUser ?? null}
+                buffer={buffer}
+                externalAvatarsEnabled={
+                  props.queryProfile?.externalAvatarsEnabled ?? props.nicklist.externalAvatarsEnabled
+                }
+                profileImagesVisible={props.queryProfile?.profileImagesVisible}
+                onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
+              />
+            ),
+          },
+          {
+            label: 'Assistant',
+            value: 'assistant',
+            content: (
+              <AiAssistantPanel
+                buffer={props.assistant?.buffer ?? buffer}
+                onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
+              />
+            ),
+          },
+        ]}
       />
     );
   }
@@ -68,20 +97,67 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   }
 
   return (
-    <div className="h-full min-h-0">
-      <NicklistPanel
-        network={props.workspace.selectedNetwork}
-        channel={props.workspace.selectedChannel}
-        friends={props.nicklist.friends}
-        mutedNicks={props.nicklist.mutedNicks}
-        nickEmojis={props.nicklist.nickEmojis}
-        contactNotificationSettings={props.nicklist.contactNotificationSettings}
-        contactRuleHandlers={props.nicklist.contactRuleHandlers}
-        externalAvatarsEnabled={props.nicklist.externalAvatarsEnabled}
-        mediaPolicy={props.nicklist.mediaPolicy}
-        onSaveNickEmoji={props.nicklist.onSaveNickEmoji}
-        onSelectNick={props.nicklist.onSelectNick}
-      />
-    </div>
+    <RightSidebarTabs
+      key={props.workspace.selectedChannel.id}
+      defaultValue="members"
+      tabs={[
+        {
+          label: 'Members',
+          value: 'members',
+          content: (
+            <NicklistPanel
+              network={props.workspace.selectedNetwork}
+              channel={props.workspace.selectedChannel}
+              friends={props.nicklist.friends}
+              mutedNicks={props.nicklist.mutedNicks}
+              nickEmojis={props.nicklist.nickEmojis}
+              contactNotificationSettings={props.nicklist.contactNotificationSettings}
+              contactRuleHandlers={props.nicklist.contactRuleHandlers}
+              externalAvatarsEnabled={props.nicklist.externalAvatarsEnabled}
+              mediaPolicy={props.nicklist.mediaPolicy}
+              onSaveNickEmoji={props.nicklist.onSaveNickEmoji}
+              onSelectNick={props.nicklist.onSelectNick}
+            />
+          ),
+        },
+        {
+          label: 'Assistant',
+          value: 'assistant',
+          content: (
+            <AiAssistantPanel
+              buffer={props.assistant?.buffer ?? props.workspace.selectedBuffer}
+              onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
+            />
+          ),
+        },
+      ]}
+    />
   );
 });
+
+function RightSidebarTabs(props: {
+  defaultValue: string;
+  tabs: Array<{ content: ReactNode; label: string; value: string }>;
+}) {
+  return (
+    <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col">
+      <TabsList className="mx-4 mt-4 grid shrink-0 grid-cols-2">
+        {props.tabs.map((tab) => (
+          <TabsTrigger key={tab.value} value={tab.value} className="min-w-0">
+            {tab.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {props.tabs.map((tab) => (
+        <TabsContent
+          key={tab.value}
+          forceMount
+          value={tab.value}
+          className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+        >
+          {tab.content}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}

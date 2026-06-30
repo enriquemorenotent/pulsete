@@ -15,13 +15,11 @@ type ResolveChatPaneHeaderActionsContext = {
   canDownloadHistory?: boolean;
   canDeleteHistory?: boolean;
   canSearchHistory?: boolean;
-  canUseAssistant?: boolean;
   onWhoisSelectedQuery?: () => void;
   onToggleChannelAutoJoin: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
   onDeleteHistory?: () => void;
   onOpenHistorySearch?: () => void;
-  onOpenAssistant?: () => void;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   onOpenChannelList: () => void;
@@ -111,14 +109,6 @@ const resolveOverflowActions = (
       id: 'search-history',
       label: 'Search history',
       onSelect: context.onOpenHistorySearch,
-    });
-  }
-
-  if (context.canUseAssistant && context.onOpenAssistant) {
-    overflow.push({
-      id: 'assistant',
-      label: 'Assistant',
-      onSelect: context.onOpenAssistant,
     });
   }
 

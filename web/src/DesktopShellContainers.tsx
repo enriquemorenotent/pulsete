@@ -1,9 +1,7 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { ChatPane } from './ChatPane.js';
 import { CommandPaletteDialog } from './CommandPaletteDialog.js';
-import { openExistingNetworkEditor } from './network-editor-actions.js';
-import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import {
   selectChannels,
   selectChannelList,
@@ -18,7 +16,6 @@ import {
   selectNickEmojis,
   selectQueryPresence,
   selectSelectedMessages,
-  selectServerProfileNetwork,
   selectSidebarConnections,
   selectWorkspace,
 } from './app-selectors.js';
@@ -30,13 +27,9 @@ import type { ContactNotificationsController } from './contact-notifications/con
 import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.js';
 import { useDesktopChatModel } from './useDesktopChatModel.js';
-import {
-  useDesktopNicklistModel,
-  useDesktopSidebarModel,
-} from './useDesktopShellModel.js';
+import { useDesktopSidebarModel } from './useDesktopShellModel.js';
 import { useSelectedBufferHistory } from './transcript/history.js';
 import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
-import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { useDocumentActivityState } from './useDocumentActivityState.js';
@@ -58,13 +51,6 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   contactRuleHandlers: ContactRuleHandlers;
   mediaPolicy: MediaVisibilityPolicy;
   jumpToLatestRequestId: number;
-};
-
-type RightSidebarContainerProps = Pick<SharedProps, 'actions'> & {
-  contactNotifications: ContactNotificationsController;
-  contactRuleHandlers: ContactRuleHandlers;
-  externalAvatarsEnabled: boolean;
-  mediaPolicy: MediaVisibilityPolicy;
 };
 
 type CommandPaletteContainerProps = SharedProps & {
@@ -153,76 +139,6 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     workspace,
   });
   return <ChatPane {...model} jumpToLatestRequestId={jumpToLatestRequestId} />;
-});
-
-export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSidebarContainer({
-  actions,
-  contactNotifications,
-  contactRuleHandlers,
-  externalAvatarsEnabled,
-  mediaPolicy,
-}: RightSidebarContainerProps) {
-  const dispatch = useAppDispatch();
-  const channels = useAppSelector(selectChannels);
-  const friends = useAppSelector(selectFriends);
-  const mutedNicks = useAppSelector(selectMutedNicks);
-  const nickEmojis = useAppSelector(selectNickEmojis);
-  const serverProfileNetwork = useAppSelector(selectServerProfileNetwork);
-  const workspace = useAppSelector(selectWorkspace);
-  const nicklist = useDesktopNicklistModel({
-    actions,
-    contactNotifications,
-    contactRuleHandlers,
-    externalAvatarsEnabled,
-    friends,
-    mediaPolicy,
-    mutedNicks,
-    nickEmojis,
-  });
-  const serverProfile = useMemo(() => ({
-    network: serverProfileNetwork,
-    onEdit: () => {
-      if (serverProfileNetwork) {
-        openExistingNetworkEditor(serverProfileNetwork, {
-          dispatch,
-          initialTab: 'servers',
-          returnMode: 'closed',
-        });
-      }
-    },
-    onSaveNotes: actions.saveNetworkNotes,
-  }), [actions.saveNetworkNotes, dispatch, serverProfileNetwork]);
-  const queryProfile = useMemo(() => {
-    const buffer = workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null;
-    return {
-      avatarUser: buffer
-        ? resolveUserAvatarCandidate(
-            channels,
-            buffer.networkId,
-            buffer.target,
-            buffer.ircCloudAvatarId,
-          )
-        : null,
-      buffer,
-      externalAvatarsEnabled,
-      profileImagesVisible: mediaPolicy.showProfileImages,
-      onSaveNotes: actions.saveBufferNotes,
-    };
-  }, [
-    actions.saveBufferNotes,
-    channels,
-    externalAvatarsEnabled,
-    mediaPolicy.showProfileImages,
-    workspace.selectedBuffer,
-  ]);
-  return (
-    <WorkspaceRightSidebar
-      workspace={workspace}
-      nicklist={nicklist}
-      serverProfile={serverProfile}
-      queryProfile={queryProfile}
-    />
-  );
 });
 
 export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogContainer({

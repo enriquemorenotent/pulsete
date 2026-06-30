@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
@@ -6,51 +5,32 @@ import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
 import { RuntimeFriendService } from './runtime-friend-service.js';
-import { createRuntimeHttpApi } from './runtime-http-api.js';
+import { createRuntimeGateway } from './runtime-gateway.js';
+import { createRuntimeHttpServices } from './runtime-http-service-builder.js';
 import { RuntimeIrcService } from './runtime-irc-service.js';
 import { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
 import { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import { RuntimePublisher } from './runtime-publisher.js';
-import { createRuntimeSnapshot } from './runtime-snapshot.js';
 import type {
   RuntimeConversationMutations,
   RuntimeFriendMutations,
-  RuntimeGateway,
   RuntimeMutedNickMutations,
   RuntimeNickEmojiMutations,
   RuntimeNetworkMutations,
   RuntimeServices,
   RuntimeStore,
 } from './runtime-service-types.js';
+import { createMutationPublisher } from './runtime-mutation-messages.js';
 import { RuntimeSocketHub } from './runtime-socket-hub.js';
 import { createRuntimeWebSocketApi } from './runtime-websocket-api.js';
-
-type MutationResult = {
-  messages: readonly ServerMessage[];
-};
-
-const tagMutationMessages = (messages: readonly ServerMessage[]) => {
-  if (messages.length === 0) {
-    return messages;
-  }
-  const mutationId = randomUUID();
-  return messages.map((message) => ({ ...message, mutationId }));
-};
 
 export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
 
   const socketHub = new RuntimeSocketHub();
   const publisher = new RuntimePublisher(socketHub);
-  const publishMutation = <T extends MutationResult>(result: T): T => {
-    const messages = tagMutationMessages(result.messages);
-    if (messages.length > 0) {
-      publisher.publish(messages);
-    }
-    return { ...result, messages } as T;
-  };
-
+  const publishMutation = createMutationPublisher((messages) => publisher.publish(messages));
   const conversationsService = new RuntimeConversationService({
     conversations: store.conversations,
     mutedNicks: store.mutedNicks,
@@ -108,13 +88,13 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     socketHub.closeAll();
     connectionManager.close();
   };
-  const gateway: RuntimeGateway = {
-    attachSocket: (ws) => socketHub.attach(ws),
-    detachSocket: (ws) => socketHub.detach(ws),
-    publish: (message) => publisher.publish(message),
-    snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager),
-    close: closeGateway,
-  };
+  const gateway = createRuntimeGateway({
+    connectionManager,
+    onClose: closeGateway,
+    publisher,
+    socketHub,
+    store,
+  });
   const conversations: RuntimeConversationMutations = {
     openQuery: (networkId, target, peerIdentity) => {
       const currentNick = connectionManager.getConnectionState(networkId)?.nick ?? null;
@@ -184,14 +164,8 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     },
     closeConnection: (networkId) => publishMutation(networkMutations.closeConnection(networkId)),
   };
-  const sessionMutations = {
-    disconnect: (networkId: string) => sessions.disconnect(networkId),
-  };
-  const http = createRuntimeHttpApi({
-    assistant: {
-      ask: (bufferId, request) => assistantService.ask(bufferId, request),
-      status: () => assistantService.status(),
-    },
+  const http = createRuntimeHttpServices({
+    assistant: assistantService,
     catalog: store.networks,
     conversations,
     friends,
@@ -199,7 +173,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     nickEmojis,
     irc,
     networks,
-    sessions: sessionMutations,
+    sessions,
   });
   const ws = createRuntimeWebSocketApi({
     attachSocket: (ws) => gateway.attachSocket(ws),

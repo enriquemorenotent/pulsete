@@ -1,4 +1,5 @@
 import type {
+  AiAssistantLoginResponse,
   AiAssistantProviderStatus,
   AiAssistantRequest,
   AiAssistantResponse,
@@ -27,4 +28,9 @@ export const aiAssistantApi = {
     ),
   status: () =>
     requestJson<AiAssistantProviderStatus>('/api/assistant/status'),
+  login: () =>
+    requestJson<AiAssistantLoginResponse>(
+      '/api/assistant/login',
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
 };

@@ -10,7 +10,12 @@ export const handleAiAssistantRoutes = async ({
   context,
 }: RouteArgs) => {
   if (pathname === '/api/assistant/status' && req.method === 'GET') {
-    writeJson(res, 200, context.assistant.status());
+    writeJson(res, 200, await context.assistant.status());
+    return true;
+  }
+
+  if (pathname === '/api/assistant/login' && req.method === 'POST') {
+    writeJson(res, 200, await context.assistant.startLogin());
     return true;
   }
 

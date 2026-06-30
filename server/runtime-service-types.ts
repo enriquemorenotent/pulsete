@@ -66,6 +66,7 @@ export type RuntimeNetworkMutations = {
 export type RuntimeHttpApi = {
   assistant: {
     ask: RuntimeAiAssistantService['ask'];
+    startLogin: RuntimeAiAssistantService['startLogin'];
     status: RuntimeAiAssistantService['status'];
   };
   networks: {

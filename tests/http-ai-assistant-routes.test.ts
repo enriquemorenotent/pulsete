@@ -4,22 +4,23 @@ import { requestJson } from './helpers/http-request-helpers.js';
 import { createHttpRuntimeContext } from './helpers/http-runtime-test-helpers.js';
 import { createNetworkInput } from './helpers/http-server-helpers.js';
 
-test('assistant status route reports an unavailable provider without an API key', async () => {
-  await withOpenAiApiKey('', async () => {
+test('assistant status route reports unavailable when Codex CLI is missing', async () => {
+  await withMissingCodexPath(async () => {
     const context = await createHttpRuntimeContext();
     try {
       const response = await requestJson(context.port, 'GET', '/api/assistant/status');
       assert.equal(response.status, 200);
       assert.equal(response.json.connected, false);
       assert.equal(response.json.provider, 'unavailable');
+      assert.match(String(response.json.detail), /Install Codex CLI/);
     } finally {
       await context.close();
     }
   });
 });
 
-test('assistant ask route returns provider errors without losing conversation context', async () => {
-  await withOpenAiApiKey('', async () => {
+test('assistant ask route returns Codex provider errors without losing conversation context', async () => {
+  await withMissingCodexPath(async () => {
     const context = await createHttpRuntimeContext();
     const network = context.storage.networks.upsert(createNetworkInput());
     const buffer = context.storage.conversations.upsertBuffer({
@@ -45,23 +46,23 @@ test('assistant ask route returns provider errors without losing conversation co
         { mode: 'answer', prompt: 'Where is the password?' },
       );
       assert.equal(response.status, 503);
-      assert.equal(response.json.message, 'OpenAI provider is not connected');
+      assert.match(String(response.json.message), /Install Codex CLI/);
     } finally {
       await context.close();
     }
   });
 });
 
-const withOpenAiApiKey = async (value: string, run: () => Promise<void>) => {
-  const previous = process.env.OPENAI_API_KEY;
-  process.env.OPENAI_API_KEY = value;
+const withMissingCodexPath = async (run: () => Promise<void>) => {
+  const previous = process.env.PATH;
+  process.env.PATH = '';
   try {
     await run();
   } finally {
     if (previous === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.PATH;
     } else {
-      process.env.OPENAI_API_KEY = previous;
+      process.env.PATH = previous;
     }
   }
 };

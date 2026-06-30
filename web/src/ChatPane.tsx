@@ -1,11 +1,9 @@
-import { memo, useCallback, useReducer, useState } from 'react';
+import { memo, useCallback, useReducer } from 'react';
 import type { BufferState, ChatMessage, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type { ChannelListState } from './app-types.js';
-import { AiAssistantDialog } from './AiAssistantDialog.js';
 import { ChannelListDialog } from './ChannelListDialog.js';
 import { ChatPaneComposer } from './ChatPaneComposer.js';
-import type { ChatPaneComposerTarget } from './ChatPaneComposerTargetChip.js';
 import { ChatPaneHeader } from './ChatPaneHeader.js';
 import { ChatPaneMessageList } from './ChatPaneMessageList.js';
 import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
@@ -19,6 +17,8 @@ import {
 } from './media-visibility-settings.js';
 import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
+import { resolveChatPaneComposerTarget } from './chat-pane-composer-target.js';
+import { useChatPaneDialogs } from './useChatPaneDialogs.js';
 import type { WorkspaceView } from './workspace.js';
 
 export type ChatPaneProps = {
@@ -79,20 +79,12 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     props.workspace.mode === 'server-connected' ||
     props.workspace.mode === 'server-connecting' ||
     props.workspace.mode === 'server-offline';
-  const [historySearchOpen, setHistorySearchOpen] =
-    useReducer((_open: boolean, nextOpen: boolean) => nextOpen, false);
-  const [assistantOpen, setAssistantOpen] =
-    useReducer((_open: boolean, nextOpen: boolean) => nextOpen, false);
-  const [deleteHistoryBuffer, setDeleteHistoryBuffer] = useState<BufferState | null>(null);
-  const [deleteHistoryPending, setDeleteHistoryPending] = useState(false);
   const searchableBuffer = props.canSearchHistory ? props.workspace.selectedBuffer : null;
-  const assistantBuffer = props.workspace.selectedBuffer?.kind === 'channel'
-    || props.workspace.selectedBuffer?.kind === 'query'
-    ? props.workspace.selectedBuffer
-    : null;
-  const clearableBuffer = props.canDeleteHistory && props.workspace.selectedBuffer?.kind === 'query'
-    ? props.workspace.selectedBuffer
-    : null;
+  const dialogs = useChatPaneDialogs({
+    canDeleteHistory: props.canDeleteHistory,
+    onDeleteHistory: props.onDeleteHistory,
+    selectedBuffer: props.workspace.selectedBuffer,
+  });
   const composerTarget = resolveChatPaneComposerTarget(props.workspace);
   const mediaPolicy = props.mediaPolicy ?? defaultMediaVisibilityPolicy;
   const inlineImageRendering: InlineImageRenderingMode =
@@ -104,21 +96,6 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     }
     return submitted;
   }, [props.onSend]);
-  const handleConfirmDeleteHistory = useCallback(async () => {
-    if (!deleteHistoryBuffer || !props.onDeleteHistory) {
-      return;
-    }
-    setDeleteHistoryPending(true);
-    try {
-      const deleted = await props.onDeleteHistory(deleteHistoryBuffer);
-      if (deleted) {
-        setDeleteHistoryBuffer(null);
-      }
-    } finally {
-      setDeleteHistoryPending(false);
-    }
-  }, [deleteHistoryBuffer, props.onDeleteHistory]);
-
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <ChatPaneHeader
@@ -136,12 +113,10 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onToggleChannelAutoJoin={props.onToggleChannelAutoJoin}
         canDownloadHistory={props.canDownloadHistory}
         onDownloadHistory={props.onDownloadHistory}
-        canDeleteHistory={Boolean(clearableBuffer && props.onDeleteHistory)}
-        onDeleteHistory={clearableBuffer ? () => setDeleteHistoryBuffer(clearableBuffer) : undefined}
+        canDeleteHistory={Boolean(dialogs.clearableBuffer && props.onDeleteHistory)}
+        onDeleteHistory={dialogs.clearableBuffer ? dialogs.openDeleteHistory : undefined}
         canSearchHistory={props.canSearchHistory}
-        onOpenHistorySearch={() => setHistorySearchOpen(true)}
-        canUseAssistant={Boolean(assistantBuffer)}
-        onOpenAssistant={() => setAssistantOpen(true)}
+        onOpenHistorySearch={dialogs.openHistorySearch}
         onCloseChannel={props.onCloseChannel}
         onCloseBuffer={props.onCloseBuffer}
         onOpenChannelList={props.onOpenChannelList}
@@ -199,45 +174,20 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onJoin={props.onJoinChannelFromList}
       />
       <HistorySearchDialog
-        open={historySearchOpen && Boolean(searchableBuffer && props.onSearchHistory)}
+        open={dialogs.historySearchOpen && Boolean(searchableBuffer && props.onSearchHistory)}
         buffer={searchableBuffer}
         mode={defaultMessageDisplayMode}
         inlineImageRendering={inlineImageRendering}
-        onOpenChange={setHistorySearchOpen}
+        onOpenChange={dialogs.setHistorySearchOpen}
         onOpenChannel={props.onOpenMentionedChannel}
         onSearch={props.onSearchHistory}
       />
-      <AiAssistantDialog
-        buffer={assistantBuffer}
-        open={assistantOpen && Boolean(assistantBuffer)}
-        onOpenChange={setAssistantOpen}
-        onUseSuggestion={props.onDraftChange}
-      />
       <DeleteHistoryDialog
-        buffer={deleteHistoryBuffer}
-        pending={deleteHistoryPending}
-        onCancel={() => setDeleteHistoryBuffer(null)}
-        onConfirm={handleConfirmDeleteHistory}
+        buffer={dialogs.deleteHistoryBuffer}
+        pending={dialogs.deleteHistoryPending}
+        onCancel={dialogs.closeDeleteHistory}
+        onConfirm={dialogs.confirmDeleteHistory}
       />
     </section>
   );
 });
-
-function resolveChatPaneComposerTarget(workspace: WorkspaceView): ChatPaneComposerTarget | null {
-  if (workspace.composerMode === 'hidden') {
-    return null;
-  }
-  if (workspace.composerMode === 'commands') {
-    return { kind: 'server', label: workspace.selectedNetwork?.name ?? 'Server' };
-  }
-  if (workspace.selectedBuffer?.kind === 'channel') {
-    return { kind: 'channel', label: workspace.selectedChannel?.name ?? workspace.selectedBuffer.target };
-  }
-  if (workspace.selectedPendingChannel) {
-    return { kind: 'channel', label: workspace.selectedPendingChannel.channel };
-  }
-  if (workspace.selectedBuffer?.kind === 'query') {
-    return { kind: 'query', label: workspace.selectedBuffer.target };
-  }
-  return null;
-}
