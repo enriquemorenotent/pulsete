@@ -116,14 +116,16 @@ test('server profile sidebar renders the per-network notes editor', () => {
 
   assert.match(markup, /RoleplayNet/);
   assert.match(markup, /Connection/);
+  assert.match(markup, /overflow-y-auto[\s\S]*data-server-sidebar-section="connection"[\s\S]*open=""/);
   assert.match(markup, /Status[\s\S]*Online/);
   assert.match(markup, /Nick[\s\S]*mira/);
   assert.match(markup, /Auth[\s\S]*No auth/);
   assert.match(markup, /Autojoin[\s\S]*Manual/);
-  assert.match(markup, /server-profile-notes/);
+  assert.match(markup, /flex min-h-72 p-0[\s\S]*relative flex-1[\s\S]*server-profile-notes[\s\S]*aria-label="Notes"[\s\S]*h-full min-h-full[\s\S]*pr-16/);
+  assert.doesNotMatch(markup, /for="server-profile-notes"[\s\S]*?>Notes<\/label>/);
   assert.match(markup, /Character: Mira/);
   assert.match(markup, /Current plot: bridge watch/);
-  assert.match(markup, /Saved/);
+  assert.match(markup, /sr-only[\s\S]*Saved/);
   assert.doesNotMatch(markup, />Save<\/button>/);
 });
 

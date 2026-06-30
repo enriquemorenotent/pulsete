@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Badge, type BadgeProps } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
+import { cn } from '@/lib/utils.js';
 import { AutosaveNotesEditor } from './AutosaveNotesEditor.js';
 import { InspectorHeader, InspectorPanel, MetadataRow } from './RightSidebarInspector.js';
 import {
@@ -10,6 +11,11 @@ import {
   getNetworkManagerStatusLabel,
 } from './network-manager-dialog-model.js';
 import { summarizeHistoryCapabilities } from './server-history-capabilities.js';
+import {
+  useServerSidebarAccordionState,
+  type ServerSidebarAccordionController,
+  type ServerSidebarAccordionId,
+} from './server-sidebar-accordion-state.js';
 import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 import type { NetworkProfile, NetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 import type { WorkspaceView } from './workspace-types.js';
@@ -25,21 +31,22 @@ export function ServerProfileSidebar(props: {
   ) => Promise<NetworkProfile | null>;
 }) {
   const network = props.network ?? props.fallbackNetwork;
+  const accordion = useServerSidebarAccordionState(network?.id);
   if (!network) {
     return null;
   }
   return (
-    <InspectorPanel>
+    <InspectorPanel className="overflow-y-auto overscroll-contain">
       <InspectorHeader
         eyebrow="Profile"
         title={network.name}
         subtitle={`${network.host}:${network.port}${network.tls ? ' - SSL/TLS' : ''}`}
         actions={<EditProfileButton disabled={!props.network} onClick={props.onEdit} />}
       />
-      <ConnectionAccordion network={network} runtime={props.runtime} />
-      <HistoryAccordion capabilities={props.runtime?.capabilities} />
-      <ServerCapabilityInspector capabilities={props.runtime?.capabilities} />
-      <NotesAccordion network={network} onSaveNotes={props.onSaveNotes} />
+      <ConnectionAccordion accordion={accordion} network={network} runtime={props.runtime} />
+      <HistoryAccordion accordion={accordion} capabilities={props.runtime?.capabilities} />
+      <ServerCapabilityInspector accordion={accordion} capabilities={props.runtime?.capabilities} />
+      <NotesAccordion accordion={accordion} network={network} onSaveNotes={props.onSaveNotes} />
     </InspectorPanel>
   );
 }
@@ -59,11 +66,16 @@ function EditProfileButton(props: { disabled: boolean; onClick: () => void }) {
 }
 
 function ConnectionAccordion(props: {
+  accordion: ServerSidebarAccordionController;
   network: NetworkProfile;
   runtime: WorkspaceView['selectedRuntime'];
 }) {
   return (
-    <ServerInspectorAccordionItem title="Connection">
+    <ServerInspectorAccordionItem
+      accordion={props.accordion}
+      itemId="connection"
+      title="Connection"
+    >
       <dl className="space-y-1.5">
         <MetadataRow label="Status" value={getNetworkManagerStatusLabel(props.runtime)} />
         <MetadataRow label="Nick" value={props.runtime?.nick ?? props.network.nick} />
@@ -74,10 +86,17 @@ function ConnectionAccordion(props: {
   );
 }
 
-function HistoryAccordion(props: { capabilities?: NetworkRuntimeCapabilities | null }) {
+function HistoryAccordion(props: {
+  accordion: ServerSidebarAccordionController;
+  capabilities?: NetworkRuntimeCapabilities | null;
+}) {
   const summary = summarizeHistoryCapabilities(props.capabilities);
   return (
-    <ServerInspectorAccordionItem title="History">
+    <ServerInspectorAccordionItem
+      accordion={props.accordion}
+      itemId="history"
+      title="History"
+    >
       <dl className="space-y-1.5">
         <MetadataRow label="Backfill" value={summary.backfill} />
         <MetadataRow label="Page size" value={summary.pageSize} />
@@ -90,37 +109,48 @@ function HistoryAccordion(props: { capabilities?: NetworkRuntimeCapabilities | n
 }
 
 function NotesAccordion(props: {
+  accordion: ServerSidebarAccordionController;
   network: NetworkProfile;
   onSaveNotes: (network: NetworkProfile, notes: string) => Promise<NetworkProfile | null>;
 }) {
   return (
-    <ServerInspectorAccordionItem title="Notes">
+    <ServerInspectorAccordionItem
+      accordion={props.accordion}
+      contentClassName="flex min-h-72 p-0"
+      itemId="notes"
+      title="Notes"
+    >
       <AutosaveNotesEditor
         id="server-profile-notes"
         notes={props.network.notes ?? ''}
         onSave={(notes) => props.onSaveNotes(props.network, notes).then(Boolean)}
         placeholder="Character, aliases, plot hooks..."
         scopeKey={props.network.id}
+        variant="compact"
       />
     </ServerInspectorAccordionItem>
   );
 }
 
 function ServerInspectorAccordionItem(props: {
+  accordion: ServerSidebarAccordionController;
   children: ReactNode;
-  defaultOpen?: boolean;
+  contentClassName?: string;
+  itemId: ServerSidebarAccordionId;
   title: string;
 }) {
   return (
     <details
+      data-server-sidebar-section={props.itemId}
       className="group rounded-sm border border-white/[0.055] bg-white/[0.018]"
-      open={props.defaultOpen ?? true}
+      open={props.accordion.isOpen(props.itemId)}
+      onToggle={(event) => props.accordion.setOpen(props.itemId, event.currentTarget.open)}
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground/72 outline-none transition-colors hover:text-foreground/84 focus-visible:ring-2 focus-visible:ring-ring/45 [&::-webkit-details-marker]:hidden">
         <span>{props.title}</span>
         <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="border-t border-white/[0.045] px-2.5 py-2.5">
+      <div className={cn('border-t border-white/[0.045] px-2.5 py-2.5', props.contentClassName)}>
         {props.children}
       </div>
     </details>
@@ -128,6 +158,7 @@ function ServerInspectorAccordionItem(props: {
 }
 
 function ServerCapabilityInspector(props: {
+  accordion: ServerSidebarAccordionController;
   capabilities?: NetworkRuntimeCapabilities | null;
 }) {
   const capabilities = props.capabilities ?? emptyNetworkRuntimeCapabilities();
@@ -140,7 +171,11 @@ function ServerCapabilityInspector(props: {
     return null;
   }
   return (
-    <ServerInspectorAccordionItem title="Capabilities">
+    <ServerInspectorAccordionItem
+      accordion={props.accordion}
+      itemId="capabilities"
+      title="Capabilities"
+    >
       <div className="space-y-2.5">
         <CapabilityGroup capabilities={negotiated} label="Active" variant="success" />
         <CapabilityGroup capabilities={offered} label="Offered" variant="secondary" />
