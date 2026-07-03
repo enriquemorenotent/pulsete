@@ -10,7 +10,7 @@ type ContactRuleControlsProps = {
 export function ContactRuleControls(props: ContactRuleControlsProps) {
   const nick = props.state.contact.nick;
   return (
-    <div className={props.className ?? 'flex shrink-0 items-center gap-1'}>
+    <div className={props.className ?? 'flex shrink-0 items-center gap-1.5'}>
       <ContactRuleIconButton
         kind="friend"
         active={Boolean(props.state.friend)}
