@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
 import type { ChatPaneHeaderAction } from './chat-pane-header-actions.js';
+import { headerIconButtonClass } from './header-icon-button-style.js';
 import type { WorkspaceView } from './workspace.js';
 
 export function PaneHeaderActions(props: {
@@ -15,33 +16,37 @@ export function PaneHeaderActions(props: {
   if (props.primary.length === 0 && !props.contactControls && props.overflow.length === 0) {
     return null;
   }
+  const closeActions = props.primary.filter(isCloseAction);
+  const regularActions = props.primary.filter((action) => !isCloseAction(action));
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-      {props.primary.map((action) =>
-        action.id === 'close-query' ? (
-          <Button
-            key={action.id}
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="size-7 text-muted-foreground"
-            aria-label={`Close ${props.title}`}
-            onClick={action.onSelect}
-          >
-            <X className="size-3.5" />
-          </Button>
-        ) : (
-          <Button key={action.id} variant="outline" size="sm" onClick={action.onSelect}>
-            {action.label}
-          </Button>
-        ),
-      )}
+      {regularActions.map((action) => (
+        <Button key={action.id} variant="outline" size="sm" onClick={action.onSelect}>
+          {action.label}
+        </Button>
+      ))}
       {props.contactControls}
       <ChatPaneHeaderActionMenu actions={props.overflow} />
+      {closeActions.map((action) => (
+        <Button
+          key={action.id}
+          type="button"
+          size="icon"
+          variant="ghost"
+          className={headerIconButtonClass()}
+          aria-label={`Close ${props.title}`}
+          onClick={action.onSelect}
+        >
+          <X className="size-3.5" />
+        </Button>
+      ))}
     </div>
   );
 }
+
+const isCloseAction = (action: ChatPaneHeaderAction) =>
+  action.id === 'close-channel' || action.id === 'close-query';
 
 export function PaneHeader(props: {
   actions: ReactNode;

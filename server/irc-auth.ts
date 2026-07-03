@@ -66,8 +66,11 @@ export const createLoginSaslState = (profile: RuntimeNetworkProfile): IrcSaslSta
       }
     : createIdleSaslState();
 
-export const resolveDeferredNickservAutoJoinTarget = (profile: RuntimeNetworkProfile) =>
-  usesNickServ(profile) && profile.autoJoin.length > 0
+export const resolveDeferredNickservAutoJoinTarget = (
+  profile: RuntimeNetworkProfile,
+  reconnectChannels: readonly string[] = [],
+) =>
+  usesNickServ(profile) && resolveAutoJoinChannels(profile, reconnectChannels).length > 0
     ? resolveNetworkAuthTarget(profile.authTarget)
     : null;
 
@@ -136,13 +139,18 @@ const isNickservReplyTarget = (rawTarget: string, pendingTarget: string, current
 
 const joinConfiguredChannels = (connection: IrcDeferredAutoJoinContext) => {
   let joinedAny = false;
-  const configuredChannels = [...connection.profile.autoJoin, ...connection.listReconnectChannels()]
-    .filter((channel, index, channels) =>
-      channels.findIndex((candidate) => isSameIrcIdentifier(candidate, channel)) === index
-    );
+  const configuredChannels = resolveAutoJoinChannels(connection.profile, connection.listReconnectChannels());
   for (const channel of configuredChannels) {
     connection.join(channel);
     joinedAny = true;
   }
   return joinedAny;
 };
+
+const resolveAutoJoinChannels = (
+  profile: RuntimeNetworkProfile,
+  reconnectChannels: readonly string[],
+) =>
+  [...profile.autoJoin, ...reconnectChannels].filter((channel, index, channels) =>
+    channels.findIndex((candidate) => isSameIrcIdentifier(candidate, channel)) === index
+  );

@@ -10,13 +10,10 @@ export type ChatPaneHeaderAction = {
 
 type ResolveChatPaneHeaderActionsContext = {
   workspace: WorkspaceView;
-  showChannelAutoJoin: boolean;
-  channelAutoJoinActive: boolean;
   canDownloadHistory?: boolean;
   canDeleteHistory?: boolean;
   canSearchHistory?: boolean;
   onWhoisSelectedQuery?: () => void;
-  onToggleChannelAutoJoin: () => Promise<boolean>;
   onDownloadHistory?: () => Promise<boolean>;
   onDeleteHistory?: () => void;
   onOpenHistorySearch?: () => void;
@@ -91,16 +88,6 @@ const resolveOverflowActions = (
       id: 'query-whois',
       label: 'WHOIS',
       onSelect: context.onWhoisSelectedQuery,
-    });
-  }
-
-  if (context.showChannelAutoJoin) {
-    overflow.push({
-      id: 'autojoin',
-      label: context.channelAutoJoinActive ? 'Autojoin On' : 'Autojoin Off',
-      onSelect: () => {
-        void context.onToggleChannelAutoJoin();
-      },
     });
   }
 

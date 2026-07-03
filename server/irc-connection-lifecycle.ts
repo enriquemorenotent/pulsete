@@ -44,7 +44,10 @@ export const openSocket = (
 export const beginLogin = (connection: IrcLifecycleContext) => {
   connection.lifecycle.lastFailureMessage = null;
   connection.lifecycle.sasl = createLoginSaslState(connection.profile);
-  connection.lifecycle.pendingNickservAutoJoinTarget = resolveDeferredNickservAutoJoinTarget(connection.profile);
+  connection.lifecycle.pendingNickservAutoJoinTarget = resolveDeferredNickservAutoJoinTarget(
+    connection.profile,
+    connection.listReconnectChannels(),
+  );
 };
 
 export const markConnectionFailure = (connection: IrcLifecycleContext, detail: string) => {

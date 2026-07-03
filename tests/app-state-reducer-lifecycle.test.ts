@@ -133,6 +133,13 @@ test('friend presence updates track status by friend id', () => {
   assert.equal(friend.id in withoutFriend.domain.friendPresence, false);
 });
 
+test('friend presence ignores unchanged status updates', () => {
+  const action = { type: 'friend-presence', friendId: 'friend-1', presence: 'away' } as const;
+  const withPresence = reducer(initialState, action);
+
+  assert.equal(reducer(withPresence, action), withPresence);
+});
+
 test('query presence updates track status by buffer id and clear on buffer removal', () => {
   const query = makeBuffer({ id: 'query-1', kind: 'query', target: 'Alice' });
   const withBuffer = reducer(initialState, { type: 'upsert-buffer', buffer: query });

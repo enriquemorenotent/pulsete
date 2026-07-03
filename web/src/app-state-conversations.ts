@@ -94,6 +94,9 @@ export const reduceConversationDomain = (
         nickEmojis: domain.nickEmojis.filter((nickEmoji) => nickEmoji.id !== action.nickEmojiId),
       };
     case 'friend-presence':
+      if (domain.friendPresence[action.friendId] === action.presence) {
+        return null;
+      }
       return {
         ...domain,
         friendPresence: {

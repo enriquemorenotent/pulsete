@@ -65,6 +65,10 @@ export type ContactNotificationSettings = {
   channels: ContactNotificationChannel[];
 };
 
+export type ContactNotificationCandidate = {
+  buffer: BufferState;
+  latestMessage: ChatMessage | null;
+};
 const defaultSettings: ContactNotificationSettings = {
   enabled: false,
   systemEnabled: false,
@@ -147,7 +151,16 @@ export const findEligibleContactNotificationBuffer = (input: {
   appVisibleAndFocused: boolean;
   selectedBufferId: string | null;
   settings: ContactNotificationSettings;
-}) => {
+}) => findEligibleContactNotification(input)?.buffer ?? null;
+
+export const findEligibleContactNotification = (input: {
+  previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
+  nextBuffers: readonly BufferState[];
+  messagesByConversation?: ConversationMessages;
+  appVisibleAndFocused: boolean;
+  selectedBufferId: string | null;
+  settings: ContactNotificationSettings;
+}): ContactNotificationCandidate | null => {
   if (!hasNotificationTargets(input.settings)) {
     return null;
   }
@@ -158,16 +171,17 @@ export const findEligibleContactNotificationBuffer = (input: {
     ) {
       continue;
     }
+    const latestMessage = getLatestBufferMessage(input.messagesByConversation, buffer);
     if (!isContactNotificationAllowed(
       input.settings,
       buffer,
-      getLatestBufferMessage(input.messagesByConversation, buffer),
+      latestMessage,
     )) {
       continue;
     }
     const previousUnread = input.previousBuffers.get(buffer.id)?.unread ?? 0;
     if (buffer.unread > previousUnread) {
-      return buffer;
+      return { buffer, latestMessage };
     }
   }
   return null;

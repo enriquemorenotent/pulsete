@@ -63,6 +63,7 @@ test('system notification click focuses, selects, and clears handlers', () => {
     focusWindow: () => {
       focusCalls += 1;
     },
+    latestMessage: { body: 'Hello from Alice' },
     networkName: 'ExampleNet',
     notificationConstructor: FakeNotification,
     onSelectBuffer: (nextBuffer) => {
@@ -72,7 +73,7 @@ test('system notification click focuses, selects, and clears handlers', () => {
 
   assert.equal(notification.title, 'Alice');
   assert.deepEqual(notification.options, {
-    body: 'New private message on ExampleNet',
+    body: 'Hello from Alice',
     tag: 'pulsete-dm:query-alice',
   });
 
@@ -163,6 +164,7 @@ test('system notification dispatch tracks active notifications until release', (
   showContactSystemNotification({
     activeNotifications,
     buffer,
+    latestMessage: { body: '\x02formatted hello\x02' },
     networkNamesById: new Map([['network-1', 'ExampleNet']]),
     notificationConstructor: FakeNotification,
     onSelectBuffer: () => undefined,
@@ -171,7 +173,7 @@ test('system notification dispatch tracks active notifications until release', (
   const notification = [...activeNotifications][0] as FakeNotification;
 
   assert.equal(activeNotifications.size, 1);
-  assert.equal(notification.options?.body, 'New private message on ExampleNet');
+  assert.equal(notification.options?.body, 'formatted hello');
 
   notification.onclose?.(new Event('close'));
 

@@ -68,13 +68,10 @@ const resolveActionLabels = (actions: ReturnType<typeof resolveChatPaneHeaderAct
 
 const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeaderActions>[0]> = {}) => ({
   workspace: makeWorkspace(),
-  showChannelAutoJoin: false,
-  channelAutoJoinActive: false,
   canDownloadHistory: false,
   canDeleteHistory: false,
   canSearchHistory: false,
   onWhoisSelectedQuery: () => undefined,
-  onToggleChannelAutoJoin: async () => true,
   onDownloadHistory: async () => true,
   onDeleteHistory: () => undefined,
   onOpenHistorySearch: () => undefined,
@@ -86,14 +83,12 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
 
 test('channel header actions keep close primary and move maintenance actions into overflow', () => {
   const actions = resolveChatPaneHeaderActions(createContext({
-    showChannelAutoJoin: true,
-    channelAutoJoinActive: true,
     canDownloadHistory: true,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
     primary: ['Close'],
-    overflow: ['Autojoin On', 'Download history'],
+    overflow: ['Download history'],
   });
 });
 

@@ -66,7 +66,12 @@ export type IrcMessageEventContext = IrcEventContext & IrcConnectionPick<
 
 export type IrcLifecycleContext = IrcEventContext & IrcConnectionPick<
   'channelList' | 'channels' | 'friendPresence' | 'history' | 'lifecycle' | 'replyTracker',
-  'clearDrainingChannelList' | 'connect' | 'prunePendingReplyContexts' | 'queueReplyContext' | 'sendRaw'
+  | 'clearDrainingChannelList'
+  | 'connect'
+  | 'listReconnectChannels'
+  | 'prunePendingReplyContexts'
+  | 'queueReplyContext'
+  | 'sendRaw'
 >;
 
 export type IrcConnectContext = IrcLifecycleContext & IrcConnectionPick<

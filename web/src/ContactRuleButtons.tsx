@@ -1,6 +1,7 @@
 import { Bell, Star, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
+import { headerIconButtonClass } from './header-icon-button-style.js';
 
 export type ContactRuleKind = 'friend' | 'notifications' | 'muted';
 
@@ -17,19 +18,13 @@ export function ContactRuleIconButton(props: {
   onClick: () => void;
 }) {
   const Icon = contactRuleIcons[props.kind];
-  const activeClass = props.kind === 'muted'
-    ? 'border-amber-300/25 bg-amber-300/10 text-amber-300 hover:text-amber-300'
-    : 'border-primary/25 bg-primary/10 text-primary hover:text-primary';
 
   return (
     <Button
       type="button"
       size="icon"
       variant="ghost"
-      className={cn(
-        'size-7 border text-muted-foreground hover:text-foreground',
-        props.active ? activeClass : 'border-transparent',
-      )}
+      className={headerIconButtonClass(props.active, props.kind === 'muted' ? 'muted' : 'primary')}
       aria-label={props.label}
       aria-pressed={props.active}
       title={props.label}

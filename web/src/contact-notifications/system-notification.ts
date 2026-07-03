@@ -1,4 +1,5 @@
-import type { BufferState } from '../../../shared/protocol-chat.js';
+import type { BufferState, ChatMessage } from '../../../shared/protocol-chat.js';
+import { getVisibleIrcText } from '../irc-format.js';
 import { resolveUserAvatarTarget } from '../user-avatars/override-model.js';
 import {
   readStoredQueryAvatarOverrides,
@@ -12,7 +13,7 @@ export type ContactSystemNotificationHandle = {
   onclose: ((event: Event) => void) | null;
 };
 
-type ContactSystemNotificationConstructor = new (
+export type ContactSystemNotificationConstructor = new (
   title: string,
   options?: NotificationOptions,
 ) => ContactSystemNotificationHandle;
@@ -22,6 +23,7 @@ type ContactSystemNotificationInput = {
   buffer: BufferState;
   focusWindow?: () => void;
   iconsEnabled?: boolean;
+  latestMessage?: Pick<ChatMessage, 'body'> | null;
   networkName: string;
   notificationConstructor?: ContactSystemNotificationConstructor;
   onRelease?: (notification: ContactSystemNotificationHandle) => void;
@@ -32,12 +34,13 @@ type ContactSystemNotificationDispatchInput = {
   activeNotifications: Set<ContactSystemNotificationHandle>;
   buffer: BufferState;
   iconsEnabled?: boolean;
+  latestMessage?: Pick<ChatMessage, 'body'> | null;
   networkNamesById: ReadonlyMap<string, string>;
   notificationConstructor?: ContactSystemNotificationConstructor;
   onSelectBuffer: (buffer: BufferState) => void;
 };
 
-const clearContactSystemNotificationHandlers = (
+export const clearContactSystemNotificationHandlers = (
   notification: ContactSystemNotificationHandle,
 ) => {
   notification.onclick = null;
@@ -67,7 +70,11 @@ export const createContactSystemNotification = (
     ? null
     : input.avatarIconUrl ?? resolveContactSystemNotificationIconUrl(input.buffer);
   const notification = new NotificationClass(input.buffer.target, {
-    body: resolveContactSystemNotificationBody(input.buffer, input.networkName),
+    body: resolveContactSystemNotificationBody(
+      input.buffer,
+      input.networkName,
+      input.latestMessage,
+    ),
     ...(icon ? { icon } : {}),
     tag: resolveContactSystemNotificationTag(input.buffer),
   });
@@ -102,6 +109,7 @@ export const showContactSystemNotification = (
     const notification = createContactSystemNotification({
       buffer: input.buffer,
       iconsEnabled: input.iconsEnabled,
+      latestMessage: input.latestMessage,
       networkName,
       notificationConstructor: input.notificationConstructor,
       onRelease: (releasedNotification) => {
@@ -117,17 +125,28 @@ export const showContactSystemNotification = (
   }
 };
 
-const resolveNotificationConstructor = () => {
+export const resolveNotificationConstructor = () => {
   if (typeof window === 'undefined' || typeof window.Notification === 'undefined') {
     return null;
   }
   return window.Notification;
 };
 
-const resolveContactSystemNotificationBody = (buffer: BufferState, networkName: string) =>
-  buffer.kind === 'channel'
+const resolveContactSystemNotificationBody = (
+  buffer: BufferState,
+  networkName: string,
+  latestMessage?: Pick<ChatMessage, 'body'> | null,
+) => {
+  const messageBody = buffer.kind === 'query' && latestMessage
+    ? getVisibleIrcText(latestMessage.body).trim()
+    : '';
+  if (messageBody) {
+    return messageBody;
+  }
+  return buffer.kind === 'channel'
     ? `New message in ${buffer.target} on ${networkName}`
     : `New private message on ${networkName}`;
+};
 
 const resolveContactSystemNotificationTag = (buffer: BufferState) =>
   buffer.kind === 'channel'

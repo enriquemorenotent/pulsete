@@ -168,6 +168,46 @@ test('numeric 900 releases deferred NickServ autojoin after identify', () => {
   assert.equal(connection.lifecycle.pendingNickservAutoJoinTarget, null);
 });
 
+test('nickserv defers saved reconnect channels when configured autojoin is empty', () => {
+  const writes: string[] = [];
+  const connection = new IrcConnection(
+    {
+      id: randomUUID(),
+      workspaceOpen: false,
+      name: 'NickServNet',
+      host: 'irc.example.test',
+      port: 6667,
+      tls: false,
+      nick: 'tester',
+      altNicks: ['tester_', 'tester__'],
+      realName: 'Test User',
+      hasPassword: true,
+      authMethod: 'nickserv',
+      authTarget: 'NickServ',
+      password: 'hunter2',
+      favorite: false,
+      autoJoin: [],
+    },
+    { onEvent() {} }
+  );
+  connection.setReconnectChannels(['#saved']);
+  connection.beginLogin();
+  attachMockSocket(connection, createMockSocket(writes));
+
+  handleIrcLine(connection, ':irc.example 001 tester :Welcome');
+
+  assert.deepEqual(writes, ['PRIVMSG NickServ :IDENTIFY tester hunter2\r\n']);
+  assert.equal(connection.lifecycle.pendingNickservAutoJoinTarget, 'NickServ');
+
+  handleIrcLine(connection, ':irc.example 900 tester tester tester!user@example :You are now logged in as tester');
+
+  assert.deepEqual(writes, [
+    'PRIVMSG NickServ :IDENTIFY tester hunter2\r\n',
+    'JOIN #saved\r\n',
+  ]);
+  assert.equal(connection.lifecycle.pendingNickservAutoJoinTarget, null);
+});
+
 test('nickserv identify success accepts configured service targets and notice star replies', () => {
   const writes: string[] = [];
   const connection = new IrcConnection(

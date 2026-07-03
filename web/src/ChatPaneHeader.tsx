@@ -1,5 +1,6 @@
 import type { BufferState, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
+import { ChannelAutoJoinButton } from './ChannelAutoJoinButton.js';
 import { ChannelNotificationButton } from './ChannelNotificationButton.js';
 import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
 import { resolveChatPaneHeaderActions } from './chat-pane-header-actions.js';
@@ -72,15 +73,17 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   const selectedChannelName = selectedBuffer?.kind === 'channel'
     ? props.workspace.selectedChannel?.name ?? selectedBuffer.target
     : null;
+  const selectedAutoJoinChannelName = props.showChannelAutoJoin
+    ? props.workspace.selectedChannel?.name
+      ?? props.workspace.selectedPendingChannel?.channel
+      ?? selectedChannelName
+    : null;
   const actions = resolveChatPaneHeaderActions({
     workspace: props.workspace,
-    showChannelAutoJoin: props.showChannelAutoJoin,
-    channelAutoJoinActive: props.channelAutoJoinActive,
     canDownloadHistory: props.canDownloadHistory,
     canDeleteHistory: props.canDeleteHistory,
     canSearchHistory: props.canSearchHistory,
     onWhoisSelectedQuery: props.onWhoisSelectedQuery,
-    onToggleChannelAutoJoin: props.onToggleChannelAutoJoin,
     onDownloadHistory: props.onDownloadHistory,
     onDeleteHistory: props.onDeleteHistory,
     onOpenHistorySearch: props.onOpenHistorySearch,
@@ -152,12 +155,25 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
                 state={props.selectedQueryContactRule}
                 handlers={props.contactRuleHandlers}
               />
-            ) : selectedChannelName && props.onToggleSelectedChannelNotifications ? (
-              <ChannelNotificationButton
-                active={props.selectedChannelNotificationsEnabled === true}
-                channel={selectedChannelName}
-                onToggle={props.onToggleSelectedChannelNotifications}
-              />
+            ) : selectedChannelName || selectedAutoJoinChannelName ? (
+              <>
+                {selectedChannelName && props.onToggleSelectedChannelNotifications ? (
+                  <ChannelNotificationButton
+                    active={props.selectedChannelNotificationsEnabled === true}
+                    channel={selectedChannelName}
+                    onToggle={props.onToggleSelectedChannelNotifications}
+                  />
+                ) : null}
+                {selectedAutoJoinChannelName ? (
+                  <ChannelAutoJoinButton
+                    active={props.channelAutoJoinActive}
+                    channel={selectedAutoJoinChannelName}
+                    onToggle={() => {
+                      void props.onToggleChannelAutoJoin();
+                    }}
+                  />
+                ) : null}
+              </>
             ) : null
           }
           overflow={actions.overflow}

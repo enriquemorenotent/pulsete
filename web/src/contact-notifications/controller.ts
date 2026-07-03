@@ -6,7 +6,7 @@ import {
   addContactNotificationChannel,
   addContactNotificationContact,
   canPlayContactNotificationCue,
-  findEligibleContactNotificationBuffer,
+  findEligibleContactNotification,
   removeContactNotificationChannel,
   removeContactNotificationContact,
   serializeContactNotificationSettings,
@@ -177,7 +177,7 @@ export function useContactNotifications(input: {
     if (!settings.enabled && !settings.systemEnabled) {
       return;
     }
-    const eligibleBuffer = findEligibleContactNotificationBuffer({
+    const eligibleNotification = findEligibleContactNotification({
       previousBuffers,
       nextBuffers: input.buffers,
       messagesByConversation: input.messagesByConversation,
@@ -185,7 +185,7 @@ export function useContactNotifications(input: {
       selectedBufferId: input.selectedBufferId,
       settings,
     });
-    if (!eligibleBuffer) {
+    if (!eligibleNotification) {
       return;
     }
     const shouldPlayAudio = settings.enabled;
@@ -210,8 +210,9 @@ export function useContactNotifications(input: {
     if (shouldNotify) {
       showContactSystemNotification({
         activeNotifications: activeNotificationsRef.current,
-        buffer: eligibleBuffer,
+        buffer: eligibleNotification.buffer,
         iconsEnabled: input.systemNotificationIconsEnabled,
+        latestMessage: eligibleNotification.latestMessage,
         networkNamesById: input.networkNamesById,
         onSelectBuffer: input.onSelectBuffer,
       });

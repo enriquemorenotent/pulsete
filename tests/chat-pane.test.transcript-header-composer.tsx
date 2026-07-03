@@ -50,15 +50,28 @@ test('channel transcripts keep the unread divider anchored after a day divider',
   assert.match(markup, /newer/);
 });
 
-test('channel headers collapse maintenance actions behind a compact overflow trigger', () => {
+test('channel headers expose one-click autojoin controls', () => {
   const markup = renderChatPane([], {
     showChannelAutoJoin: true,
     channelAutoJoinActive: true,
   });
 
-  assert.match(markup, /aria-label="More actions"/);
-  assert.match(markup, />Close</);
+  assert.match(markup, /aria-label="Close #help"/);
+  assert.doesNotMatch(markup, />Close</);
+  assert.match(markup, /aria-label="Disable autojoin for #help"/);
+  assert.match(markup, /aria-label="Disable autojoin for #help"[\s\S]*aria-label="Close #help"/);
+  assert.doesNotMatch(markup, /aria-label="More actions"/);
   assert.doesNotMatch(markup, /Autojoin On/);
+});
+
+test('channel headers expose the inactive autojoin toggle state', () => {
+  const markup = renderChatPane([], {
+    showChannelAutoJoin: true,
+    channelAutoJoinActive: false,
+  });
+
+  assert.match(markup, /aria-label="Enable autojoin for #help"/);
+  assert.doesNotMatch(markup, /aria-label="Disable autojoin for #help"/);
 });
 
 test('channel composers render the active target as a prompt cue', () => {
@@ -80,6 +93,8 @@ test('channel headers expose one-click notification controls', () => {
   const markup = renderChatPane([]);
 
   assert.match(markup, /aria-label="Enable notifications for #help"/);
+  assert.match(markup, /border-white\/10 bg-white\/\[0\.035\][^"]*" type="button" aria-label="Close #help"/);
+  assert.match(markup, /border-white\/10 bg-white\/\[0\.035\][^"]*" type="button" aria-label="Enable notifications for #help"/);
   assert.doesNotMatch(markup, /aria-label="Disable notifications for #help"/);
 });
 
@@ -135,6 +150,8 @@ test('query headers expose one-click contact controls', () => {
   assert.match(markup, /aria-label="Add MissD to watchlist"/);
   assert.match(markup, /aria-label="Enable notifications for MissD"/);
   assert.match(markup, /aria-label="Mute MissD"/);
+  assert.match(markup, /aria-label="Mute MissD"[\s\S]*aria-label="Close MissD"/);
+  assert.match(markup, /border-white\/10 bg-white\/\[0\.035\][^"]*" type="button" aria-label="Add MissD to watchlist"/);
   assert.doesNotMatch(markup, /aria-label="Edit emoji tag for MissD"/);
   assert.doesNotMatch(markup, /aria-label="Contact settings for MissD"/);
   assert.doesNotMatch(markup, /aria-label="More actions"/);

@@ -1,18 +1,17 @@
-import { Bell } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
-import { cn } from '@/lib/utils.js';
 import { headerIconButtonClass } from './header-icon-button-style.js';
 
-type ChannelNotificationButtonProps = {
+type ChannelAutoJoinButtonProps = {
   active: boolean;
   channel: string;
   onToggle: () => void;
 };
 
-export function ChannelNotificationButton(props: ChannelNotificationButtonProps) {
+export function ChannelAutoJoinButton(props: ChannelAutoJoinButtonProps) {
   const label = props.active
-    ? `Disable notifications for ${props.channel}`
-    : `Enable notifications for ${props.channel}`;
+    ? `Disable autojoin for ${props.channel}`
+    : `Enable autojoin for ${props.channel}`;
   return (
     <Button
       type="button"
@@ -24,7 +23,7 @@ export function ChannelNotificationButton(props: ChannelNotificationButtonProps)
       title={label}
       onClick={props.onToggle}
     >
-      <Bell className={cn('size-4', props.active && 'fill-current')} />
+      <LogIn className="size-4" />
     </Button>
   );
 }
