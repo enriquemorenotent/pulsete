@@ -1,10 +1,24 @@
 import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
-import { historyWindowLimit } from '../../shared/protocol-chat.js';
 import type { BufferState, ChatMessage } from '../../shared/protocol-chat.js';
+import {
+  applyMessageBucketMutation,
+  normalizeMessageBucket,
+} from './conversation-message-buckets.js';
+import { conversationMessageLimitFor } from './conversation-message-retention.js';
+
+export {
+  globalConversationMessageLimit,
+  inactiveConversationMessageLimit,
+  retainConversationMessageBudget,
+  selectedConversationMessageLimit,
+  selectedConversationMessageLimit as retainedConversationMessageLimit,
+} from './conversation-message-retention.js';
 
 export type ConversationMessages = Record<string, ChatMessage[]>;
 
-export const retainedConversationMessageLimit = historyWindowLimit * 8;
+export type ConversationMessageMutation =
+  | { kind: 'append' | 'upsert'; message: ChatMessage }
+  | { kind: 'append-batch' | 'prepend-batch'; messages: ChatMessage[] };
 
 export const toConversationMessageKey = (networkId: string, target: string) =>
   `${networkId}:${normalizeIrcIdentifier(target)}`;
@@ -17,36 +31,23 @@ export const indexConversationMessages = (messages: ChatMessage[]): Conversation
   return buckets;
 };
 
-export const appendConversationMessages = (
+export const mutateConversationMessages = (
   current: ConversationMessages,
-  incoming: ChatMessage[],
-  options: { maxMessagesPerConversation?: number } = {},
+  mutation: ConversationMessageMutation,
+  selectedBufferId: string | null,
 ): ConversationMessages => {
+  const incoming = 'message' in mutation ? [mutation.message] : mutation.messages;
   if (incoming.length === 0) {
     return current;
   }
   const next = { ...current };
   for (const [key, bucket] of groupMessagesByConversation(incoming)) {
-    next[key] = limitMessageBucket(
-      appendMessageBucket(next[key] ?? [], bucket),
-      options.maxMessagesPerConversation,
+    next[key] = applyMessageBucketMutation(
+      mutation.kind,
+      next[key] ?? [],
+      bucket,
+      selectedBufferId ? conversationMessageLimitFor(key, selectedBufferId) : undefined,
     );
-  }
-  return next;
-};
-
-export const prependConversationMessages = (
-  current: ConversationMessages,
-  incoming: ChatMessage[],
-  options: { maxMessagesPerConversation?: number } = {},
-): ConversationMessages => {
-  if (incoming.length === 0) {
-    return current;
-  }
-  const next = { ...current };
-  for (const [key, bucket] of groupMessagesByConversation(incoming)) {
-    const prepended = prependMessageBucket(next[key] ?? [], bucket);
-    next[key] = limitMessageBucket(prepended, options.maxMessagesPerConversation);
   }
   return next;
 };
@@ -93,7 +94,11 @@ export const removeBufferMessages = (
     }));
     const next = {
       ...messages,
-      [replacementKey]: mergeMessageBucket(replacementBucket, movedBucket),
+      [replacementKey]: applyMessageBucketMutation(
+        'merge',
+        replacementBucket,
+        movedBucket,
+      ),
     };
     delete next[key];
     return next;
@@ -148,9 +153,6 @@ export const removeConversationMessages = (
   return changed ? next : messages;
 };
 
-const mergeMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) =>
-  normalizeMessageBucket([...current, ...incoming]);
-
 const groupMessagesByConversation = (messages: ChatMessage[]) => {
   const grouped = new Map<string, ChatMessage[]>();
   for (const message of messages) {
@@ -169,80 +171,16 @@ const findConversationBucketsByTarget = (
   messages: ConversationMessages,
   networkId: string,
   target: string,
-) => Object.entries(messages)
-  .filter(([, bucket]) => bucket.some((message) =>
-    message.networkId === networkId
-    && normalizeIrcIdentifier(message.target) === normalizeIrcIdentifier(target)
-  ))
-  .map(([key]) => key);
-
-const appendMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => {
-  const normalizedIncoming = normalizeMessageBucket(incoming);
-  if (normalizedIncoming.length === 0) {
-    return current;
-  }
-  if (current.length === 0) {
-    return normalizedIncoming;
-  }
-  if (canAppendWithoutResort(current, normalizedIncoming)) {
-    return [...current, ...normalizedIncoming];
-  }
-  return mergeMessageBucket(current, normalizedIncoming);
-};
-
-const prependMessageBucket = (current: ChatMessage[], incoming: ChatMessage[]) => {
-  const normalizedIncoming = normalizeMessageBucket(incoming);
-  if (normalizedIncoming.length === 0) {
-    return current;
-  }
-  if (current.length === 0) {
-    return normalizedIncoming;
-  }
-  if (canPrependWithoutResort(current, normalizedIncoming)) {
-    return [...normalizedIncoming, ...current];
-  }
-  return mergeMessageBucket(normalizedIncoming, current);
-};
-
-const normalizeMessageBucket = (messages: ChatMessage[]) => {
-  if (messages.length < 2) {
-    return messages;
-  }
-  const deduped = new Map<string, ChatMessage>();
-  let sorted = true;
-  for (let index = 0; index < messages.length; index += 1) {
-    const message = messages[index];
-    deduped.set(message.id, message);
-    if (index > 0 && messages[index - 1].ts > message.ts) {
-      sorted = false;
+) => {
+  const normalizedTarget = normalizeIrcIdentifier(target);
+  const keys: string[] = [];
+  for (const [key, bucket] of Object.entries(messages)) {
+    if (bucket.some((message) =>
+      message.networkId === networkId
+      && normalizeIrcIdentifier(message.target) === normalizedTarget
+    )) {
+      keys.push(key);
     }
   }
-  const bucket = Array.from(deduped.values());
-  return sorted && bucket.length === messages.length
-    ? bucket
-    : bucket.sort((left, right) => left.ts - right.ts);
+  return keys;
 };
-
-const canAppendWithoutResort = (current: ChatMessage[], incoming: ChatMessage[]) => {
-  if (current[current.length - 1]?.ts > incoming[0]?.ts) {
-    return false;
-  }
-  return !hasDuplicateMessageIds(current, incoming);
-};
-
-const canPrependWithoutResort = (current: ChatMessage[], incoming: ChatMessage[]) => {
-  if (incoming[incoming.length - 1]?.ts > current[0]?.ts) {
-    return false;
-  }
-  return !hasDuplicateMessageIds(current, incoming);
-};
-
-const hasDuplicateMessageIds = (current: ChatMessage[], incoming: ChatMessage[]) => {
-  const currentIds = new Set(current.map((message) => message.id));
-  return incoming.some((message) => currentIds.has(message.id));
-};
-
-const limitMessageBucket = (bucket: ChatMessage[], maxMessages: number | undefined) =>
-  typeof maxMessages === 'number' && maxMessages > 0 && bucket.length > maxMessages
-    ? bucket.slice(-maxMessages)
-    : bucket;

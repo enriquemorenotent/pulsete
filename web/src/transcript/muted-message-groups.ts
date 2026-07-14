@@ -22,20 +22,7 @@ export const buildMutedGroupRow = (
   if (!pendingGroup) {
     return null;
   }
-  const firstMessage = pendingGroup.messageRows[0]?.message;
-  const lastMessage = pendingGroup.messageRows.at(-1)?.message;
-  if (!firstMessage || !lastMessage) {
-    return null;
-  }
-  return {
-    kind: 'muted-group',
-    key: `muted-group:${firstMessage.id}:${lastMessage.id}`,
-    firstMessageId: firstMessage.id,
-    lastMessageId: lastMessage.id,
-    messageCount: pendingGroup.messageRows.length,
-    messageRows: pendingGroup.messageRows,
-    nick: pendingGroup.nick,
-  };
+  return buildMutedRow(pendingGroup.messageRows, pendingGroup.nick);
 };
 
 export const shouldFlushMutedGroup = (
@@ -55,7 +42,6 @@ export const appendMutedMessageRow = (input: {
   activeGroup: ChatTranscriptGroup;
   listKind: 'chat' | 'server';
   message: ChatMessage;
-  messageIndex: number;
   mutedNick: string;
   pendingMutedGroup: PendingMutedGroup | null;
 }) => {
@@ -83,8 +69,74 @@ export const appendMutedMessageRow = (input: {
       timestampGroupKey !== null
       && timestampGroupKey === pendingGroup.previousTimestampGroupKey,
     message: input.message,
-    messageIndex: input.messageIndex,
   });
   pendingGroup.previousTimestampGroupKey = timestampGroupKey;
   return pendingGroup;
+};
+
+export const extendMutedGroupRow = (input: {
+  listKind: 'chat' | 'server';
+  message: ChatMessage;
+  mutedNick: string;
+  row: ChatTranscriptMutedGroupRow;
+}): ChatTranscriptMutedGroupRow | null => {
+  const firstMessage = input.row.messageRows[0]?.message;
+  if (
+    !firstMessage
+    || firstMessage.networkId !== input.message.networkId
+    || normalizeIrcIdentifier(input.row.nick) !== normalizeIrcIdentifier(input.mutedNick)
+  ) {
+    return null;
+  }
+  const previousMessage = input.row.messageRows.at(-1)?.message;
+  const timestampGroupKey = resolveTimestampGroupKey(input.message, input.listKind);
+  const previousTimestampGroupKey = previousMessage
+    ? resolveTimestampGroupKey(previousMessage, input.listKind)
+    : null;
+  return buildMutedRow([
+    ...input.row.messageRows,
+    {
+      kind: 'message',
+      key: `message:${input.message.id}`,
+      hideTimestamp:
+        timestampGroupKey !== null
+        && timestampGroupKey === previousTimestampGroupKey,
+      message: input.message,
+    },
+  ], input.row.nick);
+};
+
+export const trimMutedGroupRow = (
+  row: ChatTranscriptMutedGroupRow,
+  firstMessageIndex: number,
+) => {
+  const messageRows = row.messageRows.slice(firstMessageIndex);
+  const firstRow = messageRows[0];
+  if (!firstRow) {
+    return null;
+  }
+  messageRows[0] = firstRow.hideTimestamp
+    ? { ...firstRow, hideTimestamp: false }
+    : firstRow;
+  return buildMutedRow(messageRows, row.nick);
+};
+
+const buildMutedRow = (
+  messageRows: ChatTranscriptMessageRow[],
+  nick: string,
+): ChatTranscriptMutedGroupRow | null => {
+  const firstMessage = messageRows[0]?.message;
+  const lastMessage = messageRows.at(-1)?.message;
+  if (!firstMessage || !lastMessage) {
+    return null;
+  }
+  return {
+    kind: 'muted-group',
+    key: `muted-group:${firstMessage.id}:${lastMessage.id}`,
+    firstMessageId: firstMessage.id,
+    lastMessageId: lastMessage.id,
+    messageCount: messageRows.length,
+    messageRows,
+    nick,
+  };
 };

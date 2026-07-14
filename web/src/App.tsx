@@ -1,138 +1,66 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AppEffects } from './AppEffects.js';
-import {
-  selectBuffers,
-  selectFriendPresence,
-  selectFriends,
-  selectMessagesByConversation,
-  selectNetworkNamesById,
-  selectPhase,
-  selectSelectedBufferId,
-} from './app-selectors.js';
-import { AppStoreProvider, createAppStore, useAppSelector } from './app-store.js';
+import { selectSelectedBufferId } from './app-selectors.js';
+import { AppStoreProvider, createAppStore } from './app-store.js';
+import { AppBody } from './AppBody.js';
 import { createComposerStore } from './composer-store.js';
-import { useContactNotifications } from './contact-notifications/controller.js';
-import { useWatchlistPresenceNotifications } from './contact-notifications/friend-presence-notification.js';
-import { DesktopShell } from './DesktopShell.js';
-import {
-  resolveMediaVisibilityPolicy,
-  useMediaVisibilitySettings,
-} from './media-visibility-settings.js';
-import { ToastContainer } from './ToastContainer.js';
-import { useUserAvatarSettings } from './user-avatars/settings.js';
+import { createServerMessageBridge } from './server-message-bridge.js';
 import { createLiveAppActions } from './useAppActions.js';
 import { useAppUiState } from './useAppUiState.js';
-import { createServerMessageBridge } from './server-message-bridge.js';
 
 function App() {
   const ui = useAppUiState();
-  const storeRef = useRef(createAppStore());
-  const composerRef = useRef(createComposerStore());
+  const [store] = useState(createAppStore);
+  const [composer] = useState(createComposerStore);
   const updateBanner = useCallback(
     (kind: 'notice' | 'error', message: string) =>
-      storeRef.current.dispatch({
+      store.dispatch({
         type: 'set-banner',
         banner: { kind, message },
       }),
-    [],
+    [store],
   );
   const serverMessages = useMemo(
-    () => createServerMessageBridge(storeRef.current),
-    [],
+    () => createServerMessageBridge(store),
+    [store],
   );
   const actions = useMemo(
     () =>
       createLiveAppActions({
         applyServerMessages: serverMessages.applyMutationMessages,
-        getDraft: composerRef.current.getDraft,
-        getState: storeRef.current.getState,
-        dispatch: storeRef.current.dispatch,
+        getDraft: composer.getDraft,
+        getState: store.getState,
+        dispatch: store.dispatch,
         socketRef: ui.socketRef,
         setDraft: (value, contextKey) =>
-          composerRef.current.setDraft(
-            contextKey ?? selectSelectedBufferId(storeRef.current.getState()),
+          composer.setDraft(
+            contextKey ?? selectSelectedBufferId(store.getState()),
             value,
           ),
         recordComposerEntry: (value, contextKey) =>
-          composerRef.current.recordComposerEntry(
-            contextKey ?? selectSelectedBufferId(storeRef.current.getState()),
+          composer.recordComposerEntry(
+            contextKey ?? selectSelectedBufferId(store.getState()),
             value,
           ),
         updateBanner,
       }),
-    [serverMessages.applyMutationMessages, ui.socketRef, updateBanner],
+    [composer, serverMessages.applyMutationMessages, store, ui.socketRef, updateBanner],
   );
 
   return (
-    <AppStoreProvider store={storeRef.current}>
+    <AppStoreProvider store={store}>
       <AppEffects
         applySocketMessage={serverMessages.applySocketMessage}
-        composer={composerRef.current}
+        composer={composer}
         ui={ui}
       />
       <AppBody
         actions={actions}
         applyServerMessages={serverMessages.applyMutationMessages}
-        composer={composerRef.current}
+        composer={composer}
         ui={ui}
       />
     </AppStoreProvider>
-  );
-}
-
-type AppBodyProps = Omit<
-  Parameters<typeof DesktopShell>[0],
-  'contactNotifications' | 'mediaVisibilitySettings' | 'userAvatarSettings'
->;
-
-function AppBody(props: AppBodyProps) {
-  const phase = useAppSelector(selectPhase);
-  const buffers = useAppSelector(selectBuffers);
-  const friends = useAppSelector(selectFriends);
-  const friendPresence = useAppSelector(selectFriendPresence);
-  const messagesByConversation = useAppSelector(selectMessagesByConversation);
-  const networkNamesById = useAppSelector(selectNetworkNamesById);
-  const selectedBufferId = useAppSelector(selectSelectedBufferId);
-  const mediaVisibilitySettings = useMediaVisibilitySettings();
-  const mediaPolicy = useMemo(
-    () => resolveMediaVisibilityPolicy(mediaVisibilitySettings.settings),
-    [mediaVisibilitySettings.settings],
-  );
-  const contactNotifications = useContactNotifications({
-    buffers,
-    systemNotificationIconsEnabled: mediaPolicy.showNotificationIcons,
-    messagesByConversation,
-    networkNamesById,
-    onSelectBuffer: props.actions.selectTabBuffer,
-    selectedBufferId,
-  });
-  useWatchlistPresenceNotifications({
-    friends,
-    friendPresence,
-    onSelectFriend: props.actions.selectFriend,
-    systemEnabled: contactNotifications.settings.systemEnabled,
-    systemPermission: contactNotifications.systemPermission,
-  });
-  const userAvatarSettings = useUserAvatarSettings();
-
-  if (phase === 'loading') {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center px-6 text-sm font-medium uppercase tracking-[0.12em] text-muted-foreground">
-        Loading...
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <DesktopShell
-        {...props}
-        contactNotifications={contactNotifications}
-        mediaVisibilitySettings={mediaVisibilitySettings}
-        userAvatarSettings={userAvatarSettings}
-      />
-      <ToastContainer />
-    </>
   );
 }
 

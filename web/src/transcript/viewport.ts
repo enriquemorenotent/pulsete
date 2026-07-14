@@ -9,9 +9,9 @@ import {
   scrollToLatest,
   topAutoLoadThreshold,
   type ScrollBehavior,
-  type TranscriptScrollSnapshot,
 } from './viewport-positioning.js';
 import { useTranscriptOlderHistory } from './viewport-older-history.js';
+import { transcriptScrollSnapshots } from './scroll-snapshot-store.js';
 
 export { resolveFirstUnreadScrollLocation, resolveLatestFollowBehavior, resolveNextFirstItemIndex, resolvePrependedRowCountFromAnchor, resolveRestoredTranscriptScrollIndex, type TranscriptScrollSnapshot } from './viewport-positioning.js';
 
@@ -40,18 +40,19 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const positionedBufferIdRef = useRef<string | null>(null);
   const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
   const previousJumpToLatestRequestIdRef = useRef(params.jumpToLatestRequestId);
-  const scrollSnapshotsRef = useRef(new Map<string, TranscriptScrollSnapshot>());
   const visibleAnchorRowKeyRef = useRef<string | null>(null);
   const [firstItemIndex, setFirstItemIndexValue] = useState(firstItemIndexBase);
   const [isPinnedToLatest, setIsPinnedToLatest] = useState(true);
 
   const setFirstItemIndex = useCallback((value: number | ((current: number) => number)) => {
-    setFirstItemIndexValue((current) => {
-      const next = typeof value === 'function' ? value(current) : value;
-      firstItemIndexRef.current = next;
-      return next;
-    });
+    if (typeof value === 'number') {
+      firstItemIndexRef.current = value;
+    }
+    setFirstItemIndexValue(value);
   }, []);
+  useLayoutEffect(() => {
+    firstItemIndexRef.current = firstItemIndex;
+  }, [firstItemIndex]);
   const { handleLoadOlderHistory, resetOlderHistory } = useTranscriptOlderHistory({
     loadingOlderHistory: params.loadingOlderHistory,
     onLoadOlderHistory: params.onLoadOlderHistory,
@@ -64,12 +65,12 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
       return;
     }
     if (isPinnedToLatestRef.current) {
-      scrollSnapshotsRef.current.set(bufferId, { kind: 'latest' });
+      transcriptScrollSnapshots.set(bufferId, { kind: 'latest' });
       return;
     }
     const rowKey = visibleAnchorRowKeyRef.current;
     if (rowKey) {
-      scrollSnapshotsRef.current.set(bufferId, { kind: 'anchor', rowKey });
+      transcriptScrollSnapshots.set(bufferId, { kind: 'anchor', rowKey });
     }
   }, []);
 
@@ -89,7 +90,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     if (!params.bufferId || params.totalItemCount === 0) {
       return;
     }
-    scrollSnapshotsRef.current.set(params.bufferId, { kind: 'latest' });
+    transcriptScrollSnapshots.set(params.bufferId, { kind: 'latest' });
     visibleAnchorRowKeyRef.current = null;
     isPinnedToLatestRef.current = true;
     setIsPinnedToLatest(true);
@@ -134,7 +135,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     const restored = resolveRestoredTranscriptScrollIndex({
       firstItemIndex: firstItemIndexRef.current,
       rowKeys: params.rowKeys,
-      snapshot: scrollSnapshotsRef.current.get(params.bufferId) ?? null,
+      snapshot: transcriptScrollSnapshots.get(params.bufferId),
     });
     if (restored !== null) {
       virtuosoRef.current?.scrollToIndex(restored);

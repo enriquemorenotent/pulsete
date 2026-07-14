@@ -25,7 +25,6 @@ export type ChatTranscriptMessageRow = {
   key: string;
   hideTimestamp: boolean;
   message: ChatMessage;
-  messageIndex: number;
 };
 
 export type ChatTranscriptMutedGroupRow = {
@@ -66,7 +65,7 @@ export type ChatTranscriptModel = {
   unreadRowIndex: number | null;
 };
 
-type BuildChatTranscriptModelInput = {
+export type BuildChatTranscriptModelInput = {
   firstUnreadDividerIndex: number | null;
   listKind: 'chat' | 'server';
   messages: ChatMessage[];
@@ -76,6 +75,7 @@ type BuildChatTranscriptModelInput = {
 
 export const buildChatTranscriptModel = (
   input: BuildChatTranscriptModelInput,
+  now = Date.now(),
 ): ChatTranscriptModel => {
   const groups: ChatTranscriptGroup[] = [];
   const flatRows: ChatTranscriptRow[] = [];
@@ -118,7 +118,7 @@ export const buildChatTranscriptModel = (
       flushServerGroup();
       const group: ChatTranscriptGroup = {
         key: `day-${dayKey}`,
-        label: formatDayDividerLabel(message.ts),
+        label: formatDayDividerLabel(message.ts, now),
         rows: [],
       };
       const dayDividerRow: ChatTranscriptDayDividerRow = {
@@ -161,7 +161,6 @@ export const buildChatTranscriptModel = (
         activeGroup,
         listKind: input.listKind,
         message,
-        messageIndex,
         mutedNick,
         pendingMutedGroup,
       });
@@ -181,7 +180,6 @@ export const buildChatTranscriptModel = (
         activeGroup,
         descriptor: serverGroupDescriptor,
         message,
-        messageIndex,
         pendingServerGroup,
       });
       previousTimestampGroupKey = null;
@@ -198,7 +196,6 @@ export const buildChatTranscriptModel = (
         timestampGroupKey !== null
         && timestampGroupKey === previousTimestampGroupKey,
       message,
-      messageIndex,
     };
     activeGroup.rows.push(row);
     flatRows.push(row);

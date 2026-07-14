@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog.js';
 import { InlineImagePreviewDialogBody } from './InlineImagePreviewDialogBody.js';
 import { NetworkServerImageCropDialog } from './NetworkServerImageCropDialog.js';
+import { failedAvatarUrls } from './user-avatars/failure-cache.js';
 import { resolveIrcCloudAvatarUrl } from './user-avatars/irccloud.js';
 import { readSelectedImageDataUrl } from './user-avatars/image-selection.js';
 import { useQueryAvatarOverride } from './user-avatars/query-overrides.js';
@@ -28,8 +29,6 @@ type QueryProfileAvatarBannerProps = {
   onSetCustomAvatarUrl?: (url: string | null) => void;
   user: QueryProfileAvatarUser | null | undefined;
 };
-
-const failedQueryAvatarUrls = new Set<string>();
 
 export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
   const inputId = useId();
@@ -61,7 +60,7 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
 
   const sourceUrl = customAvatarUrl || realUrl;
   const source = customAvatarUrl ? 'custom' : realUrl ? 'irccloud' : 'placeholder';
-  const showInitial = !sourceUrl || failedUrl === sourceUrl || failedQueryAvatarUrls.has(sourceUrl);
+  const showInitial = !sourceUrl || failedUrl === sourceUrl || failedAvatarUrls.has(sourceUrl);
   const altText = source === 'custom'
     ? `Custom avatar for ${props.user.nick}`
     : `Avatar for ${props.user.nick}`;
@@ -107,7 +106,7 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
               loading="lazy"
               decoding="async"
               onError={() => {
-                failedQueryAvatarUrls.add(sourceUrl);
+                failedAvatarUrls.add(sourceUrl);
                 setFailedUrl(sourceUrl);
               }}
             />

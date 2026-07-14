@@ -29,6 +29,7 @@ type LoadOlderBufferHistoryParams = {
   remainingMessageCapacity: number;
   dispatch: (action: Action) => void;
   loadHistory: typeof api.loadHistory;
+  isCurrentRequest: () => boolean;
 };
 
 export type SelectedBufferHistoryControls = {
@@ -107,6 +108,7 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
     }
     loadingOlderRef.current = true;
     setLoadingOlderHistory(true);
+    const requestId = historyRequestRef.current;
     try {
       return await loadOlderBufferHistory({
         beforeMessageId: oldestSelectedMessageId,
@@ -115,6 +117,7 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
         remainingMessageCapacity,
         dispatch: params.dispatch,
         loadHistory: api.loadHistory,
+        isCurrentRequest: () => historyRequestRef.current === requestId,
       });
     } finally {
       loadingOlderRef.current = false;
@@ -169,6 +172,7 @@ export async function loadOlderBufferHistory({
   remainingMessageCapacity,
   dispatch,
   loadHistory,
+  isCurrentRequest,
 }: LoadOlderBufferHistoryParams) {
   const limit = Math.min(
     historyWindowLimit,
@@ -179,9 +183,15 @@ export async function loadOlderBufferHistory({
   }
   try {
     const payload = await loadHistory(bufferId, limit, beforeMessageId);
+    if (!isCurrentRequest()) {
+      return 0;
+    }
     applyHistoryPayload(dispatch, bufferId, payload, 'prepend-messages');
     return payload.messages.length;
   } catch {
+    if (!isCurrentRequest()) {
+      return 0;
+    }
     dispatch({ type: 'set-banner', banner: { kind: 'error', message: 'Failed to load older history' } });
     return 0;
   }

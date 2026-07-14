@@ -1,9 +1,20 @@
+import type { BufferState } from '../../../shared/protocol-chat.js';
+import type { ConversationMessages } from '../conversation-message-state.js';
 import type {
   ContactNotificationChannel,
   ContactNotificationContact,
   ContactNotificationSettings,
   ContactNotificationSound,
 } from './settings.js';
+
+export type ContactNotificationsInput = {
+  buffers: readonly BufferState[];
+  getMessagesByConversation?: () => ConversationMessages;
+  networkNamesById: ReadonlyMap<string, string>;
+  onSelectBuffer: (buffer: BufferState) => void;
+  selectedBufferId: string | null;
+  systemNotificationIconsEnabled?: boolean;
+};
 
 export type ContactNotificationsController = {
   settings: ContactNotificationSettings;

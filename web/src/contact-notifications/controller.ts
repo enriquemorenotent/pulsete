@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BufferState } from '../../../shared/protocol-chat.js';
-import type { ConversationMessages } from '../conversation-message-state.js';
 import {
   CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
   addContactNotificationChannel,
@@ -14,7 +13,10 @@ import {
   type ContactNotificationContact,
   type ContactNotificationSound,
 } from './settings.js';
-import type { ContactNotificationsController } from './controller-types.js';
+import type {
+  ContactNotificationsController,
+  ContactNotificationsInput,
+} from './controller-types.js';
 import {
   getAudioContextConstructor,
   getBufferMap,
@@ -28,16 +30,12 @@ import {
   showContactSystemNotification,
   type ContactSystemNotificationHandle,
 } from './system-notification.js';
+import { NotificationOwner } from './notification-owner.js';
 export type { ContactNotificationsController } from './controller-types.js';
 
-export function useContactNotifications(input: {
-  buffers: readonly BufferState[];
-  messagesByConversation?: ConversationMessages;
-  networkNamesById: ReadonlyMap<string, string>;
-  onSelectBuffer: (buffer: BufferState) => void;
-  selectedBufferId: string | null;
-  systemNotificationIconsEnabled?: boolean;
-}): ContactNotificationsController {
+export function useContactNotifications(
+  input: ContactNotificationsInput,
+): ContactNotificationsController {
   const [settings, setSettings] = useState(readStoredContactNotificationSettings);
   const [systemPermission, setSystemPermission] = useState<
     NotificationPermission | 'unsupported'
@@ -45,7 +43,9 @@ export function useContactNotifications(input: {
   const previousBuffersRef = useRef<ReadonlyMap<string, Pick<BufferState, 'unread'>> | null>(null);
   const lastPlayedAtRef = useRef(-Infinity);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const activeNotificationsRef = useRef(new Set<ContactSystemNotificationHandle>());
+  const [notificationOwner] = useState(() => new NotificationOwner<string, ContactSystemNotificationHandle>({
+    close: closeContactSystemNotification,
+  }));
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -163,9 +163,8 @@ export function useContactNotifications(input: {
     if (audioContextRef.current) {
       void audioContextRef.current.close().catch(() => undefined);
     }
-    activeNotificationsRef.current.forEach(closeContactSystemNotification);
-    activeNotificationsRef.current.clear();
-  }, []);
+    notificationOwner.closeAll();
+  }, [notificationOwner]);
 
   useEffect(() => {
     const nextBuffers = getBufferMap(input.buffers);
@@ -180,7 +179,7 @@ export function useContactNotifications(input: {
     const eligibleNotification = findEligibleContactNotification({
       previousBuffers,
       nextBuffers: input.buffers,
-      messagesByConversation: input.messagesByConversation,
+      messagesByConversation: input.getMessagesByConversation?.(),
       appVisibleAndFocused: !shouldShowSystemNotification(),
       selectedBufferId: input.selectedBufferId,
       settings,
@@ -209,26 +208,27 @@ export function useContactNotifications(input: {
     }
     if (shouldNotify) {
       showContactSystemNotification({
-        activeNotifications: activeNotificationsRef.current,
         buffer: eligibleNotification.buffer,
         iconsEnabled: input.systemNotificationIconsEnabled,
         latestMessage: eligibleNotification.latestMessage,
         networkNamesById: input.networkNamesById,
+        notificationOwner,
         onSelectBuffer: input.onSelectBuffer,
       });
     }
   }, [
     input.buffers,
-    input.messagesByConversation,
+    input.getMessagesByConversation,
     input.networkNamesById,
     input.onSelectBuffer,
     input.selectedBufferId,
     input.systemNotificationIconsEnabled,
+    notificationOwner,
     settings,
     ensureAudioContext,
   ]);
 
-  return {
+  return useMemo(() => ({
     settings,
     systemPermission,
     setEnabled,
@@ -241,5 +241,9 @@ export function useContactNotifications(input: {
     preview,
     prime,
     requestSystemPermission,
-  };
+  }), [
+    settings, systemPermission, setEnabled, setSystemEnabled, setSound,
+    addChannel, addContact, removeChannel, removeContact,
+    preview, prime, requestSystemPermission,
+  ]);
 }

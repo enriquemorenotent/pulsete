@@ -33,18 +33,11 @@ export const buildServerGroupRow = (
   if (!pendingGroup) {
     return null;
   }
-  const firstMessage = pendingGroup.messageRows[0]?.message;
-  const lastMessage = pendingGroup.messageRows.at(-1)?.message;
-  if (!firstMessage || !lastMessage) {
-    return null;
-  }
-  return {
-    kind: 'server-group',
-    key: `server-group:${firstMessage.id}:${lastMessage.id}`,
-    messageRows: pendingGroup.messageRows,
-    sourceLabel: pendingGroup.sourceLabel,
-    tone: pendingGroup.tone,
-  };
+  return buildServerRow(
+    pendingGroup.messageRows,
+    pendingGroup.sourceLabel,
+    pendingGroup.tone,
+  );
 };
 
 export const resolveServerGroupDescriptor = (
@@ -85,7 +78,6 @@ export const appendServerMessageRow = (input: {
   activeGroup: ChatTranscriptGroup;
   descriptor: ServerGroupDescriptor;
   message: ChatMessage;
-  messageIndex: number;
   pendingServerGroup: PendingServerGroup | null;
 }) => {
   const matchingPendingGroup =
@@ -106,7 +98,60 @@ export const appendServerMessageRow = (input: {
     key: `message:${input.message.id}`,
     hideTimestamp: false,
     message: input.message,
-    messageIndex: input.messageIndex,
   });
   return pendingGroup;
+};
+
+export const extendServerGroupRow = (input: {
+  descriptor: ServerGroupDescriptor;
+  message: ChatMessage;
+  row: ChatTranscriptServerGroupRow;
+}): ChatTranscriptServerGroupRow | null => {
+  if (
+    input.row.sourceLabel !== input.descriptor.sourceLabel
+    || input.row.tone !== input.descriptor.tone
+  ) {
+    return null;
+  }
+  return buildServerRow(
+    [
+      ...input.row.messageRows,
+      {
+        kind: 'message',
+        key: `message:${input.message.id}`,
+        hideTimestamp: false,
+        message: input.message,
+      },
+    ],
+    input.row.sourceLabel,
+    input.row.tone,
+  );
+};
+
+export const trimServerGroupRow = (
+  row: ChatTranscriptServerGroupRow,
+  firstMessageIndex: number,
+) => buildServerRow(
+  row.messageRows.slice(firstMessageIndex),
+  row.sourceLabel,
+  row.tone,
+);
+
+const buildServerRow = (
+  messageRows: ChatTranscriptMessageRow[],
+  sourceLabel: string,
+  tone: ChatTranscriptServerGroupTone,
+): ChatTranscriptServerGroupRow | null => {
+  const firstMessage = messageRows[0]?.message;
+  const lastMessage = messageRows.at(-1)?.message;
+  if (!firstMessage || !lastMessage) {
+    return null;
+  }
+  return {
+    kind: 'server-group',
+    key: `server-group:${firstMessage.id}:${lastMessage.id}`,
+    messageRows,
+    sourceLabel,
+    tone,
+  };
 };

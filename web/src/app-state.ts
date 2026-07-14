@@ -2,7 +2,11 @@ import type { AppSnapshot } from '../../shared/protocol-app.js';
 import type { BufferState } from '../../shared/protocol-chat.js';
 import { emptyNetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 import type { AppDomainState, AppTransientState } from './app-types.js';
-import { indexConversationMessages } from './conversation-message-state.js';
+import {
+  indexConversationMessages,
+  retainConversationMessageBudget,
+  type ConversationMessages,
+} from './conversation-message-state.js';
 import {
   reduceConversationDomain,
   sortBuffers,
@@ -74,36 +78,113 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
 });
 
 export const reducer = (state: State, action: Action): State => {
-  const domain = action.type === 'snapshot'
+  const selectedBufferId = state.transient.selection?.kind === 'buffer'
+    ? state.transient.selection.bufferId
+    : null;
+  const reducedDomain = action.type === 'snapshot'
     ? reduceSnapshotDomain(state, action.snapshot)
     : reduceRuntimeDomain(state.domain, action)
-      ?? reduceConversationDomain(state.domain, action)
+      ?? reduceConversationDomain(state.domain, action, selectedBufferId)
       ?? state.domain;
-  const selection = resolveNextSelection(state, domain, action);
+  const selection = resolveNextSelection(state, reducedDomain, action);
+  const nextSelectedBufferId = selection?.kind === 'buffer' ? selection.bufferId : null;
+  const messages = retainConversationMessageBudget(
+    reducedDomain.messages,
+    nextSelectedBufferId,
+  );
+  const trimmedBufferIds = findTrimmedMessageBuffers(reducedDomain.messages, messages);
+  if (isMessageRetentionAction(action)) {
+    findTrimmedMessageBuffers(state.domain.messages, reducedDomain.messages, trimmedBufferIds);
+  }
+  const domain = messages === reducedDomain.messages
+    ? reducedDomain
+    : { ...reducedDomain, messages };
   const transientBase = action.type === 'snapshot'
     ? {
         ...state.transient,
-	        selection,
-	        banner: null,
-	        channelList: initialChannelListState,
-	        historyLoadedByBufferId: {},
-	        historyHasOlderByBufferId: {},
-	      }
+        selection,
+        banner: null,
+        channelList: initialChannelListState,
+        historyLoadedByBufferId: {},
+        historyHasOlderByBufferId: {},
+      }
     : selection === state.transient.selection
       ? state.transient
       : { ...state.transient, selection };
   const reducedTransient = action.type === 'snapshot'
     ? transientBase
     : reduceTransientAction(transientBase, action) ?? transientBase;
-  const transient =
+  const prunedTransient =
     domain.buffers === state.domain.buffers
       ? reducedTransient
       : pruneTransientBufferHistory(reducedTransient, domain.buffers);
+  const transient = reconcileRetainedMessageHistory(
+    prunedTransient,
+    domain.messages,
+    trimmedBufferIds,
+  );
 
   if (domain === state.domain && transient === state.transient) {
     return state;
   }
   return { domain, transient };
+};
+
+const isMessageRetentionAction = (action: Action) =>
+  action.type === 'append-message'
+  || action.type === 'upsert-message'
+  || action.type === 'append-messages'
+  || action.type === 'prepend-messages';
+
+const findTrimmedMessageBuffers = (
+  before: ConversationMessages,
+  after: ConversationMessages,
+  trimmed = new Set<string>(),
+) => {
+  if (before === after) {
+    return trimmed;
+  }
+  for (const [bufferId, bucket] of Object.entries(before)) {
+    const retained = after[bufferId];
+    if (bucket === retained) {
+      continue;
+    }
+    const oldestMessageId = bucket[0]?.id;
+    if (oldestMessageId && (!retained || !retained.some(({ id }) => id === oldestMessageId))) {
+      trimmed.add(bufferId);
+    }
+  }
+  return trimmed;
+};
+
+const reconcileRetainedMessageHistory = (
+  transient: AppTransientState,
+  messages: ConversationMessages,
+  trimmedBufferIds: ReadonlySet<string>,
+) => {
+  let historyLoadedByBufferId = transient.historyLoadedByBufferId;
+  let historyHasOlderByBufferId = transient.historyHasOlderByBufferId;
+  for (const bufferId of trimmedBufferIds) {
+    if (!messages[bufferId]) {
+      if (bufferId in historyLoadedByBufferId) {
+        historyLoadedByBufferId = { ...historyLoadedByBufferId };
+        delete historyLoadedByBufferId[bufferId];
+      }
+      if (bufferId in historyHasOlderByBufferId) {
+        historyHasOlderByBufferId = { ...historyHasOlderByBufferId };
+        delete historyHasOlderByBufferId[bufferId];
+      }
+    } else if (historyHasOlderByBufferId[bufferId] !== true) {
+      historyHasOlderByBufferId = { ...historyHasOlderByBufferId, [bufferId]: true };
+    }
+  }
+  if (
+    historyLoadedByBufferId === transient.historyLoadedByBufferId
+    && historyHasOlderByBufferId === transient.historyHasOlderByBufferId
+  ) {
+    return transient;
+  }
+  return { ...transient, historyLoadedByBufferId, historyHasOlderByBufferId };
 };
 
 const pruneTransientBufferHistory = (

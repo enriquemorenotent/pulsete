@@ -14,6 +14,7 @@ import type { AppUiState } from './useAppUiState.js';
 import { gatewayReconnectMessage } from './gateway.js';
 import { useGatewayConnection } from './useGatewayConnection.js';
 import type { ComposerStoreApi } from './composer-store.js';
+import { transcriptScrollSnapshots } from './transcript/scroll-snapshot-store.js';
 import {
   useAutoOpenNetworkManager,
   useManagedNetworkSelection,
@@ -73,7 +74,9 @@ export function AppEffects(props: AppEffectsProps) {
   });
 
   useEffect(() => {
-    props.composer.pruneContexts(buffers.map((buffer) => buffer.id));
+    const activeBufferIds = buffers.map((buffer) => buffer.id);
+    props.composer.pruneContexts(activeBufferIds);
+    transcriptScrollSnapshots.prune(activeBufferIds);
   }, [buffers, props.composer]);
 
   return null;

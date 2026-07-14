@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FriendState } from '../shared/protocol-chat.js';
+import { NotificationOwner } from '../web/src/contact-notifications/notification-owner.js';
 import {
   createWatchlistPresenceSnapshot,
   createWatchlistPresenceSystemNotification,
   findWatchlistPresenceNotifications,
   showWatchlistPresenceSystemNotification,
 } from '../web/src/contact-notifications/friend-presence-notification.js';
+import type { ContactSystemNotificationHandle } from '../web/src/contact-notifications/system-notification.js';
 class FakeNotification {
   closeCalls = 0;
   onclick: ((event: Event) => void) | null = null;
@@ -22,6 +24,10 @@ class FakeNotification {
     this.onclose?.(new Event('close'));
   }
 }
+
+const createNotificationOwner = () => new NotificationOwner<string, ContactSystemNotificationHandle>({
+  close: (notification) => notification.close(),
+});
 
 const alice: FriendState = { id: 'friend-1', nick: 'Alice' };
 const bob: FriendState = { id: 'friend-2', nick: 'Bob' };
@@ -86,18 +92,18 @@ test('watchlist presence notification click focuses, selects, and clears handler
 });
 
 test('watchlist presence dispatch tracks active notifications until release', () => {
-  const activeNotifications = new Map<string, FakeNotification>();
+  const notificationOwner = createNotificationOwner();
 
   showWatchlistPresenceSystemNotification({
-    activeNotifications,
     notification: { friend: alice, availability: 'offline' },
     notificationConstructor: FakeNotification,
+    notificationOwner,
     onSelectFriend: () => undefined,
   });
 
-  const notification = activeNotifications.get(alice.id);
+  const notification = notificationOwner.get(alice.id) as FakeNotification;
 
-  assert.equal(activeNotifications.size, 1);
+  assert.equal(notificationOwner.size, 1);
   assert.deepEqual(notification?.options, {
     body: 'Alice is offline',
     tag: 'pulsete-watchlist:friend-1',
@@ -105,29 +111,29 @@ test('watchlist presence dispatch tracks active notifications until release', ()
 
   notification?.onclose?.(new Event('close'));
 
-  assert.equal(activeNotifications.size, 0);
+  assert.equal(notificationOwner.size, 0);
 });
 
 test('watchlist presence dispatch replaces an existing friend notification', () => {
-  const activeNotifications = new Map<string, FakeNotification>();
+  const notificationOwner = createNotificationOwner();
 
   showWatchlistPresenceSystemNotification({
-    activeNotifications,
     notification: { friend: alice, availability: 'offline' },
     notificationConstructor: FakeNotification,
+    notificationOwner,
     onSelectFriend: () => undefined,
   });
-  const previousNotification = activeNotifications.get(alice.id);
+  const previousNotification = notificationOwner.get(alice.id) as FakeNotification;
 
   showWatchlistPresenceSystemNotification({
-    activeNotifications,
     notification: { friend: alice, availability: 'online' },
     notificationConstructor: FakeNotification,
+    notificationOwner,
     onSelectFriend: () => undefined,
   });
-  const nextNotification = activeNotifications.get(alice.id);
+  const nextNotification = notificationOwner.get(alice.id) as FakeNotification;
 
-  assert.equal(activeNotifications.size, 1);
+  assert.equal(notificationOwner.size, 1);
   assert.equal(previousNotification?.closeCalls, 1);
   assert.equal(previousNotification?.onclick, null);
   assert.equal(previousNotification?.onclose, null);
@@ -135,4 +141,5 @@ test('watchlist presence dispatch replaces an existing friend notification', () 
     body: 'Alice is online',
     tag: 'pulsete-watchlist:friend-1',
   });
+  notificationOwner.closeAll();
 });

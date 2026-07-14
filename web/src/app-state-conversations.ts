@@ -2,17 +2,11 @@ import type { AppDomainState, Action } from './app-types.js';
 import type { BufferState, FriendState, MutedNickState, NickEmojiState, PendingChannelState } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
-  appendConversationMessages,
-  prependConversationMessages,
+  mutateConversationMessages,
   removeBufferMessages,
   removeConversationMessages,
-  retainedConversationMessageLimit,
   updateBufferMessageMetadata,
 } from './conversation-message-state.js';
-
-const retainedConversationMessageOptions = {
-  maxMessagesPerConversation: retainedConversationMessageLimit,
-};
 
 export const sortBuffers = (buffers: BufferState[]) =>
   [...buffers].sort((left, right) =>
@@ -58,6 +52,7 @@ const hasChannelBuffer = (buffers: BufferState[], networkId: string, channel: st
 export const reduceConversationDomain = (
   domain: AppDomainState,
   action: Action,
+  selectedBufferId: string | null = null,
 ): AppDomainState | null => {
   switch (action.type) {
     case 'upsert-friend': {
@@ -148,28 +143,31 @@ export const reduceConversationDomain = (
     case 'upsert-message':
       return {
         ...domain,
-        messages: appendConversationMessages(
+        messages: mutateConversationMessages(
           domain.messages,
-          [action.message],
-          retainedConversationMessageOptions,
+          {
+            kind: action.type === 'append-message' ? 'append' : 'upsert',
+            message: action.message,
+          },
+          selectedBufferId,
         ),
       };
     case 'append-messages':
       return {
         ...domain,
-        messages: appendConversationMessages(
+        messages: mutateConversationMessages(
           domain.messages,
-          action.messages,
-          retainedConversationMessageOptions,
+          { kind: 'append-batch', messages: action.messages },
+          selectedBufferId,
         ),
       };
     case 'prepend-messages':
       return {
         ...domain,
-        messages: prependConversationMessages(
+        messages: mutateConversationMessages(
           domain.messages,
-          action.messages,
-          retainedConversationMessageOptions,
+          { kind: 'prepend-batch', messages: action.messages },
+          selectedBufferId,
         ),
       };
     case 'remove-messages':

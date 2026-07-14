@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState } from '../shared/protocol-chat.js';
+import { NotificationOwner } from '../web/src/contact-notifications/notification-owner.js';
 import {
   closeContactSystemNotification,
   createContactSystemNotification,
@@ -86,6 +87,27 @@ test('system notification click focuses, selects, and clears handlers', () => {
   assert.equal(notification.onclose, null);
 });
 
+test('system notification click releases handlers when selection throws', () => {
+  let released = false;
+  const notification = createContactSystemNotification({
+    buffer,
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onRelease: () => {
+      released = true;
+    },
+    onSelectBuffer: () => {
+      throw new Error('selection failed');
+    },
+  }) as FakeNotification;
+
+  assert.throws(() => notification.onclick?.(new Event('click')), /selection failed/);
+  assert.equal(released, true);
+  assert.equal(notification.closeCalls, 1);
+  assert.equal(notification.onclick, null);
+  assert.equal(notification.onclose, null);
+});
+
 test('system notification can use the query custom avatar as its icon', () => {
   const notification = createContactSystemNotification({
     avatarIconUrl: 'data:image/png;base64,custom',
@@ -159,23 +181,25 @@ test('system notification owner can close without retaining click handlers', () 
 });
 
 test('system notification dispatch tracks active notifications until release', () => {
-  const activeNotifications = new Set<ContactSystemNotificationHandle>();
+  const notificationOwner = new NotificationOwner<string, ContactSystemNotificationHandle>({
+    close: (notification) => notification.close(),
+  });
 
   showContactSystemNotification({
-    activeNotifications,
     buffer,
     latestMessage: { body: '\x02formatted hello\x02' },
     networkNamesById: new Map([['network-1', 'ExampleNet']]),
     notificationConstructor: FakeNotification,
+    notificationOwner,
     onSelectBuffer: () => undefined,
   });
 
-  const notification = [...activeNotifications][0] as FakeNotification;
+  const notification = notificationOwner.get(buffer.id) as FakeNotification;
 
-  assert.equal(activeNotifications.size, 1);
+  assert.equal(notificationOwner.size, 1);
   assert.equal(notification.options?.body, 'formatted hello');
 
   notification.onclose?.(new Event('close'));
 
-  assert.equal(activeNotifications.size, 0);
+  assert.equal(notificationOwner.size, 0);
 });

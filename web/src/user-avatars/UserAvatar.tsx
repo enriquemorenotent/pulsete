@@ -3,13 +3,12 @@ import type { ChannelUserState } from '../../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog.js';
 import { InlineImagePreviewDialogBody } from '../InlineImagePreviewDialogBody.js';
+import { failedAvatarUrls } from './failure-cache.js';
 import { resolveIrcCloudAvatarUrl } from './irccloud.js';
 import {
   useUserAvatarOverrideUrl,
   type UserAvatarOverrideTarget,
 } from './query-overrides.js';
-
-const failedAvatarUrls = new Set<string>();
 
 type UserAvatarProps = {
   className?: string;

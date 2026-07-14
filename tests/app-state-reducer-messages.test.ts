@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { reducer } from '../web/src/app-state.js';
 import {
+  inactiveConversationMessageLimit,
   indexConversationMessages,
-  retainedConversationMessageLimit,
 } from '../web/src/conversation-message-state.js';
 import { makeBuffer, makeMessage, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
@@ -53,7 +53,7 @@ test('append-messages merges batched updates in timestamp order per conversation
 });
 
 test('live message appends retain only the newest browser message window', () => {
-  const existingMessages = Array.from({ length: retainedConversationMessageLimit }, (_, index) =>
+  const existingMessages = Array.from({ length: inactiveConversationMessageLimit }, (_, index) =>
     makeMessage({ id: `message-${index}`, ts: index })
   );
   const state = makeState({
@@ -63,7 +63,7 @@ test('live message appends retain only the newest browser message window', () =>
   });
   const nextLiveMessage = makeMessage({
     id: 'message-live-new',
-    ts: retainedConversationMessageLimit,
+    ts: inactiveConversationMessageLimit,
   });
 
   const nextState = reducer(state, {
@@ -73,13 +73,13 @@ test('live message appends retain only the newest browser message window', () =>
   const key = nextLiveMessage.bufferId;
   const retained = nextState.domain.messages[key];
 
-  assert.equal(retained.length, retainedConversationMessageLimit);
+  assert.equal(retained.length, inactiveConversationMessageLimit);
   assert.equal(retained[0]?.id, 'message-1');
   assert.equal(retained.at(-1)?.id, nextLiveMessage.id);
 });
 
 test('manual history batches are capped by the retained message window', () => {
-  const historyMessages = Array.from({ length: retainedConversationMessageLimit + 1 }, (_, index) =>
+  const historyMessages = Array.from({ length: inactiveConversationMessageLimit + 1 }, (_, index) =>
     makeMessage({ id: `history-message-${index}`, ts: index })
   );
 
@@ -90,13 +90,13 @@ test('manual history batches are capped by the retained message window', () => {
   const key = historyMessages[0]!.bufferId;
   const retained = nextState.domain.messages[key];
 
-  assert.equal(retained.length, retainedConversationMessageLimit);
+  assert.equal(retained.length, inactiveConversationMessageLimit);
   assert.equal(retained[0]?.id, 'history-message-1');
-  assert.equal(retained.at(-1)?.id, `history-message-${retainedConversationMessageLimit}`);
+  assert.equal(retained.at(-1)?.id, `history-message-${inactiveConversationMessageLimit}`);
 });
 
 test('prepended history fills remaining capacity before older loading is disabled', () => {
-  const currentMessages = Array.from({ length: retainedConversationMessageLimit - 1 }, (_, index) =>
+  const currentMessages = Array.from({ length: inactiveConversationMessageLimit - 1 }, (_, index) =>
     makeMessage({ id: `current-message-${index}`, ts: index + 1 })
   );
   const olderMessage = makeMessage({ id: 'older-message', ts: 0 });
@@ -112,9 +112,9 @@ test('prepended history fills remaining capacity before older loading is disable
   });
   const retained = nextState.domain.messages[olderMessage.bufferId];
 
-  assert.equal(retained.length, retainedConversationMessageLimit);
+  assert.equal(retained.length, inactiveConversationMessageLimit);
   assert.equal(retained[0]?.id, olderMessage.id);
-  assert.equal(retained.at(-1)?.id, `current-message-${retainedConversationMessageLimit - 2}`);
+  assert.equal(retained.at(-1)?.id, `current-message-${inactiveConversationMessageLimit - 2}`);
 });
 
 test('remove-messages deletes only the requested conversation entries', () => {

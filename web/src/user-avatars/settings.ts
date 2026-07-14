@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export type UserAvatarSettings = {
   externalAvatarsEnabled: boolean;
@@ -69,8 +69,8 @@ export function useUserAvatarSettings(): UserAvatarSettingsController {
     }
   }, [settings]);
 
-  return {
-    settings,
-    setExternalAvatarsEnabled,
-  };
+  return useMemo(
+    () => ({ settings, setExternalAvatarsEnabled }),
+    [settings, setExternalAvatarsEnabled],
+  );
 }

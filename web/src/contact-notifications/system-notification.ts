@@ -6,6 +6,7 @@ import {
   readStoredUserAvatarOverrides,
   resolveUserAvatarOverrideUrl,
 } from '../user-avatars/query-overrides.js';
+import type { NotificationOwner } from './notification-owner.js';
 
 export type ContactSystemNotificationHandle = {
   close: () => void;
@@ -31,11 +32,11 @@ type ContactSystemNotificationInput = {
 };
 
 type ContactSystemNotificationDispatchInput = {
-  activeNotifications: Set<ContactSystemNotificationHandle>;
   buffer: BufferState;
   iconsEnabled?: boolean;
   latestMessage?: Pick<ChatMessage, 'body'> | null;
   networkNamesById: ReadonlyMap<string, string>;
+  notificationOwner: NotificationOwner<string, ContactSystemNotificationHandle>;
   notificationConstructor?: ContactSystemNotificationConstructor;
   onSelectBuffer: (buffer: BufferState) => void;
 };
@@ -92,9 +93,12 @@ export const createContactSystemNotification = (
     if (!input.focusWindow && typeof window !== 'undefined') {
       window.focus();
     }
-    input.onSelectBuffer(input.buffer);
-    cleanup();
-    notification.close();
+    try {
+      input.onSelectBuffer(input.buffer);
+    } finally {
+      cleanup();
+      notification.close();
+    }
   };
   notification.onclose = cleanup;
   return notification;
@@ -113,12 +117,12 @@ export const showContactSystemNotification = (
       networkName,
       notificationConstructor: input.notificationConstructor,
       onRelease: (releasedNotification) => {
-        input.activeNotifications.delete(releasedNotification);
+        input.notificationOwner.release(input.buffer.id, releasedNotification);
       },
       onSelectBuffer: input.onSelectBuffer,
     });
     if (notification) {
-      input.activeNotifications.add(notification);
+      input.notificationOwner.track(input.buffer.id, notification);
     }
   } catch {
     // Browser notification delivery can still fail despite granted permission.

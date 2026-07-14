@@ -31,9 +31,29 @@ test('loadOlderBufferHistory skips requests when no retained message capacity re
       loaded = true;
       return { messages: [], hasMore: true };
     },
+    isCurrentRequest: () => true,
   });
 
   assert.equal(prependedCount, 0);
   assert.equal(loaded, false);
+  assert.deepEqual(dispatched, []);
+});
+
+test('loadOlderBufferHistory ignores a response after the selected buffer changes', async () => {
+  const dispatched: Array<{ type: string; [key: string]: unknown }> = [];
+
+  const prependedCount = await loadOlderBufferHistory({
+    beforeMessageId: message.id,
+    bufferId: 'buffer-1',
+    gatewayStatus: 'connected',
+    remainingMessageCapacity: 1,
+    dispatch: (action) => {
+      dispatched.push(action);
+    },
+    loadHistory: async () => ({ messages: [message], hasMore: false }),
+    isCurrentRequest: () => false,
+  });
+
+  assert.equal(prependedCount, 0);
   assert.deepEqual(dispatched, []);
 });

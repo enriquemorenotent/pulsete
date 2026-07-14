@@ -1,4 +1,4 @@
-import { useMemo, useReducer } from 'react';
+import { memo, useMemo, useReducer } from 'react';
 import { selectRightSidebarKind, selectSelectedBufferId } from './app-selectors.js';
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
@@ -27,7 +27,7 @@ import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 
-type DesktopShellProps = {
+export type DesktopShellProps = {
   actions: AppActions;
   applyServerMessages: ApplyServerMessages;
   composer: ComposerStoreApi;
@@ -37,7 +37,7 @@ type DesktopShellProps = {
   ui: AppUiState;
 };
 
-export function DesktopShell(props: DesktopShellProps) {
+export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps) {
   const dispatch = useAppDispatch();
   const mediaPolicy = useMemo(
     () => resolveMediaVisibilityPolicy(props.mediaVisibilitySettings.settings),
@@ -161,4 +161,4 @@ export function DesktopShell(props: DesktopShellProps) {
       }
     />
   );
-}
+});

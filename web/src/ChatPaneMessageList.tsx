@@ -9,7 +9,8 @@ import {
   type UnreadDividerAnchor,
 } from './transcript/unread-state.js';
 import { buildChannelUserModesByNick, resolveParticipantHighlightMode } from './message-participant-presentation.js';
-import { buildChatTranscriptModel, pruneExpandedMutedGroupKeys } from './transcript/model.js';
+import { pruneExpandedMutedGroupKeys } from './transcript/model.js';
+import { useChatTranscriptModel } from './transcript/use-chat-transcript-model.js';
 import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
 import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
 import { TranscriptLoadingState } from './ChatPaneTranscriptDecorations.js';
@@ -48,7 +49,9 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
     props.selectedBuffer,
     unreadDividerAnchorRef.current,
   );
-  unreadDividerAnchorRef.current = unreadDividerAnchor;
+  useEffect(() => {
+    unreadDividerAnchorRef.current = unreadDividerAnchor;
+  }, [unreadDividerAnchor]);
   const [expandedMutedGroupKeys, setExpandedMutedGroupKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -79,17 +82,17 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
     },
     [props.messages, props.mutedNicks, props.selectedBuffer, unreadDividerAnchor],
   );
-  const transcriptModel = useMemo(
-    () =>
-      buildChatTranscriptModel({
-        firstUnreadDividerIndex,
-        listKind: props.listKind,
-        messages: props.messages,
-        mutedNicks: props.mutedNicks,
-        unreadDividerKey: `unread-divider:${props.selectedBuffer?.id ?? 'none'}`,
-      }),
+  const transcriptModelInput = useMemo(
+    () => ({
+      firstUnreadDividerIndex,
+      listKind: props.listKind,
+      messages: props.messages,
+      mutedNicks: props.mutedNicks,
+      unreadDividerKey: `unread-divider:${props.selectedBuffer?.id ?? 'none'}`,
+    }),
     [firstUnreadDividerIndex, props.listKind, props.messages, props.mutedNicks, props.selectedBuffer?.id],
   );
+  const transcriptModel = useChatTranscriptModel(transcriptModelInput);
   useEffect(() => {
     setExpandedMutedGroupKeys((current) =>
       pruneExpandedMutedGroupKeys(current, transcriptModel),

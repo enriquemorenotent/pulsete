@@ -36,7 +36,8 @@
     "lint:file-length": "python3 scripts/check_source_file_length.py --all --warn-lines 250 --max-lines 500 server shared tests web/src",
     "prestart": "npm run build",
     "start": "PORT=18487 node build/server/index.cjs",
-    "test": "npm run lint:test-names && TSX_TSCONFIG_PATH=tsconfig.tests.json node --import tsx --test"
+    "test": "npm run lint:test-names && TSX_TSCONFIG_PATH=tsconfig.tests.json node --import tsx --test",
+    "test:memory": "TSX_TSCONFIG_PATH=tsconfig.tests.json node --expose-gc --import tsx --test tests/client-memory-regression.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0"

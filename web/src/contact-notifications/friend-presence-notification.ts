@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FriendState, PresenceStatus } from '../../../shared/protocol-chat.js';
 import { shouldShowSystemNotification } from './browser.js';
 import {
@@ -8,6 +8,7 @@ import {
   type ContactSystemNotificationConstructor,
   type ContactSystemNotificationHandle,
 } from './system-notification.js';
+import { NotificationOwner } from './notification-owner.js';
 
 export type WatchlistPresenceAvailability = 'online' | 'offline';
 
@@ -28,13 +29,16 @@ type WatchlistPresenceSystemNotificationInput = {
 };
 
 type WatchlistPresenceSystemNotificationDispatchInput = {
-  activeNotifications: WatchlistPresenceNotificationHandles;
   notification: WatchlistPresenceNotification;
+  notificationOwner: WatchlistPresenceNotificationOwner;
   notificationConstructor?: ContactSystemNotificationConstructor;
   onSelectFriend: (friend: FriendState) => void | Promise<void>;
 };
 
-type WatchlistPresenceNotificationHandles = Map<string, ContactSystemNotificationHandle>;
+type WatchlistPresenceNotificationOwner = NotificationOwner<
+  string,
+  ContactSystemNotificationHandle
+>;
 
 export const resolveWatchlistPresenceAvailability = (
   presence: PresenceStatus | undefined,
@@ -113,25 +117,18 @@ export const showWatchlistPresenceSystemNotification = (
   input: WatchlistPresenceSystemNotificationDispatchInput,
 ) => {
   const key = resolveWatchlistPresenceNotificationKey(input.notification.friend);
-  const previousNotification = input.activeNotifications.get(key);
-  if (previousNotification) {
-    input.activeNotifications.delete(key);
-    closeContactSystemNotification(previousNotification);
-  }
   try {
     const notification = createWatchlistPresenceSystemNotification({
       friend: input.notification.friend,
       availability: input.notification.availability,
       notificationConstructor: input.notificationConstructor,
       onRelease: (releasedNotification) => {
-        if (input.activeNotifications.get(key) === releasedNotification) {
-          input.activeNotifications.delete(key);
-        }
+        input.notificationOwner.release(key, releasedNotification);
       },
       onSelectFriend: input.onSelectFriend,
     });
     if (notification) {
-      input.activeNotifications.set(key, notification);
+      input.notificationOwner.track(key, notification);
     }
   } catch {
     // Browser notification delivery can still fail despite granted permission.
@@ -149,12 +146,13 @@ export function useWatchlistPresenceNotifications(input: {
   systemPermission: NotificationPermission | 'unsupported';
 }) {
   const previousPresenceRef = useRef<WatchlistPresenceSnapshot | null>(null);
-  const activeNotificationsRef = useRef<WatchlistPresenceNotificationHandles>(new Map());
+  const [notificationOwner] = useState(() => new NotificationOwner<string, ContactSystemNotificationHandle>({
+    close: closeContactSystemNotification,
+  }));
 
   useEffect(() => () => {
-    activeNotificationsRef.current.forEach(closeContactSystemNotification);
-    activeNotificationsRef.current.clear();
-  }, []);
+    notificationOwner.closeAll();
+  }, [notificationOwner]);
 
   useEffect(() => {
     const nextPresence = createWatchlistPresenceSnapshot(
@@ -177,14 +175,15 @@ export function useWatchlistPresenceNotifications(input: {
       friendPresence: input.friendPresence,
     })) {
       showWatchlistPresenceSystemNotification({
-        activeNotifications: activeNotificationsRef.current,
         notification,
+        notificationOwner,
         onSelectFriend: input.onSelectFriend,
       });
     }
   }, [
     input.friends,
     input.friendPresence,
+    notificationOwner,
     input.onSelectFriend,
     input.systemEnabled,
     input.systemPermission,

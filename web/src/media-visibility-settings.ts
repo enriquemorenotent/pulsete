@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export const MEDIA_VISIBILITY_SETTINGS_STORAGE_KEY =
   'pulsete.preferences.mediaVisibility.v1';
@@ -117,8 +117,5 @@ export function useMediaVisibilitySettings(): MediaVisibilitySettingsController 
     }
   }, [settings]);
 
-  return {
-    settings,
-    setMode,
-  };
+  return useMemo(() => ({ settings, setMode }), [settings, setMode]);
 }

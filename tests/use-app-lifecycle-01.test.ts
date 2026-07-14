@@ -239,6 +239,7 @@ test('loadOlderBufferHistory prepends older messages and updates hasOlder state'
       assert.equal(beforeMessageId, message.id);
       return { messages: [olderMessage], hasMore: false };
     },
+    isCurrentRequest: () => true,
   });
 
   assert.equal(prependedCount, 1);
