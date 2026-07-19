@@ -5,6 +5,7 @@ export const createDesktopShellLayoutProps = (
 ): DesktopShellLayoutProps => ({
   header: {
     mediaVisibilityMode: 'show-media',
+    onDownloadDiagnostics: () => undefined,
     onOpenLogInspector: () => undefined,
     onOpenNetworkManager: () => undefined,
     onOpenPreferences: () => undefined,

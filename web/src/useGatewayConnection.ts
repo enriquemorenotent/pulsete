@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type { Action } from './app-types.js';
-import { connectSocket, type SocketHandle } from './client.js';
+import {
+  connectSocket,
+  type ClientSocketInstrumentation,
+  type SocketHandle,
+} from './client.js';
 import { gatewayReconnectMessage, getGatewayReconnectDelayMs } from './gateway.js';
 import { dispatchInboundServerMessage } from './server-message-actions.js';
 
@@ -10,6 +14,7 @@ type MutableRef<T> = { current: T };
 type UseGatewayConnectionParams = {
   applySocketMessage: (message: ServerMessage) => void;
   dispatch: (action: Action) => void;
+  instrumentation?: ClientSocketInstrumentation;
   socketRef: MutableRef<SocketHandle | null>;
 };
 
@@ -36,16 +41,19 @@ export function useGatewayConnection(params: UseGatewayConnectionParams) {
     params.dispatch({ type: 'gateway-connecting' });
     let closedByClient = false;
     let socket: SocketHandle;
-    socket = connectSocket(createGatewaySocketCallbacks({
-      getSocket: () => socket,
-      socketRef: params.socketRef,
-      isClosedByClient: () => closedByClient,
-      applySocketMessage: params.applySocketMessage,
-      dispatch: params.dispatch,
-      reconnectAttemptRef,
-      reconnectTimerRef,
-      setSocketGeneration,
-    }));
+    socket = connectSocket(
+      createGatewaySocketCallbacks({
+        getSocket: () => socket,
+        socketRef: params.socketRef,
+        isClosedByClient: () => closedByClient,
+        applySocketMessage: params.applySocketMessage,
+        dispatch: params.dispatch,
+        reconnectAttemptRef,
+        reconnectTimerRef,
+        setSocketGeneration,
+      }),
+      params.instrumentation,
+    );
     params.socketRef.current = socket;
     return () => {
       closedByClient = true;
@@ -58,7 +66,13 @@ export function useGatewayConnection(params: UseGatewayConnectionParams) {
       }
       socket.close();
     };
-  }, [params.applySocketMessage, params.dispatch, params.socketRef, socketGeneration]);
+  }, [
+    params.applySocketMessage,
+    params.dispatch,
+    params.instrumentation,
+    params.socketRef,
+    socketGeneration,
+  ]);
 }
 
 export const createGatewaySocketCallbacks = ({

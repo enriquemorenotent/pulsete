@@ -114,6 +114,7 @@ export const renderQueryPane = (
       onOpenMentionedChannel={() => undefined}
       onOpenParticipantQuery={() => undefined}
       onOpenChannelList={() => undefined}
+      onWhoisSelectedQuery={() => undefined}
     />
   );
 

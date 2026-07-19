@@ -19,10 +19,12 @@ import {
   useAutoOpenNetworkManager,
   useManagedNetworkSelection,
 } from './useNetworkManagerLifecycle.js';
+import type { ClientSocketInstrumentation } from './client-socket.js';
 
 type AppEffectsProps = {
   applySocketMessage: (message: ServerMessage) => void;
   composer: Pick<ComposerStoreApi, 'pruneContexts'>;
+  socketInstrumentation: ClientSocketInstrumentation;
   ui: Pick<
     AppUiState,
     | 'didAutoOpenManagerRef'
@@ -70,6 +72,7 @@ export function AppEffects(props: AppEffectsProps) {
   useGatewayConnection({
     applySocketMessage: props.applySocketMessage,
     dispatch,
+    instrumentation: props.socketInstrumentation,
     socketRef: props.ui.socketRef,
   });
 

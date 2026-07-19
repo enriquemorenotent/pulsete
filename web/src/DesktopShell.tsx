@@ -33,6 +33,7 @@ export type DesktopShellProps = {
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
   mediaVisibilitySettings: MediaVisibilitySettingsController;
+  onDownloadDiagnostics: () => void;
   userAvatarSettings: UserAvatarSettingsController;
   ui: AppUiState;
 };
@@ -49,6 +50,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
       mode: props.mediaVisibilitySettings.settings.mode,
       setMode: props.mediaVisibilitySettings.setMode,
     },
+    onDownloadDiagnostics: props.onDownloadDiagnostics,
     ui: props.ui,
   });
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);

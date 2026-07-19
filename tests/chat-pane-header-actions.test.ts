@@ -104,7 +104,7 @@ test('channel header actions expose history search when the selected buffer supp
   });
 });
 
-test('query header actions keep close visible and leave utilities in overflow', () => {
+test('query header actions keep WHOIS and close visible while history stays in overflow', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -122,8 +122,8 @@ test('query header actions keep close visible and leave utilities in overflow', 
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close'],
-    overflow: ['WHOIS', 'Download history'],
+    primary: ['WHOIS', 'Close'],
+    overflow: ['Download history'],
   });
 });
 
@@ -145,8 +145,8 @@ test('query header actions expose destructive history delete when enabled', () =
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close'],
-    overflow: ['WHOIS', 'Delete history'],
+    primary: ['WHOIS', 'Close'],
+    overflow: ['Delete history'],
   });
   assert.equal(actions.overflow.find((action) => action.label === 'Delete history')?.tone, 'danger');
 });
@@ -168,8 +168,8 @@ test('query header actions are stable when notifications are enabled', () => {
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close'],
-    overflow: ['WHOIS'],
+    primary: ['WHOIS', 'Close'],
+    overflow: [],
   });
 });
 
@@ -190,8 +190,8 @@ test('query header actions stay stable while the query is still active', () => {
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close'],
-    overflow: ['WHOIS'],
+    primary: ['WHOIS', 'Close'],
+    overflow: [],
   });
 });
 
@@ -212,8 +212,8 @@ test('muted query header actions keep utilities available', () => {
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['Close'],
-    overflow: ['WHOIS'],
+    primary: ['WHOIS', 'Close'],
+    overflow: [],
   });
 });
 

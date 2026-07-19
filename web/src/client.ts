@@ -19,7 +19,11 @@ import {
   triggerFileDownload,
 } from './browser-download.js';
 
-export { connectSocket, type SocketHandle } from './client-socket.js';
+export {
+  connectSocket,
+  type ClientSocketInstrumentation,
+  type SocketHandle,
+} from './client-socket.js';
 
 export type BufferHistoryPayload = {
   messages: ChatMessage[];

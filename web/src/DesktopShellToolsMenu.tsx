@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ChevronDown, PanelsTopLeft, Settings2 } from 'lucide-react';
+import { Bug, ChevronDown, PanelsTopLeft, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 
 type DesktopShellToolsMenuProps = {
+  onDownloadDiagnostics: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
 };
@@ -54,6 +55,14 @@ export function DesktopShellToolsMenu(props: DesktopShellToolsMenuProps) {
           role="menu"
           className="absolute right-0 top-full z-40 mt-2 min-w-48 overflow-hidden rounded-[0.9rem] border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
         >
+          <DesktopShellToolsMenuItem
+            icon={<Bug className="size-3.5" />}
+            label="Capture memory diagnostics"
+            onSelect={() => {
+              setOpen(false);
+              props.onDownloadDiagnostics();
+            }}
+          />
           <DesktopShellToolsMenuItem
             icon={<Settings2 className="size-3.5" />}
             label="Preferences"

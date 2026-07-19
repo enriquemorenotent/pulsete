@@ -150,7 +150,9 @@ test('query headers expose one-click contact controls', () => {
   assert.match(markup, /aria-label="Add MissD to watchlist"/);
   assert.match(markup, /aria-label="Enable notifications for MissD"/);
   assert.match(markup, /aria-label="Mute MissD"/);
-  assert.match(markup, /aria-label="Mute MissD"[\s\S]*aria-label="Close MissD"/);
+  assert.match(markup, /aria-label="Mute MissD"[\s\S]*aria-label="WHOIS MissD"[\s\S]*aria-label="Close MissD"/);
+  assert.match(markup, /aria-label="WHOIS MissD"/);
+  assert.doesNotMatch(markup, />WHOIS</);
   assert.match(markup, /border-white\/10 bg-white\/\[0\.035\][^"]*" type="button" aria-label="Add MissD to watchlist"/);
   assert.doesNotMatch(markup, /aria-label="Edit emoji tag for MissD"/);
   assert.doesNotMatch(markup, /aria-label="Contact settings for MissD"/);

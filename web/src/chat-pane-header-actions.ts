@@ -1,7 +1,8 @@
-import type { BufferState, ChannelState } from '../../shared/protocol-chat.js';
+import type { BufferState } from '../../shared/protocol-chat.js';
 import type { WorkspaceView } from './workspace.js';
 
 export type ChatPaneHeaderAction = {
+  icon?: 'close' | 'whois';
   id: string;
   label: string;
   onSelect: () => void;
@@ -38,39 +39,38 @@ export const resolveChatPaneHeaderActions = (
     };
   }
 
-  const primary = [
-    ...resolvePrimaryActions(
-      context.workspace.selectedBuffer,
-      context.workspace.selectedChannel,
-      context.onCloseChannel,
-      context.onCloseBuffer,
-    ),
-  ];
+  const primary = resolvePrimaryActions(context);
   const overflow = resolveOverflowActions(context);
   return { primary, overflow };
 };
 
 const resolvePrimaryActions = (
-  selectedBuffer: BufferState | null,
-  selectedChannel: ChannelState | null,
-  onCloseChannel: ResolveChatPaneHeaderActionsContext['onCloseChannel'],
-  onCloseBuffer: ResolveChatPaneHeaderActionsContext['onCloseBuffer'],
+  context: ResolveChatPaneHeaderActionsContext,
 ): ChatPaneHeaderAction[] => {
+  const { selectedBuffer, selectedChannel } = context.workspace;
   if (selectedChannel) {
     return [
       {
+        icon: 'close',
         id: 'close-channel',
         label: 'Close',
-        onSelect: () => onCloseChannel(selectedChannel.networkId, selectedChannel.name),
+        onSelect: () => context.onCloseChannel(selectedChannel.networkId, selectedChannel.name),
       },
     ];
   }
   if (selectedBuffer?.kind === 'query') {
     return [
+      ...(context.onWhoisSelectedQuery ? [{
+        icon: 'whois' as const,
+        id: 'query-whois',
+        label: 'WHOIS',
+        onSelect: context.onWhoisSelectedQuery,
+      }] : []),
       {
+        icon: 'close',
         id: 'close-query',
         label: 'Close',
-        onSelect: () => onCloseBuffer(selectedBuffer),
+        onSelect: () => context.onCloseBuffer(selectedBuffer),
       },
     ];
   }
@@ -82,14 +82,6 @@ const resolveOverflowActions = (
 ): ChatPaneHeaderAction[] => {
   const { selectedBuffer } = context.workspace;
   const overflow: ChatPaneHeaderAction[] = [];
-
-  if (selectedBuffer?.kind === 'query' && context.onWhoisSelectedQuery) {
-    overflow.push({
-      id: 'query-whois',
-      label: 'WHOIS',
-      onSelect: context.onWhoisSelectedQuery,
-    });
-  }
 
   if (context.canSearchHistory && context.onOpenHistorySearch) {
     overflow.push({

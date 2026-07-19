@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppEffects } from './AppEffects.js';
 import { selectSelectedBufferId } from './app-selectors.js';
 import { AppStoreProvider, createAppStore } from './app-store.js';
+import { initialState } from './app-state.js';
 import { AppBody } from './AppBody.js';
+import { createClientDiagnosticsRecorder } from './client-diagnostics.js';
 import { createComposerStore } from './composer-store.js';
 import { createServerMessageBridge } from './server-message-bridge.js';
 import { createLiveAppActions } from './useAppActions.js';
@@ -10,7 +12,14 @@ import { useAppUiState } from './useAppUiState.js';
 
 function App() {
   const ui = useAppUiState();
-  const [store] = useState(createAppStore);
+  const [{ diagnostics, store }] = useState(() => {
+    const diagnosticsRecorder = createClientDiagnosticsRecorder();
+    const appStore = createAppStore(initialState, {
+      onDispatch: diagnosticsRecorder.recordStoreDispatch,
+      onListenerCountChange: diagnosticsRecorder.recordStoreListenerCount,
+    });
+    return { diagnostics: diagnosticsRecorder, store: appStore };
+  });
   const [composer] = useState(createComposerStore);
   const updateBanner = useCallback(
     (kind: 'notice' | 'error', message: string) =>
@@ -20,6 +29,14 @@ function App() {
       }),
     [store],
   );
+  const downloadDiagnostics = useCallback(() => {
+    const state = store.getState();
+    updateBanner('notice', 'Capturing memory diagnostics...');
+    void diagnostics.download(state).then(
+      () => updateBanner('notice', 'Memory diagnostics downloaded.'),
+      () => updateBanner('error', 'Could not create the memory diagnostics file.'),
+    );
+  }, [diagnostics, store, updateBanner]);
   const serverMessages = useMemo(
     () => createServerMessageBridge(store),
     [store],
@@ -47,17 +64,24 @@ function App() {
     [composer, serverMessages.applyMutationMessages, store, ui.socketRef, updateBanner],
   );
 
+  useEffect(
+    () => diagnostics.start(store.getState),
+    [diagnostics, store],
+  );
+
   return (
     <AppStoreProvider store={store}>
       <AppEffects
         applySocketMessage={serverMessages.applySocketMessage}
         composer={composer}
+        socketInstrumentation={diagnostics.socketInstrumentation}
         ui={ui}
       />
       <AppBody
         actions={actions}
         applyServerMessages={serverMessages.applyMutationMessages}
         composer={composer}
+        onDownloadDiagnostics={downloadDiagnostics}
         ui={ui}
       />
     </AppStoreProvider>

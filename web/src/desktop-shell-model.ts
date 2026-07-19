@@ -24,6 +24,7 @@ import type {
 
 export type DesktopShellHeaderModel = {
   mediaVisibilityMode: MediaVisibilityMode;
+  onDownloadDiagnostics: () => void;
   onOpenLogInspector: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;

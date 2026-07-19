@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { UserSearch, X } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
@@ -17,7 +17,10 @@ export function PaneHeaderActions(props: {
     return null;
   }
   const closeActions = props.primary.filter(isCloseAction);
-  const regularActions = props.primary.filter((action) => !isCloseAction(action));
+  const iconActions = props.primary.filter(
+    (action) => action.icon && !isCloseAction(action),
+  );
+  const regularActions = props.primary.filter((action) => !action.icon);
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
@@ -27,26 +30,64 @@ export function PaneHeaderActions(props: {
         </Button>
       ))}
       {props.contactControls}
+      {iconActions.map((action) => (
+        <PaneHeaderIconAction key={action.id} action={action} title={props.title} />
+      ))}
       <ChatPaneHeaderActionMenu actions={props.overflow} />
       {closeActions.map((action) => (
-        <Button
-          key={action.id}
-          type="button"
-          size="icon"
-          variant="ghost"
-          className={headerIconButtonClass()}
-          aria-label={`Close ${props.title}`}
-          onClick={action.onSelect}
-        >
-          <X className="size-3.5" />
-        </Button>
+        <PaneHeaderIconAction key={action.id} action={action} title={props.title} />
       ))}
     </div>
   );
 }
 
 const isCloseAction = (action: ChatPaneHeaderAction) =>
-  action.id === 'close-channel' || action.id === 'close-query';
+  action.icon === 'close';
+
+const headerActionIconPresentations = {
+  close: {
+    Icon: X,
+    iconClassName: 'size-3.5',
+    label: (_action: ChatPaneHeaderAction, title: string) => `Close ${title}`,
+  },
+  whois: {
+    Icon: UserSearch,
+    iconClassName: 'size-4',
+    label: (action: ChatPaneHeaderAction, title: string) => `${action.label} ${title}`,
+  },
+} satisfies Record<
+  NonNullable<ChatPaneHeaderAction['icon']>,
+  {
+    Icon: typeof X;
+    iconClassName: string;
+    label: (action: ChatPaneHeaderAction, title: string) => string;
+  }
+>;
+
+function PaneHeaderIconAction(props: {
+  action: ChatPaneHeaderAction;
+  title: string;
+}) {
+  if (!props.action.icon) {
+    return null;
+  }
+  const presentation = headerActionIconPresentations[props.action.icon];
+  const label = presentation.label(props.action, props.title);
+  const Icon = presentation.Icon;
+  return (
+    <Button
+      type="button"
+      size="icon"
+      variant="ghost"
+      className={headerIconButtonClass()}
+      aria-label={label}
+      title={label}
+      onClick={props.action.onSelect}
+    >
+      <Icon className={presentation.iconClassName} />
+    </Button>
+  );
+}
 
 export function PaneHeader(props: {
   actions: ReactNode;

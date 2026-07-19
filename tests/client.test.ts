@@ -85,22 +85,46 @@ test('connectSocket forwards websocket events through the wrapper', () => {
   const restore = installFakeWebSocket();
   try {
     const messages: Array<{ type: string; networkId: string | null; message: string }> = [];
+    const receivedTraffic: Array<{ characters: number; type: string }> = [];
+    const sentTraffic: Array<{ characters: number; type: string }> = [];
+    let instrumentedCloseCalls = 0;
+    let instrumentedCreateCalls = 0;
+    let instrumentedOpenCalls = 0;
     let openCalls = 0;
     let closeCalls = 0;
 
-    const handle = connectSocket({
-      onMessage: (message) => {
-        if (message.type === 'notice') {
-          messages.push(message);
-        }
+    const handle = connectSocket(
+      {
+        onMessage: (message) => {
+          if (message.type === 'notice') {
+            messages.push(message);
+          }
+        },
+        onOpen: () => {
+          openCalls += 1;
+        },
+        onClose: () => {
+          closeCalls += 1;
+        },
       },
-      onOpen: () => {
-        openCalls += 1;
+      {
+        onClose: () => {
+          instrumentedCloseCalls += 1;
+        },
+        onCreate: () => {
+          instrumentedCreateCalls += 1;
+        },
+        onOpen: () => {
+          instrumentedOpenCalls += 1;
+        },
+        onReceive: (type, characters) => {
+          receivedTraffic.push({ type, characters });
+        },
+        onSend: (type, characters) => {
+          sentTraffic.push({ type, characters });
+        },
       },
-      onClose: () => {
-        closeCalls += 1;
-      },
-    });
+    );
 
     const socket = FakeWebSocket.instances[0]!;
     assert.equal(socket.url, 'ws://example.test/ws');
@@ -115,11 +139,22 @@ test('connectSocket forwards websocket events through the wrapper', () => {
 
     assert.equal(openCalls, 1);
     assert.equal(closeCalls, 1);
+    assert.equal(instrumentedOpenCalls, 1);
+    assert.equal(instrumentedCreateCalls, 1);
+    assert.equal(instrumentedCloseCalls, 1);
     assert.equal(socket.listenerCount('open'), 0);
     assert.equal(socket.listenerCount('message'), 0);
     assert.equal(socket.listenerCount('close'), 0);
     assert.deepEqual(socket.sent.map((entry) => JSON.parse(entry)), [{ type: 'network.connect', networkId: 'net-1' }]);
     assert.deepEqual(messages, [{ type: 'notice', networkId: null, message: 'hello' }]);
+    assert.deepEqual(sentTraffic, [{
+      type: 'network.connect',
+      characters: socket.sent[0]!.length,
+    }]);
+    assert.deepEqual(receivedTraffic, [{
+      type: 'notice',
+      characters: JSON.stringify({ type: 'notice', networkId: null, message: 'hello' }).length,
+    }]);
   } finally {
     restore();
   }

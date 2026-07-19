@@ -21,6 +21,7 @@ type DesktopHeaderModelParams = {
     mode: MediaVisibilityMode;
     setMode: (mode: MediaVisibilityMode) => void;
   };
+  onDownloadDiagnostics: () => void;
   ui: Pick<
     AppUiState,
     'openLogInspector' | 'openPreferences'
@@ -53,12 +54,14 @@ type DesktopNicklistModelParams = {
 export function useDesktopHeaderModel({
   dispatch,
   mediaVisibilitySettings,
+  onDownloadDiagnostics,
   ui,
 }: DesktopHeaderModelParams): DesktopShellModel['header'] {
   const { mode, setMode } = mediaVisibilitySettings;
   return useMemo(
     () => ({
       mediaVisibilityMode: mode,
+      onDownloadDiagnostics,
       onOpenLogInspector: ui.openLogInspector,
       onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
       onOpenPreferences: ui.openPreferences,
@@ -73,6 +76,7 @@ export function useDesktopHeaderModel({
     [
       dispatch,
       mode,
+      onDownloadDiagnostics,
       setMode,
       ui.openLogInspector,
       ui.openPreferences,

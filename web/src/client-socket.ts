@@ -13,6 +13,15 @@ export type SocketCallbacks = {
   onClose?: () => void;
 };
 
+export type ClientSocketInstrumentation = {
+  onClose?: () => void;
+  onCreate?: () => void;
+  onInvalidReceive?: (payloadCharacters: number) => void;
+  onOpen?: () => void;
+  onReceive?: (type: ServerMessage['type'], payloadCharacters: number) => void;
+  onSend?: (type: ClientMessage['type'], payloadCharacters: number) => void;
+};
+
 type WebSocketLocation = Pick<Location, 'host' | 'protocol'>;
 type PulseteImportMeta = ImportMeta & {
   env?: {
@@ -53,8 +62,9 @@ export const connectSocket = ({
   onMessage,
   onOpen,
   onClose,
-}: SocketCallbacks): SocketHandle => {
+}: SocketCallbacks, instrumentation?: ClientSocketInstrumentation): SocketHandle => {
   const socket = new WebSocket(resolveWebSocketUrl(window.location));
+  instrumentation?.onCreate?.();
   let closed = false;
 
   const cleanup = () => {
@@ -68,6 +78,7 @@ export const connectSocket = ({
     }
     closed = true;
     cleanup();
+    instrumentation?.onClose?.();
     onClose?.();
   };
   const closeAndRetireSocket = () => {
@@ -76,6 +87,7 @@ export const connectSocket = ({
   };
   function handleOpen() {
     if (!closed) {
+      instrumentation?.onOpen?.();
       onOpen?.();
     }
   }
@@ -86,8 +98,10 @@ export const connectSocket = ({
     const payload = String(event.data);
     try {
       const message = decodeServer(payload);
+      instrumentation?.onReceive?.(message.type, payload.length);
       onMessage(message);
     } catch (error) {
+      instrumentation?.onInvalidReceive?.(payload.length);
       console.error('Invalid websocket payload', error);
       closeAndRetireSocket();
     }
@@ -108,7 +122,9 @@ export const connectSocket = ({
         throw new Error(gatewaySocketClosedMessage);
       }
       try {
-        socket.send(encode(parsed));
+        const payload = encode(parsed);
+        socket.send(payload);
+        instrumentation?.onSend?.(parsed.type, payload.length);
       } catch {
         closeAndRetireSocket();
         throw new Error(gatewaySocketClosedMessage);

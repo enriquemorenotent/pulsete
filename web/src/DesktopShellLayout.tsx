@@ -138,6 +138,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             {showingMedia ? 'Hide media' : 'Show media'}
           </Button>
           <DesktopShellToolsMenu
+            onDownloadDiagnostics={props.header.onDownloadDiagnostics}
             onOpenNetworkManager={props.header.onOpenNetworkManager}
             onOpenPreferences={props.header.onOpenPreferences}
           />

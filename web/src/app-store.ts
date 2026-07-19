@@ -17,13 +17,21 @@ export type AppStoreApi = {
   subscribe: (listener: Listener) => () => void;
 };
 
+export type AppStoreInstrumentation = {
+  onDispatch?: (type: Action['type'], changed: boolean) => void;
+  onListenerCountChange?: (listenerCount: number) => void;
+};
+
 const notifyListeners = (listeners: Set<Listener>) => {
   for (const listener of listeners) {
     listener();
   }
 };
 
-export const createAppStore = (state: State = initialState): AppStoreApi => {
+export const createAppStore = (
+  state: State = initialState,
+  instrumentation: AppStoreInstrumentation = {},
+): AppStoreApi => {
   let currentState = state;
   let batchDepth = 0;
   let pendingNotification = false;
@@ -59,6 +67,7 @@ export const createAppStore = (state: State = initialState): AppStoreApi => {
     },
     dispatch(action) {
       const nextState = reducer(currentState, action);
+      instrumentation.onDispatch?.(action.type, nextState !== currentState);
       if (nextState === currentState) {
         return;
       }
@@ -67,9 +76,15 @@ export const createAppStore = (state: State = initialState): AppStoreApi => {
     },
     getState: () => currentState,
     subscribe(listener) {
+      const previousSize = listeners.size;
       listeners.add(listener);
+      if (listeners.size !== previousSize) {
+        instrumentation.onListenerCountChange?.(listeners.size);
+      }
       return () => {
-        listeners.delete(listener);
+        if (listeners.delete(listener)) {
+          instrumentation.onListenerCountChange?.(listeners.size);
+        }
       };
     },
   };
