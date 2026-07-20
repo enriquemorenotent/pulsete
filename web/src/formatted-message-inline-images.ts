@@ -1,23 +1,6 @@
-import type { tokenizeFormattedMessage } from './formatted-message.js';
-
-type FormattedMessageTokens = ReturnType<typeof tokenizeFormattedMessage>;
-
-const inlineImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp'];
+const inlineImageExtensions = ['.png', '.pnj', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp'];
 const inlineImageFormats = new Set(inlineImageExtensions.map((extension) => extension.slice(1)));
 const inlineImageFormatQueryKeys = new Set(['ext', 'fm', 'format']);
-
-export const collectInlineImageHrefs = (tokens: FormattedMessageTokens) => {
-  const hrefs: string[] = [];
-  const seen = new Set<string>();
-  for (const token of tokens) {
-    if (token.type !== 'link' || !isInlineImageHref(token.href) || seen.has(token.href)) {
-      continue;
-    }
-    seen.add(token.href);
-    hrefs.push(token.href);
-  }
-  return hrefs;
-};
 
 export const isInlineImageHref = (href: string) => {
   try {

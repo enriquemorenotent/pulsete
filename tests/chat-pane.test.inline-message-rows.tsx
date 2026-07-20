@@ -74,6 +74,54 @@ test('compact chat rows use one grid skeleton for plain text and inline previews
   assert.doesNotMatch(previewMarkup, /col-start-2/);
 });
 
+test('compact chat rows render Imgur GIFV links as inline videos', () => {
+  const markup = renderChatPane([
+    makeMessage({
+      id: 'message-1',
+      nick: 'Joby',
+      body: 'Watch https://i.imgur.com/TEHJoGS.gifv',
+      ts: 1,
+    }),
+  ]);
+
+  assert.match(markup, /Watch /);
+  assert.match(markup, /<video[^>]*src="https:\/\/i\.imgur\.com\/TEHJoGS\.mp4"/);
+  assert.doesNotMatch(markup, /href="https:\/\/i\.imgur\.com\/TEHJoGS\.gifv"/);
+});
+
+test('compact chat rows render direct MP4 links as on-demand video players', () => {
+  const markup = renderChatPane([
+    makeMessage({
+      id: 'message-1',
+      nick: 'Joby',
+      body: 'Watch https://cdn.example.com/media/clip.mp4?token=abc',
+      ts: 1,
+    }),
+  ]);
+
+  assert.match(markup, /Watch /);
+  assert.match(markup, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mp4\?token=abc"/);
+  assert.match(markup, /<video[^>]*controls=""/i);
+  assert.doesNotMatch(markup, /<video[^>]*autoPlay=""/i);
+  assert.doesNotMatch(markup, /<video[^>]*loop=""/i);
+  assert.doesNotMatch(markup, /href="https:\/\/cdn\.example\.com\/media\/clip\.mp4\?token=abc"/);
+});
+
+test('compact chat rows render Tumblr GIFV links as negotiated images', () => {
+  const markup = renderChatPane([
+    makeMessage({
+      id: 'message-1',
+      nick: 'Joby',
+      body: 'Watch https://64.media.tumblr.com/hash/revision/s400x600/clip.gifv',
+      ts: 1,
+    }),
+  ]);
+
+  assert.match(markup, /Watch /);
+  assert.match(markup, /<img[^>]*src="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
+  assert.doesNotMatch(markup, /href="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
+});
+
 test('message rows render a compact time with full datetime metadata', () => {
   const timestamp = new Date(2026, 2, 11, 2, 57, 36, 0).getTime();
   const markup = renderChatPane([

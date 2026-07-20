@@ -6,8 +6,10 @@ import { tokenizeFormattedMessage } from '../web/src/formatted-message.js';
 import {
   FormattedMessageText,
   InlineImagePreviewDialogBody,
+  InlineMediaPreviewDialogBody,
   parseFormattedMessageContent,
 } from '../web/src/FormattedMessageText.js';
+import { resolveInlineMediaHref } from '../web/src/formatted-message-inline-media.js';
 
 test('keeps links clickable across IRC style changes', () => {
   const tokens = tokenizeFormattedMessage('Docs: https://exa\u0002mple.com now');
@@ -172,6 +174,156 @@ test('renders inline previews when the image format is carried in query params',
   assert.doesNotMatch(html, />https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large</);
 });
 
+test('renders inline previews for PNJ image links', () => {
+  const extensionHtml = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Look https://cdn.example.com/cat.PNJ',
+      onOpenChannel() {},
+    })
+  );
+  const queryHtml = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Look https://cdn.example.com/image?id=cat&format=pnj',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(extensionHtml, /<img[^>]*src="https:\/\/cdn\.example\.com\/cat\.PNJ"/);
+  assert.match(queryHtml, /<img[^>]*src="https:\/\/cdn\.example\.com\/image\?id=cat&amp;format=pnj"/);
+});
+
+test('renders Imgur GIFV links as looping MP4 video previews', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Watch https://i.imgur.com/TEHJoGS.gifv',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /<video[^>]*src="https:\/\/i\.imgur\.com\/TEHJoGS\.mp4"/);
+  assert.match(html, /<video[^>]*autoPlay=""/i);
+  assert.match(html, /<video[^>]*loop=""/i);
+  assert.match(html, /<video[^>]*muted=""/i);
+  assert.match(html, /<video[^>]*playsInline=""/i);
+  assert.match(html, /<video[^>]*preload="metadata"/i);
+  assert.doesNotMatch(html, /href="https:\/\/i\.imgur\.com\/TEHJoGS\.gifv"/);
+});
+
+test('renders direct MP4 links as on-demand video players', () => {
+  const href = 'https://cdn.example.com/media/clip.MP4?token=abc#t=2';
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: `Watch ${href}`,
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.MP4\?token=abc#t=2"/);
+  assert.match(html, /<video[^>]*controls=""/i);
+  assert.match(html, /<video[^>]*muted=""/i);
+  assert.match(html, /<video[^>]*playsInline=""/i);
+  assert.match(html, /<video[^>]*preload="metadata"/i);
+  assert.doesNotMatch(html, /<video[^>]*autoPlay=""/i);
+  assert.doesNotMatch(html, /<video[^>]*loop=""/i);
+  assert.match(html, /aria-label="Expand Inline video preview: clip\.MP4"/);
+  assert.doesNotMatch(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.MP4\?token=abc#t=2"/);
+});
+
+test('resolves only direct MP4 paths as on-demand videos', () => {
+  const href = 'https://cdn.example.com/media/clip.MP4?token=abc#t=2';
+
+  assert.deepEqual(resolveInlineMediaHref(href), {
+    kind: 'video',
+    mimeType: 'video/mp4',
+    originalHref: href,
+    playback: 'on-demand',
+    sourceHref: href,
+  });
+  assert.equal(resolveInlineMediaHref('https://cdn.example.com/media/clip.mp4/metadata'), null);
+  assert.equal(resolveInlineMediaHref('https://cdn.example.com/media/clip?format=mp4'), null);
+});
+
+test('renders Tumblr GIFV links as negotiated image previews', () => {
+  const href = 'https://64.media.tumblr.com/hash/revision/s400x600/clip.gifv';
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: `Watch ${href}`,
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /<img[^>]*src="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
+  assert.match(html, /alt="Inline image preview: clip\.gifv"/);
+  assert.doesNotMatch(html, /<video/);
+  assert.doesNotMatch(html, /href="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
+});
+
+test('resolves only Tumblr media-host GIFV routes as negotiated images', () => {
+  const href = 'https://64.media.tumblr.com/hash/revision/s1280x1920/clip.GIFV?download=1';
+
+  assert.deepEqual(resolveInlineMediaHref(href), {
+    kind: 'image',
+    originalHref: href,
+    sourceHref: href,
+  });
+  assert.equal(resolveInlineMediaHref('https://example.tumblr.com/clip.gifv'), null);
+});
+
+test('resolves only direct Imgur GIFV media URLs', () => {
+  assert.deepEqual(
+    resolveInlineMediaHref('https://imgur.com/aB123.GIFV?download=1#preview'),
+    {
+      kind: 'video',
+      mimeType: 'video/mp4',
+      originalHref: 'https://imgur.com/aB123.GIFV?download=1#preview',
+      playback: 'looping-animation',
+      sourceHref: 'https://imgur.com/aB123.mp4?download=1',
+    },
+  );
+  assert.equal(resolveInlineMediaHref('https://cdn.example.com/aB123.gifv'), null);
+  assert.equal(resolveInlineMediaHref('https://imgur.com/gallery/aB123.gifv'), null);
+});
+
+test('renders unrecognized GIFV URLs as ordinary links', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Watch https://cdn.example.com/clip.gifv',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/clip\.gifv"/);
+  assert.doesNotMatch(html, /<video/);
+});
+
+test('inline GIFV dialog plays video with controls and links to the original route', () => {
+  const media = resolveInlineMediaHref('https://i.imgur.com/TEHJoGS.gifv');
+  assert.ok(media);
+  const html = renderToStaticMarkup(
+    createElement(InlineMediaPreviewDialogBody, { media })
+  );
+
+  assert.match(html, /<video[^>]*src="https:\/\/i\.imgur\.com\/TEHJoGS\.mp4"/);
+  assert.match(html, /<video[^>]*controls=""/i);
+  assert.match(html, /href="https:\/\/i\.imgur\.com\/TEHJoGS\.gifv"/);
+  assert.match(html, />Open original</);
+});
+
+test('inline MP4 dialog waits for playback and links to the original video', () => {
+  const media = resolveInlineMediaHref('https://cdn.example.com/media/clip.mp4');
+  assert.ok(media);
+  const html = renderToStaticMarkup(
+    createElement(InlineMediaPreviewDialogBody, { media })
+  );
+
+  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mp4"/);
+  assert.match(html, /<video[^>]*controls=""/i);
+  assert.match(html, /<video[^>]*muted=""/i);
+  assert.doesNotMatch(html, /<video[^>]*autoPlay=""/i);
+  assert.doesNotMatch(html, /<video[^>]*loop=""/i);
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.mp4"/);
+});
+
 test('inline image preview dialog exposes the full-size image and original link', () => {
   const html = renderToStaticMarkup(
     createElement(InlineImagePreviewDialogBody, {
@@ -244,6 +396,32 @@ test('can render inline image URLs as links when media previews are hidden', () 
   assert.match(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
   assert.match(html, />https:\/\/cdn\.example\.com\/cat\.PNG\?size=full</);
   assert.doesNotMatch(html, /<img/);
+});
+
+test('can render GIFV URLs as links when media previews are hidden', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Watch https://i.imgur.com/TEHJoGS.gifv',
+      inlineImageRendering: 'link',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /href="https:\/\/i\.imgur\.com\/TEHJoGS\.gifv"/);
+  assert.doesNotMatch(html, /<video/);
+});
+
+test('can render MP4 URLs as links when media previews are hidden', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Watch https://cdn.example.com/media/clip.mp4',
+      inlineImageRendering: 'link',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.mp4"/);
+  assert.doesNotMatch(html, /<video/);
 });
 
 test('renders raw mode with visible escape sequences instead of hidden control characters', () => {

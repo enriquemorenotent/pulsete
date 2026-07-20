@@ -127,7 +127,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
           </p>
           {inlineImageRendering === 'preview' ? (
             <FormattedMessageInlinePreviews
-              hrefs={parsedContent.inlineImageHrefs}
+              media={parsedContent.inlineMedia}
               onInlinePreviewLoad={props.onInlinePreviewLoad}
             />
           ) : null}

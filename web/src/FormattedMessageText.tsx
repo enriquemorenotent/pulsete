@@ -4,7 +4,7 @@ import {
   type InlineImageRenderingMode,
   type ParsedFormattedMessageContent,
 } from './formatted-message-content.js';
-import { isInlineImageHref } from './formatted-message-inline-images.js';
+import { isInlineMediaHref } from './formatted-message-inline-media.js';
 import { renderFormattedMessageParts } from './formatted-message-render-parts.js';
 import { FormattedMessageInlinePreviews } from './FormattedMessageInlinePreviews.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
@@ -17,6 +17,7 @@ export type { ParsedFormattedMessageContent } from './formatted-message-content.
 export type { InlineImageRenderingMode } from './formatted-message-content.js';
 export { FormattedMessageInlinePreviews } from './FormattedMessageInlinePreviews.js';
 export { InlineImagePreviewDialogBody } from './InlineImagePreviewDialogBody.js';
+export { InlineMediaPreviewDialogBody } from './InlineMediaPreviewDialogBody.js';
 
 type FormattedMessageTextProps = {
   inlineImageRendering?: InlineImageRenderingMode;
@@ -63,7 +64,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
             </button>
           );
         }
-        if (isInlineImageHref(token.href) && inlineImageRendering !== 'link') {
+        if (isInlineMediaHref(token.href) && inlineImageRendering !== 'link') {
           return null;
         }
         return (
@@ -80,7 +81,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
       })}
       {props.renderInlinePreviews === false || inlineImageRendering !== 'preview' ? null : (
         <FormattedMessageInlinePreviews
-          hrefs={content.inlineImageHrefs}
+          media={content.inlineMedia}
           onInlinePreviewLoad={props.onInlinePreviewLoad}
         />
       )}

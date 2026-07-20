@@ -38,7 +38,7 @@ test('media visibility settings serialize known mode values', () => {
 test('media visibility policy disables passive media in hide media mode', () => {
   assert.deepEqual(resolveMediaVisibilityPolicy({ mode: 'hide-media' }), {
     mode: 'hide-media',
-    showChatImagePreviews: false,
+    showChatMediaPreviews: false,
     showCommandPaletteImages: false,
     showExternalMedia: false,
     showNotificationIcons: false,

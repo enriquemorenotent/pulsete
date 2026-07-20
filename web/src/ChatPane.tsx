@@ -88,7 +88,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
   const composerTarget = resolveChatPaneComposerTarget(props.workspace);
   const mediaPolicy = props.mediaPolicy ?? defaultMediaVisibilityPolicy;
   const inlineImageRendering: InlineImageRenderingMode =
-    mediaPolicy.showChatImagePreviews ? 'preview' : 'link';
+    mediaPolicy.showChatMediaPreviews ? 'preview' : 'link';
   const handleSend = useCallback(async () => {
     const submitted = await props.onSend();
     if (submitted) {

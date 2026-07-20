@@ -21,7 +21,7 @@ export type MediaVisibilitySettingsController = {
 
 export type MediaVisibilityPolicy = {
   mode: MediaVisibilityMode;
-  showChatImagePreviews: boolean;
+  showChatMediaPreviews: boolean;
   showCommandPaletteImages: boolean;
   showExternalMedia: boolean;
   showNotificationIcons: boolean;
@@ -74,7 +74,7 @@ export function resolveMediaVisibilityPolicy(
   const showMedia = settings.mode === 'show-media';
   return {
     mode: settings.mode,
-    showChatImagePreviews: showMedia,
+    showChatMediaPreviews: showMedia,
     showCommandPaletteImages: showMedia,
     showExternalMedia: showMedia,
     showNotificationIcons: showMedia,

@@ -1,10 +1,14 @@
 import { tokenizeFormattedMessage, tokenizeStrippedMessage } from './formatted-message.js';
-import { collectInlineImageHrefs, isInlineImageHref } from './formatted-message-inline-images.js';
+import {
+  collectInlineMedia,
+  isInlineMediaHref,
+  type InlineMedia,
+} from './formatted-message-inline-media.js';
 import { escapeIrcTextForDebug } from './irc-format.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
 export type ParsedFormattedMessageContent = {
-  inlineImageHrefs: string[];
+  inlineMedia: InlineMedia[];
   rawMode: boolean;
   rawText: string;
   tokens: ReturnType<typeof tokenizeFormattedMessage>;
@@ -18,7 +22,7 @@ export const parseFormattedMessageContent = (
 ): ParsedFormattedMessageContent => {
   if (mode === 'raw') {
     return {
-      inlineImageHrefs: [],
+      inlineMedia: [],
       rawMode: true,
       rawText: escapeIrcTextForDebug(text),
       tokens: [],
@@ -28,7 +32,7 @@ export const parseFormattedMessageContent = (
     ? tokenizeStrippedMessage(text)
     : tokenizeFormattedMessage(text);
   return {
-    inlineImageHrefs: collectInlineImageHrefs(tokens),
+    inlineMedia: collectInlineMedia(tokens),
     rawMode: false,
     rawText: '',
     tokens,
@@ -48,7 +52,7 @@ export const hasVisibleFormattedMessageText = (
       return token.parts.some((part) => part.text.trim().length > 0);
     }
     return (
-      (!isInlineImageHref(token.href) || inlineImageRendering === 'link')
+      (!isInlineMediaHref(token.href) || inlineImageRendering === 'link')
       && token.parts.some((part) => part.text.trim().length > 0)
     );
   });
