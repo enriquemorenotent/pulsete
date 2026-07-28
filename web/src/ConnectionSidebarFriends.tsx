@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { Check, MoreHorizontal } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
@@ -22,8 +21,9 @@ type ConnectionSidebarFriendsProps = Pick<
 export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 	const hideOfflineFriends = props.hideOfflineFriends ?? false;
 	const variant = props.variant ?? 'bottom';
-	const [menuOpen, setMenuOpen] = useState(false);
-	const menuRef = useRef<HTMLDivElement | null>(null);
+	const offlineVisibilityLabel = hideOfflineFriends
+		? 'Show offline nicks'
+		: 'Hide offline nicks';
 	const sortedFriends = [...props.friends].sort(
 		(left, right) =>
 			presenceWeight(props.friendPresence[right.id]) -
@@ -44,28 +44,6 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 		? activeFriends
 		: [...activeFriends, ...offlineFriends];
 
-	useEffect(() => {
-		if (!menuOpen) {
-			return;
-		}
-		const handlePointerDown = (event: PointerEvent) => {
-			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-				setMenuOpen(false);
-			}
-		};
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				setMenuOpen(false);
-			}
-		};
-		window.addEventListener('pointerdown', handlePointerDown);
-		window.addEventListener('keydown', handleKeyDown);
-		return () => {
-			window.removeEventListener('pointerdown', handlePointerDown);
-			window.removeEventListener('keydown', handleKeyDown);
-		};
-	}, [menuOpen]);
-
 	return (
 		<>
 			<section
@@ -81,42 +59,22 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 							Watchlist
 						</h2>
 					</div>
-					<div ref={menuRef} className="relative shrink-0">
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon"
-							className="size-6 text-muted-foreground/75 hover:text-foreground"
-							aria-label="Watchlist options"
-							aria-expanded={menuOpen}
-							aria-haspopup="menu"
-							onClick={() => setMenuOpen((current) => !current)}
-						>
-							<MoreHorizontal className="size-4" />
-						</Button>
-						{menuOpen ? (
-							<div
-								role="menu"
-								className="absolute right-0 top-full z-30 mt-1.5 min-w-44 overflow-hidden rounded-md border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
-							>
-								<button
-									type="button"
-									role="menuitemcheckbox"
-									aria-checked={hideOfflineFriends}
-									className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-[12px] text-foreground transition-colors hover:bg-white/[0.06]"
-									onClick={() => {
-										setMenuOpen(false);
-										props.onToggleHideOfflineFriends?.();
-									}}
-								>
-									<span>Hide offline nicks</span>
-									{hideOfflineFriends ? (
-										<Check className="size-3.5 text-primary" />
-									) : null}
-								</button>
-							</div>
-						) : null}
-					</div>
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						className="size-6 shrink-0 text-muted-foreground/75 hover:text-foreground"
+						aria-label={offlineVisibilityLabel}
+						aria-pressed={hideOfflineFriends}
+						title={offlineVisibilityLabel}
+						onClick={props.onToggleHideOfflineFriends}
+					>
+						{hideOfflineFriends ? (
+							<Eye className="size-4" />
+						) : (
+							<EyeOff className="size-4" />
+						)}
+					</Button>
 				</div>
 				<div
 					className={

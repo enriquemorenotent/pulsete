@@ -11,7 +11,7 @@ export type InlineMedia =
     }
   | {
       kind: 'video';
-      mimeType: 'video/mp4';
+      mimeType: 'video/mp4' | 'video/quicktime';
       originalHref: string;
       playback: 'looping-animation' | 'on-demand';
       sourceHref: string;
@@ -22,9 +22,14 @@ type InlineMediaResolver = (url: URL, originalHref: string) => InlineMedia | nul
 const inlineMediaResolvers: readonly InlineMediaResolver[] = [
   resolveTumblrGifv,
   resolveImgurGifv,
-  resolveMp4,
+  resolveDirectVideo,
   resolveImage,
 ];
+
+const directVideoFormats = [
+  { extension: '.mp4', mimeType: 'video/mp4' },
+  { extension: '.mov', mimeType: 'video/quicktime' },
+] as const;
 
 const inlineMediaLabelBuilders: Record<InlineMedia['kind'], (href: string) => string> = {
   image: buildImageAltText,
@@ -98,13 +103,15 @@ function resolveTumblrGifv(url: URL, originalHref: string): InlineMedia | null {
   };
 }
 
-function resolveMp4(url: URL, originalHref: string): InlineMedia | null {
-  if (!url.pathname.toLowerCase().endsWith('.mp4')) {
+function resolveDirectVideo(url: URL, originalHref: string): InlineMedia | null {
+  const pathname = url.pathname.toLowerCase();
+  const format = directVideoFormats.find(({ extension }) => pathname.endsWith(extension));
+  if (!format) {
     return null;
   }
   return {
     kind: 'video',
-    mimeType: 'video/mp4',
+    mimeType: format.mimeType,
     originalHref,
     playback: 'on-demand',
     sourceHref: originalHref,

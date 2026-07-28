@@ -1,0 +1,5070 @@
+{
+  "kind": "pulsete-client-memory-diagnostics",
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-20T21:27:18.811Z",
+  "privacy": {
+    "includesChatBodies": false,
+    "includesNamesOrIdentifiers": false,
+    "includesServerAddresses": false,
+    "note": "Only structural counts, sizes, timings, browser metadata, and fixed event types are included."
+  },
+  "session": {
+    "startedAt": "2026-07-20T21:05:48.043Z",
+    "elapsedMs": 1290768,
+    "sampling": {
+      "capacity": 360,
+      "dropped": 0,
+      "intervalMs": 10000,
+      "retained": 131
+    }
+  },
+  "currentSample": {
+    "at": "2026-07-20T21:27:18.811Z",
+    "sessionElapsedMs": 1290768,
+    "browser": {
+      "documentVisibility": "visible",
+      "domElements": 502,
+      "jsHeap": {
+        "status": "available",
+        "jsHeapSizeLimitBytes": 4395630592,
+        "totalJSHeapSizeBytes": 162805283,
+        "usedJSHeapSizeBytes": 106899523
+      }
+    },
+    "workspace": {
+      "buffers": 15,
+      "channels": 5,
+      "channelUsers": 285,
+      "messages": 3055,
+      "messageBodyCharacters": 157495,
+      "networks": 10
+    },
+    "activityTotals": {
+      "performanceMeasures": 452174,
+      "socketReceived": 856,
+      "socketSent": 65,
+      "storeListeners": 53,
+      "storeDispatches": 972
+    }
+  },
+  "history": [
+    {
+      "at": "2026-07-20T21:05:48.180Z",
+      "sessionElapsedMs": 137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 13,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 29190112,
+          "usedJSHeapSizeBytes": 22112376
+        }
+      },
+      "workspace": {
+        "buffers": 0,
+        "channels": 0,
+        "channelUsers": 0,
+        "messages": 0,
+        "messageBodyCharacters": 0,
+        "networks": 0
+      },
+      "activityTotals": {
+        "performanceMeasures": 0,
+        "socketReceived": 0,
+        "socketSent": 0,
+        "storeListeners": 13,
+        "storeDispatches": 1
+      }
+    },
+    {
+      "at": "2026-07-20T21:05:58.180Z",
+      "sessionElapsedMs": 10137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 589,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 133738469,
+          "usedJSHeapSizeBytes": 57561725
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 272,
+        "messages": 3775,
+        "messageBodyCharacters": 224134,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 3572,
+        "socketReceived": 3,
+        "socketSent": 0,
+        "storeListeners": 53,
+        "storeDispatches": 14
+      }
+    },
+    {
+      "at": "2026-07-20T21:06:08.186Z",
+      "sessionElapsedMs": 20143,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 589,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 116157291,
+          "usedJSHeapSizeBytes": 51956259
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 272,
+        "messages": 3775,
+        "messageBodyCharacters": 224134,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 9517,
+        "socketReceived": 3,
+        "socketSent": 0,
+        "storeListeners": 53,
+        "storeDispatches": 14
+      }
+    },
+    {
+      "at": "2026-07-20T21:06:18.180Z",
+      "sessionElapsedMs": 30137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 534,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 141311440,
+          "usedJSHeapSizeBytes": 78652552
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 271,
+        "messages": 3526,
+        "messageBodyCharacters": 190781,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 21647,
+        "socketReceived": 16,
+        "socketSent": 1,
+        "storeListeners": 53,
+        "storeDispatches": 35
+      }
+    },
+    {
+      "at": "2026-07-20T21:06:28.180Z",
+      "sessionElapsedMs": 40137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 852,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 59132179,
+          "usedJSHeapSizeBytes": 49840763
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 272,
+        "messages": 3528,
+        "messageBodyCharacters": 190983,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 25376,
+        "socketReceived": 30,
+        "socketSent": 2,
+        "storeListeners": 53,
+        "storeDispatches": 49
+      }
+    },
+    {
+      "at": "2026-07-20T21:06:38.180Z",
+      "sessionElapsedMs": 50137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 588,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 72267324,
+          "usedJSHeapSizeBytes": 54537468
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3529,
+        "messageBodyCharacters": 191043,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 31608,
+        "socketReceived": 45,
+        "socketSent": 2,
+        "storeListeners": 53,
+        "storeDispatches": 65
+      }
+    },
+    {
+      "at": "2026-07-20T21:06:48.180Z",
+      "sessionElapsedMs": 60137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 493,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 61519607,
+          "usedJSHeapSizeBytes": 50891115
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3529,
+        "messageBodyCharacters": 190981,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 34039,
+        "socketReceived": 50,
+        "socketSent": 3,
+        "storeListeners": 53,
+        "storeDispatches": 73
+      }
+    },
+    {
+      "at": "2026-07-20T21:06:58.397Z",
+      "sessionElapsedMs": 70354,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 6453,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 94202190,
+          "usedJSHeapSizeBytes": 77133106
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3531,
+        "messageBodyCharacters": 191024,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 39032,
+        "socketReceived": 57,
+        "socketSent": 5,
+        "storeListeners": 53,
+        "storeDispatches": 81
+      }
+    },
+    {
+      "at": "2026-07-20T21:07:08.180Z",
+      "sessionElapsedMs": 80137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1649,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 124318256,
+          "usedJSHeapSizeBytes": 70551588
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3532,
+        "messageBodyCharacters": 191203,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 45708,
+        "socketReceived": 62,
+        "socketSent": 5,
+        "storeListeners": 53,
+        "storeDispatches": 89
+      }
+    },
+    {
+      "at": "2026-07-20T21:07:18.180Z",
+      "sessionElapsedMs": 90137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 535,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 114673518,
+          "usedJSHeapSizeBytes": 78265986
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3534,
+        "messageBodyCharacters": 191241,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 48094,
+        "socketReceived": 69,
+        "socketSent": 5,
+        "storeListeners": 53,
+        "storeDispatches": 97
+      }
+    },
+    {
+      "at": "2026-07-20T21:07:28.180Z",
+      "sessionElapsedMs": 100137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 535,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 57116457,
+          "usedJSHeapSizeBytes": 52953681
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3534,
+        "messageBodyCharacters": 191241,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 48094,
+        "socketReceived": 69,
+        "socketSent": 5,
+        "storeListeners": 53,
+        "storeDispatches": 97
+      }
+    },
+    {
+      "at": "2026-07-20T21:07:38.180Z",
+      "sessionElapsedMs": 110137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 535,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 65996690,
+          "usedJSHeapSizeBytes": 56385942
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3534,
+        "messageBodyCharacters": 191754,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 49909,
+        "socketReceived": 81,
+        "socketSent": 5,
+        "storeListeners": 53,
+        "storeDispatches": 109
+      }
+    },
+    {
+      "at": "2026-07-20T21:07:48.180Z",
+      "sessionElapsedMs": 120137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 535,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 61083988,
+          "usedJSHeapSizeBytes": 57430912
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3534,
+        "messageBodyCharacters": 191754,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 50313,
+        "socketReceived": 83,
+        "socketSent": 5,
+        "storeListeners": 53,
+        "storeDispatches": 111
+      }
+    },
+    {
+      "at": "2026-07-20T21:07:58.182Z",
+      "sessionElapsedMs": 130139,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 525,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 69049479,
+          "usedJSHeapSizeBytes": 54136183
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3535,
+        "messageBodyCharacters": 191768,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 56277,
+        "socketReceived": 90,
+        "socketSent": 6,
+        "storeListeners": 53,
+        "storeDispatches": 119
+      }
+    },
+    {
+      "at": "2026-07-20T21:08:08.180Z",
+      "sessionElapsedMs": 140137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 525,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 75346311,
+          "usedJSHeapSizeBytes": 60027971
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3535,
+        "messageBodyCharacters": 191579,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 59420,
+        "socketReceived": 94,
+        "socketSent": 6,
+        "storeListeners": 53,
+        "storeDispatches": 123
+      }
+    },
+    {
+      "at": "2026-07-20T21:08:18.180Z",
+      "sessionElapsedMs": 150137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 533,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 75871932,
+          "usedJSHeapSizeBytes": 62697628
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3536,
+        "messageBodyCharacters": 191615,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 61537,
+        "socketReceived": 96,
+        "socketSent": 7,
+        "storeListeners": 53,
+        "storeDispatches": 125
+      }
+    },
+    {
+      "at": "2026-07-20T21:08:28.180Z",
+      "sessionElapsedMs": 160137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 77133777,
+          "usedJSHeapSizeBytes": 57407901
+        }
+      },
+      "workspace": {
+        "buffers": 17,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3536,
+        "messageBodyCharacters": 191615,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 62349,
+        "socketReceived": 97,
+        "socketSent": 7,
+        "storeListeners": 53,
+        "storeDispatches": 127
+      }
+    },
+    {
+      "at": "2026-07-20T21:08:38.180Z",
+      "sessionElapsedMs": 170137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 592,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 77397574,
+          "usedJSHeapSizeBytes": 63223830
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3537,
+        "messageBodyCharacters": 191632,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 65556,
+        "socketReceived": 100,
+        "socketSent": 7,
+        "storeListeners": 53,
+        "storeDispatches": 130
+      }
+    },
+    {
+      "at": "2026-07-20T21:08:48.180Z",
+      "sessionElapsedMs": 180137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 529,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 79395929,
+          "usedJSHeapSizeBytes": 60013473
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3539,
+        "messageBodyCharacters": 191762,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 70080,
+        "socketReceived": 123,
+        "socketSent": 10,
+        "storeListeners": 53,
+        "storeDispatches": 156
+      }
+    },
+    {
+      "at": "2026-07-20T21:08:58.180Z",
+      "sessionElapsedMs": 190137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 597,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 99742847,
+          "usedJSHeapSizeBytes": 72011007
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3546,
+        "messageBodyCharacters": 192307,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 75989,
+        "socketReceived": 147,
+        "socketSent": 11,
+        "storeListeners": 53,
+        "storeDispatches": 183
+      }
+    },
+    {
+      "at": "2026-07-20T21:09:08.180Z",
+      "sessionElapsedMs": 200137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 601,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 100799902,
+          "usedJSHeapSizeBytes": 61489446
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 274,
+        "messages": 3546,
+        "messageBodyCharacters": 192269,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 77349,
+        "socketReceived": 152,
+        "socketSent": 11,
+        "storeListeners": 53,
+        "storeDispatches": 189
+      }
+    },
+    {
+      "at": "2026-07-20T21:09:18.180Z",
+      "sessionElapsedMs": 210137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 602,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 100937553,
+          "usedJSHeapSizeBytes": 64331937
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3550,
+        "messageBodyCharacters": 192442,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 85260,
+        "socketReceived": 173,
+        "socketSent": 12,
+        "storeListeners": 53,
+        "storeDispatches": 210
+      }
+    },
+    {
+      "at": "2026-07-20T21:09:28.180Z",
+      "sessionElapsedMs": 220137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 602,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 101044026,
+          "usedJSHeapSizeBytes": 69033042
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3551,
+        "messageBodyCharacters": 192469,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 87169,
+        "socketReceived": 185,
+        "socketSent": 13,
+        "storeListeners": 53,
+        "storeDispatches": 222
+      }
+    },
+    {
+      "at": "2026-07-20T21:09:38.180Z",
+      "sessionElapsedMs": 230137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 602,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 64081729,
+          "usedJSHeapSizeBytes": 55333085
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3551,
+        "messageBodyCharacters": 192469,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 87379,
+        "socketReceived": 185,
+        "socketSent": 13,
+        "storeListeners": 53,
+        "storeDispatches": 222
+      }
+    },
+    {
+      "at": "2026-07-20T21:09:48.180Z",
+      "sessionElapsedMs": 240137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 934,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 70738498,
+          "usedJSHeapSizeBytes": 60525154
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3551,
+        "messageBodyCharacters": 192452,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 91747,
+        "socketReceived": 193,
+        "socketSent": 13,
+        "storeListeners": 53,
+        "storeDispatches": 230
+      }
+    },
+    {
+      "at": "2026-07-20T21:09:58.180Z",
+      "sessionElapsedMs": 250137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 564,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 76710093,
+          "usedJSHeapSizeBytes": 56436077
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 275,
+        "messages": 3548,
+        "messageBodyCharacters": 191903,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 94521,
+        "socketReceived": 196,
+        "socketSent": 13,
+        "storeListeners": 53,
+        "storeDispatches": 234
+      }
+    },
+    {
+      "at": "2026-07-20T21:10:08.180Z",
+      "sessionElapsedMs": 260137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 443,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 83578811,
+          "usedJSHeapSizeBytes": 54606907
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 277,
+        "messages": 3550,
+        "messageBodyCharacters": 192138,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 100027,
+        "socketReceived": 215,
+        "socketSent": 15,
+        "storeListeners": 53,
+        "storeDispatches": 254
+      }
+    },
+    {
+      "at": "2026-07-20T21:10:18.180Z",
+      "sessionElapsedMs": 270137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 438,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 92438382,
+          "usedJSHeapSizeBytes": 63337214
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 277,
+        "messages": 3550,
+        "messageBodyCharacters": 192138,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 101773,
+        "socketReceived": 215,
+        "socketSent": 15,
+        "storeListeners": 53,
+        "storeDispatches": 256
+      }
+    },
+    {
+      "at": "2026-07-20T21:10:28.180Z",
+      "sessionElapsedMs": 280137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 593,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 96372346,
+          "usedJSHeapSizeBytes": 59275266
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 277,
+        "messages": 3554,
+        "messageBodyCharacters": 192255,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 104985,
+        "socketReceived": 227,
+        "socketSent": 17,
+        "storeListeners": 53,
+        "storeDispatches": 269
+      }
+    },
+    {
+      "at": "2026-07-20T21:10:38.180Z",
+      "sessionElapsedMs": 290137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 466,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 96482708,
+          "usedJSHeapSizeBytes": 61502612
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 276,
+        "messages": 3553,
+        "messageBodyCharacters": 192259,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 106359,
+        "socketReceived": 234,
+        "socketSent": 17,
+        "storeListeners": 53,
+        "storeDispatches": 277
+      }
+    },
+    {
+      "at": "2026-07-20T21:10:48.180Z",
+      "sessionElapsedMs": 300137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 475,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 96371302,
+          "usedJSHeapSizeBytes": 55355878
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 276,
+        "messages": 3554,
+        "messageBodyCharacters": 192123,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 108145,
+        "socketReceived": 238,
+        "socketSent": 18,
+        "storeListeners": 53,
+        "storeDispatches": 281
+      }
+    },
+    {
+      "at": "2026-07-20T21:10:58.180Z",
+      "sessionElapsedMs": 310137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 483,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 99804166,
+          "usedJSHeapSizeBytes": 59547786
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 277,
+        "messages": 3555,
+        "messageBodyCharacters": 192196,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 112365,
+        "socketReceived": 249,
+        "socketSent": 19,
+        "storeListeners": 53,
+        "storeDispatches": 292
+      }
+    },
+    {
+      "at": "2026-07-20T21:11:08.180Z",
+      "sessionElapsedMs": 320137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 585,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 100039802,
+          "usedJSHeapSizeBytes": 56012006
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 277,
+        "messages": 3558,
+        "messageBodyCharacters": 192550,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 116016,
+        "socketReceived": 261,
+        "socketSent": 20,
+        "storeListeners": 53,
+        "storeDispatches": 305
+      }
+    },
+    {
+      "at": "2026-07-20T21:11:18.180Z",
+      "sessionElapsedMs": 330137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 585,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 106597001,
+          "usedJSHeapSizeBytes": 71022737
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 277,
+        "messages": 3559,
+        "messageBodyCharacters": 192561,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 120722,
+        "socketReceived": 265,
+        "socketSent": 21,
+        "storeListeners": 53,
+        "storeDispatches": 309
+      }
+    },
+    {
+      "at": "2026-07-20T21:11:28.180Z",
+      "sessionElapsedMs": 340137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 114988238,
+          "usedJSHeapSizeBytes": 63146814
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 277,
+        "messages": 3558,
+        "messageBodyCharacters": 192480,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 127322,
+        "socketReceived": 272,
+        "socketSent": 22,
+        "storeListeners": 53,
+        "storeDispatches": 317
+      }
+    },
+    {
+      "at": "2026-07-20T21:11:38.180Z",
+      "sessionElapsedMs": 350137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 115118115,
+          "usedJSHeapSizeBytes": 67990627
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3558,
+        "messageBodyCharacters": 192538,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 132835,
+        "socketReceived": 290,
+        "socketSent": 22,
+        "storeListeners": 53,
+        "storeDispatches": 335
+      }
+    },
+    {
+      "at": "2026-07-20T21:11:48.180Z",
+      "sessionElapsedMs": 360137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 537,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 120863123,
+          "usedJSHeapSizeBytes": 63488955
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3559,
+        "messageBodyCharacters": 192584,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 138197,
+        "socketReceived": 301,
+        "socketSent": 23,
+        "storeListeners": 53,
+        "storeDispatches": 347
+      }
+    },
+    {
+      "at": "2026-07-20T21:11:58.180Z",
+      "sessionElapsedMs": 370137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 537,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 119701902,
+          "usedJSHeapSizeBytes": 56530522
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3560,
+        "messageBodyCharacters": 192576,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 143226,
+        "socketReceived": 305,
+        "socketSent": 24,
+        "storeListeners": 53,
+        "storeDispatches": 351
+      }
+    },
+    {
+      "at": "2026-07-20T21:12:08.180Z",
+      "sessionElapsedMs": 380137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1562,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 131612126,
+          "usedJSHeapSizeBytes": 59740686
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3561,
+        "messageBodyCharacters": 192411,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 147615,
+        "socketReceived": 313,
+        "socketSent": 25,
+        "storeListeners": 53,
+        "storeDispatches": 361
+      }
+    },
+    {
+      "at": "2026-07-20T21:12:18.180Z",
+      "sessionElapsedMs": 390137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1570,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 64241009,
+          "usedJSHeapSizeBytes": 59066373
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3562,
+        "messageBodyCharacters": 192518,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 149449,
+        "socketReceived": 317,
+        "socketSent": 26,
+        "storeListeners": 53,
+        "storeDispatches": 365
+      }
+    },
+    {
+      "at": "2026-07-20T21:12:28.180Z",
+      "sessionElapsedMs": 400137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 577,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 70827070,
+          "usedJSHeapSizeBytes": 58988122
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3563,
+        "messageBodyCharacters": 192540,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 150636,
+        "socketReceived": 322,
+        "socketSent": 26,
+        "storeListeners": 53,
+        "storeDispatches": 371
+      }
+    },
+    {
+      "at": "2026-07-20T21:12:38.180Z",
+      "sessionElapsedMs": 410137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 63220974,
+          "usedJSHeapSizeBytes": 57803966
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3564,
+        "messageBodyCharacters": 192722,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 151839,
+        "socketReceived": 324,
+        "socketSent": 26,
+        "storeListeners": 53,
+        "storeDispatches": 373
+      }
+    },
+    {
+      "at": "2026-07-20T21:12:48.180Z",
+      "sessionElapsedMs": 420137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 66891350,
+          "usedJSHeapSizeBytes": 60554114
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3564,
+        "messageBodyCharacters": 192722,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 156490,
+        "socketReceived": 324,
+        "socketSent": 26,
+        "storeListeners": 53,
+        "storeDispatches": 373
+      }
+    },
+    {
+      "at": "2026-07-20T21:12:58.180Z",
+      "sessionElapsedMs": 430137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 76071194,
+          "usedJSHeapSizeBytes": 61506506
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3565,
+        "messageBodyCharacters": 192413,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 161110,
+        "socketReceived": 330,
+        "socketSent": 27,
+        "storeListeners": 53,
+        "storeDispatches": 379
+      }
+    },
+    {
+      "at": "2026-07-20T21:13:08.180Z",
+      "sessionElapsedMs": 440137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 76335785,
+          "usedJSHeapSizeBytes": 61991937
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3565,
+        "messageBodyCharacters": 192413,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 165686,
+        "socketReceived": 330,
+        "socketSent": 27,
+        "storeListeners": 53,
+        "storeDispatches": 379
+      }
+    },
+    {
+      "at": "2026-07-20T21:13:18.180Z",
+      "sessionElapsedMs": 450137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 507,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 90230632,
+          "usedJSHeapSizeBytes": 59849216
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 278,
+        "messages": 3564,
+        "messageBodyCharacters": 192255,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 170571,
+        "socketReceived": 333,
+        "socketSent": 28,
+        "storeListeners": 53,
+        "storeDispatches": 383
+      }
+    },
+    {
+      "at": "2026-07-20T21:13:28.180Z",
+      "sessionElapsedMs": 460137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 581,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 91278692,
+          "usedJSHeapSizeBytes": 59345500
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3566,
+        "messageBodyCharacters": 192479,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 176957,
+        "socketReceived": 348,
+        "socketSent": 30,
+        "storeListeners": 53,
+        "storeDispatches": 399
+      }
+    },
+    {
+      "at": "2026-07-20T21:13:38.187Z",
+      "sessionElapsedMs": 470144,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1918,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 91518057,
+          "usedJSHeapSizeBytes": 69656785
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3567,
+        "messageBodyCharacters": 192510,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 181451,
+        "socketReceived": 351,
+        "socketSent": 31,
+        "storeListeners": 53,
+        "storeDispatches": 403
+      }
+    },
+    {
+      "at": "2026-07-20T21:13:48.180Z",
+      "sessionElapsedMs": 480137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 529,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 58929057,
+          "usedJSHeapSizeBytes": 56655225
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3568,
+        "messageBodyCharacters": 192530,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 183342,
+        "socketReceived": 362,
+        "socketSent": 31,
+        "storeListeners": 53,
+        "storeDispatches": 415
+      }
+    },
+    {
+      "at": "2026-07-20T21:13:58.180Z",
+      "sessionElapsedMs": 490137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 529,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 73627376,
+          "usedJSHeapSizeBytes": 58305724
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3568,
+        "messageBodyCharacters": 192693,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 190376,
+        "socketReceived": 364,
+        "socketSent": 31,
+        "storeListeners": 53,
+        "storeDispatches": 417
+      }
+    },
+    {
+      "at": "2026-07-20T21:14:08.180Z",
+      "sessionElapsedMs": 500137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 531,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 77112216,
+          "usedJSHeapSizeBytes": 58789600
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3569,
+        "messageBodyCharacters": 192793,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 195846,
+        "socketReceived": 371,
+        "socketSent": 32,
+        "storeListeners": 53,
+        "storeDispatches": 425
+      }
+    },
+    {
+      "at": "2026-07-20T21:14:18.180Z",
+      "sessionElapsedMs": 510137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 568,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 91857733,
+          "usedJSHeapSizeBytes": 68369301
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3570,
+        "messageBodyCharacters": 192845,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 199299,
+        "socketReceived": 376,
+        "socketSent": 33,
+        "storeListeners": 53,
+        "storeDispatches": 431
+      }
+    },
+    {
+      "at": "2026-07-20T21:14:28.180Z",
+      "sessionElapsedMs": 520137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 569,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 65566332,
+          "usedJSHeapSizeBytes": 60980284
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3571,
+        "messageBodyCharacters": 193056,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 200194,
+        "socketReceived": 378,
+        "socketSent": 33,
+        "storeListeners": 53,
+        "storeDispatches": 433
+      }
+    },
+    {
+      "at": "2026-07-20T21:14:38.180Z",
+      "sessionElapsedMs": 530137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 570,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 83730630,
+          "usedJSHeapSizeBytes": 59884978
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3574,
+        "messageBodyCharacters": 193173,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 207549,
+        "socketReceived": 388,
+        "socketSent": 34,
+        "storeListeners": 53,
+        "storeDispatches": 443
+      }
+    },
+    {
+      "at": "2026-07-20T21:14:48.180Z",
+      "sessionElapsedMs": 540137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 910,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 85249976,
+          "usedJSHeapSizeBytes": 66964436
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3574,
+        "messageBodyCharacters": 192931,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 209927,
+        "socketReceived": 393,
+        "socketSent": 35,
+        "storeListeners": 53,
+        "storeDispatches": 449
+      }
+    },
+    {
+      "at": "2026-07-20T21:14:58.180Z",
+      "sessionElapsedMs": 550137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 6600,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 119989905,
+          "usedJSHeapSizeBytes": 70411057
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3575,
+        "messageBodyCharacters": 192718,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 215165,
+        "socketReceived": 401,
+        "socketSent": 36,
+        "storeListeners": 53,
+        "storeDispatches": 459
+      }
+    },
+    {
+      "at": "2026-07-20T21:15:08.180Z",
+      "sessionElapsedMs": 560137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1634,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 72030695,
+          "usedJSHeapSizeBytes": 63251271
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3576,
+        "messageBodyCharacters": 192908,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 216675,
+        "socketReceived": 404,
+        "socketSent": 36,
+        "storeListeners": 53,
+        "storeDispatches": 463
+      }
+    },
+    {
+      "at": "2026-07-20T21:15:18.180Z",
+      "sessionElapsedMs": 570137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1635,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 71055554,
+          "usedJSHeapSizeBytes": 64149070
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3577,
+        "messageBodyCharacters": 192976,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 217168,
+        "socketReceived": 406,
+        "socketSent": 36,
+        "storeListeners": 53,
+        "storeDispatches": 465
+      }
+    },
+    {
+      "at": "2026-07-20T21:15:28.180Z",
+      "sessionElapsedMs": 580137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 519,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 75117464,
+          "usedJSHeapSizeBytes": 64921312
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3577,
+        "messageBodyCharacters": 192976,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 217941,
+        "socketReceived": 407,
+        "socketSent": 36,
+        "storeListeners": 53,
+        "storeDispatches": 467
+      }
+    },
+    {
+      "at": "2026-07-20T21:15:38.180Z",
+      "sessionElapsedMs": 590137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 519,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 74608324,
+          "usedJSHeapSizeBytes": 59817304
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3577,
+        "messageBodyCharacters": 192976,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 220941,
+        "socketReceived": 407,
+        "socketSent": 36,
+        "storeListeners": 53,
+        "storeDispatches": 467
+      }
+    },
+    {
+      "at": "2026-07-20T21:15:48.180Z",
+      "sessionElapsedMs": 600137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 519,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 81692171,
+          "usedJSHeapSizeBytes": 65429631
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3579,
+        "messageBodyCharacters": 192950,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 224986,
+        "socketReceived": 413,
+        "socketSent": 36,
+        "storeListeners": 53,
+        "storeDispatches": 473
+      }
+    },
+    {
+      "at": "2026-07-20T21:15:58.180Z",
+      "sessionElapsedMs": 610137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 582,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 79591822,
+          "usedJSHeapSizeBytes": 65762326
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3580,
+        "messageBodyCharacters": 193142,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 229400,
+        "socketReceived": 418,
+        "socketSent": 37,
+        "storeListeners": 53,
+        "storeDispatches": 479
+      }
+    },
+    {
+      "at": "2026-07-20T21:16:08.180Z",
+      "sessionElapsedMs": 620137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 562,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 95144190,
+          "usedJSHeapSizeBytes": 65015386
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3581,
+        "messageBodyCharacters": 193205,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 236045,
+        "socketReceived": 427,
+        "socketSent": 38,
+        "storeListeners": 53,
+        "storeDispatches": 489
+      }
+    },
+    {
+      "at": "2026-07-20T21:16:18.180Z",
+      "sessionElapsedMs": 630137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 558,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 95341306,
+          "usedJSHeapSizeBytes": 71855006
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3582,
+        "messageBodyCharacters": 193278,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 240251,
+        "socketReceived": 430,
+        "socketSent": 39,
+        "storeListeners": 53,
+        "storeDispatches": 493
+      }
+    },
+    {
+      "at": "2026-07-20T21:16:28.180Z",
+      "sessionElapsedMs": 640137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 558,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 95346716,
+          "usedJSHeapSizeBytes": 68917940
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3582,
+        "messageBodyCharacters": 193278,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 245650,
+        "socketReceived": 430,
+        "socketSent": 39,
+        "storeListeners": 53,
+        "storeDispatches": 493
+      }
+    },
+    {
+      "at": "2026-07-20T21:16:38.180Z",
+      "sessionElapsedMs": 650137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 558,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 95402830,
+          "usedJSHeapSizeBytes": 63515526
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3584,
+        "messageBodyCharacters": 193547,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 249126,
+        "socketReceived": 436,
+        "socketSent": 40,
+        "storeListeners": 53,
+        "storeDispatches": 499
+      }
+    },
+    {
+      "at": "2026-07-20T21:16:48.180Z",
+      "sessionElapsedMs": 660137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 560,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 95403660,
+          "usedJSHeapSizeBytes": 65532644
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3584,
+        "messageBodyCharacters": 193533,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 249310,
+        "socketReceived": 438,
+        "socketSent": 40,
+        "storeListeners": 53,
+        "storeDispatches": 501
+      }
+    },
+    {
+      "at": "2026-07-20T21:16:58.180Z",
+      "sessionElapsedMs": 670137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 513,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 70175348,
+          "usedJSHeapSizeBytes": 61704148
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3583,
+        "messageBodyCharacters": 193183,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 250092,
+        "socketReceived": 441,
+        "socketSent": 40,
+        "storeListeners": 53,
+        "storeDispatches": 505
+      }
+    },
+    {
+      "at": "2026-07-20T21:17:08.180Z",
+      "sessionElapsedMs": 680137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 513,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 73586400,
+          "usedJSHeapSizeBytes": 63980984
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3584,
+        "messageBodyCharacters": 192943,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 253267,
+        "socketReceived": 447,
+        "socketSent": 40,
+        "storeListeners": 53,
+        "storeDispatches": 511
+      }
+    },
+    {
+      "at": "2026-07-20T21:17:18.180Z",
+      "sessionElapsedMs": 690137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 578,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 81154268,
+          "usedJSHeapSizeBytes": 60113924
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3585,
+        "messageBodyCharacters": 192988,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 256709,
+        "socketReceived": 450,
+        "socketSent": 41,
+        "storeListeners": 53,
+        "storeDispatches": 515
+      }
+    },
+    {
+      "at": "2026-07-20T21:17:28.180Z",
+      "sessionElapsedMs": 700137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1584,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 90918561,
+          "usedJSHeapSizeBytes": 66130633
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3586,
+        "messageBodyCharacters": 193044,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 260511,
+        "socketReceived": 457,
+        "socketSent": 42,
+        "storeListeners": 53,
+        "storeDispatches": 523
+      }
+    },
+    {
+      "at": "2026-07-20T21:17:38.180Z",
+      "sessionElapsedMs": 710137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1579,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 98468217,
+          "usedJSHeapSizeBytes": 76429561
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3589,
+        "messageBodyCharacters": 193222,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 262946,
+        "socketReceived": 463,
+        "socketSent": 43,
+        "storeListeners": 53,
+        "storeDispatches": 529
+      }
+    },
+    {
+      "at": "2026-07-20T21:17:48.180Z",
+      "sessionElapsedMs": 720137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 580,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 98457613,
+          "usedJSHeapSizeBytes": 67159649
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3589,
+        "messageBodyCharacters": 193233,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 267553,
+        "socketReceived": 467,
+        "socketSent": 44,
+        "storeListeners": 53,
+        "storeDispatches": 535
+      }
+    },
+    {
+      "at": "2026-07-20T21:17:58.180Z",
+      "sessionElapsedMs": 730137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 580,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 103441362,
+          "usedJSHeapSizeBytes": 82458486
+        }
+      },
+      "workspace": {
+        "buffers": 18,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3590,
+        "messageBodyCharacters": 193233,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 269131,
+        "socketReceived": 471,
+        "socketSent": 45,
+        "storeListeners": 53,
+        "storeDispatches": 539
+      }
+    },
+    {
+      "at": "2026-07-20T21:18:08.180Z",
+      "sessionElapsedMs": 740137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 760,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 119909686,
+          "usedJSHeapSizeBytes": 88804970
+        }
+      },
+      "workspace": {
+        "buffers": 16,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3509,
+        "messageBodyCharacters": 183572,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 272399,
+        "socketReceived": 477,
+        "socketSent": 45,
+        "storeListeners": 53,
+        "storeDispatches": 551
+      }
+    },
+    {
+      "at": "2026-07-20T21:18:18.180Z",
+      "sessionElapsedMs": 750137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 527,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 129038912,
+          "usedJSHeapSizeBytes": 72706204
+        }
+      },
+      "workspace": {
+        "buffers": 16,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3262,
+        "messageBodyCharacters": 172669,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 276111,
+        "socketReceived": 495,
+        "socketSent": 45,
+        "storeListeners": 53,
+        "storeDispatches": 573
+      }
+    },
+    {
+      "at": "2026-07-20T21:18:28.180Z",
+      "sessionElapsedMs": 760137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 363,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 128100547,
+          "usedJSHeapSizeBytes": 69041327
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3011,
+        "messageBodyCharacters": 154326,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 277479,
+        "socketReceived": 497,
+        "socketSent": 45,
+        "storeListeners": 53,
+        "storeDispatches": 578
+      }
+    },
+    {
+      "at": "2026-07-20T21:18:38.180Z",
+      "sessionElapsedMs": 770137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 495,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 128114288,
+          "usedJSHeapSizeBytes": 66608092
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3012,
+        "messageBodyCharacters": 154236,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 279321,
+        "socketReceived": 504,
+        "socketSent": 46,
+        "storeListeners": 53,
+        "storeDispatches": 586
+      }
+    },
+    {
+      "at": "2026-07-20T21:18:48.180Z",
+      "sessionElapsedMs": 780137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 495,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 128116225,
+          "usedJSHeapSizeBytes": 83454157
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3013,
+        "messageBodyCharacters": 154274,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 284029,
+        "socketReceived": 506,
+        "socketSent": 47,
+        "storeListeners": 53,
+        "storeDispatches": 588
+      }
+    },
+    {
+      "at": "2026-07-20T21:18:58.180Z",
+      "sessionElapsedMs": 790137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 563,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 143329073,
+          "usedJSHeapSizeBytes": 77952469
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 281,
+        "messages": 3014,
+        "messageBodyCharacters": 154473,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 290979,
+        "socketReceived": 522,
+        "socketSent": 47,
+        "storeListeners": 53,
+        "storeDispatches": 606
+      }
+    },
+    {
+      "at": "2026-07-20T21:19:08.180Z",
+      "sessionElapsedMs": 800137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 555,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 164125092,
+          "usedJSHeapSizeBytes": 96180176
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 281,
+        "messages": 3015,
+        "messageBodyCharacters": 154598,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 296308,
+        "socketReceived": 528,
+        "socketSent": 48,
+        "storeListeners": 53,
+        "storeDispatches": 615
+      }
+    },
+    {
+      "at": "2026-07-20T21:19:18.180Z",
+      "sessionElapsedMs": 810137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 556,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 79640652,
+          "usedJSHeapSizeBytes": 68812176
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3015,
+        "messageBodyCharacters": 154750,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 297335,
+        "socketReceived": 544,
+        "socketSent": 48,
+        "storeListeners": 53,
+        "storeDispatches": 631
+      }
+    },
+    {
+      "at": "2026-07-20T21:19:28.180Z",
+      "sessionElapsedMs": 820137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 556,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 78355869,
+          "usedJSHeapSizeBytes": 70903909
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3016,
+        "messageBodyCharacters": 154866,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 298134,
+        "socketReceived": 556,
+        "socketSent": 48,
+        "storeListeners": 53,
+        "storeDispatches": 643
+      }
+    },
+    {
+      "at": "2026-07-20T21:19:38.180Z",
+      "sessionElapsedMs": 830137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 387,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 87583708,
+          "usedJSHeapSizeBytes": 70222248
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3017,
+        "messageBodyCharacters": 154808,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 301042,
+        "socketReceived": 574,
+        "socketSent": 48,
+        "storeListeners": 53,
+        "storeDispatches": 662
+      }
+    },
+    {
+      "at": "2026-07-20T21:19:48.621Z",
+      "sessionElapsedMs": 840578,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 6501,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 106030516,
+          "usedJSHeapSizeBytes": 84894828
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3018,
+        "messageBodyCharacters": 154822,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 301912,
+        "socketReceived": 578,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 667
+      }
+    },
+    {
+      "at": "2026-07-20T21:19:58.180Z",
+      "sessionElapsedMs": 850137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 6577,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 146735785,
+          "usedJSHeapSizeBytes": 93297517
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3019,
+        "messageBodyCharacters": 154893,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 308255,
+        "socketReceived": 584,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 675
+      }
+    },
+    {
+      "at": "2026-07-20T21:20:08.180Z",
+      "sessionElapsedMs": 860137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 401,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 115574536,
+          "usedJSHeapSizeBytes": 90283908
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3020,
+        "messageBodyCharacters": 154897,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 313841,
+        "socketReceived": 590,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 682
+      }
+    },
+    {
+      "at": "2026-07-20T21:20:18.180Z",
+      "sessionElapsedMs": 870137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 495,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 84825994,
+          "usedJSHeapSizeBytes": 73049070
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3021,
+        "messageBodyCharacters": 154925,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 314768,
+        "socketReceived": 593,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 686
+      }
+    },
+    {
+      "at": "2026-07-20T21:20:28.180Z",
+      "sessionElapsedMs": 880137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 497,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 80848840,
+          "usedJSHeapSizeBytes": 69473020
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3021,
+        "messageBodyCharacters": 154864,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 316821,
+        "socketReceived": 599,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 692
+      }
+    },
+    {
+      "at": "2026-07-20T21:20:38.180Z",
+      "sessionElapsedMs": 890137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 497,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 86979915,
+          "usedJSHeapSizeBytes": 73339987
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3021,
+        "messageBodyCharacters": 154603,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 321272,
+        "socketReceived": 605,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 698
+      }
+    },
+    {
+      "at": "2026-07-20T21:20:48.180Z",
+      "sessionElapsedMs": 900137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 497,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 78068381,
+          "usedJSHeapSizeBytes": 71298237
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 279,
+        "messages": 3022,
+        "messageBodyCharacters": 154734,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 321923,
+        "socketReceived": 607,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 700
+      }
+    },
+    {
+      "at": "2026-07-20T21:20:58.180Z",
+      "sessionElapsedMs": 910137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 497,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 91752048,
+          "usedJSHeapSizeBytes": 72856836
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3022,
+        "messageBodyCharacters": 154931,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 326793,
+        "socketReceived": 619,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 712
+      }
+    },
+    {
+      "at": "2026-07-20T21:21:08.180Z",
+      "sessionElapsedMs": 920137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 497,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 92809180,
+          "usedJSHeapSizeBytes": 74285388
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3023,
+        "messageBodyCharacters": 154989,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 329828,
+        "socketReceived": 623,
+        "socketSent": 49,
+        "storeListeners": 53,
+        "storeDispatches": 716
+      }
+    },
+    {
+      "at": "2026-07-20T21:21:18.180Z",
+      "sessionElapsedMs": 930137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 535,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 94731200,
+          "usedJSHeapSizeBytes": 75771048
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3024,
+        "messageBodyCharacters": 155103,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 333941,
+        "socketReceived": 626,
+        "socketSent": 50,
+        "storeListeners": 53,
+        "storeDispatches": 720
+      }
+    },
+    {
+      "at": "2026-07-20T21:21:28.180Z",
+      "sessionElapsedMs": 940137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 535,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 94933591,
+          "usedJSHeapSizeBytes": 73195235
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3024,
+        "messageBodyCharacters": 155015,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 334312,
+        "socketReceived": 630,
+        "socketSent": 50,
+        "storeListeners": 53,
+        "storeDispatches": 724
+      }
+    },
+    {
+      "at": "2026-07-20T21:21:38.180Z",
+      "sessionElapsedMs": 950137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 579,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 93565284,
+          "usedJSHeapSizeBytes": 72689412
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 280,
+        "messages": 3025,
+        "messageBodyCharacters": 155033,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 337083,
+        "socketReceived": 633,
+        "socketSent": 51,
+        "storeListeners": 53,
+        "storeDispatches": 728
+      }
+    },
+    {
+      "at": "2026-07-20T21:21:48.180Z",
+      "sessionElapsedMs": 960137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1645,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 167609640,
+          "usedJSHeapSizeBytes": 106616632
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3026,
+        "messageBodyCharacters": 155124,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 356555,
+        "socketReceived": 650,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 747
+      }
+    },
+    {
+      "at": "2026-07-20T21:21:58.180Z",
+      "sessionElapsedMs": 970137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 555,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 162599692,
+          "usedJSHeapSizeBytes": 74068580
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3026,
+        "messageBodyCharacters": 155124,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 357521,
+        "socketReceived": 650,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 749
+      }
+    },
+    {
+      "at": "2026-07-20T21:22:08.180Z",
+      "sessionElapsedMs": 980137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 556,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 77935806,
+          "usedJSHeapSizeBytes": 73780402
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 283,
+        "messages": 3026,
+        "messageBodyCharacters": 155525,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 358308,
+        "socketReceived": 662,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 761
+      }
+    },
+    {
+      "at": "2026-07-20T21:22:18.180Z",
+      "sessionElapsedMs": 990137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 558,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 82899562,
+          "usedJSHeapSizeBytes": 76143590
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3027,
+        "messageBodyCharacters": 155596,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 359111,
+        "socketReceived": 674,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 773
+      }
+    },
+    {
+      "at": "2026-07-20T21:22:28.180Z",
+      "sessionElapsedMs": 1000137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 559,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 79501913,
+          "usedJSHeapSizeBytes": 76678161
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3029,
+        "messageBodyCharacters": 155811,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 359282,
+        "socketReceived": 678,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 777
+      }
+    },
+    {
+      "at": "2026-07-20T21:22:38.180Z",
+      "sessionElapsedMs": 1010137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 559,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 80289977,
+          "usedJSHeapSizeBytes": 77226441
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3029,
+        "messageBodyCharacters": 155779,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 359453,
+        "socketReceived": 682,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 781
+      }
+    },
+    {
+      "at": "2026-07-20T21:22:48.180Z",
+      "sessionElapsedMs": 1020137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 559,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 83176946,
+          "usedJSHeapSizeBytes": 78667730
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3029,
+        "messageBodyCharacters": 155804,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 359805,
+        "socketReceived": 690,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 789
+      }
+    },
+    {
+      "at": "2026-07-20T21:22:58.180Z",
+      "sessionElapsedMs": 1030137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 559,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 81604895,
+          "usedJSHeapSizeBytes": 79097547
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 282,
+        "messages": 3029,
+        "messageBodyCharacters": 155764,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 359873,
+        "socketReceived": 692,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 791
+      }
+    },
+    {
+      "at": "2026-07-20T21:23:08.180Z",
+      "sessionElapsedMs": 1040137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 559,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 89298649,
+          "usedJSHeapSizeBytes": 75584769
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 283,
+        "messages": 3029,
+        "messageBodyCharacters": 155974,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 360986,
+        "socketReceived": 706,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 805
+      }
+    },
+    {
+      "at": "2026-07-20T21:23:18.180Z",
+      "sessionElapsedMs": 1050137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 481,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 90512779,
+          "usedJSHeapSizeBytes": 74390483
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 283,
+        "messages": 3029,
+        "messageBodyCharacters": 156024,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 361991,
+        "socketReceived": 713,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 813
+      }
+    },
+    {
+      "at": "2026-07-20T21:23:28.180Z",
+      "sessionElapsedMs": 1060137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 481,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 91037145,
+          "usedJSHeapSizeBytes": 78239945
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 283,
+        "messages": 3029,
+        "messageBodyCharacters": 156024,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 362445,
+        "socketReceived": 713,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 813
+      }
+    },
+    {
+      "at": "2026-07-20T21:23:38.180Z",
+      "sessionElapsedMs": 1070137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 481,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 93506076,
+          "usedJSHeapSizeBytes": 76119708
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3029,
+        "messageBodyCharacters": 156282,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 368410,
+        "socketReceived": 723,
+        "socketSent": 52,
+        "storeListeners": 53,
+        "storeDispatches": 823
+      }
+    },
+    {
+      "at": "2026-07-20T21:23:48.180Z",
+      "sessionElapsedMs": 1080137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 489,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 100792958,
+          "usedJSHeapSizeBytes": 82443450
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3030,
+        "messageBodyCharacters": 156233,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 374185,
+        "socketReceived": 733,
+        "socketSent": 53,
+        "storeListeners": 53,
+        "storeDispatches": 833
+      }
+    },
+    {
+      "at": "2026-07-20T21:23:58.180Z",
+      "sessionElapsedMs": 1090137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 412,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 100799291,
+          "usedJSHeapSizeBytes": 75573643
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3030,
+        "messageBodyCharacters": 156329,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 376052,
+        "socketReceived": 736,
+        "socketSent": 53,
+        "storeListeners": 53,
+        "storeDispatches": 837
+      }
+    },
+    {
+      "at": "2026-07-20T21:24:08.180Z",
+      "sessionElapsedMs": 1100137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 830,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 101261795,
+          "usedJSHeapSizeBytes": 82878603
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3032,
+        "messageBodyCharacters": 156198,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 381038,
+        "socketReceived": 743,
+        "socketSent": 55,
+        "storeListeners": 53,
+        "storeDispatches": 845
+      }
+    },
+    {
+      "at": "2026-07-20T21:24:18.180Z",
+      "sessionElapsedMs": 1110137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 585,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 108344769,
+          "usedJSHeapSizeBytes": 92409689
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3033,
+        "messageBodyCharacters": 156205,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 383541,
+        "socketReceived": 745,
+        "socketSent": 56,
+        "storeListeners": 53,
+        "storeDispatches": 848
+      }
+    },
+    {
+      "at": "2026-07-20T21:24:28.180Z",
+      "sessionElapsedMs": 1120137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 1563,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 157038915,
+          "usedJSHeapSizeBytes": 96676395
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3034,
+        "messageBodyCharacters": 156203,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 390135,
+        "socketReceived": 753,
+        "socketSent": 57,
+        "storeListeners": 53,
+        "storeDispatches": 858
+      }
+    },
+    {
+      "at": "2026-07-20T21:24:38.180Z",
+      "sessionElapsedMs": 1130137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 479,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 91507295,
+          "usedJSHeapSizeBytes": 80615551
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3035,
+        "messageBodyCharacters": 156279,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 391407,
+        "socketReceived": 758,
+        "socketSent": 57,
+        "storeListeners": 53,
+        "storeDispatches": 864
+      }
+    },
+    {
+      "at": "2026-07-20T21:24:48.180Z",
+      "sessionElapsedMs": 1140137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 479,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 79634665,
+          "usedJSHeapSizeBytes": 74840117
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3036,
+        "messageBodyCharacters": 156323,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 391577,
+        "socketReceived": 760,
+        "socketSent": 57,
+        "storeListeners": 53,
+        "storeDispatches": 866
+      }
+    },
+    {
+      "at": "2026-07-20T21:24:58.180Z",
+      "sessionElapsedMs": 1150137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 479,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 87344162,
+          "usedJSHeapSizeBytes": 77817258
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3039,
+        "messageBodyCharacters": 156448,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 396243,
+        "socketReceived": 768,
+        "socketSent": 57,
+        "storeListeners": 53,
+        "storeDispatches": 874
+      }
+    },
+    {
+      "at": "2026-07-20T21:25:08.180Z",
+      "sessionElapsedMs": 1160137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 526,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 97612522,
+          "usedJSHeapSizeBytes": 75127698
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3041,
+        "messageBodyCharacters": 156518,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 400170,
+        "socketReceived": 774,
+        "socketSent": 58,
+        "storeListeners": 53,
+        "storeDispatches": 882
+      }
+    },
+    {
+      "at": "2026-07-20T21:25:18.180Z",
+      "sessionElapsedMs": 1170137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 526,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 97613192,
+          "usedJSHeapSizeBytes": 81422596
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3041,
+        "messageBodyCharacters": 156518,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 400856,
+        "socketReceived": 774,
+        "socketSent": 59,
+        "storeListeners": 53,
+        "storeDispatches": 882
+      }
+    },
+    {
+      "at": "2026-07-20T21:25:28.180Z",
+      "sessionElapsedMs": 1180137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 427,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 110744350,
+          "usedJSHeapSizeBytes": 80859314
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3044,
+        "messageBodyCharacters": 156649,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 406206,
+        "socketReceived": 787,
+        "socketSent": 60,
+        "storeListeners": 53,
+        "storeDispatches": 896
+      }
+    },
+    {
+      "at": "2026-07-20T21:25:38.180Z",
+      "sessionElapsedMs": 1190137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 525,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 110755100,
+          "usedJSHeapSizeBytes": 79437140
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3045,
+        "messageBodyCharacters": 156446,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 408073,
+        "socketReceived": 792,
+        "socketSent": 61,
+        "storeListeners": 53,
+        "storeDispatches": 902
+      }
+    },
+    {
+      "at": "2026-07-20T21:25:48.180Z",
+      "sessionElapsedMs": 1200137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 6631,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 135621711,
+          "usedJSHeapSizeBytes": 102314071
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3046,
+        "messageBodyCharacters": 156473,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 413107,
+        "socketReceived": 801,
+        "socketSent": 62,
+        "storeListeners": 53,
+        "storeDispatches": 912
+      }
+    },
+    {
+      "at": "2026-07-20T21:25:58.180Z",
+      "sessionElapsedMs": 1210137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 6631,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 89415599,
+          "usedJSHeapSizeBytes": 87097415
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 284,
+        "messages": 3046,
+        "messageBodyCharacters": 156473,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 413192,
+        "socketReceived": 801,
+        "socketSent": 62,
+        "storeListeners": 53,
+        "storeDispatches": 912
+      }
+    },
+    {
+      "at": "2026-07-20T21:26:08.180Z",
+      "sessionElapsedMs": 1220137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 6674,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 144240707,
+          "usedJSHeapSizeBytes": 89735203
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3049,
+        "messageBodyCharacters": 156773,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 427056,
+        "socketReceived": 813,
+        "socketSent": 62,
+        "storeListeners": 53,
+        "storeDispatches": 924
+      }
+    },
+    {
+      "at": "2026-07-20T21:26:18.180Z",
+      "sessionElapsedMs": 1230137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 531,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 167287629,
+          "usedJSHeapSizeBytes": 101395609
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3048,
+        "messageBodyCharacters": 156924,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 434104,
+        "socketReceived": 821,
+        "socketSent": 62,
+        "storeListeners": 53,
+        "storeDispatches": 933
+      }
+    },
+    {
+      "at": "2026-07-20T21:26:28.180Z",
+      "sessionElapsedMs": 1240137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 533,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 168387451,
+          "usedJSHeapSizeBytes": 79755107
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3048,
+        "messageBodyCharacters": 157184,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 436757,
+        "socketReceived": 829,
+        "socketSent": 62,
+        "storeListeners": 53,
+        "storeDispatches": 941
+      }
+    },
+    {
+      "at": "2026-07-20T21:26:38.180Z",
+      "sessionElapsedMs": 1250137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 531,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 162500287,
+          "usedJSHeapSizeBytes": 78499079
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3050,
+        "messageBodyCharacters": 157217,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 441618,
+        "socketReceived": 835,
+        "socketSent": 63,
+        "storeListeners": 53,
+        "storeDispatches": 949
+      }
+    },
+    {
+      "at": "2026-07-20T21:26:48.180Z",
+      "sessionElapsedMs": 1260137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 470,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 162742600,
+          "usedJSHeapSizeBytes": 104226160
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3052,
+        "messageBodyCharacters": 157483,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 443657,
+        "socketReceived": 840,
+        "socketSent": 64,
+        "storeListeners": 53,
+        "storeDispatches": 955
+      }
+    },
+    {
+      "at": "2026-07-20T21:26:58.180Z",
+      "sessionElapsedMs": 1270137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 471,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 162745045,
+          "usedJSHeapSizeBytes": 84514149
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3052,
+        "messageBodyCharacters": 157202,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 444191,
+        "socketReceived": 846,
+        "socketSent": 64,
+        "storeListeners": 53,
+        "storeDispatches": 961
+      }
+    },
+    {
+      "at": "2026-07-20T21:27:08.180Z",
+      "sessionElapsedMs": 1280137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 471,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 162800154,
+          "usedJSHeapSizeBytes": 104334470
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3052,
+        "messageBodyCharacters": 157211,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 449063,
+        "socketReceived": 850,
+        "socketSent": 64,
+        "storeListeners": 53,
+        "storeDispatches": 965
+      }
+    },
+    {
+      "at": "2026-07-20T21:27:18.180Z",
+      "sessionElapsedMs": 1290137,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 502,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 162805283,
+          "usedJSHeapSizeBytes": 106868695
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3055,
+        "messageBodyCharacters": 157495,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 452174,
+        "socketReceived": 856,
+        "socketSent": 65,
+        "storeListeners": 53,
+        "storeDispatches": 971
+      }
+    },
+    {
+      "at": "2026-07-20T21:27:18.811Z",
+      "sessionElapsedMs": 1290768,
+      "browser": {
+        "documentVisibility": "visible",
+        "domElements": 502,
+        "jsHeap": {
+          "status": "available",
+          "jsHeapSizeLimitBytes": 4395630592,
+          "totalJSHeapSizeBytes": 162805283,
+          "usedJSHeapSizeBytes": 106899523
+        }
+      },
+      "workspace": {
+        "buffers": 15,
+        "channels": 5,
+        "channelUsers": 285,
+        "messages": 3055,
+        "messageBodyCharacters": 157495,
+        "networks": 10
+      },
+      "activityTotals": {
+        "performanceMeasures": 452174,
+        "socketReceived": 856,
+        "socketSent": 65,
+        "storeListeners": 53,
+        "storeDispatches": 972
+      }
+    }
+  ],
+  "activity": {
+    "store": {
+      "activeListeners": 53,
+      "changed": 972,
+      "dispatched": 972,
+      "maxActiveListeners": 53,
+      "unchanged": 0,
+      "byType": [
+        {
+          "characters": 0,
+          "count": 467,
+          "type": "upsert-buffer"
+        },
+        {
+          "characters": 0,
+          "count": 286,
+          "type": "append-message"
+        },
+        {
+          "characters": 0,
+          "count": 94,
+          "type": "upsert-channel"
+        },
+        {
+          "characters": 0,
+          "count": 83,
+          "type": "select"
+        },
+        {
+          "characters": 0,
+          "count": 14,
+          "type": "history-buffer-loaded"
+        },
+        {
+          "characters": 0,
+          "count": 12,
+          "type": "append-messages"
+        },
+        {
+          "characters": 0,
+          "count": 4,
+          "type": "remove-buffer"
+        },
+        {
+          "characters": 0,
+          "count": 3,
+          "type": "query-presence"
+        },
+        {
+          "characters": 0,
+          "count": 2,
+          "type": "gateway-connecting"
+        },
+        {
+          "characters": 0,
+          "count": 2,
+          "type": "prepend-messages"
+        },
+        {
+          "characters": 0,
+          "count": 1,
+          "type": "friend-presence"
+        },
+        {
+          "characters": 0,
+          "count": 1,
+          "type": "gateway-connected"
+        },
+        {
+          "characters": 0,
+          "count": 1,
+          "type": "set-banner"
+        },
+        {
+          "characters": 0,
+          "count": 1,
+          "type": "set-managed-network"
+        },
+        {
+          "characters": 0,
+          "count": 1,
+          "type": "snapshot"
+        }
+      ]
+    },
+    "socket": {
+      "activeConnections": 1,
+      "connectionsClosed": 0,
+      "connectionsCreated": 1,
+      "connectionsOpened": 1,
+      "invalidPayloads": 0,
+      "maxActiveConnections": 1,
+      "received": [
+        {
+          "characters": 176077,
+          "count": 467,
+          "type": "buffer.upsert"
+        },
+        {
+          "characters": 151723,
+          "count": 286,
+          "type": "message.append"
+        },
+        {
+          "characters": 4219654,
+          "count": 94,
+          "type": "channel.snapshot"
+        },
+        {
+          "characters": 708,
+          "count": 4,
+          "type": "buffer.remove"
+        },
+        {
+          "characters": 286,
+          "count": 3,
+          "type": "query.presence"
+        },
+        {
+          "characters": 97,
+          "count": 1,
+          "type": "friend.presence"
+        },
+        {
+          "characters": 1730785,
+          "count": 1,
+          "type": "state.ready"
+        }
+      ],
+      "sent": [
+        {
+          "characters": 14226,
+          "count": 65,
+          "type": "message.send"
+        }
+      ]
+    },
+    "performanceMeasuresObserved": {
+      "count": 452178,
+      "maxDurationMs": 507.5,
+      "totalDurationMs": 176759.2,
+      "topByCount": [
+        {
+          "count": 59484,
+          "maxDurationMs": 10,
+          "name": "React component: ChatPaneCompactMessageRow",
+          "totalDurationMs": 6645.4
+        },
+        {
+          "count": 56853,
+          "maxDurationMs": 11.7,
+          "name": "React component: ChatTranscriptRow",
+          "totalDurationMs": 7394.6
+        },
+        {
+          "count": 54311,
+          "maxDurationMs": 10,
+          "name": "React component: ChatTranscriptMessageRow",
+          "totalDurationMs": 6382.7
+        },
+        {
+          "count": 39939,
+          "maxDurationMs": 7.5,
+          "name": "React component: ContactRuleIconButton",
+          "totalDurationMs": 2384.8
+        },
+        {
+          "count": 34664,
+          "maxDurationMs": 7.5,
+          "name": "React component: Button",
+          "totalDurationMs": 3250.4
+        },
+        {
+          "count": 14666,
+          "maxDurationMs": 7.5,
+          "name": "React component: ContactRuleControls",
+          "totalDurationMs": 2651.8
+        },
+        {
+          "count": 11388,
+          "maxDurationMs": 7.1,
+          "name": "React component: NickEmojiEditorControl",
+          "totalDurationMs": 674.1
+        },
+        {
+          "count": 11250,
+          "maxDurationMs": 5.4,
+          "name": "React component: Dialog",
+          "totalDurationMs": 1564.3
+        },
+        {
+          "count": 9522,
+          "maxDurationMs": 5.4,
+          "name": "React component: DialogProvider",
+          "totalDurationMs": 1384.1
+        },
+        {
+          "count": 8002,
+          "maxDurationMs": 5.4,
+          "name": "React component: DialogContent",
+          "totalDurationMs": 1599.1
+        },
+        {
+          "count": 7652,
+          "maxDurationMs": 5.4,
+          "name": "React component: DialogPortal",
+          "totalDurationMs": 991.2
+        },
+        {
+          "count": 7619,
+          "maxDurationMs": 119,
+          "name": "React component: Primitive.div",
+          "totalDurationMs": 18320
+        },
+        {
+          "count": 6542,
+          "maxDurationMs": 32.3,
+          "name": "React component: ForwardRef",
+          "totalDurationMs": 1929.2
+        },
+        {
+          "count": 5736,
+          "maxDurationMs": 5.4,
+          "name": "React component: DialogPortalProvider",
+          "totalDurationMs": 604.7
+        },
+        {
+          "count": 5056,
+          "maxDurationMs": 117.3,
+          "name": "React component: Presence",
+          "totalDurationMs": 5012.4
+        },
+        {
+          "count": 4799,
+          "maxDurationMs": 1.2,
+          "name": "React component: PaneHeaderIconAction",
+          "totalDurationMs": 551.4
+        },
+        {
+          "count": 4534,
+          "maxDurationMs": 172.3,
+          "name": "React: Mount",
+          "totalDurationMs": 5917.1
+        },
+        {
+          "count": 4327,
+          "maxDurationMs": 75.8,
+          "name": "React component: ForwardRef(TranscriptList2)",
+          "totalDurationMs": 10197.3
+        },
+        {
+          "count": 3866,
+          "maxDurationMs": 91.1,
+          "name": "React component: ScrollArea",
+          "totalDurationMs": 8862.2
+        },
+        {
+          "count": 3666,
+          "maxDurationMs": 2.3,
+          "name": "React component: ChatPaneHeader",
+          "totalDurationMs": 2434.5
+        },
+        {
+          "count": 3666,
+          "maxDurationMs": 32.3,
+          "name": "React component: ChatPaneMessageList2",
+          "totalDurationMs": 1018.7
+        },
+        {
+          "count": 3666,
+          "maxDurationMs": 1.4,
+          "name": "React component: ChatPaneComposer",
+          "totalDurationMs": 754.8
+        },
+        {
+          "count": 3666,
+          "maxDurationMs": 4.6,
+          "name": "React component: DeleteHistoryDialog",
+          "totalDurationMs": 489.3
+        },
+        {
+          "count": 3660,
+          "maxDurationMs": 2.2,
+          "name": "React component: PaneHeader",
+          "totalDurationMs": 2286.9
+        },
+        {
+          "count": 3659,
+          "maxDurationMs": 32.2,
+          "name": "React component: fr",
+          "totalDurationMs": 480.2
+        },
+        {
+          "count": 3633,
+          "maxDurationMs": 2.1,
+          "name": "React component: PaneHeaderActions",
+          "totalDurationMs": 2037.1
+        },
+        {
+          "count": 3625,
+          "maxDurationMs": 32.3,
+          "name": "React component: ChatTranscriptVirtuoso2",
+          "totalDurationMs": 890.6
+        },
+        {
+          "count": 3609,
+          "maxDurationMs": 0.3,
+          "name": "React component: ChatPaneHeaderActionMenu",
+          "totalDurationMs": 335.4
+        },
+        {
+          "count": 3598,
+          "maxDurationMs": 33.1,
+          "name": "React component: ChatPane2",
+          "totalDurationMs": 6071.4
+        },
+        {
+          "count": 3598,
+          "maxDurationMs": 0.1,
+          "name": "React component: ChatPaneStatusBanner",
+          "totalDurationMs": 8.1
+        }
+      ],
+      "topByTotalDuration": [
+        {
+          "count": 7619,
+          "maxDurationMs": 119,
+          "name": "React component: Primitive.div",
+          "totalDurationMs": 18320
+        },
+        {
+          "count": 4327,
+          "maxDurationMs": 75.8,
+          "name": "React component: ForwardRef(TranscriptList2)",
+          "totalDurationMs": 10197.3
+        },
+        {
+          "count": 3866,
+          "maxDurationMs": 91.1,
+          "name": "React component: ScrollArea",
+          "totalDurationMs": 8862.2
+        },
+        {
+          "count": 1988,
+          "maxDurationMs": 117.3,
+          "name": "React component: TabsContent",
+          "totalDurationMs": 8245.4
+        },
+        {
+          "count": 56853,
+          "maxDurationMs": 11.7,
+          "name": "React component: ChatTranscriptRow",
+          "totalDurationMs": 7394.6
+        },
+        {
+          "count": 648,
+          "maxDurationMs": 172.4,
+          "name": "React component: WorkspaceRightSidebar2",
+          "totalDurationMs": 6896.8
+        },
+        {
+          "count": 59484,
+          "maxDurationMs": 10,
+          "name": "React component: ChatPaneCompactMessageRow",
+          "totalDurationMs": 6645.4
+        },
+        {
+          "count": 54311,
+          "maxDurationMs": 10,
+          "name": "React component: ChatTranscriptMessageRow",
+          "totalDurationMs": 6382.7
+        },
+        {
+          "count": 3598,
+          "maxDurationMs": 33.1,
+          "name": "React component: ChatPane2",
+          "totalDurationMs": 6071.4
+        },
+        {
+          "count": 4534,
+          "maxDurationMs": 172.3,
+          "name": "React: Mount",
+          "totalDurationMs": 5917.1
+        },
+        {
+          "count": 5056,
+          "maxDurationMs": 117.3,
+          "name": "React component: Presence",
+          "totalDurationMs": 5012.4
+        },
+        {
+          "count": 497,
+          "maxDurationMs": 119.2,
+          "name": "React component: RightSidebarTabs",
+          "totalDurationMs": 4421.5
+        },
+        {
+          "count": 497,
+          "maxDurationMs": 119.1,
+          "name": "React component: Tabs",
+          "totalDurationMs": 4400.9
+        },
+        {
+          "count": 2155,
+          "maxDurationMs": 90.9,
+          "name": "React component: ScrollAreaProvider",
+          "totalDurationMs": 4394.7
+        },
+        {
+          "count": 497,
+          "maxDurationMs": 119,
+          "name": "React component: TabsProvider",
+          "totalDurationMs": 4391.1
+        },
+        {
+          "count": 1877,
+          "maxDurationMs": 90.8,
+          "name": "React component: ScrollAreaViewport",
+          "totalDurationMs": 4174.8
+        },
+        {
+          "count": 1146,
+          "maxDurationMs": 91.3,
+          "name": "React component: InspectorPanel",
+          "totalDurationMs": 3554.1
+        },
+        {
+          "count": 181,
+          "maxDurationMs": 181.2,
+          "name": "React component: DesktopShellLayout",
+          "totalDurationMs": 3282.5
+        },
+        {
+          "count": 34664,
+          "maxDurationMs": 7.5,
+          "name": "React component: Button",
+          "totalDurationMs": 3250.4
+        },
+        {
+          "count": 168,
+          "maxDurationMs": 181.3,
+          "name": "React component: AppStoreProvider",
+          "totalDurationMs": 3238.6
+        },
+        {
+          "count": 168,
+          "maxDurationMs": 181.3,
+          "name": "React component: AppBody",
+          "totalDurationMs": 3233.9
+        },
+        {
+          "count": 649,
+          "maxDurationMs": 91.1,
+          "name": "React component: InspectorSection",
+          "totalDurationMs": 3230.3
+        },
+        {
+          "count": 168,
+          "maxDurationMs": 181.3,
+          "name": "React component: DesktopShell2",
+          "totalDurationMs": 3224.5
+        },
+        {
+          "count": 14666,
+          "maxDurationMs": 7.5,
+          "name": "React component: ContactRuleControls",
+          "totalDurationMs": 2651.8
+        },
+        {
+          "count": 3666,
+          "maxDurationMs": 2.3,
+          "name": "React component: ChatPaneHeader",
+          "totalDurationMs": 2434.5
+        },
+        {
+          "count": 39939,
+          "maxDurationMs": 7.5,
+          "name": "React component: ContactRuleIconButton",
+          "totalDurationMs": 2384.8
+        },
+        {
+          "count": 3660,
+          "maxDurationMs": 2.2,
+          "name": "React component: PaneHeader",
+          "totalDurationMs": 2286.9
+        },
+        {
+          "count": 3633,
+          "maxDurationMs": 2.1,
+          "name": "React component: PaneHeaderActions",
+          "totalDurationMs": 2037.1
+        },
+        {
+          "count": 6542,
+          "maxDurationMs": 32.3,
+          "name": "React component: ForwardRef",
+          "totalDurationMs": 1929.2
+        },
+        {
+          "count": 652,
+          "maxDurationMs": 5.8,
+          "name": "React component: ConnectionSidebar2",
+          "totalDurationMs": 1839.2
+        }
+      ]
+    }
+  },
+  "workspace": {
+    "phase": "ready",
+    "gatewayStatus": "connected",
+    "networks": {
+      "count": 10,
+      "runtimesByPhase": {
+        "offline": 7,
+        "connected": 3
+      },
+      "runtimeCapabilities": {
+        "offered": 45,
+        "negotiated": 33,
+        "pending": 0,
+        "values": 1
+      },
+      "workspaceOpen": 5
+    },
+    "buffers": {
+      "count": 15,
+      "byKind": {
+        "channel": 5,
+        "server": 5,
+        "query": 5
+      },
+      "totalPriorityUnread": 2,
+      "totalUnread": 6
+    },
+    "channels": {
+      "count": 5,
+      "topicCharacters": 614,
+      "totalUsers": 285,
+      "usersPerChannel": [
+        231,
+        46,
+        5,
+        2,
+        1
+      ],
+      "usersPerChannelOmitted": 0
+    },
+    "pendingChannels": 0,
+    "messages": {
+      "bodyCharacters": 157495,
+      "count": 3055,
+      "metadataCharacters": 401984,
+      "bucketCount": 15,
+      "byDelivery": {
+        "unspecified": 3055
+      },
+      "byKind": {
+        "join": 294,
+        "quit": 161,
+        "system": 1170,
+        "line": 1103,
+        "part": 24,
+        "action": 195,
+        "notice": 107,
+        "error": 1
+      },
+      "retainedByBuffer": [
+        {
+          "bodyCharacters": 16142,
+          "count": 250,
+          "metadataCharacters": 35776,
+          "bufferKind": "channel",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 15145,
+          "count": 250,
+          "metadataCharacters": 35654,
+          "bufferKind": "channel",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 14197,
+          "count": 250,
+          "metadataCharacters": 29172,
+          "bufferKind": "server",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 14104,
+          "count": 250,
+          "metadataCharacters": 29100,
+          "bufferKind": "server",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 13966,
+          "count": 250,
+          "metadataCharacters": 29148,
+          "bufferKind": "server",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 13826,
+          "count": 250,
+          "metadataCharacters": 29172,
+          "bufferKind": "server",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 13802,
+          "count": 250,
+          "metadataCharacters": 29196,
+          "bufferKind": "server",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 13387,
+          "count": 211,
+          "metadataCharacters": 30252,
+          "bufferKind": "query",
+          "selected": true
+        },
+        {
+          "bodyCharacters": 11748,
+          "count": 250,
+          "metadataCharacters": 36954,
+          "bufferKind": "channel",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 10966,
+          "count": 250,
+          "metadataCharacters": 38408,
+          "bufferKind": "channel",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 9699,
+          "count": 250,
+          "metadataCharacters": 32956,
+          "bufferKind": "query",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 6403,
+          "count": 250,
+          "metadataCharacters": 32558,
+          "bufferKind": "channel",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 2597,
+          "count": 50,
+          "metadataCharacters": 7446,
+          "bufferKind": "query",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 956,
+          "count": 33,
+          "metadataCharacters": 4689,
+          "bufferKind": "query",
+          "selected": false
+        },
+        {
+          "bodyCharacters": 557,
+          "count": 11,
+          "metadataCharacters": 1503,
+          "bufferKind": "query",
+          "selected": false
+        }
+      ],
+      "retainedByBufferOmitted": 0
+    },
+    "contacts": {
+      "friends": 13,
+      "mutedNicks": 9,
+      "nickEmojis": 13,
+      "friendPresenceEntries": 13,
+      "queryPresenceEntries": 5
+    },
+    "selection": {
+      "kind": "buffer",
+      "selectedBufferKind": "query"
+    },
+    "transient": {
+      "bannerVisible": false,
+      "channelListEntries": 0,
+      "channelListOpen": false,
+      "channelListStatus": "idle",
+      "historyHasOlderEntries": 8,
+      "historyLoadedEntries": 8,
+      "networkManagerMode": "closed"
+    }
+  },
+  "browser": {
+    "environment": {
+      "build": {
+        "development": true,
+        "mode": "development",
+        "production": false
+      },
+      "browser": {
+        "deviceMemoryGiB": 16,
+        "hardwareConcurrency": 12,
+        "maxTouchPoints": 0,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+      },
+      "context": {
+        "crossOriginIsolated": false,
+        "secure": true,
+        "locationProtocol": "http:",
+        "visibility": "visible"
+      },
+      "screen": {
+        "devicePixelRatio": 2.5,
+        "screenHeight": 2160,
+        "screenWidth": 3840,
+        "viewportHeight": 819,
+        "viewportWidth": 1536
+      }
+    },
+    "memory": {
+      "chromiumHeap": {
+        "status": "available",
+        "jsHeapSizeLimitBytes": 4395630592,
+        "totalJSHeapSizeBytes": 162805283,
+        "usedJSHeapSizeBytes": 106899523
+      },
+      "userAgentSpecific": {
+        "status": "unsupported"
+      }
+    },
+    "dom": {
+      "status": "available",
+      "elements": 502,
+      "attributes": 1309,
+      "commentNodes": 0,
+      "textNodes": 107,
+      "shadowRoots": 0,
+      "inlineEventAttributes": 0,
+      "inlineStyleAttributes": 36,
+      "byTag": {
+        "div": 138,
+        "path": 78,
+        "span": 72,
+        "button": 39,
+        "svg": 39,
+        "p": 21,
+        "article": 19,
+        "time": 18,
+        "circle": 16,
+        "line": 13,
+        "img": 6,
+        "section": 6,
+        "rect": 5,
+        "style": 4,
+        "h2": 4,
+        "script": 3,
+        "header": 3,
+        "aside": 3,
+        "meta": 2,
+        "input": 2,
+        "label": 2,
+        "textarea": 2,
+        "html": 1,
+        "head": 1,
+        "link": 1,
+        "title": 1,
+        "body": 1,
+        "main": 1,
+        "footer": 1
+      },
+      "dialogs": 0,
+      "menus": 1,
+      "canvases": {
+        "count": 0,
+        "backingPixels": 0
+      },
+      "images": {
+        "count": 6,
+        "complete": 6,
+        "decodedPixels": 2905890
+      },
+      "styleSheets": {
+        "count": 4,
+        "accessibleCssRules": 107,
+        "inaccessible": 0
+      },
+      "fonts": 28
+    },
+    "performance": {
+      "status": "available",
+      "timeOrigin": 1784581546305.9,
+      "totalEntries": 452625,
+      "entryCounts": {
+        "navigation": 1,
+        "visibility-state": 3,
+        "long-animation-frame": 194,
+        "resource": 250,
+        "measure": 452174,
+        "paint": 2,
+        "first-input": 1
+      },
+      "measures": {
+        "count": 452174,
+        "maxDurationMs": 181.3,
+        "totalDurationMs": 176251,
+        "topByCount": [
+          {
+            "count": 59484,
+            "maxDurationMs": 10,
+            "name": "React component: ChatPaneCompactMessageRow",
+            "totalDurationMs": 6645.4
+          },
+          {
+            "count": 56853,
+            "maxDurationMs": 11.7,
+            "name": "React component: ChatTranscriptRow",
+            "totalDurationMs": 7394.6
+          },
+          {
+            "count": 54311,
+            "maxDurationMs": 10,
+            "name": "React component: ChatTranscriptMessageRow",
+            "totalDurationMs": 6382.7
+          },
+          {
+            "count": 39939,
+            "maxDurationMs": 7.5,
+            "name": "React component: ContactRuleIconButton",
+            "totalDurationMs": 2384.8
+          },
+          {
+            "count": 34663,
+            "maxDurationMs": 7.5,
+            "name": "React component: Button",
+            "totalDurationMs": 3250.3
+          },
+          {
+            "count": 14666,
+            "maxDurationMs": 7.5,
+            "name": "React component: ContactRuleControls",
+            "totalDurationMs": 2651.8
+          },
+          {
+            "count": 11388,
+            "maxDurationMs": 7.1,
+            "name": "React component: NickEmojiEditorControl",
+            "totalDurationMs": 674.1
+          },
+          {
+            "count": 11250,
+            "maxDurationMs": 5.4,
+            "name": "React component: Dialog",
+            "totalDurationMs": 1564.3
+          },
+          {
+            "count": 9522,
+            "maxDurationMs": 5.4,
+            "name": "React component: DialogProvider",
+            "totalDurationMs": 1384.1
+          },
+          {
+            "count": 8002,
+            "maxDurationMs": 5.4,
+            "name": "React component: DialogContent",
+            "totalDurationMs": 1599.1
+          },
+          {
+            "count": 7652,
+            "maxDurationMs": 5.4,
+            "name": "React component: DialogPortal",
+            "totalDurationMs": 991.2
+          },
+          {
+            "count": 7619,
+            "maxDurationMs": 119,
+            "name": "React component: Primitive.div",
+            "totalDurationMs": 18320
+          },
+          {
+            "count": 6542,
+            "maxDurationMs": 32.3,
+            "name": "React component: ForwardRef",
+            "totalDurationMs": 1929.2
+          },
+          {
+            "count": 5736,
+            "maxDurationMs": 5.4,
+            "name": "React component: DialogPortalProvider",
+            "totalDurationMs": 604.7
+          },
+          {
+            "count": 5056,
+            "maxDurationMs": 117.3,
+            "name": "React component: Presence",
+            "totalDurationMs": 5012.4
+          },
+          {
+            "count": 4799,
+            "maxDurationMs": 1.2,
+            "name": "React component: PaneHeaderIconAction",
+            "totalDurationMs": 551.4
+          },
+          {
+            "count": 4533,
+            "maxDurationMs": 172.3,
+            "name": "React: Mount",
+            "totalDurationMs": 5916.9
+          },
+          {
+            "count": 4327,
+            "maxDurationMs": 75.8,
+            "name": "React component: ForwardRef(TranscriptList2)",
+            "totalDurationMs": 10197.3
+          },
+          {
+            "count": 3866,
+            "maxDurationMs": 91.1,
+            "name": "React component: ScrollArea",
+            "totalDurationMs": 8862.2
+          },
+          {
+            "count": 3666,
+            "maxDurationMs": 2.3,
+            "name": "React component: ChatPaneHeader",
+            "totalDurationMs": 2434.5
+          },
+          {
+            "count": 3666,
+            "maxDurationMs": 32.3,
+            "name": "React component: ChatPaneMessageList2",
+            "totalDurationMs": 1018.7
+          },
+          {
+            "count": 3666,
+            "maxDurationMs": 1.4,
+            "name": "React component: ChatPaneComposer",
+            "totalDurationMs": 754.8
+          },
+          {
+            "count": 3666,
+            "maxDurationMs": 4.6,
+            "name": "React component: DeleteHistoryDialog",
+            "totalDurationMs": 489.3
+          },
+          {
+            "count": 3660,
+            "maxDurationMs": 2.2,
+            "name": "React component: PaneHeader",
+            "totalDurationMs": 2286.9
+          },
+          {
+            "count": 3659,
+            "maxDurationMs": 32.2,
+            "name": "React component: fr",
+            "totalDurationMs": 480.2
+          },
+          {
+            "count": 3633,
+            "maxDurationMs": 2.1,
+            "name": "React component: PaneHeaderActions",
+            "totalDurationMs": 2037.1
+          },
+          {
+            "count": 3625,
+            "maxDurationMs": 32.3,
+            "name": "React component: ChatTranscriptVirtuoso2",
+            "totalDurationMs": 890.6
+          },
+          {
+            "count": 3609,
+            "maxDurationMs": 0.3,
+            "name": "React component: ChatPaneHeaderActionMenu",
+            "totalDurationMs": 335.4
+          },
+          {
+            "count": 3598,
+            "maxDurationMs": 33.1,
+            "name": "React component: ChatPane2",
+            "totalDurationMs": 6071.4
+          },
+          {
+            "count": 3598,
+            "maxDurationMs": 0.1,
+            "name": "React component: ChatPaneStatusBanner",
+            "totalDurationMs": 8.1
+          }
+        ],
+        "topByTotalDuration": [
+          {
+            "count": 7619,
+            "maxDurationMs": 119,
+            "name": "React component: Primitive.div",
+            "totalDurationMs": 18320
+          },
+          {
+            "count": 4327,
+            "maxDurationMs": 75.8,
+            "name": "React component: ForwardRef(TranscriptList2)",
+            "totalDurationMs": 10197.3
+          },
+          {
+            "count": 3866,
+            "maxDurationMs": 91.1,
+            "name": "React component: ScrollArea",
+            "totalDurationMs": 8862.2
+          },
+          {
+            "count": 1988,
+            "maxDurationMs": 117.3,
+            "name": "React component: TabsContent",
+            "totalDurationMs": 8245.4
+          },
+          {
+            "count": 56853,
+            "maxDurationMs": 11.7,
+            "name": "React component: ChatTranscriptRow",
+            "totalDurationMs": 7394.6
+          },
+          {
+            "count": 648,
+            "maxDurationMs": 172.4,
+            "name": "React component: WorkspaceRightSidebar2",
+            "totalDurationMs": 6896.8
+          },
+          {
+            "count": 59484,
+            "maxDurationMs": 10,
+            "name": "React component: ChatPaneCompactMessageRow",
+            "totalDurationMs": 6645.4
+          },
+          {
+            "count": 54311,
+            "maxDurationMs": 10,
+            "name": "React component: ChatTranscriptMessageRow",
+            "totalDurationMs": 6382.7
+          },
+          {
+            "count": 3598,
+            "maxDurationMs": 33.1,
+            "name": "React component: ChatPane2",
+            "totalDurationMs": 6071.4
+          },
+          {
+            "count": 4533,
+            "maxDurationMs": 172.3,
+            "name": "React: Mount",
+            "totalDurationMs": 5916.9
+          },
+          {
+            "count": 5056,
+            "maxDurationMs": 117.3,
+            "name": "React component: Presence",
+            "totalDurationMs": 5012.4
+          },
+          {
+            "count": 497,
+            "maxDurationMs": 119.2,
+            "name": "React component: RightSidebarTabs",
+            "totalDurationMs": 4421.5
+          },
+          {
+            "count": 497,
+            "maxDurationMs": 119.1,
+            "name": "React component: Tabs",
+            "totalDurationMs": 4400.9
+          },
+          {
+            "count": 2155,
+            "maxDurationMs": 90.9,
+            "name": "React component: ScrollAreaProvider",
+            "totalDurationMs": 4394.7
+          },
+          {
+            "count": 497,
+            "maxDurationMs": 119,
+            "name": "React component: TabsProvider",
+            "totalDurationMs": 4391.1
+          },
+          {
+            "count": 1877,
+            "maxDurationMs": 90.8,
+            "name": "React component: ScrollAreaViewport",
+            "totalDurationMs": 4174.8
+          },
+          {
+            "count": 1146,
+            "maxDurationMs": 91.3,
+            "name": "React component: InspectorPanel",
+            "totalDurationMs": 3554.1
+          },
+          {
+            "count": 181,
+            "maxDurationMs": 181.2,
+            "name": "React component: DesktopShellLayout",
+            "totalDurationMs": 3282.5
+          },
+          {
+            "count": 34663,
+            "maxDurationMs": 7.5,
+            "name": "React component: Button",
+            "totalDurationMs": 3250.3
+          },
+          {
+            "count": 168,
+            "maxDurationMs": 181.3,
+            "name": "React component: AppStoreProvider",
+            "totalDurationMs": 3238.6
+          },
+          {
+            "count": 168,
+            "maxDurationMs": 181.3,
+            "name": "React component: AppBody",
+            "totalDurationMs": 3233.9
+          },
+          {
+            "count": 649,
+            "maxDurationMs": 91.1,
+            "name": "React component: InspectorSection",
+            "totalDurationMs": 3230.3
+          },
+          {
+            "count": 168,
+            "maxDurationMs": 181.3,
+            "name": "React component: DesktopShell2",
+            "totalDurationMs": 3224.5
+          },
+          {
+            "count": 14666,
+            "maxDurationMs": 7.5,
+            "name": "React component: ContactRuleControls",
+            "totalDurationMs": 2651.8
+          },
+          {
+            "count": 3666,
+            "maxDurationMs": 2.3,
+            "name": "React component: ChatPaneHeader",
+            "totalDurationMs": 2434.5
+          },
+          {
+            "count": 39939,
+            "maxDurationMs": 7.5,
+            "name": "React component: ContactRuleIconButton",
+            "totalDurationMs": 2384.8
+          },
+          {
+            "count": 3660,
+            "maxDurationMs": 2.2,
+            "name": "React component: PaneHeader",
+            "totalDurationMs": 2286.9
+          },
+          {
+            "count": 3633,
+            "maxDurationMs": 2.1,
+            "name": "React component: PaneHeaderActions",
+            "totalDurationMs": 2037.1
+          },
+          {
+            "count": 6542,
+            "maxDurationMs": 32.3,
+            "name": "React component: ForwardRef",
+            "totalDurationMs": 1929.2
+          },
+          {
+            "count": 652,
+            "maxDurationMs": 5.8,
+            "name": "React component: ConnectionSidebar2",
+            "totalDurationMs": 1839.2
+          }
+        ]
+      },
+      "resources": {
+        "byInitiator": [
+          {
+            "initiatorType": "script",
+            "count": 250,
+            "decodedBodyBytes": 5809814,
+            "durationMs": 21833.1,
+            "transferBytes": 0
+          }
+        ],
+        "byScope": {
+          "same-origin": 250
+        }
+      },
+      "longTasks": {
+        "count": 0,
+        "totalDurationMs": 0
+      },
+      "supportedEntryTypes": [
+        "element",
+        "event",
+        "first-input",
+        "largest-contentful-paint",
+        "layout-shift",
+        "long-animation-frame",
+        "longtask",
+        "mark",
+        "measure",
+        "navigation",
+        "paint",
+        "resource",
+        "visibility-state"
+      ]
+    },
+    "storage": {
+      "status": "available",
+      "quotaBytes": 2147483648,
+      "usageBytes": 0
+    }
+  },
+  "limitations": [
+    "Normal web pages cannot create a browser heap snapshot or enumerate detached DOM nodes.",
+    "Chromium tab/process memory includes renderer allocations that performance.memory may not report.",
+    "Performance-entry details are intentionally never serialized because React development entries can retain component trees and props."
+  ]
+}

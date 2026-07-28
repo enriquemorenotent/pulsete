@@ -6,6 +6,7 @@ import { initialState } from './app-state.js';
 import { AppBody } from './AppBody.js';
 import { createClientDiagnosticsRecorder } from './client-diagnostics.js';
 import { createComposerStore } from './composer-store.js';
+import { createAiAssistantStore } from './ai-assistant-store.js';
 import { createServerMessageBridge } from './server-message-bridge.js';
 import { createLiveAppActions } from './useAppActions.js';
 import { useAppUiState } from './useAppUiState.js';
@@ -20,6 +21,7 @@ function App() {
     });
     return { diagnostics: diagnosticsRecorder, store: appStore };
   });
+  const [assistantStore] = useState(createAiAssistantStore);
   const [composer] = useState(createComposerStore);
   const updateBanner = useCallback(
     (kind: 'notice' | 'error', message: string) =>
@@ -73,6 +75,7 @@ function App() {
     <AppStoreProvider store={store}>
       <AppEffects
         applySocketMessage={serverMessages.applySocketMessage}
+        assistantStore={assistantStore}
         composer={composer}
         socketInstrumentation={diagnostics.socketInstrumentation}
         ui={ui}
@@ -80,6 +83,7 @@ function App() {
       <AppBody
         actions={actions}
         applyServerMessages={serverMessages.applyMutationMessages}
+        assistantStore={assistantStore}
         composer={composer}
         onDownloadDiagnostics={downloadDiagnostics}
         ui={ui}

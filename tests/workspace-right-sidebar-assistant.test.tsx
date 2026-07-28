@@ -6,6 +6,7 @@ import { WorkspaceRightSidebar } from '../web/src/WorkspaceRightSidebar.js';
 import type { DesktopShellNicklistModel } from '../web/src/desktop-shell-model.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
+import { createAiAssistantStore } from '../web/src/ai-assistant-store.js';
 
 const network: NetworkProfile = {
   id: 'network-1',
@@ -37,6 +38,8 @@ const nicklist: DesktopShellNicklistModel = {
 };
 
 test('channel sidebar exposes members and assistant tabs', () => {
+  const assistantStore = createAiAssistantStore();
+  assistantStore.setInput(channelBuffer.id, 'Keep this draft');
   const markup = renderToStaticMarkup(
     <WorkspaceRightSidebar
       workspace={{
@@ -52,16 +55,22 @@ test('channel sidebar exposes members and assistant tabs', () => {
         showNicklist: true,
       }}
       nicklist={nicklist}
-      assistant={{ buffer: channelBuffer, onUseSuggestion: () => undefined }}
+      assistant={{
+        buffer: channelBuffer,
+        onUseSuggestion: () => undefined,
+        store: assistantStore,
+      }}
     />,
   );
 
   assert.match(markup, />Members</);
   assert.match(markup, />Assistant</);
+  assert.match(markup, />New chat</);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);
 });
 
 test('private message sidebar exposes info and assistant tabs', () => {
+  const assistantStore = createAiAssistantStore();
   const markup = renderToStaticMarkup(
     <WorkspaceRightSidebar
       workspace={{
@@ -76,12 +85,17 @@ test('private message sidebar exposes info and assistant tabs', () => {
         profileImagesVisible: false,
         onSaveNotes: async () => queryBuffer,
       }}
-      assistant={{ buffer: queryBuffer, onUseSuggestion: () => undefined }}
+      assistant={{
+        buffer: queryBuffer,
+        onUseSuggestion: () => undefined,
+        store: assistantStore,
+      }}
     />,
   );
 
   assert.match(markup, />Info</);
   assert.match(markup, />Assistant</);
+  assert.match(markup, />New chat</);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);
 });
 

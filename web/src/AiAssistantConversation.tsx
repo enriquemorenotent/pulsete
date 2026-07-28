@@ -1,9 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { Bot, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
+
+const AiAssistantMarkdown = lazy(async () => {
+  const module = await import('./AiAssistantMarkdown.js');
+  return { default: module.AiAssistantMarkdown };
+});
 
 type AiAssistantConversationProps = {
   entries: readonly AssistantEntry[];
@@ -53,7 +58,15 @@ function AssistantBubble(props: {
           : 'border-primary/14 bg-primary/12 text-foreground',
       )}>
         {assistant ? <Bot className="mb-1 size-3.5 text-muted-foreground" /> : null}
-        <div className="whitespace-pre-wrap">{props.entry.text}</div>
+        <div className="min-w-0 space-y-2 break-words">
+          {assistant ? (
+            <Suspense fallback={<div className="whitespace-pre-wrap">{props.entry.text}</div>}>
+              <AiAssistantMarkdown>{props.entry.text}</AiAssistantMarkdown>
+            </Suspense>
+          ) : (
+            <div className="whitespace-pre-wrap">{props.entry.text}</div>
+          )}
+        </div>
         {props.entry.mode === 'suggest-reply' ? (
           <Button
             size="sm"

@@ -1,7 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { MessageSquarePlus } from 'lucide-react';
 import type { BufferState } from '../../shared/protocol-chat.js';
-import type { AiAssistantMode, AiAssistantProviderStatus } from '../../shared/protocol-ai.js';
+import {
+  aiAssistantThreadMaxTurns,
+  type AiAssistantMode,
+  type AiAssistantProviderStatus,
+} from '../../shared/protocol-ai.js';
+import { Button } from '@/components/ui/button.js';
 import { aiAssistantApi } from './ai-assistant-client.js';
+import {
+  createAiAssistantStore,
+  hasAiAssistantThreadContent,
+  type AiAssistantStoreApi,
+  useAiAssistantThread,
+} from './ai-assistant-store.js';
 import { AiAssistantChatView } from './AiAssistantChatView.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 import { AiAssistantConnectionPanel } from './AiAssistantConnectionPanel.js';
@@ -14,30 +26,15 @@ import {
 type AiAssistantPanelProps = {
   buffer: BufferState | null;
   onUseSuggestion: (value: string) => void;
+  store?: AiAssistantStoreApi;
 };
 
 export function AiAssistantPanel(props: AiAssistantPanelProps) {
-  const [entries, setEntries] = useState<AssistantEntry[]>([]);
-  const [error, setError] = useState('');
-  const [input, setInput] = useState('');
-  const [pending, setPending] = useState(false);
-  const [pendingLabel, setPendingLabel] = useState('Thinking');
+  const [localStore] = useState(createAiAssistantStore);
+  const store = props.store ?? localStore;
+  const bufferId = props.buffer?.id ?? null;
+  const thread = useAiAssistantThread(store, bufferId);
   const [status, setStatus] = useState<AiAssistantProviderStatus | null>(null);
-  const nextId = useRef(1);
-  const requestId = useRef(0);
-
-  useEffect(() => {
-    requestId.current += 1;
-    setEntries([]);
-    setError('');
-    setInput('');
-    setPending(false);
-    setPendingLabel('Thinking');
-  }, [props.buffer?.id]);
-
-  const appendEntry = (entry: Omit<AssistantEntry, 'id'>) => {
-    setEntries((current) => [...current, { ...entry, id: nextId.current++ }]);
-  };
 
   const ask = async (
     mode: AiAssistantMode,
@@ -45,42 +42,43 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     label = prompt,
     nextPendingLabel = 'Thinking',
   ) => {
-    if (!props.buffer || pending || (mode === 'answer' && !prompt.trim())) {
+    if (!bufferId || (mode === 'answer' && !prompt.trim())) {
       return;
     }
-    const currentRequestId = ++requestId.current;
-    const bufferId = props.buffer.id;
-    const assistantTurns = buildAssistantTurns(entries);
-    setPending(true);
-    setPendingLabel(nextPendingLabel);
-    setError('');
-    appendEntry({ role: 'user', text: label || 'Draft a reply' });
+    const assistantTurns = buildAssistantTurns(store.getThread(bufferId).entries);
+    const currentRequestId = store.startRequest(bufferId, {
+      label: label || 'Draft a reply',
+      pendingLabel: nextPendingLabel,
+    });
+    if (currentRequestId === null) {
+      return;
+    }
     try {
       const response = await aiAssistantApi.ask(bufferId, { assistantTurns, mode, prompt });
-      if (currentRequestId !== requestId.current) {
-        return;
-      }
       setStatus(response.status);
-      appendEntry({ mode, role: 'assistant', text: response.answer });
+      store.resolveRequest(bufferId, currentRequestId, {
+        mode,
+        text: response.answer,
+      });
     } catch (reason) {
-      if (currentRequestId !== requestId.current) {
-        return;
-      }
-      setError(reason instanceof Error ? reason.message : 'Assistant request failed');
-    } finally {
-      if (currentRequestId === requestId.current) {
-        setPending(false);
-        setPendingLabel('Thinking');
-      }
+      store.failRequest(
+        bufferId,
+        currentRequestId,
+        reason instanceof Error ? reason.message : 'Assistant request failed',
+      );
     }
   };
 
   const submit = () => {
-    const prompt = input.trim();
-    if (!prompt || pending) {
+    if (!bufferId) {
       return;
     }
-    setInput('');
+    const current = store.getThread(bufferId);
+    const prompt = current.input.trim();
+    if (!prompt || current.pending) {
+      return;
+    }
+    store.setInput(bufferId, '');
     void ask('answer', prompt);
   };
 
@@ -91,18 +89,38 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         eyebrow="Private assistant"
         title="Assistant"
         subtitle={props.buffer ? props.buffer.target : undefined}
+        actions={(
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!bufferId || !hasAiAssistantThreadContent(thread)}
+            onClick={() => {
+              if (bufferId) {
+                store.clearThread(bufferId);
+              }
+            }}
+          >
+            <MessageSquarePlus />
+            New chat
+          </Button>
+        )}
       />
       <InspectorSection className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <AiAssistantConnectionPanel compact onStatusChange={setStatus} />
         {connected ? (
           <AiAssistantChatView
-            entries={entries}
-            error={error}
-            input={input}
-            pending={pending}
-            pendingLabel={pendingLabel}
+            entries={thread.entries}
+            error={thread.error}
+            input={thread.input}
+            pending={thread.pending}
+            pendingLabel={thread.pendingLabel}
             onAsk={ask}
-            onChange={setInput}
+            onChange={(value) => {
+              if (bufferId) {
+                store.setInput(bufferId, value);
+              }
+            }}
             onSubmit={submit}
             onUseSuggestion={props.onUseSuggestion}
           />
@@ -114,8 +132,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
 
 const buildAssistantTurns = (entries: readonly AssistantEntry[]) =>
   entries
-    .slice(-assistantTurnLimit)
+    .slice(-aiAssistantThreadMaxTurns)
     .map((entry) => ({ role: entry.role, text: entry.text.trim() }))
     .filter((entry) => entry.text);
-
-const assistantTurnLimit = 12;

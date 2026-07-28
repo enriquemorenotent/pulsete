@@ -26,6 +26,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('node_modules/markdown-to-jsx')) {
+            return 'assistant-markdown';
+          }
           return id.includes('node_modules') ? 'vendor' : undefined;
         },
       },

@@ -107,6 +107,24 @@ test('compact chat rows render direct MP4 links as on-demand video players', () 
   assert.doesNotMatch(markup, /href="https:\/\/cdn\.example\.com\/media\/clip\.mp4\?token=abc"/);
 });
 
+test('compact chat rows render direct MOV links as on-demand video players', () => {
+  const markup = renderChatPane([
+    makeMessage({
+      id: 'message-1',
+      nick: 'Joby',
+      body: 'Watch https://cdn.example.com/media/clip.mov?token=abc',
+      ts: 1,
+    }),
+  ]);
+
+  assert.match(markup, /Watch /);
+  assert.match(markup, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mov\?token=abc"/);
+  assert.match(markup, /<video[^>]*controls=""/i);
+  assert.doesNotMatch(markup, /<video[^>]*autoPlay=""/i);
+  assert.doesNotMatch(markup, /<video[^>]*loop=""/i);
+  assert.doesNotMatch(markup, /href="https:\/\/cdn\.example\.com\/media\/clip\.mov\?token=abc"/);
+});
+
 test('compact chat rows render Tumblr GIFV links as negotiated images', () => {
   const markup = renderChatPane([
     makeMessage({

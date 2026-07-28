@@ -229,8 +229,29 @@ test('renders direct MP4 links as on-demand video players', () => {
   assert.doesNotMatch(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.MP4\?token=abc#t=2"/);
 });
 
-test('resolves only direct MP4 paths as on-demand videos', () => {
+test('renders direct MOV links as on-demand video players', () => {
+  const href = 'https://cdn.example.com/media/clip.MOV?token=abc#t=2';
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: `Watch ${href}`,
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.MOV\?token=abc#t=2"/);
+  assert.match(html, /<video[^>]*controls=""/i);
+  assert.match(html, /<video[^>]*muted=""/i);
+  assert.match(html, /<video[^>]*playsInline=""/i);
+  assert.match(html, /<video[^>]*preload="metadata"/i);
+  assert.doesNotMatch(html, /<video[^>]*autoPlay=""/i);
+  assert.doesNotMatch(html, /<video[^>]*loop=""/i);
+  assert.match(html, /aria-label="Expand Inline video preview: clip\.MOV"/);
+  assert.doesNotMatch(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.MOV\?token=abc#t=2"/);
+});
+
+test('resolves only direct MP4 and MOV paths as on-demand videos', () => {
   const href = 'https://cdn.example.com/media/clip.MP4?token=abc#t=2';
+  const movHref = 'https://cdn.example.com/media/clip.MOV?token=abc#t=2';
 
   assert.deepEqual(resolveInlineMediaHref(href), {
     kind: 'video',
@@ -239,8 +260,17 @@ test('resolves only direct MP4 paths as on-demand videos', () => {
     playback: 'on-demand',
     sourceHref: href,
   });
+  assert.deepEqual(resolveInlineMediaHref(movHref), {
+    kind: 'video',
+    mimeType: 'video/quicktime',
+    originalHref: movHref,
+    playback: 'on-demand',
+    sourceHref: movHref,
+  });
   assert.equal(resolveInlineMediaHref('https://cdn.example.com/media/clip.mp4/metadata'), null);
+  assert.equal(resolveInlineMediaHref('https://cdn.example.com/media/clip.mov/metadata'), null);
   assert.equal(resolveInlineMediaHref('https://cdn.example.com/media/clip?format=mp4'), null);
+  assert.equal(resolveInlineMediaHref('https://cdn.example.com/media/clip?format=mov'), null);
 });
 
 test('renders Tumblr GIFV links as negotiated image previews', () => {
@@ -322,6 +352,21 @@ test('inline MP4 dialog waits for playback and links to the original video', () 
   assert.doesNotMatch(html, /<video[^>]*autoPlay=""/i);
   assert.doesNotMatch(html, /<video[^>]*loop=""/i);
   assert.match(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.mp4"/);
+});
+
+test('inline MOV dialog waits for playback and links to the original video', () => {
+  const media = resolveInlineMediaHref('https://cdn.example.com/media/clip.mov');
+  assert.ok(media);
+  const html = renderToStaticMarkup(
+    createElement(InlineMediaPreviewDialogBody, { media })
+  );
+
+  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mov"/);
+  assert.match(html, /<video[^>]*controls=""/i);
+  assert.match(html, /<video[^>]*muted=""/i);
+  assert.doesNotMatch(html, /<video[^>]*autoPlay=""/i);
+  assert.doesNotMatch(html, /<video[^>]*loop=""/i);
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.mov"/);
 });
 
 test('inline image preview dialog exposes the full-size image and original link', () => {
@@ -421,6 +466,19 @@ test('can render MP4 URLs as links when media previews are hidden', () => {
   );
 
   assert.match(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.mp4"/);
+  assert.doesNotMatch(html, /<video/);
+});
+
+test('can render MOV URLs as links when media previews are hidden', () => {
+  const html = renderToStaticMarkup(
+    createElement(FormattedMessageText, {
+      text: 'Watch https://cdn.example.com/media/clip.mov',
+      inlineImageRendering: 'link',
+      onOpenChannel() {},
+    })
+  );
+
+  assert.match(html, /href="https:\/\/cdn\.example\.com\/media\/clip\.mov"/);
   assert.doesNotMatch(html, /<video/);
 });
 

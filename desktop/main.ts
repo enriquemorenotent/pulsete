@@ -1,6 +1,10 @@
 import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { startPulseteServer, type PulseteServerHandle } from '../server/server-app.js';
+import {
+  handleDesktopNavigationCommand,
+  restrictDesktopNavigationToOrigin,
+} from './navigation-history.js';
 
 let mainWindow: BrowserWindow | null = null;
 let serverHandle: PulseteServerHandle | null = null;
@@ -95,6 +99,20 @@ function createMainWindow(server: PulseteServerHandle) {
     }
     event.preventDefault();
     openTrustedExternalUrl(url);
+  });
+
+  window.on('app-command', (event, command) => {
+    if (
+      handleDesktopNavigationCommand(
+        command,
+        restrictDesktopNavigationToOrigin(
+          window.webContents.navigationHistory,
+          server.url,
+        ),
+      )
+    ) {
+      event.preventDefault();
+    }
   });
 
   return window;

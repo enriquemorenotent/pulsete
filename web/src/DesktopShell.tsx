@@ -26,10 +26,12 @@ import { useDesktopHeaderModel } from './useDesktopShellModel.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
+import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 
 export type DesktopShellProps = {
   actions: AppActions;
   applyServerMessages: ApplyServerMessages;
+  assistantStore: AiAssistantStoreApi;
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
   mediaVisibilitySettings: MediaVisibilitySettingsController;
@@ -120,6 +122,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
         rightSidebarKind ? (
           <WorkspaceRightSidebarContainer
             actions={props.actions}
+            assistantStore={props.assistantStore}
             composer={props.composer}
             contactNotifications={props.contactNotifications}
             contactRuleHandlers={contactRuleHandlers}

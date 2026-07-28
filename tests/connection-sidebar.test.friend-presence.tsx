@@ -55,7 +55,7 @@ test('friends sort online contacts above away, then offline', () => {
   assert.ok(beaIndex < aliceIndex);
 });
 
-test('friends header includes an overflow menu button', () => {
+test('friends header includes a direct offline visibility button', () => {
   const markup = renderConnectionSidebar({
     friends: [
       { id: 'friend-1', nick: 'Alice' },
@@ -64,6 +64,22 @@ test('friends header includes an overflow menu button', () => {
   });
 
   assert.match(markup, /Watchlist<\/h2>/);
-  assert.match(markup, /aria-label="Watchlist options"/);
-  assert.match(markup, /aria-haspopup="menu"/);
+  assert.match(markup, /aria-label="Hide offline nicks"/);
+  assert.match(markup, /aria-pressed="false"/);
+  assert.match(markup, /lucide-eye-off/);
+  assert.doesNotMatch(markup, /aria-haspopup="menu"/);
+  assert.doesNotMatch(markup, />Hide offline nicks</);
+});
+
+test('friends header changes the visibility button when offline nicks are hidden', () => {
+  const markup = renderConnectionSidebar({
+    friends: [{ id: 'friend-1', nick: 'Alice' }],
+    hideOfflineFriends: true,
+  });
+
+  assert.match(markup, /aria-label="Show offline nicks"/);
+  assert.match(markup, /aria-pressed="true"/);
+  assert.match(markup, /lucide-eye/);
+  assert.doesNotMatch(markup, /lucide-eye-off/);
+  assert.doesNotMatch(markup, />Show offline nicks</);
 });

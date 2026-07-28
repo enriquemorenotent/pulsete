@@ -20,9 +20,12 @@ import {
   useManagedNetworkSelection,
 } from './useNetworkManagerLifecycle.js';
 import type { ClientSocketInstrumentation } from './client-socket.js';
+import type { AiAssistantStoreApi } from './ai-assistant-store.js';
+import { useConversationNavigationHistory } from './conversation-navigation-history.js';
 
 type AppEffectsProps = {
   applySocketMessage: (message: ServerMessage) => void;
+  assistantStore: Pick<AiAssistantStoreApi, 'pruneThreads'>;
   composer: Pick<ComposerStoreApi, 'pruneContexts'>;
   socketInstrumentation: ClientSocketInstrumentation;
   ui: Pick<
@@ -41,6 +44,8 @@ export function AppEffects(props: AppEffectsProps) {
   const networks = useAppSelector(selectNetworks);
   const phase = useAppSelector(selectPhase);
   const visibleNetworks = useAppSelector(selectVisibleNetworks);
+
+  useConversationNavigationHistory();
 
   useAutoOpenNetworkManager({
     phase,
@@ -78,9 +83,10 @@ export function AppEffects(props: AppEffectsProps) {
 
   useEffect(() => {
     const activeBufferIds = buffers.map((buffer) => buffer.id);
+    props.assistantStore.pruneThreads(activeBufferIds);
     props.composer.pruneContexts(activeBufferIds);
     transcriptScrollSnapshots.prune(activeBufferIds);
-  }, [buffers, props.composer]);
+  }, [buffers, props.assistantStore, props.composer]);
 
   return null;
 }

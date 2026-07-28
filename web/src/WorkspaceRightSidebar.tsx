@@ -7,6 +7,7 @@ import { ServerProfileSidebar } from './ServerProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import type { BufferState, ChannelUserState, NetworkProfile } from '../../shared/protocol-chat.js';
+import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 
 type QueryProfileAvatarUser = Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
   ircCloudAvatarId?: string | null;
@@ -18,6 +19,7 @@ type WorkspaceRightSidebarProps = {
   assistant?: {
     buffer: BufferState | null;
     onUseSuggestion: (value: string) => void;
+    store?: AiAssistantStoreApi;
   };
   serverProfile?: {
     network: WorkspaceView['selectedNetwork'];
@@ -84,6 +86,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
               <AiAssistantPanel
                 buffer={props.assistant?.buffer ?? buffer}
                 onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
+                store={props.assistant?.store}
               />
             ),
           },
@@ -127,6 +130,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
             <AiAssistantPanel
               buffer={props.assistant?.buffer ?? props.workspace.selectedBuffer}
               onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
+              store={props.assistant?.store}
             />
           ),
         },

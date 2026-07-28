@@ -17,9 +17,11 @@ import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { useDesktopNicklistModel } from './useDesktopShellModel.js';
 import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 import type { AppActions } from './useAppActions.js';
+import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 
 type WorkspaceRightSidebarContainerProps = {
   actions: AppActions;
+  assistantStore: AiAssistantStoreApi;
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
@@ -29,6 +31,7 @@ type WorkspaceRightSidebarContainerProps = {
 
 export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSidebarContainer({
   actions,
+  assistantStore,
   composer,
   contactNotifications,
   contactRuleHandlers,
@@ -96,8 +99,9 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     return {
       buffer,
       onUseSuggestion: (value: string) => composer.setDraft(buffer?.id ?? null, value),
+      store: assistantStore,
     };
-  }, [composer, workspace.selectedBuffer]);
+  }, [assistantStore, composer, workspace.selectedBuffer]);
   return (
     <WorkspaceRightSidebar
       workspace={workspace}
