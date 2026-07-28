@@ -6,6 +6,7 @@ type FormattedMessageTokens = ReturnType<typeof tokenizeFormattedMessage>;
 export type InlineMedia =
   | {
       kind: 'image';
+      label?: string;
       originalHref: string;
       sourceHref: string;
     }
@@ -74,7 +75,9 @@ export const resolveInlineMediaHref = (href: string): InlineMedia | null => {
 export const isInlineMediaHref = (href: string) => resolveInlineMediaHref(href) !== null;
 
 export const buildInlineMediaLabel = (media: InlineMedia) =>
-  inlineMediaLabelBuilders[media.kind](media.originalHref);
+  media.kind === 'image' && media.label
+    ? `Inline image preview: ${media.label}`
+    : inlineMediaLabelBuilders[media.kind](media.originalHref);
 
 function resolveImgurGifv(url: URL, originalHref: string): InlineMedia | null {
   if (!isImgurHostname(url.hostname) || !/^\/[a-z0-9]+\.gifv$/i.test(url.pathname)) {

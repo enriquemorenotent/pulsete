@@ -9,6 +9,7 @@ import type { MessageDisplayMode } from './message-display-mode.js';
 
 export type ParsedFormattedMessageContent = {
   inlineMedia: InlineMedia[];
+  pagePreviewHrefs: string[];
   rawMode: boolean;
   rawText: string;
   tokens: ReturnType<typeof tokenizeFormattedMessage>;
@@ -23,6 +24,7 @@ export const parseFormattedMessageContent = (
   if (mode === 'raw') {
     return {
       inlineMedia: [],
+      pagePreviewHrefs: [],
       rawMode: true,
       rawText: escapeIrcTextForDebug(text),
       tokens: [],
@@ -33,11 +35,46 @@ export const parseFormattedMessageContent = (
     : tokenizeFormattedMessage(text);
   return {
     inlineMedia: collectInlineMedia(tokens),
+    pagePreviewHrefs: collectPagePreviewHrefs(tokens),
     rawMode: false,
     rawText: '',
     tokens,
   };
 };
+
+const collectPagePreviewHrefs = (
+  tokens: ReturnType<typeof tokenizeFormattedMessage>,
+) => {
+  const hrefs: string[] = [];
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    if (
+      token.type !== 'link'
+      || isInlineMediaHref(token.href)
+      || seen.has(token.href)
+      || !isHttpUrl(token.href)
+    ) {
+      continue;
+    }
+    seen.add(token.href);
+    hrefs.push(token.href);
+    if (hrefs.length === pagePreviewHrefLimit) {
+      break;
+    }
+  }
+  return hrefs;
+};
+
+const isHttpUrl = (href: string) => {
+  try {
+    const url = new URL(href);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const pagePreviewHrefLimit = 3;
 
 export const hasVisibleFormattedMessageText = (
   content: ParsedFormattedMessageContent,

@@ -121,6 +121,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
                   onOpenChannel={props.onOpenChannel}
                   parsedContent={parsedContent}
                   renderInlinePreviews={false}
+                  renderPagePreviewStatus={inlineImageRendering === 'preview'}
                 />
               </span>
             ) : null}
@@ -129,6 +130,7 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
             <FormattedMessageInlinePreviews
               media={parsedContent.inlineMedia}
               onInlinePreviewLoad={props.onInlinePreviewLoad}
+              pageHrefs={parsedContent.pagePreviewHrefs}
             />
           ) : null}
         </div>

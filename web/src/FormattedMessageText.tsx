@@ -8,6 +8,7 @@ import { isInlineMediaHref } from './formatted-message-inline-media.js';
 import { renderFormattedMessageParts } from './formatted-message-render-parts.js';
 import { FormattedMessageInlinePreviews } from './FormattedMessageInlinePreviews.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
+import { PagePreviewUnavailableIndicator } from './PagePreviewUnavailableIndicator.js';
 
 export {
   hasVisibleFormattedMessageText,
@@ -24,6 +25,7 @@ type FormattedMessageTextProps = {
   onInlinePreviewLoad?: () => void;
   parsedContent?: ParsedFormattedMessageContent;
   renderInlinePreviews?: boolean;
+  renderPagePreviewStatus?: boolean;
   text: string;
   onOpenChannel: (channel: string) => void;
   mode?: MessageDisplayMode;
@@ -36,6 +38,8 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
   );
   const content = props.parsedContent ?? memoizedContent;
   const inlineImageRendering = props.inlineImageRendering ?? 'preview';
+  const renderPagePreviewStatus = props.renderPagePreviewStatus
+    ?? inlineImageRendering === 'preview';
 
   if (content.rawMode) {
     return <span className="font-mono">{content.rawText}</span>;
@@ -68,21 +72,27 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
           return null;
         }
         return (
-          <a
-            key={`link-${token.href}-${tokenIndex}`}
-            href={token.href}
-            target={token.external ? '_blank' : undefined}
-            rel={token.external ? 'noreferrer' : undefined}
-            className="font-medium text-primary/90 underline decoration-primary/35 decoration-1 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/80 hover:opacity-90"
-          >
-            {renderedContent}
-          </a>
+          <Fragment key={`link-${token.href}-${tokenIndex}`}>
+            <a
+              href={token.href}
+              target={token.external ? '_blank' : undefined}
+              rel={token.external ? 'noreferrer' : undefined}
+              className="font-medium text-primary/90 underline decoration-primary/35 decoration-1 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/80 hover:opacity-90"
+            >
+              {renderedContent}
+            </a>
+            {renderPagePreviewStatus
+              && content.pagePreviewHrefs.includes(token.href) ? (
+                <PagePreviewUnavailableIndicator href={token.href} />
+              ) : null}
+          </Fragment>
         );
       })}
       {props.renderInlinePreviews === false || inlineImageRendering !== 'preview' ? null : (
         <FormattedMessageInlinePreviews
           media={content.inlineMedia}
           onInlinePreviewLoad={props.onInlinePreviewLoad}
+          pageHrefs={content.pagePreviewHrefs}
         />
       )}
     </>

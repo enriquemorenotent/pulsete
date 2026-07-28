@@ -14,6 +14,9 @@ import type {
   NickEmojiState,
 } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
+import type {
+  PagePreviewResponse,
+} from '../../shared/protocol-page-preview.js';
 import {
   parseDownloadFileName,
   triggerFileDownload,
@@ -224,4 +227,12 @@ export const api = {
       method: 'DELETE',
       body: '{}',
     }),
+  resolvePagePreview: (
+    url: string,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => apiRequest<PagePreviewResponse>('/api/media/page-preview', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+    signal: init?.signal,
+  }),
 };

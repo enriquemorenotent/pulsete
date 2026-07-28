@@ -6,25 +6,32 @@ import {
   type InlineMedia,
 } from './formatted-message-inline-media.js';
 import { InlineMediaPreviewDialogBody } from './InlineMediaPreviewDialogBody.js';
+import { usePagePreviewMedia } from './page-preview-media.js';
 
 export const FormattedMessageInlinePreviews = memo(function FormattedMessageInlinePreviews(
-  props: { media: InlineMedia[]; onInlinePreviewLoad?: () => void },
+  props: {
+    media: readonly InlineMedia[];
+    onInlinePreviewLoad?: () => void;
+    pageHrefs?: readonly string[];
+  },
 ) {
   const [activeHref, setActiveHref] = useState<string | null>(null);
-  const activeMedia = props.media.find((media) => media.originalHref === activeHref) ?? null;
+  const pageMedia = usePagePreviewMedia(props.pageHrefs ?? []);
+  const media = [...props.media, ...pageMedia];
+  const activeMedia = media.find((entry) => entry.originalHref === activeHref) ?? null;
 
-  if (props.media.length === 0) {
+  if (media.length === 0) {
     return null;
   }
 
   return (
     <Dialog open={activeMedia !== null} onOpenChange={(open) => !open && setActiveHref(null)}>
       <span className="mt-2 flex flex-wrap gap-2">
-        {props.media.map((media) => (
+        {media.map((entry) => (
           <InlineMediaPreviewTile
-            key={media.originalHref}
-            media={media}
-            onActivate={() => setActiveHref(media.originalHref)}
+            key={entry.originalHref}
+            media={entry}
+            onActivate={() => setActiveHref(entry.originalHref)}
             onLoad={props.onInlinePreviewLoad}
           />
         ))}

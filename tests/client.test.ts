@@ -390,3 +390,50 @@ test('saveBufferNotes updates the buffer notes endpoint', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('resolvePagePreview posts the webpage URL and forwards cancellation', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    body: unknown;
+    method: string;
+    signal: AbortSignal | null | undefined;
+    url: string;
+  }> = [];
+  const controller = new AbortController();
+  globalThis.fetch = (async (input, init) => {
+    calls.push({
+      body: JSON.parse(String(init?.body ?? '{}')),
+      method: String(init?.method ?? 'GET'),
+      signal: init?.signal,
+      url: String(input),
+    });
+    return new Response(JSON.stringify({
+      preview: {
+        imageUrl: 'https://cdn.example/card.png',
+        pageUrl: 'https://example.com/post',
+        title: 'Example card',
+      },
+      unavailableReason: null,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  try {
+    const payload = await api.resolvePagePreview(
+      'https://example.com/post',
+      { signal: controller.signal },
+    );
+
+    assert.deepEqual(calls, [{
+      body: { url: 'https://example.com/post' },
+      method: 'POST',
+      signal: controller.signal,
+      url: '/api/media/page-preview',
+    }]);
+    assert.equal(payload.preview?.title, 'Example card');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

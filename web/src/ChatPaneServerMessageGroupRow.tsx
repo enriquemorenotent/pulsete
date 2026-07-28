@@ -97,6 +97,7 @@ function ServerMessageGroupLine(props: {
               onOpenChannel={props.onOpenChannel}
               parsedContent={parsedContent}
               renderInlinePreviews={false}
+              renderPagePreviewStatus={inlineImageRendering === 'preview'}
             />
           </p>
         ) : null}
@@ -104,6 +105,7 @@ function ServerMessageGroupLine(props: {
           <FormattedMessageInlinePreviews
             media={parsedContent.inlineMedia}
             onInlinePreviewLoad={props.onInlinePreviewLoad}
+            pageHrefs={parsedContent.pagePreviewHrefs}
           />
         ) : null}
       </div>
