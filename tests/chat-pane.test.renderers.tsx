@@ -69,6 +69,9 @@ export const renderQueryPane = (
   selectedMessages: ChatMessage[],
   overrides: Partial<{
     canLoadOlderHistory: boolean;
+    canDeleteHistory: boolean;
+    canDownloadHistory: boolean;
+    canSearchHistory: boolean;
     initialHistoryPending: boolean;
     loadingOlderHistory: boolean;
     friends: FriendState[];
@@ -101,6 +104,14 @@ export const renderQueryPane = (
       showChannelAutoJoin={false}
       channelAutoJoinActive={false}
       onToggleChannelAutoJoin={async () => true}
+      canDeleteHistory={overrides.canDeleteHistory}
+      onDeleteHistory={overrides.canDeleteHistory ? async () => true : undefined}
+      canDownloadHistory={overrides.canDownloadHistory}
+      onDownloadHistory={overrides.canDownloadHistory ? async () => true : undefined}
+      canSearchHistory={overrides.canSearchHistory}
+      onSearchHistory={overrides.canSearchHistory
+        ? async (_bufferId, query) => ({ query, results: [], hasMore: false })
+        : undefined}
       canLoadOlderHistory={overrides.canLoadOlderHistory}
       initialHistoryPending={overrides.initialHistoryPending}
       loadingOlderHistory={overrides.loadingOlderHistory}

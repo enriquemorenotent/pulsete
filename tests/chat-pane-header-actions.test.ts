@@ -104,7 +104,7 @@ test('channel header actions expose history search when the selected buffer supp
   });
 });
 
-test('query header actions keep WHOIS and close visible while history stays in overflow', () => {
+test('query header actions expose history tools as direct header actions', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -118,16 +118,22 @@ test('query header actions keep WHOIS and close visible while history stays in o
       composerPlaceholder: 'Message MissD',
       showNicklist: false,
     }),
+    canSearchHistory: true,
     canDownloadHistory: true,
+    canDeleteHistory: true,
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['WHOIS', 'Close'],
-    overflow: ['Download history'],
+    primary: ['WHOIS', 'Search history', 'Download history', 'Delete history', 'Close'],
+    overflow: [],
   });
+  assert.deepEqual(
+    actions.primary.map((action) => action.icon),
+    ['whois', 'search-history', 'download-history', 'delete-history', 'close'],
+  );
 });
 
-test('query header actions expose destructive history delete when enabled', () => {
+test('query header actions keep destructive history delete direct when enabled alone', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -145,10 +151,10 @@ test('query header actions expose destructive history delete when enabled', () =
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['WHOIS', 'Close'],
-    overflow: ['Delete history'],
+    primary: ['WHOIS', 'Delete history', 'Close'],
+    overflow: [],
   });
-  assert.equal(actions.overflow.find((action) => action.label === 'Delete history')?.tone, 'danger');
+  assert.equal(actions.primary.find((action) => action.label === 'Delete history')?.tone, 'danger');
 });
 
 test('query header actions are stable when notifications are enabled', () => {

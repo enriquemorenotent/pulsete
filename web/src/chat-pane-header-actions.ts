@@ -2,7 +2,7 @@ import type { BufferState } from '../../shared/protocol-chat.js';
 import type { WorkspaceView } from './workspace.js';
 
 export type ChatPaneHeaderAction = {
-  icon?: 'close' | 'whois';
+  icon?: 'close' | 'delete-history' | 'download-history' | 'search-history' | 'whois';
   id: string;
   label: string;
   onSelect: () => void;
@@ -39,13 +39,21 @@ export const resolveChatPaneHeaderActions = (
     };
   }
 
-  const primary = resolvePrimaryActions(context);
-  const overflow = resolveOverflowActions(context);
-  return { primary, overflow };
+  const historyActions = resolveHistoryActions(context);
+  const showHistoryActionsDirectly = context.workspace.selectedBuffer?.kind === 'query';
+  const primary = resolvePrimaryActions(
+    context,
+    showHistoryActionsDirectly ? historyActions : [],
+  );
+  return {
+    primary,
+    overflow: showHistoryActionsDirectly ? [] : historyActions,
+  };
 };
 
 const resolvePrimaryActions = (
   context: ResolveChatPaneHeaderActionsContext,
+  historyActions: ChatPaneHeaderAction[],
 ): ChatPaneHeaderAction[] => {
   const { selectedBuffer, selectedChannel } = context.workspace;
   if (selectedChannel) {
@@ -66,6 +74,7 @@ const resolvePrimaryActions = (
         label: 'WHOIS',
         onSelect: context.onWhoisSelectedQuery,
       }] : []),
+      ...historyActions,
       {
         icon: 'close',
         id: 'close-query',
@@ -77,14 +86,15 @@ const resolvePrimaryActions = (
   return [];
 };
 
-const resolveOverflowActions = (
+const resolveHistoryActions = (
   context: ResolveChatPaneHeaderActionsContext,
 ): ChatPaneHeaderAction[] => {
   const { selectedBuffer } = context.workspace;
-  const overflow: ChatPaneHeaderAction[] = [];
+  const actions: ChatPaneHeaderAction[] = [];
 
   if (context.canSearchHistory && context.onOpenHistorySearch) {
-    overflow.push({
+    actions.push({
+      icon: 'search-history',
       id: 'search-history',
       label: 'Search history',
       onSelect: context.onOpenHistorySearch,
@@ -92,7 +102,8 @@ const resolveOverflowActions = (
   }
 
   if (context.canDownloadHistory && context.onDownloadHistory) {
-    overflow.push({
+    actions.push({
+      icon: 'download-history',
       id: 'download-history',
       label: 'Download history',
       onSelect: () => {
@@ -102,7 +113,8 @@ const resolveOverflowActions = (
   }
 
   if (selectedBuffer?.kind === 'query' && context.canDeleteHistory && context.onDeleteHistory) {
-    overflow.push({
+    actions.push({
+      icon: 'delete-history',
       id: 'delete-history',
       label: 'Delete history',
       tone: 'danger',
@@ -110,5 +122,5 @@ const resolveOverflowActions = (
     });
   }
 
-  return overflow;
+  return actions;
 };
