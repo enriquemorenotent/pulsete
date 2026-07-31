@@ -78,3 +78,26 @@ test('history search dialog body renders expanded context around a selected resu
   assert.match(markup, /data-active="true"/);
   assert.match(markup, /Showing first results/);
 });
+
+test('history results keep lifecycle media URLs as links without previews', () => {
+  const url = 'https://cdn.example.com/client.png';
+  const message = makeMessage({
+    id: 'quit-message',
+    body: `Alice quit (${url})`,
+    kind: 'quit',
+  });
+  const markup = renderBody({
+    status: 'loaded',
+    query: 'client',
+    results: [{ message, context: [message] }],
+    hasMore: false,
+    error: null,
+  }, {
+    expandedMessageId: message.id,
+    query: 'client',
+  });
+
+  assert.match(markup, /href="https:\/\/cdn\.example\.com\/client\.png"/);
+  assert.doesNotMatch(markup, /<img/);
+  assert.doesNotMatch(markup, /<video/);
+});

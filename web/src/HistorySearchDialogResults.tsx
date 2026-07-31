@@ -6,6 +6,7 @@ import {
   formatMessageTimestampDateTime,
   formatMessageTimestampTitle,
   messageTone,
+  resolveMessageInlineImageRendering,
 } from './chat-pane-message-utils.js';
 import {
   FormattedMessageText,
@@ -152,7 +153,10 @@ function MessageSummary(props: {
       <span className="text-foreground">
         <FormattedMessageText
           text={props.message.body}
-          inlineImageRendering={props.inlineImageRendering}
+          inlineImageRendering={resolveMessageInlineImageRendering(
+            props.message,
+            props.inlineImageRendering,
+          )}
           mode={props.mode}
           renderInlinePreviews={false}
           onOpenChannel={props.onOpenChannel}

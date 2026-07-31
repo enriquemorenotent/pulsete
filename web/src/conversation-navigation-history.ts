@@ -146,10 +146,22 @@ export const createConversationNavigationHistory = (input: {
       initialize(event.state);
       return;
     }
+    const previousSelection = event.previousState.transient.selection;
+    if (
+      event.action.type === 'remove-buffer'
+      && !event.action.replacementBufferId
+      && previousSelection?.kind === 'buffer'
+      && previousSelection.bufferId === event.action.bufferId
+      && currentIndex > 0
+    ) {
+      restoreGeneration += 1;
+      input.history.back();
+      return;
+    }
     if (
       event.state.domain.phase !== 'ready'
       || sameSelection(
-        event.previousState.transient.selection,
+        previousSelection,
         event.state.transient.selection,
       )
     ) {

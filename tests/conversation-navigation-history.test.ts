@@ -68,6 +68,30 @@ test('same-tab selections do not add entries and a new choice clears forward his
   navigation.dispose();
 });
 
+test('closing the selected conversation returns to the previously selected tab', () => {
+  const buffers = [
+    makeBuffer({ id: 'server' }),
+    makeBuffer({ id: 'john', kind: 'query', target: 'JOHN' }),
+    makeBuffer({ id: 'jane', kind: 'query', target: 'JANE' }),
+  ];
+  const store = createAppStore(makeReadyState({
+    buffers,
+    selection: selection('server'),
+  }));
+  const navigation = attachHistory(store);
+
+  store.dispatch({ type: 'select', selection: selection('john') });
+  store.dispatch({ type: 'select', selection: selection('jane') });
+  store.dispatch({
+    type: 'remove-buffer',
+    bufferId: 'jane',
+    networkId: buffers[2]!.networkId,
+  });
+
+  assert.deepEqual(store.getState().transient.selection, selection('john'));
+  navigation.dispose();
+});
+
 test('a joining channel becoming ready replaces its pending history entry', () => {
   const server = makeBuffer({ id: 'server' });
   const pending = makePendingChannel({ channel: '#help' });

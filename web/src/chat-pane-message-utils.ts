@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../../shared/protocol-chat.js';
+import type { InlineImageRenderingMode } from './formatted-message-content.js';
 
 export const formatMessageTime = (value: number) => {
   const date = new Date(value);
@@ -109,6 +110,14 @@ export const getLifecycleEventSummary = (message: ChatMessage) => {
 };
 
 export const isLifecycleEventMessage = (message: ChatMessage) => getLifecycleEventLabel(message) !== null;
+
+export const resolveMessageInlineImageRendering = (
+  message: ChatMessage,
+  rendering: InlineImageRenderingMode = 'preview',
+): InlineImageRenderingMode =>
+  isLifecycleEventMessage(message) && rendering === 'preview'
+    ? 'link'
+    : rendering;
 
 export const showKindLabel = (message: ChatMessage) =>
   message.kind === 'notice' || message.kind === 'error';

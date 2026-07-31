@@ -22,6 +22,7 @@ import {
   isActionMessage,
   messageDeliveryTone,
   messageTone,
+  resolveMessageInlineImageRendering,
 } from './chat-pane-message-utils.js';
 
 type ChatPaneCompactMessageRowProps = {
@@ -44,7 +45,10 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
     () => parseFormattedMessageContent(displayText, props.mode),
     [displayText, props.mode]
   );
-  const inlineImageRendering = props.inlineImageRendering ?? 'preview';
+  const inlineImageRendering = resolveMessageInlineImageRendering(
+    message,
+    props.inlineImageRendering,
+  );
   const hasVisibleText = hasVisibleFormattedMessageText(parsedContent, {
     inlineImageRendering,
   });

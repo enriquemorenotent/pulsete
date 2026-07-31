@@ -11,6 +11,7 @@ import {
   isActionMessage,
   messageDeliveryTone,
   messageTone,
+  resolveMessageInlineImageRendering,
 } from './chat-pane-message-utils.js';
 import type { ChatMessage } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
@@ -60,7 +61,10 @@ export const ChatPaneExpandedMessageRow = (props: {
       >
         <FormattedMessageText
           text={props.message.body}
-          inlineImageRendering={props.inlineImageRendering}
+          inlineImageRendering={resolveMessageInlineImageRendering(
+            props.message,
+            props.inlineImageRendering,
+          )}
           mode={props.mode}
           onInlinePreviewLoad={props.onInlinePreviewLoad}
           onOpenChannel={props.onOpenChannel}
