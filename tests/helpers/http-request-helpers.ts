@@ -13,7 +13,7 @@ export const listen = (server: ReturnType<typeof createServer>) =>
 
 export const requestJson = async (
   port: number,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown
 ) => {

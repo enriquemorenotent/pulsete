@@ -6,6 +6,7 @@ import { createGatewayActions } from './app-actions-gateway.js';
 import { createMutedNickActions } from './app-actions-muted-nicks.js';
 import { createNetworkActions } from './app-actions-networks.js';
 import { createNickEmojiActions } from './app-actions-nick-emojis.js';
+import { createPreferenceActions } from './app-actions-preferences.js';
 import {
   type AppActionContext,
   type ApplyServerMessages,
@@ -84,6 +85,7 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
     ...createNickEmojiActions({
       ...actionContext,
     }),
+    ...createPreferenceActions(actionContext),
     ...mutedNickActions,
     ...createChatActions({
       ...actionContext,

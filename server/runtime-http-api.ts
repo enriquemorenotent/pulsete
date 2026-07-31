@@ -7,6 +7,9 @@ import type {
   RuntimeMutedNickMutations,
   RuntimeNickEmojiMutations,
   RuntimeNetworkMutations,
+  RuntimePreferenceMutations,
+  RuntimeDraftMutations,
+  RuntimeAvatarOverrideMutations,
 } from './runtime-service-types.js';
 import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
 
@@ -20,6 +23,9 @@ type CreateRuntimeHttpApiParams = {
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
   sessions: Pick<RuntimeNetworkSessionService, 'disconnect'>;
+  preferences: RuntimePreferenceMutations;
+  drafts: RuntimeDraftMutations;
+  avatarOverrides: RuntimeAvatarOverrideMutations;
 };
 
 export const createRuntimeHttpApi = ({
@@ -32,6 +38,9 @@ export const createRuntimeHttpApi = ({
   irc,
   networks,
   sessions,
+  preferences,
+  drafts,
+  avatarOverrides,
 }: CreateRuntimeHttpApiParams): RuntimeHttpApi => ({
   assistant,
   networks: {
@@ -69,4 +78,7 @@ export const createRuntimeHttpApi = ({
     add: (networkId, nick, identity) => mutedNicks.upsertMutedNick(networkId, nick, identity),
     remove: (mutedNickId) => mutedNicks.removeMutedNick(mutedNickId),
   },
+  preferences,
+  drafts,
+  avatarOverrides,
 });

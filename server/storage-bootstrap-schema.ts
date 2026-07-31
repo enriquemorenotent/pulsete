@@ -4,6 +4,7 @@ import {
   queryPeerIdentitiesSchemaSql,
   queryNickAliasesSchemaSql,
 } from './storage-schema-helpers.js';
+import { userStateSchemaSql } from './storage-user-state-schema.js';
 
 export const storageBootstrapSchemaSql = `
   PRAGMA journal_mode = WAL;
@@ -163,4 +164,6 @@ ${messageSearchSchemaSql}
 
   CREATE INDEX IF NOT EXISTS idx_muted_nicks_network_nick
     ON muted_nicks(networkId, nick COLLATE NOCASE, createdAt ASC);
+
+${userStateSchemaSql}
 `;

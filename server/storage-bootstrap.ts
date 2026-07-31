@@ -4,6 +4,7 @@ import { ensureAllNetworkBuffers } from './storage-network-invariants.js';
 import { hasEncryptedNetworkPasswords } from './storage-networks.js';
 import type { AppPaths } from './app-paths.js';
 import type { SqliteDb } from './storage-sqlite.js';
+import { ensureWorkspacePreferencesRow } from './storage-user-state-schema.js';
 
 export type StorageBootstrapResources = {
   db: SqliteDb;
@@ -21,5 +22,7 @@ export const openStorageResources = (paths: AppPaths): StorageBootstrapResources
 export const initializeStorageDefaults = ({ db }: StorageBootstrapResources) => {
   runInTransaction(db, () => {
     ensureAllNetworkBuffers(db);
+    const preferenceRow = ensureWorkspacePreferencesRow();
+    db.prepare(preferenceRow.sql).run(preferenceRow.now);
   });
 };

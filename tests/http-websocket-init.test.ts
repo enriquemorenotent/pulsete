@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { createServer } from 'node:http';
 import test from 'node:test';
 import WebSocket from 'ws';
+import { defaultWorkspacePreferences } from '../shared/protocol-preferences.js';
 import { attachWebSocketServer, initializeWebSocketConnection } from '../server/ws-server.js';
 import { createFailingWebSocket, createThrowingWebSocket } from './helpers/http-websocket-test-helpers.js';
 import { createWebSocketTestDouble } from './helpers/websocket-test-doubles.js';
@@ -22,6 +23,10 @@ const createEmptySnapshot = () => ({
   pendingChannels: [],
   messages: [],
   networkStates: {},
+  preferences: defaultWorkspacePreferences,
+  userAvatarOverrides: [],
+  drafts: [],
+  browserStorageImportPending: false,
 });
 
 const createWebSocketTestContext = (overrides: WebSocketTestContextOverrides = {}): WebSocketTestContext => ({

@@ -1,5 +1,5 @@
-import { memo, useMemo, useReducer } from 'react';
-import { selectRightSidebarKind, selectSelectedBufferId } from './app-selectors.js';
+import { memo, useCallback, useMemo, useReducer } from 'react';
+import { selectPreferences, selectRightSidebarKind, selectSelectedBufferId } from './app-selectors.js';
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
@@ -57,6 +57,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   });
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
+  const preferences = useAppSelector(selectPreferences);
   const [jumpToLatestRequestId, requestJumpToLatest] = useReducer(
     (value: number) => value + 1,
     0,
@@ -91,6 +92,12 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
       props.contactNotifications.settings.enabled,
     ],
   );
+  const setLeftSidebarWidth = useCallback((width: number) => {
+    void props.actions.updatePreferences({ leftSidebarWidth: width });
+  }, [props.actions]);
+  const setRightSidebarWidth = useCallback((width: number) => {
+    void props.actions.updatePreferences({ rightSidebarWidth: width });
+  }, [props.actions]);
 
   return (
     <DesktopShellLayout
@@ -99,6 +106,10 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
       onJumpChatToLatest={requestJumpToLatest}
       selectedBufferId={selectedBufferId}
       rightSidebarKind={rightSidebarKind}
+      leftSidebarWidth={preferences.leftSidebarWidth}
+      rightSidebarWidth={preferences.rightSidebarWidth}
+      onSetLeftSidebarWidth={setLeftSidebarWidth}
+      onSetRightSidebarWidth={setRightSidebarWidth}
       sidebar={
         <ConnectionSidebarContainer
           actions={props.actions}

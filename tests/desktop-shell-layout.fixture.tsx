@@ -26,5 +26,9 @@ export const createDesktopShellLayoutProps = (
   networkManagerDialog: null,
   networkEditorDialog: null,
   onJumpChatToLatest: () => undefined,
+  leftSidebarWidth: 256,
+  rightSidebarWidth: 256,
+  onSetLeftSidebarWidth: () => undefined,
+  onSetRightSidebarWidth: () => undefined,
   ...overrides,
 });

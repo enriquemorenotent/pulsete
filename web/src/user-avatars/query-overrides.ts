@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useMemo,
+  type ReactNode,
+} from 'react';
+import type { UserAvatarOverride } from '../../../shared/protocol-preferences.js';
 import {
   QUERY_AVATAR_OVERRIDES_STORAGE_KEY,
   USER_AVATAR_OVERRIDES_STORAGE_KEY,
-  normalizeAvatarUrl,
   parseQueryAvatarOverrides,
   parseUserAvatarOverrides,
   resolveUserAvatarOverrideKey,
@@ -28,50 +35,70 @@ export {
   type UserAvatarOverrideTarget,
 } from './override-model.js';
 
+type AvatarOverridesContextValue = {
+  overrides: UserAvatarOverride[];
+  queryOverrides: QueryAvatarOverrides;
+  userOverrides: UserAvatarOverrides;
+  onRemove: (id: string) => void;
+  onSave: (input: {
+    networkId: string;
+    nick: string;
+    identity: UserAvatarOverrideTarget['identity'];
+    dataUrl?: string;
+    externalUrl?: string;
+  }) => void;
+};
+
 const emptyQueryOverrides: QueryAvatarOverrides = {};
 const emptyUserOverrides: UserAvatarOverrides = {};
-const listeners = new Set<() => void>();
-let queryOverridesSnapshot: QueryAvatarOverrides | null = null;
-let userOverridesSnapshot: UserAvatarOverrides | null = null;
 
-export const readStoredQueryAvatarOverrides = () => {
-  if (typeof window === 'undefined') {
-    return emptyQueryOverrides;
-  }
-  if (!queryOverridesSnapshot) {
-    queryOverridesSnapshot = parseQueryAvatarOverrides(
-      window.localStorage.getItem(QUERY_AVATAR_OVERRIDES_STORAGE_KEY),
-    );
-  }
-  return queryOverridesSnapshot;
-};
+const AvatarOverridesContext = createContext<AvatarOverridesContextValue>({
+  overrides: [],
+  queryOverrides: emptyQueryOverrides,
+  userOverrides: emptyUserOverrides,
+  onRemove: () => undefined,
+  onSave: () => undefined,
+});
 
-export const readStoredUserAvatarOverrides = () => {
-  if (typeof window === 'undefined') {
-    return emptyUserOverrides;
-  }
-  if (!userOverridesSnapshot) {
-    userOverridesSnapshot = parseUserAvatarOverrides(
-      window.localStorage.getItem(USER_AVATAR_OVERRIDES_STORAGE_KEY),
-    );
-  }
-  return userOverridesSnapshot;
-};
+export function AvatarOverridesProvider(props: {
+  children: ReactNode;
+  overrides: UserAvatarOverride[];
+  onRemove: (id: string) => void;
+  onSave: AvatarOverridesContextValue['onSave'];
+}) {
+  const userOverrides = useMemo(
+    () => createUserAvatarOverrideMap(props.overrides),
+    [props.overrides],
+  );
+  const value = useMemo<AvatarOverridesContextValue>(() => ({
+    overrides: props.overrides,
+    queryOverrides: emptyQueryOverrides,
+    userOverrides,
+    onRemove: props.onRemove,
+    onSave: props.onSave,
+  }), [props.onRemove, props.onSave, props.overrides, userOverrides]);
+  return createElement(AvatarOverridesContext.Provider, { value }, props.children);
+}
+
+export const createUserAvatarOverrideMap = (
+  overrides: readonly UserAvatarOverride[],
+): UserAvatarOverrides => Object.fromEntries(
+  overrides.flatMap((override) => {
+    const key = resolveUserAvatarOverrideKey({
+      networkId: override.networkId,
+      nick: override.nick,
+      identity: override.identity,
+    }, { allowNickFallback: true });
+    return key ? [[key, override.imageUrl]] : [];
+  }),
+);
 
 export function useUserAvatarOverrides() {
-  return useSyncExternalStore(
-    subscribeToAvatarOverrides,
-    readStoredUserAvatarOverrides,
-    () => emptyUserOverrides,
-  );
+  return useContext(AvatarOverridesContext).userOverrides;
 }
 
 export function useQueryAvatarOverrides() {
-  return useSyncExternalStore(
-    subscribeToAvatarOverrides,
-    readStoredQueryAvatarOverrides,
-    () => emptyQueryOverrides,
-  );
+  return useContext(AvatarOverridesContext).queryOverrides;
 }
 
 export function useUserAvatarOverrideUrl(
@@ -89,104 +116,39 @@ export function useUserAvatarOverrideUrl(
 
 export function useQueryAvatarOverride(input: {
   allowNickFallback?: boolean;
-  bufferId: string | null;
   target: UserAvatarOverrideTarget | null;
 }) {
-  const queryOverrides = useQueryAvatarOverrides();
-  const userOverrides = useUserAvatarOverrides();
+  const context = useContext(AvatarOverridesContext);
   const key = resolveUserAvatarOverrideKey(input.target, {
     allowNickFallback: input.allowNickFallback,
   });
-  const legacyUrl = input.bufferId ? queryOverrides[input.bufferId] ?? null : null;
-  const userUrl = key ? userOverrides[key] ?? null : null;
-
-  useEffect(() => {
-    if (key && legacyUrl && !userUrl) {
-      setStoredUserAvatarOverrideByKey(key, legacyUrl);
+  const existing = key
+    ? context.overrides.find((override) => resolveUserAvatarOverrideKey({
+        networkId: override.networkId,
+        nick: override.nick,
+        identity: override.identity,
+      }, { allowNickFallback: true }) === key) ?? null
+    : null;
+  const url = key ? context.userOverrides[key] ?? null : null;
+  const setUrl = useCallback((nextUrl: string | null) => {
+    if (!input.target) {
+      return;
     }
-  }, [key, legacyUrl, userUrl]);
-
-  const setUrl = useCallback((url: string | null) => {
-    if (input.target) {
-      setStoredUserAvatarOverride(input.target, url, {
-        allowNickFallback: input.allowNickFallback,
-      });
+    if (!nextUrl) {
+      if (existing) {
+        context.onRemove(existing.id);
+      }
+      return;
     }
-    if (input.bufferId) {
-      setStoredQueryAvatarOverride(input.bufferId, url);
-    }
-  }, [input.allowNickFallback, input.bufferId, input.target]);
-
-  return { url: userUrl ?? legacyUrl, setUrl };
+    const source = nextUrl.startsWith('data:')
+      ? { dataUrl: nextUrl }
+      : { externalUrl: nextUrl };
+    context.onSave({
+      networkId: input.target.networkId,
+      nick: input.target.nick,
+      identity: input.target.identity,
+      ...source,
+    });
+  }, [context, existing, input.target]);
+  return { url, setUrl };
 }
-
-export const setStoredUserAvatarOverride = (
-  target: UserAvatarOverrideTarget,
-  url: string | null,
-  options: { allowNickFallback?: boolean } = {},
-) => {
-  const key = resolveUserAvatarOverrideKey(target, options);
-  if (key) {
-    setStoredUserAvatarOverrideByKey(key, url);
-  }
-};
-
-const setStoredQueryAvatarOverride = (bufferId: string, url: string | null) => {
-  const key = bufferId.trim();
-  if (!key) {
-    return;
-  }
-  const next = { ...readStoredQueryAvatarOverrides() };
-  const nextUrl = normalizeAvatarUrl(url);
-  if (nextUrl) {
-    next[key] = nextUrl;
-  } else {
-    delete next[key];
-  }
-  queryOverridesSnapshot = sanitizeQueryOverrides(next);
-  writeStorage(QUERY_AVATAR_OVERRIDES_STORAGE_KEY, serializeQueryAvatarOverrides(queryOverridesSnapshot));
-  notifyAvatarOverrideListeners();
-};
-
-const setStoredUserAvatarOverrideByKey = (key: string, url: string | null) => {
-  const next = { ...readStoredUserAvatarOverrides() };
-  const nextUrl = normalizeAvatarUrl(url);
-  if (nextUrl) {
-    next[key] = nextUrl;
-  } else {
-    delete next[key];
-  }
-  userOverridesSnapshot = sanitizeUserOverrides(next);
-  writeStorage(USER_AVATAR_OVERRIDES_STORAGE_KEY, serializeUserAvatarOverrides(userOverridesSnapshot));
-  notifyAvatarOverrideListeners();
-};
-
-const subscribeToAvatarOverrides = (listener: () => void) => {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-};
-
-const notifyAvatarOverrideListeners = () => {
-  for (const listener of listeners) {
-    listener();
-  }
-};
-
-const writeStorage = (key: string, value: string) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // localStorage may be unavailable or full after large image uploads.
-  }
-};
-
-const sanitizeQueryOverrides = (overrides: QueryAvatarOverrides) =>
-  parseQueryAvatarOverrides(serializeQueryAvatarOverrides(overrides));
-
-const sanitizeUserOverrides = (overrides: UserAvatarOverrides) =>
-  parseUserAvatarOverrides(serializeUserAvatarOverrides(overrides));

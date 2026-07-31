@@ -179,6 +179,10 @@ export type StorageSnapshotSource = {
   listNickEmojis(networkId?: string): NickEmojiState[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
   listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
+  getPreferences(): AppSnapshot['preferences'];
+  isLegacyBrowserImportPending(): boolean;
+  listDrafts(): AppSnapshot['drafts'];
+  listAvatarOverrides(): AppSnapshot['userAvatarOverrides'];
 };
 
 export type ChannelUsers = ChannelUserState[];

@@ -2,6 +2,7 @@ import type { AppSnapshot } from '../../shared/protocol-app.js';
 import type { BufferState, ChatMessage, FriendState, NetworkProfile, PendingChannelState } from '../../shared/protocol-chat.js';
 import { initialState } from '../../web/src/app-state.js';
 import type { State } from '../../web/src/app-types.js';
+import { defaultWorkspacePreferences } from '../../shared/protocol-preferences.js';
 
 export const makeNetwork = (overrides: Partial<NetworkProfile> = {}): NetworkProfile => ({
   id: overrides.id ?? 'network-1',
@@ -71,6 +72,10 @@ export const emptySnapshot = (): AppSnapshot => ({
   pendingChannels: [],
   messages: [],
   networkStates: {},
+  preferences: defaultWorkspacePreferences,
+  userAvatarOverrides: [],
+  drafts: [],
+  browserStorageImportPending: false,
 });
 
 export const makeState = (overrides: {

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import WebSocket from 'ws';
+import { defaultWorkspacePreferences } from '../shared/protocol-preferences.js';
 import type { ClientMessage } from '../shared/protocol-messages.js';
 import { createHttpHandler } from '../server/http-router.js';
 import { createRuntime } from '../server/runtime.js';
@@ -43,6 +44,10 @@ test('websocket error replies detach the socket when a later send fails', () => 
         pendingChannels: [],
         messages: [],
         networkStates: {},
+        preferences: defaultWorkspacePreferences,
+        userAvatarOverrides: [],
+        drafts: [],
+        browserStorageImportPending: false,
       };
     },
     handleMessage() {

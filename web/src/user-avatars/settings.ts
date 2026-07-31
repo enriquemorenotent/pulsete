@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export type UserAvatarSettings = {
   externalAvatarsEnabled: boolean;
@@ -36,38 +36,13 @@ export const serializeUserAvatarSettings = (settings: UserAvatarSettings) =>
     externalAvatarsEnabled: settings.externalAvatarsEnabled === true,
   });
 
-const readStoredUserAvatarSettings = (): UserAvatarSettings => {
-  if (typeof window === 'undefined') {
-    return defaultUserAvatarSettings;
-  }
-  try {
-    return parseUserAvatarSettings(
-      window.localStorage.getItem(USER_AVATAR_SETTINGS_STORAGE_KEY),
-    );
-  } catch {
-    return defaultUserAvatarSettings;
-  }
-};
-
-export function useUserAvatarSettings(): UserAvatarSettingsController {
-  const [settings, setSettings] = useState(readStoredUserAvatarSettings);
+export function useUserAvatarSettings(
+  settings: UserAvatarSettings,
+  onSetExternalAvatarsEnabled: (enabled: boolean) => void,
+): UserAvatarSettingsController {
   const setExternalAvatarsEnabled = useCallback((enabled: boolean) => {
-    setSettings({ externalAvatarsEnabled: enabled });
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      window.localStorage.setItem(
-        USER_AVATAR_SETTINGS_STORAGE_KEY,
-        serializeUserAvatarSettings(settings),
-      );
-    } catch {
-      // localStorage may be unavailable in private or embedded contexts.
-    }
-  }, [settings]);
+    onSetExternalAvatarsEnabled(enabled);
+  }, [onSetExternalAvatarsEnabled]);
 
   return useMemo(
     () => ({ settings, setExternalAvatarsEnabled }),

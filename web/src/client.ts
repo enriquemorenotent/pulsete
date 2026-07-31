@@ -15,6 +15,12 @@ import type {
 } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type {
+  BufferDraft,
+  UserAvatarOverride,
+  WorkspacePreferences,
+  WorkspacePreferencesPatch,
+} from '../../shared/protocol-preferences.js';
+import type {
   PagePreviewResponse,
 } from '../../shared/protocol-page-preview.js';
 import {
@@ -50,6 +56,50 @@ const apiRequest = async <T>(path: string, init?: RequestInit) => {
 };
 
 export const api = {
+  updatePreferences: (patch: WorkspacePreferencesPatch) =>
+    apiRequest<{ preferences: WorkspacePreferences; messages: ServerMessage[] }>(
+      '/api/preferences',
+      { method: 'PATCH', body: JSON.stringify(patch) },
+    ),
+  importLegacyPreferences: (payload: {
+    preferences: WorkspacePreferencesPatch;
+    avatarOverrides: Array<{
+      networkId: string;
+      nick: string;
+      identity?: NetworkUserIdentity | null;
+      dataUrl?: string;
+      externalUrl?: string;
+    }>;
+  }) => apiRequest<{
+    imported: boolean;
+    skippedAvatarOverrides: number;
+    preferences: WorkspacePreferences;
+    avatarOverrides: UserAvatarOverride[];
+    messages: ServerMessage[];
+  }>('/api/preferences/import-legacy', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  saveDraft: (bufferId: string, body: string) =>
+    apiRequest<{ draft: BufferDraft | null; messages: ServerMessage[] }>(
+      `/api/buffers/${encodeURIComponent(bufferId)}/draft`,
+      { method: 'PUT', body: JSON.stringify({ body }) },
+    ),
+  saveAvatarOverride: (payload: {
+    networkId: string;
+    nick: string;
+    identity?: NetworkUserIdentity | null;
+    dataUrl?: string;
+    externalUrl?: string;
+  }) => apiRequest<{ avatarOverride: UserAvatarOverride; messages: ServerMessage[] }>(
+    '/api/user-avatar-overrides',
+    { method: 'PUT', body: JSON.stringify(payload) },
+  ),
+  removeAvatarOverride: (id: string) =>
+    apiRequest<{ avatarOverrideId: string; messages: ServerMessage[] }>(
+      `/api/user-avatar-overrides/${encodeURIComponent(id)}`,
+      { method: 'DELETE', body: '{}' },
+    ),
   saveNetwork: (payload: Partial<NetworkProfile> & { clearPassword?: boolean; id?: string; password?: string }) =>
     apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(
       payload.id ? `/api/networks/${payload.id}` : '/api/networks',

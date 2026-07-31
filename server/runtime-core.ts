@@ -24,6 +24,7 @@ import type {
 import { createMutationPublisher } from './runtime-mutation-messages.js';
 import { RuntimeSocketHub } from './runtime-socket-hub.js';
 import { createRuntimeWebSocketApi } from './runtime-websocket-api.js';
+import { createRuntimeUserStateServices } from './runtime-user-state-service.js';
 
 export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
@@ -31,6 +32,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const socketHub = new RuntimeSocketHub();
   const publisher = new RuntimePublisher(socketHub);
   const publishMutation = createMutationPublisher((messages) => publisher.publish(messages));
+  const { avatarOverrides, drafts, preferences } = createRuntimeUserStateServices(
+    store,
+    publishMutation,
+  );
   const conversationsService = new RuntimeConversationService({
     conversations: store.conversations,
     mutedNicks: store.mutedNicks,
@@ -149,7 +154,17 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
-    deleteNetwork: (networkId) => publishMutation(networkMutations.deleteNetwork(networkId)),
+    deleteNetwork: (networkId) => {
+      const result = networkMutations.deleteNetwork(networkId);
+      const nextPreferences = store.preferences.get();
+      return publishMutation({
+        ...result,
+        messages: [
+          ...result.messages,
+          { type: 'preferences.updated', preferences: nextPreferences },
+        ],
+      });
+    },
     connectNetwork: (networkId) => {
       const opened = networkMutations.openConnection(networkId);
       const result = publishMutation({
@@ -174,6 +189,9 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     irc,
     networks,
     sessions,
+    preferences,
+    drafts,
+    avatarOverrides,
   });
   const ws = createRuntimeWebSocketApi({
     attachSocket: (ws) => gateway.attachSocket(ws),
@@ -194,6 +212,9 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     nickEmojis,
     irc,
     networks,
+    preferences,
+    drafts,
+    avatarOverrides,
     http,
     ws,
   };

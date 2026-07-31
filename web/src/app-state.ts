@@ -20,6 +20,7 @@ import { resolveNextSelection } from './app-state-selection.js';
 import { reduceRuntimeDomain } from './app-state-runtime.js';
 import { initialNetworkManagerState, reduceTransientAction } from './app-state-ui.js';
 import type { Action, State } from './app-types.js';
+import { defaultWorkspacePreferences } from '../../shared/protocol-preferences.js';
 
 export { initialChannelListState } from './app-state-channel-list.js';
 
@@ -37,6 +38,10 @@ const initialDomainState: AppDomainState = {
   pendingChannels: [],
   messages: {},
   networkStates: {},
+  preferences: defaultWorkspacePreferences,
+  userAvatarOverrides: [],
+  drafts: [],
+  browserStorageImportPending: false,
 };
 
 const initialTransientState: AppTransientState = {
@@ -75,6 +80,10 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
       },
     ]),
   ),
+  preferences: snapshot.preferences,
+  userAvatarOverrides: snapshot.userAvatarOverrides,
+  drafts: snapshot.drafts,
+  browserStorageImportPending: snapshot.browserStorageImportPending,
 });
 
 export const reducer = (state: State, action: Action): State => {

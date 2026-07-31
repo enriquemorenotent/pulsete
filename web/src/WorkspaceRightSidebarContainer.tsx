@@ -6,6 +6,7 @@ import {
   selectFriends,
   selectMutedNicks,
   selectNickEmojis,
+  selectPreferences,
   selectServerProfileNetwork,
   selectWorkspace,
 } from './app-selectors.js';
@@ -45,6 +46,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   const nickEmojis = useAppSelector(selectNickEmojis);
   const serverProfileNetwork = useAppSelector(selectServerProfileNetwork);
   const workspace = useAppSelector(selectWorkspace);
+  const preferences = useAppSelector(selectPreferences);
   const nicklist = useDesktopNicklistModel({
     actions,
     contactNotifications,
@@ -67,7 +69,27 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
       }
     },
     onSaveNotes: actions.saveNetworkNotes,
-  }), [actions.saveNetworkNotes, dispatch, serverProfileNetwork]);
+    accordionState: serverProfileNetwork
+      ? preferences.serverSidebarAccordions[serverProfileNetwork.id] ?? {}
+      : {},
+    onSetAccordionState: (state: import('./server-sidebar-accordion-state.js').ServerSidebarAccordionState) => {
+      if (!serverProfileNetwork) {
+        return;
+      }
+      void actions.updatePreferences({
+        serverSidebarAccordions: {
+          ...preferences.serverSidebarAccordions,
+          [serverProfileNetwork.id]: state,
+        },
+      });
+    },
+  }), [
+    actions.saveNetworkNotes,
+    actions.updatePreferences,
+    dispatch,
+    preferences.serverSidebarAccordions,
+    serverProfileNetwork,
+  ]);
   const queryProfile = useMemo(() => {
     const buffer = workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null;
     return {

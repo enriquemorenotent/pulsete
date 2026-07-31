@@ -23,7 +23,6 @@ export type QueryProfileAvatarUser = Pick<
 > & { ircCloudAvatarId?: string | null };
 
 type QueryProfileAvatarBannerProps = {
-  bufferId: string;
   customAvatarUrl?: string | null;
   enabled: boolean;
   networkId: string;
@@ -41,7 +40,6 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
   );
   const override = useQueryAvatarOverride({
     allowNickFallback: true,
-    bufferId: props.bufferId,
     target: avatarTarget,
   });
   const customAvatarUrl = props.customAvatarUrl === undefined

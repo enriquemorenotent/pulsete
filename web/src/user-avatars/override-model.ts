@@ -82,6 +82,32 @@ export const resolveUserAvatarOverrideKey = (
   return nick ? buildAvatarOverrideKey(networkId, 'nick', nick) : null;
 };
 
+export const parseUserAvatarOverrideKey = (value: string) => {
+  const parts = value.split('|');
+  if (parts.length !== 3) {
+    return null;
+  }
+  try {
+    const networkId = decodeURIComponent(parts[0]).trim();
+    const kind = decodeURIComponent(parts[1]);
+    const identityValue = decodeURIComponent(parts[2]).trim();
+    if (
+      !networkId
+      || !identityValue
+      || (kind !== 'account' && kind !== 'userhost' && kind !== 'nick')
+    ) {
+      return null;
+    }
+    return {
+      networkId,
+      identity: { kind, value: identityValue },
+      nick: kind === 'nick' ? identityValue : identityValue,
+    } as UserAvatarOverrideTarget;
+  } catch {
+    return null;
+  }
+};
+
 export const resolveUserAvatarOverrideUrl = (input: {
   allowNickFallback?: boolean;
   legacyBufferId?: string | null;

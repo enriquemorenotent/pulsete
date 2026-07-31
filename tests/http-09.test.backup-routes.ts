@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
 import { RuntimeHost } from '../server/runtime-host.js';
@@ -16,7 +17,10 @@ import {
   waitForWebSocketCloseDetails,
 } from './helpers/http-websocket-test-helpers.js';
 
-const backupChannelUser = { account: 'alice', away: false, host: 'example.test', mode: 'op' as const, modes: ['op' as const], nick: 'Alice', realname: 'Alice Backup', username: 'alice' };
+const backupChannelUser = { account: 'alice', away: false, host: 'example.test', identity: { kind: 'account' as const, value: 'alice' }, mode: 'op' as const, modes: ['op' as const], nick: 'Alice', realname: 'Alice Backup', username: 'alice' };
+const backupAvatar = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 
 test('backup export and import fully replace stored app data', async () => {
   const context = await createBackupServer();
@@ -86,6 +90,13 @@ test('backup export and import fully replace stored app data', async () => {
     assert.equal(restored.friends.list()[0]?.nick, 'Alice');
     assert.equal(restored.mutedNicks.list(original.networkId)[0]?.nick, 'Mallory');
     assert.equal(restored.nickEmojis.list(original.networkId)[0]?.emoji, ':)');
+    assert.equal(restored.preferences.get().hideOfflineFriends, true);
+    assert.equal(restored.preferences.get().rightSidebarWidth, 336);
+    assert.equal(restored.drafts.get(original.queryId)?.body, 'unfinished backup reply');
+    const avatar = restored.avatarOverrides.get(original.avatarId);
+    assert.equal(avatar?.nick, 'Alice');
+    assert.deepEqual(restored.avatarOverrides.getSource(original.avatarId)?.data, backupAvatar);
+    assert.equal(restored.preferences.isLegacyBrowserImportPending(), false);
     assertBackupTables(restored.databasePath);
     assert.ok(readdirSync(join(context.dir, 'backups')).some((name) => name.startsWith('pre-restore-')));
   } finally {
@@ -147,6 +158,39 @@ test('backup import rejects invalid files without replacing current data', async
   }
 });
 
+test('current-version backups must contain the durable user-state tables', async () => {
+  const context = await createBackupServer();
+  try {
+    seedBackupFixture(context.host);
+    const exportResponse = await fetch(`http://127.0.0.1:${context.port}/api/backups/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const envelope = JSON.parse(gunzipSync(
+      Buffer.from(await exportResponse.arrayBuffer()),
+    ).toString('utf8')) as { database: string };
+    const damagedPath = join(context.dir, 'damaged.sqlite');
+    writeFileSync(damagedPath, Buffer.from(envelope.database, 'base64'));
+    const db = openSqliteDatabase(damagedPath);
+    db.exec('DROP TABLE buffer_drafts');
+    db.close();
+    envelope.database = readFileSync(damagedPath).toString('base64');
+
+    const response = await fetch(`http://127.0.0.1:${context.port}/api/backups/import`, {
+      method: 'POST',
+      body: gzipSync(Buffer.from(JSON.stringify(envelope))),
+    });
+    const body = await response.json() as { message: string };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.message, 'Invalid backup database');
+    assert.equal(context.host.currentStorage().networks.list()[0]?.name, 'BackupNet');
+  } finally {
+    await context.close();
+  }
+});
+
 const seedBackupFixture = (host: RuntimeHost) => {
   const storage = host.currentStorage();
   const network = storage.networks.upsert(createNetworkInput({
@@ -195,13 +239,27 @@ const seedBackupFixture = (host: RuntimeHost) => {
     target: '#backup',
     ts: 1,
   });
-  storage.conversations.upsertQuery(network.id, 'Alice');
+  const query = storage.conversations.upsertQuery(network.id, 'Alice');
   storage.conversations.recordObservedQueryNickChange(network.id, 'Alice', 'Alice_');
   insertHistoryImportBatch(storage.databasePath, storage.conversations.getBufferByTarget(network.id, '#backup')!.id);
   storage.friends.upsert({ nick: 'Alice' });
   storage.mutedNicks.upsert({ networkId: network.id, nick: 'Mallory' });
   storage.nickEmojis.upsert({ networkId: network.id, nick: 'Alice', emoji: ':)' });
-  return { networkId: network.id };
+  storage.preferences.update({
+    hideOfflineFriends: true,
+    rightSidebarWidth: 336,
+  });
+  storage.preferences.markLegacyBrowserImported();
+  storage.drafts.save(query.id, 'unfinished backup reply');
+  const avatar = storage.avatarOverrides.upsert({
+    data: backupAvatar,
+    identity: { kind: 'account', value: 'alice' },
+    mimeType: 'image/png',
+    networkId: network.id,
+    nick: 'Alice',
+    sourceKind: 'blob',
+  });
+  return { avatarId: avatar.id, networkId: network.id, queryId: query.id };
 };
 
 const insertHistoryImportBatch = (databasePath: string, bufferId: string) => {
@@ -226,6 +284,9 @@ const assertBackupTables = (databasePath: string) => {
     assert.equal(readCount(db, 'history_import_batches'), 1);
     assert.equal(readCount(db, 'query_nick_aliases'), 2);
     assert.equal(readCount(db, 'message_search_fts'), 1);
+    assert.equal(readCount(db, 'workspace_preferences'), 1);
+    assert.equal(readCount(db, 'buffer_drafts'), 1);
+    assert.equal(readCount(db, 'user_avatar_overrides'), 1);
   } finally {
     db.close();
   }

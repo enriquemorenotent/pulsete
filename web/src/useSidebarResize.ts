@@ -1,16 +1,16 @@
-import { useEffect, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import {
   DEFAULT_SIDEBAR_WIDTH,
   clampSidebarWidth,
   readSidebarWidth,
   resolveDraggedSidebarWidth,
   type SidebarEdge,
-  SIDEBAR_WIDTH_STORAGE_KEY,
 } from './sidebar-width.js';
 
 type UseSidebarResizeOptions = {
   edge?: SidebarEdge;
-  storageKey?: string;
+  width?: number;
+  onCommit?: (width: number) => void;
 };
 
 export function useSidebarResize(
@@ -18,21 +18,29 @@ export function useSidebarResize(
   options: UseSidebarResizeOptions = {},
 ) {
   const edge = options.edge ?? 'left';
-  const storageKey = options.storageKey ?? SIDEBAR_WIDTH_STORAGE_KEY;
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    if (typeof window === 'undefined') {
-      return DEFAULT_SIDEBAR_WIDTH;
-    }
-    return readSidebarWidth(window.localStorage.getItem(storageKey));
-  });
+  const [sidebarWidth, setSidebarWidth] = useState(() =>
+    readSidebarWidth(String(options.width ?? DEFAULT_SIDEBAR_WIDTH))
+  );
   const [isResizing, setIsResizing] = useState(false);
+  const widthRef = useRef(sidebarWidth);
+  const externalWidthRef = useRef(options.width);
+  const pendingExternalWidthRef = useRef<number | null>(null);
+  widthRef.current = sidebarWidth;
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
+    if (options.width !== externalWidthRef.current) {
+      externalWidthRef.current = options.width;
+      pendingExternalWidthRef.current = options.width === undefined
+        ? null
+        : clampSidebarWidth(options.width);
     }
-    window.localStorage.setItem(storageKey, String(sidebarWidth));
-  }, [sidebarWidth, storageKey]);
+    if (!isResizing && pendingExternalWidthRef.current !== null) {
+      const next = pendingExternalWidthRef.current;
+      pendingExternalWidthRef.current = null;
+      widthRef.current = next;
+      setSidebarWidth(next);
+    }
+  }, [isResizing, options.width]);
 
   useEffect(() => {
     if (!isResizing) {
@@ -46,6 +54,7 @@ export function useSidebarResize(
 
     const stopDragging = () => {
       setIsResizing(false);
+      options.onCommit?.(widthRef.current);
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -54,7 +63,9 @@ export function useSidebarResize(
         return;
       }
       const bounds = layout.getBoundingClientRect();
-      setSidebarWidth(resolveDraggedSidebarWidth(edge, event.clientX, bounds));
+      const next = resolveDraggedSidebarWidth(edge, event.clientX, bounds);
+      widthRef.current = next;
+      setSidebarWidth(next);
     };
 
     window.addEventListener('pointermove', handlePointerMove);
@@ -68,7 +79,7 @@ export function useSidebarResize(
       window.removeEventListener('pointerup', stopDragging);
       window.removeEventListener('pointercancel', stopDragging);
     };
-  }, [edge, isResizing, layoutRef]);
+  }, [edge, isResizing, layoutRef, options.onCommit]);
 
   const startDragging = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) {
@@ -79,11 +90,16 @@ export function useSidebarResize(
   };
 
   const nudgeWidth = (delta: number) => {
-    setSidebarWidth((currentWidth) => clampSidebarWidth(currentWidth + delta));
+    const next = clampSidebarWidth(widthRef.current + delta);
+    widthRef.current = next;
+    setSidebarWidth(next);
+    options.onCommit?.(next);
   };
 
   const resetWidth = () => {
+    widthRef.current = DEFAULT_SIDEBAR_WIDTH;
     setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+    options.onCommit?.(DEFAULT_SIDEBAR_WIDTH);
   };
 
   return {

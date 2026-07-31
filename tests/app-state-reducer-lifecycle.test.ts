@@ -31,16 +31,9 @@ test('snapshot selects the first instance server buffer', () => {
   const nextState = reducer(initialState, {
     type: 'snapshot',
     snapshot: {
+      ...emptySnapshot(),
       networks: [network],
-      friends: [],
-      nickEmojis: [],
-      mutedNicks: [],
-      friendPresence: {},
-      queryPresence: {},
       buffers: [buffer],
-      channels: [],
-      pendingChannels: [],
-      messages: [],
       networkStates: {
         [network.id]: {
           phase: 'connecting',
@@ -81,15 +74,9 @@ test('snapshot replaces stale runtime messages and invalid pending selections', 
   const nextState = reducer(state, {
     type: 'snapshot',
     snapshot: {
+      ...emptySnapshot(),
       networks: [network],
-      friends: [],
-      nickEmojis: [],
-      mutedNicks: [],
-      friendPresence: {},
-      queryPresence: {},
       buffers: [serverBuffer],
-      channels: [],
-      pendingChannels: [],
       messages: [freshMessage],
       networkStates: {
         [network.id]: {

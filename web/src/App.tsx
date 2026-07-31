@@ -74,9 +74,11 @@ function App() {
   return (
     <AppStoreProvider store={store}>
       <AppEffects
+        applyServerMessages={serverMessages.applyMutationMessages}
         applySocketMessage={serverMessages.applySocketMessage}
         assistantStore={assistantStore}
         composer={composer}
+        saveDraft={actions.saveDraft}
         socketInstrumentation={diagnostics.socketInstrumentation}
         ui={ui}
       />

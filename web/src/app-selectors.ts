@@ -130,6 +130,11 @@ export const selectChannels = (state: State) => state.domain.channels;
 export const selectFriends = (state: State) => state.domain.friends;
 export const selectMutedNicks = (state: State) => state.domain.mutedNicks;
 export const selectNickEmojis = (state: State) => state.domain.nickEmojis;
+export const selectPreferences = (state: State) => state.domain.preferences;
+export const selectUserAvatarOverrides = (state: State) => state.domain.userAvatarOverrides;
+export const selectDrafts = (state: State) => state.domain.drafts;
+export const selectBrowserStorageImportPending = (state: State) =>
+  state.domain.browserStorageImportPending;
 export const selectFriendPresence = (state: State) => state.domain.friendPresence;
 export const selectQueryPresence = (state: State) => state.domain.queryPresence;
 export const selectChannelList = (state: State) => state.transient.channelList;

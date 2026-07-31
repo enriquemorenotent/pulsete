@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ChatMessage } from '../shared/protocol-chat.js';
+import { defaultWorkspacePreferences } from '../shared/protocol-preferences.js';
 import type { SocketHandle } from '../web/src/client.js';
 import {
   createGatewaySocketCallbacks,
@@ -27,6 +28,10 @@ const emptySnapshot = {
   pendingChannels: [],
   messages: [],
   networkStates: {},
+  preferences: defaultWorkspacePreferences,
+  userAvatarOverrides: [],
+  drafts: [],
+  browserStorageImportPending: false,
 };
 
 const message: ChatMessage = {

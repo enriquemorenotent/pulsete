@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export const MEDIA_VISIBILITY_SETTINGS_STORAGE_KEY =
   'pulsete.preferences.mediaVisibility.v1';
@@ -84,38 +84,13 @@ export function resolveMediaVisibilityPolicy(
   };
 }
 
-const readStoredMediaVisibilitySettings = (): MediaVisibilitySettings => {
-  if (typeof window === 'undefined') {
-    return defaultMediaVisibilitySettings;
-  }
-  try {
-    return parseMediaVisibilitySettings(
-      window.localStorage.getItem(MEDIA_VISIBILITY_SETTINGS_STORAGE_KEY),
-    );
-  } catch {
-    return defaultMediaVisibilitySettings;
-  }
-};
-
-export function useMediaVisibilitySettings(): MediaVisibilitySettingsController {
-  const [settings, setSettings] = useState(readStoredMediaVisibilitySettings);
+export function useMediaVisibilitySettings(
+  settings: MediaVisibilitySettings,
+  onSetMode: (mode: MediaVisibilityMode) => void,
+): MediaVisibilitySettingsController {
   const setMode = useCallback((mode: MediaVisibilityMode) => {
-    setSettings({ mode });
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      window.localStorage.setItem(
-        MEDIA_VISIBILITY_SETTINGS_STORAGE_KEY,
-        serializeMediaVisibilitySettings(settings),
-      );
-    } catch {
-      // localStorage may be unavailable in private or embedded contexts.
-    }
-  }, [settings]);
+    onSetMode(mode);
+  }, [onSetMode]);
 
   return useMemo(() => ({ settings, setMode }), [settings, setMode]);
 }

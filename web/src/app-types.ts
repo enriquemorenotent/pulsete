@@ -3,6 +3,11 @@ import type { BufferState, ChannelState, ChannelListEntry, ChannelUserState, Cha
 import type { ConversationMessages } from './conversation-message-state.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 import type { NetworkRuntimeState, SelectedBuffer } from './workspace-types.js';
+import type {
+  BufferDraft,
+  UserAvatarOverride,
+  WorkspacePreferences,
+} from '../../shared/protocol-preferences.js';
 
 export type Banner = { kind: 'notice' | 'error'; message: string } | null;
 export type GatewayStatus = 'connecting' | 'connected' | 'disconnected';
@@ -46,6 +51,10 @@ export type AppDomainState = {
   pendingChannels: PendingChannelState[];
   messages: ConversationMessages;
   networkStates: Record<string, NetworkRuntimeState>;
+  preferences: WorkspacePreferences;
+  userAvatarOverrides: UserAvatarOverride[];
+  drafts: BufferDraft[];
+  browserStorageImportPending: boolean;
 };
 
 export type AppTransientState = {
@@ -74,6 +83,12 @@ export type Action =
   | { type: 'remove-muted-nick'; mutedNickId: string }
   | { type: 'upsert-nick-emoji'; nickEmoji: NickEmojiState }
   | { type: 'remove-nick-emoji'; nickEmojiId: string }
+  | { type: 'update-preferences'; preferences: WorkspacePreferences }
+  | { type: 'upsert-avatar-override'; avatarOverride: UserAvatarOverride }
+  | { type: 'remove-avatar-override'; avatarOverrideId: string }
+  | { type: 'upsert-draft'; draft: BufferDraft }
+  | { type: 'remove-draft'; bufferId: string }
+  | { type: 'complete-browser-storage-import' }
   | { type: 'friend-presence'; friendId: string; presence: PresenceStatus }
   | { type: 'query-presence'; bufferId: string; presence: PresenceStatus }
   | { type: 'upsert-buffer'; buffer: BufferState }

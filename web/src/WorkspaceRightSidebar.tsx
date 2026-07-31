@@ -8,6 +8,7 @@ import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import type { BufferState, ChannelUserState, NetworkProfile } from '../../shared/protocol-chat.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
+import type { ServerSidebarAccordionState } from './server-sidebar-accordion-state.js';
 
 type QueryProfileAvatarUser = Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
   ircCloudAvatarId?: string | null;
@@ -28,6 +29,8 @@ type WorkspaceRightSidebarProps = {
       network: NonNullable<WorkspaceView['selectedNetwork']>,
       notes: string,
     ) => Promise<NetworkProfile | null>;
+    accordionState?: ServerSidebarAccordionState;
+    onSetAccordionState?: (state: ServerSidebarAccordionState) => void;
   };
   queryProfile?: {
     avatarUser?: QueryProfileAvatarUser | null;
@@ -53,6 +56,8 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         runtime={props.workspace.selectedRuntime}
         onEdit={props.serverProfile?.onEdit ?? (() => undefined)}
         onSaveNotes={props.serverProfile?.onSaveNotes ?? (async () => null)}
+        accordionState={props.serverProfile?.accordionState}
+        onSetAccordionState={props.serverProfile?.onSetAccordionState}
       />
     );
   }

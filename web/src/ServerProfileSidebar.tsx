@@ -29,9 +29,17 @@ export function ServerProfileSidebar(props: {
     network: NonNullable<WorkspaceView['selectedNetwork']>,
     notes: string,
   ) => Promise<NetworkProfile | null>;
+  accordionState?: import('./server-sidebar-accordion-state.js').ServerSidebarAccordionState;
+  onSetAccordionState?: (
+    state: import('./server-sidebar-accordion-state.js').ServerSidebarAccordionState,
+  ) => void;
 }) {
   const network = props.network ?? props.fallbackNetwork;
-  const accordion = useServerSidebarAccordionState(network?.id);
+  const accordion = useServerSidebarAccordionState(
+    network?.id,
+    props.accordionState,
+    props.onSetAccordionState,
+  );
   if (!network) {
     return null;
   }

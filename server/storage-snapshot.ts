@@ -22,5 +22,9 @@ export const createStorageSnapshot = (store: StorageSnapshotSource): AppSnapshot
       historyWindowLimit
     ),
     networkStates: {},
+    preferences: store.getPreferences(),
+    userAvatarOverrides: store.listAvatarOverrides(),
+    drafts: store.listDrafts(),
+    browserStorageImportPending: store.isLegacyBrowserImportPending(),
   };
 };

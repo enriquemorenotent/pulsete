@@ -8,6 +8,9 @@ import { handleLogRoutes } from './http-logs.js';
 import { handleMutedNickRoutes } from './http-muted-nicks.js';
 import { handleNickEmojiRoutes } from './http-nick-emojis.js';
 import { handleNetworkRoutes } from './http-networks.js';
+import { handlePreferenceRoutes } from './http-preferences.js';
+import { handleDraftRoutes } from './http-drafts.js';
+import { handleAvatarOverrideRoutes } from './http-avatar-overrides.js';
 import { handlePagePreviewRoutes } from './http-page-previews.js';
 import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js';
 import type { HttpContext, HttpHandlerContext } from './http-types.js';
@@ -37,6 +40,9 @@ export const createHttpHandler = (
         (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))
         || await handleAiAssistantRoutes(args)
         || await handlePagePreviewRoutes(args, pagePreviewResolver)
+        || await handlePreferenceRoutes(args)
+        || await handleAvatarOverrideRoutes(args)
+        || await handleDraftRoutes(args)
         || await handleNetworkRoutes(args)
         || await handleNickEmojiRoutes(args)
         || await handleFriendRoutes(args)

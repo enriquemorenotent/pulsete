@@ -5,6 +5,9 @@ import type {
   RuntimeMutedNickMutations,
   RuntimeNickEmojiMutations,
   RuntimeNetworkMutations,
+  RuntimePreferenceMutations,
+  RuntimeDraftMutations,
+  RuntimeAvatarOverrideMutations,
   RuntimeStore,
 } from './runtime-service-types.js';
 import type { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
@@ -21,6 +24,9 @@ type RuntimeHttpServicesParams = {
   networks: RuntimeNetworkMutations;
   nickEmojis: RuntimeNickEmojiMutations;
   sessions: RuntimeNetworkSessionService;
+  preferences: RuntimePreferenceMutations;
+  drafts: RuntimeDraftMutations;
+  avatarOverrides: RuntimeAvatarOverrideMutations;
 };
 
 export const createRuntimeHttpServices = ({
@@ -33,6 +39,9 @@ export const createRuntimeHttpServices = ({
   networks,
   nickEmojis,
   sessions,
+  preferences,
+  drafts,
+  avatarOverrides,
 }: RuntimeHttpServicesParams) =>
   createRuntimeHttpApi({
     assistant: {
@@ -50,4 +59,7 @@ export const createRuntimeHttpServices = ({
     sessions: {
       disconnect: (networkId) => sessions.disconnect(networkId),
     },
+    preferences,
+    drafts,
+    avatarOverrides,
   });

@@ -17,6 +17,7 @@ import type { AppPaths } from './app-paths.js';
 import { currentStorageSchemaVersion } from './storage-migrations.js';
 import { hasEncryptedNetworkPasswords } from './storage-networks.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
+import { userStateStorageSchemaVersion } from './storage-user-state-schema.js';
 
 const backupFormat = 'pulsete.backup.v1';
 const sqliteHeader = 'SQLite format 3\u0000';
@@ -159,7 +160,7 @@ const validateBackupDatabase = (databasePath: string, declaredVersion: number, h
     }
     if (
       version > currentStorageSchemaVersion
-      || !hasRequiredTables(db)
+      || !hasRequiredTables(db, version)
       || (hasEncryptedNetworkPasswords(db) && !hasSecret)
     ) {
       throw badRequest('Invalid backup database');
@@ -169,8 +170,17 @@ const validateBackupDatabase = (databasePath: string, declaredVersion: number, h
   }
 };
 
-const hasRequiredTables = (db: SqliteDb) =>
-  ['networks', 'buffers', 'messages'].every((table) =>
+const hasRequiredTables = (db: SqliteDb, version: number) =>
+  [
+    'networks',
+    'buffers',
+    'messages',
+    ...(version >= userStateStorageSchemaVersion ? [
+      'workspace_preferences',
+      'buffer_drafts',
+      'user_avatar_overrides',
+    ] : []),
+  ].every((table) =>
     Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table))
   );
 

@@ -37,6 +37,35 @@ export const reduceRuntimeDomain = (
         pendingChannels: [],
         networkStates: offlineNetworkStates(domain),
       };
+    case 'update-preferences':
+      return { ...domain, preferences: action.preferences };
+    case 'upsert-avatar-override':
+      return {
+        ...domain,
+        userAvatarOverrides: [
+          ...domain.userAvatarOverrides.filter(({ id }) => id !== action.avatarOverride.id),
+          action.avatarOverride,
+        ],
+      };
+    case 'remove-avatar-override':
+      return {
+        ...domain,
+        userAvatarOverrides: domain.userAvatarOverrides.filter(
+          ({ id }) => id !== action.avatarOverrideId,
+        ),
+      };
+    case 'upsert-draft':
+      return {
+        ...domain,
+        drafts: [...domain.drafts.filter(({ bufferId }) => bufferId !== action.draft.bufferId), action.draft],
+      };
+    case 'remove-draft':
+      return {
+        ...domain,
+        drafts: domain.drafts.filter(({ bufferId }) => bufferId !== action.bufferId),
+      };
+    case 'complete-browser-storage-import':
+      return { ...domain, browserStorageImportPending: false };
     case 'upsert-network': {
       const networks = domain.networks.filter((network) => network.id !== action.network.id);
       networks.push(action.network);
@@ -120,9 +149,35 @@ export const reduceRuntimeDomain = (
         ),
         messages: removeNetworkMessages(domain.messages, action.networkId),
         networkStates,
+        userAvatarOverrides: domain.userAvatarOverrides.filter(
+          ({ networkId }) => networkId !== action.networkId,
+        ),
+        drafts: domain.drafts.filter(({ networkId: draftNetworkId }) => draftNetworkId !== action.networkId),
+        preferences: removeNetworkPreferences(domain.preferences, action.networkId),
       };
     }
     default:
       return null;
   }
+};
+
+const removeNetworkPreferences = (
+  preferences: AppDomainState['preferences'],
+  networkId: string,
+) => {
+  const serverSidebarAccordions = { ...preferences.serverSidebarAccordions };
+  delete serverSidebarAccordions[networkId];
+  return {
+    ...preferences,
+    contactNotifications: {
+      ...preferences.contactNotifications,
+      contacts: preferences.contactNotifications.contacts.filter(
+        (contact) => contact.networkId !== networkId,
+      ),
+      channels: preferences.contactNotifications.channels.filter(
+        (channel) => channel.networkId !== networkId,
+      ),
+    },
+    serverSidebarAccordions,
+  };
 };

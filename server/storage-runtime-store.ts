@@ -3,6 +3,9 @@ import type { StorageFriendsRepository } from './storage-friends-repository.js';
 import type { StorageMutedNicksRepository } from './storage-muted-nicks-repository.js';
 import type { StorageNetworksRepository } from './storage-networks-repository.js';
 import type { StorageNickEmojisRepository } from './storage-nick-emojis-repository.js';
+import type { StoragePreferencesRepository } from './storage-preferences-repository.js';
+import type { StorageDraftsRepository } from './storage-drafts-repository.js';
+import type { StorageAvatarOverridesRepository } from './storage-avatar-overrides-repository.js';
 import type { StorageSnapshotSource } from './storage-types.js';
 import type { RuntimeStore } from './runtime-store-ports.js';
 
@@ -12,6 +15,9 @@ type StorageRepositories = {
   mutedNicks: StorageMutedNicksRepository;
   networks: StorageNetworksRepository;
   nickEmojis: StorageNickEmojisRepository;
+  preferences: StoragePreferencesRepository;
+  drafts: StorageDraftsRepository;
+  avatarOverrides: StorageAvatarOverridesRepository;
 };
 
 export const createStorageViews = (repositories: StorageRepositories) => {
@@ -22,6 +28,10 @@ export const createStorageViews = (repositories: StorageRepositories) => {
     listMutedNicks: (networkId) => repositories.mutedNicks.list(networkId),
     listNetworks: () => repositories.networks.list(),
     listNickEmojis: (networkId) => repositories.nickEmojis.list(networkId),
+    getPreferences: () => repositories.preferences.get(),
+    isLegacyBrowserImportPending: () => repositories.preferences.isLegacyBrowserImportPending(),
+    listDrafts: () => repositories.drafts.list(),
+    listAvatarOverrides: () => repositories.avatarOverrides.list(),
     listRecentMessages: (limit) => repositories.conversations.listRecentMessages(limit),
     listRecentMessagesForBufferIds: (bufferIds, limit) =>
       repositories.conversations.listRecentMessagesForBufferIds(bufferIds, limit),
@@ -33,6 +43,9 @@ export const createStorageViews = (repositories: StorageRepositories) => {
     mutedNicks: repositories.mutedNicks,
     networks: repositories.networks,
     nickEmojis: repositories.nickEmojis,
+    preferences: repositories.preferences,
+    drafts: repositories.drafts,
+    avatarOverrides: repositories.avatarOverrides,
   };
 
   return { snapshotSource, runtimeStore };

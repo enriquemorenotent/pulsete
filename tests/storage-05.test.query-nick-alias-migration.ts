@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { makeStorageFile, openSqliteDatabase, Storage } from './helpers/storage-test-helpers.js';
 import { createNetworkInput } from './helpers/runtime-test-common.js';
 
@@ -52,7 +53,7 @@ test('query nick alias migration repairs empty duplicate buffers without rewriti
   const bodies = migrated.conversations.listMessages(network.id, 'Rust', 10).map((message) => message.body);
   migrated.close();
 
-  assert.equal(version.user_version, 29);
+  assert.equal(version.user_version, currentStorageSchemaVersion);
   assert.equal(duplicate, undefined);
   assert.deepEqual(aliases, ['Rust', 'Rust-AFK']);
   assert.equal(reopened.id, rustAfk.id);

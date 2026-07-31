@@ -16,10 +16,6 @@ import type {
 import { DesktopShellBrand } from './DesktopShellBrand.js';
 import { DesktopShellToolsMenu } from './DesktopShellToolsMenu.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
-import {
-  RIGHT_SIDEBAR_WIDTH_STORAGE_KEY,
-  SIDEBAR_WIDTH_STORAGE_KEY,
-} from './sidebar-width.js';
 import { useMediaQuery } from './useMediaQuery.js';
 import { useSidebarResize } from './useSidebarResize.js';
 
@@ -39,6 +35,10 @@ export type DesktopShellLayoutProps = {
   rightSidebarKind: 'profile' | 'users' | 'notes' | null;
   selectedBufferId: string | null;
   sidebar: ReactNode;
+  leftSidebarWidth: number;
+  rightSidebarWidth: number;
+  onSetLeftSidebarWidth: (width: number) => void;
+  onSetRightSidebarWidth: (width: number) => void;
 };
 
 export function DesktopShellLayout(props: DesktopShellLayoutProps) {
@@ -50,11 +50,13 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
   );
   const leftSidebarResize = useSidebarResize(layoutRef, {
     edge: 'left',
-    storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    width: props.leftSidebarWidth,
+    onCommit: props.onSetLeftSidebarWidth,
   });
   const rightSidebarResize = useSidebarResize(layoutRef, {
     edge: 'right',
-    storageKey: RIGHT_SIDEBAR_WIDTH_STORAGE_KEY,
+    width: props.rightSidebarWidth,
+    onCommit: props.onSetRightSidebarWidth,
   });
   const layoutStyle = {
     '--sidebar-width': `${leftSidebarResize.sidebarWidth}px`,

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { storageBootstrapSchemaSql } from '../server/storage-bootstrap-schema.js';
+import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { makeStorageFile, openSqliteDatabase, Storage } from './helpers/storage-test-helpers.js';
 
 test('versioned storage migrations remove legacy message search artifacts', () => {
@@ -85,7 +86,7 @@ test('versioned storage migrations remove legacy message search artifacts', () =
   `).all('payload') as Array<{ id: string }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 29);
+  assert.equal(version.user_version, currentStorageSchemaVersion);
   assert.deepEqual(artifacts, []);
   assert.deepEqual(newArtifacts.map((artifact) => artifact.name), [
     'message_search_ad',

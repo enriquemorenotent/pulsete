@@ -11,6 +11,12 @@ import {
   pendingChannelSchema,
   presenceStatusSchema,
 } from './protocol-chat.js';
+import {
+  bufferDraftSchema,
+  defaultWorkspacePreferences,
+  userAvatarOverrideSchema,
+  workspacePreferencesSchema,
+} from './protocol-preferences.js';
 
 export const appSnapshotSchema = z.object({
   networks: z.array(networkSchema),
@@ -24,5 +30,9 @@ export const appSnapshotSchema = z.object({
   pendingChannels: z.array(pendingChannelSchema).default([]),
   messages: z.array(chatMessageSchema),
   networkStates: z.record(networkRuntimeStateSchema),
+  preferences: workspacePreferencesSchema.default(defaultWorkspacePreferences),
+  userAvatarOverrides: z.array(userAvatarOverrideSchema).default([]),
+  drafts: z.array(bufferDraftSchema).default([]),
+  browserStorageImportPending: z.boolean().default(false),
 });
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;

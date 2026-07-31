@@ -10,10 +10,13 @@ import type {
 export type ContactNotificationsInput = {
   buffers: readonly BufferState[];
   getMessagesByConversation?: () => ConversationMessages;
+  getAvatarIconUrl?: (buffer: BufferState) => string | null;
   networkNamesById: ReadonlyMap<string, string>;
   onSelectBuffer: (buffer: BufferState) => void;
   selectedBufferId: string | null;
   systemNotificationIconsEnabled?: boolean;
+  settings: ContactNotificationSettings;
+  onSettingsChange: (settings: ContactNotificationSettings) => void;
 };
 
 export type ContactNotificationsController = {

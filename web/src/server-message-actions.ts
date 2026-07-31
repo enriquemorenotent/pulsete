@@ -42,6 +42,18 @@ const toActions = (message: ServerMessage): Action[] => {
       return [{ type: 'upsert-nick-emoji', nickEmoji: message.nickEmoji }];
     case 'nick-emoji.remove':
       return [{ type: 'remove-nick-emoji', nickEmojiId: message.nickEmojiId }];
+    case 'preferences.updated':
+      return [{ type: 'update-preferences', preferences: message.preferences }];
+    case 'avatar-override.upsert':
+      return [{ type: 'upsert-avatar-override', avatarOverride: message.avatarOverride }];
+    case 'avatar-override.remove':
+      return [{ type: 'remove-avatar-override', avatarOverrideId: message.avatarOverrideId }];
+    case 'draft.upsert':
+      return [{ type: 'upsert-draft', draft: message.draft }];
+    case 'draft.remove':
+      return [{ type: 'remove-draft', bufferId: message.bufferId }];
+    case 'browser-storage-import.completed':
+      return [{ type: 'complete-browser-storage-import' }];
     case 'friend.presence':
       return [{
         type: 'friend-presence',

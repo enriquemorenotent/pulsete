@@ -5,6 +5,7 @@ import {
   handleDesktopNavigationCommand,
   restrictDesktopNavigationToOrigin,
 } from './navigation-history.js';
+import { configureNotificationPermissions } from './notification-permissions.js';
 
 let mainWindow: BrowserWindow | null = null;
 let serverHandle: PulseteServerHandle | null = null;
@@ -76,6 +77,8 @@ function createMainWindow(server: PulseteServerHandle) {
       sandbox: true,
     },
   });
+
+  configureNotificationPermissions(window.webContents.session, window, server.url);
 
   window.once('ready-to-show', () => {
     window.show();

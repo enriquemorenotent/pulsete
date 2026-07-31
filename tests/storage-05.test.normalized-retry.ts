@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { makeStorageFile, openSqliteDatabase, Storage } from './helpers/storage-test-helpers.js';
 
 test('normalized storage migration can retry after leftover scratch tables from a failed attempt', () => {
@@ -166,7 +167,7 @@ test('normalized storage migration can retry after leftover scratch tables from 
   ).map((row) => row.name);
   upgraded.close();
 
-  assert.equal(version.user_version, 29);
+  assert.equal(version.user_version, currentStorageSchemaVersion);
   assert.deepEqual(storage.conversations.listMessages('network-1', 'ALICE', 10).map((message) => message.id), ['message-1']);
   assert.deepEqual(storage.networks.get('network-1')?.autoJoin, ['#help']);
   assert.deepEqual(scratchTables, []);

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { maxDraftCharacters } from '../../shared/protocol-preferences.js';
 import { SendHorizonal, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
@@ -167,6 +168,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
           <Input
             ref={inputRef}
             value={props.draft}
+            maxLength={maxDraftCharacters}
             disabled={props.disabled}
             className="min-w-0 flex-1 border-transparent bg-transparent focus-visible:border-ring/40"
             onBlur={() => {

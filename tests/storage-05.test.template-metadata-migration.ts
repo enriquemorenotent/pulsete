@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { makeStorageFile, openSqliteDatabase, Storage } from './helpers/storage-test-helpers.js';
 
 test('versioned storage migrations rebuild networks as workspace-owned rows', () => {
@@ -109,7 +110,7 @@ test('versioned storage migrations rebuild networks as workspace-owned rows', ()
   assert.deepEqual(network?.historicalSelfNicks, []);
   assert.deepEqual(network?.autoJoin, []);
   assert.equal(network?.notes, '');
-  assert.equal(version.user_version, 29);
+  assert.equal(version.user_version, currentStorageSchemaVersion);
   assert.equal(columns.some((column) => column.name === 'workspaceOpen'), true);
   assert.equal(columns.some((column) => column.name === 'templateId'), false);
   assert.equal(columns.some((column) => column.name === 'managerHidden'), false);

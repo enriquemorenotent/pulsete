@@ -15,6 +15,10 @@ import {
 } from './storage-schema-helpers.js';
 import { migrateWorkspaceNetworks } from './storage-workspace-migration.js';
 import { ensureColumn, type StorageMigration } from './storage-migration-helpers.js';
+import {
+  userStateSchemaSql,
+  userStateStorageSchemaVersion,
+} from './storage-user-state-schema.js';
 
 const noopMigration = () => {};
 
@@ -165,6 +169,15 @@ export const storageMigrations: readonly StorageMigration[] = [
     version: 29,
     apply: (db) => {
       ensureColumn(db, 'messages', 'delivery', "TEXT NOT NULL DEFAULT 'live'");
+    },
+  },
+  {
+    version: userStateStorageSchemaVersion,
+    apply: (db) => {
+      db.exec(userStateSchemaSql);
+      db.prepare(`INSERT OR IGNORE INTO workspace_preferences
+        (id, value, legacyBrowserImported, updatedAt)
+        VALUES (1, '{}', 0, ?)`).run(Date.now());
     },
   },
 ];

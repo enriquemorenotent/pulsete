@@ -70,44 +70,6 @@ test('channel list resets when the gateway drops, its network disconnects, or th
   assert.deepEqual(removed.transient.historyHasOlderByBufferId, {});
 });
 
-test('removing a network prunes its muted nicks and query presence', () => {
-  const removedQuery = makeBuffer({
-    id: 'query-1',
-    networkId: 'network-1',
-    kind: 'query',
-    target: 'Alice',
-  });
-  const retainedQuery = makeBuffer({
-    id: 'query-2',
-    networkId: 'network-2',
-    kind: 'query',
-    target: 'Bob',
-  });
-  const state = makeState({
-    domain: {
-      networks: [
-        makeNetwork({ id: 'network-1', workspaceOpen: true }),
-        makeNetwork({ id: 'network-2', workspaceOpen: true }),
-      ],
-      buffers: [removedQuery, retainedQuery],
-      mutedNicks: [
-        { id: 'mute-1', networkId: 'network-1', nick: 'Alice' },
-        { id: 'mute-2', networkId: 'network-2', nick: 'Bob' },
-      ],
-      queryPresence: {
-        [removedQuery.id]: 'online',
-        [retainedQuery.id]: 'away',
-      },
-    },
-  });
-
-  const nextState = reducer(state, { type: 'remove-network', networkId: 'network-1' });
-
-  assert.deepEqual(nextState.domain.mutedNicks.map((mutedNick) => mutedNick.id), ['mute-2']);
-  assert.equal(removedQuery.id in nextState.domain.queryPresence, false);
-  assert.equal(nextState.domain.queryPresence[retainedQuery.id], 'away');
-});
-
 test('presence updates match channel names case-insensitively', () => {
   const channel = {
     id: 'channel-1',

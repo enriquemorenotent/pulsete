@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BufferState } from '../../../shared/protocol-chat.js';
 import {
-  CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
   addContactNotificationChannel,
   addContactNotificationContact,
   canPlayContactNotificationCue,
   findEligibleContactNotification,
   removeContactNotificationChannel,
   removeContactNotificationContact,
-  serializeContactNotificationSettings,
   type ContactNotificationChannel,
   type ContactNotificationContact,
   type ContactNotificationSound,
@@ -22,7 +20,6 @@ import {
   getBufferMap,
   getNotificationPermission,
   playCue,
-  readStoredContactNotificationSettings,
   shouldShowSystemNotification,
 } from './browser.js';
 import {
@@ -36,7 +33,7 @@ export type { ContactNotificationsController } from './controller-types.js';
 export function useContactNotifications(
   input: ContactNotificationsInput,
 ): ContactNotificationsController {
-  const [settings, setSettings] = useState(readStoredContactNotificationSettings);
+  const settings = input.settings;
   const [systemPermission, setSystemPermission] = useState<
     NotificationPermission | 'unsupported'
   >(getNotificationPermission);
@@ -46,20 +43,6 @@ export function useContactNotifications(
   const [notificationOwner] = useState(() => new NotificationOwner<string, ContactSystemNotificationHandle>({
     close: closeContactSystemNotification,
   }));
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      window.localStorage.setItem(
-        CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY,
-        serializeContactNotificationSettings(settings),
-      );
-    } catch {
-      // Ignore storage failures; the preference simply becomes session-local.
-    }
-  }, [settings]);
 
   useEffect(() => {
     const refreshPermission = () => {
@@ -77,46 +60,39 @@ export function useContactNotifications(
     };
   }, []);
 
-  useEffect(() => {
-    if (systemPermission === 'granted') {
-      return;
-    }
-    setSettings((current) => current.systemEnabled ? {
-      ...current,
-      systemEnabled: false,
-    } : current);
-  }, [systemPermission]);
-
   const setEnabled = useCallback((enabled: boolean) => {
-    setSettings((current) =>
-      current.enabled === enabled ? current : { ...current, enabled });
-  }, []);
+    if (settings.enabled !== enabled) {
+      input.onSettingsChange({ ...settings, enabled });
+    }
+  }, [input.onSettingsChange, settings]);
 
   const setSystemEnabled = useCallback((enabled: boolean) => {
-    setSettings((current) =>
-      current.systemEnabled === enabled ? current : { ...current, systemEnabled: enabled });
-  }, []);
+    if (settings.systemEnabled !== enabled) {
+      input.onSettingsChange({ ...settings, systemEnabled: enabled });
+    }
+  }, [input.onSettingsChange, settings]);
 
   const setSound = useCallback((sound: ContactNotificationSound) => {
-    setSettings((current) =>
-      current.sound === sound ? current : { ...current, sound });
-  }, []);
+    if (settings.sound !== sound) {
+      input.onSettingsChange({ ...settings, sound });
+    }
+  }, [input.onSettingsChange, settings]);
 
   const addChannel = useCallback((channel: ContactNotificationChannel) => {
-    setSettings((current) => addContactNotificationChannel(current, channel));
-  }, []);
+    input.onSettingsChange(addContactNotificationChannel(settings, channel));
+  }, [input.onSettingsChange, settings]);
 
   const addContact = useCallback((contact: ContactNotificationContact) => {
-    setSettings((current) => addContactNotificationContact(current, contact));
-  }, []);
+    input.onSettingsChange(addContactNotificationContact(settings, contact));
+  }, [input.onSettingsChange, settings]);
 
   const removeChannel = useCallback((channel: ContactNotificationChannel) => {
-    setSettings((current) => removeContactNotificationChannel(current, channel));
-  }, []);
+    input.onSettingsChange(removeContactNotificationChannel(settings, channel));
+  }, [input.onSettingsChange, settings]);
 
   const removeContact = useCallback((contact: ContactNotificationContact) => {
-    setSettings((current) => removeContactNotificationContact(current, contact));
-  }, []);
+    input.onSettingsChange(removeContactNotificationContact(settings, contact));
+  }, [input.onSettingsChange, settings]);
 
   const requestSystemPermission = useCallback(async () => {
     if (typeof window === 'undefined' || typeof window.Notification === 'undefined') {
@@ -208,6 +184,7 @@ export function useContactNotifications(
     }
     if (shouldNotify) {
       showContactSystemNotification({
+        avatarIconUrl: input.getAvatarIconUrl?.(eligibleNotification.buffer),
         buffer: eligibleNotification.buffer,
         iconsEnabled: input.systemNotificationIconsEnabled,
         latestMessage: eligibleNotification.latestMessage,
@@ -219,6 +196,7 @@ export function useContactNotifications(
   }, [
     input.buffers,
     input.getMessagesByConversation,
+    input.getAvatarIconUrl,
     input.networkNamesById,
     input.onSelectBuffer,
     input.selectedBufferId,

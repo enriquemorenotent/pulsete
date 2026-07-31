@@ -3,6 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage } from '../server/storage.js';
 
@@ -196,7 +197,7 @@ test('normalized storage migration preserves large transcripts and backfills mis
   `).all('network-1') as Array<{ target: string; batchCount: number }>;
   upgraded.close();
 
-  assert.equal(version.user_version, 29);
+  assert.equal(version.user_version, currentStorageSchemaVersion);
   assert.equal(networkColumns.some((column) => column.name === 'username'), true);
   assert.equal(bufferColumns.some((column) => column.name === 'ircCloudAvatarId'), true);
   assert.deepEqual(

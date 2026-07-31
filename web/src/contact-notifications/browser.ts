@@ -1,29 +1,7 @@
 import type { BufferState } from '../../../shared/protocol-chat.js';
-import {
-  CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS,
-  parseContactNotificationSettings,
-  type ContactNotificationSettings,
-  type ContactNotificationSound,
-} from './settings.js';
+import type { ContactNotificationSound } from './settings.js';
 
 type AudioContextConstructor = typeof AudioContext;
-
-export const readStoredContactNotificationSettings = (): ContactNotificationSettings => {
-  if (typeof window === 'undefined') {
-    return parseContactNotificationSettings(null);
-  }
-  try {
-    for (const storageKey of CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEYS) {
-      const value = window.localStorage.getItem(storageKey);
-      if (value) {
-        return parseContactNotificationSettings(value);
-      }
-    }
-    return parseContactNotificationSettings(null);
-  } catch {
-    return parseContactNotificationSettings(null);
-  }
-};
 
 export const getAudioContextConstructor = (): AudioContextConstructor | null => {
   if (typeof window === 'undefined') {

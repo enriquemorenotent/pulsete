@@ -27,6 +27,9 @@ import type {
 } from './storage-types.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import type { QueryNickAliasRecord } from './storage-query-aliases.js';
+import type { StoragePreferencesRepository } from './storage-preferences-repository.js';
+import type { StorageDraftsRepository } from './storage-drafts-repository.js';
+import type { StorageAvatarOverridesRepository } from './storage-avatar-overrides-repository.js';
 
 export type RuntimeSnapshotSource = {
   listBuffers(networkId?: string): BufferState[];
@@ -37,6 +40,10 @@ export type RuntimeSnapshotSource = {
   listNetworks(): StoredNetworkProfile[];
   listRecentMessages(limit?: number): AppSnapshot['messages'];
   listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number): AppSnapshot['messages'];
+  getPreferences(): AppSnapshot['preferences'];
+  isLegacyBrowserImportPending(): boolean;
+  listDrafts(): AppSnapshot['drafts'];
+  listAvatarOverrides(): AppSnapshot['userAvatarOverrides'];
 };
 
 export type RuntimeConversationStore = {
@@ -142,4 +149,7 @@ export type RuntimeStore = {
   mutedNicks: RuntimeMutedNickStore;
   networks: RuntimeNetworkStore;
   nickEmojis: RuntimeNickEmojiStore;
+  preferences: StoragePreferencesRepository;
+  drafts: StorageDraftsRepository;
+  avatarOverrides: StorageAvatarOverridesRepository;
 };

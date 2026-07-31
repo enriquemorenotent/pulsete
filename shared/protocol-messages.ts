@@ -16,6 +16,11 @@ import {
   presenceStatusSchema,
 } from './protocol-chat.js';
 import { networkUserIdentitySchema } from './user-identity.js';
+import {
+  bufferDraftSchema,
+  userAvatarOverrideSchema,
+  workspacePreferencesSchema,
+} from './protocol-preferences.js';
 
 const baseClientSchema = z.object({
   type: z.string(),
@@ -83,6 +88,21 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   baseServerSchema.extend({ type: z.literal('muted-nick.remove'), mutedNickId: z.string() }),
   baseServerSchema.extend({ type: z.literal('nick-emoji.upsert'), nickEmoji: nickEmojiSchema }),
   baseServerSchema.extend({ type: z.literal('nick-emoji.remove'), nickEmojiId: z.string() }),
+  baseServerSchema.extend({
+    type: z.literal('preferences.updated'),
+    preferences: workspacePreferencesSchema,
+  }),
+  baseServerSchema.extend({
+    type: z.literal('avatar-override.upsert'),
+    avatarOverride: userAvatarOverrideSchema,
+  }),
+  baseServerSchema.extend({
+    type: z.literal('avatar-override.remove'),
+    avatarOverrideId: z.string(),
+  }),
+  baseServerSchema.extend({ type: z.literal('draft.upsert'), draft: bufferDraftSchema }),
+  baseServerSchema.extend({ type: z.literal('draft.remove'), bufferId: z.string() }),
+  baseServerSchema.extend({ type: z.literal('browser-storage-import.completed') }),
   baseServerSchema.extend({
     type: z.literal('friend.presence'),
     friendId: z.string(),

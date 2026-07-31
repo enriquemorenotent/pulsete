@@ -97,6 +97,18 @@ export class RuntimeHost {
         add: (networkId, nick, identity) => this.runtime.http.mutedNicks.add(networkId, nick, identity),
         remove: (mutedNickId) => this.runtime.http.mutedNicks.remove(mutedNickId),
       },
+      preferences: {
+        update: (patch) => this.runtime.http.preferences.update(patch),
+        importLegacy: (patch, avatars) => this.runtime.http.preferences.importLegacy(patch, avatars),
+      },
+      drafts: {
+        save: (bufferId, body) => this.runtime.http.drafts.save(bufferId, body),
+      },
+      avatarOverrides: {
+        upsert: (input) => this.runtime.http.avatarOverrides.upsert(input),
+        remove: (id) => this.runtime.http.avatarOverrides.remove(id),
+        source: (id) => this.runtime.http.avatarOverrides.source(id),
+      },
       backups: {
         export: (browserPreferences) => this.storage.exportBackup(browserPreferences),
         import: (backupContent) => this.restore(backupContent),

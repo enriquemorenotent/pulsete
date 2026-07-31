@@ -136,6 +136,9 @@ export const reduceConversationDomain = (
           Object.entries(domain.queryPresence).filter(([bufferId]) => bufferId !== action.bufferId)
         ),
         channels: domain.channels.filter((channel) => channel.id !== action.bufferId),
+        drafts: action.replacementBufferId
+          ? domain.drafts.filter((draft) => draft.bufferId !== action.bufferId)
+          : domain.drafts,
         messages: removeBufferMessages(domain.messages, action.bufferId, replacementBuffer),
       };
     }

@@ -7,7 +7,7 @@ import {
 } from '../web/src/backup-client.js';
 import { createDocumentTestDouble } from './helpers/browser-test-doubles.js';
 
-test('downloadFullBackup sends Pulsete browser preferences and downloads the attachment', async () => {
+test('downloadFullBackup relies on the SQLite backup and downloads the attachment', async () => {
   const restore = installBrowserStubs();
   const fetchCalls: Array<{ body: unknown; url: string }> = [];
   const clicked: Array<{ download: string; href: string }> = [];
@@ -42,9 +42,7 @@ test('downloadFullBackup sends Pulsete browser preferences and downloads the att
     await downloadFullBackup();
 
     assert.equal(fetchCalls[0].url, '/api/backups/export');
-    assert.deepEqual(JSON.parse(String(fetchCalls[0].body)), {
-      browserPreferences: { 'pulsete.sidebar.width': '320' },
-    });
+    assert.deepEqual(JSON.parse(String(fetchCalls[0].body)), {});
     assert.deepEqual(clicked, [{
       download: 'pulsete-test.pulsete-backup',
       href: 'blob:backup',

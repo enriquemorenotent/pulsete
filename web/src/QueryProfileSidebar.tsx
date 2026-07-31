@@ -26,7 +26,6 @@ export function QueryProfileSidebar(props: {
       <header className="flex shrink-0 items-center gap-3 border-b border-white/[0.055] bg-white/[0.012] px-4 py-4">
         {props.profileImagesVisible !== false && props.avatarUser ? (
           <QueryProfileAvatarBanner
-            bufferId={buffer.id}
             customAvatarUrl={props.customAvatarUrl}
             enabled={props.externalAvatarsEnabled}
             networkId={buffer.networkId}

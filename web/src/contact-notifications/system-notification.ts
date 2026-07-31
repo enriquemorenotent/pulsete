@@ -1,11 +1,5 @@
 import type { BufferState, ChatMessage } from '../../../shared/protocol-chat.js';
 import { getVisibleIrcText } from '../irc-format.js';
-import { resolveUserAvatarTarget } from '../user-avatars/override-model.js';
-import {
-  readStoredQueryAvatarOverrides,
-  readStoredUserAvatarOverrides,
-  resolveUserAvatarOverrideUrl,
-} from '../user-avatars/query-overrides.js';
 import type { NotificationOwner } from './notification-owner.js';
 
 export type ContactSystemNotificationHandle = {
@@ -32,6 +26,7 @@ type ContactSystemNotificationInput = {
 };
 
 type ContactSystemNotificationDispatchInput = {
+  avatarIconUrl?: string | null;
   buffer: BufferState;
   iconsEnabled?: boolean;
   latestMessage?: Pick<ChatMessage, 'body'> | null;
@@ -69,7 +64,7 @@ export const createContactSystemNotification = (
   }
   const icon = input.iconsEnabled === false
     ? null
-    : input.avatarIconUrl ?? resolveContactSystemNotificationIconUrl(input.buffer);
+    : input.avatarIconUrl ?? null;
   const notification = new NotificationClass(input.buffer.target, {
     body: resolveContactSystemNotificationBody(
       input.buffer,
@@ -111,6 +106,7 @@ export const showContactSystemNotification = (
     const networkName =
       input.networkNamesById.get(input.buffer.networkId) ?? input.buffer.networkId;
     const notification = createContactSystemNotification({
+      avatarIconUrl: input.avatarIconUrl,
       buffer: input.buffer,
       iconsEnabled: input.iconsEnabled,
       latestMessage: input.latestMessage,
@@ -156,19 +152,3 @@ const resolveContactSystemNotificationTag = (buffer: BufferState) =>
   buffer.kind === 'channel'
     ? `pulsete-channel:${buffer.id}`
     : `pulsete-dm:${buffer.id}`;
-
-const resolveContactSystemNotificationIconUrl = (buffer: BufferState) => {
-  if (buffer.kind !== 'query') {
-    return null;
-  }
-  return resolveUserAvatarOverrideUrl({
-    allowNickFallback: true,
-    legacyBufferId: buffer.id,
-    queryAvatarOverrides: readStoredQueryAvatarOverrides(),
-    target: resolveUserAvatarTarget(buffer.networkId, {
-      identity: buffer.peerIdentity,
-      nick: buffer.target,
-    }),
-    userAvatarOverrides: readStoredUserAvatarOverrides(),
-  });
-};

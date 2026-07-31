@@ -11,8 +11,15 @@ import type { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import type { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type { createRuntimeSnapshot } from './runtime-snapshot.js';
-import type { RuntimeNetworkCatalog } from './runtime-store-ports.js';
+import type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
+import type {
+  WorkspacePreferencesPatch,
+} from '../shared/protocol-preferences.js';
+import type {
+  AvatarOverrideInput,
+  AvatarOverrideSource,
+} from './storage-avatar-overrides-repository.js';
 
 export type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
 
@@ -63,6 +70,43 @@ export type RuntimeNetworkMutations = {
   closeConnection: NetworkLifecycleService['closeConnection'];
 };
 
+export type RuntimePreferenceMutations = {
+  update(patch: WorkspacePreferencesPatch): {
+    preferences: ReturnType<RuntimeStore['preferences']['get']>;
+    messages: readonly ServerMessage[];
+  };
+  importLegacy(
+    patch: WorkspacePreferencesPatch,
+    avatars: readonly AvatarOverrideInput[],
+    initiallySkippedAvatarOverrides?: number,
+  ): {
+    preferences: ReturnType<RuntimeStore['preferences']['get']>;
+    avatarOverrides: ReturnType<RuntimeStore['avatarOverrides']['list']>;
+    imported: boolean;
+    skippedAvatarOverrides: number;
+    messages: readonly ServerMessage[];
+  };
+};
+
+export type RuntimeDraftMutations = {
+  save(bufferId: string, body: string): {
+    draft: ReturnType<RuntimeStore['drafts']['get']>;
+    messages: readonly ServerMessage[];
+  };
+};
+
+export type RuntimeAvatarOverrideMutations = {
+  upsert(input: AvatarOverrideInput): {
+    avatarOverride: ReturnType<RuntimeStore['avatarOverrides']['upsert']>;
+    messages: readonly ServerMessage[];
+  };
+  remove(id: string): {
+    avatarOverrideId: string;
+    messages: readonly ServerMessage[];
+  };
+  source(id: string): AvatarOverrideSource | null;
+};
+
 export type RuntimeHttpApi = {
   assistant: {
     ask: RuntimeAiAssistantService['ask'];
@@ -104,6 +148,9 @@ export type RuntimeHttpApi = {
     add: RuntimeMutedNickMutations['upsertMutedNick'];
     remove: RuntimeMutedNickMutations['removeMutedNick'];
   };
+  preferences: RuntimePreferenceMutations;
+  drafts: RuntimeDraftMutations;
+  avatarOverrides: RuntimeAvatarOverrideMutations;
 };
 
 export type RuntimeWebSocketApi = {
@@ -123,6 +170,9 @@ export type RuntimeServices = {
   nickEmojis: RuntimeNickEmojiMutations;
   irc: Pick<RuntimeIrcService, 'join' | 'part' | 'sendMessage' | 'sendRaw'>;
   networks: RuntimeNetworkMutations;
+  preferences: RuntimePreferenceMutations;
+  drafts: RuntimeDraftMutations;
+  avatarOverrides: RuntimeAvatarOverrideMutations;
   http: RuntimeHttpApi;
   ws: RuntimeWebSocketApi;
 };

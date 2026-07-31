@@ -9,6 +9,9 @@ import { StorageFriendsRepository } from './storage-friends-repository.js';
 import { StorageMutedNicksRepository } from './storage-muted-nicks-repository.js';
 import { StorageNetworksRepository } from './storage-networks-repository.js';
 import { StorageNickEmojisRepository } from './storage-nick-emojis-repository.js';
+import { StoragePreferencesRepository } from './storage-preferences-repository.js';
+import { StorageDraftsRepository } from './storage-drafts-repository.js';
+import { StorageAvatarOverridesRepository } from './storage-avatar-overrides-repository.js';
 import { createStorageViews } from './storage-runtime-store.js';
 import { createStorageSnapshot } from './storage-snapshot.js';
 import type { RuntimeStore } from './runtime-service-types.js';
@@ -29,6 +32,9 @@ export class Storage {
   readonly mutedNicks: StorageMutedNicksRepository;
   readonly snapshotSource: StorageSnapshotSource;
   readonly nickEmojis: StorageNickEmojisRepository;
+  readonly preferences: StoragePreferencesRepository;
+  readonly drafts: StorageDraftsRepository;
+  readonly avatarOverrides: StorageAvatarOverridesRepository;
   readonly runtimeStore: RuntimeStore;
 
   constructor(paths: AppPaths | string) {
@@ -43,12 +49,18 @@ export class Storage {
     this.friends = new StorageFriendsRepository(this.db);
     this.mutedNicks = new StorageMutedNicksRepository(this.db);
     this.nickEmojis = new StorageNickEmojisRepository(this.db);
+    this.preferences = new StoragePreferencesRepository(this.db);
+    this.drafts = new StorageDraftsRepository(this.db);
+    this.avatarOverrides = new StorageAvatarOverridesRepository(this.db);
     const views = createStorageViews({
       conversations: this.conversations,
       friends: this.friends,
       mutedNicks: this.mutedNicks,
       networks: this.networks,
       nickEmojis: this.nickEmojis,
+      preferences: this.preferences,
+      drafts: this.drafts,
+      avatarOverrides: this.avatarOverrides,
     });
     this.snapshotSource = views.snapshotSource;
     this.runtimeStore = views.runtimeStore;
