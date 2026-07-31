@@ -195,7 +195,7 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   assert.doesNotMatch(markup, /Details/);
   assert.doesNotMatch(markup, /Identity/);
   assert.doesNotMatch(markup, /aria-label="Edit emoji tag for Sofia"/);
-  assert.match(markup, /query-profile-notes/);
+  assert.match(markup, /h-\[min\(32dvh,18rem\)\][\s\S]*query-profile-notes/);
   assert.match(markup, /Prefers encrypted routes/);
   assert.match(markup, /Saved/);
 });
@@ -208,9 +208,9 @@ test('query profile sidebar renders IRCCloud avatars above notes when enabled', 
 
   assert.match(markup, /aria-label="Avatar for Sofia"[\s\S]*Notes/);
   assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
-  assert.match(markup, /flex h-full min-h-0 flex-col gap-5 py-4 px-0/);
-  assert.match(markup, /flex min-h-0 flex-1 flex-col px-4/);
-  assert.match(markup, /block h-auto w-full object-contain/);
+  assert.match(markup, /flex h-full min-h-0 flex-col gap-0 px-0 py-0/);
+  assert.match(markup, /size-12 rounded-xl/);
+  assert.match(markup, /block size-full object-cover/);
   assert.match(markup, /cursor-zoom-in/);
 });
 
@@ -243,7 +243,7 @@ test('query profile sidebar renders avatar placeholders when no IRCCloud avatar 
   });
 
   assert.match(markup, /font-medium leading-none">S/);
-  assert.match(markup, /aspect-square w-full/);
+  assert.match(markup, /size-12 rounded-xl/);
   assert.match(markup, /Sofia[\s\S]*Notes/);
   assert.doesNotMatch(markup, /avatar-redirect/);
   assert.doesNotMatch(markup, /cursor-zoom-in/);

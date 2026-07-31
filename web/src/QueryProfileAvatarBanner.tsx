@@ -1,6 +1,7 @@
 import { useId, useMemo, useState, type ChangeEvent } from 'react';
 import { Cloud, ImageIcon, ImagePlus, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
+import { cn } from '@/lib/utils.js';
 import {
   Dialog,
   DialogContent,
@@ -28,9 +29,11 @@ type QueryProfileAvatarBannerProps = {
   networkId: string;
   onSetCustomAvatarUrl?: (url: string | null) => void;
   user: QueryProfileAvatarUser | null | undefined;
+  variant?: 'banner' | 'compact';
 };
 
 export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
+  const compact = props.variant === 'compact';
   const inputId = useId();
   const avatarTarget = useMemo(
     () => (props.user ? resolveUserAvatarTarget(props.networkId, props.user) : null),
@@ -80,11 +83,14 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
   };
 
   return (
-    <div className="group relative">
+    <div className={cn('group relative', compact && 'size-12 shrink-0')}>
       {showInitial ? (
         <div
           aria-hidden="true"
-          className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-sm border border-white/10 bg-secondary text-5xl text-muted-foreground"
+          className={cn(
+            'flex items-center justify-center overflow-hidden border border-white/10 bg-secondary text-muted-foreground',
+            compact ? 'size-12 rounded-xl text-base' : 'aspect-square w-full rounded-sm text-5xl',
+          )}
         >
           <span className="font-medium leading-none">
             {resolveAvatarInitial(props.user.nick)}
@@ -95,13 +101,19 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
           <button
             type="button"
             aria-label={altText}
-            className="block w-full cursor-zoom-in overflow-hidden rounded-sm border border-white/10 bg-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            className={cn(
+              'block cursor-zoom-in overflow-hidden border border-white/10 bg-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
+              compact ? 'size-12 rounded-xl' : 'w-full rounded-sm',
+            )}
             onClick={() => setPreviewOpen(true)}
           >
             <img
               src={sourceUrl}
               alt=""
-              className="block h-auto w-full object-contain"
+              className={cn(
+                'block w-full',
+                compact ? 'size-full object-cover' : 'h-auto object-contain',
+              )}
               referrerPolicy="no-referrer"
               loading="lazy"
               decoding="async"
@@ -120,12 +132,25 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
           ) : null}
         </Dialog>
       )}
-      <AvatarSourceCue source={source} />
-      <div className="absolute bottom-2 right-2 z-20 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <AvatarSourceCue compact={compact} source={source} />
+      <div
+        className={cn(
+          'absolute z-20 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100',
+          compact
+            ? 'inset-0 items-center justify-center rounded-xl bg-black/60'
+            : 'bottom-2 right-2 gap-1',
+        )}
+      >
         <input id={inputId} type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
-        <Button asChild variant="secondary" size="icon" title="Choose custom avatar" className="size-7">
+        <Button
+          asChild
+          variant="secondary"
+          size="icon"
+          title="Choose custom avatar"
+          className={compact ? 'size-[22px]' : 'size-7'}
+        >
           <label htmlFor={inputId} className="cursor-pointer">
-            <ImagePlus className="size-3.5" aria-hidden />
+            <ImagePlus className={compact ? 'size-3' : 'size-3.5'} aria-hidden />
           </label>
         </Button>
         {customAvatarUrl ? (
@@ -134,13 +159,13 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
             variant="secondary"
             size="icon"
             title="Use original avatar"
-            className="size-7"
+            className={compact ? 'size-[22px]' : 'size-7'}
             onClick={() => {
               setError(null);
               setCustomAvatarUrl(null);
             }}
           >
-            <RotateCcw className="size-3.5" aria-hidden />
+            <RotateCcw className={compact ? 'size-3' : 'size-3.5'} aria-hidden />
           </Button>
         ) : null}
       </div>
@@ -160,7 +185,10 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
   );
 }
 
-function AvatarSourceCue(props: { source: 'custom' | 'irccloud' | 'placeholder' }) {
+function AvatarSourceCue(props: {
+  compact: boolean;
+  source: 'custom' | 'irccloud' | 'placeholder';
+}) {
   if (props.source === 'placeholder') {
     return null;
   }
@@ -169,10 +197,13 @@ function AvatarSourceCue(props: { source: 'custom' | 'irccloud' | 'placeholder' 
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute right-2 top-2 z-10 flex size-6 items-center justify-center rounded-full border border-black/60 bg-sky-300 text-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.24)]"
+      className={cn(
+        'pointer-events-none absolute z-10 flex items-center justify-center rounded-full border border-black/60 bg-sky-300 text-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.24)]',
+        props.compact ? '-right-1 -top-1 size-4' : 'right-2 top-2 size-6',
+      )}
       title={title}
     >
-      <Icon className="size-3.5" />
+      <Icon className={props.compact ? 'size-2.5' : 'size-3.5'} />
     </span>
   );
 }

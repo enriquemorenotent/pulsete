@@ -8,6 +8,7 @@ type NotesEditorVariant = 'default' | 'compact';
 const autosaveDelayMs = 600;
 
 export function AutosaveNotesEditor(props: {
+  fill?: boolean;
   id: string;
   notes: string;
   onSave: (notes: string) => Promise<boolean>;
@@ -16,6 +17,7 @@ export function AutosaveNotesEditor(props: {
   variant?: NotesEditorVariant;
 }) {
   const savedNotes = props.notes;
+  const fill = props.fill ?? true;
   const variant = props.variant ?? 'default';
   const showHeader = variant === 'default';
   const [draftNotes, setDraftNotes] = useState(savedNotes);
@@ -81,10 +83,19 @@ export function AutosaveNotesEditor(props: {
   const showCompactStatus = !showHeader && statusText !== 'Saved';
 
   return (
-    <div className={cn('flex min-h-0 flex-1 flex-col', showHeader ? 'gap-2' : 'gap-0')}>
+    <div
+      className={cn(
+        'flex min-h-0 flex-col',
+        fill && 'flex-1',
+        showHeader ? 'gap-2.5' : 'gap-0',
+      )}
+    >
       {showHeader ? (
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor={props.id} className="text-muted-foreground/86">
+          <Label
+            htmlFor={props.id}
+            className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/74"
+          >
             Notes
           </Label>
           <AutosaveStatus state={autosaveState} statusText={statusText} />
@@ -94,7 +105,13 @@ export function AutosaveNotesEditor(props: {
           {statusText}
         </span>
       )}
-      <div className={cn('relative flex-1', showHeader ? 'min-h-40' : 'min-h-32')}>
+      <div
+        className={cn(
+          'relative',
+          fill ? 'flex-1' : 'h-[min(32dvh,18rem)]',
+          showHeader ? fill && 'min-h-40' : 'min-h-32',
+        )}
+      >
         <textarea
           id={props.id}
           aria-label={showHeader ? undefined : 'Notes'}
@@ -102,10 +119,10 @@ export function AutosaveNotesEditor(props: {
           onChange={(event) => setDraftNotes(event.target.value)}
           placeholder={props.placeholder}
           className={cn(
-            'h-full min-h-full w-full resize-none rounded-sm outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring/35',
+            'h-full min-h-full w-full resize-none outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring/35',
             showHeader
-              ? 'border border-white/[0.055] bg-white/[0.018] px-2.5 py-2 text-[13px] leading-5 text-foreground/84 placeholder:text-muted-foreground/54 hover:border-white/10 hover:bg-white/[0.026] focus-visible:border-ring/60 focus-visible:bg-white/[0.032]'
-              : 'border border-white/[0.04] bg-black/10 py-1.5 pl-2 pr-16 text-[12px] leading-5 text-foreground/78 placeholder:text-muted-foreground/50 hover:border-white/8 hover:bg-black/15 focus-visible:border-ring/50 focus-visible:bg-black/12',
+              ? 'rounded-lg border border-white/[0.07] bg-black/15 px-3 py-2.5 text-[13px] leading-5 text-foreground/84 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-muted-foreground/54 hover:border-white/12 hover:bg-black/20 focus-visible:border-ring/60 focus-visible:bg-black/20'
+              : 'rounded-sm border border-white/[0.04] bg-black/10 py-1.5 pl-2 pr-16 text-[12px] leading-5 text-foreground/78 placeholder:text-muted-foreground/50 hover:border-white/8 hover:bg-black/15 focus-visible:border-ring/50 focus-visible:bg-black/12',
           )}
         />
         {showCompactStatus ? (
