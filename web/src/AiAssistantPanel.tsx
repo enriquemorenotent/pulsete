@@ -18,7 +18,6 @@ import { AiAssistantChatView } from './AiAssistantChatView.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 import { AiAssistantConnectionPanel } from './AiAssistantConnectionPanel.js';
 import {
-  InspectorHeader,
   InspectorPanel,
   InspectorSection,
 } from './RightSidebarInspector.js';
@@ -83,18 +82,27 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   };
 
   const connected = status?.connected === true;
+  const hasThreadContent = hasAiAssistantThreadContent(thread);
   return (
-    <InspectorPanel>
-      <InspectorHeader
-        eyebrow="Private assistant"
-        title="Assistant"
-        subtitle={props.buffer ? props.buffer.target : undefined}
-        actions={(
+    <InspectorPanel className="gap-3 py-3.5">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.045] pb-3">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <h2 className="shrink-0 text-sm font-semibold tracking-tight text-foreground/92">
+            Assistant
+          </h2>
+          {props.buffer ? (
+            <p className="truncate font-mono text-[11px] text-muted-foreground/82">
+              {props.buffer.target}
+            </p>
+          ) : null}
+        </div>
+        {hasThreadContent ? (
           <Button
             type="button"
             size="sm"
-            variant="outline"
-            disabled={!bufferId || !hasAiAssistantThreadContent(thread)}
+            variant="ghost"
+            className="shrink-0 text-foreground/72 hover:text-foreground"
+            disabled={!bufferId}
             onClick={() => {
               if (bufferId) {
                 store.clearThread(bufferId);
@@ -104,8 +112,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             <MessageSquarePlus />
             New chat
           </Button>
-        )}
-      />
+        ) : null}
+      </header>
       <InspectorSection className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <AiAssistantConnectionPanel compact onStatusChange={setStatus} />
         {connected ? (

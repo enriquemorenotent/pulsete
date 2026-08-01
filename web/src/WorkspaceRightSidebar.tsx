@@ -150,12 +150,12 @@ function RightSidebarTabs(props: {
 }) {
   return (
     <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col">
-      <TabsList className="grid h-11 w-full shrink-0 grid-cols-2 rounded-none border-x-0 border-t-0 border-b border-white/[0.055] bg-transparent p-0">
+      <TabsList className="grid h-10 w-full shrink-0 grid-cols-2 rounded-none border-x-0 border-t-0 border-b border-white/[0.055] bg-transparent p-0">
         {props.tabs.map((tab) => (
           <TabsTrigger
             key={tab.value}
             value={tab.value}
-            className="h-full min-w-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-0 text-[12px] text-muted-foreground/72 data-[state=active]:border-primary/70 data-[state=active]:bg-white/[0.025] data-[state=active]:text-foreground/92"
+            className="relative h-full min-w-0 rounded-none border-0 bg-transparent px-4 py-0 text-[12px] text-muted-foreground/72 after:absolute after:bottom-0 after:left-1/2 after:h-px after:w-10 after:-translate-x-1/2 after:bg-transparent data-[state=active]:bg-white/[0.025] data-[state=active]:text-foreground/92 data-[state=active]:after:bg-primary/80"
           >
             {tab.label}
           </TabsTrigger>

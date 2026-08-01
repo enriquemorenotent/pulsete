@@ -66,6 +66,7 @@ test('channel sidebar exposes members and assistant tabs', () => {
   assert.match(markup, />Members</);
   assert.match(markup, />Assistant</);
   assert.match(markup, />New chat</);
+  assert.doesNotMatch(markup, /Private assistant/);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);
 });
 
@@ -95,7 +96,8 @@ test('private message sidebar exposes info and assistant tabs', () => {
 
   assert.match(markup, />Info</);
   assert.match(markup, />Assistant</);
-  assert.match(markup, />New chat</);
+  assert.doesNotMatch(markup, />New chat</);
+  assert.doesNotMatch(markup, /Private assistant/);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);
 });
 

@@ -64,15 +64,26 @@ type AiAssistantChatViewProps = {
 };
 
 export function AiAssistantChatView(props: AiAssistantChatViewProps) {
+  const empty = props.entries.length === 0 && !props.pending;
   return (
-    <>
-      <QuickActions pending={props.pending} onAsk={props.onAsk} />
-      <AiAssistantConversation
-        entries={props.entries}
-        pending={props.pending}
-        pendingLabel={props.pendingLabel}
-        onUseSuggestion={props.onUseSuggestion}
-      />
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {empty ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center py-6">
+          <div className="w-full max-w-sm space-y-3">
+            <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/76">
+              Start with a shortcut
+            </p>
+            <QuickActions pending={props.pending} onAsk={props.onAsk} />
+          </div>
+        </div>
+      ) : (
+        <AiAssistantConversation
+          entries={props.entries}
+          pending={props.pending}
+          pendingLabel={props.pendingLabel}
+          onUseSuggestion={props.onUseSuggestion}
+        />
+      )}
       {props.error ? (
         <p role="alert" className="rounded-sm border border-amber-300/18 bg-amber-300/8 px-2.5 py-2 text-[12px] text-amber-100">
           {props.error}
@@ -84,7 +95,7 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
         onChange={props.onChange}
         onSubmit={props.onSubmit}
       />
-    </>
+    </div>
   );
 }
 
@@ -93,7 +104,7 @@ function QuickActions(props: {
   onAsk: AssistantAskHandler;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-1.5">
       {quickActions.map((action) => {
         const Icon = action.icon;
         return (
@@ -101,7 +112,7 @@ function QuickActions(props: {
             key={action.label}
             variant="outline"
             size="sm"
-            className="h-auto min-h-9 justify-start whitespace-normal px-2.5 py-2 text-left leading-4"
+            className="h-8 justify-start px-2.5 text-left text-[12px]"
             disabled={props.pending}
             onClick={() => props.onAsk(
               action.mode,
@@ -126,8 +137,10 @@ function AssistantInput(props: {
   value: string;
 }) {
   return (
-    <div className="flex shrink-0 items-end gap-2">
+    <div className="relative shrink-0 rounded-md border border-white/[0.08] bg-white/[0.025] transition-colors focus-within:border-ring/60">
       <textarea
+        aria-label="Message assistant"
+        rows={2}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
         onKeyDown={(event) => {
@@ -139,10 +152,11 @@ function AssistantInput(props: {
         placeholder={props.disabled ? 'Assistant is working...' : 'Ask about this conversation...'}
         disabled={props.disabled}
         aria-busy={props.disabled}
-        className="min-h-16 flex-1 resize-none rounded-sm border border-white/[0.055] bg-white/[0.018] px-2.5 py-2 text-[13px] leading-5 text-foreground/84 outline-none placeholder:text-muted-foreground/54 focus-visible:border-ring/60 disabled:opacity-70"
+        className="min-h-14 w-full resize-none bg-transparent px-3 py-2.5 pr-11 text-[13px] leading-5 text-foreground/88 outline-none placeholder:text-muted-foreground/72 disabled:opacity-70"
       />
       <Button
         size="icon"
+        className="absolute bottom-2 right-2 size-7 rounded-md"
         aria-label={props.disabled ? 'Assistant working' : 'Ask assistant'}
         disabled={props.disabled || !props.value.trim()}
         onClick={props.onSubmit}
