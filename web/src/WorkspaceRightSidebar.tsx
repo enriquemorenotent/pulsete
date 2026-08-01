@@ -1,4 +1,12 @@
 import { memo, type ReactNode } from 'react';
+import {
+  Info,
+  PanelRightClose,
+  Sparkles,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { AiAssistantPanel } from './AiAssistantPanel.js';
 import { NicklistPanel } from './NicklistPanel.js';
@@ -13,6 +21,7 @@ import type { ServerSidebarAccordionState } from './server-sidebar-accordion-sta
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
   nicklist: DesktopShellNicklistModel;
+  onCollapse?: () => void;
   assistant?: {
     buffer: BufferState | null;
     onUseSuggestion: (value: string) => void;
@@ -51,6 +60,9 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         onSaveNotes={props.serverProfile?.onSaveNotes ?? (async () => null)}
         accordionState={props.serverProfile?.accordionState}
         onSetAccordionState={props.serverProfile?.onSetAccordionState}
+        collapseControl={(
+          <RightSidebarCollapseButton onCollapse={props.onCollapse ?? (() => undefined)} />
+        )}
       />
     );
   }
@@ -61,8 +73,10 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
       <RightSidebarTabs
         key={buffer?.id}
         defaultValue="info"
+        onCollapse={props.onCollapse ?? (() => undefined)}
         tabs={[
           {
+            icon: Info,
             label: 'Info',
             value: 'info',
             content: (
@@ -73,6 +87,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
             ),
           },
           {
+            icon: Sparkles,
             label: 'Assistant',
             value: 'assistant',
             content: (
@@ -96,8 +111,10 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     <RightSidebarTabs
       key={props.workspace.selectedChannel.id}
       defaultValue="members"
+      onCollapse={props.onCollapse ?? (() => undefined)}
       tabs={[
         {
+          icon: Users,
           label: 'Members',
           value: 'members',
           content: (
@@ -117,6 +134,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
           ),
         },
         {
+          icon: Sparkles,
           label: 'Assistant',
           value: 'assistant',
           content: (
@@ -134,21 +152,36 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
 
 function RightSidebarTabs(props: {
   defaultValue: string;
-  tabs: Array<{ content: ReactNode; label: string; value: string }>;
+  onCollapse: () => void;
+  tabs: Array<{ content: ReactNode; icon: LucideIcon; label: string; value: string }>;
 }) {
   return (
     <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col">
-      <TabsList className="grid h-10 w-full shrink-0 grid-cols-2 rounded-none border-x-0 border-t-0 border-b border-white/[0.055] bg-transparent p-0">
-        {props.tabs.map((tab) => (
-          <TabsTrigger
-            key={tab.value}
-            value={tab.value}
-            className="relative h-full min-w-0 rounded-none border-0 bg-transparent px-4 py-0 text-[12px] text-muted-foreground/72 after:absolute after:bottom-0 after:left-1/2 after:h-px after:w-10 after:-translate-x-1/2 after:bg-transparent data-[state=active]:bg-white/[0.025] data-[state=active]:text-foreground/92 data-[state=active]:after:bg-primary/80"
-          >
-            {tab.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      <div className="flex h-10 w-full shrink-0 items-center gap-2 border-b border-white/[0.055] px-2">
+        <TabsList
+          aria-label="Sidebar views"
+          className="flex h-auto gap-1 rounded-none border-0 bg-transparent p-0"
+        >
+          {props.tabs.map((tab) => {
+            const TabIcon = tab.icon;
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                aria-label={tab.label}
+                title={tab.label}
+                className="size-7 min-w-0 rounded-lg border border-transparent p-0 text-muted-foreground/72 hover:bg-white/[0.055] hover:text-foreground data-[state=active]:border-primary/25 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                <TabIcon aria-hidden className="size-4" />
+                <span className="sr-only">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+        <div className="ml-auto">
+          <RightSidebarCollapseButton onCollapse={props.onCollapse} />
+        </div>
+      </div>
       {props.tabs.map((tab) => (
         <TabsContent
           key={tab.value}
@@ -160,5 +193,21 @@ function RightSidebarTabs(props: {
         </TabsContent>
       ))}
     </Tabs>
+  );
+}
+
+function RightSidebarCollapseButton(props: { onCollapse: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="hidden size-7 text-muted-foreground/72 lg:inline-flex"
+      aria-label="Collapse right sidebar"
+      title="Collapse right sidebar"
+      onClick={props.onCollapse}
+    >
+      <PanelRightClose className="size-4" />
+    </Button>
   );
 }

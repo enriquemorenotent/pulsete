@@ -63,8 +63,12 @@ test('channel sidebar exposes members and assistant tabs', () => {
     />,
   );
 
-  assert.match(markup, />Members</);
-  assert.match(markup, />Assistant</);
+  assert.match(markup, /aria-label="Sidebar views"/);
+  assert.match(markup, /aria-label="Members"/);
+  assert.match(markup, /lucide-users/);
+  assert.match(markup, /aria-label="Assistant"/);
+  assert.match(markup, /lucide-sparkles/);
+  assert.match(markup, /aria-label="Collapse right sidebar"/);
   assert.match(markup, />New chat</);
   assert.doesNotMatch(markup, /Private assistant/);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);
@@ -92,8 +96,12 @@ test('private message sidebar exposes info and assistant tabs', () => {
     />,
   );
 
-  assert.match(markup, />Info</);
-  assert.match(markup, />Assistant</);
+  assert.match(markup, /aria-label="Sidebar views"/);
+  assert.match(markup, /aria-label="Info"/);
+  assert.match(markup, /lucide-info/);
+  assert.match(markup, /aria-label="Assistant"/);
+  assert.match(markup, /lucide-sparkles/);
+  assert.match(markup, /aria-label="Collapse right sidebar"/);
   assert.doesNotMatch(markup, />New chat</);
   assert.doesNotMatch(markup, /Private assistant/);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);

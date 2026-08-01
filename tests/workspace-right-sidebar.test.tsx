@@ -115,6 +115,7 @@ test('server profile sidebar renders the per-network notes editor', () => {
   );
 
   assert.match(markup, /RoleplayNet/);
+  assert.match(markup, /aria-label="Collapse right sidebar"/);
   assert.match(markup, /Connection/);
   assert.match(markup, /overflow-y-auto[\s\S]*data-server-sidebar-section="connection"[\s\S]*open=""/);
   assert.match(markup, /Status[\s\S]*Online/);
@@ -189,6 +190,9 @@ test('server profile sidebar hides empty capabilities', () => {
 test('query profile sidebar renders the per-DM notes editor', () => {
   const markup = renderQueryProfileSidebar();
 
+  assert.match(markup, /aria-label="Info"/);
+  assert.match(markup, /aria-label="Assistant"/);
+  assert.match(markup, /aria-label="Collapse right sidebar"/);
   assert.match(markup, /Notes/);
   assert.doesNotMatch(markup, /Private message/);
   assert.doesNotMatch(markup, /<h2[^>]*>Sofia<\/h2>/);

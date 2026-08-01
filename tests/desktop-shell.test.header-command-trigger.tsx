@@ -16,6 +16,7 @@ test('desktop shell keeps only the left resize handle when no right sidebar is a
 
   assert.match(markup, /aria-label="Resize left sidebar"/);
   assert.doesNotMatch(markup, /aria-label="Resize right sidebar"/);
+  assert.doesNotMatch(markup, /aria-label="Expand right sidebar"/);
 });
 
 test('desktop shell renders a visible command palette trigger in the header', () => {

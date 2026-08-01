@@ -26,6 +26,7 @@ type WorkspaceRightSidebarContainerProps = {
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
   mediaPolicy: MediaVisibilityPolicy;
+  onCollapse: () => void;
 };
 
 export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSidebarContainer({
@@ -36,6 +37,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   contactRuleHandlers,
   externalAvatarsEnabled,
   mediaPolicy,
+  onCollapse,
 }: WorkspaceRightSidebarContainerProps) {
   const dispatch = useAppDispatch();
   const friends = useAppSelector(selectFriends);
@@ -115,6 +117,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
       assistant={assistant}
       serverProfile={serverProfile}
       queryProfile={queryProfile}
+      onCollapse={onCollapse}
     />
   );
 });

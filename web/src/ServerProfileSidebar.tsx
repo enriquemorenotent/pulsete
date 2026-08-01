@@ -33,6 +33,7 @@ export function ServerProfileSidebar(props: {
   onSetAccordionState?: (
     state: import('./server-sidebar-accordion-state.js').ServerSidebarAccordionState,
   ) => void;
+  collapseControl?: ReactNode;
 }) {
   const network = props.network ?? props.fallbackNetwork;
   const accordion = useServerSidebarAccordionState(
@@ -49,7 +50,12 @@ export function ServerProfileSidebar(props: {
         eyebrow="Profile"
         title={network.name}
         subtitle={`${network.host}:${network.port}${network.tls ? ' - SSL/TLS' : ''}`}
-        actions={<EditProfileButton disabled={!props.network} onClick={props.onEdit} />}
+        actions={(
+          <div className="flex items-center gap-1">
+            <EditProfileButton disabled={!props.network} onClick={props.onEdit} />
+            {props.collapseControl}
+          </div>
+        )}
       />
       <ConnectionAccordion accordion={accordion} network={network} runtime={props.runtime} />
       <HistoryAccordion accordion={accordion} capabilities={props.runtime?.capabilities} />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { FolderSearch, Image as ImageIcon, ImageOff, Search } from 'lucide-react';
+import { FolderSearch, Image as ImageIcon, ImageOff, PanelRightOpen, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
@@ -33,12 +33,14 @@ export type DesktopShellLayoutProps = {
   preferencesDialog: ReactNode;
   rightSidebar: ReactNode;
   rightSidebarKind: 'profile' | 'users' | 'notes' | null;
+  rightSidebarCollapsed: boolean;
   selectedBufferId: string | null;
   sidebar: ReactNode;
   leftSidebarWidth: number;
   rightSidebarWidth: number;
   onSetLeftSidebarWidth: (width: number) => void;
   onSetRightSidebarWidth: (width: number) => void;
+  onExpandRightSidebar: () => void;
 };
 
 export function DesktopShellLayout(props: DesktopShellLayoutProps) {
@@ -199,17 +201,43 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             </div>
             {props.rightSidebarKind ? (
               <>
-                <SidebarResizeHandle
-                  sidebarWidth={rightSidebarResize.sidebarWidth}
-                  isResizing={rightSidebarResize.isResizing}
-                  edge="right"
-                  onPointerDown={rightSidebarResize.startDragging}
-                  onNudge={rightSidebarResize.nudgeWidth}
-                  onReset={rightSidebarResize.resetWidth}
-                />
-                <div className="min-h-0 bg-black/[0.08] backdrop-blur-xl lg:w-[var(--right-sidebar-width)] lg:shrink-0">
+                {!props.rightSidebarCollapsed ? (
+                  <SidebarResizeHandle
+                    key="right-sidebar-resize"
+                    sidebarWidth={rightSidebarResize.sidebarWidth}
+                    isResizing={rightSidebarResize.isResizing}
+                    edge="right"
+                    onPointerDown={rightSidebarResize.startDragging}
+                    onNudge={rightSidebarResize.nudgeWidth}
+                    onReset={rightSidebarResize.resetWidth}
+                  />
+                ) : null}
+                <div
+                  key="right-sidebar-panel"
+                  className={props.rightSidebarCollapsed
+                    ? 'hidden'
+                    : 'min-h-0 bg-black/[0.08] backdrop-blur-xl lg:w-[var(--right-sidebar-width)] lg:shrink-0'}
+                >
                   {props.rightSidebar}
                 </div>
+                {props.rightSidebarCollapsed ? (
+                  <div
+                    key="right-sidebar-rail"
+                    className="flex h-full w-10 shrink-0 items-start justify-center border-l border-white/[0.055] bg-black/[0.08] pt-1.5 backdrop-blur-xl"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground/72"
+                      aria-label="Expand right sidebar"
+                      title="Expand right sidebar"
+                      onClick={props.onExpandRightSidebar}
+                    >
+                      <PanelRightOpen className="size-4" />
+                    </Button>
+                  </div>
+                ) : null}
               </>
             ) : null}
           </div>

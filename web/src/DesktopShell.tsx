@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useReducer } from 'react';
+import { memo, useCallback, useMemo, useReducer, useState } from 'react';
 import { selectPreferences, selectRightSidebarKind, selectSelectedBufferId } from './app-selectors.js';
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
@@ -58,6 +58,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
   const preferences = useAppSelector(selectPreferences);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [jumpToLatestRequestId, requestJumpToLatest] = useReducer(
     (value: number) => value + 1,
     0,
@@ -98,6 +99,8 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   const setRightSidebarWidth = useCallback((width: number) => {
     void props.actions.updatePreferences({ rightSidebarWidth: width });
   }, [props.actions]);
+  const collapseRightSidebar = useCallback(() => setRightSidebarCollapsed(true), []);
+  const expandRightSidebar = useCallback(() => setRightSidebarCollapsed(false), []);
 
   return (
     <DesktopShellLayout
@@ -106,10 +109,12 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
       onJumpChatToLatest={requestJumpToLatest}
       selectedBufferId={selectedBufferId}
       rightSidebarKind={rightSidebarKind}
+      rightSidebarCollapsed={rightSidebarCollapsed}
       leftSidebarWidth={preferences.leftSidebarWidth}
       rightSidebarWidth={preferences.rightSidebarWidth}
       onSetLeftSidebarWidth={setLeftSidebarWidth}
       onSetRightSidebarWidth={setRightSidebarWidth}
+      onExpandRightSidebar={expandRightSidebar}
       sidebar={
         <ConnectionSidebarContainer
           actions={props.actions}
@@ -140,6 +145,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
             contactRuleHandlers={contactRuleHandlers}
             externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
             mediaPolicy={mediaPolicy}
+            onCollapse={collapseRightSidebar}
           />
         ) : null
       }

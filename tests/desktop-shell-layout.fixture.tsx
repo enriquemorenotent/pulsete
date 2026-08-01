@@ -17,6 +17,7 @@ export const createDesktopShellLayoutProps = (
   },
   selectedBufferId: 'buffer-1',
   rightSidebarKind: null,
+  rightSidebarCollapsed: false,
   sidebar: <div>Sidebar</div>,
   chat: <div>Chat</div>,
   rightSidebar: <div>Details</div>,
@@ -30,5 +31,6 @@ export const createDesktopShellLayoutProps = (
   rightSidebarWidth: 256,
   onSetLeftSidebarWidth: () => undefined,
   onSetRightSidebarWidth: () => undefined,
+  onExpandRightSidebar: () => undefined,
   ...overrides,
 });
