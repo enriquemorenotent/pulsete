@@ -1,53 +1,64 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { BufferState } from '../shared/protocol-chat.js';
-import { QueryProfileSidebar } from '../web/src/QueryProfileSidebar.js';
+import { QueryProfileAvatarBanner } from '../web/src/QueryProfileAvatarBanner.js';
 
-const queryBuffer: BufferState = {
-  id: 'query-buffer-1',
-  networkId: 'network-1',
-  kind: 'query',
-  target: 'Sofia',
-  notes: '',
-  unread: 0,
-  priorityUnread: 0,
-  lastReadTs: null,
-  lastReadMessageId: null,
-};
-
-test('query avatar banner marks IRCCloud avatars with a source cue', () => {
+test('query avatar banner renders IRCCloud avatars as a clean preview target', () => {
   const markup = renderToStaticMarkup(
-    <QueryProfileSidebar
-      avatarUser={{ nick: 'Sofia', username: 'uid7', host: null }}
-      buffer={queryBuffer}
-      externalAvatarsEnabled
-      onSaveNotes={async () => queryBuffer}
+    <QueryProfileAvatarBanner
+      enabled
+      networkId="network-1"
+      user={{ nick: 'Sofia', username: 'uid7', host: null }}
+      variant="compact"
     />,
   );
 
   assert.match(markup, /aria-label="Avatar for Sofia"/);
   assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
-  assert.match(markup, /title="IRCCloud avatar"/);
-  assert.match(markup, /title="Choose custom avatar"/);
+  assert.match(markup, /aria-label="Avatar for Sofia"/);
+  assert.doesNotMatch(markup, /title="IRCCloud avatar"/);
+  assert.doesNotMatch(markup, /title="Choose custom avatar"/);
 });
 
-test('query avatar banner prefers custom overrides with a source cue', () => {
+test('query avatar banner prefers custom overrides without edit controls', () => {
   const markup = renderToStaticMarkup(
-    <QueryProfileSidebar
-      avatarUser={{ nick: 'Sofia', username: 'uid7', host: null }}
-      buffer={queryBuffer}
+    <QueryProfileAvatarBanner
       customAvatarUrl="data:image/png;base64,custom"
-      externalAvatarsEnabled
-      onSetCustomAvatarUrl={() => undefined}
-      onSaveNotes={async () => queryBuffer}
+      enabled
+      networkId="network-1"
+      user={{ nick: 'Sofia', username: 'uid7', host: null }}
+      variant="compact"
     />,
   );
 
   assert.match(markup, /aria-label="Custom avatar for Sofia"/);
   assert.match(markup, /src="data:image\/png;base64,custom"/);
-  assert.match(markup, /title="Custom avatar"/);
-  assert.match(markup, /title="Choose custom avatar"/);
-  assert.match(markup, /title="Use original avatar"/);
+  assert.doesNotMatch(markup, /title="Custom avatar"/);
+  assert.doesNotMatch(markup, /title="Choose custom avatar"/);
+  assert.doesNotMatch(markup, /title="Use original avatar"/);
   assert.doesNotMatch(markup, /avatar-redirect\/7/);
+});
+
+test('topbar avatars do not draw a divider beside the name', () => {
+  const imageMarkup = renderToStaticMarkup(
+    <QueryProfileAvatarBanner
+      enabled
+      networkId="network-1"
+      user={{ nick: 'Sofia', username: 'uid7', host: null }}
+      variant="topbar"
+    />,
+  );
+  const initialMarkup = renderToStaticMarkup(
+    <QueryProfileAvatarBanner
+      enabled={false}
+      networkId="network-1"
+      user={{ nick: 'Sofia', username: null, host: null }}
+      variant="topbar"
+    />,
+  );
+
+  assert.doesNotMatch(imageMarkup, /\bborder-r\b/);
+  assert.doesNotMatch(initialMarkup, /\bborder-r\b/);
+  assert.match(imageMarkup, /\bsize-15\b/);
+  assert.match(initialMarkup, /\bsize-15\b/);
 });

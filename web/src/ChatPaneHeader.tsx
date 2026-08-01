@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import type { BufferState, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { ChannelAutoJoinButton } from './ChannelAutoJoinButton.js';
 import { ChannelNotificationButton } from './ChannelNotificationButton.js';
 import { ChatPaneTopicBar } from './ChatPaneTopicBar.js';
 import { resolveChatPaneHeaderActions } from './chat-pane-header-actions.js';
+import { QueryAvatarOptionsMenu } from './QueryAvatarOptionsMenu.js';
+import { QueryProfileAvatarBanner, type QueryProfileAvatarUser } from './QueryProfileAvatarBanner.js';
 import {
   PaneHeader,
   PaneHeaderActions,
@@ -13,7 +16,6 @@ import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import { ContactRuleControls } from './contact-notifications/ContactRuleControls.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
-import { UserAvatar } from './user-avatars/UserAvatar.js';
 import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -21,11 +23,13 @@ type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
   nickEmojis: NickEmojiState[];
   selectedQueryIdentity?: NetworkUserIdentity | null;
+  selectedQueryUser?: QueryProfileAvatarUser | null;
   contactRuleHandlers: ContactRuleHandlers;
   selectedQueryContactRule?: ContactRuleState | null;
   selectedChannelNotificationsEnabled?: boolean;
   inlineImageRendering: InlineImageRenderingMode;
-  userAvatarsVisible: boolean;
+  externalAvatarsEnabled?: boolean;
+  profileImagesVisible?: boolean;
   onToggleSelectedChannelNotifications?: () => void;
   onOpenMentionedChannel: (channel: string) => void;
   onWhoisSelectedQuery?: () => void;
@@ -44,6 +48,7 @@ type ChatPaneHeaderProps = {
 };
 
 export function ChatPaneHeader(props: ChatPaneHeaderProps) {
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const { selectedBuffer } = props.workspace;
   const selectedNickEmoji =
     selectedBuffer?.kind === 'query'
@@ -54,13 +59,16 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           props.selectedQueryIdentity,
         )
       : null;
-  const selectedQueryAvatarTarget = selectedBuffer?.kind === 'query'
+  const selectedQueryAvatarUser = props.selectedQueryUser ?? (selectedBuffer?.kind === 'query'
     ? {
+        account: null,
+        host: null,
         identity: props.selectedQueryIdentity ?? selectedBuffer.peerIdentity,
-        networkId: selectedBuffer.networkId,
         nick: selectedBuffer.target,
+        username: null,
+        ircCloudAvatarId: selectedBuffer.ircCloudAvatarId,
       }
-    : null;
+    : null);
   const topic = props.workspace.selectedChannel?.topic.trim() ?? '';
   const subtitle = shouldShowChatPaneHeaderSubtitle(props.workspace, props.workspace.headerSubtitle)
     && !resolveChatPaneStatusBanner(props.workspace)
@@ -119,20 +127,13 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
   }
   return (
     <PaneHeader
-      avatar={props.userAvatarsVisible && selectedQueryAvatarTarget ? (
-        <UserAvatar
-          customAvatarAllowNickFallback
-          customAvatarTarget={selectedQueryAvatarTarget}
-          enabled={false}
-          placeholder="none"
-          size="md"
-          user={{
-            account: null,
-            host: null,
-            identity: selectedQueryAvatarTarget.identity,
-            nick: selectedQueryAvatarTarget.nick,
-            username: null,
-          }}
+      avatar={props.profileImagesVisible !== false && selectedQueryAvatarUser ? (
+        <QueryProfileAvatarBanner
+          enabled={props.externalAvatarsEnabled === true}
+          networkId={selectedBuffer?.networkId ?? ''}
+          onSourceError={setFailedAvatarUrl}
+          user={selectedQueryAvatarUser}
+          variant="topbar"
         />
       ) : null}
       title={props.workspace.headerTitle}
@@ -150,11 +151,22 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           title={props.workspace.headerTitle}
           primary={actions.primary}
           contactControls={
-            props.selectedQueryContactRule ? (
-              <ContactRuleControls
-                state={props.selectedQueryContactRule}
-                handlers={props.contactRuleHandlers}
-              />
+            selectedBuffer?.kind === 'query' && selectedQueryAvatarUser ? (
+              <>
+                {props.selectedQueryContactRule ? (
+                  <ContactRuleControls
+                    className="flex shrink-0 items-center gap-1 sm:gap-1.5"
+                    state={props.selectedQueryContactRule}
+                    handlers={props.contactRuleHandlers}
+                  />
+                ) : null}
+                <QueryAvatarOptionsMenu
+                  externalAvatarsEnabled={props.externalAvatarsEnabled === true}
+                  failedAvatarUrl={failedAvatarUrl}
+                  networkId={selectedBuffer.networkId}
+                  user={selectedQueryAvatarUser}
+                />
+              </>
             ) : selectedChannelName || selectedAutoJoinChannelName ? (
               <>
                 {selectedChannelName && props.onToggleSelectedChannelNotifications ? (

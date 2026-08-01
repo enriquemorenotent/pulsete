@@ -10,6 +10,7 @@ import { ChatPaneStatusBanner } from './ChatPaneStatusBanner.js';
 import { DeleteHistoryDialog } from './DeleteHistoryDialog.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
 import { HistorySearchDialog } from './HistorySearchDialog.js';
+import type { QueryProfileAvatarUser } from './QueryProfileAvatarBanner.js';
 import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 import {
   defaultMediaVisibilityPolicy,
@@ -26,6 +27,7 @@ export type ChatPaneProps = {
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
   selectedQueryIdentity?: NetworkUserIdentity | null;
+  selectedQueryUser?: QueryProfileAvatarUser | null;
   selectedMessages: ChatMessage[];
   draft: string;
   focusContextKey?: string | null;
@@ -40,6 +42,7 @@ export type ChatPaneProps = {
   onSend: () => Promise<boolean>;
   contactRuleHandlers: ContactRuleHandlers;
   mediaPolicy?: MediaVisibilityPolicy;
+  externalAvatarsEnabled?: boolean;
   selectedQueryContactRule?: ContactRuleState | null;
   selectedChannelNotificationsEnabled?: boolean;
   onToggleSelectedChannelNotifications?: () => void;
@@ -102,6 +105,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         workspace={props.workspace}
         nickEmojis={props.nickEmojis}
         selectedQueryIdentity={props.selectedQueryIdentity}
+        selectedQueryUser={props.selectedQueryUser}
         contactRuleHandlers={props.contactRuleHandlers}
         selectedQueryContactRule={props.selectedQueryContactRule}
         selectedChannelNotificationsEnabled={props.selectedChannelNotificationsEnabled}
@@ -121,7 +125,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onCloseBuffer={props.onCloseBuffer}
         onOpenChannelList={props.onOpenChannelList}
         inlineImageRendering={inlineImageRendering}
-        userAvatarsVisible={mediaPolicy.showUserAvatars}
+        externalAvatarsEnabled={props.externalAvatarsEnabled}
+        profileImagesVisible={mediaPolicy.showProfileImages}
       />
       <ChatPaneStatusBanner
         workspace={props.workspace}

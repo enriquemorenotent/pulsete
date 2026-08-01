@@ -21,19 +21,29 @@ export function PaneHeaderActions(props: {
     (action) => action.icon && !isCloseAction(action),
   );
   const regularActions = props.primary.filter((action) => !action.icon);
+  const compactMenuActions = [...iconActions, ...props.overflow];
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-1.5">
       {regularActions.map((action) => (
         <Button key={action.id} variant="outline" size="sm" onClick={action.onSelect}>
           {action.label}
         </Button>
       ))}
       {props.contactControls}
-      {iconActions.map((action) => (
-        <PaneHeaderIconAction key={action.id} action={action} title={props.title} />
-      ))}
-      <ChatPaneHeaderActionMenu actions={props.overflow} />
+      {iconActions.length > 0 || props.overflow.length > 0 ? (
+        <>
+          <div className="hidden items-center gap-1.5 sm:flex">
+            {iconActions.map((action) => (
+              <PaneHeaderIconAction key={action.id} action={action} title={props.title} />
+            ))}
+            <ChatPaneHeaderActionMenu actions={props.overflow} />
+          </div>
+          <div className="sm:hidden">
+            <ChatPaneHeaderActionMenu actions={compactMenuActions} />
+          </div>
+        </>
+      ) : null}
       {closeActions.map((action) => (
         <PaneHeaderIconAction key={action.id} action={action} title={props.title} />
       ))}
@@ -116,37 +126,50 @@ export function PaneHeader(props: {
   title: string;
   topicBar?: ReactNode;
 }) {
+  const identity = (
+    <div className="min-w-0">
+      {props.title ? (
+        <h2
+          className={cn(
+            'flex min-w-0 items-center truncate text-lg font-semibold tracking-tight text-foreground',
+            'gap-2',
+            props.subtitle && 'mb-1',
+          )}
+        >
+          <span className="truncate">{props.title}</span>
+          {props.emoji ? (
+            <span aria-hidden className="shrink-0 leading-none">
+              {props.emoji}
+            </span>
+          ) : null}
+        </h2>
+      ) : null}
+      {props.subtitle ? (
+        <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">
+          {props.subtitle}
+        </p>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="relative z-20 shrink-0 border-b border-white/6 bg-background/90 backdrop-blur-sm">
-      <div className="flex items-start justify-between gap-4 px-4 py-4">
-        <div className="flex min-w-0 items-start gap-3">
-          {props.avatar}
+      {props.avatar ? (
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 px-4 py-4">
+          <div className="-my-4 -ml-4 shrink-0">
+            {props.avatar}
+          </div>
+          {identity}
           <div className="min-w-0">
-            {props.title ? (
-              <h2
-                className={cn(
-                  'flex min-w-0 items-center truncate text-lg font-semibold tracking-tight text-foreground',
-                  'gap-2',
-                  props.subtitle && 'mb-1',
-                )}
-              >
-                <span className="truncate">{props.title}</span>
-                {props.emoji ? (
-                  <span aria-hidden className="shrink-0 leading-none">
-                    {props.emoji}
-                  </span>
-                ) : null}
-              </h2>
-            ) : null}
-            {props.subtitle ? (
-              <p className="max-w-xl truncate text-[12px] uppercase tracking-[0.12em] text-muted-foreground">
-                {props.subtitle}
-              </p>
-            ) : null}
+            {props.actions}
           </div>
         </div>
-        {props.actions}
-      </div>
+      ) : (
+        <div className="flex items-start justify-between gap-4 px-4 py-4">
+          {identity}
+          {props.actions}
+        </div>
+      )}
       {props.topicBar ? props.topicBar : null}
     </div>
   );

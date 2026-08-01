@@ -49,6 +49,7 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
+  externalAvatarsEnabled: boolean;
   mediaPolicy: MediaVisibilityPolicy;
   jumpToLatestRequestId: number;
 };
@@ -89,6 +90,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   composer,
   contactNotifications,
   contactRuleHandlers,
+  externalAvatarsEnabled,
   mediaPolicy,
   jumpToLatestRequestId,
 }: ChatContainerProps) {
@@ -128,6 +130,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     contactRuleHandlers,
     channels,
     friends,
+    externalAvatarsEnabled,
     mediaPolicy,
     mutedNicks,
     nickEmojis,

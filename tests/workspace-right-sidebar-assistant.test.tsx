@@ -82,8 +82,6 @@ test('private message sidebar exposes info and assistant tabs', () => {
       nicklist={nicklist}
       queryProfile={{
         buffer: queryBuffer,
-        externalAvatarsEnabled: false,
-        profileImagesVisible: false,
         onSaveNotes: async () => queryBuffer,
       }}
       assistant={{

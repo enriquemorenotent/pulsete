@@ -33,6 +33,7 @@ export type DesktopChatModelParams = {
   contactRuleHandlers: ContactRuleHandlers;
   channels: State['domain']['channels'];
   friends: State['domain']['friends'];
+  externalAvatarsEnabled?: boolean;
   mediaPolicy: MediaVisibilityPolicy;
   mutedNicks: State['domain']['mutedNicks'];
   nickEmojis: State['domain']['nickEmojis'];
@@ -51,6 +52,7 @@ export function useDesktopChatModel({
   contactRuleHandlers,
   channels,
   friends,
+  externalAvatarsEnabled,
   mediaPolicy,
   mutedNicks,
   nickEmojis,
@@ -119,6 +121,8 @@ export function useDesktopChatModel({
       workspace,
       nickEmojis,
       selectedQueryIdentity,
+      selectedQueryUser,
+      externalAvatarsEnabled,
       selectedMessages,
       mutedNicks,
       contactRuleHandlers,
@@ -199,6 +203,7 @@ export function useDesktopChatModel({
       contactNotifications.settings,
       draft,
       friends,
+      externalAvatarsEnabled,
       mediaPolicy,
       mutedNicks,
       nickEmojis,
@@ -212,6 +217,7 @@ export function useDesktopChatModel({
       selectedBufferId,
       selectedMessages,
       selectedNetwork,
+      selectedQueryUser,
       workspace,
     ],
   );

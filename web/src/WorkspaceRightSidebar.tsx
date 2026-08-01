@@ -6,13 +6,9 @@ import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import { ServerProfileSidebar } from './ServerProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import type { WorkspaceView } from './workspace-types.js';
-import type { BufferState, ChannelUserState, NetworkProfile } from '../../shared/protocol-chat.js';
+import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import type { ServerSidebarAccordionState } from './server-sidebar-accordion-state.js';
-
-type QueryProfileAvatarUser = Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
-  ircCloudAvatarId?: string | null;
-};
 
 type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
@@ -33,10 +29,7 @@ type WorkspaceRightSidebarProps = {
     onSetAccordionState?: (state: ServerSidebarAccordionState) => void;
   };
   queryProfile?: {
-    avatarUser?: QueryProfileAvatarUser | null;
     buffer: BufferState | null;
-    externalAvatarsEnabled?: boolean;
-    profileImagesVisible?: boolean;
     onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
   };
 };
@@ -74,12 +67,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
             value: 'info',
             content: (
               <QueryProfileSidebar
-                avatarUser={props.queryProfile?.avatarUser ?? null}
                 buffer={buffer}
-                externalAvatarsEnabled={
-                  props.queryProfile?.externalAvatarsEnabled ?? props.nicklist.externalAvatarsEnabled
-                }
-                profileImagesVisible={props.queryProfile?.profileImagesVisible}
                 onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
               />
             ),

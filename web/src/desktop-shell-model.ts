@@ -2,7 +2,6 @@ import type { CommandPaletteEntry } from './command-palette.js';
 import type { PreferencesDialogProps } from './PreferencesDialog.js';
 import type {
   BufferState,
-  ChannelUserState,
   FriendState,
   MutedNickState,
   NetworkProfile,
@@ -94,12 +93,7 @@ export type DesktopShellServerProfileModel = {
 };
 
 export type DesktopShellQueryProfileModel = {
-  avatarUser?: (Pick<ChannelUserState, 'host' | 'nick' | 'username'> & {
-    ircCloudAvatarId?: string | null;
-  }) | null;
   buffer: BufferState | null;
-  externalAvatarsEnabled: boolean;
-  profileImagesVisible: boolean;
   onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
 };
 
