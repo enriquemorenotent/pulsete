@@ -45,15 +45,16 @@ export class RuntimeAiAssistantService {
       mode: request.mode,
       prompt,
     });
-    const answer = await this.provider.request({
+    const result = await this.provider.request({
       instructions: buildInstructions(request.mode),
       prompt: buildPrompt({ assistantTurns: request.assistantTurns, context, prompt }),
+      selection: request.selection,
     });
     return {
-      answer,
+      answer: result.answer,
       context: toPublicAiAssistantContext(context),
       mode: request.mode,
-      status: await this.status(),
+      status: result.status,
     };
   }
 }

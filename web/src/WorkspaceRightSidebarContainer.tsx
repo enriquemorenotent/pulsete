@@ -106,10 +106,19 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
       : null;
     return {
       buffer,
+      onSelectionChange: (selection: typeof preferences.aiAssistant) =>
+        actions.updatePreferences({ aiAssistant: selection }),
       onUseSuggestion: (value: string) => composer.setDraft(buffer?.id ?? null, value),
+      selection: preferences.aiAssistant,
       store: assistantStore,
     };
-  }, [assistantStore, composer, workspace.selectedBuffer]);
+  }, [
+    actions.updatePreferences,
+    assistantStore,
+    composer,
+    preferences.aiAssistant,
+    workspace.selectedBuffer,
+  ]);
   return (
     <WorkspaceRightSidebar
       workspace={workspace}

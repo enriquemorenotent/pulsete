@@ -1,17 +1,38 @@
-import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { serviceUnavailable } from './app-error.js';
-import { readFailure, runCommand, stripAnsi } from './codex-command-runner.js';
+import { readFailure, runCommand } from './codex-command-runner.js';
 import type {
   AiAssistantLoginResponse,
   AiAssistantProviderStatus,
+  AiAssistantSelection,
 } from '../shared/protocol-ai.js';
+import {
+  readCodexAssistantModelCatalog,
+  resolveCodexAssistantSelection,
+  type CodexAssistantModelCatalog,
+  type ResolvedCodexAssistantSelection,
+} from './codex-assistant-models.js';
+import {
+  readCodexConnectionStatus,
+  startCodexLogin,
+  type CodexConnectionStatus,
+  type CodexLoginProcess,
+} from './codex-assistant-auth.js';
+
+type CodexAssistantProviderResponse = {
+  answer: string;
+  status: AiAssistantProviderStatus;
+};
 
 export type CodexAssistantProvider = {
   model: string | null;
-  request(input: { instructions: string; prompt: string }): Promise<string>;
+  request(input: {
+    instructions: string;
+    prompt: string;
+    selection?: AiAssistantSelection;
+  }): Promise<CodexAssistantProviderResponse>;
   startLogin(): Promise<AiAssistantLoginResponse>;
   status(): Promise<AiAssistantProviderStatus>;
 };
@@ -21,7 +42,7 @@ type CodexProviderOptions = {
   env?: NodeJS.ProcessEnv;
 };
 
-const codexProviderName = 'codex-openai-login' as const;
+const modelCatalogCacheMs = 30_000;
 
 export const createCodexAssistantProvider = (
   options: CodexProviderOptions = {},
@@ -29,10 +50,11 @@ export const createCodexAssistantProvider = (
   const command = options.command ?? 'codex';
   const env = options.env ?? process.env;
   const model = env.PULSETE_CODEX_MODEL?.trim() || null;
+  const readModelCatalog = createModelCatalogReader(command);
   let activeLoginInstructions: string | null = null;
-  let loginProcess: ReturnType<typeof spawn> | null = null;
+  let loginProcess: CodexLoginProcess | null = null;
 
-  const status = () => readCodexLoginStatus(command, model);
+  const status = () => readCodexProviderStatus(command, model, readModelCatalog);
 
   return {
     model,
@@ -46,7 +68,7 @@ export const createCodexAssistantProvider = (
       if (loginProcess && !loginProcess.killed) {
         return { instructions: activeLoginInstructions, status: current };
       }
-      const response = await startCodexLogin(command, model, (process) => {
+      const response = await startCodexLogin(command, current, status, (process) => {
         loginProcess = process;
         process.once('exit', () => {
           if (loginProcess === process) {
@@ -58,94 +80,58 @@ export const createCodexAssistantProvider = (
       activeLoginInstructions = response.instructions;
       return response;
     },
-    request: async (input) => requestCodexAnswer(command, model, input),
-  };
-};
-
-const readCodexLoginStatus = async (
-  command: string,
-  model: string | null,
-): Promise<AiAssistantProviderStatus> => {
-  const result = await runCommand(command, ['login', 'status'], { timeoutMs: 10_000 });
-  if (result.error?.code === 'ENOENT') {
-    return unavailableStatus('Install Codex CLI and sign in with OpenAI to enable assistant requests.', model);
-  }
-  const output = `${result.stdout}\n${result.stderr}`;
-  if (result.code === 0 && /logged in/i.test(output)) {
-    return {
-      connected: true,
-      detail: 'Codex OpenAI login connected',
+    request: async (input) => requestCodexAnswer(
+      command,
       model,
-      provider: codexProviderName,
-    };
-  }
-  return {
-    connected: false,
-    detail: 'Sign in with OpenAI through Codex to use the assistant.',
-    model,
-    provider: codexProviderName,
+      readModelCatalog,
+      input,
+    ),
   };
 };
 
-const startCodexLogin = (
+const readCodexProviderStatus = async (
   command: string,
-  model: string | null,
-  onProcess: (process: ReturnType<typeof spawn>) => void,
-) => new Promise<AiAssistantLoginResponse>((resolve, reject) => {
-  const child = spawn(command, ['login', '--device-auth'], { stdio: ['ignore', 'pipe', 'pipe'] });
-  let settled = false;
-  let output = '';
-  onProcess(child);
-  const settle = (instructions: string | null, status: AiAssistantProviderStatus) => {
-    if (!settled) {
-      settled = true;
-      resolve({ instructions, status });
-    }
-  };
-  const collect = (chunk: Buffer) => {
-    output += stripAnsi(chunk.toString('utf8'));
-    if (output.includes('https://auth.openai.com/codex/device')) {
-      settle(output.trim(), {
-        connected: false,
-        detail: 'Complete the Codex OpenAI login in your browser.',
-        model,
-        provider: codexProviderName,
-      });
-    }
-  };
-  child.stdout.on('data', collect);
-  child.stderr.on('data', collect);
-  child.once('error', (error: NodeJS.ErrnoException) => {
-    reject(serviceUnavailable(error.code === 'ENOENT' ? 'Codex CLI is not installed' : error.message));
-  });
-  child.once('exit', (code) => {
-    if (settled) {
-      return;
-    }
-    if (code !== 0) {
-      reject(serviceUnavailable('Codex OpenAI login could not be started'));
-      return;
-    }
-    void readCodexLoginStatus(command, model).then(
-      (status) => settle(null, status),
-      () => reject(serviceUnavailable('Codex OpenAI login status could not be checked')),
-    );
-  });
-});
+  configuredModel: string | null,
+  readModelCatalog: () => Promise<CodexAssistantModelCatalog>,
+) => {
+  const [connection, catalog] = await Promise.all([
+    readCodexConnectionStatus(command),
+    readModelCatalog(),
+  ]);
+  return buildProviderStatus(
+    connection,
+    catalog,
+    resolveCodexAssistantSelection(catalog.models, configuredModel),
+  );
+};
 
 const requestCodexAnswer = async (
   command: string,
-  model: string | null,
-  input: { instructions: string; prompt: string },
-) => {
-  const status = await readCodexLoginStatus(command, model);
-  if (!status.connected) {
-    throw serviceUnavailable(status.detail);
+  configuredModel: string | null,
+  readModelCatalog: () => Promise<CodexAssistantModelCatalog>,
+  input: {
+    instructions: string;
+    prompt: string;
+    selection?: AiAssistantSelection;
+  },
+): Promise<CodexAssistantProviderResponse> => {
+  const [connection, catalog] = await Promise.all([
+    readCodexConnectionStatus(command),
+    readModelCatalog(),
+  ]);
+  const selection = resolveCodexAssistantSelection(
+    catalog.models,
+    configuredModel,
+    input.selection,
+  );
+  const providerStatus = buildProviderStatus(connection, catalog, selection);
+  if (!providerStatus.connected) {
+    throw serviceUnavailable(providerStatus.detail);
   }
   const dir = await mkdtemp(join(tmpdir(), 'pulsete-codex-assistant-'));
   const outputPath = join(dir, 'answer.txt');
   try {
-    const args = buildCodexExecArgs(dir, outputPath, model);
+    const args = buildCodexExecArgs(dir, outputPath, selection);
     const result = await runCommand(command, args, {
       input: buildCodexPrompt(input),
       timeoutMs: 120_000,
@@ -153,13 +139,20 @@ const requestCodexAnswer = async (
     if (result.code !== 0) {
       throw serviceUnavailable(readFailure(result) ?? 'Codex assistant request failed');
     }
-    return (await readFile(outputPath, 'utf8')).trim();
+    return {
+      answer: (await readFile(outputPath, 'utf8')).trim(),
+      status: providerStatus,
+    };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 };
 
-const buildCodexExecArgs = (dir: string, outputPath: string, model: string | null) => [
+const buildCodexExecArgs = (
+  dir: string,
+  outputPath: string,
+  selection: ResolvedCodexAssistantSelection,
+) => [
   'exec',
   '--ephemeral',
   '--ignore-rules',
@@ -171,7 +164,11 @@ const buildCodexExecArgs = (dir: string, outputPath: string, model: string | nul
   dir,
   '--output-last-message',
   outputPath,
-  ...(model ? ['--model', model] : []),
+  ...(selection.model ? ['--model', selection.model] : []),
+  ...(selection.reasoningEffort ? [
+    '--config',
+    `model_reasoning_effort=${JSON.stringify(selection.reasoningEffort)}`,
+  ] : []),
   '-',
 ];
 
@@ -183,12 +180,33 @@ const buildCodexPrompt = (input: { instructions: string; prompt: string }) => [
   input.prompt,
 ].join('\n\n');
 
-const unavailableStatus = (
-  detail: string,
-  model: string | null,
+const createModelCatalogReader = (command: string) => {
+  let cached: {
+    expiresAt: number;
+    value: CodexAssistantModelCatalog;
+  } | null = null;
+  return async () => {
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.value;
+    }
+    const value = await readCodexAssistantModelCatalog(command);
+    cached = {
+      expiresAt: Date.now() + modelCatalogCacheMs,
+      value,
+    };
+    return value;
+  };
+};
+
+const buildProviderStatus = (
+  connection: CodexConnectionStatus,
+  catalog: CodexAssistantModelCatalog,
+  selection: ResolvedCodexAssistantSelection,
 ): AiAssistantProviderStatus => ({
-  connected: false,
-  detail,
-  model,
-  provider: 'unavailable',
+  ...connection,
+  availableModels: catalog.models,
+  model: selection.model,
+  modelsError: catalog.error,
+  reasoningEffort: selection.reasoningEffort,
+  selectionNotice: selection.notice,
 });

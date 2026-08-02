@@ -15,6 +15,7 @@ import { ServerProfileSidebar } from './ServerProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
+import type { AiAssistantSelection } from '../../shared/protocol-ai.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import type { ServerSidebarAccordionState } from './server-sidebar-accordion-state.js';
 
@@ -24,7 +25,9 @@ type WorkspaceRightSidebarProps = {
   onCollapse?: () => void;
   assistant?: {
     buffer: BufferState | null;
+    onSelectionChange?: (selection: AiAssistantSelection) => boolean | Promise<boolean>;
     onUseSuggestion: (value: string) => void;
+    selection?: AiAssistantSelection;
     store?: AiAssistantStoreApi;
   };
   serverProfile?: {
@@ -93,7 +96,9 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
             content: (
               <AiAssistantPanel
                 buffer={props.assistant?.buffer ?? buffer}
+                onSelectionChange={props.assistant?.onSelectionChange}
                 onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
+                selection={props.assistant?.selection}
                 store={props.assistant?.store}
               />
             ),
@@ -140,7 +145,9 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
           content: (
             <AiAssistantPanel
               buffer={props.assistant?.buffer ?? props.workspace.selectedBuffer}
+              onSelectionChange={props.assistant?.onSelectionChange}
               onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
+              selection={props.assistant?.selection}
               store={props.assistant?.store}
             />
           ),
