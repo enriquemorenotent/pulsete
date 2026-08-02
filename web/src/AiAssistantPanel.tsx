@@ -5,6 +5,7 @@ import {
   aiAssistantThreadMaxTurns,
   type AiAssistantMode,
   type AiAssistantProviderStatus,
+  type AiAssistantSelection,
 } from '../../shared/protocol-ai.js';
 import { Button } from '@/components/ui/button.js';
 import { aiAssistantApi } from './ai-assistant-client.js';
@@ -17,6 +18,8 @@ import {
 import { AiAssistantChatView } from './AiAssistantChatView.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 import { AiAssistantConnectionPanel } from './AiAssistantConnectionPanel.js';
+import { AiAssistantModelControls } from './AiAssistantModelControls.js';
+import { resolveAiAssistantSelection } from './ai-assistant-model-selection.js';
 import {
   InspectorPanel,
   InspectorSection,
@@ -24,8 +27,15 @@ import {
 
 type AiAssistantPanelProps = {
   buffer: BufferState | null;
+  onSelectionChange?: (selection: AiAssistantSelection) => boolean | Promise<boolean>;
   onUseSuggestion: (value: string) => void;
+  selection?: AiAssistantSelection;
   store?: AiAssistantStoreApi;
+};
+
+const defaultSelection: AiAssistantSelection = {
+  model: null,
+  reasoningEffort: null,
 };
 
 export function AiAssistantPanel(props: AiAssistantPanelProps) {
@@ -34,6 +44,16 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const bufferId = props.buffer?.id ?? null;
   const thread = useAiAssistantThread(store, bufferId);
   const [status, setStatus] = useState<AiAssistantProviderStatus | null>(null);
+  const [optimisticSelection, setOptimisticSelection] = useState<AiAssistantSelection | null>(null);
+  const savedSelection = optimisticSelection ?? props.selection ?? defaultSelection;
+  const resolvedSelection = resolveAiAssistantSelection(status, savedSelection);
+
+  const changeSelection = (selection: AiAssistantSelection) => {
+    setOptimisticSelection(selection);
+    void Promise.resolve(props.onSelectionChange?.(selection) ?? true).finally(() => {
+      setOptimisticSelection((current) => selectionsMatch(current, selection) ? null : current);
+    });
+  };
 
   const ask = async (
     mode: AiAssistantMode,
@@ -53,7 +73,12 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       return;
     }
     try {
-      const response = await aiAssistantApi.ask(bufferId, { assistantTurns, mode, prompt });
+      const response = await aiAssistantApi.ask(bufferId, {
+        assistantTurns,
+        mode,
+        prompt,
+        selection: resolvedSelection.selection,
+      });
       setStatus(response.status);
       store.resolveRequest(bufferId, currentRequestId, {
         mode,
@@ -117,21 +142,29 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       <InspectorSection className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <AiAssistantConnectionPanel compact onStatusChange={setStatus} />
         {connected ? (
-          <AiAssistantChatView
-            entries={thread.entries}
-            error={thread.error}
-            input={thread.input}
-            pending={thread.pending}
-            pendingLabel={thread.pendingLabel}
-            onAsk={ask}
-            onChange={(value) => {
-              if (bufferId) {
-                store.setInput(bufferId, value);
-              }
-            }}
-            onSubmit={submit}
-            onUseSuggestion={props.onUseSuggestion}
-          />
+          <>
+            <AiAssistantModelControls
+              disabled={thread.pending}
+              onSelectionChange={changeSelection}
+              savedSelection={savedSelection}
+              status={status}
+            />
+            <AiAssistantChatView
+              entries={thread.entries}
+              error={thread.error}
+              input={thread.input}
+              pending={thread.pending}
+              pendingLabel={thread.pendingLabel}
+              onAsk={ask}
+              onChange={(value) => {
+                if (bufferId) {
+                  store.setInput(bufferId, value);
+                }
+              }}
+              onSubmit={submit}
+              onUseSuggestion={props.onUseSuggestion}
+            />
+          </>
         ) : null}
       </InspectorSection>
     </InspectorPanel>
@@ -143,3 +176,8 @@ const buildAssistantTurns = (entries: readonly AssistantEntry[]) =>
     .slice(-aiAssistantThreadMaxTurns)
     .map((entry) => ({ role: entry.role, text: entry.text.trim() }))
     .filter((entry) => entry.text);
+
+const selectionsMatch = (
+  left: AiAssistantSelection | null,
+  right: AiAssistantSelection,
+) => left?.model === right.model && left.reasoningEffort === right.reasoningEffort;

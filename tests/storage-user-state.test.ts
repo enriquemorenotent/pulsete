@@ -24,6 +24,10 @@ test('workspace preferences, drafts, and avatar blobs survive a storage restart'
   );
 
   const preferences = first.preferences.update({
+    aiAssistant: {
+      model: 'gpt-5.6-terra',
+      reasoningEffort: 'high',
+    },
     contactNotifications: {
       enabled: true,
       systemEnabled: true,

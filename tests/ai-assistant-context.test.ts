@@ -133,7 +133,7 @@ test('assistant requests include prior sidebar Q&A for clarification prompts', a
     model: null,
     request: async (input: { prompt: string }) => {
       capturedPrompt = input.prompt;
-      return 'answer';
+      return { answer: 'answer', status: connectedStatus };
     },
     startLogin: async () => ({ instructions: null, status: connectedStatus }),
     status: async () => connectedStatus,
@@ -150,6 +150,7 @@ test('assistant requests include prior sidebar Q&A for clarification prompts', a
     ],
     mode: 'answer',
     prompt: 'I mean, ever, since they know each other',
+    selection: { model: null, reasoningEffort: null },
   });
 
   assert.match(capturedPrompt, /Assistant conversation so far:/);
@@ -185,8 +186,12 @@ const createMessage = (id: string, body: string, ts: number): ChatMessage => ({
 });
 
 const connectedStatus: AiAssistantProviderStatus = {
+  availableModels: [],
   connected: true,
   detail: 'connected',
   model: null,
+  modelsError: null,
   provider: 'codex-openai-login',
+  reasoningEffort: null,
+  selectionNotice: null,
 };

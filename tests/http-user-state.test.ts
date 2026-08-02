@@ -22,6 +22,10 @@ test('preference and draft routes persist changes and broadcast snapshots', asyn
       'PATCH',
       '/api/preferences',
       {
+        aiAssistant: {
+          model: 'gpt-5.6-luna',
+          reasoningEffort: 'max',
+        },
         hideOfflineFriends: true,
         leftSidebarWidth: 318,
         rightSidebarWidth: 346,
@@ -37,6 +41,12 @@ test('preference and draft routes persist changes and broadcast snapshots', asyn
     assert.equal(
       (preferenceBroadcast.preferences as { rightSidebarWidth: number }).rightSidebarWidth,
       346,
+    );
+    assert.deepEqual(
+      (preferenceResponse.json.preferences as {
+        aiAssistant: { model: string; reasoningEffort: string };
+      }).aiAssistant,
+      { model: 'gpt-5.6-luna', reasoningEffort: 'max' },
     );
 
     const upsertMessage = waitForWebSocketMessageType(context.socket, 'draft.upsert');

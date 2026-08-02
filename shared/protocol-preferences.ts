@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { aiAssistantSelectionSchema } from './protocol-ai.js';
 import { networkUserIdentitySchema } from './user-identity.js';
 
 export const contactNotificationSoundSchema = z.enum(['chirp', 'bell', 'glass']);
@@ -55,6 +56,10 @@ const sidebarWidthSchema = z.number().finite().transform((value) =>
 );
 
 export const workspacePreferencesSchema = z.object({
+  aiAssistant: aiAssistantSelectionSchema.default({
+    model: null,
+    reasoningEffort: null,
+  }),
   contactNotifications: contactNotificationSettingsSchema.default({
     enabled: false,
     systemEnabled: false,
@@ -75,6 +80,7 @@ export const defaultWorkspacePreferences: WorkspacePreferences =
   workspacePreferencesSchema.parse({});
 
 export const workspacePreferencesPatchSchema = z.object({
+  aiAssistant: aiAssistantSelectionSchema.optional(),
   contactNotifications: contactNotificationSettingsSchema.optional(),
   mediaVisibilityMode: mediaVisibilityModeSchema.optional(),
   externalAvatarsEnabled: z.boolean().optional(),
