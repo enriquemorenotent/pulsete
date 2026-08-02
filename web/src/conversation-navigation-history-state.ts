@@ -11,6 +11,7 @@ export type HistoryTarget = {
 };
 
 export type ConversationHistoryEntry = {
+  backTarget: HistoryTarget | null;
   index: number;
   target: HistoryTarget;
   version: typeof HISTORY_STATE_VERSION;
@@ -75,23 +76,40 @@ export const readConversationHistoryEntry = (
     || entry.version !== HISTORY_STATE_VERSION
     || !Number.isInteger(entry.index)
     || (entry.index as number) < 0
-    || !isRecord(entry.target)
   ) {
     return null;
   }
-  const selection = readSelection(entry.target.selection);
-  const networkId = entry.target.networkId;
+  const target = readHistoryTarget(entry.target);
+  const backTarget = entry.backTarget === undefined || entry.backTarget === null
+    ? null
+    : readHistoryTarget(entry.backTarget);
   if (
-    selection === undefined
-    || (networkId !== null && typeof networkId !== 'string')
+    target === undefined
+    || backTarget === undefined
   ) {
     return null;
   }
   return {
+    backTarget,
     index: entry.index as number,
-    target: { networkId, selection },
+    target,
     version: HISTORY_STATE_VERSION,
   };
+};
+
+const readHistoryTarget = (value: unknown): HistoryTarget | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const selection = readSelection(value.selection);
+  const networkId = value.networkId;
+  if (
+    selection === undefined
+    || (networkId !== null && typeof networkId !== 'string')
+  ) {
+    return undefined;
+  }
+  return { networkId, selection };
 };
 
 const readSelection = (value: unknown): SelectedBuffer | null | undefined => {

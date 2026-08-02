@@ -12,6 +12,7 @@ import {
 } from './helpers/app-state-test-helpers.js';
 import {
   attachHistory,
+  DeferredPopStateHistory,
   makeReadyState,
   selection,
 } from './helpers/conversation-navigation-history-test-helpers.js';
@@ -68,7 +69,7 @@ test('same-tab selections do not add entries and a new choice clears forward his
   navigation.dispose();
 });
 
-test('closing the selected conversation returns to the previously selected tab', () => {
+test('closing the selected conversation restores the previous tab without a fallback render', () => {
   const buffers = [
     makeBuffer({ id: 'server' }),
     makeBuffer({ id: 'john', kind: 'query', target: 'JOHN' }),
@@ -78,10 +79,19 @@ test('closing the selected conversation returns to the previously selected tab',
     buffers,
     selection: selection('server'),
   }));
-  const navigation = attachHistory(store);
+  const history = new DeferredPopStateHistory();
+  const navigation = attachHistory(store, history);
 
   store.dispatch({ type: 'select', selection: selection('john') });
   store.dispatch({ type: 'select', selection: selection('jane') });
+  const observedBufferIds = ['jane'];
+  const unsubscribe = store.subscribe(() => {
+    const selected = store.getState().transient.selection;
+    const bufferId = selected?.kind === 'buffer' ? selected.bufferId : null;
+    if (observedBufferIds.at(-1) !== bufferId) {
+      observedBufferIds.push(bufferId ?? 'none');
+    }
+  });
   store.dispatch({
     type: 'remove-buffer',
     bufferId: 'jane',
@@ -89,6 +99,11 @@ test('closing the selected conversation returns to the previously selected tab',
   });
 
   assert.deepEqual(store.getState().transient.selection, selection('john'));
+  assert.deepEqual(observedBufferIds, ['jane', 'john']);
+  assert.equal(history.flushPopState(), true);
+  assert.deepEqual(store.getState().transient.selection, selection('john'));
+  assert.deepEqual(observedBufferIds, ['jane', 'john']);
+  unsubscribe();
   navigation.dispose();
 });
 
