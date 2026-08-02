@@ -80,9 +80,18 @@ export const createConversationNavigationHistory = (input: {
   let restoreGeneration = 0;
   let disposed = false;
 
-  const writeCurrentSelection = (mode: 'push' | 'replace') => {
+  const writeCurrentSelection = (
+    mode: 'push' | 'replace',
+    backTargetOverride?: HistoryTarget | null,
+  ) => {
     const state = input.store.getState();
+    const currentEntry = readConversationHistoryEntry(input.history.state);
     const entry: ConversationHistoryEntry = {
+      backTarget: backTargetOverride !== undefined
+        ? backTargetOverride
+        : mode === 'push'
+          ? currentEntry?.target ?? null
+          : currentEntry?.backTarget ?? null,
       index: currentIndex,
       target: targetFromState(state),
       version: HISTORY_STATE_VERSION,
@@ -99,19 +108,29 @@ export const createConversationNavigationHistory = (input: {
     }
   };
 
-  const restore = (target: HistoryTarget) => {
+  const restore = (
+    target: HistoryTarget,
+    options: {
+      backTarget?: HistoryTarget | null;
+      writeHistory?: boolean;
+    } = {},
+  ) => {
     const state = input.store.getState();
     if (state.domain.phase !== 'ready') {
       return;
     }
     const selection = normalizeHistorySelection(state, target);
-    replaying = true;
-    try {
-      input.store.dispatch({ type: 'select', selection });
-    } finally {
-      replaying = false;
+    if (!sameSelection(selection, state.transient.selection)) {
+      replaying = true;
+      try {
+        input.store.dispatch({ type: 'select', selection });
+      } finally {
+        replaying = false;
+      }
     }
-    writeCurrentSelection('replace');
+    if (options.writeHistory !== false) {
+      writeCurrentSelection('replace', options.backTarget);
+    }
   };
 
   const initialize = (state: State) => {
@@ -155,6 +174,10 @@ export const createConversationNavigationHistory = (input: {
       && currentIndex > 0
     ) {
       restoreGeneration += 1;
+      const currentEntry = readConversationHistoryEntry(input.history.state);
+      if (currentEntry?.backTarget) {
+        restore(currentEntry.backTarget, { writeHistory: false });
+      }
       input.history.back();
       return;
     }
@@ -167,11 +190,14 @@ export const createConversationNavigationHistory = (input: {
     ) {
       return;
     }
-    if (event.action.type === 'select' && !replaying) {
+    if (event.action.type === 'select') {
+      if (replaying) {
+        return;
+      }
       restoreGeneration += 1;
       currentIndex += 1;
       highestIndex = currentIndex;
-      writeCurrentSelection('push');
+      writeCurrentSelection('push', targetFromState(event.previousState));
       return;
     }
     writeCurrentSelection('replace');
@@ -183,9 +209,15 @@ export const createConversationNavigationHistory = (input: {
       return;
     }
     restoreGeneration += 1;
+    const departingIndex = currentIndex;
+    const departingTarget = targetFromState(input.store.getState());
     currentIndex = entry.index;
     highestIndex = Math.max(highestIndex, currentIndex);
-    restore(entry.target);
+    restore(entry.target, {
+      backTarget: entry.index === departingIndex + 1
+        ? departingTarget
+        : entry.backTarget,
+    });
   };
 
   return {

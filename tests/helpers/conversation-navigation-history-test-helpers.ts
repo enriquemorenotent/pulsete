@@ -41,6 +41,27 @@ export class FakeHistory {
   }
 }
 
+export class DeferredPopStateHistory extends FakeHistory {
+  pendingIndex: number | null = null;
+
+  back() {
+    if (this.index === 0 || this.pendingIndex !== null) {
+      return;
+    }
+    this.pendingIndex = this.index - 1;
+  }
+
+  flushPopState() {
+    if (this.pendingIndex === null) {
+      return false;
+    }
+    this.index = this.pendingIndex;
+    this.pendingIndex = null;
+    this.onPopState?.(this.state);
+    return true;
+  }
+}
+
 export const selection = (bufferId: string): SelectedBuffer => ({
   kind: 'buffer',
   bufferId,
