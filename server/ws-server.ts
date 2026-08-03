@@ -4,13 +4,30 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol-messages.js';
 import type { RuntimeWebSocketApi } from './runtime.js';
 import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
+import {
+  createRequestOriginPolicy,
+  type RequestOriginPolicy,
+} from './request-origin-policy.js';
 
-export const attachWebSocketServer = (server: Server, context: RuntimeWebSocketApi) => {
+export type WebSocketServerOptions = {
+  originPolicy?: RequestOriginPolicy;
+};
+
+export const attachWebSocketServer = (
+  server: Server,
+  context: RuntimeWebSocketApi,
+  options: WebSocketServerOptions = {},
+) => {
   const wss = new WebSocketServer({ noServer: true, maxPayload: jsonBodyLimitBytes });
+  const originPolicy = options.originPolicy ?? createRequestOriginPolicy();
   const handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = tryParseRequestUrl(req.url);
     if (!url || url.pathname !== '/ws') {
       socket.destroy();
+      return;
+    }
+    if (!originPolicy.allows(req.headers.origin)) {
+      rejectUpgrade(socket, 'Origin not allowed');
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
@@ -36,6 +53,18 @@ export const attachWebSocketServer = (server: Server, context: RuntimeWebSocketA
   server.on('upgrade', handleUpgrade);
   server.once('close', cleanup);
   wss.on('connection', handleConnection);
+};
+
+const rejectUpgrade = (socket: Duplex, message: string) => {
+  const body = `${message}\n`;
+  socket.end([
+    'HTTP/1.1 403 Forbidden',
+    'Connection: close',
+    'Content-Type: text/plain; charset=utf-8',
+    `Content-Length: ${Buffer.byteLength(body)}`,
+    '',
+    body,
+  ].join('\r\n'));
 };
 
 export const initializeWebSocketConnection = (ws: WebSocket, context: RuntimeWebSocketApi) => {
