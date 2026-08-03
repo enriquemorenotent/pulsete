@@ -2,6 +2,7 @@ import { startPulseteServer } from './server-app.js';
 
 const PORT = Number(process.env.PORT ?? 18487);
 const HOST = process.env.HOST ?? '127.0.0.1';
+const BROWSER_ORIGIN = process.env.PULSETE_BROWSER_ORIGIN;
 const ALLOWED_ORIGINS = (process.env.PULSETE_ALLOWED_ORIGINS ?? '')
   .split(',')
   .map((origin) => origin.trim())
@@ -14,6 +15,9 @@ void startPulseteServer({
   port: PORT,
 }).then((server) => {
   console.log(`Pulsete server listening on ${server.url}`);
+  console.log(
+    `Open Pulsete using this one-time local link: ${server.createBrowserBootstrapUrl(BROWSER_ORIGIN)}`,
+  );
 }).catch((error: unknown) => {
   console.error('Failed to start Pulsete server', error);
   process.exitCode = 1;

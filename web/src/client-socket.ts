@@ -23,29 +23,10 @@ export type ClientSocketInstrumentation = {
 };
 
 type WebSocketLocation = Pick<Location, 'host' | 'protocol'>;
-type PulseteImportMeta = ImportMeta & {
-  env?: {
-    VITE_PULSETE_WS_ORIGIN?: string;
-  };
-};
-
-const normalizeWebSocketOrigin = (origin: string) => origin.replace(/\/$/, '');
-
-const resolveConfiguredWebSocketOrigin = () => {
-  const origin = (import.meta as PulseteImportMeta).env?.VITE_PULSETE_WS_ORIGIN;
-  if (!origin) {
-    return null;
-  }
-  return normalizeWebSocketOrigin(origin);
-};
 
 export const resolveWebSocketUrl = (
   location: WebSocketLocation,
-  configuredOrigin = resolveConfiguredWebSocketOrigin(),
 ) => {
-  if (configuredOrigin) {
-    return `${normalizeWebSocketOrigin(configuredOrigin)}/ws`;
-  }
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${location.host}/ws`;
 };

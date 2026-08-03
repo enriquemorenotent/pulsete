@@ -4,12 +4,14 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol-messages.js';
 import type { RuntimeWebSocketApi } from './runtime.js';
 import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
+import type { LaunchAuthentication } from './launch-authentication.js';
 import {
   createRequestOriginPolicy,
   type RequestOriginPolicy,
 } from './request-origin-policy.js';
 
 export type WebSocketServerOptions = {
+  authentication?: LaunchAuthentication;
   originPolicy?: RequestOriginPolicy;
 };
 
@@ -27,7 +29,11 @@ export const attachWebSocketServer = (
       return;
     }
     if (!originPolicy.allows(req.headers.origin)) {
-      rejectUpgrade(socket, 'Origin not allowed');
+      rejectUpgrade(socket, 403, 'Origin not allowed');
+      return;
+    }
+    if (options.authentication && !options.authentication.authenticate(req)) {
+      rejectUpgrade(socket, 401, 'Authentication required');
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
@@ -55,10 +61,11 @@ export const attachWebSocketServer = (
   wss.on('connection', handleConnection);
 };
 
-const rejectUpgrade = (socket: Duplex, message: string) => {
+const rejectUpgrade = (socket: Duplex, status: 401 | 403, message: string) => {
   const body = `${message}\n`;
+  const statusText = status === 401 ? 'Unauthorized' : 'Forbidden';
   socket.end([
-    'HTTP/1.1 403 Forbidden',
+    `HTTP/1.1 ${status} ${statusText}`,
     'Connection: close',
     'Content-Type: text/plain; charset=utf-8',
     `Content-Length: ${Buffer.byteLength(body)}`,

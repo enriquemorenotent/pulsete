@@ -20,8 +20,8 @@
   },
   "scripts": {
     "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web:wait\"",
-    "dev:server": "PULSETE_ALLOWED_ORIGINS=http://127.0.0.1:18473,http://localhost:18473 PORT=18487 tsx watch server/index.ts",
-    "dev:web": "VITE_PULSETE_WS_ORIGIN=ws://127.0.0.1:18487 vite --port 18473",
+    "dev:server": "PULSETE_ALLOWED_ORIGINS=http://127.0.0.1:18473,http://localhost:18473 PULSETE_BROWSER_ORIGIN=http://127.0.0.1:18473 PORT=18487 tsx watch server/index.ts",
+    "dev:web": "vite --host 127.0.0.1 --port 18473",
     "dev:web:wait": "node scripts/wait_for_tcp_port.mjs 127.0.0.1 18487 60000 && npm run dev:web",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json && tsc -p tsconfig.web.json && tsc -p tsconfig.desktop.json && tsc -p tsconfig.tests.json",
     "build": "npm run typecheck && npm run build:web && npm run build:server",

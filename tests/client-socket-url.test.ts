@@ -13,13 +13,9 @@ test('resolveWebSocketUrl uses same-origin websocket by default', () => {
   );
 });
 
-test('resolveWebSocketUrl uses configured dev websocket origin', () => {
+test('resolveWebSocketUrl keeps development websocket traffic same-origin', () => {
   assert.equal(
-    resolveWebSocketUrl({ protocol: 'http:', host: 'localhost:18473' }, 'ws://127.0.0.1:18487'),
-    'ws://127.0.0.1:18487/ws',
-  );
-  assert.equal(
-    resolveWebSocketUrl({ protocol: 'http:', host: 'localhost:18473' }, 'ws://127.0.0.1:18487/'),
-    'ws://127.0.0.1:18487/ws',
+    resolveWebSocketUrl({ protocol: 'http:', host: '127.0.0.1:18473' }),
+    'ws://127.0.0.1:18473/ws',
   );
 });

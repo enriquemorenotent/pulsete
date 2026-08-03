@@ -1,10 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { forbidden, toAppError } from './app-error.js';
+import { forbidden, toAppError, unauthorized } from './app-error.js';
+import { launchBootstrapPath } from '../shared/launch-authentication.js';
 import { handleAiAssistantRoutes } from './http-ai-assistant.js';
 import { handleBackupRoutes } from './http-backups.js';
 import { handleBufferRoutes } from './http-buffers.js';
 import { handleFriendRoutes } from './http-friends.js';
 import { handleLogRoutes } from './http-logs.js';
+import { handleLaunchAuthenticationBootstrap } from './http-launch-authentication.js';
 import { handleMutedNickRoutes } from './http-muted-nicks.js';
 import { handleNickEmojiRoutes } from './http-nick-emojis.js';
 import { handleNetworkRoutes } from './http-networks.js';
@@ -14,6 +16,7 @@ import { handleAvatarOverrideRoutes } from './http-avatar-overrides.js';
 import { handlePagePreviewRoutes } from './http-page-previews.js';
 import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js';
 import type { HttpContext, HttpHandlerContext } from './http-types.js';
+import type { LaunchAuthentication } from './launch-authentication.js';
 import {
   createRequestOriginPolicy,
   type RequestOriginPolicy,
@@ -25,6 +28,7 @@ import {
 import { serveStatic } from './static-handler.js';
 
 export type HttpHandlerOptions = {
+  authentication?: LaunchAuthentication;
   assetRoot?: string;
   originPolicy?: RequestOriginPolicy;
   pagePreviewResolver?: PagePreviewResolver;
@@ -43,6 +47,26 @@ export const createHttpHandler = (
       const pathname = url.pathname;
       if (isApi(pathname) && !originPolicy.allows(req.headers.origin)) {
         throw forbidden('Origin not allowed');
+      }
+      if (pathname === launchBootstrapPath) {
+        if (!options.authentication) {
+          writeJson(res, 404, { message: 'Not found' });
+          return;
+        }
+        await handleLaunchAuthenticationBootstrap(
+          req,
+          res,
+          options.authentication,
+          originPolicy,
+        );
+        return;
+      }
+      if (
+        isApi(pathname)
+        && options.authentication
+        && !options.authentication.authenticate(req)
+      ) {
+        throw unauthorized('Authentication required');
       }
       const args = { req, res, url, pathname, context };
       if (
@@ -73,7 +97,7 @@ export const createHttpHandler = (
       writeJson(res, 404, { message: 'Not found' });
     } catch (error) {
       const appError = toAppError(error);
-      if (isApiRequest(req.url)) {
+      if (isApiRequest(req.url) || isLaunchBootstrapRequest(req.url)) {
         writeJson(res, appError.status, { message: appError.message });
         return;
       }
@@ -81,6 +105,14 @@ export const createHttpHandler = (
       res.end(appError.message);
     }
   };
+};
+
+const isLaunchBootstrapRequest = (value: string | undefined) => {
+  try {
+    return new URL(value ?? '/', 'http://127.0.0.1').pathname === launchBootstrapPath;
+  } catch {
+    return false;
+  }
 };
 
 const hasBackupApi = (context: HttpHandlerContext): context is HttpContext =>

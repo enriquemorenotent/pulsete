@@ -144,11 +144,13 @@ test('started servers trust their exact dynamic application origin', async () =>
   });
 
   try {
+    const authenticationCookie = server.getAuthenticationCookie();
+    const cookie = `${authenticationCookie.name}=${authenticationCookie.value}`;
     const appResponse = await fetch(`${server.url}/api/networks`, {
-      headers: { Origin: server.url },
+      headers: { Cookie: cookie, Origin: server.url },
     });
     const developmentResponse = await fetch(`${server.url}/api/networks`, {
-      headers: { Origin: developmentOrigin },
+      headers: { Cookie: cookie, Origin: developmentOrigin },
     });
 
     assert.equal(appResponse.status, 200);
