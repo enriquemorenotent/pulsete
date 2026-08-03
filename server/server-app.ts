@@ -1,6 +1,10 @@
 import { createServer, type Server } from 'node:http';
 import { resolveAppPaths, type AppPathInput } from './app-paths.js';
 import { createHttpHandler } from './http-router.js';
+import {
+  createLaunchAuthentication,
+  type LaunchSessionCookie,
+} from './launch-authentication.js';
 import { RuntimeHost } from './runtime-host.js';
 import { createRequestOriginPolicy } from './request-origin-policy.js';
 import { attachWebSocketServer } from './ws-server.js';
@@ -14,6 +18,8 @@ export type PulseteServerOptions = AppPathInput & {
 
 export type PulseteServerHandle = {
   close: () => Promise<void>;
+  createBrowserBootstrapUrl: (browserOrigin?: string) => string;
+  getAuthenticationCookie: () => LaunchSessionCookie;
   host: string;
   port: number;
   server: Server;
@@ -24,15 +30,18 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
   const listenHost = options.host ?? '127.0.0.1';
   const listenPort = options.port ?? Number(process.env.PORT ?? 18487);
   const originPolicy = createRequestOriginPolicy(options.allowedOrigins);
+  const authentication = createLaunchAuthentication();
   const runtimeHost = new RuntimeHost(resolveAppPaths(options));
   const server = createServer(createHttpHandler(runtimeHost.http, {
+    authentication,
     assetRoot: options.assetRoot,
     originPolicy,
   }));
   let closed = false;
 
-  attachWebSocketServer(server, runtimeHost.ws, { originPolicy });
+  attachWebSocketServer(server, runtimeHost.ws, { authentication, originPolicy });
   server.on('close', () => {
+    authentication.expire();
     runtimeHost.close();
   });
 
@@ -49,6 +58,9 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
     host: listenHost,
     port,
     url,
+    createBrowserBootstrapUrl: (browserOrigin = url) =>
+      authentication.createBrowserBootstrapUrl(browserOrigin),
+    getAuthenticationCookie: () => authentication.getSessionCookie(),
     close: async () => {
       if (closed) {
         return;

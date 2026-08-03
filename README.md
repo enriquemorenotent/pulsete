@@ -84,7 +84,8 @@ npm run dev
 ```
 
 The dev server uses a local Node process on port `18487` and a Vite web client
-on port `18473`.
+on port `18473`. Open the newest one-time local link printed by the server. A
+backend restart prints a new link because launch credentials are not reused.
 
 ## Validation
 
