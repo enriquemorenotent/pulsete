@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 
 const backendHost = '127.0.0.1';
-const backendPort = Number(process.env.PULSETE_BACKEND_PORT ?? 18487);
+const backendPort = 18487;
 const webPort = 18473;
 
 export default defineConfig({
@@ -18,11 +18,6 @@ export default defineConfig({
     port: webPort,
     proxy: {
       '/api': `http://${backendHost}:${backendPort}`,
-      '/_pulsete': `http://${backendHost}:${backendPort}`,
-      '/ws': {
-        target: `ws://${backendHost}:${backendPort}`,
-        ws: true,
-      },
     },
   },
   build: {

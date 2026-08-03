@@ -7,17 +7,9 @@ const normalizeWebSocketMessage = (payload: WebSocket.RawData) => {
   return message;
 };
 
-export const connectWebSocket = (port: number, origin?: string, cookie?: string) =>
+export const connectWebSocket = (port: number) =>
   new Promise<{ socket: WebSocket; ready: Record<string, unknown> }>((resolve, reject) => {
-    const socket = new WebSocket(
-      `ws://127.0.0.1:${port}/ws`,
-      origin || cookie
-        ? {
-            ...(origin ? { origin } : {}),
-            ...(cookie ? { headers: { Cookie: cookie } } : {}),
-          }
-        : undefined,
-    );
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
     const cleanup = () => {
       socket.off('message', handleMessage);
       socket.off('error', handleError);

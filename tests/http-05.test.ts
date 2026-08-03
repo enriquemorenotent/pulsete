@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
-import { createLaunchAuthentication } from '../server/launch-authentication.js';
 import { createRuntime } from '../server/runtime.js';
 import { Storage } from '../server/storage.js';
 import { attachWebSocketServer } from '../server/ws-server.js';
@@ -99,22 +98,16 @@ test('oversized json bodies are rejected before parsing', async () => {
   }
 });
 
-test('authenticated websocket upgrade emits state.ready', async () => {
+test('websocket upgrade succeeds without cookies and emits state.ready', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const runtime = createRuntime(storage.runtimeStore);
-  const authentication = createLaunchAuthentication();
-  const server = createServer(createHttpHandler(runtime.http, { authentication }));
-  attachWebSocketServer(server, runtime.ws, { authentication });
+  const server = createServer(createHttpHandler(runtime.http));
+  attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
 
   try {
-    const cookie = authentication.getSessionCookie();
-    const { socket, ready } = await connectWebSocket(
-      port,
-      undefined,
-      `${cookie.name}=${cookie.value}`,
-    );
+    const { socket, ready } = await connectWebSocket(port);
     assert.equal(ready.type, 'state.ready');
     assert.ok(Array.isArray(ready.snapshot ? (ready.snapshot as { networks: unknown[] }).networks : []));
     await closeWebSocket(socket);

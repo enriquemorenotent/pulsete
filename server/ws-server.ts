@@ -4,36 +4,13 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol-messages.js';
 import type { RuntimeWebSocketApi } from './runtime.js';
 import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
-import type { LaunchAuthentication } from './launch-authentication.js';
-import {
-  createRequestOriginPolicy,
-  type RequestOriginPolicy,
-} from './request-origin-policy.js';
 
-export type WebSocketServerOptions = {
-  authentication?: LaunchAuthentication;
-  originPolicy?: RequestOriginPolicy;
-};
-
-export const attachWebSocketServer = (
-  server: Server,
-  context: RuntimeWebSocketApi,
-  options: WebSocketServerOptions = {},
-) => {
+export const attachWebSocketServer = (server: Server, context: RuntimeWebSocketApi) => {
   const wss = new WebSocketServer({ noServer: true, maxPayload: jsonBodyLimitBytes });
-  const originPolicy = options.originPolicy ?? createRequestOriginPolicy();
   const handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = tryParseRequestUrl(req.url);
     if (!url || url.pathname !== '/ws') {
       socket.destroy();
-      return;
-    }
-    if (!originPolicy.allows(req.headers.origin)) {
-      rejectUpgrade(socket, 403, 'Origin not allowed');
-      return;
-    }
-    if (options.authentication && !options.authentication.authenticate(req)) {
-      rejectUpgrade(socket, 401, 'Authentication required');
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
@@ -59,19 +36,6 @@ export const attachWebSocketServer = (
   server.on('upgrade', handleUpgrade);
   server.once('close', cleanup);
   wss.on('connection', handleConnection);
-};
-
-const rejectUpgrade = (socket: Duplex, status: 401 | 403, message: string) => {
-  const body = `${message}\n`;
-  const statusText = status === 401 ? 'Unauthorized' : 'Forbidden';
-  socket.end([
-    `HTTP/1.1 ${status} ${statusText}`,
-    'Connection: close',
-    'Content-Type: text/plain; charset=utf-8',
-    `Content-Length: ${Buffer.byteLength(body)}`,
-    '',
-    body,
-  ].join('\r\n'));
 };
 
 export const initializeWebSocketConnection = (ws: WebSocket, context: RuntimeWebSocketApi) => {
