@@ -2,9 +2,11 @@ import { createServer, type Server } from 'node:http';
 import { resolveAppPaths, type AppPathInput } from './app-paths.js';
 import { createHttpHandler } from './http-router.js';
 import { RuntimeHost } from './runtime-host.js';
+import { createRequestOriginPolicy } from './request-origin-policy.js';
 import { attachWebSocketServer } from './ws-server.js';
 
 export type PulseteServerOptions = AppPathInput & {
+  allowedOrigins?: readonly string[];
   assetRoot?: string;
   host?: string;
   port?: number;
@@ -21,11 +23,15 @@ export type PulseteServerHandle = {
 export const startPulseteServer = async (options: PulseteServerOptions = {}): Promise<PulseteServerHandle> => {
   const listenHost = options.host ?? '127.0.0.1';
   const listenPort = options.port ?? Number(process.env.PORT ?? 18487);
+  const originPolicy = createRequestOriginPolicy(options.allowedOrigins);
   const runtimeHost = new RuntimeHost(resolveAppPaths(options));
-  const server = createServer(createHttpHandler(runtimeHost.http, { assetRoot: options.assetRoot }));
+  const server = createServer(createHttpHandler(runtimeHost.http, {
+    assetRoot: options.assetRoot,
+    originPolicy,
+  }));
   let closed = false;
 
-  attachWebSocketServer(server, runtimeHost.ws);
+  attachWebSocketServer(server, runtimeHost.ws, { originPolicy });
   server.on('close', () => {
     runtimeHost.close();
   });
@@ -36,11 +42,13 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
   });
 
   const port = resolveListeningPort(server, listenPort);
+  const url = `http://${listenHost}:${port}`;
+  originPolicy.addAllowedOrigin(url);
   return {
     server,
     host: listenHost,
     port,
-    url: `http://${listenHost}:${port}`,
+    url,
     close: async () => {
       if (closed) {
         return;

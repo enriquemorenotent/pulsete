@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { toAppError } from './app-error.js';
+import { forbidden, toAppError } from './app-error.js';
 import { handleAiAssistantRoutes } from './http-ai-assistant.js';
 import { handleBackupRoutes } from './http-backups.js';
 import { handleBufferRoutes } from './http-buffers.js';
@@ -15,6 +15,10 @@ import { handlePagePreviewRoutes } from './http-page-previews.js';
 import { isApi, isApiRequest, parseRequestUrl, writeJson } from './http-utils.js';
 import type { HttpContext, HttpHandlerContext } from './http-types.js';
 import {
+  createRequestOriginPolicy,
+  type RequestOriginPolicy,
+} from './request-origin-policy.js';
+import {
   createPagePreviewResolver,
   type PagePreviewResolver,
 } from './page-preview-resolver.js';
@@ -22,6 +26,7 @@ import { serveStatic } from './static-handler.js';
 
 export type HttpHandlerOptions = {
   assetRoot?: string;
+  originPolicy?: RequestOriginPolicy;
   pagePreviewResolver?: PagePreviewResolver;
 };
 
@@ -31,10 +36,14 @@ export const createHttpHandler = (
 ) => {
   const pagePreviewResolver = options.pagePreviewResolver
     ?? createPagePreviewResolver();
+  const originPolicy = options.originPolicy ?? createRequestOriginPolicy();
   return async (req: IncomingMessage, res: ServerResponse) => {
     try {
       const url = parseRequestUrl(req.url);
       const pathname = url.pathname;
+      if (isApi(pathname) && !originPolicy.allows(req.headers.origin)) {
+        throw forbidden('Origin not allowed');
+      }
       const args = { req, res, url, pathname, context };
       if (
         (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))

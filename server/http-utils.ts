@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { badRequest, payloadTooLarge } from './app-error.js';
+import { badRequest, payloadTooLarge, unsupportedMediaType } from './app-error.js';
 
 export const jsonBodyLimitBytes = 64 * 1024;
 export const networkJsonBodyLimitBytes = 8 * 1024 * 1024;
@@ -7,9 +7,15 @@ export const backupBodyLimitBytes = 512 * 1024 * 1024;
 const requestBase = 'http://127.0.0.1';
 
 export const readJson = async (req: IncomingMessage, maxBytes = jsonBodyLimitBytes) => {
+  if (!isJsonContentType(req.headers['content-type'])) {
+    throw unsupportedMediaType('Content-Type must be application/json');
+  }
   const raw = await readBytes(req, maxBytes);
   return raw.length > 0 ? JSON.parse(raw.toString('utf8')) : {};
 };
+
+const isJsonContentType = (value: string | undefined) =>
+  value?.split(';', 1)[0]?.trim().toLowerCase() === 'application/json';
 
 export const readBytes = async (req: IncomingMessage, maxBytes: number) => {
   const declaredLength = Number(req.headers['content-length'] ?? 0);
