@@ -2,10 +2,6 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { startPulseteServer, type PulseteServerHandle } from '../server/server-app.js';
 import {
-  installLaunchAuthenticationCookie,
-  launchSessionPartition,
-} from './launch-authentication.js';
-import {
   handleDesktopNavigationCommand,
   restrictDesktopNavigationToOrigin,
 } from './navigation-history.js';
@@ -63,7 +59,6 @@ async function startDesktopApp() {
   });
 
   mainWindow = createMainWindow(serverHandle);
-  await installLaunchAuthenticationCookie(mainWindow.webContents.session, serverHandle);
   await mainWindow.loadURL(serverHandle.url);
 }
 
@@ -79,7 +74,6 @@ function createMainWindow(server: PulseteServerHandle) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      partition: launchSessionPartition,
       sandbox: true,
     },
   });
