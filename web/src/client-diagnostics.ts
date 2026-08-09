@@ -4,6 +4,7 @@ import {
   collectBrowserDiagnostics,
   collectLightweightBrowserSample,
   createPerformanceMeasureAccumulator,
+  isReactPerformanceMeasureName,
 } from './client-diagnostics-browser.js';
 import {
   summarizeClientState,
@@ -162,9 +163,23 @@ export const createClientDiagnosticsRecorder = (options: RecorderOptions = {}) =
     }
     try {
       performanceObserver = new PerformanceObserver((list) => {
+        const reactMeasureNames = new Set<string>();
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'measure') {
             observedMeasures.record(entry);
+            if (isReactPerformanceMeasureName(entry.name)) {
+              reactMeasureNames.add(entry.name);
+            }
+          }
+        }
+        if (typeof performance !== 'undefined'
+          && typeof performance.clearMeasures === 'function') {
+          for (const name of reactMeasureNames) {
+            try {
+              performance.clearMeasures(name);
+            } catch {
+              // Diagnostics cleanup must never interfere with the client.
+            }
           }
         }
       });

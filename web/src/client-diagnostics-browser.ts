@@ -43,6 +43,9 @@ const knownReactMeasureNames = new Set([
   'Update Blocked',
 ]);
 
+export const isReactPerformanceMeasureName = (name: string) =>
+  name.startsWith('\u200b') || knownReactMeasureNames.has(name);
+
 const finiteNumber = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : 0;
 
@@ -60,7 +63,7 @@ export const classifyPerformanceMeasureName = (name: string) => {
   if (name.startsWith('\u200b')) {
     return `React component: ${sanitizeComponentName(name.slice(1))}`;
   }
-  if (knownReactMeasureNames.has(name)) {
+  if (isReactPerformanceMeasureName(name)) {
     return `React: ${name}`;
   }
   return 'Other application/browser measures';
