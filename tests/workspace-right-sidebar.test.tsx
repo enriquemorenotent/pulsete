@@ -202,7 +202,10 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   assert.doesNotMatch(markup, /aria-label="Edit emoji tag for Sofia"/);
   assert.doesNotMatch(markup, /aria-label="(?:Custom )?Avatar for Sofia"/);
   assert.doesNotMatch(markup, /avatar-redirect/);
-  assert.match(markup, /h-\[min\(32dvh,18rem\)\][\s\S]*query-profile-notes/);
+  assert.match(markup, /flex min-h-0 flex-1 px-4 py-4/);
+  assert.match(markup, /flex min-h-0 flex-col flex-1 gap-2\.5/);
+  assert.match(markup, /relative flex-1 min-h-40[\s\S]*query-profile-notes/);
+  assert.doesNotMatch(markup, /h-\[min\(32dvh,18rem\)\]/);
   assert.match(markup, /Prefers encrypted routes/);
   assert.match(markup, /Saved/);
 });
