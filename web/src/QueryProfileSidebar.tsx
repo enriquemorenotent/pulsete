@@ -14,9 +14,8 @@ export function QueryProfileSidebar(props: {
 
   return (
     <InspectorPanel className="gap-0 px-0 py-0">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex min-h-0 flex-1 px-4 py-4">
         <AutosaveNotesEditor
-          fill={false}
           id="query-profile-notes"
           notes={buffer.notes ?? ''}
           onSave={(notes) => props.onSaveNotes(buffer, notes).then(Boolean)}
