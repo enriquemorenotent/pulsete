@@ -41,6 +41,52 @@ test('performance summaries preserve React component names but redact arbitrary 
   assert.doesNotMatch(serialized, /private room name/);
 });
 
+test('diagnostics retain React measure totals without retaining their performance entries', async () => {
+  const componentMeasure = '\u200bDiagnosticsRetentionTestComponent';
+  const schedulerMeasure = 'Update';
+  const unrelatedMeasure = 'pulsete-unrelated-measure-test';
+  const measureNames = [componentMeasure, schedulerMeasure, unrelatedMeasure];
+  for (const name of measureNames) {
+    performance.clearMeasures(name);
+  }
+  const recorder = createClientDiagnosticsRecorder();
+  const stop = recorder.start(() => initialState);
+
+  try {
+    performance.measure(componentMeasure, { start: 0, duration: 4 });
+    performance.measure(schedulerMeasure, { start: 0, duration: 3 });
+    performance.measure(unrelatedMeasure, { start: 0, duration: 2 });
+
+    for (let attempts = 0; attempts < 20; attempts += 1) {
+      if (performance.getEntriesByName(componentMeasure, 'measure').length === 0
+        && performance.getEntriesByName(schedulerMeasure, 'measure').length === 0) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert.equal(performance.getEntriesByName(componentMeasure, 'measure').length, 0);
+    assert.equal(performance.getEntriesByName(schedulerMeasure, 'measure').length, 0);
+    assert.equal(performance.getEntriesByName(unrelatedMeasure, 'measure').length, 1);
+
+    const report = await recorder.capture(initialState);
+    const measures = report.activity.performanceMeasuresObserved;
+    assert.ok(measures.count >= 3);
+    assert.ok(measures.topByCount.some(
+      (entry) => entry.name === 'React component: DiagnosticsRetentionTestComponent',
+    ));
+    assert.ok(measures.topByCount.some((entry) => entry.name === 'React: Update'));
+    assert.ok(measures.topByCount.some(
+      (entry) => entry.name === 'Other application/browser measures',
+    ));
+  } finally {
+    stop();
+    for (const name of measureNames) {
+      performance.clearMeasures(name);
+    }
+  }
+});
+
 test('diagnostics report contains structural memory evidence without conversation data', async () => {
   const secrets = {
     body: 'SECRET_CHAT_BODY_9ca031',
