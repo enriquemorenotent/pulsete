@@ -1,6 +1,11 @@
 import type { CommandPaletteEntrySpec } from './command-palette-types.js';
 
-export const filterCommandPaletteEntries = <T extends Pick<CommandPaletteEntrySpec, 'label' | 'subtitle' | 'keywords'>>(
+export const filterCommandPaletteEntries = <
+  T extends Pick<
+    CommandPaletteEntrySpec,
+    'label' | 'subtitle' | 'keywords' | 'ranking' | 'section'
+  >,
+>(
   entries: readonly T[],
   query: string,
 ): T[] => {
@@ -12,11 +17,9 @@ export const filterCommandPaletteEntries = <T extends Pick<CommandPaletteEntrySp
     .map((entry, index) => ({ entry, index }))
     .filter(({ entry }) => getCommandPaletteSearchText(entry).includes(normalizedQuery))
     .sort((left, right) =>
-      compareCommandPaletteMatches(
-        left.entry as T & Pick<CommandPaletteEntrySpec, 'ranking'>,
-        right.entry as T & Pick<CommandPaletteEntrySpec, 'ranking'>,
-        normalizedQuery,
-      ) || left.index - right.index,
+      compareCommandPaletteSectionPriority(left.entry, right.entry)
+      || compareCommandPaletteMatches(left.entry, right.entry, normalizedQuery)
+      || left.index - right.index,
     )
     .map(({ entry }) => entry);
 };
@@ -44,6 +47,25 @@ const getCommandPaletteSearchText = (
   normalizeCommandPaletteQuery(
     [entry.label, entry.subtitle, ...entry.keywords].filter(Boolean).join(' '),
   );
+
+const compareCommandPaletteSectionPriority = (
+  left: Pick<CommandPaletteEntrySpec, 'section'>,
+  right: Pick<CommandPaletteEntrySpec, 'section'>,
+) =>
+  getCommandPaletteSectionPriority(left.section)
+  - getCommandPaletteSectionPriority(right.section);
+
+const getCommandPaletteSectionPriority = (
+  section: CommandPaletteEntrySpec['section'],
+) => {
+  if (section === 'unread') {
+    return 0;
+  }
+  if (section === 'buffers') {
+    return 1;
+  }
+  return 2;
+};
 
 const compareCommandPaletteMatches = (
   left: Pick<CommandPaletteEntrySpec, 'label' | 'ranking'>,

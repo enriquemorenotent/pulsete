@@ -86,7 +86,42 @@ test('command palette scoring promotes exact matches, then current-network unrea
 
   assert.deepEqual(
     filterCommandPaletteEntries(entries, 'help').map((entry) => entry.label),
-    ['#help', '#helpdesk', '#helper', '#helpdesk'],
+    ['#help', '#helpdesk', '#helpdesk', '#helper'],
+  );
+});
+
+test('command palette filtering keeps unread matches ahead of every other section', () => {
+  const unreadChannel: BufferState = {
+    ...channelBuffer,
+    target: '#displace',
+    unread: 1,
+  };
+  const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
+    actions: {
+      canToggleChannelAutoJoin: true,
+      channelAutoJoinActive: true,
+      canDownloadHistory: false,
+    },
+    connections: [{
+      ...connection,
+      childBuffers: [{ buffer: unreadChannel, selected: false }],
+    }],
+  }));
+
+  assert.deepEqual(
+    filterCommandPaletteEntries(entries, 'dis')
+      .map((entry) => `${entry.section}:${entry.label}`),
+    ['unread:#displace', 'actions:Disable Autojoin'],
+  );
+});
+
+test('command palette filtering keeps conversation matches ahead of tools', () => {
+  const entries = buildCommandPaletteEntrySpecs(buildPaletteInput());
+
+  assert.deepEqual(
+    filterCommandPaletteEntries(entries, 'channel')
+      .map((entry) => `${entry.section}:${entry.label}`),
+    ['buffers:#help', 'buffers:#pending', 'actions:List Channels'],
   );
 });
 
