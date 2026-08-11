@@ -16,9 +16,8 @@ import {
   type StorageMigrationContext,
 } from './storage-migration-helpers.js';
 import { storageMigrations } from './storage-migration-list.js';
-import { userStateStorageSchemaVersion } from './storage-user-state-schema.js';
 
-export const currentStorageSchemaVersion = userStateStorageSchemaVersion;
+export const currentStorageSchemaVersion = storageMigrations[storageMigrations.length - 1]!.version;
 
 export const bootstrapStorageSchema = (db: SqliteDb) => db.exec(storageBootstrapSchemaSql);
 

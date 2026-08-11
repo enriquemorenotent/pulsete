@@ -3,8 +3,10 @@ import type { BufferState, FriendState, MutedNickState, NickEmojiState, PendingC
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
 import {
   mutateConversationMessages,
+  replaceConversationMessageBucket,
   removeBufferMessages,
   removeConversationMessages,
+  updateExistingConversationMessage,
   updateBufferMessageMetadata,
 } from './conversation-message-state.js';
 
@@ -123,6 +125,7 @@ export const reduceConversationDomain = (
         buffers: sortBuffers(buffers),
         pendingChannels,
         messages: updateBufferMessageMetadata(domain.messages, action.buffer),
+        pinnedMessages: updateBufferMessageMetadata(domain.pinnedMessages, action.buffer),
       };
     }
     case 'remove-buffer': {
@@ -140,6 +143,11 @@ export const reduceConversationDomain = (
           ? domain.drafts.filter((draft) => draft.bufferId !== action.bufferId)
           : domain.drafts,
         messages: removeBufferMessages(domain.messages, action.bufferId, replacementBuffer),
+        pinnedMessages: removeBufferMessages(
+          domain.pinnedMessages,
+          action.bufferId,
+          replacementBuffer,
+        ),
       };
     }
     case 'append-message':
@@ -164,6 +172,44 @@ export const reduceConversationDomain = (
           selectedBufferId,
         ),
       };
+    case 'set-pinned-messages':
+      return {
+        ...domain,
+        pinnedMessages: replaceConversationMessageBucket(
+          domain.pinnedMessages,
+          action.bufferId,
+          action.messages,
+        ),
+      };
+    case 'message-pin-updated': {
+      const pinnedMessages = action.message.pinnedAt == null
+        ? removeConversationMessages(
+            domain.pinnedMessages,
+            action.message.networkId,
+            action.message.target,
+            [action.message.id],
+            action.message.bufferId,
+          )
+        : mutateConversationMessages(
+            domain.pinnedMessages,
+            { kind: 'upsert', message: action.message },
+            null,
+          );
+      return {
+        ...domain,
+        messages: updateExistingConversationMessage(domain.messages, action.message),
+        pinnedMessages,
+      };
+    }
+    case 'replace-message-window':
+      return {
+        ...domain,
+        messages: replaceConversationMessageBucket(
+          domain.messages,
+          action.bufferId,
+          action.messages,
+        ),
+      };
     case 'prepend-messages':
       return {
         ...domain,
@@ -178,6 +224,13 @@ export const reduceConversationDomain = (
         ...domain,
         messages: removeConversationMessages(
           domain.messages,
+          action.networkId,
+          action.target,
+          action.messageIds,
+          action.bufferId,
+        ),
+        pinnedMessages: removeConversationMessages(
+          domain.pinnedMessages,
           action.networkId,
           action.target,
           action.messageIds,

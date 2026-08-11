@@ -166,6 +166,7 @@ export const toMessage = (row: MessageRow): ChatMessage => {
     kind: row.kind as ChatMessage['kind'],
     self: Boolean(row.self) || (speakerRole === 'self' && attributionConfidence === 'high'),
     ts: row.ts,
+    ...(row.pinnedAt === null ? {} : { pinnedAt: row.pinnedAt }),
   };
 };
 

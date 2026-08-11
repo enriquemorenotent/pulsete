@@ -36,6 +36,11 @@ export type ChatPaneProps = {
   completionCandidates?: string[];
   completionCommandCandidates?: string[];
   jumpToLatestRequestId?: number;
+  messageFocusRequest?: {
+    bufferId: string;
+    messageId: string;
+    requestId: number;
+  } | null;
   onDraftChange: (value: string) => void;
   onRecallOlderDraft: () => void;
   onRecallNewerDraft: () => void;
@@ -61,6 +66,10 @@ export type ChatPaneProps = {
   initialHistoryPending?: boolean;
   loadingOlderHistory?: boolean;
   onLoadOlderHistory?: () => Promise<number>;
+  hasNewerHistory?: boolean;
+  onReturnToLatest?: () => Promise<boolean>;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
   onCloseChannel: (networkId: string, channel: string) => void;
   onCloseBuffer: (buffer: BufferState) => void;
   channelList: ChannelListState;
@@ -75,6 +84,10 @@ export type ChatPaneProps = {
 
 export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
   const [followOutputRequestId, requestFollowOutput] = useReducer(
+    (value: number) => value + 1,
+    0,
+  );
+  const [returnToLatestRequestId, requestReturnToLatest] = useReducer(
     (value: number) => value + 1,
     0,
   );
@@ -95,10 +108,25 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
   const handleSend = useCallback(async () => {
     const submitted = await props.onSend();
     if (submitted) {
+      if (props.hasNewerHistory && props.onReturnToLatest) {
+        const returned = await props.onReturnToLatest();
+        if (!returned) {
+          return submitted;
+        }
+        requestReturnToLatest();
+        return submitted;
+      }
       requestFollowOutput();
     }
     return submitted;
-  }, [props.onSend]);
+  }, [props.hasNewerHistory, props.onReturnToLatest, props.onSend]);
+  const handleReturnToLatest = useCallback(async () => {
+    const returned = await props.onReturnToLatest?.();
+    if (returned) {
+      requestReturnToLatest();
+    }
+    return returned ?? false;
+  }, [props.onReturnToLatest]);
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <ChatPaneHeader
@@ -139,7 +167,8 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         channelUsers={props.workspace.selectedChannel?.users ?? []}
         nickEmojis={props.nickEmojis}
         followOutputRequestId={followOutputRequestId}
-        jumpToLatestRequestId={props.jumpToLatestRequestId ?? 0}
+        jumpToLatestRequestId={(props.jumpToLatestRequestId ?? 0) + returnToLatestRequestId}
+        messageFocusRequest={props.messageFocusRequest}
         messages={props.selectedMessages}
         mutedNicks={props.mutedNicks}
         emptyBody={props.workspace.emptyBody}
@@ -152,6 +181,10 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onOpenChannel={props.onOpenMentionedChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
         onLoadOlderHistory={props.onLoadOlderHistory}
+        hasNewerHistory={props.hasNewerHistory}
+        onReturnToLatest={props.onReturnToLatest ? handleReturnToLatest : undefined}
+        canPinMessages={props.canPinMessages}
+        onSetMessagePinned={props.onSetMessagePinned}
       />
       {props.workspace.composerMode !== 'hidden' ? (
         <ChatPaneComposer

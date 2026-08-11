@@ -50,6 +50,7 @@ export type AppDomainState = {
   channels: ChannelState[];
   pendingChannels: PendingChannelState[];
   messages: ConversationMessages;
+  pinnedMessages: ConversationMessages;
   networkStates: Record<string, NetworkRuntimeState>;
   preferences: WorkspacePreferences;
   userAvatarOverrides: UserAvatarOverride[];
@@ -63,6 +64,13 @@ export type AppTransientState = {
   channelList: ChannelListState;
   historyLoadedByBufferId: Record<string, true>;
   historyHasOlderByBufferId: Record<string, boolean>;
+  historyHasNewerByBufferId: Record<string, boolean>;
+  pinnedMessagesLoadedByBufferId: Record<string, true>;
+  messageFocusRequest: {
+    bufferId: string;
+    messageId: string;
+    requestId: number;
+  } | null;
   networkManager: NetworkManagerState;
 };
 
@@ -96,6 +104,8 @@ export type Action =
   | { type: 'select'; selection: SelectedBuffer | null }
   | { type: 'append-message'; message: ChatMessage }
   | { type: 'upsert-message'; message: ChatMessage }
+  | { type: 'message-pin-updated'; message: ChatMessage }
+  | { type: 'set-pinned-messages'; bufferId: string; messages: ChatMessage[] }
   | { type: 'append-messages'; messages: ChatMessage[] }
   | { type: 'prepend-messages'; messages: ChatMessage[] }
   | { type: 'remove-messages'; networkId: string; target: string; messageIds: string[]; bufferId?: string }
@@ -128,5 +138,14 @@ export type Action =
   | { type: 'close-network-editor' }
   | { type: 'set-network-editor-tab'; tab: EditorTab }
   | { type: 'update-network-editor-form'; form: Partial<NetworkForm> }
-  | { type: 'history-buffer-loaded'; bufferId: string; hasOlder: boolean }
+  | { type: 'history-buffer-loaded'; bufferId: string; hasOlder: boolean; hasNewer?: boolean }
+  | {
+      type: 'replace-message-window';
+      bufferId: string;
+      messages: ChatMessage[];
+      hasOlder: boolean;
+      hasNewer: boolean;
+      focusMessageId?: string;
+      focusRequestId?: number;
+    }
   | { type: 'remove-network'; networkId: string };

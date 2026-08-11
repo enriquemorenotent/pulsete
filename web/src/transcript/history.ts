@@ -8,6 +8,7 @@ type UseSelectedBufferHistoryParams = {
   dispatch: (action: Action) => void;
   gatewayStatus: GatewayStatus;
   historyHasOlderByBufferId: Record<string, boolean>;
+  historyHasNewerByBufferId: Record<string, boolean>;
   historyLoadedByBufferId: Record<string, true>;
   selectedBuffer: BufferState | null;
   selectedMessages: ChatMessage[];
@@ -34,6 +35,7 @@ type LoadOlderBufferHistoryParams = {
 
 export type SelectedBufferHistoryControls = {
   canLoadOlderHistory: boolean;
+  hasNewerHistory: boolean;
   initialHistoryPending: boolean;
   isLoadingOlderHistory: boolean;
   loadOlderHistory: () => Promise<number>;
@@ -54,6 +56,9 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
     : false;
   const hasOlderHistory = selectedBufferId
     ? params.historyHasOlderByBufferId[selectedBufferId] === true
+    : false;
+  const hasNewerHistory = selectedBufferId
+    ? params.historyHasNewerByBufferId[selectedBufferId] === true
     : false;
   const remainingMessageCapacity = Math.max(
     0,
@@ -132,6 +137,7 @@ export function useSelectedBufferHistory(params: UseSelectedBufferHistoryParams)
       && params.selectedMessages.length > 0
       && hasOlderHistory
       && remainingMessageCapacity > 0,
+    hasNewerHistory,
     initialHistoryPending,
     isLoadingOlderHistory: loadingOlderHistory,
     loadOlderHistory,
@@ -204,5 +210,16 @@ const applyHistoryPayload = (
   type: 'append-messages' | 'prepend-messages',
 ) => {
   dispatch({ type, messages: payload.messages });
-  dispatch({ type: 'history-buffer-loaded', bufferId, hasOlder: payload.hasMore });
+  dispatch(type === 'append-messages'
+    ? {
+        type: 'history-buffer-loaded',
+        bufferId,
+        hasOlder: payload.hasMore,
+        hasNewer: false,
+      }
+    : {
+        type: 'history-buffer-loaded',
+        bufferId,
+        hasOlder: payload.hasMore,
+      });
 };

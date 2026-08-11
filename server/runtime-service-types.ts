@@ -46,6 +46,9 @@ export type RuntimeConversationMutations = {
   searchLogs: RuntimeConversationService['searchLogs'];
   listLogSources: RuntimeConversationService['listLogSources'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
+  listPinnedMessages: RuntimeConversationService['listPinnedMessages'];
+  setMessagePinned: RuntimeConversationService['setMessagePinned'];
+  pinnedMessageHistoryWindow: RuntimeConversationService['getPinnedMessageHistoryWindow'];
 };
 
 export type RuntimeFriendMutations = {
@@ -132,6 +135,9 @@ export type RuntimeHttpApi = {
     history: RuntimeConversationMutations['history'];
     searchHistory: RuntimeConversationMutations['searchHistory'];
     exportHistory: RuntimeConversationMutations['exportHistory'];
+    listPinnedMessages: RuntimeConversationMutations['listPinnedMessages'];
+    setMessagePinned: RuntimeConversationMutations['setMessagePinned'];
+    pinnedMessageHistoryWindow: RuntimeConversationMutations['pinnedMessageHistoryWindow'];
   };
   logs: {
     listSources: RuntimeConversationMutations['listLogSources'];

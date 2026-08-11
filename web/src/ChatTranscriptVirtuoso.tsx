@@ -27,6 +27,9 @@ type ChatTranscriptVirtuosoProps = {
   expandedMutedGroupKeys: ReadonlySet<string>;
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   followOutputRequestId: number;
+  focusRequestId: number;
+  focusRowIndex: number | null;
+  highlightedMessageId?: string | null;
   initialHistoryPending?: boolean;
   initialScrollTarget: TranscriptInitialScrollTarget;
   inlineImageRendering?: InlineImageRenderingMode;
@@ -39,6 +42,10 @@ type ChatTranscriptVirtuosoProps = {
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
   onToggleMutedGroup: (key: string) => void;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
+  hasNewerHistory?: boolean;
+  onReturnToLatest?: () => Promise<boolean>;
   participantHighlightMode: ParticipantHighlightMode;
 };
 
@@ -78,6 +85,8 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
   const viewport = useTranscriptViewport({
     bufferId: props.bufferId,
     followOutputRequestId: props.followOutputRequestId,
+    focusRequestId: props.focusRequestId,
+    focusRowIndex: props.focusRowIndex,
     initialHistoryPending: props.initialHistoryPending ?? false,
     initialScrollTarget: props.initialScrollTarget,
     jumpToLatestRequestId: props.jumpToLatestRequestId,
@@ -135,6 +144,9 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
           row={row}
           channelUserModesByNick={props.channelUserModesByNick}
           expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+          highlightedMessageId={props.highlightedMessageId}
+          canPinMessages={props.canPinMessages}
+          onSetMessagePinned={props.onSetMessagePinned}
           inlineImageRendering={props.inlineImageRendering}
           nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
           listKind={props.listKind}
@@ -150,6 +162,8 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     [
       props.channelUserModesByNick,
       props.expandedMutedGroupKeys,
+      props.highlightedMessageId,
+      props.canPinMessages,
       props.inlineImageRendering,
       props.nickEmojiByNetworkNick,
       props.listKind,
@@ -157,6 +171,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
       props.model,
       props.onOpenChannel,
       props.onOpenParticipantQuery,
+      props.onSetMessagePinned,
       props.onToggleMutedGroup,
       props.participantHighlightMode,
       viewport.firstItemIndex,
@@ -192,6 +207,18 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         startReached={viewport.handleStartReached}
         totalCount={props.model.flatRows.length}
       />
+      {props.hasNewerHistory && props.onReturnToLatest ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="pointer-events-auto shadow-lg"
+            onClick={() => void props.onReturnToLatest?.()}
+          >
+            Return to latest
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 });

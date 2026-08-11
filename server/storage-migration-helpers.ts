@@ -37,4 +37,10 @@ export const ensureCurrentBufferColumns = (db: SqliteDb) => {
 
 export const ensureCurrentMessageColumns = (db: SqliteDb) => {
   ensureColumn(db, 'messages', 'delivery', "TEXT NOT NULL DEFAULT 'live'");
+  ensureColumn(db, 'messages', 'pinnedAt', 'INTEGER');
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_messages_buffer_pinned
+      ON messages(bufferId, ts ASC)
+      WHERE pinnedAt IS NOT NULL;
+  `);
 };

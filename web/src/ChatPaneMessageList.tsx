@@ -9,7 +9,10 @@ import {
   type UnreadDividerAnchor,
 } from './transcript/unread-state.js';
 import { buildChannelUserModesByNick, resolveParticipantHighlightMode } from './message-participant-presentation.js';
-import { pruneExpandedMutedGroupKeys } from './transcript/model.js';
+import {
+  pruneExpandedMutedGroupKeys,
+  resolveTranscriptMessageLocation,
+} from './transcript/model.js';
 import { useChatTranscriptModel } from './transcript/use-chat-transcript-model.js';
 import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
 import { ChatTranscriptVirtuoso } from './ChatTranscriptVirtuoso.js';
@@ -24,6 +27,11 @@ type ChatPaneMessageListProps = {
   nickEmojis?: NickEmojiState[];
   followOutputRequestId?: number;
   jumpToLatestRequestId?: number;
+  messageFocusRequest?: {
+    bufferId: string;
+    messageId: string;
+    requestId: number;
+  } | null;
   messages: ChatMessage[];
   mutedNicks: MutedNickState[];
   emptyBody: string;
@@ -36,6 +44,10 @@ type ChatPaneMessageListProps = {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
+  hasNewerHistory?: boolean;
+  onReturnToLatest?: () => Promise<boolean>;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
 };
 
 export const ChatPaneMessageList = memo(function ChatPaneMessageList(
@@ -93,6 +105,41 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
     [firstUnreadDividerIndex, props.listKind, props.messages, props.mutedNicks, props.selectedBuffer?.id],
   );
   const transcriptModel = useChatTranscriptModel(transcriptModelInput);
+  const activeFocusRequest =
+    props.messageFocusRequest?.bufferId === props.selectedBuffer?.id
+      ? props.messageFocusRequest
+      : null;
+  const focusedMessageLocation = useMemo(
+    () => activeFocusRequest
+      ? resolveTranscriptMessageLocation(transcriptModel, activeFocusRequest.messageId)
+      : null,
+    [activeFocusRequest, transcriptModel],
+  );
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!activeFocusRequest || !focusedMessageLocation) {
+      setHighlightedMessageId(null);
+      return;
+    }
+    const mutedGroupKey = focusedMessageLocation.mutedGroupKey;
+    if (mutedGroupKey) {
+      setExpandedMutedGroupKeys((current) => {
+        if (current.has(mutedGroupKey)) {
+          return current;
+        }
+        const next = new Set(current);
+        next.add(mutedGroupKey);
+        return next;
+      });
+    }
+    setHighlightedMessageId(activeFocusRequest.messageId);
+    const timer = window.setTimeout(() => {
+      setHighlightedMessageId((current) =>
+        current === activeFocusRequest.messageId ? null : current,
+      );
+    }, 2_000);
+    return () => window.clearTimeout(timer);
+  }, [activeFocusRequest, focusedMessageLocation]);
   useEffect(() => {
     setExpandedMutedGroupKeys((current) =>
       pruneExpandedMutedGroupKeys(current, transcriptModel),
@@ -137,6 +184,11 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
         mode={props.mode}
         model={transcriptModel}
         expandedMutedGroupKeys={expandedMutedGroupKeys}
+        highlightedMessageId={highlightedMessageId}
+        canPinMessages={props.canPinMessages}
+        onSetMessagePinned={props.onSetMessagePinned}
+        hasNewerHistory={props.hasNewerHistory}
+        onReturnToLatest={props.onReturnToLatest}
         onLoadOlderHistory={loadOlderHistory}
         onToggleMutedGroup={toggleMutedGroup}
         onOpenChannel={props.onOpenChannel}
@@ -153,6 +205,8 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       emptyBody={props.emptyBody}
       nickEmojiByNetworkNick={nickEmojiByNetworkNick}
       followOutputRequestId={props.followOutputRequestId ?? 0}
+      focusRequestId={activeFocusRequest?.requestId ?? 0}
+      focusRowIndex={focusedMessageLocation?.rowIndex ?? null}
       jumpToLatestRequestId={props.jumpToLatestRequestId ?? 0}
       initialHistoryPending={props.initialHistoryPending}
       initialScrollTarget={initialScrollTarget}
@@ -162,6 +216,11 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       mode={props.mode}
       model={transcriptModel}
       expandedMutedGroupKeys={expandedMutedGroupKeys}
+      highlightedMessageId={highlightedMessageId}
+      canPinMessages={props.canPinMessages}
+      onSetMessagePinned={props.onSetMessagePinned}
+      hasNewerHistory={props.hasNewerHistory}
+      onReturnToLatest={props.onReturnToLatest}
       onLoadOlderHistory={loadOlderHistory}
       onToggleMutedGroup={toggleMutedGroup}
       onOpenChannel={props.onOpenChannel}

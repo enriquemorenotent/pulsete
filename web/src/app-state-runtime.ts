@@ -101,6 +101,7 @@ export const reduceRuntimeDomain = (
             (pendingChannel) => pendingChannel.networkId !== action.network.id,
           ),
           messages: removeNetworkMessages(domain.messages, action.network.id),
+          pinnedMessages: removeNetworkMessages(domain.pinnedMessages, action.network.id),
           networkStates,
           queryPresence,
         };
@@ -148,6 +149,7 @@ export const reduceRuntimeDomain = (
           Object.entries(domain.queryPresence).filter(([bufferId]) => !removedBufferIds.has(bufferId))
         ),
         messages: removeNetworkMessages(domain.messages, action.networkId),
+        pinnedMessages: removeNetworkMessages(domain.pinnedMessages, action.networkId),
         networkStates,
         userAvatarOverrides: domain.userAvatarOverrides.filter(
           ({ networkId }) => networkId !== action.networkId,

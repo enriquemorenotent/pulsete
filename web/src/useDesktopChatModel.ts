@@ -40,6 +40,7 @@ export type DesktopChatModelParams = {
   networks: State['domain']['networks'];
   channelList: State['transient']['channelList'];
   channelListNetwork: ChatPaneProps['channelListNetwork'];
+  messageFocusRequest: State['transient']['messageFocusRequest'];
   selectedBufferHistory: SelectedBufferHistoryControls;
   selectedMessages: ChatPaneProps['selectedMessages'];
   workspace: WorkspaceView;
@@ -59,6 +60,7 @@ export function useDesktopChatModel({
   networks,
   channelList,
   channelListNetwork,
+  messageFocusRequest,
   selectedBufferHistory,
   selectedMessages,
   workspace,
@@ -124,6 +126,7 @@ export function useDesktopChatModel({
       selectedQueryUser,
       externalAvatarsEnabled,
       selectedMessages,
+      messageFocusRequest,
       mutedNicks,
       contactRuleHandlers,
       mediaPolicy,
@@ -175,6 +178,12 @@ export function useDesktopChatModel({
       initialHistoryPending: selectedBufferHistory.initialHistoryPending,
       loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
       onLoadOlderHistory: selectedBufferHistory.loadOlderHistory,
+      hasNewerHistory: selectedBufferHistory.hasNewerHistory,
+      onReturnToLatest: selectedQueryBuffer
+        ? () => actions.returnBufferToLatest(selectedQueryBuffer.id)
+        : undefined,
+      canPinMessages: Boolean(selectedQueryBuffer),
+      onSetMessagePinned: actions.setMessagePinned,
       channelList,
       channelListNetwork,
       onCloseChannelList: actions.closeChannelList,
@@ -205,6 +214,7 @@ export function useDesktopChatModel({
       friends,
       externalAvatarsEnabled,
       mediaPolicy,
+      messageFocusRequest,
       mutedNicks,
       nickEmojis,
       participantQueryNetwork,

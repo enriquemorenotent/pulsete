@@ -10,7 +10,9 @@ import {
   selectFriends,
   selectGatewayStatus,
   selectHistoryHasOlderByBufferId,
+  selectHistoryHasNewerByBufferId,
   selectHistoryLoadedByBufferId,
+  selectMessageFocusRequest,
   selectMutedNicks,
   selectNetworks,
   selectNickEmojis,
@@ -101,7 +103,9 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   const nickEmojis = useAppSelector(selectNickEmojis);
   const gatewayStatus = useAppSelector(selectGatewayStatus);
   const historyHasOlderByBufferId = useAppSelector(selectHistoryHasOlderByBufferId);
+  const historyHasNewerByBufferId = useAppSelector(selectHistoryHasNewerByBufferId);
   const historyLoadedByBufferId = useAppSelector(selectHistoryLoadedByBufferId);
+  const messageFocusRequest = useAppSelector(selectMessageFocusRequest);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const networks = useAppSelector(selectNetworks);
   const selectedMessages = useAppSelector(selectSelectedMessages);
@@ -119,6 +123,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     dispatch,
     gatewayStatus,
     historyHasOlderByBufferId,
+    historyHasNewerByBufferId,
     historyLoadedByBufferId,
     selectedBuffer: workspace.selectedBuffer,
     selectedMessages,
@@ -137,6 +142,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     networks,
     channelList,
     channelListNetwork,
+    messageFocusRequest,
     selectedBufferHistory,
     selectedMessages,
     workspace,

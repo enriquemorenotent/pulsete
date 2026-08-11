@@ -191,6 +191,7 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   const markup = renderQueryProfileSidebar();
 
   assert.match(markup, /aria-label="Info"/);
+  assert.match(markup, /aria-label="Pinned"/);
   assert.match(markup, /aria-label="Assistant"/);
   assert.match(markup, /aria-label="Collapse right sidebar"/);
   assert.match(markup, /Notes/);

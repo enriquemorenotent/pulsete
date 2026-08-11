@@ -1,10 +1,12 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import { openExistingNetworkEditor } from './network-editor-actions.js';
 import {
   selectFriends,
   selectMutedNicks,
   selectNickEmojis,
+  selectPinnedMessagesByConversation,
+  selectPinnedMessagesLoadedByBufferId,
   selectPreferences,
   selectServerProfileNetwork,
   selectWorkspace,
@@ -17,6 +19,7 @@ import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { useDesktopNicklistModel } from './useDesktopShellModel.js';
 import type { AppActions } from './useAppActions.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
+import type { PinnedMessagesLoadState } from './PinnedMessagesSidebar.js';
 
 type WorkspaceRightSidebarContainerProps = {
   actions: AppActions;
@@ -43,9 +46,47 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   const friends = useAppSelector(selectFriends);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const nickEmojis = useAppSelector(selectNickEmojis);
+  const pinnedMessagesByConversation = useAppSelector(selectPinnedMessagesByConversation);
+  const pinnedMessagesLoadedByBufferId = useAppSelector(selectPinnedMessagesLoadedByBufferId);
   const serverProfileNetwork = useAppSelector(selectServerProfileNetwork);
   const workspace = useAppSelector(selectWorkspace);
   const preferences = useAppSelector(selectPreferences);
+  const queryBuffer = workspace.selectedBuffer?.kind === 'query'
+    ? workspace.selectedBuffer
+    : null;
+  const queryBufferId = queryBuffer?.id ?? null;
+  const pinnedMessagesLoaded = queryBufferId
+    ? pinnedMessagesLoadedByBufferId[queryBufferId] === true
+    : false;
+  const [pinnedMessagesLoad, setPinnedMessagesLoad] = useState<{
+    bufferId: string | null;
+    state: PinnedMessagesLoadState;
+  }>({ bufferId: null, state: 'idle' });
+  const loadPinnedMessages = useCallback(async () => {
+    if (!queryBufferId) {
+      return false;
+    }
+    const bufferId = queryBufferId;
+    setPinnedMessagesLoad({ bufferId, state: 'loading' });
+    const loaded = await actions.loadPinnedMessages(bufferId);
+    setPinnedMessagesLoad((current) =>
+      current.bufferId === bufferId
+        ? { bufferId, state: loaded ? 'loaded' : 'error' }
+        : current,
+    );
+    return loaded;
+  }, [actions.loadPinnedMessages, queryBufferId]);
+  useEffect(() => {
+    if (!queryBufferId) {
+      setPinnedMessagesLoad({ bufferId: null, state: 'idle' });
+      return;
+    }
+    if (pinnedMessagesLoaded) {
+      setPinnedMessagesLoad({ bufferId: queryBufferId, state: 'loaded' });
+      return;
+    }
+    void loadPinnedMessages();
+  }, [loadPinnedMessages, pinnedMessagesLoaded, queryBufferId]);
   const nicklist = useDesktopNicklistModel({
     actions,
     contactNotifications,
@@ -90,14 +131,29 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     serverProfileNetwork,
   ]);
   const queryProfile = useMemo(() => {
-    const buffer = workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null;
     return {
-      buffer,
+      buffer: queryBuffer,
+      pinnedMessages: queryBufferId
+        ? pinnedMessagesByConversation[queryBufferId] ?? []
+        : [],
+      pinnedMessagesLoadState: pinnedMessagesLoad.bufferId === queryBufferId
+        ? pinnedMessagesLoad.state
+        : 'idle' as const,
+      onJumpToPinnedMessage: actions.jumpToPinnedMessage,
+      onRetryPinnedMessages: () => void loadPinnedMessages(),
       onSaveNotes: actions.saveBufferNotes,
+      onUnpinMessage: (bufferId: string, messageId: string) =>
+        actions.setMessagePinned(bufferId, messageId, false),
     };
   }, [
+    actions.jumpToPinnedMessage,
     actions.saveBufferNotes,
-    workspace.selectedBuffer,
+    actions.setMessagePinned,
+    loadPinnedMessages,
+    pinnedMessagesByConversation,
+    pinnedMessagesLoad,
+    queryBuffer,
+    queryBufferId,
   ]);
   const assistant = useMemo(() => {
     const buffer = workspace.selectedBuffer?.kind === 'channel'

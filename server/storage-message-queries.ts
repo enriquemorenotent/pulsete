@@ -1,5 +1,5 @@
 import type { SqliteDb } from './storage-sqlite.js';
-import type { MessagePage, MessageRow } from './storage-types.js';
+import type { MessagePage, MessageRow, MessageWindowPage } from './storage-types.js';
 import {
   emptyMessagePage,
   getMessageBufferId,
@@ -87,6 +87,51 @@ export const getMessageWindow = (db: SqliteDb, messageId: string, before: number
     ORDER BY m.ts ASC, m.rowid ASC LIMIT ?
   `).all(cursor.bufferId, cursor.ts, cursor.ts, cursor.rowid, after) as MessageRow[];
   return hydrateMessages(db, [...beforeRows.reverse(), ...afterRows]);
+};
+
+export const getMessageWindowPage = (
+  db: SqliteDb,
+  messageId: string,
+  before: number,
+  after: number,
+): MessageWindowPage | null => {
+  const cursor = getMessageCursor(db, messageId);
+  if (!cursor) {
+    return null;
+  }
+  const messages = getMessageWindow(db, messageId, before, after);
+  const firstCursor = messages[0] ? getMessageCursor(db, messages[0].id) : null;
+  const lastCursor = messages.at(-1) ? getMessageCursor(db, messages.at(-1)!.id) : null;
+  if (!firstCursor || !lastCursor) {
+    return null;
+  }
+  const boundaries = db.prepare(`
+    SELECT
+      EXISTS(
+        SELECT 1 FROM messages
+        WHERE bufferId = ?
+          AND (ts < ? OR (ts = ? AND rowid < ?))
+      ) AS hasOlder,
+      EXISTS(
+        SELECT 1 FROM messages
+        WHERE bufferId = ?
+          AND (ts > ? OR (ts = ? AND rowid > ?))
+      ) AS hasNewer
+  `).get(
+    firstCursor.bufferId,
+    firstCursor.ts,
+    firstCursor.ts,
+    firstCursor.rowid,
+    lastCursor.bufferId,
+    lastCursor.ts,
+    lastCursor.ts,
+    lastCursor.rowid,
+  ) as { hasOlder: number; hasNewer: number };
+  return {
+    messages,
+    hasMore: Boolean(boundaries.hasOlder),
+    hasNewer: Boolean(boundaries.hasNewer),
+  };
 };
 
 export const listRecentMessages = (db: SqliteDb, limit = 200) => {

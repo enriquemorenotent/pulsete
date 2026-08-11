@@ -12,6 +12,8 @@ import {
   parseFormattedMessageContent,
 } from './FormattedMessageText.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
+import { ChatMessagePinButton, isPinnableChatMessage } from './ChatMessagePinButton.js';
+import { useFocusedMessageScroll } from './useFocusedMessageScroll.js';
 import {
   formatMessageTime,
   formatMessageTimestampDateTime,
@@ -34,10 +36,18 @@ type ChatPaneCompactMessageRowProps = {
   onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
+  highlighted?: boolean;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
 };
 
 export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps) {
   const { message } = props;
+  const rowRef = useFocusedMessageScroll(props.highlighted);
+  const showPinControl =
+    props.canPinMessages
+    && !!props.onSetMessagePinned
+    && isPinnableChatMessage(message);
   const isAction = isActionMessage(message);
   const lifecycleEventSummary = getLifecycleEventSummary(message);
   const displayText = lifecycleEventSummary ?? message.body;
@@ -106,10 +116,21 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
 
   return (
     <article
-      className={cn('px-1 py-0.5', messageTone(message), messageDeliveryTone(message))}
+      ref={rowRef}
+      className={cn(
+        'px-1 py-0.5',
+        showPinControl && 'group/message relative pr-9',
+        props.highlighted && 'rounded-sm bg-primary/10 ring-1 ring-inset ring-primary/35',
+        messageTone(message),
+        messageDeliveryTone(message),
+      )}
       data-message-delivery={message.delivery === 'server-history' ? message.delivery : undefined}
       data-message-id={message.id}
+      data-message-pinned={message.pinnedAt != null ? 'true' : undefined}
     >
+      {showPinControl && props.onSetMessagePinned ? (
+        <ChatMessagePinButton message={message} onSetMessagePinned={props.onSetMessagePinned} />
+      ) : null}
       <div className="grid items-baseline grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 font-sans">
         {timeLabel}
         <div className="min-w-0">

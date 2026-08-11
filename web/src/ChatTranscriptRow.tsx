@@ -12,6 +12,7 @@ import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 type ChatTranscriptRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   expandedMutedGroupKeys: ReadonlySet<string>;
+  highlightedMessageId?: string | null;
   inlineImageRendering?: InlineImageRenderingMode;
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
@@ -21,6 +22,8 @@ type ChatTranscriptRowProps = {
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onToggleMutedGroup: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
   row: TranscriptRow;
 };
 
@@ -39,6 +42,9 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
         row={props.row}
         channelUserModesByNick={props.channelUserModesByNick}
         expanded={props.expandedMutedGroupKeys.has(props.row.key)}
+        highlightedMessageId={props.highlightedMessageId}
+        canPinMessages={props.canPinMessages}
+        onSetMessagePinned={props.onSetMessagePinned}
         inlineImageRendering={props.inlineImageRendering}
         nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
         listKind={props.listKind}
@@ -76,6 +82,9 @@ export function ChatTranscriptRow(props: ChatTranscriptRowProps) {
       onOpenChannel={props.onOpenChannel}
       onOpenParticipantQuery={props.onOpenParticipantQuery}
       participantHighlightMode={props.participantHighlightMode}
+      highlighted={props.highlightedMessageId === props.row.message.id}
+      canPinMessages={props.canPinMessages}
+      onSetMessagePinned={props.onSetMessagePinned}
     />
   );
 }

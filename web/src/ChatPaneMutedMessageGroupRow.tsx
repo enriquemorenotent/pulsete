@@ -11,6 +11,7 @@ import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 type ChatPaneMutedMessageGroupRowProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   expanded: boolean;
+  highlightedMessageId?: string | null;
   inlineImageRendering?: InlineImageRenderingMode;
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
@@ -20,6 +21,8 @@ type ChatPaneMutedMessageGroupRowProps = {
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onToggle: (key: string) => void;
   participantHighlightMode: ParticipantHighlightMode;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
   row: ChatTranscriptMutedGroupRow;
 };
 
@@ -66,6 +69,9 @@ export function ChatPaneMutedMessageGroupRow(props: ChatPaneMutedMessageGroupRow
               onOpenChannel={props.onOpenChannel}
               onOpenParticipantQuery={props.onOpenParticipantQuery}
               participantHighlightMode={props.participantHighlightMode}
+              highlighted={props.highlightedMessageId === row.message.id}
+              canPinMessages={props.canPinMessages}
+              onSetMessagePinned={props.onSetMessagePinned}
             />
           ))}
         </div>

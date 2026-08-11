@@ -5,6 +5,7 @@ import {
   deleteMessages,
   deleteMessagesByIdPrefixes,
   getMessageWindow,
+  getMessageWindowPage,
   getMessageById,
   listAllMessages,
   listOpeningMessages,
@@ -45,6 +46,7 @@ import {
 import type { LogSourceKind } from '../shared/protocol-chat.js';
 import type { BufferInput, ChannelInput, MessageInput, MessageSearchFilters } from './storage-types.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
+import { listPinnedMessages, setMessagePinned } from './storage-message-pins.js';
 
 export class StorageConversationsRepository {
   constructor(private readonly db: SqliteDb) {}
@@ -155,6 +157,24 @@ export class StorageConversationsRepository {
 
   getMessageWindow(messageId: string, before: number, after: number) {
     return getMessageWindow(this.db, messageId, before, after);
+  }
+
+  getMessageWindowPage(messageId: string, before: number, after: number) {
+    return getMessageWindowPage(this.db, messageId, before, after);
+  }
+
+  listPinnedMessages(bufferId: string) {
+    return listPinnedMessages(this.db, bufferId);
+  }
+
+  setMessagePinned(messageId: string, pinned: boolean, now?: number) {
+    return setMessagePinned(
+      this.db,
+      messageId,
+      pinned,
+      (id) => this.getMessageById(id),
+      now,
+    );
   }
 
   listRecentMessages(limit = 200) {

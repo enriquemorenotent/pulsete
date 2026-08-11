@@ -159,7 +159,7 @@ test('loadSelectedBufferHistory appends messages for the current request', async
 
   assert.deepEqual(dispatched, [
     { type: 'append-messages', messages: [message] },
-    { type: 'history-buffer-loaded', bufferId: 'buffer-1', hasOlder: true },
+    { type: 'history-buffer-loaded', bufferId: 'buffer-1', hasOlder: true, hasNewer: false },
   ]);
 });
 

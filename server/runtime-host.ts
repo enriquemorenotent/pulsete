@@ -80,6 +80,11 @@ export class RuntimeHost {
         searchHistory: (bufferId, query, limit) =>
           this.runtime.http.buffers.searchHistory(bufferId, query, limit),
         exportHistory: (bufferId) => this.runtime.http.buffers.exportHistory(bufferId),
+        listPinnedMessages: (bufferId) => this.runtime.http.buffers.listPinnedMessages(bufferId),
+        setMessagePinned: (bufferId, messageId, pinned) =>
+          this.runtime.http.buffers.setMessagePinned(bufferId, messageId, pinned),
+        pinnedMessageHistoryWindow: (bufferId, messageId) =>
+          this.runtime.http.buffers.pinnedMessageHistoryWindow(bufferId, messageId),
       },
       logs: {
         listSources: (filters, limit) => this.runtime.http.logs.listSources(filters, limit),

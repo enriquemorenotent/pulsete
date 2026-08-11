@@ -45,8 +45,16 @@ export const chatMessageSchema = z.object({
   kind: messageKindSchema,
   self: z.boolean(),
   ts: z.number(),
+  pinnedAt: z.number().nullable().optional(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+export type PinnedMessageHistoryWindowPayload = {
+  messages: ChatMessage[];
+  targetMessageId: string;
+  hasOlder: boolean;
+  hasNewer: boolean;
+};
 
 export type {
   BufferHistorySearchPayload,

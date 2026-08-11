@@ -17,6 +17,7 @@ import type {
   ChannelInput,
   FriendInput,
   MessagePage,
+  MessageWindowPage,
   MessageSearchFilters,
   MessageSearchPage,
   MessageInput,
@@ -76,6 +77,17 @@ export type RuntimeConversationStore = {
   searchMessagesByBufferId(bufferId: string, query: string, limit: number): MessageSearchPage;
   getMessageById(messageId: string): AppSnapshot['messages'][number] | null;
   getMessageWindow(messageId: string, before: number, after: number): AppSnapshot['messages'];
+  getMessageWindowPage(
+    messageId: string,
+    before: number,
+    after: number,
+  ): MessageWindowPage | null;
+  listPinnedMessages(bufferId: string): AppSnapshot['messages'];
+  setMessagePinned(
+    messageId: string,
+    pinned: boolean,
+    now?: number,
+  ): AppSnapshot['messages'][number] | null;
   deleteMessages(networkId: string, target: string): AppSnapshot['messages'];
   deleteMessagesByIdPrefixes(prefixes: string[]): AppSnapshot['messages'];
   upsertChannel(input: ChannelInput): ChannelState;

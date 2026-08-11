@@ -62,6 +62,11 @@ export const createRuntimeHttpApi = ({
     history: (bufferId, limit, beforeMessageId) => conversations.history(bufferId, limit, beforeMessageId),
     searchHistory: (bufferId, query, limit) => conversations.searchHistory(bufferId, query, limit),
     exportHistory: (bufferId) => conversations.exportHistory(bufferId),
+    listPinnedMessages: (bufferId) => conversations.listPinnedMessages(bufferId),
+    setMessagePinned: (bufferId, messageId, pinned) =>
+      conversations.setMessagePinned(bufferId, messageId, pinned),
+    pinnedMessageHistoryWindow: (bufferId, messageId) =>
+      conversations.pinnedMessageHistoryWindow(bufferId, messageId),
   },
   logs: {
     listSources: (filters, limit) => conversations.listLogSources(filters, limit),

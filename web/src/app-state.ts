@@ -37,6 +37,7 @@ const initialDomainState: AppDomainState = {
   channels: [],
   pendingChannels: [],
   messages: {},
+  pinnedMessages: {},
   networkStates: {},
   preferences: defaultWorkspacePreferences,
   userAvatarOverrides: [],
@@ -50,6 +51,9 @@ const initialTransientState: AppTransientState = {
   channelList: initialChannelListState,
   historyLoadedByBufferId: {},
   historyHasOlderByBufferId: {},
+  historyHasNewerByBufferId: {},
+  pinnedMessagesLoadedByBufferId: {},
+  messageFocusRequest: null,
   networkManager: initialNetworkManagerState,
 };
 
@@ -71,6 +75,7 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
   channels: snapshot.channels,
   pendingChannels: sortPendingChannels(snapshot.pendingChannels),
   messages: indexConversationMessages(snapshot.messages),
+  pinnedMessages: {},
   networkStates: Object.fromEntries(
     Object.entries(snapshot.networkStates).map(([networkId, runtime]) => [
       networkId,
@@ -90,9 +95,13 @@ export const reducer = (state: State, action: Action): State => {
   const selectedBufferId = state.transient.selection?.kind === 'buffer'
     ? state.transient.selection.bufferId
     : null;
+  const suppressHistoricalAppend = action.type === 'append-message'
+    && state.transient.historyHasNewerByBufferId[action.message.bufferId] === true;
   const reducedDomain = action.type === 'snapshot'
     ? reduceSnapshotDomain(state, action.snapshot)
-    : reduceRuntimeDomain(state.domain, action)
+    : suppressHistoricalAppend
+      ? state.domain
+      : reduceRuntimeDomain(state.domain, action)
       ?? reduceConversationDomain(state.domain, action, selectedBufferId)
       ?? state.domain;
   const selection = resolveNextSelection(state, reducedDomain, action);
@@ -116,6 +125,9 @@ export const reducer = (state: State, action: Action): State => {
         channelList: initialChannelListState,
         historyLoadedByBufferId: {},
         historyHasOlderByBufferId: {},
+        historyHasNewerByBufferId: {},
+        pinnedMessagesLoadedByBufferId: {},
+        messageFocusRequest: null,
       }
     : selection === state.transient.selection
       ? state.transient
@@ -209,9 +221,24 @@ const pruneTransientBufferHistory = (
     transient.historyHasOlderByBufferId,
     activeBufferIds,
   );
+  const historyHasNewerByBufferId = retainActiveBufferKeys(
+    transient.historyHasNewerByBufferId,
+    activeBufferIds,
+  );
+  const pinnedMessagesLoadedByBufferId = retainActiveBufferKeys(
+    transient.pinnedMessagesLoadedByBufferId,
+    activeBufferIds,
+  );
+  const messageFocusRequest = transient.messageFocusRequest
+    && activeBufferIds.has(transient.messageFocusRequest.bufferId)
+    ? transient.messageFocusRequest
+    : null;
   if (
     historyLoadedByBufferId === transient.historyLoadedByBufferId
     && historyHasOlderByBufferId === transient.historyHasOlderByBufferId
+    && historyHasNewerByBufferId === transient.historyHasNewerByBufferId
+    && pinnedMessagesLoadedByBufferId === transient.pinnedMessagesLoadedByBufferId
+    && messageFocusRequest === transient.messageFocusRequest
   ) {
     return transient;
   }
@@ -219,6 +246,9 @@ const pruneTransientBufferHistory = (
     ...transient,
     historyLoadedByBufferId,
     historyHasOlderByBufferId,
+    historyHasNewerByBufferId,
+    pinnedMessagesLoadedByBufferId,
+    messageFocusRequest,
   };
 };
 

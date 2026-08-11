@@ -12,6 +12,7 @@ import type {
   MutedNickState,
   NetworkProfile,
   NickEmojiState,
+  PinnedMessageHistoryWindowPayload,
 } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type {
@@ -154,6 +155,24 @@ export const api = {
       { signal: init?.signal },
     );
   },
+  loadPinnedMessages: (bufferId: string, init?: Pick<RequestInit, 'signal'>) =>
+    apiRequest<{ messages: ChatMessage[] }>(
+      `/api/buffers/${encodeURIComponent(bufferId)}/pins`,
+      { signal: init?.signal },
+    ),
+  setMessagePinned: (bufferId: string, messageId: string, pinned: boolean) =>
+    apiRequest<{ message: ChatMessage; messages: ServerMessage[] }>(
+      `/api/buffers/${encodeURIComponent(bufferId)}/messages/${encodeURIComponent(messageId)}/pin`,
+      { method: pinned ? 'PUT' : 'DELETE', body: '{}' },
+    ),
+  loadPinnedMessageHistoryWindow: (
+    bufferId: string,
+    messageId: string,
+    init?: Pick<RequestInit, 'signal'>,
+  ) => apiRequest<PinnedMessageHistoryWindowPayload>(
+    `/api/buffers/${encodeURIComponent(bufferId)}/history/around/${encodeURIComponent(messageId)}`,
+    { signal: init?.signal },
+  ),
   searchBufferHistory: (
     bufferId: string,
     query: string,

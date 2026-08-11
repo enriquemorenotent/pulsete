@@ -17,6 +17,8 @@ import type { ChatMessage } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { MessageParticipantPresentation } from './message-participant-presentation.js';
+import { ChatMessagePinButton, isPinnableChatMessage } from './ChatMessagePinButton.js';
+import { useFocusedMessageScroll } from './useFocusedMessageScroll.js';
 
 export const ChatPaneExpandedMessageRow = (props: {
   message: ChatMessage;
@@ -26,13 +28,34 @@ export const ChatPaneExpandedMessageRow = (props: {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   participant: MessageParticipantPresentation;
-}) => (
-  <article
-    className={cn('px-1 py-0.5', messageTone(props.message), messageDeliveryTone(props.message))}
-    data-message-delivery={props.message.delivery === 'server-history' ? props.message.delivery : undefined}
-    data-message-id={props.message.id}
-  >
-    <div className="min-w-0">
+  highlighted?: boolean;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
+}) => {
+  const rowRef = useFocusedMessageScroll(props.highlighted);
+  const showPinControl =
+    props.canPinMessages
+    && !!props.onSetMessagePinned
+    && isPinnableChatMessage(props.message);
+
+  return (
+    <article
+      ref={rowRef}
+      className={cn(
+        'px-1 py-0.5',
+        showPinControl && 'group/message relative pr-9',
+        props.highlighted && 'rounded-sm bg-primary/10 ring-1 ring-inset ring-primary/35',
+        messageTone(props.message),
+        messageDeliveryTone(props.message),
+      )}
+      data-message-delivery={props.message.delivery === 'server-history' ? props.message.delivery : undefined}
+      data-message-id={props.message.id}
+      data-message-pinned={props.message.pinnedAt != null ? 'true' : undefined}
+    >
+      {showPinControl && props.onSetMessagePinned ? (
+        <ChatMessagePinButton message={props.message} onSetMessagePinned={props.onSetMessagePinned} />
+      ) : null}
+      <div className="min-w-0">
       <div className="mb-0.5 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-[var(--transcript-meta)]">
         <time
           className="tabular-nums normal-case tracking-normal"
@@ -70,6 +93,7 @@ export const ChatPaneExpandedMessageRow = (props: {
           onOpenChannel={props.onOpenChannel}
         />
       </p>
-    </div>
-  </article>
-);
+      </div>
+    </article>
+  );
+};

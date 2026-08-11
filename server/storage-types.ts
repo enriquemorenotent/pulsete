@@ -66,6 +66,7 @@ export type MessageRow = {
   kind: string;
   self: number;
   ts: number;
+  pinnedAt: number | null;
 };
 
 export type FriendRow = {
@@ -164,6 +165,10 @@ export type MessagePage = {
 };
 
 export type MessageSearchPage = MessagePage;
+
+export type MessageWindowPage = MessagePage & {
+  hasNewer: boolean;
+};
 
 export type MessageSearchFilters = {
   networkId?: string;
