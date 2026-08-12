@@ -33,7 +33,7 @@ export function ConnectionSidebarServerSwitcher(
                 connection={connection}
                 active={connection.network.id === activeConnection?.network.id}
                 externalAvatarsEnabled={props.externalAvatarsEnabled}
-                mediaPolicy={props.mediaPolicy}
+                showMedia={props.showMedia}
                 onSelect={() => props.onSelectNetwork(connection.network)}
               />
             ))}
@@ -74,7 +74,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
               <ServerSwitcherBanner
                 connection={activeConnection}
                 externalAvatarsEnabled={props.externalAvatarsEnabled}
-                mediaPolicy={props.mediaPolicy}
+                showMedia={props.showMedia}
               />
               <ServerSwitcherActionBar
                 connection={activeConnection}
@@ -95,7 +95,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
                 onCloseConnection={props.onCloseConnection}
                 onCloseChannel={props.onCloseChannel}
                 onCloseBuffer={props.onCloseBuffer}
-                mediaPolicy={props.mediaPolicy}
+                showMedia={props.showMedia}
                 variant="server-switcher"
               />
             </>
@@ -152,15 +152,14 @@ function ServerSwitcherActionBar(props: {
 function ServerSwitcherBanner(props: {
   connection: SidebarConnectionView;
   externalAvatarsEnabled?: boolean;
-  mediaPolicy?: ConnectionSidebarProps['mediaPolicy'];
+  showMedia?: ConnectionSidebarProps['showMedia'];
 }) {
-  if (props.mediaPolicy?.showServerImages === false) {
+  if (props.showMedia === false) {
     return null;
   }
   const serverImage = resolveNetworkServerImage(
     props.connection.network,
-    props.externalAvatarsEnabled === true
-      && props.mediaPolicy?.showExternalMedia !== false,
+    props.externalAvatarsEnabled === true,
   );
   if (!serverImage) {
     return null;
@@ -189,16 +188,15 @@ function ServerSwitcherButton(props: {
   active: boolean;
   connection: SidebarConnectionView;
   externalAvatarsEnabled?: boolean;
-  mediaPolicy?: ConnectionSidebarProps['mediaPolicy'];
+  showMedia?: ConnectionSidebarProps['showMedia'];
   onSelect: () => void;
 }) {
   const activity = resolveConnectionActivity(props.connection);
-  const serverImage = props.mediaPolicy?.showServerImages === false
+  const serverImage = props.showMedia === false
     ? null
     : resolveNetworkServerImage(
         props.connection.network,
-        props.externalAvatarsEnabled === true
-          && props.mediaPolicy?.showExternalMedia !== false,
+        props.externalAvatarsEnabled === true,
       );
   return (
     <div className="relative flex w-full justify-center">

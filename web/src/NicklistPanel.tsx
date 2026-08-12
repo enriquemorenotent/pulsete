@@ -20,7 +20,6 @@ import {
   InspectorPanel,
   InspectorSection,
 } from './RightSidebarInspector.js';
-import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { resolveUserAvatarTarget } from './user-avatars/override-model.js';
 import { UserAvatar } from './user-avatars/UserAvatar.js';
 
@@ -33,7 +32,7 @@ export type NicklistPanelProps = {
   contactNotificationSettings: Pick<ContactNotificationSettings, 'contacts'>;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
-  mediaPolicy?: MediaVisibilityPolicy;
+  showMedia?: boolean;
   onSaveNickEmoji: (
     networkId: string,
     nick: string,
@@ -54,7 +53,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
     () => buildNicklistGroups(props.channel.users, props.friends, deferredQuery),
     [deferredQuery, props.channel.users, props.friends],
   );
-  const userAvatarsVisible = props.mediaPolicy?.showUserAvatars !== false;
+  const userAvatarsVisible = props.showMedia !== false;
 
   useEffect(() => {
     setQuery('');

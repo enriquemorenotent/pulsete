@@ -5,7 +5,7 @@ import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 type ConnectionSidebarConnectionsProps = Pick<
 	ConnectionSidebarProps,
 	| 'queryPresence'
-	| 'mediaPolicy'
+	| 'showMedia'
 	| 'nickEmojis'
 	| 'connections'
 	| 'onSelectNetwork'
@@ -40,7 +40,7 @@ export function ConnectionSidebarConnections(
 							key={connection.network.id}
 							connection={connection}
 							index={index}
-							mediaPolicy={props.mediaPolicy}
+							showMedia={props.showMedia}
 							nickEmojis={props.nickEmojis}
 							queryPresence={props.queryPresence ?? {}}
 							onSelectNetwork={props.onSelectNetwork}

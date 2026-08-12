@@ -12,7 +12,6 @@ import {
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
-import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
 type QueryPresenceDisplay = PresenceStatus | 'pending';
@@ -20,7 +19,7 @@ type QueryPresenceDisplay = PresenceStatus | 'pending';
 type ConnectionSidebarNetworkSectionProps = {
 	connection: SidebarConnectionView;
 	index: number;
-	mediaPolicy?: MediaVisibilityPolicy;
+	showMedia?: boolean;
 	nickEmojis: ConnectionSidebarProps['nickEmojis'];
 	queryPresence: Record<string, PresenceStatus>;
 	onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
@@ -39,7 +38,7 @@ export function ConnectionSidebarNetworkSection(
 ) {
 	const { connection } = props;
 	const serverActivity = resolveBufferActivityState(connection.serverBuffer);
-	const userAvatarsVisible = props.mediaPolicy?.showUserAvatars !== false;
+	const userAvatarsVisible = props.showMedia !== false;
 
 	return (
 		<section

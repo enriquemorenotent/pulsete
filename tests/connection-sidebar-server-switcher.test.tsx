@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FriendState } from '../shared/protocol-chat.js';
-import { resolveMediaVisibilityPolicy } from '../web/src/media-visibility-settings.js';
 import {
   makeSidebarBuffer,
   makeSidebarNetwork,
@@ -146,7 +145,7 @@ test('connection sidebar uses the tree view and hides server images when media i
     iconUrl: 'https://example.test/beta.png',
   });
   const markup = renderConnectionSidebar({
-    mediaPolicy: resolveMediaVisibilityPolicy({ mode: 'hide-media' }),
+    showMedia: false,
     networks: [alpha, beta],
     buffers: [
       makeSidebarBuffer({ id: 'alpha-server', networkId: 'alpha' }),

@@ -15,7 +15,6 @@ import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
-import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import type { AppActions } from './useAppActions.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import type { PinnedMessagesLoadState } from './PinnedMessagesSidebar.js';
@@ -27,7 +26,7 @@ type WorkspaceRightSidebarContainerProps = {
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
-  mediaPolicy: MediaVisibilityPolicy;
+  showMedia: boolean;
   onCollapse: () => void;
 };
 
@@ -38,7 +37,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   contactNotifications,
   contactRuleHandlers,
   externalAvatarsEnabled,
-  mediaPolicy,
+  showMedia,
   onCollapse,
 }: WorkspaceRightSidebarContainerProps) {
   const dispatch = useAppDispatch();
@@ -91,7 +90,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     contactRuleHandlers,
     externalAvatarsEnabled,
     friends,
-    mediaPolicy,
+    showMedia,
     mutedNicks,
     nickEmojis,
     onSaveNickEmoji: actions.saveNickEmoji,
@@ -103,7 +102,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     contactRuleHandlers,
     externalAvatarsEnabled,
     friends,
-    mediaPolicy,
+    showMedia,
     mutedNicks,
     nickEmojis,
   ]);

@@ -5,7 +5,6 @@ import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
 import { RuntimeFriendService } from './runtime-friend-service.js';
-import { createRuntimeGateway } from './runtime-gateway.js';
 import { RuntimeIrcService } from './runtime-irc-service.js';
 import { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
@@ -14,6 +13,7 @@ import { RuntimePublisher } from './runtime-publisher.js';
 import type {
   RuntimeConversationMutations,
   RuntimeFriendMutations,
+  RuntimeGateway,
   RuntimeMutedNickMutations,
   RuntimeNickEmojiMutations,
   RuntimeNetworkMutations,
@@ -23,6 +23,7 @@ import type {
 } from './runtime-service-types.js';
 import { createMutationPublisher } from './runtime-mutation-messages.js';
 import { RuntimeSocketHub } from './runtime-socket-hub.js';
+import { createRuntimeSnapshot } from './runtime-snapshot.js';
 import { createRuntimeWebSocketApi } from './runtime-websocket-api.js';
 import { createRuntimeUserStateServices } from './runtime-user-state-service.js';
 
@@ -88,18 +89,17 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     conversations: store.conversations,
     networks: store.networks,
   });
-  const closeGateway = () => {
-    closing = true;
-    socketHub.closeAll();
-    connectionManager.close();
+  const gateway: RuntimeGateway = {
+    attachSocket: (ws) => socketHub.attach(ws),
+    detachSocket: (ws) => socketHub.detach(ws),
+    publish: (message) => publisher.publish(message),
+    snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager),
+    close: () => {
+      closing = true;
+      socketHub.closeAll();
+      connectionManager.close();
+    },
   };
-  const gateway = createRuntimeGateway({
-    connectionManager,
-    onClose: closeGateway,
-    publisher,
-    socketHub,
-    store,
-  });
   const conversations: RuntimeConversationMutations = {
     openQuery: (networkId, target, peerIdentity) => {
       const currentNick = connectionManager.getConnectionState(networkId)?.nick ?? null;

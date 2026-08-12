@@ -3,7 +3,6 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ChannelState, ChannelUserState, NetworkProfile } from '../shared/protocol-chat.js';
 import { NicklistPanel } from '../web/src/NicklistPanel.js';
-import { resolveMediaVisibilityPolicy } from '../web/src/media-visibility-settings.js';
 import { buildNicklistGroups } from '../web/src/nicklist-groups.js';
 import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
 
@@ -39,7 +38,7 @@ type NicklistRenderOptions = Partial<Pick<
   'contactNotificationSettings'
   | 'externalAvatarsEnabled'
   | 'friends'
-  | 'mediaPolicy'
+  | 'showMedia'
   | 'mutedNicks'
   | 'nickEmojis'
 >>;
@@ -65,7 +64,7 @@ const renderNicklist = (
     contactNotificationSettings={options.contactNotificationSettings ?? { contacts: [] }}
     contactRuleHandlers={noopContactRuleHandlers}
     externalAvatarsEnabled={options.externalAvatarsEnabled ?? false}
-    mediaPolicy={options.mediaPolicy}
+    showMedia={options.showMedia}
     onSaveNickEmoji={async () => true}
     onSelectNick={() => undefined}
   />
@@ -169,7 +168,7 @@ test('nicklist hides user avatars when media is hidden', () => {
   ]);
   const markup = renderNicklist(channel, {
     externalAvatarsEnabled: true,
-    mediaPolicy: resolveMediaVisibilityPolicy({ mode: 'hide-media' }),
+    showMedia: false,
   });
 
   assert.doesNotMatch(markup, /avatar-redirect/);

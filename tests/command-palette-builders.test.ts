@@ -4,7 +4,6 @@ import {
   buildCommandPaletteEntrySpecs,
   runCommandPaletteAction,
 } from '../web/src/command-palette.js';
-import { resolveMediaVisibilityPolicy } from '../web/src/media-visibility-settings.js';
 import {
   buildPaletteInput,
   channelBuffer,
@@ -142,7 +141,7 @@ test('command palette carries server images for network-backed entries', () => {
 test('command palette omits network-backed images when media is hidden', () => {
   const iconUrl = 'data:image/png;base64,cHVsc2V0ZQ==';
   const entries = buildCommandPaletteEntrySpecs(buildPaletteInput({
-    mediaPolicy: resolveMediaVisibilityPolicy({ mode: 'hide-media' }),
+    showMedia: false,
     connections: [{
       ...connection,
       network: { ...network, iconUrl },
