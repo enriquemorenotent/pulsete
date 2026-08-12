@@ -98,7 +98,16 @@ test('backup export and import fully replace stored app data', async () => {
     assert.deepEqual(restored.avatarOverrides.getSource(original.avatarId)?.data, backupAvatar);
     assert.equal(restored.preferences.isLegacyBrowserImportPending(), false);
     assertBackupTables(restored.databasePath);
-    assert.ok(readdirSync(join(context.dir, 'backups')).some((name) => name.startsWith('pre-restore-')));
+    const preRestoreBackup = readdirSync(join(context.dir, 'backups'))
+      .find((name) => name.startsWith('pre-restore-'));
+    assert.ok(preRestoreBackup);
+    const preserved = openSqliteDatabase(join(context.dir, 'backups', preRestoreBackup, 'db.sqlite'));
+    try {
+      const names = preserved.prepare('SELECT name FROM networks ORDER BY name').all() as Array<{ name: string }>;
+      assert.deepEqual(names.map((network) => network.name), ['BackupNet', 'ThrowawayNet']);
+    } finally {
+      preserved.close();
+    }
   } finally {
     await context.close();
   }

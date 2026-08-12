@@ -1,8 +1,13 @@
 import type WebSocket from 'ws';
+import { appSnapshotSchema } from '../shared/protocol-app.js';
 import type { ClientMessage } from '../shared/protocol-messages.js';
+import { badRequest } from './app-error.js';
 import { createRuntime, type Runtime, type RuntimeHttpApi } from './runtime.js';
 import { Storage } from './storage.js';
-import { prepareStorageBackupRestore } from './storage-backup.js';
+import {
+  prepareStorageBackupRestore,
+  type PreparedStorageRestore,
+} from './storage-backup.js';
 import { resolveAppPaths, type AppPaths } from './app-paths.js';
 import type { RuntimeWebSocketApi } from './runtime-service-types.js';
 import type { BackupHttpApi } from './http-types.js';
@@ -32,22 +37,82 @@ export class RuntimeHost {
     this.storage.close();
   }
 
-  private openRuntime() {
-    const storage = new Storage(this.paths);
-    return {
-      runtime: createRuntime(storage.runtimeStore),
-      storage,
-    };
+  private openRuntime(paths = this.paths) {
+    const storage = new Storage(paths);
+    try {
+      return {
+        runtime: createRuntime(storage.runtimeStore),
+        storage,
+      };
+    } catch (error) {
+      storage.close();
+      throw error;
+    }
   }
 
   private restore(backupContent: Buffer) {
     const prepared = prepareStorageBackupRestore({ backupContent, paths: this.paths });
-    this.close();
-    prepared.apply();
-    const current = this.openRuntime();
-    this.storage = current.storage;
-    this.runtime = current.runtime;
-    return { browserPreferences: prepared.browserPreferences };
+    try {
+      this.validateRestoreCandidate(prepared);
+      const replacement = prepared.stageReplacement();
+      try {
+        this.close();
+        replacement.activate();
+        let current: ReturnType<RuntimeHost['openRuntime']> | null = null;
+        try {
+          current = this.openRuntime();
+          this.assertRuntimeHealthy(current);
+          replacement.commit();
+          this.storage = current.storage;
+          this.runtime = current.runtime;
+          current = null;
+        } catch (error) {
+          if (current) {
+            this.closeOpenedRuntime(current);
+          }
+          replacement.rollback();
+          const previous = this.openRuntime();
+          this.storage = previous.storage;
+          this.runtime = previous.runtime;
+          throw error;
+        }
+      } finally {
+        replacement.dispose();
+      }
+      return { browserPreferences: prepared.browserPreferences };
+    } finally {
+      prepared.dispose();
+    }
+  }
+
+  private validateRestoreCandidate(prepared: PreparedStorageRestore) {
+    let candidate: ReturnType<RuntimeHost['openRuntime']> | null = null;
+    try {
+      candidate = this.openRuntime(prepared.paths);
+      this.assertRuntimeHealthy(candidate);
+      const validatedCandidate = candidate;
+      candidate = null;
+      this.closeOpenedRuntime(validatedCandidate);
+      prepared.validateDatabase();
+    } catch {
+      throw badRequest('Invalid backup database');
+    } finally {
+      if (candidate) {
+        this.closeOpenedRuntime(candidate);
+      }
+    }
+  }
+
+  private assertRuntimeHealthy(current: ReturnType<RuntimeHost['openRuntime']>) {
+    for (const network of current.storage.networks.list()) {
+      current.storage.networks.getRuntime(network.id);
+    }
+    appSnapshotSchema.parse(current.runtime.ws.snapshot());
+  }
+
+  private closeOpenedRuntime(current: ReturnType<RuntimeHost['openRuntime']>) {
+    current.runtime.gateway.close();
+    current.storage.close();
   }
 
   private createHttpApi(): RuntimeHost['http'] {
