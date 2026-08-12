@@ -4,13 +4,26 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { decodeClient, encode } from '../shared/protocol-messages.js';
 import type { RuntimeWebSocketApi } from './runtime.js';
 import { jsonBodyLimitBytes, tryParseRequestUrl } from './http-utils.js';
+import type { ClientAuthentication } from './client-authentication.js';
 
-export const attachWebSocketServer = (server: Server, context: RuntimeWebSocketApi) => {
+type WebSocketServerOptions = {
+  authentication?: ClientAuthentication;
+};
+
+export const attachWebSocketServer = (
+  server: Server,
+  context: RuntimeWebSocketApi,
+  options: WebSocketServerOptions = {},
+) => {
   const wss = new WebSocketServer({ noServer: true, maxPayload: jsonBodyLimitBytes });
   const handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = tryParseRequestUrl(req.url);
     if (!url || url.pathname !== '/ws') {
       socket.destroy();
+      return;
+    }
+    if (options.authentication && !options.authentication.authenticate(req)) {
+      rejectWebSocketUpgrade(socket);
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
@@ -36,6 +49,17 @@ export const attachWebSocketServer = (server: Server, context: RuntimeWebSocketA
   server.on('upgrade', handleUpgrade);
   server.once('close', cleanup);
   wss.on('connection', handleConnection);
+};
+
+const rejectWebSocketUpgrade = (socket: Duplex) => {
+  socket.end([
+    'HTTP/1.1 401 Unauthorized',
+    'Connection: close',
+    'Content-Type: text/plain; charset=utf-8',
+    'Content-Length: 30',
+    '',
+    'Client authentication required',
+  ].join('\r\n'));
 };
 
 export const initializeWebSocketConnection = (ws: WebSocket, context: RuntimeWebSocketApi) => {
