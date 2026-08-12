@@ -7,7 +7,7 @@ import { AppBody } from './AppBody.js';
 import { createComposerStore } from './composer-store.js';
 import { createAiAssistantStore } from './ai-assistant-store.js';
 import { createServerMessageBridge } from './server-message-bridge.js';
-import { createLiveAppActions } from './useAppActions.js';
+import { createAppActions } from './useAppActions.js';
 import { useAppUiState } from './useAppUiState.js';
 
 function App() {
@@ -27,8 +27,8 @@ function App() {
     const state = store.getState();
     updateBanner('notice', 'Capturing memory diagnostics...');
     try {
-      const { createClientDiagnosticsRecorder } = await import('./client-diagnostics.js');
-      await createClientDiagnosticsRecorder().download(state);
+      const { downloadClientDiagnostics } = await import('./client-diagnostics.js');
+      await downloadClientDiagnostics(state);
       updateBanner('notice', 'Memory diagnostics downloaded.');
     } catch {
       updateBanner('error', 'Could not create the memory diagnostics file.');
@@ -40,7 +40,7 @@ function App() {
   );
   const actions = useMemo(
     () =>
-      createLiveAppActions({
+      createAppActions({
         applyServerMessages: serverMessages.applyMutationMessages,
         getDraft: composer.getDraft,
         getState: store.getState,

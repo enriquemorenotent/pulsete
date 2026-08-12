@@ -1,5 +1,5 @@
 import { createChatActions } from './app-actions-chat.js';
-import { createBackupActions } from './app-actions-backups.js';
+import { downloadFullBackup, importFullBackup } from './backup-client.js';
 import { createConversationActions } from './app-actions-conversation.js';
 import { createFriendActions } from './app-actions-friends.js';
 import { createGatewayActions } from './app-actions-gateway.js';
@@ -14,10 +14,7 @@ import {
   type AppDispatch,
   type MutableRef,
 } from './app-actions-types.js';
-import type { State } from './app-types.js';
-import type { AppSessionSnapshot } from './app-session.js';
 import type { SocketHandle } from './client.js';
-import { createServerMessageBridge } from './server-message-bridge.js';
 
 type CreateAppActionsParams = {
   applyServerMessages: ApplyServerMessages;
@@ -32,20 +29,7 @@ type CreateAppActionsParams = {
   updateBanner: (kind: 'notice' | 'error', message: string) => void;
 };
 
-type CreateStaticAppActionsParams = {
-  applyServerMessages?: ApplyServerMessages;
-  draft?: string;
-  getDraft?: AppActionContext['getDraft'];
-  session?: AppSessionSnapshot;
-  state?: State;
-  dispatch: AppDispatch;
-  socketRef: MutableRef<SocketHandle | null>;
-  recordComposerEntry: AppActionContext['recordComposerEntry'];
-  setDraft: AppActionContext['setDraft'];
-  updateBanner: (kind: 'notice' | 'error', message: string) => void;
-};
-
-const createAppActionsFromSession = (params: CreateAppActionsParams) => {
+export const createAppActions = (params: CreateAppActionsParams) => {
   const actionContext: AppActionContext = {
     getConversation: params.getConversation,
     getDraft: params.getDraft,
@@ -71,7 +55,8 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
     ...actionContext,
   });
   return {
-    ...createBackupActions(),
+    exportBackup: downloadFullBackup,
+    importBackup: importFullBackup,
     ...createNetworkActions({
       ...actionContext,
     }),
@@ -96,51 +81,6 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
     }),
   };
 };
-
-const resolveStaticAccessors = (
-  params: CreateStaticAppActionsParams,
-): Pick<CreateAppActionsParams, 'getDraft' | 'getState'> => {
-  if (params.getDraft && params.state) {
-    return {
-      getDraft: params.getDraft,
-      getState: () => params.state as State,
-    };
-  }
-  if (!params.session) {
-    throw new Error('createAppActions requires either state/getDraft or session');
-  }
-  return {
-    getDraft: (contextKey) => {
-      const selectedBufferId = params.session?.workspace.selectedBuffer?.id ?? null;
-      return contextKey === null || contextKey === selectedBufferId
-        ? params.session?.draft ?? ''
-        : '';
-    },
-    getState: () => params.session?.state as State,
-  };
-};
-
-export function createAppActions(params: CreateStaticAppActionsParams) {
-  const applyServerMessages =
-    params.applyServerMessages ??
-    createServerMessageBridge(params.dispatch).applyMutationMessages;
-  const accessors = resolveStaticAccessors(params);
-  return createAppActionsFromSession({
-    applyServerMessages,
-    getConversation: params.session ? () => params.session!.conversation : undefined,
-    getDraft: accessors.getDraft,
-    getState: accessors.getState,
-    getWorkspace: params.session ? () => params.session!.workspace : undefined,
-    dispatch: params.dispatch,
-    socketRef: params.socketRef,
-    setDraft: params.setDraft,
-    recordComposerEntry: params.recordComposerEntry,
-    updateBanner: params.updateBanner,
-  });
-}
-
-export const createLiveAppActions = (params: CreateAppActionsParams) =>
-  createAppActionsFromSession(params);
 
 export type AppActions = ReturnType<typeof createAppActions>;
 export type ChatActionSet = Pick<

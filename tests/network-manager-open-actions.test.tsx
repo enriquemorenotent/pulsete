@@ -4,7 +4,7 @@ import type { BufferState, ChannelState, NetworkProfile } from '../shared/protoc
 import { initialState } from '../web/src/app-state.js';
 import { createNetworkActions } from '../web/src/app-actions-networks.js';
 import type { Action, State } from '../web/src/app-types.js';
-import type { AppSessionSnapshot } from '../web/src/app-session.js';
+import type { AppSessionSnapshot } from './helpers/app-actions-test-session.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 

@@ -9,7 +9,6 @@ import { RuntimeIrcService } from './runtime-irc-service.js';
 import { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
 import { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
-import { RuntimePublisher } from './runtime-publisher.js';
 import type {
   RuntimeConversationMutations,
   RuntimeFriendMutations,
@@ -31,8 +30,13 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
 
   const socketHub = new RuntimeSocketHub();
-  const publisher = new RuntimePublisher(socketHub);
-  const publishMutation = createMutationPublisher((messages) => publisher.publish(messages));
+  const publish = (message: ServerMessage | readonly ServerMessage[]) => {
+    const messages = Array.isArray(message) ? message : [message];
+    for (const entry of messages) {
+      socketHub.broadcast(entry);
+    }
+  };
+  const publishMutation = createMutationPublisher(publish);
   const { avatarOverrides, drafts, preferences } = createRuntimeUserStateServices(
     store,
     publishMutation,
@@ -49,8 +53,8 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     buffers: store.conversations,
     conversations: conversationsService,
     friends: store.friends,
-    publish: (messages) => publisher.publish(messages),
-    sendSocket: (ws, message) => publisher.sendSocket(ws, message),
+    publish,
+    sendSocket: (ws, message) => socketHub.sendSocket(ws, message),
   });
   const connectionManager = new RuntimeConnectionManager({
     conversations: store.conversations,
@@ -92,7 +96,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const gateway: RuntimeGateway = {
     attachSocket: (ws) => socketHub.attach(ws),
     detachSocket: (ws) => socketHub.detach(ws),
-    publish: (message) => publisher.publish(message),
+    publish,
     snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager),
     close: () => {
       closing = true;
