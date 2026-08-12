@@ -59,7 +59,7 @@ async function startDesktopApp() {
   });
 
   mainWindow = createMainWindow(serverHandle);
-  await mainWindow.loadURL(serverHandle.url);
+  await mainWindow.loadURL(serverHandle.clientUrl);
 }
 
 function createMainWindow(server: PulseteServerHandle) {

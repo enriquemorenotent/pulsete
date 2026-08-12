@@ -19,9 +19,14 @@ import {
   type PagePreviewResolver,
 } from './page-preview-resolver.js';
 import { serveStatic } from './static-handler.js';
+import {
+  clientBootstrapPath,
+  type ClientAuthentication,
+} from './client-authentication.js';
 
 export type HttpHandlerOptions = {
   assetRoot?: string;
+  authentication?: ClientAuthentication;
   pagePreviewResolver?: PagePreviewResolver;
 };
 
@@ -35,6 +40,18 @@ export const createHttpHandler = (
     try {
       const url = parseRequestUrl(req.url);
       const pathname = url.pathname;
+      if (options.authentication && pathname === clientBootstrapPath) {
+        handleClientBootstrap(req, res, options.authentication);
+        return;
+      }
+      if (
+        options.authentication
+        && (isApi(pathname) || pathname === '/ws')
+        && !options.authentication.authenticate(req)
+      ) {
+        writeAuthenticationRequired(res);
+        return;
+      }
       const args = { req, res, url, pathname, context };
       if (
         (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))
@@ -76,3 +93,27 @@ export const createHttpHandler = (
 
 const hasBackupApi = (context: HttpHandlerContext): context is HttpContext =>
   'backups' in context;
+
+const handleClientBootstrap = (
+  req: IncomingMessage,
+  res: ServerResponse,
+  authentication: ClientAuthentication,
+) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'GET' && authentication.authenticate(req)) {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+  if (req.method !== 'POST' || !authentication.bootstrap(req, res)) {
+    writeAuthenticationRequired(res);
+    return;
+  }
+  res.statusCode = 204;
+  res.end();
+};
+
+const writeAuthenticationRequired = (res: ServerResponse) => {
+  res.setHeader('Cache-Control', 'no-store');
+  writeJson(res, 401, { message: 'Client authentication required' });
+};

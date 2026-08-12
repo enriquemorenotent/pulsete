@@ -18,6 +18,10 @@ export default defineConfig({
     port: webPort,
     proxy: {
       '/api': `http://${backendHost}:${backendPort}`,
+      '/ws': {
+        target: `ws://${backendHost}:${backendPort}`,
+        ws: true,
+      },
     },
   },
   build: {

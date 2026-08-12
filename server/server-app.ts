@@ -3,6 +3,10 @@ import { resolveAppPaths, type AppPathInput } from './app-paths.js';
 import { createHttpHandler } from './http-router.js';
 import { RuntimeHost } from './runtime-host.js';
 import { attachWebSocketServer } from './ws-server.js';
+import {
+  createClientAuthentication,
+  createClientBootstrapUrl,
+} from './client-authentication.js';
 
 export type PulseteServerOptions = AppPathInput & {
   assetRoot?: string;
@@ -11,6 +15,7 @@ export type PulseteServerOptions = AppPathInput & {
 };
 
 export type PulseteServerHandle = {
+  clientUrl: string;
   close: () => Promise<void>;
   host: string;
   port: number;
@@ -22,10 +27,14 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
   const listenHost = options.host ?? '127.0.0.1';
   const listenPort = options.port ?? Number(process.env.PORT ?? 18487);
   const runtimeHost = new RuntimeHost(resolveAppPaths(options));
-  const server = createServer(createHttpHandler(runtimeHost.http, { assetRoot: options.assetRoot }));
+  const authentication = createClientAuthentication();
+  const server = createServer(createHttpHandler(runtimeHost.http, {
+    assetRoot: options.assetRoot,
+    authentication,
+  }));
   let closed = false;
 
-  attachWebSocketServer(server, runtimeHost.ws);
+  attachWebSocketServer(server, runtimeHost.ws, { authentication });
   server.on('close', () => {
     runtimeHost.close();
   });
@@ -36,11 +45,13 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
   });
 
   const port = resolveListeningPort(server, listenPort);
+  const url = `http://${listenHost}:${port}`;
   return {
+    clientUrl: createClientBootstrapUrl(url, authentication.bootstrapCredential),
     server,
     host: listenHost,
     port,
-    url: `http://${listenHost}:${port}`,
+    url,
     close: async () => {
       if (closed) {
         return;
