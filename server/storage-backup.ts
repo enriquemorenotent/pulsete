@@ -1,19 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import {
-  copyFileSync,
   existsSync,
   mkdtempSync,
-  mkdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { badRequest } from './app-error.js';
 import { isValidNetworkSecretContent } from './network-secret.js';
 import type { AppPaths } from './app-paths.js';
+import {
+  prepareStorageReplacement,
+  type PreparedStorageReplacement,
+} from './storage-backup-replacement.js';
 import { currentStorageSchemaVersion } from './storage-migrations.js';
 import { hasEncryptedNetworkPasswords } from './storage-networks.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
@@ -29,9 +31,12 @@ export type StorageBackupDownload = {
   fileName: string;
 };
 
-type PreparedStorageRestore = {
-  apply: () => void;
+export type PreparedStorageRestore = {
   browserPreferences: BrowserPreferences;
+  dispose: () => void;
+  paths: AppPaths;
+  stageReplacement: () => PreparedStorageReplacement;
+  validateDatabase: () => void;
 };
 
 type BackupEnvelope = {
@@ -84,18 +89,35 @@ export const prepareStorageBackupRestore = (input: {
   const backup = parseStorageBackup(input.backupContent);
   const tempDir = mkdtempSync(join(tmpdir(), 'pulsete-restore-'));
   const validationPath = join(tempDir, 'restore.sqlite');
+  const candidatePaths: AppPaths = {
+    backupDirectory: join(tempDir, 'backups'),
+    dataDirectory: tempDir,
+    databasePath: validationPath,
+    networkSecretPath: join(tempDir, 'pulsete.secret'),
+  };
   try {
     writeFileSync(validationPath, backup.database, { mode: 0o600 });
+    if (backup.secret !== null) {
+      writeFileSync(candidatePaths.networkSecretPath, `${backup.secret}\n`, { mode: 0o600 });
+    }
     validateBackupDatabase(validationPath, backup.storageSchemaVersion, backup.secret !== null);
     return {
       browserPreferences: backup.browserPreferences,
-      apply: () => {
-        createPreRestoreBackup(input.paths);
-        replaceStorageFiles(input.paths, backup);
-      },
+      dispose: () => rmSync(tempDir, { force: true, recursive: true }),
+      paths: candidatePaths,
+      stageReplacement: () => prepareStorageReplacement({
+        sourcePaths: candidatePaths,
+        targetPaths: input.paths,
+      }),
+      validateDatabase: () => validateBackupDatabase(
+        validationPath,
+        currentStorageSchemaVersion,
+        existsSync(candidatePaths.networkSecretPath),
+      ),
     };
-  } finally {
+  } catch (error) {
     rmSync(tempDir, { force: true, recursive: true });
+    throw error;
   }
 };
 
@@ -149,24 +171,28 @@ const decodeDatabase = (value: string) => {
 };
 
 const validateBackupDatabase = (databasePath: string, declaredVersion: number, hasSecret: boolean) => {
-  const db = openSqliteDatabase(databasePath);
+  let db: SqliteDb | null = null;
   try {
+    db = openSqliteDatabase(databasePath);
     const integrity = db.prepare('PRAGMA integrity_check').get() as { integrity_check?: string } | undefined;
+    const foreignKeyErrors = db.prepare('PRAGMA foreign_key_check').all();
     const version = Number(
       (db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0
     );
-    if (integrity?.integrity_check !== 'ok' || version !== declaredVersion) {
-      throw badRequest('Invalid backup database');
-    }
     if (
-      version > currentStorageSchemaVersion
+      integrity?.integrity_check !== 'ok'
+      || foreignKeyErrors.length > 0
+      || version !== declaredVersion
+      || version > currentStorageSchemaVersion
       || !hasRequiredTables(db, version)
       || (hasEncryptedNetworkPasswords(db) && !hasSecret)
     ) {
       throw badRequest('Invalid backup database');
     }
+  } catch {
+    throw badRequest('Invalid backup database');
   } finally {
-    db.close();
+    db?.close();
   }
 };
 
@@ -183,28 +209,6 @@ const hasRequiredTables = (db: SqliteDb, version: number) =>
   ].every((table) =>
     Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table))
   );
-
-const createPreRestoreBackup = (paths: AppPaths) => {
-  const backupDir = join(paths.backupDirectory, `pre-restore-${formatBackupTimestamp(new Date())}-${randomUUID()}`);
-  mkdirSync(backupDir, { recursive: true });
-  copyIfPresent(paths.databasePath, join(backupDir, basename(paths.databasePath)));
-  copyIfPresent(`${paths.databasePath}-wal`, join(backupDir, `${basename(paths.databasePath)}-wal`));
-  copyIfPresent(`${paths.databasePath}-shm`, join(backupDir, `${basename(paths.databasePath)}-shm`));
-  copyIfPresent(paths.networkSecretPath, join(backupDir, basename(paths.networkSecretPath)));
-};
-
-const replaceStorageFiles = (paths: AppPaths, backup: ParsedBackup) => {
-  mkdirSync(dirname(paths.databasePath), { recursive: true });
-  rmSync(paths.databasePath, { force: true });
-  rmSync(`${paths.databasePath}-wal`, { force: true });
-  rmSync(`${paths.databasePath}-shm`, { force: true });
-  writeFileSync(paths.databasePath, backup.database, { mode: 0o600 });
-  if (backup.secret) {
-    writeFileSync(paths.networkSecretPath, `${backup.secret}\n`, { mode: 0o600 });
-    return;
-  }
-  rmSync(paths.networkSecretPath, { force: true });
-};
 
 const normalizeBrowserPreferences = (value: BrowserPreferences) =>
   Object.fromEntries(
@@ -232,12 +236,6 @@ const normalizeSecret = (value: string | null) => {
     throw badRequest('Invalid backup secret');
   }
   return secret;
-};
-
-const copyIfPresent = (source: string, destination: string) => {
-  if (existsSync(source)) {
-    copyFileSync(source, destination);
-  }
 };
 
 const formatBackupTimestamp = (date: Date) =>
