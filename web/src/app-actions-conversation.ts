@@ -106,6 +106,16 @@ export const createConversationActions = ({
     executeMutation({
       request: () => api.clearBufferHistory(buffer.id),
       mapResult: () => true,
+      onSuccess: () => {
+        dispatch({
+          type: 'replace-message-window',
+          bufferId: buffer.id,
+          messages: [],
+          hasOlder: false,
+          hasNewer: false,
+        });
+        dispatch({ type: 'set-pinned-messages', bufferId: buffer.id, messages: [] });
+      },
       successMessage: 'Private-message history deleted',
       errorMessage: 'Failed to delete private-message history',
       failureValue: false,

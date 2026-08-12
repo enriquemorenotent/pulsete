@@ -20,6 +20,11 @@ import {
   handleRuntimeConversationStatusEvent,
 } from './runtime-conversation-event-actions.js';
 import type { RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
+import {
+  getRuntimePinnedMessageHistoryWindow,
+  listRuntimePinnedMessages,
+  setRuntimeMessagePinned,
+} from './runtime-conversation-pin-actions.js';
 
 export class RuntimeConversationService {
   constructor(private readonly options: RuntimeConversationServiceOptions) {}
@@ -74,6 +79,18 @@ export class RuntimeConversationService {
 
   exportBufferHistory(bufferId: string) {
     return exportRuntimeConversationBufferHistory(this.options, bufferId);
+  }
+
+  listPinnedMessages(bufferId: string) {
+    return listRuntimePinnedMessages(this.options, bufferId);
+  }
+
+  setMessagePinned(bufferId: string, messageId: string, pinned: boolean) {
+    return setRuntimeMessagePinned(this.options, bufferId, messageId, pinned);
+  }
+
+  getPinnedMessageHistoryWindow(bufferId: string, messageId: string) {
+    return getRuntimePinnedMessageHistoryWindow(this.options, bufferId, messageId);
   }
 
   handleStatusEvent(event: Extract<RuntimeEvent, { type: 'status' }>) {

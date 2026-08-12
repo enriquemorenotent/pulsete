@@ -20,6 +20,8 @@ export type TranscriptInitialScrollTarget = 'latest' | 'first-unread' | 'wait';
 type UseTranscriptViewportParams = {
   bufferId: string | null;
   followOutputRequestId: number;
+  focusRequestId: number;
+  focusRowIndex: number | null;
   initialHistoryPending: boolean;
   initialScrollTarget: TranscriptInitialScrollTarget;
   jumpToLatestRequestId: number;
@@ -39,6 +41,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const pendingSendToLatestRef = useRef(false);
   const positionedBufferIdRef = useRef<string | null>(null);
   const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
+  const previousFocusRequestIdRef = useRef(0);
   const previousJumpToLatestRequestIdRef = useRef(params.jumpToLatestRequestId);
   const visibleAnchorRowKeyRef = useRef<string | null>(null);
   const [firstItemIndex, setFirstItemIndexValue] = useState(firstItemIndexBase);
@@ -96,6 +99,37 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     setIsPinnedToLatest(true);
     scrollToLatest(virtuosoRef.current);
   }, [params.bufferId, params.jumpToLatestRequestId, params.totalItemCount]);
+
+  useEffect(() => {
+    if (
+      params.focusRequestId <= 0
+      || params.focusRequestId === previousFocusRequestIdRef.current
+    ) {
+      return;
+    }
+    previousFocusRequestIdRef.current = params.focusRequestId;
+    if (!params.bufferId || params.focusRowIndex === null || params.totalItemCount === 0) {
+      return;
+    }
+    const rowKey = params.rowKeys[params.focusRowIndex] ?? null;
+    visibleAnchorRowKeyRef.current = rowKey;
+    isPinnedToLatestRef.current = false;
+    setIsPinnedToLatest(false);
+    if (rowKey) {
+      transcriptScrollSnapshots.set(params.bufferId, { kind: 'anchor', rowKey });
+    }
+    virtuosoRef.current?.scrollToIndex({
+      align: 'center',
+      behavior: 'auto',
+      index: firstItemIndexRef.current + params.focusRowIndex,
+    });
+  }, [
+    params.bufferId,
+    params.focusRequestId,
+    params.focusRowIndex,
+    params.rowKeys,
+    params.totalItemCount,
+  ]);
 
   useLayoutEffect(() => {
     if (currentBufferIdRef.current === params.bufferId) {

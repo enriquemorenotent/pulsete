@@ -7,6 +7,7 @@ import { createMutedNickActions } from './app-actions-muted-nicks.js';
 import { createNetworkActions } from './app-actions-networks.js';
 import { createNickEmojiActions } from './app-actions-nick-emojis.js';
 import { createPreferenceActions } from './app-actions-preferences.js';
+import { createMessagePinActions } from './app-actions-message-pins.js';
 import {
   type AppActionContext,
   type ApplyServerMessages,
@@ -87,6 +88,7 @@ const createAppActionsFromSession = (params: CreateAppActionsParams) => {
     }),
     ...createPreferenceActions(actionContext),
     ...mutedNickActions,
+    ...createMessagePinActions(actionContext),
     ...createChatActions({
       ...actionContext,
       ...gateway,
@@ -153,8 +155,10 @@ export type ChatActionSet = Pick<
   | 'openMentionedChannel'
   | 'reconnectNetwork'
   | 'requestWhois'
+  | 'returnBufferToLatest'
   | 'searchBufferHistory'
   | 'selectPrivateBuffer'
+  | 'setMessagePinned'
   | 'sendComposer'
   | 'toggleCurrentChannelAutoJoin'
 >;

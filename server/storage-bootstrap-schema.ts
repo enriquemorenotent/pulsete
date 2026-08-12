@@ -109,7 +109,8 @@ export const storageBootstrapSchemaSql = `
     body TEXT NOT NULL,
     kind TEXT NOT NULL,
     self INTEGER NOT NULL,
-    ts INTEGER NOT NULL
+    ts INTEGER NOT NULL,
+    pinnedAt INTEGER
   );
 
 ${historyImportBatchesSchemaSql}

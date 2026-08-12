@@ -180,4 +180,15 @@ export const storageMigrations: readonly StorageMigration[] = [
         VALUES (1, '{}', 0, ?)`).run(Date.now());
     },
   },
+  {
+    version: 31,
+    apply: (db) => {
+      ensureColumn(db, 'messages', 'pinnedAt', 'INTEGER');
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_messages_buffer_pinned
+          ON messages(bufferId, ts ASC)
+          WHERE pinnedAt IS NOT NULL;
+      `);
+    },
+  },
 ];

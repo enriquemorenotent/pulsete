@@ -24,6 +24,9 @@ type ChatTranscriptMessageRowProps = {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   participantHighlightMode: ParticipantHighlightMode;
+  highlighted?: boolean;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
   row: TranscriptMessageRow;
 };
 
@@ -56,6 +59,9 @@ export function ChatTranscriptMessageRow(props: ChatTranscriptMessageRowProps) {
         onInlinePreviewLoad={props.onInlinePreviewLoad}
         onOpenChannel={props.onOpenChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
+        highlighted={props.highlighted}
+        canPinMessages={props.canPinMessages}
+        onSetMessagePinned={props.onSetMessagePinned}
       />
     );
   }
@@ -69,6 +75,9 @@ export function ChatTranscriptMessageRow(props: ChatTranscriptMessageRowProps) {
       onOpenChannel={props.onOpenChannel}
       onOpenParticipantQuery={props.onOpenParticipantQuery}
       participant={participant}
+      highlighted={props.highlighted}
+      canPinMessages={props.canPinMessages}
+      onSetMessagePinned={props.onSetMessagePinned}
     />
   );
 }

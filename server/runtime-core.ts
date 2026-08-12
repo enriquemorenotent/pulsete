@@ -137,6 +137,11 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     searchLogs: (query, limit, filters) => conversationsService.searchLogs(query, limit, filters),
     listLogSources: (filters, limit) => conversationsService.listLogSources(filters, limit),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),
+    listPinnedMessages: (bufferId) => conversationsService.listPinnedMessages(bufferId),
+    setMessagePinned: (bufferId, messageId, pinned) =>
+      publishMutation(conversationsService.setMessagePinned(bufferId, messageId, pinned)),
+    pinnedMessageHistoryWindow: (bufferId, messageId) =>
+      conversationsService.getPinnedMessageHistoryWindow(bufferId, messageId),
   };
   const friends: RuntimeFriendMutations = {
     upsertFriend: (nick) => publishMutation(friendMutations.upsertFriend(nick)),

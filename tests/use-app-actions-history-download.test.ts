@@ -246,7 +246,7 @@ test('downloadBufferHistory revokes the blob URL when the browser click fails', 
 });
 
 test('clearBufferHistory deletes PM history and applies returned server messages', async () => {
-  const { params, banners } = createParams();
+  const { params, banners, actions: dispatchedActions } = createParams();
   const queryBuffer: BufferState = {
     ...selectedBuffer,
     id: 'query-1',
@@ -296,6 +296,16 @@ test('clearBufferHistory deletes PM history and applies returned server messages
       { url: '/api/buffers/query-1/history', method: 'DELETE', body: '{}' },
     ]);
     assert.deepEqual(appliedMessages, returnedMessages);
+    assert.deepEqual(dispatchedActions, [
+      {
+        type: 'replace-message-window',
+        bufferId: queryBuffer.id,
+        messages: [],
+        hasOlder: false,
+        hasNewer: false,
+      },
+      { type: 'set-pinned-messages', bufferId: queryBuffer.id, messages: [] },
+    ]);
     assert.deepEqual(banners, [
       { kind: 'notice', message: 'Private-message history deleted' },
     ]);

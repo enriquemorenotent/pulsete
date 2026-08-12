@@ -126,6 +126,7 @@ export const selectGatewayStatus = (state: State) => state.domain.gatewayStatus;
 export const selectNetworks = (state: State) => state.domain.networks;
 export const selectBuffers = (state: State) => state.domain.buffers;
 export const selectMessagesByConversation = (state: State) => state.domain.messages;
+export const selectPinnedMessagesByConversation = (state: State) => state.domain.pinnedMessages;
 export const selectChannels = (state: State) => state.domain.channels;
 export const selectFriends = (state: State) => state.domain.friends;
 export const selectMutedNicks = (state: State) => state.domain.mutedNicks;
@@ -143,6 +144,12 @@ export const selectHistoryLoadedByBufferId = (state: State) =>
   state.transient.historyLoadedByBufferId;
 export const selectHistoryHasOlderByBufferId = (state: State) =>
   state.transient.historyHasOlderByBufferId;
+export const selectHistoryHasNewerByBufferId = (state: State) =>
+  state.transient.historyHasNewerByBufferId;
+export const selectPinnedMessagesLoadedByBufferId = (state: State) =>
+  state.transient.pinnedMessagesLoadedByBufferId;
+export const selectMessageFocusRequest = (state: State) =>
+  state.transient.messageFocusRequest;
 
 export const selectConversation = (state: State) =>
   buildConversation(

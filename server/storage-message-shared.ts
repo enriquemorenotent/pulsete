@@ -24,6 +24,7 @@ export const messageColumns = [
   'm.kind',
   'm.self',
   'm.ts',
+  'm.pinnedAt',
 ].join(', ');
 
 export const messageJoin = 'FROM messages AS m JOIN buffers AS b ON b.id = m.bufferId';

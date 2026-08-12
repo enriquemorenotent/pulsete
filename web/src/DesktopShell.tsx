@@ -1,5 +1,10 @@
 import { memo, useCallback, useMemo, useReducer, useState } from 'react';
-import { selectPreferences, selectRightSidebarKind, selectSelectedBufferId } from './app-selectors.js';
+import {
+  selectHistoryHasNewerByBufferId,
+  selectPreferences,
+  selectRightSidebarKind,
+  selectSelectedBufferId,
+} from './app-selectors.js';
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
@@ -57,6 +62,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   });
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
+  const historyHasNewerByBufferId = useAppSelector(selectHistoryHasNewerByBufferId);
   const preferences = useAppSelector(selectPreferences);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [jumpToLatestRequestId, requestJumpToLatest] = useReducer(
@@ -101,12 +107,23 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   }, [props.actions]);
   const collapseRightSidebar = useCallback(() => setRightSidebarCollapsed(true), []);
   const expandRightSidebar = useCallback(() => setRightSidebarCollapsed(false), []);
+  const jumpChatToLatest = useCallback(() => {
+    if (selectedBufferId && historyHasNewerByBufferId[selectedBufferId] === true) {
+      void props.actions.returnBufferToLatest(selectedBufferId).then((returned) => {
+        if (returned) {
+          requestJumpToLatest();
+        }
+      });
+      return;
+    }
+    requestJumpToLatest();
+  }, [historyHasNewerByBufferId, props.actions, selectedBufferId]);
 
   return (
     <DesktopShellLayout
       header={header}
       commandPalette={commandPalette}
-      onJumpChatToLatest={requestJumpToLatest}
+      onJumpChatToLatest={jumpChatToLatest}
       selectedBufferId={selectedBufferId}
       rightSidebarKind={rightSidebarKind}
       rightSidebarCollapsed={rightSidebarCollapsed}

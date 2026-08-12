@@ -21,7 +21,7 @@ export const reduceTransientAction = (
 
   switch (action.type) {
     case 'select':
-      return withChannelList({ banner: null });
+      return withChannelList({ banner: null, messageFocusRequest: null });
     case 'set-banner':
       return withChannelList({ banner: action.banner });
     case 'gateway-connected':
@@ -30,6 +30,9 @@ export const reduceTransientAction = (
       return withChannelList({
         historyLoadedByBufferId: {},
         historyHasOlderByBufferId: {},
+        historyHasNewerByBufferId: {},
+        pinnedMessagesLoadedByBufferId: {},
+        messageFocusRequest: null,
       });
     case 'open-network-manager':
       return {
@@ -126,12 +129,62 @@ export const reduceTransientAction = (
           ...transient.historyHasOlderByBufferId,
           [action.bufferId]: action.hasOlder,
         },
+        historyHasNewerByBufferId: action.hasNewer === undefined
+          ? transient.historyHasNewerByBufferId
+          : {
+              ...transient.historyHasNewerByBufferId,
+              [action.bufferId]: action.hasNewer,
+            },
       };
+    case 'set-pinned-messages':
+      return {
+        ...transient,
+        pinnedMessagesLoadedByBufferId: {
+          ...transient.pinnedMessagesLoadedByBufferId,
+          [action.bufferId]: true,
+        },
+      };
+    case 'replace-message-window':
+      return {
+        ...transient,
+        historyLoadedByBufferId: {
+          ...transient.historyLoadedByBufferId,
+          [action.bufferId]: true,
+        },
+        historyHasOlderByBufferId: {
+          ...transient.historyHasOlderByBufferId,
+          [action.bufferId]: action.hasOlder,
+        },
+        historyHasNewerByBufferId: {
+          ...transient.historyHasNewerByBufferId,
+          [action.bufferId]: action.hasNewer,
+        },
+        messageFocusRequest: action.focusMessageId && action.focusRequestId !== undefined
+          ? {
+              bufferId: action.bufferId,
+              messageId: action.focusMessageId,
+              requestId: action.focusRequestId,
+            }
+          : null,
+      };
+    case 'remove-messages':
+      return transient.messageFocusRequest
+        && action.messageIds.includes(transient.messageFocusRequest.messageId)
+        ? { ...withChannelList(), messageFocusRequest: null }
+        : withChannelList();
     case 'remove-buffer':
       return {
         ...withChannelList(),
         historyLoadedByBufferId: omitHistoryBuffer(transient.historyLoadedByBufferId, action.bufferId),
         historyHasOlderByBufferId: omitHistoryBuffer(transient.historyHasOlderByBufferId, action.bufferId),
+        historyHasNewerByBufferId: omitHistoryBuffer(transient.historyHasNewerByBufferId, action.bufferId),
+        pinnedMessagesLoadedByBufferId: omitHistoryBuffer(
+          transient.pinnedMessagesLoadedByBufferId,
+          action.bufferId,
+        ),
+        messageFocusRequest: transient.messageFocusRequest?.bufferId === action.bufferId
+          ? null
+          : transient.messageFocusRequest,
       };
     case 'remove-network':
       if (channelList === transient.channelList) {
@@ -139,11 +192,17 @@ export const reduceTransientAction = (
           ...transient,
           historyLoadedByBufferId: {},
           historyHasOlderByBufferId: {},
+          historyHasNewerByBufferId: {},
+          pinnedMessagesLoadedByBufferId: {},
+          messageFocusRequest: null,
         };
       }
       return withChannelList({
         historyLoadedByBufferId: {},
         historyHasOlderByBufferId: {},
+        historyHasNewerByBufferId: {},
+        pinnedMessagesLoadedByBufferId: {},
+        messageFocusRequest: null,
       });
     default:
       return channelList === transient.channelList ? null : withChannelList();

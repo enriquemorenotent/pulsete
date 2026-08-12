@@ -7,6 +7,7 @@ export {
   listRecentMessagesForBuffer,
   listRecentMessagesForBufferIds,
   getMessageWindow,
+  getMessageWindowPage,
   listRecentMessages,
 } from './storage-message-queries.js';
 export {

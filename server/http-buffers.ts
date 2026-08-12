@@ -67,6 +67,32 @@ export const handleBufferRoutes = async ({ req, res, pathname, url, context }: R
   const historyMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history$/);
   const historySearchMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/search$/);
   const downloadMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/download$/);
+  const pinsMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/pins$/);
+  const messagePinMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/messages\/([^/]+)\/pin$/);
+  const messageWindowMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/history\/around\/([^/]+)$/);
+
+  if (pinsMatch && req.method === 'GET') {
+    writeJson(res, 200, context.buffers.listPinnedMessages(decodeRouteParam(pinsMatch[1])));
+    return true;
+  }
+
+  if (messagePinMatch && (req.method === 'PUT' || req.method === 'DELETE')) {
+    const bufferId = decodeRouteParam(messagePinMatch[1]);
+    const messageId = decodeRouteParam(messagePinMatch[2]);
+    writeJson(
+      res,
+      200,
+      context.buffers.setMessagePinned(bufferId, messageId, req.method === 'PUT'),
+    );
+    return true;
+  }
+
+  if (messageWindowMatch && req.method === 'GET') {
+    const bufferId = decodeRouteParam(messageWindowMatch[1]);
+    const messageId = decodeRouteParam(messageWindowMatch[2]);
+    writeJson(res, 200, context.buffers.pinnedMessageHistoryWindow(bufferId, messageId));
+    return true;
+  }
   if (historyMatch && req.method === 'DELETE') {
     const bufferId = decodeRouteParam(historyMatch[1]);
     writeJson(res, 200, { ok: true, ...context.buffers.clearHistory(bufferId) });

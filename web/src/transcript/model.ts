@@ -65,6 +65,30 @@ export type ChatTranscriptModel = {
   unreadRowIndex: number | null;
 };
 
+export type TranscriptMessageLocation = {
+  mutedGroupKey: string | null;
+  rowIndex: number;
+};
+
+export const resolveTranscriptMessageLocation = (
+  model: Pick<ChatTranscriptModel, 'flatRows'>,
+  messageId: string,
+): TranscriptMessageLocation | null => {
+  for (let rowIndex = 0; rowIndex < model.flatRows.length; rowIndex += 1) {
+    const row = model.flatRows[rowIndex];
+    if (row?.kind === 'message' && row.message.id === messageId) {
+      return { mutedGroupKey: null, rowIndex };
+    }
+    if (
+      row?.kind === 'muted-group'
+      && row.messageRows.some((messageRow) => messageRow.message.id === messageId)
+    ) {
+      return { mutedGroupKey: row.key, rowIndex };
+    }
+  }
+  return null;
+};
+
 export type BuildChatTranscriptModelInput = {
   firstUnreadDividerIndex: number | null;
   listKind: 'chat' | 'server';

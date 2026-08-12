@@ -53,6 +53,7 @@ export const makeMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage =
     target,
     nick: overrides.nick ?? 'alice',
     ...(overrides.delivery ? { delivery: overrides.delivery } : {}),
+    ...(overrides.pinnedAt !== undefined ? { pinnedAt: overrides.pinnedAt } : {}),
     body: overrides.body ?? 'hello',
     kind: overrides.kind ?? 'line',
     self: overrides.self ?? false,

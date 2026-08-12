@@ -12,6 +12,7 @@ type ChatTranscriptStaticProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
   emptyBody: string;
   expandedMutedGroupKeys: ReadonlySet<string>;
+  highlightedMessageId?: string | null;
   inlineImageRendering?: InlineImageRenderingMode;
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
@@ -22,6 +23,10 @@ type ChatTranscriptStaticProps = {
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
   onToggleMutedGroup: (key: string) => void;
+  canPinMessages?: boolean;
+  onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
+  hasNewerHistory?: boolean;
+  onReturnToLatest?: () => Promise<boolean>;
   participantHighlightMode: ParticipantHighlightMode;
 };
 
@@ -57,6 +62,9 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
             row={row}
             channelUserModesByNick={props.channelUserModesByNick}
             expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+            highlightedMessageId={props.highlightedMessageId}
+            canPinMessages={props.canPinMessages}
+            onSetMessagePinned={props.onSetMessagePinned}
             inlineImageRendering={props.inlineImageRendering}
             nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
             listKind={props.listKind}
@@ -68,6 +76,13 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
           />
         ))}
       </div>
+      {props.hasNewerHistory && props.onReturnToLatest ? (
+        <div className="sticky bottom-3 mt-3 flex justify-center">
+          <Button variant="secondary" size="sm" onClick={() => void props.onReturnToLatest?.()}>
+            Return to latest
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

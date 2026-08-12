@@ -52,6 +52,42 @@ export const mutateConversationMessages = (
   return next;
 };
 
+export const replaceConversationMessageBucket = (
+  current: ConversationMessages,
+  bufferId: string,
+  messages: ChatMessage[],
+): ConversationMessages => {
+  const normalized = normalizeMessageBucket(
+    messages.filter((message) => message.bufferId === bufferId),
+  );
+  if (normalized.length === 0) {
+    if (!(bufferId in current)) {
+      return current;
+    }
+    const next = { ...current };
+    delete next[bufferId];
+    return next;
+  }
+  return { ...current, [bufferId]: normalized };
+};
+
+export const updateExistingConversationMessage = (
+  current: ConversationMessages,
+  message: ChatMessage,
+): ConversationMessages => {
+  const bucket = current[message.bufferId];
+  if (!bucket) {
+    return current;
+  }
+  const index = bucket.findIndex(({ id }) => id === message.id);
+  if (index < 0 || bucket[index] === message) {
+    return current;
+  }
+  const nextBucket = bucket.slice();
+  nextBucket[index] = message;
+  return { ...current, [message.bufferId]: normalizeMessageBucket(nextBucket) };
+};
+
 export const updateBufferMessageMetadata = (messages: ConversationMessages, buffer: BufferState) => {
   const key = buffer.id;
   const bucket = messages[key];

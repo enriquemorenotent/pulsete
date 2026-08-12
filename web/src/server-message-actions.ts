@@ -116,6 +116,8 @@ const toActions = (message: ServerMessage): Action[] => {
       return [{ type: 'append-message', message: message.message }];
     case 'message.upsert':
       return [{ type: 'upsert-message', message: message.message }];
+    case 'message.pin.updated':
+      return [{ type: 'message-pin-updated', message: message.message }];
     case 'message.remove':
       return [{
         type: 'remove-messages',

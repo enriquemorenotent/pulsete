@@ -1,6 +1,7 @@
 import { memo, type ReactNode } from 'react';
 import {
   Info,
+  Pin,
   PanelRightClose,
   Sparkles,
   Users,
@@ -11,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.j
 import { AiAssistantPanel } from './AiAssistantPanel.js';
 import { NicklistPanel } from './NicklistPanel.js';
 import { QueryProfileSidebar } from './QueryProfileSidebar.js';
+import { PinnedMessagesSidebar, type PinnedMessagesLoadState } from './PinnedMessagesSidebar.js';
 import { ServerProfileSidebar } from './ServerProfileSidebar.js';
 import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import type { WorkspaceView } from './workspace-types.js';
-import type { BufferState, NetworkProfile } from '../../shared/protocol-chat.js';
+import type { BufferState, ChatMessage, NetworkProfile } from '../../shared/protocol-chat.js';
 import type { AiAssistantSelection } from '../../shared/protocol-ai.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import type { ServerSidebarAccordionState } from './server-sidebar-accordion-state.js';
@@ -42,7 +44,12 @@ type WorkspaceRightSidebarProps = {
   };
   queryProfile?: {
     buffer: BufferState | null;
+    pinnedMessages?: ChatMessage[];
+    pinnedMessagesLoadState?: PinnedMessagesLoadState;
+    onJumpToPinnedMessage?: (bufferId: string, messageId: string) => Promise<boolean>;
+    onRetryPinnedMessages?: () => void;
     onSaveNotes: (buffer: BufferState, notes: string) => Promise<BufferState | null>;
+    onUnpinMessage?: (bufferId: string, messageId: string) => Promise<boolean>;
   };
 };
 
@@ -86,6 +93,21 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
               <QueryProfileSidebar
                 buffer={buffer}
                 onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
+              />
+            ),
+          },
+          {
+            icon: Pin,
+            label: 'Pinned',
+            value: 'pinned',
+            content: (
+              <PinnedMessagesSidebar
+                buffer={buffer}
+                messages={props.queryProfile?.pinnedMessages ?? []}
+                loadState={props.queryProfile?.pinnedMessagesLoadState ?? 'idle'}
+                onJump={props.queryProfile?.onJumpToPinnedMessage ?? (async () => false)}
+                onRetry={props.queryProfile?.onRetryPinnedMessages ?? (() => undefined)}
+                onUnpin={props.queryProfile?.onUnpinMessage ?? (async () => false)}
               />
             ),
           },
