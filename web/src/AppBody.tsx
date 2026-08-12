@@ -16,12 +16,7 @@ import { useAppSelector, useAppStore } from './app-store.js';
 import { useContactNotifications } from './contact-notifications/controller.js';
 import { useWatchlistPresenceNotifications } from './contact-notifications/friend-presence-notification.js';
 import { DesktopShell, type DesktopShellProps } from './DesktopShell.js';
-import {
-  resolveMediaVisibilityPolicy,
-  useMediaVisibilitySettings,
-} from './media-visibility-settings.js';
 import { ToastContainer } from './ToastContainer.js';
-import { useUserAvatarSettings } from './user-avatars/settings.js';
 import {
   AvatarOverridesProvider,
   createUserAvatarOverrideMap,
@@ -34,7 +29,12 @@ import type { AppTransientUiState } from './useAppUiState.js';
 
 type AppBodyProps = Omit<
   DesktopShellProps,
-  'contactNotifications' | 'mediaVisibilitySettings' | 'ui' | 'userAvatarSettings'
+  | 'contactNotifications'
+  | 'externalAvatarsEnabled'
+  | 'mediaVisibilityMode'
+  | 'onSetExternalAvatarsEnabled'
+  | 'onSetMediaVisibilityMode'
+  | 'ui'
 > & { ui: AppTransientUiState };
 
 export function AppBody(props: AppBodyProps) {
@@ -57,14 +57,7 @@ export function AppBody(props: AppBodyProps) {
     },
     [props.actions],
   );
-  const mediaVisibilitySettings = useMediaVisibilitySettings(
-    { mode: preferences.mediaVisibilityMode },
-    setMediaVisibilityMode,
-  );
-  const mediaPolicy = useMemo(
-    () => resolveMediaVisibilityPolicy(mediaVisibilitySettings.settings),
-    [mediaVisibilitySettings.settings],
-  );
+  const showMedia = preferences.mediaVisibilityMode === 'show-media';
   const userAvatarOverrideMap = useMemo(
     () => createUserAvatarOverrideMap(userAvatarOverrides),
     [userAvatarOverrides],
@@ -95,7 +88,7 @@ export function AppBody(props: AppBodyProps) {
     networkNamesById,
     onSelectBuffer: props.actions.selectTabBuffer,
     selectedBufferId,
-    systemNotificationIconsEnabled: mediaPolicy.showNotificationIcons,
+    systemNotificationIconsEnabled: showMedia,
     settings: preferences.contactNotifications,
     onSettingsChange: updateContactNotificationSettings,
   });
@@ -111,10 +104,6 @@ export function AppBody(props: AppBodyProps) {
       void props.actions.updatePreferences({ externalAvatarsEnabled: enabled });
     },
     [props.actions],
-  );
-  const userAvatarSettings = useUserAvatarSettings(
-    { externalAvatarsEnabled: preferences.externalAvatarsEnabled },
-    setExternalAvatarsEnabled,
   );
   const ui = useMemo(() => ({
     ...props.ui,
@@ -157,8 +146,10 @@ export function AppBody(props: AppBodyProps) {
           {...props}
           ui={ui}
           contactNotifications={contactNotifications}
-          mediaVisibilitySettings={mediaVisibilitySettings}
-          userAvatarSettings={userAvatarSettings}
+          externalAvatarsEnabled={preferences.externalAvatarsEnabled}
+          mediaVisibilityMode={preferences.mediaVisibilityMode}
+          onSetExternalAvatarsEnabled={setExternalAvatarsEnabled}
+          onSetMediaVisibilityMode={setMediaVisibilityMode}
         />
       </AvatarOverridesProvider>
       <ToastContainer />

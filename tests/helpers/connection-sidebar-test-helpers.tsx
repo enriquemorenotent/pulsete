@@ -3,7 +3,6 @@ import type { BufferState, FriendState, NetworkProfile, NickEmojiState, Presence
 import { ConnectionSidebar } from '../../web/src/ConnectionSidebar.js';
 import { buildConnectionSidebarView } from '../../web/src/connection-sidebar-view.js';
 import { buildConversationIndex } from '../../web/src/conversation-selectors.js';
-import type { MediaVisibilityPolicy } from '../../web/src/media-visibility-settings.js';
 import type { NetworkRuntimeState } from '../../web/src/workspace.js';
 
 type SidebarViewInput = Parameters<typeof buildConnectionSidebarView>[0];
@@ -14,7 +13,7 @@ type RenderConnectionSidebarOptions = {
   friends?: FriendState[];
   friendPresence?: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;
-  mediaPolicy?: MediaVisibilityPolicy;
+  showMedia?: boolean;
   nickEmojis?: NickEmojiState[];
   networks?: NetworkProfile[];
   networkStates?: Record<string, NetworkRuntimeState>;
@@ -77,7 +76,7 @@ export const renderConnectionSidebar = (options: RenderConnectionSidebarOptions 
       friends={options.friends ?? []}
       friendPresence={options.friendPresence ?? {}}
       hideOfflineFriends={options.hideOfflineFriends}
-      mediaPolicy={options.mediaPolicy}
+      showMedia={options.showMedia}
       nickEmojis={options.nickEmojis ?? []}
       onAddFriend={async () => true}
       onRemoveFriend={async () => true}

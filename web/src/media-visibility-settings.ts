@@ -1,5 +1,3 @@
-import { useCallback, useMemo } from 'react';
-
 export const MEDIA_VISIBILITY_SETTINGS_STORAGE_KEY =
   'pulsete.preferences.mediaVisibility.v1';
 
@@ -14,29 +12,9 @@ export type MediaVisibilitySettings = {
   mode: MediaVisibilityMode;
 };
 
-export type MediaVisibilitySettingsController = {
-  settings: MediaVisibilitySettings;
-  setMode: (mode: MediaVisibilityMode) => void;
-};
-
-export type MediaVisibilityPolicy = {
-  mode: MediaVisibilityMode;
-  showChatMediaPreviews: boolean;
-  showCommandPaletteImages: boolean;
-  showExternalMedia: boolean;
-  showNotificationIcons: boolean;
-  showProfileImages: boolean;
-  showServerImages: boolean;
-  showUserAvatars: boolean;
-};
-
 const defaultMediaVisibilitySettings: MediaVisibilitySettings = {
   mode: 'show-media',
 };
-
-export const defaultMediaVisibilityPolicy = resolveMediaVisibilityPolicy(
-  defaultMediaVisibilitySettings,
-);
 
 const isMediaVisibilityMode = (value: unknown): value is MediaVisibilityMode =>
   typeof value === 'string'
@@ -59,38 +37,3 @@ export const parseMediaVisibilitySettings = (
     return defaultMediaVisibilitySettings;
   }
 };
-
-export const serializeMediaVisibilitySettings = (
-  settings: MediaVisibilitySettings,
-) => JSON.stringify({
-  mode: isMediaVisibilityMode(settings.mode)
-    ? settings.mode
-    : defaultMediaVisibilitySettings.mode,
-});
-
-export function resolveMediaVisibilityPolicy(
-  settings: MediaVisibilitySettings,
-): MediaVisibilityPolicy {
-  const showMedia = settings.mode === 'show-media';
-  return {
-    mode: settings.mode,
-    showChatMediaPreviews: showMedia,
-    showCommandPaletteImages: showMedia,
-    showExternalMedia: showMedia,
-    showNotificationIcons: showMedia,
-    showProfileImages: showMedia,
-    showServerImages: showMedia,
-    showUserAvatars: showMedia,
-  };
-}
-
-export function useMediaVisibilitySettings(
-  settings: MediaVisibilitySettings,
-  onSetMode: (mode: MediaVisibilityMode) => void,
-): MediaVisibilitySettingsController {
-  const setMode = useCallback((mode: MediaVisibilityMode) => {
-    onSetMode(mode);
-  }, [onSetMode]);
-
-  return useMemo(() => ({ settings, setMode }), [settings, setMode]);
-}

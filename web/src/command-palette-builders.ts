@@ -13,12 +13,12 @@ import { resolveUserAvatarOverrideUrl, resolveUserAvatarTarget } from './user-av
 
 export const buildCommandPaletteEntrySpecs = (input: BuildCommandPaletteEntrySpecsInput) => {
   const nickEmojiByNetworkNick = buildNickEmojiByNetworkNick(input.nickEmojis);
-  const showImages = input.mediaPolicy?.showCommandPaletteImages !== false;
+  const showImages = input.showMedia !== false;
   const bufferEntries = buildBufferEntries(
     input.connections,
     showImages
       && input.externalAvatarsEnabled === true
-      && input.mediaPolicy?.showExternalMedia !== false,
+      && showImages,
     showImages,
     input.selectedNetwork.id,
     nickEmojiByNetworkNick,

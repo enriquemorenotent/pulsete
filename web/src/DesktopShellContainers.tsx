@@ -26,7 +26,6 @@ import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
-import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.js';
 import { useDesktopChatModel } from './useDesktopChatModel.js';
 import { useSelectedBufferHistory } from './transcript/history.js';
@@ -42,7 +41,7 @@ type SharedProps = {
 
 type SidebarContainerProps = SharedProps & {
   externalAvatarsEnabled: boolean;
-  mediaPolicy: MediaVisibilityPolicy;
+  showMedia: boolean;
 };
 
 type ChatContainerProps = Pick<SharedProps, 'actions'> & {
@@ -51,19 +50,19 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   contactNotifications: ContactNotificationsController;
   contactRuleHandlers: ContactRuleHandlers;
   externalAvatarsEnabled: boolean;
-  mediaPolicy: MediaVisibilityPolicy;
+  showMedia: boolean;
   jumpToLatestRequestId: number;
 };
 
 type CommandPaletteContainerProps = SharedProps & {
   externalAvatarsEnabled: boolean;
-  mediaPolicy: MediaVisibilityPolicy;
+  showMedia: boolean;
 };
 
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
   actions,
   externalAvatarsEnabled,
-  mediaPolicy,
+  showMedia,
   ui,
 }: SidebarContainerProps) {
   const friends = useAppSelector(selectFriends);
@@ -77,7 +76,7 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
     friends,
     friendPresence,
     hideOfflineFriends: ui.hideOfflineFriends,
-    mediaPolicy,
+    showMedia,
     nickEmojis,
     queryPresence,
     onAddFriend: actions.addFriend,
@@ -97,7 +96,7 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
     externalAvatarsEnabled,
     friendPresence,
     friends,
-    mediaPolicy,
+    showMedia,
     nickEmojis,
     queryPresence,
     sidebarConnections,
@@ -114,7 +113,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   contactNotifications,
   contactRuleHandlers,
   externalAvatarsEnabled,
-  mediaPolicy,
+  showMedia,
   jumpToLatestRequestId,
 }: ChatContainerProps) {
   const channels = useAppSelector(selectChannels);
@@ -157,7 +156,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     channels,
     friends,
     externalAvatarsEnabled,
-    mediaPolicy,
+    showMedia,
     mutedNicks,
     nickEmojis,
     networks,
@@ -174,7 +173,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
 export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogContainer({
   actions,
   externalAvatarsEnabled,
-  mediaPolicy,
+  showMedia,
   ui,
 }: CommandPaletteContainerProps) {
   const dispatch = useAppDispatch();
@@ -188,7 +187,7 @@ export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogC
     dispatch,
     externalAvatarsEnabled,
     friends,
-    mediaPolicy,
+    showMedia,
     nickEmojis,
     networks,
     sidebarConnections,

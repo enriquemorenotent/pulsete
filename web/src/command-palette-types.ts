@@ -2,7 +2,6 @@ import type { FriendState, NickEmojiState } from '../../shared/protocol-chat.js'
 import type { NetworkImageRuntimePhase } from './network-image-state.js';
 import type { NetworkServerImageSource } from './network-server-image.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
-import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import type {
   QueryAvatarOverrides,
   UserAvatarOverrides,
@@ -65,7 +64,7 @@ export type BuildCommandPaletteEntrySpecsInput = {
   connections: SidebarConnectionView[];
   externalAvatarsEnabled?: boolean;
   friends: FriendState[];
-  mediaPolicy?: MediaVisibilityPolicy;
+  showMedia?: boolean;
   nickEmojis: NickEmojiState[];
   queryAvatarOverrides?: QueryAvatarOverrides;
   selectedBuffer: {

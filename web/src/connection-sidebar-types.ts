@@ -1,6 +1,5 @@
 import type { BufferState, FriendState, NetworkProfile, NickEmojiState, PresenceStatus } from '../../shared/protocol-chat.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
-import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 
 export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
@@ -8,7 +7,7 @@ export type ConnectionSidebarProps = {
   friends: FriendState[];
   friendPresence: Record<string, PresenceStatus>;
   hideOfflineFriends?: boolean;
-  mediaPolicy?: MediaVisibilityPolicy;
+  showMedia?: boolean;
   nickEmojis: NickEmojiState[];
   queryPresence?: Record<string, PresenceStatus>;
   onAddFriend: (nick: string) => Promise<boolean>;

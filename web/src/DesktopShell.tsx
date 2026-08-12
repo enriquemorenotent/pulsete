@@ -23,11 +23,7 @@ import {
   PreferencesDialogContainer,
 } from './DesktopShellDialogContainers.js';
 import { DesktopShellLayout } from './DesktopShellLayout.js';
-import {
-  resolveMediaVisibilityPolicy,
-  type MediaVisibilitySettingsController,
-} from './media-visibility-settings.js';
-import type { UserAvatarSettingsController } from './user-avatars/settings.js';
+import type { MediaVisibilityMode } from './media-visibility-settings.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
@@ -38,35 +34,34 @@ export type DesktopShellProps = {
   assistantStore: AiAssistantStoreApi;
   composer: ComposerStoreApi;
   contactNotifications: ContactNotificationsController;
-  mediaVisibilitySettings: MediaVisibilitySettingsController;
+  externalAvatarsEnabled: boolean;
+  mediaVisibilityMode: MediaVisibilityMode;
+  onSetExternalAvatarsEnabled: (enabled: boolean) => void;
+  onSetMediaVisibilityMode: (mode: MediaVisibilityMode) => void;
   onDownloadDiagnostics: () => void;
-  userAvatarSettings: UserAvatarSettingsController;
   ui: AppUiState;
 };
 
 export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps) {
   const dispatch = useAppDispatch();
-  const mediaPolicy = useMemo(
-    () => resolveMediaVisibilityPolicy(props.mediaVisibilitySettings.settings),
-    [props.mediaVisibilitySettings.settings],
-  );
+  const showMedia = props.mediaVisibilityMode === 'show-media';
   const header = useMemo(() => ({
-    mediaVisibilityMode: props.mediaVisibilitySettings.settings.mode,
+    mediaVisibilityMode: props.mediaVisibilityMode,
     onDownloadDiagnostics: props.onDownloadDiagnostics,
     onOpenLogInspector: props.ui.openLogInspector,
     onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
     onOpenPreferences: props.ui.openPreferences,
     onToggleMediaVisibilityMode: () => {
-      props.mediaVisibilitySettings.setMode(
-        props.mediaVisibilitySettings.settings.mode === 'show-media'
+      props.onSetMediaVisibilityMode(
+        props.mediaVisibilityMode === 'show-media'
           ? 'hide-media'
           : 'show-media',
       );
     },
   }), [
     dispatch,
-    props.mediaVisibilitySettings.setMode,
-    props.mediaVisibilitySettings.settings.mode,
+    props.mediaVisibilityMode,
+    props.onSetMediaVisibilityMode,
     props.onDownloadDiagnostics,
     props.ui.openLogInspector,
     props.ui.openPreferences,
@@ -146,8 +141,8 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
       sidebar={
         <ConnectionSidebarContainer
           actions={props.actions}
-          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
-          mediaPolicy={mediaPolicy}
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
+          showMedia={showMedia}
           ui={props.ui}
         />
       }
@@ -158,8 +153,8 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
           composer={props.composer}
           contactNotifications={props.contactNotifications}
           contactRuleHandlers={contactRuleHandlers}
-          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
-          mediaPolicy={mediaPolicy}
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
+          showMedia={showMedia}
           jumpToLatestRequestId={jumpToLatestRequestId}
         />
       }
@@ -171,8 +166,8 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
             composer={props.composer}
             contactNotifications={props.contactNotifications}
             contactRuleHandlers={contactRuleHandlers}
-            externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
-            mediaPolicy={mediaPolicy}
+            externalAvatarsEnabled={props.externalAvatarsEnabled}
+            showMedia={showMedia}
             onCollapse={collapseRightSidebar}
           />
         ) : null
@@ -180,8 +175,8 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
       commandPaletteDialog={
         <CommandPaletteDialogContainer
           actions={props.actions}
-          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
-          mediaPolicy={mediaPolicy}
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
+          showMedia={showMedia}
           ui={props.ui}
         />
       }
@@ -192,22 +187,24 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
         <PreferencesDialogContainer
           actions={props.actions}
           contactNotifications={props.contactNotifications}
-          mediaVisibilitySettings={props.mediaVisibilitySettings}
-          userAvatarSettings={props.userAvatarSettings}
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
+          mediaVisibilityMode={props.mediaVisibilityMode}
+          onSetExternalAvatarsEnabled={props.onSetExternalAvatarsEnabled}
+          onSetMediaVisibilityMode={props.onSetMediaVisibilityMode}
           ui={props.ui}
         />
       }
       networkManagerDialog={
         <NetworkManagerDialogContainer
           actions={props.actions}
-          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
-          mediaPolicy={mediaPolicy}
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
+          showMedia={showMedia}
         />
       }
       networkEditorDialog={
         <NetworkEditorDialogContainer
           actions={props.actions}
-          externalAvatarsEnabled={props.userAvatarSettings.settings.externalAvatarsEnabled}
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
         />
       }
     />

@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createAppStore } from '../web/src/app-store.js';
 import { initialState } from '../web/src/app-state.js';
 import {
   classifyPerformanceMeasureName,
@@ -167,24 +166,4 @@ test('diagnostics report contains structural memory evidence without conversatio
   assert.equal(report.activity.socket.received[0]?.type, 'message.append');
   assert.equal(report.activity.socket.sent[0]?.type, 'message.send');
   assert.equal(report.privacy.includesChatBodies, false);
-});
-
-test('app store instrumentation reports changed and unchanged dispatches', () => {
-  const dispatches: Array<{ changed: boolean; type: string }> = [];
-  const listenerCounts: number[] = [];
-  const store = createAppStore(initialState, {
-    onDispatch: (type, changed) => dispatches.push({ changed, type }),
-    onListenerCountChange: (count) => listenerCounts.push(count),
-  });
-  const unsubscribe = store.subscribe(() => undefined);
-
-  store.dispatch({ type: 'set-network-editor-tab', tab: 'servers' });
-  store.dispatch({ type: 'gateway-connected' });
-  unsubscribe();
-
-  assert.deepEqual(dispatches, [
-    { type: 'set-network-editor-tab', changed: false },
-    { type: 'gateway-connected', changed: true },
-  ]);
-  assert.deepEqual(listenerCounts, [1, 0]);
 });

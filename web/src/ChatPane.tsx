@@ -12,10 +12,6 @@ import type { ContactRuleHandlers, ContactRuleState } from './contact-notificati
 import { HistorySearchDialog } from './HistorySearchDialog.js';
 import type { QueryProfileAvatarUser } from './QueryProfileAvatarBanner.js';
 import type { InlineImageRenderingMode } from './FormattedMessageText.js';
-import {
-  defaultMediaVisibilityPolicy,
-  type MediaVisibilityPolicy,
-} from './media-visibility-settings.js';
 import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
 import { resolveChatPaneComposerTarget } from './chat-pane-composer-target.js';
@@ -46,7 +42,7 @@ export type ChatPaneProps = {
   onRecallNewerDraft: () => void;
   onSend: () => Promise<boolean>;
   contactRuleHandlers: ContactRuleHandlers;
-  mediaPolicy?: MediaVisibilityPolicy;
+  showMedia?: boolean;
   externalAvatarsEnabled?: boolean;
   selectedQueryContactRule?: ContactRuleState | null;
   selectedChannelNotificationsEnabled?: boolean;
@@ -102,9 +98,9 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     selectedBuffer: props.workspace.selectedBuffer,
   });
   const composerTarget = resolveChatPaneComposerTarget(props.workspace);
-  const mediaPolicy = props.mediaPolicy ?? defaultMediaVisibilityPolicy;
+  const showMedia = props.showMedia !== false;
   const inlineImageRendering: InlineImageRenderingMode =
-    mediaPolicy.showChatMediaPreviews ? 'preview' : 'link';
+    showMedia ? 'preview' : 'link';
   const handleSend = useCallback(async () => {
     const submitted = await props.onSend();
     if (submitted) {
@@ -154,7 +150,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         onOpenChannelList={props.onOpenChannelList}
         inlineImageRendering={inlineImageRendering}
         externalAvatarsEnabled={props.externalAvatarsEnabled}
-        profileImagesVisible={mediaPolicy.showProfileImages}
+        profileImagesVisible={showMedia}
       />
       <ChatPaneStatusBanner
         workspace={props.workspace}

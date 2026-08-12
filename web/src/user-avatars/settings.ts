@@ -1,12 +1,5 @@
-import { useCallback, useMemo } from 'react';
-
 export type UserAvatarSettings = {
   externalAvatarsEnabled: boolean;
-};
-
-export type UserAvatarSettingsController = {
-  settings: UserAvatarSettings;
-  setExternalAvatarsEnabled: (enabled: boolean) => void;
 };
 
 export const USER_AVATAR_SETTINGS_STORAGE_KEY = 'pulsete.preferences.userAvatars.v1';
@@ -30,22 +23,3 @@ export const parseUserAvatarSettings = (
     return defaultUserAvatarSettings;
   }
 };
-
-export const serializeUserAvatarSettings = (settings: UserAvatarSettings) =>
-  JSON.stringify({
-    externalAvatarsEnabled: settings.externalAvatarsEnabled === true,
-  });
-
-export function useUserAvatarSettings(
-  settings: UserAvatarSettings,
-  onSetExternalAvatarsEnabled: (enabled: boolean) => void,
-): UserAvatarSettingsController {
-  const setExternalAvatarsEnabled = useCallback((enabled: boolean) => {
-    onSetExternalAvatarsEnabled(enabled);
-  }, [onSetExternalAvatarsEnabled]);
-
-  return useMemo(
-    () => ({ settings, setExternalAvatarsEnabled }),
-    [settings, setExternalAvatarsEnabled],
-  );
-}

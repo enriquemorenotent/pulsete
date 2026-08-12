@@ -14,23 +14,26 @@ import { useNetworkEditorController } from './useNetworkEditorController.js';
 import { useNetworkManagerController } from './useNetworkManagerController.js';
 import type { AppActions } from './useAppActions.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
-import type { MediaVisibilityPolicy, MediaVisibilitySettingsController } from './media-visibility-settings.js';
-import type { UserAvatarSettingsController } from './user-avatars/settings.js';
+import type { MediaVisibilityMode } from './media-visibility-settings.js';
 import type { AppUiState } from './useAppUiState.js';
 
 type PreferencesDialogContainerProps = {
   actions: AppActions;
   contactNotifications: ContactNotificationsController;
-  mediaVisibilitySettings: MediaVisibilitySettingsController;
-  userAvatarSettings: UserAvatarSettingsController;
+  externalAvatarsEnabled: boolean;
+  mediaVisibilityMode: MediaVisibilityMode;
+  onSetExternalAvatarsEnabled: (enabled: boolean) => void;
+  onSetMediaVisibilityMode: (mode: MediaVisibilityMode) => void;
   ui: AppUiState;
 };
 
 export const PreferencesDialogContainer = memo(function PreferencesDialogContainer({
   actions,
   contactNotifications,
-  mediaVisibilitySettings,
-  userAvatarSettings,
+  externalAvatarsEnabled,
+  mediaVisibilityMode,
+  onSetExternalAvatarsEnabled,
+  onSetMediaVisibilityMode,
   ui,
 }: PreferencesDialogContainerProps) {
   const mutedNicks = useAppSelector(selectMutedNicks);
@@ -38,8 +41,8 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
   const model = useMemo(() => ({
     open: ui.preferencesOpen,
     contactNotifications: contactNotifications.settings,
-    mediaVisibilitySettings: mediaVisibilitySettings.settings,
-    userAvatarSettings: userAvatarSettings.settings,
+    mediaVisibilitySettings: { mode: mediaVisibilityMode },
+    userAvatarSettings: { externalAvatarsEnabled },
     mutedNicks,
     networks,
     onClose: ui.closePreferences,
@@ -58,19 +61,21 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
     onRemoveContactNotificationChannel: contactNotifications.removeChannel,
     onRemoveContactNotificationContact: contactNotifications.removeContact,
     onRemoveMutedNick: actions.removeMutedNick,
-    onSetMediaVisibilityMode: mediaVisibilitySettings.setMode,
-    onSetExternalAvatarsEnabled: userAvatarSettings.setExternalAvatarsEnabled,
+    onSetMediaVisibilityMode,
+    onSetExternalAvatarsEnabled,
     onExportBackup: actions.exportBackup,
     onImportBackup: actions.importBackup,
   }), [
     actions,
     contactNotifications,
-    mediaVisibilitySettings,
+    externalAvatarsEnabled,
+    mediaVisibilityMode,
     mutedNicks,
     networks,
     ui.closePreferences,
     ui.preferencesOpen,
-    userAvatarSettings,
+    onSetExternalAvatarsEnabled,
+    onSetMediaVisibilityMode,
   ]);
   return <PreferencesDialog {...model} />;
 });
@@ -78,11 +83,11 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
 export const NetworkManagerDialogContainer = memo(function NetworkManagerDialogContainer({
   actions,
   externalAvatarsEnabled,
-  mediaPolicy,
+  showMedia,
 }: {
   actions: AppActions;
   externalAvatarsEnabled: boolean;
-  mediaPolicy: MediaVisibilityPolicy;
+  showMedia: boolean;
 }) {
   const dispatch = useAppDispatch();
   const managedNetworkModel = useAppSelector(selectManagedNetworkModel);
@@ -101,7 +106,7 @@ export const NetworkManagerDialogContainer = memo(function NetworkManagerDialogC
   return model.open ? (
     <NetworkManagerDialog
       externalAvatarsEnabled={externalAvatarsEnabled}
-      serverImagesVisible={mediaPolicy.showServerImages}
+      serverImagesVisible={showMedia}
       networks={model.networks}
       selected={model.selected}
       runtime={model.runtime}

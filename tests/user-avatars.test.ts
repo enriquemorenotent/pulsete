@@ -6,10 +6,7 @@ import {
   resolveIrcCloudAvatarUrl,
   resolveUserAvatarCandidate,
 } from '../web/src/user-avatars/irccloud.js';
-import {
-  parseUserAvatarSettings,
-  serializeUserAvatarSettings,
-} from '../web/src/user-avatars/settings.js';
+import { parseUserAvatarSettings } from '../web/src/user-avatars/settings.js';
 import {
   parseQueryAvatarOverrides,
   serializeQueryAvatarOverrides,
@@ -143,16 +140,12 @@ test('query avatar lookup falls back to persisted PM avatar ids', () => {
   );
 });
 
-test('user avatar settings are disabled by default and serialize explicitly', () => {
+test('user avatar settings are disabled by default and parse legacy values', () => {
   assert.deepEqual(parseUserAvatarSettings(null), { externalAvatarsEnabled: false });
   assert.deepEqual(parseUserAvatarSettings('not-json'), { externalAvatarsEnabled: false });
   assert.deepEqual(
     parseUserAvatarSettings('{"externalAvatarsEnabled":true}'),
     { externalAvatarsEnabled: true },
-  );
-  assert.equal(
-    serializeUserAvatarSettings({ externalAvatarsEnabled: true }),
-    '{"externalAvatarsEnabled":true}',
   );
 });
 

@@ -9,12 +9,12 @@ export type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 export const ConnectionSidebar = memo(function ConnectionSidebar(
 	props: ConnectionSidebarProps,
 ) {
-	if (props.mediaPolicy?.mode === 'hide-media') {
+	if (props.showMedia === false) {
 		return (
 			<aside className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
 				<ConnectionSidebarConnections
 					connections={props.connections}
-					mediaPolicy={props.mediaPolicy}
+					showMedia={props.showMedia}
 					nickEmojis={props.nickEmojis}
 					queryPresence={props.queryPresence ?? {}}
 					onSelectNetwork={props.onSelectNetwork}
