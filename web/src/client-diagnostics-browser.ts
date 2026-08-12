@@ -142,14 +142,6 @@ export const readChromiumHeapMemory = () => {
   };
 };
 
-export const collectLightweightBrowserSample = () => ({
-  documentVisibility: typeof document === 'undefined' ? 'unavailable' : document.visibilityState,
-  domElements: typeof document === 'undefined'
-    ? null
-    : document.getElementsByTagName('*').length,
-  jsHeap: readChromiumHeapMemory(),
-});
-
 const countDomNodes = (element: Element) => {
   const counts = { comments: 0, text: 0 };
   for (const node of element.childNodes) {

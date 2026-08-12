@@ -3,9 +3,9 @@ import test from 'node:test';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol-chat.js';
 import { initialState } from '../web/src/app-state.js';
 import type { Action, State } from '../web/src/app-types.js';
-import type { AppSessionSnapshot } from '../web/src/app-session.js';
+import type { AppSessionSnapshot } from './helpers/app-actions-test-session.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
-import { createAppActions } from '../web/src/useAppActions.js';
+import { createAppActionsForTest as createAppActions } from './helpers/app-actions-test-session.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
 const network: NetworkProfile = {

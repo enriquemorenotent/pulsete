@@ -157,25 +157,3 @@ export const summarizeClientState = (state: State) => {
     },
   };
 };
-
-export const summarizeClientStateForSample = (state: State) => {
-  let messageCount = 0;
-  let messageBodyCharacters = 0;
-  for (const messages of Object.values(state.domain.messages)) {
-    messageCount += messages.length;
-    for (const message of messages) {
-      messageBodyCharacters += message.body.length;
-    }
-  }
-  return {
-    buffers: state.domain.buffers.length,
-    channels: state.domain.channels.length,
-    channelUsers: state.domain.channels.reduce(
-      (total, channel) => total + channel.users.length,
-      0,
-    ),
-    messages: messageCount,
-    messageBodyCharacters,
-    networks: state.domain.networks.length,
-  };
-};
