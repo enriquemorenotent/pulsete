@@ -27,6 +27,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build Desktop Runtime
+        run: npm run build:electron
+
+      - name: Audit Shipped Dependencies
+        run: npm run audit:shipped
+
       - name: Build Landing Site
         run: npm run build:site
 

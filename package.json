@@ -18,6 +18,30 @@
   "engines": {
     "node": "24.x"
   },
+  "pulsete": {
+    "shippedDependencies": [
+      "@fontsource/ibm-plex-mono",
+      "@fontsource/ibm-plex-sans",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-tabs",
+      "better-sqlite3",
+      "class-variance-authority",
+      "clsx",
+      "electron",
+      "lucide-react",
+      "markdown-to-jsx",
+      "radix-ui",
+      "react",
+      "react-dom",
+      "react-virtuoso",
+      "tailwind-merge",
+      "ws",
+      "zod"
+    ]
+  },
   "scripts": {
     "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web:wait\"",
     "dev:server": "PORT=18487 tsx watch server/index.ts",
@@ -30,6 +54,7 @@
     "build:server": "node scripts/build_node_entries.mjs --server",
     "build:web": "vite build",
     "build:site": "node scripts/build_landing_site.mjs",
+    "audit:shipped": "node scripts/audit_shipped_dependencies.mjs",
     "dist:apt": "npm run build:site && node scripts/build_apt_repository.mjs",
     "dist:linux": "npm run build:desktop && node scripts/build_linux_deb.mjs",
     "lint:test-names": "node scripts/check_test_file_names.mjs",
@@ -41,7 +66,8 @@
   },
   "dependencies": {
     "@openai/codex-security": "^0.1.1",
-    "better-sqlite3": "^12.10.0"
+    "better-sqlite3": "^12.10.0",
+    "ws": "8.21.3"
   },
   "devDependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",
@@ -61,7 +87,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^9.2.1",
-    "electron": "^41.6.1",
+    "electron": "41.10.5",
     "electron-builder": "^26.8.1",
     "esbuild": "^0.28.0",
     "lucide-react": "^0.577.0",
@@ -75,7 +101,6 @@
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.0",
-    "ws": "^8.18.3",
     "zod": "^3.25.76"
   }
 }
