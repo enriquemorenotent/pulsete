@@ -12,7 +12,7 @@ import type {
   AiAssistantResponse,
   AiAssistantTurn,
 } from '../shared/protocol-ai.js';
-import type { RuntimeConversationStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore } from './runtime-store.js';
 import type { CodexAssistantProvider } from './codex-assistant-provider.js';
 
 type RuntimeAiAssistantServiceOptions = {

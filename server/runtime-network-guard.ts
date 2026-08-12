@@ -1,5 +1,5 @@
 import { notFound } from './app-error.js';
-import type { RuntimeNetworkStore } from './runtime-store-ports.js';
+import type { RuntimeNetworkStore } from './runtime-store.js';
 
 type StoredNetworkLookup = Pick<RuntimeNetworkStore, 'get'>;
 type RuntimeNetworkLookup = Pick<RuntimeNetworkStore, 'getRuntime'>;

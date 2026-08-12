@@ -2,7 +2,7 @@ import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import { notFound } from './app-error.js';
 import { normalizeNickEmoji, normalizeNickEmojiNick } from './irc-validate.js';
-import type { RuntimeNetworkStore, RuntimeNickEmojiStore } from './runtime-store-ports.js';
+import type { RuntimeNetworkStore, RuntimeNickEmojiStore } from './runtime-store.js';
 
 type RuntimeNickEmojiServiceOptions = {
   networks: RuntimeNetworkStore;

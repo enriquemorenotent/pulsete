@@ -11,7 +11,7 @@ import type { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import type { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
 import type { RuntimeNetworkSessionService } from './runtime-network-session-service.js';
 import type { createRuntimeSnapshot } from './runtime-snapshot.js';
-import type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
+import type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import type {
   WorkspacePreferencesPatch,
@@ -21,7 +21,7 @@ import type {
   AvatarOverrideSource,
 } from './storage-avatar-overrides-repository.js';
 
-export type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store-ports.js';
+export type { RuntimeNetworkCatalog, RuntimeStore } from './runtime-store.js';
 
 export type RuntimeGateway = {
   attachSocket(ws: WebSocket): void;

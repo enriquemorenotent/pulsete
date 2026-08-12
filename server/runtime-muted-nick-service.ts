@@ -8,7 +8,7 @@ import type {
   RuntimeConversationStore,
   RuntimeMutedNickStore,
   RuntimeNetworkStore,
-} from './runtime-store-ports.js';
+} from './runtime-store.js';
 
 type RuntimeMutedNickServiceOptions = {
   conversations: Pick<RuntimeConversationStore, 'listBuffers' | 'listAllMessages' | 'setBufferUnread'>;

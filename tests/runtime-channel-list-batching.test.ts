@@ -17,7 +17,7 @@ import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
 test('runtime sends large LIST replies in channel-list batches', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const entryCount = channelListBatchSize * 2 + 100;
   const listServer = await createBulkListServer(received, entryCount);

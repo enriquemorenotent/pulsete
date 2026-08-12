@@ -17,7 +17,7 @@ import { closeWebSocket,connectWebSocket,waitForWebSocketMessageType } from './h
 test('saving an open workspace network broadcasts its server buffer before the network update', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const network = storage.networks.upsert(createNetworkInput({
     workspaceOpen: true,
     name: 'Open network',
@@ -72,7 +72,7 @@ test('delete returns the deleted saved network id', async () => {
     workspaceOpen: true,
     name: 'TemplateNet clone',
   }));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -88,7 +88,7 @@ test('delete returns the deleted saved network id', async () => {
 test('duplicate creates a new saved network and preserves encrypted passwords', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const network = storage.networks.upsert(createNetworkInput({
     name: 'PrimaryNet',
     host: 'irc.primary.test',
@@ -153,7 +153,7 @@ test('query routes validate missing networks and invalid targets', async () => {
     networkId: network.id,
     name: '#help',
   });
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {

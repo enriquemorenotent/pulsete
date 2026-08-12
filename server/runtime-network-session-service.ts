@@ -1,8 +1,8 @@
 import type WebSocket from 'ws';
 import { requireStoredNetwork } from './runtime-network-guard.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import type { RuntimeConversationStore } from './runtime-store-ports.js';
-import type { RuntimeNetworkStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore } from './runtime-store.js';
+import type { RuntimeNetworkStore } from './runtime-store.js';
 
 type RuntimeNetworkSessionServiceOptions = {
   connectionManager: RuntimeConnectionManager;

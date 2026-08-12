@@ -6,7 +6,6 @@ import { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeEventRouter } from './runtime-event-router.js';
 import { RuntimeFriendService } from './runtime-friend-service.js';
 import { createRuntimeGateway } from './runtime-gateway.js';
-import { createRuntimeHttpServices } from './runtime-http-service-builder.js';
 import { RuntimeIrcService } from './runtime-irc-service.js';
 import { RuntimeMutedNickService } from './runtime-muted-nick-service.js';
 import { RuntimeNickEmojiService } from './runtime-nick-emoji-service.js';
@@ -18,6 +17,7 @@ import type {
   RuntimeMutedNickMutations,
   RuntimeNickEmojiMutations,
   RuntimeNetworkMutations,
+  RuntimeHttpApi,
   RuntimeServices,
   RuntimeStore,
 } from './runtime-service-types.js';
@@ -184,20 +184,55 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     },
     closeConnection: (networkId) => publishMutation(networkMutations.closeConnection(networkId)),
   };
-  const http = createRuntimeHttpServices({
-    assistant: assistantService,
-    catalog: store.networks,
-    conversations,
-    friends,
-    mutedNicks,
-    nickEmojis,
-    irc,
-    networks,
-    sessions,
+  const http: RuntimeHttpApi = {
+    assistant: {
+      ask: (bufferId, request) => assistantService.ask(bufferId, request),
+      startLogin: () => assistantService.startLogin(),
+      status: () => assistantService.status(),
+    },
+    networks: {
+      list: () => store.networks.list(),
+      save: networks.saveNetwork,
+      duplicate: networks.duplicateNetwork,
+      remove: networks.deleteNetwork,
+      close: networks.closeConnection,
+      connect: networks.connectNetwork,
+      disconnect: (networkId) => sessions.disconnect(networkId),
+    },
+    buffers: {
+      joinChannel: (networkId, channel, sourceBufferId) =>
+        irc.join(networkId, channel, sourceBufferId),
+      openQuery: conversations.openQuery,
+      close: conversations.closeBuffer,
+      clearHistory: conversations.clearBufferHistory,
+      markRead: conversations.markBufferRead,
+      saveNotes: conversations.saveBufferNotes,
+      history: conversations.history,
+      searchHistory: conversations.searchHistory,
+      exportHistory: conversations.exportHistory,
+      listPinnedMessages: conversations.listPinnedMessages,
+      setMessagePinned: conversations.setMessagePinned,
+      pinnedMessageHistoryWindow: conversations.pinnedMessageHistoryWindow,
+    },
+    logs: {
+      listSources: conversations.listLogSources,
+      search: conversations.searchLogs,
+    },
+    friends: {
+      add: friends.upsertFriend,
+      remove: friends.removeFriend,
+    },
+    nickEmojis: {
+      save: nickEmojis.saveNickEmoji,
+    },
+    mutedNicks: {
+      add: mutedNicks.upsertMutedNick,
+      remove: mutedNicks.removeMutedNick,
+    },
     preferences,
     drafts,
     avatarOverrides,
-  });
+  };
   const ws = createRuntimeWebSocketApi({
     attachSocket: (ws) => gateway.attachSocket(ws),
     detachSocket: (ws) => gateway.detachSocket(ws),

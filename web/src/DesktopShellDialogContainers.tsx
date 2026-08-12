@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { NetworkEditorDialog } from './NetworkEditorDialog.js';
 import { NetworkManagerDialog } from './NetworkManagerDialog.js';
 import { PreferencesDialog } from './PreferencesDialog.js';
@@ -12,7 +12,6 @@ import {
 import { useAppDispatch, useAppSelector } from './app-store.js';
 import { useNetworkEditorController } from './useNetworkEditorController.js';
 import { useNetworkManagerController } from './useNetworkManagerController.js';
-import { usePreferencesController } from './usePreferencesController.js';
 import type { AppActions } from './useAppActions.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
 import type { MediaVisibilityPolicy, MediaVisibilitySettingsController } from './media-visibility-settings.js';
@@ -36,15 +35,43 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
 }: PreferencesDialogContainerProps) {
   const mutedNicks = useAppSelector(selectMutedNicks);
   const networks = useAppSelector(selectNetworks);
-  const model = usePreferencesController({
+  const model = useMemo(() => ({
+    open: ui.preferencesOpen,
+    contactNotifications: contactNotifications.settings,
+    mediaVisibilitySettings: mediaVisibilitySettings.settings,
+    userAvatarSettings: userAvatarSettings.settings,
+    mutedNicks,
+    networks,
+    onClose: ui.closePreferences,
+    onSetContactNotificationSoundEnabled: (enabled: boolean) => {
+      contactNotifications.setEnabled(enabled);
+      if (enabled) {
+        contactNotifications.prime();
+      }
+    },
+    contactNotificationSystemPermission: contactNotifications.systemPermission,
+    onSetContactNotificationSystemEnabled: contactNotifications.setSystemEnabled,
+    onRequestContactNotificationSystemPermission:
+      contactNotifications.requestSystemPermission,
+    onSetContactNotificationSound: contactNotifications.setSound,
+    onPreviewContactNotificationSound: contactNotifications.preview,
+    onRemoveContactNotificationChannel: contactNotifications.removeChannel,
+    onRemoveContactNotificationContact: contactNotifications.removeContact,
+    onRemoveMutedNick: actions.removeMutedNick,
+    onSetMediaVisibilityMode: mediaVisibilitySettings.setMode,
+    onSetExternalAvatarsEnabled: userAvatarSettings.setExternalAvatarsEnabled,
+    onExportBackup: actions.exportBackup,
+    onImportBackup: actions.importBackup,
+  }), [
     actions,
     contactNotifications,
     mediaVisibilitySettings,
     mutedNicks,
     networks,
+    ui.closePreferences,
+    ui.preferencesOpen,
     userAvatarSettings,
-    ui,
-  });
+  ]);
   return <PreferencesDialog {...model} />;
 });
 

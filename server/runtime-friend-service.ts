@@ -2,7 +2,7 @@ import type { ServerMessage } from '../shared/protocol-messages.js';
 import { notFound } from './app-error.js';
 import { normalizeFriendNick } from './irc-validate.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
-import type { RuntimeFriendStore } from './runtime-store-ports.js';
+import type { RuntimeFriendStore } from './runtime-store.js';
 
 type RuntimeFriendServiceOptions = {
   connectionManager: RuntimeConnectionManager;

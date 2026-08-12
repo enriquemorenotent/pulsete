@@ -16,7 +16,6 @@ import {
 } from './contact-notifications/settings.js';
 import type { ChatPaneProps } from './ChatPane.js';
 import type { State } from './app-types.js';
-import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { resolveUserAvatarCandidate } from './user-avatars/irccloud.js';
 import type { ChatActionSet } from './useAppActions.js';
@@ -64,7 +63,7 @@ export function useDesktopChatModel({
   selectedBufferHistory,
   selectedMessages,
   workspace,
-}: DesktopChatModelParams): DesktopShellModel['chat'] {
+}: DesktopChatModelParams): ChatPaneProps {
   const channelAutoJoin = resolveCurrentChannelAutoJoinState(networks, workspace);
   const composerContextKey = workspace.selectedBuffer?.id ?? null;
   const draft = useComposerDraft(composer, composerContextKey);

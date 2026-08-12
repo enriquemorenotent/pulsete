@@ -5,7 +5,7 @@ import { badRequest } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
 import { getRequiredBuffer } from './runtime-conversation-store-helpers.js';
-import type { RuntimeConversationStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore } from './runtime-store.js';
 import type { MessageInput } from './storage-types.js';
 
 type BufferResolution = {

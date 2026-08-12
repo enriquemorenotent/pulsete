@@ -15,7 +15,7 @@ import {
 test('runtime stores untagged live messages with a generated timestamp', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = net.createServer((socket) => {
     socket.setEncoding('utf8');
@@ -84,7 +84,7 @@ test('runtime stores untagged live messages with a generated timestamp', async (
 test('runtime uses updated network settings on reconnect', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createHandshakeServer(firstReceived);
@@ -125,7 +125,7 @@ test('runtime uses updated network settings on reconnect', async () => {
 test('saving a connected network reconnects with updated settings', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createRegisteredServer(firstReceived);
@@ -168,7 +168,7 @@ test('saving a connected network reconnects with updated settings', async () => 
 test('saving a connected network reconnects when the username changes', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createRegisteredServer(received);
   const network = storage.networks.upsert(createNetworkInput({
@@ -198,7 +198,7 @@ test('saving a connected network reconnects when the username changes', async ()
 test('runtime reconnect restores saved channel buffers', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createRegisteredServer(received);
   const network = storage.networks.upsert(createNetworkInput({
@@ -228,7 +228,7 @@ test('runtime reconnect restores saved channel buffers', async () => {
 test('runtime reconnect deduplicates saved channels against autoJoin', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createRegisteredServer(received);
   const network = storage.networks.upsert(createNetworkInput({

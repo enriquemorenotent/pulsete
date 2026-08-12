@@ -24,7 +24,7 @@ import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { resolveUserAvatarTarget } from './user-avatars/override-model.js';
 import { UserAvatar } from './user-avatars/UserAvatar.js';
 
-type NicklistPanelProps = {
+export type NicklistPanelProps = {
   network: NetworkProfile | null;
   channel: ChannelState;
   friends: FriendState[];

@@ -13,7 +13,7 @@ import {
 test('runtime clears cached friend presence when a network disconnects', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({
@@ -44,7 +44,7 @@ test('runtime clears cached friend presence when a network disconnects', async (
 test('runtime clears cached friend presence when a watched peer quits', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({

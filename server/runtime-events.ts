@@ -5,7 +5,7 @@ import type {
   RuntimeConversationStore,
   RuntimeMutedNickStore,
   RuntimeNetworkStore,
-} from './runtime-store-ports.js';
+} from './runtime-store.js';
 
 type RuntimeEventConversations = Pick<
   RuntimeConversationService,

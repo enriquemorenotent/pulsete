@@ -4,7 +4,7 @@ import { aiAssistantMessageLimit } from '../shared/protocol-ai.js';
 import type { AiAssistantContext } from '../shared/protocol-ai.js';
 import type { ChatMessage } from '../shared/protocol-chat.js';
 import type { AiAssistantRequest } from '../shared/protocol-ai.js';
-import type { RuntimeConversationStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore } from './runtime-store.js';
 
 type AiAssistantContextRequest = Pick<AiAssistantRequest, 'mode' | 'prompt'>
   & Partial<Pick<AiAssistantRequest, 'assistantTurns'>>;

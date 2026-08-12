@@ -10,20 +10,19 @@ import {
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { AiAssistantPanel } from './AiAssistantPanel.js';
-import { NicklistPanel } from './NicklistPanel.js';
+import { NicklistPanel, type NicklistPanelProps } from './NicklistPanel.js';
 import { QueryProfileSidebar } from './QueryProfileSidebar.js';
 import { PinnedMessagesSidebar, type PinnedMessagesLoadState } from './PinnedMessagesSidebar.js';
 import { ServerProfileSidebar } from './ServerProfileSidebar.js';
-import type { DesktopShellNicklistModel } from './desktop-shell-model.js';
 import type { WorkspaceView } from './workspace-types.js';
 import type { BufferState, ChatMessage, NetworkProfile } from '../../shared/protocol-chat.js';
 import type { AiAssistantSelection } from '../../shared/protocol-ai.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import type { ServerSidebarAccordionState } from './server-sidebar-accordion-state.js';
 
-type WorkspaceRightSidebarProps = {
+export type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
-  nicklist: DesktopShellNicklistModel;
+  nicklist: Omit<NicklistPanelProps, 'channel' | 'network'>;
   onCollapse?: () => void;
   assistant?: {
     buffer: BufferState | null;

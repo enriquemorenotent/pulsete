@@ -41,7 +41,7 @@ export class RuntimeHost {
     const storage = new Storage(paths);
     try {
       return {
-        runtime: createRuntime(storage.runtimeStore),
+        runtime: createRuntime(storage),
         storage,
       };
     } catch (error) {

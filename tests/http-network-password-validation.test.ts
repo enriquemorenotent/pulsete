@@ -13,7 +13,7 @@ import { createNetworkInput } from './helpers/http-server-helpers.js';
 test('network save preserves exact passwords for sasl and inferred server pass', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
   const saslPassword = ' secret pass ';
   const serverPassPassword = '  server secret  ';
@@ -45,7 +45,7 @@ test('network save preserves exact passwords for sasl and inferred server pass',
 test('network save rejects NickServ whitespace passwords and multi-line passwords', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {

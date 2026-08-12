@@ -27,7 +27,7 @@ test('history can load older pages before the oldest visible message', async () 
       ts: Date.now() + index,
     });
   }
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -97,7 +97,7 @@ test('buffer history download returns a human-readable transcript attachment', a
     self: true,
     ts: Date.UTC(2026, 2, 24, 18, 1, 0),
   });
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -151,7 +151,7 @@ test('private-message history delete route clears the saved transcript and keeps
     self: true,
     ts: 2,
   });
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -189,7 +189,7 @@ test('buffer history delete route rejects non-private-message buffers', async ()
     self: false,
     ts: 1,
   });
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -218,7 +218,7 @@ test('buffer import and self-alias repair routes are not exposed', async () => {
     self: false,
     ts: 1,
   });
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {

@@ -10,7 +10,7 @@ import type {
   RuntimeConversationStore,
   RuntimeFriendStore,
   RuntimeNetworkStore,
-} from './runtime-store-ports.js';
+} from './runtime-store.js';
 
 type RuntimeConnectionManagerOptions = {
   eventRouter: RuntimeEventRouter;

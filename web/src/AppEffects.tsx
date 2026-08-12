@@ -21,7 +21,6 @@ import {
   useAutoOpenNetworkManager,
   useManagedNetworkSelection,
 } from './useNetworkManagerLifecycle.js';
-import type { ClientSocketInstrumentation } from './client-socket.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import { useConversationNavigationHistory } from './conversation-navigation-history.js';
 import type { AppActions } from './useAppActions.js';
@@ -34,7 +33,6 @@ type AppEffectsProps = {
   assistantStore: Pick<AiAssistantStoreApi, 'pruneThreads'>;
   composer: Pick<ComposerStoreApi, 'applyServerDrafts' | 'pruneContexts' | 'subscribeDrafts'>;
   saveDraft: AppActions['saveDraft'];
-  socketInstrumentation: ClientSocketInstrumentation;
   ui: Pick<
     AppTransientUiState,
     | 'didAutoOpenManagerRef'
@@ -86,7 +84,6 @@ export function AppEffects(props: AppEffectsProps) {
   useGatewayConnection({
     applySocketMessage: props.applySocketMessage,
     dispatch,
-    instrumentation: props.socketInstrumentation,
     socketRef: props.ui.socketRef,
   });
 

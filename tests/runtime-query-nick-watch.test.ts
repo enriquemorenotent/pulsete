@@ -11,7 +11,7 @@ import { createNetworkInput, waitFor } from './helpers/runtime-test-common.js';
 test('live nick changes notify open private messages and refresh watched query aliases', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createMonitorNickServer(received);
   const network = storage.networks.upsert(createNetworkInput({
@@ -44,7 +44,7 @@ test('live nick changes notify open private messages and refresh watched query a
 test('initial offline monitor presence for open private messages does not create PM noise', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createMonitorNickServer(received);
   const network = storage.networks.upsert(createNetworkInput({
@@ -73,7 +73,7 @@ test('initial offline monitor presence for open private messages does not create
 test('monitor offline transitions do not fabricate nick-change notices', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createMonitorNickServer(received);
   const network = storage.networks.upsert(createNetworkInput({
@@ -104,7 +104,7 @@ test('monitor offline transitions do not fabricate nick-change notices', async (
 test('monitor updates retarget an open private message when a known alias comes online', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createMonitorNickServer(received);
   const network = storage.networks.upsert(createNetworkInput({

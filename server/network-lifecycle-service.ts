@@ -7,7 +7,7 @@ import { createDuplicateNetworkName } from './network-name-utils.js';
 import { parseNetworkInput } from './network-input.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { requireRuntimeNetwork, requireStoredNetwork } from './runtime-network-guard.js';
-import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store.js';
 
 type NetworkLifecycleContext = {
   connectionManager: RuntimeConnectionManager;

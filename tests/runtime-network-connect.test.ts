@@ -11,7 +11,7 @@ import { createHandshakeServer } from './helpers/runtime-test-handshake-servers.
 test('connectNetwork opens a saved network in the workspace', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const handshake = await createHandshakeServer([]);
   const network = storage.networks.upsert(createNetworkInput({
     host: '127.0.0.1',
@@ -48,7 +48,7 @@ test('connectNetwork opens a saved network in the workspace', async () => {
 test('connectNetwork accepts a concrete network id', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const handshake = await createHandshakeServer([]);
   const network = storage.networks.upsert(createNetworkInput({
     workspaceOpen: true,
@@ -71,7 +71,7 @@ test('connectNetwork accepts a concrete network id', async () => {
 test('connectNetwork keeps a workspace network visible even when the IRC socket fails later', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const closedServer = await createHandshakeServer([]);
   const port = closedServer.port;
   await new Promise<void>((resolve, reject) => closedServer.server.close((error) => (error ? reject(error) : resolve())));
