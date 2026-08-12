@@ -7,7 +7,7 @@ import {
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { requireStoredNetwork } from './runtime-network-guard.js';
 import { assertNotSelfPrivateMessageTarget } from './runtime-self-target.js';
-import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store.js';
 import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
 type RuntimeIrcServiceOptions = {

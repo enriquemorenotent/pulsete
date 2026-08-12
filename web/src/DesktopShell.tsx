@@ -27,7 +27,6 @@ import {
   resolveMediaVisibilityPolicy,
   type MediaVisibilitySettingsController,
 } from './media-visibility-settings.js';
-import { useDesktopHeaderModel } from './useDesktopShellModel.js';
 import type { UserAvatarSettingsController } from './user-avatars/settings.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
@@ -51,15 +50,27 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
     () => resolveMediaVisibilityPolicy(props.mediaVisibilitySettings.settings),
     [props.mediaVisibilitySettings.settings],
   );
-  const header = useDesktopHeaderModel({
-    dispatch,
-    mediaVisibilitySettings: {
-      mode: props.mediaVisibilitySettings.settings.mode,
-      setMode: props.mediaVisibilitySettings.setMode,
-    },
+  const header = useMemo(() => ({
+    mediaVisibilityMode: props.mediaVisibilitySettings.settings.mode,
     onDownloadDiagnostics: props.onDownloadDiagnostics,
-    ui: props.ui,
-  });
+    onOpenLogInspector: props.ui.openLogInspector,
+    onOpenNetworkManager: () => dispatch({ type: 'open-network-manager' }),
+    onOpenPreferences: props.ui.openPreferences,
+    onToggleMediaVisibilityMode: () => {
+      props.mediaVisibilitySettings.setMode(
+        props.mediaVisibilitySettings.settings.mode === 'show-media'
+          ? 'hide-media'
+          : 'show-media',
+      );
+    },
+  }), [
+    dispatch,
+    props.mediaVisibilitySettings.setMode,
+    props.mediaVisibilitySettings.settings.mode,
+    props.onDownloadDiagnostics,
+    props.ui.openLogInspector,
+    props.ui.openPreferences,
+  ]);
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
   const historyHasNewerByBufferId = useAppSelector(selectHistoryHasNewerByBufferId);

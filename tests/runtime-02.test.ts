@@ -12,7 +12,7 @@ import { createRegisteredServer } from './helpers/runtime-test-handshake-servers
 test('saving a connected network updates the live connection profile', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createRegisteredServer(firstReceived);
@@ -199,7 +199,7 @@ test('self direct messages create query buffers when none exist', () => {
 test('runtime join preserves existing channel metadata', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const network = storage.networks.upsert(createNetworkInput());
   const existing = storage.conversations.upsertChannel({
     networkId: network.id,
@@ -218,7 +218,7 @@ test('runtime join preserves existing channel metadata', () => {
 test('runtime join does not create a channel buffer when the join command is not sent', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const network = storage.networks.upsert(createNetworkInput());
 
   runtime.irc.join(network.id, '#missing');
@@ -231,7 +231,7 @@ test('runtime join does not create a channel buffer when the join command is not
 test('runtime part reports not connected before the first connection exists', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const network = storage.networks.upsert(createNetworkInput());
 
   runtime.irc.part(network.id, '#help');

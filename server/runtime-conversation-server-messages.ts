@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { ChatMessage } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
-import type { RuntimeConversationStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore } from './runtime-store.js';
 
 export const removedBufferMessages = (
   networkId: string,

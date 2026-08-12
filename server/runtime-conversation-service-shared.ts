@@ -2,7 +2,7 @@ import type {
   RuntimeConversationStore,
   RuntimeMutedNickStore,
   RuntimeNetworkStore,
-} from './runtime-store-ports.js';
+} from './runtime-store.js';
 
 export type RuntimeConversationServiceOptions = {
   conversations: RuntimeConversationStore;

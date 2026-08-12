@@ -19,7 +19,7 @@ import {
   SelectedNetworkPane,
 } from './network-manager-dialog-sections.js';
 
-type NetworkManagerDialogProps = {
+export type NetworkManagerDialogProps = {
   externalAvatarsEnabled?: boolean;
   networks: NetworkProfile[];
   selected: NetworkProfile | null;

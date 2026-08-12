@@ -11,7 +11,7 @@ import { createNetworkInput, waitFor } from './helpers/runtime-test-common.js';
 test('runtime auto-loads recent server history after joining a chathistory-capable channel', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-chathistory-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createChatHistoryServer(received);
   const network = storage.networks.upsert(createNetworkInput({

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { ChatPane } from './ChatPane.js';
 import { CommandPaletteDialog } from './CommandPaletteDialog.js';
@@ -29,7 +29,6 @@ import type { ContactNotificationsController } from './contact-notifications/con
 import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import { useDesktopCommandPaletteModel } from './useDesktopCommandPaletteModel.js';
 import { useDesktopChatModel } from './useDesktopChatModel.js';
-import { useDesktopSidebarModel } from './useDesktopShellModel.js';
 import { useSelectedBufferHistory } from './transcript/history.js';
 import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
 import type { AppActions } from './useAppActions.js';
@@ -72,17 +71,39 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
   const nickEmojis = useAppSelector(selectNickEmojis);
   const queryPresence = useAppSelector(selectQueryPresence);
   const sidebarConnections = useAppSelector(selectSidebarConnections);
-  const model = useDesktopSidebarModel({
-    actions,
+  const model = useMemo(() => ({
+    connections: sidebarConnections,
     externalAvatarsEnabled,
     friends,
     friendPresence,
+    hideOfflineFriends: ui.hideOfflineFriends,
+    mediaPolicy,
+    nickEmojis,
+    queryPresence,
+    onAddFriend: actions.addFriend,
+    onRemoveFriend: actions.removeFriend,
+    onSelectFriend: actions.selectFriend,
+    onToggleHideOfflineFriends: ui.toggleHideOfflineFriends,
+    onSelectNetwork: actions.selectNetworkBuffer,
+    onSelectBuffer: actions.selectTabBuffer,
+    onSelectPendingChannel: actions.selectPendingTab,
+    onReconnectNetwork: actions.reconnectNetwork,
+    onDisconnectNetwork: actions.disconnectNetwork,
+    onCloseConnection: actions.closeConnection,
+    onCloseChannel: actions.closeChannel,
+    onCloseBuffer: actions.closeBuffer,
+  }), [
+    actions,
+    externalAvatarsEnabled,
+    friendPresence,
+    friends,
     mediaPolicy,
     nickEmojis,
     queryPresence,
     sidebarConnections,
-    ui,
-  });
+    ui.hideOfflineFriends,
+    ui.toggleHideOfflineFriends,
+  ]);
   return <ConnectionSidebar {...model} />;
 });
 

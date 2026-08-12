@@ -20,7 +20,7 @@ export const createHttpRuntimeContext = async (
 ) => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const server = createServer(createHttpHandler(runtime.http, options.handler));
   if (options.websocket) {
     attachWebSocketServer(server, runtime.ws);

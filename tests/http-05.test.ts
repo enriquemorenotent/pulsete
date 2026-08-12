@@ -16,7 +16,7 @@ test('malformed request targets and route params return handled bad requests', a
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   storage.networks.upsert(createNetworkInput());
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
   let uncaught: string | null = null;
   const onUncaught = (error: unknown) => {
@@ -49,7 +49,7 @@ test('malformed request targets and route params return handled bad requests', a
 test('malformed websocket upgrade targets are destroyed without uncaught exceptions', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const server = createServer(createHttpHandler(runtime.http));
   attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);
@@ -83,7 +83,7 @@ test('malformed websocket upgrade targets are destroyed without uncaught excepti
 test('oversized json bodies are rejected before parsing', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -101,7 +101,7 @@ test('oversized json bodies are rejected before parsing', async () => {
 test('websocket upgrade succeeds without cookies and emits state.ready', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const server = createServer(createHttpHandler(runtime.http));
   attachWebSocketServer(server, runtime.ws);
   const port = await listen(server);

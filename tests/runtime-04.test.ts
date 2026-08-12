@@ -13,7 +13,7 @@ import { createSocketRecorder } from './helpers/runtime-test-sockets.js';
 test('runtime replays active LIST entries to a later requester without sending LIST twice', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const listServer = await createStreamingListServer(received, 500);
   const network = storage.networks.upsert(createNetworkInput({
@@ -79,7 +79,7 @@ test('runtime replays active LIST entries to a later requester without sending L
 test('runtime does not replay active LIST entries twice to the same requester', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const listServer = await createStreamingListServer(received, 500);
   const network = storage.networks.upsert(createNetworkInput({
@@ -140,7 +140,7 @@ test('runtime does not replay active LIST entries twice to the same requester', 
 test('runtime replays active LIST entries after the same requester cancels and reopens', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const listServer = await createStreamingListServer(received, 500);
   const network = storage.networks.upsert(createNetworkInput({

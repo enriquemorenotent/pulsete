@@ -6,7 +6,7 @@ import {
   renderAiAssistantMessages,
 } from '../server/ai-assistant-context.js';
 import { RuntimeAiAssistantService } from '../server/runtime-ai-assistant-service.js';
-import type { RuntimeConversationStore } from '../server/runtime-store-ports.js';
+import type { RuntimeConversationStore } from '../server/runtime-store.js';
 import type { BufferState, ChatMessage } from '../shared/protocol-chat.js';
 import type { AiAssistantProviderStatus } from '../shared/protocol-ai.js';
 

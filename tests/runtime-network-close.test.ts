@@ -11,7 +11,7 @@ import { createHandshakeServer } from './helpers/runtime-test-handshake-servers.
 test('closeConnection closes a workspace network without deleting its logs', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const handshake = await createHandshakeServer([]);
   const network = storage.networks.upsert(createNetworkInput({
     workspaceOpen: true,
@@ -61,7 +61,7 @@ test('closeConnection closes a workspace network without deleting its logs', asy
 test('deleteNetwork removes a saved network', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const network = storage.networks.upsert(createNetworkInput({ name: 'TemplateNet' }));
 
   const result = runtime.networks.deleteNetwork(network.id);

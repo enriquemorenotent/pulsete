@@ -5,10 +5,10 @@ import {
   buildCommandPaletteEntrySpecs,
   runCommandPaletteAction,
   type CommandPaletteActionHandlers,
+  type CommandPaletteEntry,
 } from './command-palette.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { Action, State } from './app-types.js';
-import type { DesktopShellModel } from './desktop-shell-model.js';
 import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { AppActions } from './useAppActions.js';
@@ -58,7 +58,12 @@ export function useDesktopCommandPaletteModel({
   sidebarConnections,
   ui,
   workspace,
-}: DesktopCommandPaletteModelParams): DesktopShellModel['commandPalette'] {
+}: DesktopCommandPaletteModelParams): {
+  open: boolean;
+  entries: CommandPaletteEntry[];
+  onOpen: () => void;
+  onClose: () => void;
+} {
   const selectableBuffersById = useMemo(() => {
     const next = new Map<string, BufferState>();
     for (const connection of sidebarConnections) {

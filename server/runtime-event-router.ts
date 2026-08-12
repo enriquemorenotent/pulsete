@@ -9,7 +9,7 @@ import { RuntimeChannelListService } from './runtime-channel-lists.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
 import { RuntimeFriendPresenceProjector } from './runtime-friend-presence-projector.js';
 import { createRuntimeProjectionSnapshot } from './runtime-snapshot-projector.js';
-import type { RuntimeConversationStore, RuntimeFriendStore } from './runtime-store-ports.js';
+import type { RuntimeConversationStore, RuntimeFriendStore } from './runtime-store.js';
 
 type RuntimeEventRouterOptions = {
   conversations: RuntimeConversationService;

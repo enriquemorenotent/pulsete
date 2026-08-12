@@ -13,7 +13,7 @@ import { createHandshakeServer } from './helpers/runtime-test-handshake-servers.
 test('deleteNetwork removes runtime connections', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
   const network = storage.networks.upsert(createNetworkInput({
@@ -43,7 +43,7 @@ test('deleteNetwork removes runtime connections', async () => {
 test('runtime close disconnects active connections without appending shutdown noise', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const handshake = await createHandshakeServer([]);
   const network = storage.networks.upsert(createNetworkInput({
     name: 'CloseNet',
@@ -77,7 +77,7 @@ test('runtime close disconnects active connections without appending shutdown no
 test('deleteNetwork removes open network connections', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const handshake = await createHandshakeServer(received);
   const network = storage.networks.upsert(createNetworkInput({

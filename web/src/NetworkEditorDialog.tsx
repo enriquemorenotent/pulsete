@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.j
 import { NetworkServerImageField } from './NetworkServerImageField.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 
-type NetworkEditorDialogProps = {
+export type NetworkEditorDialogProps = {
   externalAvatarsEnabled?: boolean;
   form: NetworkForm;
   activeTab: EditorTab;

@@ -14,7 +14,7 @@ import {
 test('runtime snapshot includes live network states after a refresh point', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createRegisteredServer(received);
   const network = storage.networks.upsert(createNetworkInput({
@@ -45,7 +45,7 @@ test('runtime snapshot includes live network states after a refresh point', asyn
 test('runtime snapshot includes aggregated friend presence from live connections', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createPresenceServer(received, { Alice: 'away' });
   const network = storage.networks.upsert(createNetworkInput({
@@ -73,7 +73,7 @@ test('runtime snapshot includes aggregated friend presence from live connections
 test('runtime snapshot includes presence for open query targets', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({
@@ -101,7 +101,7 @@ test('runtime snapshot includes presence for open query targets', async () => {
 test('opening a query after connect starts tracking that target presence', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({
@@ -131,7 +131,7 @@ test('opening a query after connect starts tracking that target presence', async
 test('opening a query after connect does not emit an immediate offline presence', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const server = await createPresenceServer(received, { Alice: 'online' });
   const network = storage.networks.upsert(createNetworkInput({
@@ -168,7 +168,7 @@ test('opening a query after connect does not emit an immediate offline presence'
 test('query presence stays scoped to the query network', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const firstReceived: string[] = [];
   const secondReceived: string[] = [];
   const first = await createPresenceServer(firstReceived, {});

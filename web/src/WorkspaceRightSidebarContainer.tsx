@@ -16,7 +16,6 @@ import type { ComposerStoreApi } from './composer-store.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
 import type { MediaVisibilityPolicy } from './media-visibility-settings.js';
-import { useDesktopNicklistModel } from './useDesktopShellModel.js';
 import type { AppActions } from './useAppActions.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import type { PinnedMessagesLoadState } from './PinnedMessagesSidebar.js';
@@ -87,16 +86,27 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     }
     void loadPinnedMessages();
   }, [loadPinnedMessages, pinnedMessagesLoaded, queryBufferId]);
-  const nicklist = useDesktopNicklistModel({
-    actions,
-    contactNotifications,
+  const nicklist = useMemo(() => ({
+    contactNotificationSettings: contactNotifications.settings,
     contactRuleHandlers,
     externalAvatarsEnabled,
     friends,
     mediaPolicy,
     mutedNicks,
     nickEmojis,
-  });
+    onSaveNickEmoji: actions.saveNickEmoji,
+    onSelectNick: actions.selectPrivateBuffer,
+  }), [
+    actions.saveNickEmoji,
+    actions.selectPrivateBuffer,
+    contactNotifications.settings,
+    contactRuleHandlers,
+    externalAvatarsEnabled,
+    friends,
+    mediaPolicy,
+    mutedNicks,
+    nickEmojis,
+  ]);
   const serverProfile = useMemo(() => ({
     network: serverProfileNetwork,
     onEdit: () => {

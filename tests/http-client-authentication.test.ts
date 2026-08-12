@@ -19,7 +19,7 @@ const bootstrapHeader = 'x-pulsete-bootstrap';
 const startAuthenticatedServer = async () => {
   const directory = mkdtempSync(join(tmpdir(), 'pulsete-auth-'));
   const storage = new Storage(join(directory, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const authentication = createClientAuthentication();
   const server = createServer(createHttpHandler(runtime.http, { authentication }));
   attachWebSocketServer(server, runtime.ws, { authentication });

@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { BufferState, NetworkProfile } from '../shared/protocol-chat.js';
-import { WorkspaceRightSidebar } from '../web/src/WorkspaceRightSidebar.js';
-import type { DesktopShellNicklistModel } from '../web/src/desktop-shell-model.js';
+import {
+  WorkspaceRightSidebar,
+  type WorkspaceRightSidebarProps,
+} from '../web/src/WorkspaceRightSidebar.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 import { noopContactRuleHandlers } from './chat-pane.test.renderers.js';
 
@@ -75,7 +77,7 @@ const queryWorkspace: WorkspaceView = {
   showNicklist: false,
 };
 
-const nicklist: DesktopShellNicklistModel = {
+const nicklist: WorkspaceRightSidebarProps['nicklist'] = {
   friends: [],
   nickEmojis: [],
   mutedNicks: [],

@@ -9,10 +9,7 @@ import {
   resolveCompactWorkspacePane,
   type CompactWorkspacePane,
 } from './desktop-shell-layout.js';
-import type {
-  DesktopShellCommandPaletteModel,
-  DesktopShellHeaderModel,
-} from './desktop-shell-model.js';
+import type { MediaVisibilityMode } from './media-visibility-settings.js';
 import { DesktopShellBrand } from './DesktopShellBrand.js';
 import { DesktopShellToolsMenu } from './DesktopShellToolsMenu.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
@@ -23,9 +20,16 @@ const compactDesktopShellQuery = '(max-width: 1023px)';
 
 export type DesktopShellLayoutProps = {
   chat: ReactNode;
-  commandPalette: Pick<DesktopShellCommandPaletteModel, 'onOpen' | 'open'>;
+  commandPalette: { onOpen: () => void; open: boolean };
   commandPaletteDialog: ReactNode;
-  header: DesktopShellHeaderModel;
+  header: {
+    mediaVisibilityMode: MediaVisibilityMode;
+    onDownloadDiagnostics: () => void;
+    onOpenLogInspector: () => void;
+    onOpenNetworkManager: () => void;
+    onOpenPreferences: () => void;
+    onToggleMediaVisibilityMode: () => void;
+  };
   logInspectorDialog: ReactNode;
   networkEditorDialog: ReactNode;
   networkManagerDialog: ReactNode;

@@ -11,7 +11,7 @@ import { createRegisteredServer } from './helpers/runtime-test-handshake-servers
 test('runtime channel close removes the local buffer and parts an existing connected session', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const received: string[] = [];
   const ircServer = await createRegisteredServer(received);
   const network = storage.networks.upsert(createNetworkInput({

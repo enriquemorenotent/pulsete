@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AppEffects } from './AppEffects.js';
 import { selectSelectedBufferId } from './app-selectors.js';
 import { AppStoreProvider, createAppStore } from './app-store.js';
 import { initialState } from './app-state.js';
 import { AppBody } from './AppBody.js';
-import { createClientDiagnosticsRecorder } from './client-diagnostics.js';
 import { createComposerStore } from './composer-store.js';
 import { createAiAssistantStore } from './ai-assistant-store.js';
 import { createServerMessageBridge } from './server-message-bridge.js';
@@ -13,14 +12,7 @@ import { useAppUiState } from './useAppUiState.js';
 
 function App() {
   const ui = useAppUiState();
-  const [{ diagnostics, store }] = useState(() => {
-    const diagnosticsRecorder = createClientDiagnosticsRecorder();
-    const appStore = createAppStore(initialState, {
-      onDispatch: diagnosticsRecorder.recordStoreDispatch,
-      onListenerCountChange: diagnosticsRecorder.recordStoreListenerCount,
-    });
-    return { diagnostics: diagnosticsRecorder, store: appStore };
-  });
+  const [store] = useState(() => createAppStore(initialState));
   const [assistantStore] = useState(createAiAssistantStore);
   const [composer] = useState(createComposerStore);
   const updateBanner = useCallback(
@@ -31,14 +23,17 @@ function App() {
       }),
     [store],
   );
-  const downloadDiagnostics = useCallback(() => {
+  const downloadDiagnostics = useCallback(async () => {
     const state = store.getState();
     updateBanner('notice', 'Capturing memory diagnostics...');
-    void diagnostics.download(state).then(
-      () => updateBanner('notice', 'Memory diagnostics downloaded.'),
-      () => updateBanner('error', 'Could not create the memory diagnostics file.'),
-    );
-  }, [diagnostics, store, updateBanner]);
+    try {
+      const { createClientDiagnosticsRecorder } = await import('./client-diagnostics.js');
+      await createClientDiagnosticsRecorder().download(state);
+      updateBanner('notice', 'Memory diagnostics downloaded.');
+    } catch {
+      updateBanner('error', 'Could not create the memory diagnostics file.');
+    }
+  }, [store, updateBanner]);
   const serverMessages = useMemo(
     () => createServerMessageBridge(store),
     [store],
@@ -66,11 +61,6 @@ function App() {
     [composer, serverMessages.applyMutationMessages, store, ui.socketRef, updateBanner],
   );
 
-  useEffect(
-    () => diagnostics.start(store.getState),
-    [diagnostics, store],
-  );
-
   return (
     <AppStoreProvider store={store}>
       <AppEffects
@@ -79,7 +69,6 @@ function App() {
         assistantStore={assistantStore}
         composer={composer}
         saveDraft={actions.saveDraft}
-        socketInstrumentation={diagnostics.socketInstrumentation}
         ui={ui}
       />
       <AppBody

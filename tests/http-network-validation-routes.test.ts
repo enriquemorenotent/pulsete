@@ -13,7 +13,7 @@ import { createNetworkInput } from './helpers/http-server-helpers.js';
 test('network routes start with no saved networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -28,7 +28,7 @@ test('network routes start with no saved networks', async () => {
 test('connect and disconnect return not found for missing networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -47,7 +47,7 @@ test('connect and disconnect return not found for missing networks', async () =>
 test('network save rejects invalid payloads and IRC-unsafe fields', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -122,7 +122,7 @@ test('network save rejects invalid payloads and IRC-unsafe fields', async () => 
 test('network save preserves workspace state on ordinary profile edits', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const runtime = createRuntime(storage.runtimeStore);
+  const runtime = createRuntime(storage);
   const network = storage.networks.upsert(createNetworkInput({
     workspaceOpen: true,
     name: 'Open network',
@@ -146,7 +146,7 @@ test('network save preserves workspace state on ordinary profile edits', async (
 test('network save rejects conflicting and empty password updates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -172,7 +172,7 @@ test('network save rejects conflicting and empty password updates', async () => 
 test('network save rejects auth methods without a saved password', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
   const protectedNetwork = storage.networks.upsert(createNetworkInput({
     authMethod: 'nickserv',

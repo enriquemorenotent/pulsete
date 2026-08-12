@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol-chat.js';
 import type { Action, State } from './app-types.js';
-import type { DesktopShellModel } from './desktop-shell-model.js';
+import type { NetworkManagerDialogProps } from './NetworkManagerDialog.js';
 import { buildManagedRuntime } from './network-manager-runtime.js';
 import { openExistingNetworkEditor, openNewNetworkEditor } from './network-editor-actions.js';
 import type { NetworkManagerActionSet } from './useAppActions.js';
@@ -27,7 +27,7 @@ export function useNetworkManagerController({
   networkManager,
   visibleManagedNetwork,
   visibleNetworks,
-}: NetworkManagerControllerParams): DesktopShellModel['networkManager'] {
+}: NetworkManagerControllerParams): NetworkManagerDialogProps & { open: boolean } {
   const openNewNetworkEditorDialog = useCallback(createOpenNewNetworkEditorDialog(dispatch), [dispatch]);
 
   const openExistingNetworkEditorDialog = useCallback(

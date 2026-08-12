@@ -28,7 +28,7 @@ test('close marks workspace networks closed without deleting stored logs', async
     self: true,
     ts: 1,
   });
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
@@ -51,7 +51,7 @@ test('delete removes saved networks', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-http-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.networks.upsert(createNetworkInput({ name: 'TemplateNet' }));
-  const server = createServer(createHttpHandler(createRuntime(storage.runtimeStore).http));
+  const server = createServer(createHttpHandler(createRuntime(storage).http));
   const port = await listen(server);
 
   try {
