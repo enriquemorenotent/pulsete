@@ -7,32 +7,32 @@
 
 :root {
   color-scheme: dark;
-  --background: oklch(0.155 0.004 255);
-  --foreground: oklch(0.91 0.008 255);
-  --card: oklch(0.19 0.005 255);
-  --card-foreground: oklch(0.91 0.008 255);
-  --popover: oklch(0.19 0.005 255);
-  --popover-foreground: oklch(0.91 0.008 255);
-  --primary: oklch(0.64 0.08 246);
+  --background: #101215;
+  --foreground: #e5e7eb;
+  --card: #15181c;
+  --card-foreground: #e5e7eb;
+  --popover: #171a1e;
+  --popover-foreground: #e5e7eb;
+  --primary: #f27f68;
   --primary-foreground: oklch(0.98 0.002 255);
-  --secondary: oklch(0.23 0.004 255);
-  --secondary-foreground: oklch(0.91 0.008 255);
-  --muted: oklch(0.22 0.004 255);
-  --muted-foreground: oklch(0.67 0.01 255);
-  --accent: oklch(0.25 0.008 255);
-  --accent-foreground: oklch(0.94 0.006 255);
+  --secondary: #1a1d22;
+  --secondary-foreground: #e5e7eb;
+  --muted: #1b1e23;
+  --muted-foreground: #7f8793;
+  --accent: #25282e;
+  --accent-foreground: #f1f3f5;
   --destructive: oklch(0.58 0.18 27);
   --destructive-foreground: oklch(0.98 0.002 27);
-  --border: oklch(0.31 0.005 255);
-  --input: oklch(0.205 0.004 255);
-  --ring: oklch(0.64 0.08 246);
-  --success: oklch(0.67 0.08 156);
+  --border: #292d33;
+  --input: #191c20;
+  --ring: #f27f68;
+  --success: #8cc9b7;
   --success-foreground: oklch(0.98 0.002 156);
-  --transcript-message: oklch(0.935 0.006 255);
-  --transcript-notice: oklch(0.86 0.008 255);
-  --transcript-secondary: oklch(0.73 0.01 255);
-  --transcript-meta: oklch(0.62 0.01 255);
-  --radius: 0.35rem;
+  --transcript-message: #c4c9d0;
+  --transcript-notice: #aeb5bf;
+  --transcript-secondary: #949ca8;
+  --transcript-meta: #66707c;
+  --radius: 0.5rem;
 }
 
 @theme inline {
@@ -78,10 +78,7 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top left, rgba(96, 137, 215, 0.14), transparent 22rem),
-    radial-gradient(circle at top right, rgba(24, 180, 133, 0.08), transparent 18rem),
-    #141518;
+  background: #101215;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -103,6 +100,12 @@ input {
 
 button {
   cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(242, 127, 104, 0.55);
+  outline-offset: 2px;
 }
 
 ::selection {

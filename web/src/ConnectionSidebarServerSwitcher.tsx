@@ -24,9 +24,14 @@ export function ConnectionSidebarServerSwitcher(
 
   return (
     <section className="flex min-h-0 flex-1 overflow-hidden">
-      <div className="flex w-14 shrink-0 flex-col items-center gap-2 border-r border-white/8 bg-black/14 px-2 py-2">
+      <div className="flex w-[64px] shrink-0 flex-col items-center gap-2 border-r border-[#292d33] bg-[#0d0f12] px-2 py-4">
+        {props.railBrand ? (
+          <div className="mb-3 flex h-8 w-full items-center justify-center overflow-hidden">
+            {props.railBrand}
+          </div>
+        ) : null}
         <ScrollArea className="min-h-0 w-full flex-1">
-          <div className="flex flex-col items-center gap-1.5">
+          <div className="flex flex-col items-center gap-2">
             {props.connections.map((connection) => (
               <ServerSwitcherButton
                 key={connection.network.id}
@@ -39,6 +44,25 @@ export function ConnectionSidebarServerSwitcher(
             ))}
           </div>
         </ScrollArea>
+        {props.railPalette || props.railMediaToggle || props.railTools ? (
+          <div className="flex flex-col items-center gap-2">
+            {props.railPalette ? (
+              <div className="relative flex h-8 w-full items-center justify-center">
+                {props.railPalette}
+              </div>
+            ) : null}
+            {props.railMediaToggle ? (
+              <div className="relative flex h-8 w-full items-center justify-center">
+                {props.railMediaToggle}
+              </div>
+            ) : null}
+            {props.railTools ? (
+              <div className="relative flex h-8 w-full items-center justify-center">
+                {props.railTools}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <ConnectionSwitcherDetail {...props} activeConnection={activeConnection} />
@@ -203,11 +227,10 @@ function ServerSwitcherButton(props: {
       <button
         type="button"
         className={cn(
-          'relative flex size-10 items-center justify-center overflow-hidden border transition-all',
+          'relative flex size-10 items-center justify-center overflow-hidden rounded-sm p-0 transition-colors',
           props.active
-            ? 'rounded-xl border-2 border-primary/70 bg-white/[0.12] text-foreground shadow-[0_7px_18px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]'
-            : 'rounded-md border-white/8 bg-white/[0.035] hover:border-white/16 hover:bg-white/[0.06]',
-          props.connection.runtime?.phase !== 'connected' && 'opacity-70',
+            ? 'bg-[#25282e] text-foreground'
+            : 'bg-white/[0.035] hover:bg-white/[0.07]',
         )}
         onClick={props.onSelect}
         aria-label={
@@ -218,7 +241,7 @@ function ServerSwitcherButton(props: {
         title={props.connection.labelParts.name}
       >
         <ConnectionSidebarServerIcon
-          className={serverImage ? 'size-full rounded-[inherit]' : 'size-4'}
+          className={serverImage ? 'absolute inset-0 size-full rounded-[inherit]' : 'size-4'}
           iconUrl={serverImage?.url}
           runtime={props.connection.runtime}
         />
@@ -226,13 +249,16 @@ function ServerSwitcherButton(props: {
           <NetworkServerImageFallbackCue />
         ) : null}
         {props.active ? (
-          <span aria-hidden className="absolute inset-0 bg-white/[0.06]" />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] shadow-[inset_0_0_0_1px_#f27f68]"
+          />
         ) : null}
         {activity.hasUnread ? (
           <span
             aria-hidden
             className={cn(
-              'absolute bottom-0.5 right-0.5 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
+              'absolute bottom-0.5 right-0.5 z-20 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
               activity.priority
                 ? 'size-2.5 bg-primary ring-2 ring-black/45'
                 : 'size-2 bg-primary',

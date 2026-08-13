@@ -145,10 +145,10 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   };
 
   return (
-    <footer className="shrink-0 border-t border-white/6 bg-background/32 px-4 py-3 backdrop-blur-sm">
+    <footer className="shrink-0 border-t border-[#20242a] bg-[#101215] px-5 py-4">
       <div
         className={cn(
-          'flex items-center gap-2 rounded-[1rem] bg-black/12 p-2 ring-1 ring-white/[0.05]',
+          'flex items-center gap-2 rounded-lg bg-[#1a1d22] p-2 ring-1 ring-[#2a2e34]',
           prompt.variant === 'commands' && 'flex-wrap bg-amber-400/[0.045] ring-amber-300/15 sm:flex-nowrap'
         )}
       >

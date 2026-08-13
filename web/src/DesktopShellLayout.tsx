@@ -114,8 +114,8 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
 
   const showingMedia = props.header.mediaVisibilityMode === 'show-media';
   return (
-    <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(87,128,208,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_20%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] text-foreground">
-      <header className="relative z-30 flex shrink-0 flex-wrap items-center gap-3 border-b border-white/6 bg-background/80 px-4 py-3 backdrop-blur-xl">
+    <div className="fixed inset-0 flex min-h-0 overflow-hidden bg-[#101215] text-foreground">
+      <div className="hidden">
         <DesktopShellBrand />
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           <Button
@@ -147,13 +147,14 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           </Button>
           <DesktopShellToolsMenu
             onDownloadDiagnostics={props.header.onDownloadDiagnostics}
+            onOpenLogInspector={props.header.onOpenLogInspector}
             onOpenNetworkManager={props.header.onOpenNetworkManager}
             onOpenPreferences={props.header.onOpenPreferences}
           />
         </div>
-      </header>
+      </div>
 
-      <main className="flex min-h-0 flex-1 overflow-hidden">
+      <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {compactLayout ? (
           <Tabs
             value={compactPane}
@@ -187,9 +188,9 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           <div
             ref={layoutRef}
             style={layoutStyle}
-            className="flex h-full min-h-0 flex-1 overflow-hidden bg-black/20 shadow-[0_20px_70px_rgba(0,0,0,0.42)] lg:flex-row"
+            className="flex h-full min-h-0 flex-1 overflow-hidden bg-[#101215] lg:flex-row"
           >
-            <div className="min-h-0 bg-card/50 backdrop-blur-xl lg:w-(--sidebar-width) lg:shrink-0">
+            <div className="min-h-0 bg-[#15181c] lg:w-(--sidebar-width) lg:min-w-[320px] lg:shrink-0">
               {props.sidebar}
             </div>
             <SidebarResizeHandle
@@ -200,7 +201,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
               onNudge={leftSidebarResize.nudgeWidth}
               onReset={leftSidebarResize.resetWidth}
             />
-            <div className="min-h-0 min-w-0 flex-1 bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_14rem)]">
+            <div className="min-h-0 min-w-0 flex-1 bg-[#101215]">
               {props.chat}
             </div>
             {props.rightSidebarKind ? (
@@ -218,9 +219,9 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
                 ) : null}
                 <div
                   key="right-sidebar-panel"
-                  className={props.rightSidebarCollapsed
+                    className={props.rightSidebarCollapsed
                     ? 'hidden'
-                    : 'min-h-0 bg-black/[0.08] backdrop-blur-xl lg:w-[var(--right-sidebar-width)] lg:shrink-0'}
+                    : 'min-h-0 bg-[#101215] lg:w-[var(--right-sidebar-width)] lg:max-w-[300px] lg:shrink-0'}
                 >
                   {props.rightSidebar}
                 </div>

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Bug, ChevronDown, PanelsTopLeft, Settings2 } from 'lucide-react';
+import { Bug, ChevronDown, FolderSearch, PanelsTopLeft, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 
 type DesktopShellToolsMenuProps = {
+  iconOnly?: boolean;
   onDownloadDiagnostics: () => void;
+  onOpenLogInspector: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
 };
@@ -40,21 +42,30 @@ export function DesktopShellToolsMenu(props: DesktopShellToolsMenuProps) {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size={props.iconOnly ? 'icon' : 'sm'}
         aria-label="Tools"
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((current) => !current)}
       >
         <Settings2 />
-        Tools
-        <ChevronDown className="size-3" />
+        {props.iconOnly ? <span className="sr-only">Tools</span> : <><span>Tools</span><ChevronDown className="size-3" /></>}
       </Button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-40 mt-2 min-w-48 overflow-hidden rounded-[0.9rem] border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+          className={props.iconOnly
+            ? 'absolute left-full bottom-0 z-40 ml-2 min-w-48 overflow-hidden rounded-[0.9rem] border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]'
+            : 'absolute right-0 top-full z-40 mt-2 min-w-48 overflow-hidden rounded-[0.9rem] border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]'}
         >
+          <DesktopShellToolsMenuItem
+            icon={<FolderSearch className="size-3.5" />}
+            label="Logs"
+            onSelect={() => {
+              setOpen(false);
+              props.onOpenLogInspector();
+            }}
+          />
           <DesktopShellToolsMenuItem
             icon={<Bug className="size-3.5" />}
             label="Capture memory diagnostics"

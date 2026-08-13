@@ -185,7 +185,7 @@ function RightSidebarTabs(props: {
 }) {
   return (
     <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col">
-      <div className="flex h-10 w-full shrink-0 items-center gap-2 border-b border-white/[0.055] px-2">
+      <div className="flex h-[72px] w-full shrink-0 items-center gap-2 border-b border-[#292d33] px-5">
         <TabsList
           aria-label="Sidebar views"
           className="flex h-auto gap-1 rounded-none border-0 bg-transparent p-0"

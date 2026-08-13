@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 145 132" role="img" aria-label="Pulsete">
+  <defs>
+    <linearGradient id="pulsete-signal" x1="18" y1="28" x2="128" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path
+      d="M28 69h29l10-20 19 41 14-21h24"
+      stroke="url(#pulsete-signal)"
+      stroke-width="9"
+    />
+    <path
+      d="M23 42c0-10 8-18 18-18h73c10 0 18 8 18 18v48c0 10-8 18-18 18H68l-28 17v-17"
+      stroke="#e5e7eb"
+      stroke-opacity=".78"
+      stroke-width="7"
+    />
+    <circle cx="124" cy="69" r="6" fill="#34d399" stroke="none"/>
+  </g>
+</svg>

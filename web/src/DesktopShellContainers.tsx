@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, type ReactNode } from 'react';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { ChatPane } from './ChatPane.js';
 import { CommandPaletteDialog } from './CommandPaletteDialog.js';
@@ -41,6 +41,10 @@ type SharedProps = {
 
 type SidebarContainerProps = SharedProps & {
   externalAvatarsEnabled: boolean;
+  railBrand?: ReactNode;
+  railPalette?: ReactNode;
+  railMediaToggle?: ReactNode;
+  railTools?: ReactNode;
   showMedia: boolean;
 };
 
@@ -62,6 +66,10 @@ type CommandPaletteContainerProps = SharedProps & {
 export const ConnectionSidebarContainer = memo(function ConnectionSidebarContainer({
   actions,
   externalAvatarsEnabled,
+  railBrand,
+  railPalette,
+  railMediaToggle,
+  railTools,
   showMedia,
   ui,
 }: SidebarContainerProps) {
@@ -73,6 +81,10 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
   const model = useMemo(() => ({
     connections: sidebarConnections,
     externalAvatarsEnabled,
+    railBrand,
+    railPalette,
+    railMediaToggle,
+    railTools,
     friends,
     friendPresence,
     hideOfflineFriends: ui.hideOfflineFriends,
@@ -99,6 +111,10 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
     showMedia,
     nickEmojis,
     queryPresence,
+    railBrand,
+    railPalette,
+    railMediaToggle,
+    railTools,
     sidebarConnections,
     ui.hideOfflineFriends,
     ui.toggleHideOfflineFriends,
