@@ -83,8 +83,8 @@ test('offline connections keep channel and query rows visible and selectable', (
 
   assert.match(markup, /aria-label="Open #help"/);
   assert.match(markup, /aria-label="Open alice"/);
-  assert.match(markup, /Connections<\/h2>/);
-  assert.doesNotMatch(markup, /Buffers<\/h2>/);
+  assert.match(markup, /Channels<\/h2>/);
+  assert.match(markup, /Direct messages<\/h2>/);
   assert.doesNotMatch(markup, /aria-label="Open #help"[^>]*disabled/);
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
   assert.doesNotMatch(markup, />Offline</);
@@ -132,7 +132,7 @@ test('connected rows rely on the status dot instead of repeating a connected lab
   );
 });
 
-test('connecting rows rely on the status dot instead of repeating a connecting label', () => {
+test('connecting rows use the amber server icon and connecting action', () => {
   const network = makeNetwork();
   const server = makeBuffer({ id: 'server-1' });
   const markup = renderToStaticMarkup(
@@ -165,7 +165,7 @@ test('connecting rows rely on the status dot instead of repeating a connecting l
     />,
   );
 
-  assert.doesNotMatch(markup, />Connecting</);
+  assert.match(markup, />Connecting</);
   assert.doesNotMatch(markup, />as sofia</);
   assert.match(markup, /text-amber-300/);
 });

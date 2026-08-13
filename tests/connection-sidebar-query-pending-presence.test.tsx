@@ -43,7 +43,7 @@ const makeRuntime = (
   nick: overrides.nick ?? 'sofia',
 });
 
-test('connected query buffers show a gray badge while presence is resolving', () => {
+test('connected query buffers omit the presence dot while status is resolving', () => {
   const network = makeNetwork();
   const pendingQuery = makeBuffer({
     id: 'query-pending',
@@ -82,8 +82,7 @@ test('connected query buffers show a gray badge while presence is resolving', ()
   );
 
   assert.match(markup, /aria-label="Open alice \(checking status\)"/);
-  assert.match(markup, /text-zinc-400/);
-  assert.doesNotMatch(markup, /bg-zinc-400/);
+  assert.doesNotMatch(markup, /bg-\[#8cc9b7\]|bg-\[#e0bc68\]|bg-\[#505762\]/);
 });
 
 test('offline query buffers do not show a gray pending badge', () => {
@@ -127,4 +126,3 @@ test('offline query buffers do not show a gray pending badge', () => {
   assert.match(markup, /aria-label="Open alice"/);
   assert.doesNotMatch(markup, /bg-zinc-400/);
 });
-

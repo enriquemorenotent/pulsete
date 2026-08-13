@@ -34,14 +34,13 @@ test('connection sidebar shows all servers but only the active server tabs', () 
 
   assert.match(markup, /aria-label="Open Alpha"/);
   assert.match(markup, /aria-label="Open Beta"/);
-  assert.match(markup, /rounded-xl border-2 border-primary\/70 bg-white\/\[0\.12\]/);
-  assert.match(markup, /absolute inset-0 bg-white\/\[0\.06\]/);
+  assert.match(markup, /shadow-\[inset_0_0_0_1px_#f27f68\]/);
   assert.doesNotMatch(markup, /absolute right-0\.5 top-0\.5 size-2 rounded-full bg-primary/);
   assert.doesNotMatch(markup, /rounded-r-full bg-primary/);
   assert.doesNotMatch(markup, /ring-2 ring-inset ring-primary/);
   assert.doesNotMatch(markup, /Alpha<\/h2>/);
   assert.doesNotMatch(markup, /ml-3 min-w-0 space-y-px border-l border-white\/7 pl-2/);
-  assert.match(markup, /class="min-w-0 space-y-px w-full"/);
+  assert.match(markup, /class="min-w-0 w-full"/);
   assert.match(markup, /aria-label="Connect Alpha \(sofia\)"/);
   assert.match(markup, /aria-label="Close Alpha \(sofia\)"/);
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
@@ -133,7 +132,7 @@ test('connection sidebar renders assigned server images when media is shown', ()
   assert.match(markup, /referrerPolicy="no-referrer"/);
 });
 
-test('connection sidebar uses the tree view and hides server images when media is hidden', () => {
+test('connection sidebar keeps the server rail and hides images when media is hidden', () => {
   const alpha = makeSidebarNetwork({
     id: 'alpha',
     name: 'Alpha',
@@ -166,12 +165,11 @@ test('connection sidebar uses the tree view and hides server images when media i
     selection: { kind: 'buffer', bufferId: 'alpha-server' },
   });
 
-  assert.match(markup, /Connections<\/h2>/);
+  assert.match(markup, /Channels<\/h2>/);
   assert.match(markup, /aria-label="Open Alpha"/);
   assert.match(markup, /aria-label="Open #alpha"/);
-  assert.match(markup, /aria-label="Open #beta"/);
-  assert.match(markup, /ml-3 border-l border-white\/7 pl-2/);
-  assert.doesNotMatch(markup, /class="min-w-0 space-y-px w-full"/);
+  assert.doesNotMatch(markup, /aria-label="Open #beta"/);
+  assert.match(markup, /class="min-w-0 w-full"/);
   assert.doesNotMatch(markup, /src="https:\/\/example.test\/alpha.png"/);
   assert.doesNotMatch(markup, /src="https:\/\/example.test\/beta.png"/);
 });

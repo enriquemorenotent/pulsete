@@ -42,16 +42,19 @@ export function ConnectionSidebarBufferRow(
 	});
 	const visibleCustomAvatarUrl =
 		props.userAvatarsVisible === false ? null : customAvatarUrl;
+	const isQuery = props.buffer.kind === 'query';
+	const unreadCount = Math.max(props.buffer.unread, props.buffer.priorityUnread);
 
 	return (
 		<div
 			className={connectionSidebarRowClass(activity, {
 				dimmed: props.dimmed,
 				selected: props.selected,
+				variant: 'selector',
 			})}
 		>
 			<button
-				className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
+				className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/55"
 				onClick={props.onSelect}
 				aria-label={resolveBufferAriaLabel(
 					props.buffer.target,
@@ -59,40 +62,35 @@ export function ConnectionSidebarBufferRow(
 					activity.hasUnread,
 				)}
 			>
-				<span className="relative flex size-4 shrink-0 items-center justify-center">
-					{visibleCustomAvatarUrl ? (
-						<UserAvatar
-							className="size-4"
-							customAvatarUrl={visibleCustomAvatarUrl}
-							enabled={false}
-							user={{
-								account: null,
-								host: null,
-								identity: props.buffer.peerIdentity,
-								nick: props.buffer.target,
-								username: null,
-							}}
-						/>
-					) : (
+				{isQuery ? (
+					<UserAvatar
+						className={cn(
+							'size-8 rounded-lg text-[11px] font-semibold text-[#111318]',
+							avatarTone(props.buffer.target),
+						)}
+						customAvatarUrl={visibleCustomAvatarUrl}
+						enabled={props.userAvatarsVisible !== false}
+						placeholder="initial"
+						shape="square"
+						user={{
+							account: null,
+							host: null,
+							identity: props.buffer.peerIdentity,
+							ircCloudAvatarId: props.buffer.ircCloudAvatarId,
+							nick: props.buffer.target,
+							username: null,
+						}}
+					/>
+				) : (
+					<span className="relative flex size-5 shrink-0 items-center justify-center">
 						<Icon
 							className={cn(
-								'size-3.5 shrink-0',
-								props.presence
-									? presenceIconTone(props.presence)
-									: 'text-muted-foreground',
+								'size-5 shrink-0',
+								props.selected ? 'text-primary' : 'text-[#929aa5]',
 							)}
 						/>
-					)}
-					{activity.hasUnread ? (
-						<span
-							aria-hidden
-							className={cn(
-								'absolute -bottom-0.5 -right-0.5 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
-								unreadBadgeTone(activity),
-							)}
-						/>
-					) : null}
-				</span>
+					</span>
+				)}
 				<span
 					className={cn(
 						connectionSidebarLabelClass(activity, {
@@ -100,19 +98,30 @@ export function ConnectionSidebarBufferRow(
 							offline: props.presence === 'offline',
 							selected: props.selected,
 						}),
-						'block min-w-0 flex-1',
+						'block min-w-0 flex-1 text-[14px]',
 					)}
 				>
-					{props.buffer.target}
+					{displayBufferTarget(props.buffer)}
 					{props.emoji ? (
 						<span className="ml-1 text-[12px] leading-none" aria-hidden>
 							{props.emoji}
 						</span>
 					) : null}
 				</span>
+				{activity.hasUnread ? (
+					<span className="inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-[#3a414b] px-1.5 py-0.5 font-mono text-[11px] font-medium text-[#dce1e6]">
+						{unreadCount}
+					</span>
+				) : null}
+				{isQuery && props.presence && props.presence !== 'pending' ? (
+					<span
+						aria-hidden
+						className={cn('size-2 shrink-0 rounded-full', presenceDotTone(props.presence))}
+					/>
+				) : null}
 			</button>
 			<button
-				className="flex w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity duration-150 hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
+				className="absolute right-1.5 top-1/2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-md bg-[#2a2d32] text-muted-foreground opacity-0 transition-opacity duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
 				onClick={props.onClose}
 				aria-label={`Close ${props.buffer.target}`}
 			>
@@ -121,6 +130,31 @@ export function ConnectionSidebarBufferRow(
 		</div>
 	);
 }
+
+const displayBufferTarget = (buffer: BufferState) =>
+	buffer.kind === 'channel' ? buffer.target.replace(/^#/, '') : buffer.target;
+
+const avatarTones = [
+	'bg-[#f1a086]',
+	'bg-[#e9c77f]',
+	'bg-[#8fc8b9]',
+	'bg-[#91add8]',
+	'bg-[#b8a0cf]',
+] as const;
+
+const avatarTone = (nick: string) => {
+	let hash = 0;
+	for (const character of nick) {
+		hash = (hash * 31 + character.charCodeAt(0)) | 0;
+	}
+	return avatarTones[Math.abs(hash) % avatarTones.length];
+};
+
+const presenceDotTone = (presence: BufferPresenceDisplay) => {
+	if (presence === 'online') return 'bg-[#8cc9b7]';
+	if (presence === 'away') return 'bg-[#e0bc68]';
+	return 'bg-[#505762]';
+};
 
 const presenceLabel = (presence: BufferPresenceDisplay) =>
 	presence === 'pending' ? 'checking status' : presence;
@@ -137,21 +171,3 @@ const resolveBufferAriaLabel = (
 	}
 	return hasUnread ? `Open ${target} (unread)` : `Open ${target}`;
 };
-
-const presenceIconTone = (presence: BufferPresenceDisplay) => {
-	if (presence === 'pending') {
-		return 'text-zinc-400';
-	}
-	if (presence === 'online') {
-		return 'text-emerald-400';
-	}
-	if (presence === 'away') {
-		return 'text-yellow-400';
-	}
-	return 'text-red-400';
-};
-
-const unreadBadgeTone = (activity: { priority: boolean }) =>
-	activity.priority
-		? 'size-2.5 bg-primary ring-2 ring-primary/25'
-		: 'size-2 bg-primary/70';
