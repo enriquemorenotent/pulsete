@@ -87,10 +87,10 @@ test('offline connections keep channel and query rows visible and selectable', (
   assert.match(markup, /Direct messages<\/h2>/);
   assert.doesNotMatch(markup, /aria-label="Open #help"[^>]*disabled/);
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
-  assert.doesNotMatch(markup, />Offline</);
+  assert.match(markup, />Offline</);
 });
 
-test('connected rows rely on the status dot instead of repeating a connected label', () => {
+test('connected server headers show the server name and status', () => {
   const network = makeNetwork();
   const server = makeBuffer({ id: 'server-1' });
   const markup = renderToStaticMarkup(
@@ -123,13 +123,10 @@ test('connected rows rely on the status dot instead of repeating a connected lab
     />,
   );
 
-  assert.doesNotMatch(markup, />Connected</);
+  assert.match(markup, />Connected</);
   assert.doesNotMatch(markup, />as sofia</);
-  assert.match(markup, /text-emerald-400/);
-  assert.match(
-    markup,
-    /class="truncate text-\[12\.5px\] text-foreground font-semibold block min-w-0 flex-1">Cuff-Link<\/span>/,
-  );
+  assert.match(markup, /bg-\[#8cc9b7\]/);
+  assert.match(markup, />Cuff-Link<\/button>/);
 });
 
 test('connecting rows use the amber server icon and connecting action', () => {
@@ -167,7 +164,7 @@ test('connecting rows use the amber server icon and connecting action', () => {
 
   assert.match(markup, />Connecting</);
   assert.doesNotMatch(markup, />as sofia</);
-  assert.match(markup, /text-amber-300/);
+  assert.match(markup, /bg-\[#e0bc68\]/);
 });
 
 test('server rows use the overlaid dot for unread state instead of a trailing marker', () => {
@@ -208,11 +205,8 @@ test('server rows use the overlaid dot for unread state instead of a trailing ma
   );
 
   assert.match(markup, /aria-label="Open Cuff-Link \(unread\)"/);
-  assert.match(markup, /text-emerald-400/);
+  assert.match(markup, /bg-\[#8cc9b7\]/);
   assert.match(markup, /bg-primary/);
-  assert.match(
-    markup,
-    /class="truncate text-\[12\.5px\] text-foreground font-semibold block min-w-0 flex-1">Cuff-Link<\/span>/,
-  );
+  assert.match(markup, />Cuff-Link<\/button>/);
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
 });

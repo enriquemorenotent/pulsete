@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { PowerOff, RefreshCcw, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Copy, PowerOff, RefreshCcw, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
@@ -95,13 +95,11 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
           ) : null}
           {activeConnection ? (
             <>
-              <ServerSwitcherBanner
+              <ServerSwitcherHeader
                 connection={activeConnection}
                 externalAvatarsEnabled={props.externalAvatarsEnabled}
                 showMedia={props.showMedia}
-              />
-              <ServerSwitcherActionBar
-                connection={activeConnection}
+                onSelectNetwork={props.onSelectNetwork}
                 onReconnectNetwork={props.onReconnectNetwork}
                 onDisconnectNetwork={props.onDisconnectNetwork}
                 onCloseConnection={props.onCloseConnection}
@@ -130,13 +128,22 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
   );
 }
 
-function ServerSwitcherActionBar(props: {
+function ServerSwitcherHeader(props: {
   connection: SidebarConnectionView;
+  externalAvatarsEnabled?: boolean;
+  showMedia?: ConnectionSidebarProps['showMedia'];
+  onSelectNetwork: ConnectionSidebarProps['onSelectNetwork'];
   onReconnectNetwork: ConnectionSidebarProps['onReconnectNetwork'];
   onDisconnectNetwork: ConnectionSidebarProps['onDisconnectNetwork'];
   onCloseConnection: ConnectionSidebarProps['onCloseConnection'];
 }) {
   const phase = props.connection.runtime?.phase ?? 'offline';
+  const serverImage = props.showMedia === false
+    ? null
+    : resolveNetworkServerImage(
+        props.connection.network,
+        props.externalAvatarsEnabled === true,
+      );
   const actionLabel =
     phase === 'connected'
       ? 'Disconnect'
@@ -144,69 +151,154 @@ function ServerSwitcherActionBar(props: {
         ? 'Connecting'
         : 'Connect';
   return (
-    <div className="mb-1 flex items-center justify-between gap-1 px-0.5">
-      <button
-        className="flex h-7 shrink-0 items-center gap-1.5 rounded-sm px-2 text-[11px] font-medium text-muted-foreground/90 transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
-        onClick={() =>
-          phase === 'connected'
-            ? props.onDisconnectNetwork(props.connection.network.id)
-            : props.onReconnectNetwork(props.connection.network)
-        }
-        aria-label={`${actionLabel} ${props.connection.label}`}
-        disabled={phase === 'connecting'}
-      >
-        {phase === 'connected' ? (
-          <PowerOff className="size-3" />
-        ) : (
-          <RefreshCcw className="size-3" />
+    <header
+      className={cn(
+        'relative mb-5 flex overflow-hidden rounded-sm bg-[#111419]',
+        serverImage ? 'min-h-[116px]' : 'min-h-[82px] border border-[#292d33]',
+      )}
+    >
+      {serverImage ? (
+        <img
+          src={serverImage.url}
+          alt=""
+          className={cn(
+            'absolute inset-0 size-full object-cover',
+            networkImageRuntimeClass(props.connection.runtime),
+          )}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+        />
+      ) : null}
+      <div
+        aria-hidden
+        className={cn(
+          'absolute inset-0',
+          serverImage
+            ? 'bg-[linear-gradient(180deg,rgba(5,7,10,0.48)_0%,rgba(5,7,10,0.18)_42%,rgba(5,7,10,0.82)_100%)]'
+            : 'bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent)]',
         )}
-        <span>{actionLabel}</span>
-      </button>
-      <button
-        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground/80 transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
-        onClick={() => props.onCloseConnection(props.connection.network)}
-        aria-label={`Close ${props.connection.label}`}
-      >
-        <X className="size-3" />
-      </button>
-    </div>
+      />
+      {serverImage ? (
+        <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1.5">
+          {isNetworkServerImageFallback(serverImage) ? (
+            <NetworkServerImageFallbackCue className="static size-5" />
+          ) : null}
+          <CopyServerImageUrlButton url={serverImage.url} />
+        </div>
+      ) : null}
+      <div className="pointer-events-none relative z-20 flex w-full flex-col justify-between p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 pt-0.5">
+            <button
+              type="button"
+              className="pointer-events-auto block max-w-full truncate rounded-sm text-left text-[15px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              onClick={() => props.onSelectNetwork(props.connection.network)}
+              aria-label={`Open ${props.connection.labelParts.name}`}
+              title="Open server"
+            >
+              {props.connection.labelParts.name}
+            </button>
+          </div>
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1">
+            <button
+              className="flex size-8 items-center justify-center rounded-md bg-black/35 text-white/85 backdrop-blur-sm transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50"
+              onClick={() =>
+                phase === 'connected'
+                  ? props.onDisconnectNetwork(props.connection.network.id)
+                  : props.onReconnectNetwork(props.connection.network)
+              }
+              aria-label={`${actionLabel} ${props.connection.labelParts.name}`}
+              title={actionLabel}
+              disabled={phase === 'connecting'}
+            >
+              {phase === 'connected' ? (
+                <PowerOff className="size-4" />
+              ) : (
+                <RefreshCcw className="size-4" />
+              )}
+            </button>
+            <button
+              className="flex size-8 items-center justify-center rounded-md bg-black/35 text-white/85 backdrop-blur-sm transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              onClick={() => props.onCloseConnection(props.connection.network)}
+              aria-label={`Close ${props.connection.labelParts.name}`}
+              title="Close server"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] font-medium text-white/75 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+          <span
+            aria-hidden
+            className={cn(
+              'size-2 rounded-full',
+              phase === 'connected'
+                ? 'bg-[#8cc9b7]'
+                : phase === 'connecting'
+                  ? 'bg-[#e0bc68]'
+                  : 'bg-[#66707c]',
+            )}
+          />
+          <span>{connectionStatusLabel(phase)}</span>
+        </div>
+      </div>
+    </header>
   );
 }
 
-function ServerSwitcherBanner(props: {
-  connection: SidebarConnectionView;
-  externalAvatarsEnabled?: boolean;
-  showMedia?: ConnectionSidebarProps['showMedia'];
-}) {
-  if (props.showMedia === false) {
-    return null;
-  }
-  const serverImage = resolveNetworkServerImage(
-    props.connection.network,
-    props.externalAvatarsEnabled === true,
+function CopyServerImageUrlButton(props: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    },
+    [],
   );
-  if (!serverImage) {
-    return null;
-  }
+
+  const copyImageUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(props.url);
+      setCopied(true);
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+      feedbackTimeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        feedbackTimeoutRef.current = null;
+      }, 1000);
+    } catch {
+      // Keep the resting state when clipboard access is unavailable.
+    }
+  };
+
   return (
-    <div className="relative mb-2 overflow-hidden rounded-sm border border-white/10 bg-black/20">
-      <img
-        src={serverImage.url}
-        alt=""
-        className={cn(
-          'block h-auto w-full object-contain',
-          networkImageRuntimeClass(props.connection.runtime),
-        )}
-        loading="lazy"
-        decoding="async"
-        referrerPolicy="no-referrer"
-      />
-      {isNetworkServerImageFallback(serverImage) ? (
-        <NetworkServerImageFallbackCue className="right-1 top-1 size-5" />
-      ) : null}
-    </div>
+    <button
+      type="button"
+      className={cn(
+        'flex size-7 items-center justify-center rounded-md backdrop-blur-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
+        copied
+          ? 'bg-emerald-950/70 text-emerald-300'
+          : 'bg-black/45 text-white/80 hover:bg-black/65 hover:text-white',
+      )}
+      onClick={() => void copyImageUrl()}
+      aria-label={copied ? 'Server image URL copied' : 'Copy server image URL'}
+      title={copied ? 'Copied' : 'Copy image URL'}
+    >
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+    </button>
   );
 }
+
+const connectionStatusLabel = (phase: 'connected' | 'connecting' | 'offline') => {
+  if (phase === 'connected') return 'Connected';
+  if (phase === 'connecting') return 'Connecting';
+  return 'Offline';
+};
 
 function ServerSwitcherButton(props: {
   active: boolean;

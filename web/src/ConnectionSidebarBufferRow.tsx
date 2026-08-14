@@ -54,7 +54,7 @@ export function ConnectionSidebarBufferRow(
 			})}
 		>
 			<button
-				className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/55"
+				className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg py-2 pl-3 pr-11 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/55"
 				onClick={props.onSelect}
 				aria-label={resolveBufferAriaLabel(
 					props.buffer.target,
@@ -63,24 +63,38 @@ export function ConnectionSidebarBufferRow(
 				)}
 			>
 				{isQuery ? (
-					<UserAvatar
-						className={cn(
-							'size-8 rounded-lg text-[11px] font-semibold text-[#111318]',
-							avatarTone(props.buffer.target),
-						)}
-						customAvatarUrl={visibleCustomAvatarUrl}
-						enabled={props.userAvatarsVisible !== false}
-						placeholder="initial"
-						shape="square"
-						user={{
-							account: null,
-							host: null,
-							identity: props.buffer.peerIdentity,
-							ircCloudAvatarId: props.buffer.ircCloudAvatarId,
-							nick: props.buffer.target,
-							username: null,
-						}}
-					/>
+					<span className="relative flex size-8 shrink-0">
+						<UserAvatar
+							className={cn(
+								'size-8 rounded-lg text-[11px] font-semibold text-[#111318]',
+								avatarTone(props.buffer.target),
+							)}
+							customAvatarUrl={visibleCustomAvatarUrl}
+							enabled={props.userAvatarsVisible !== false}
+							placeholder="initial"
+							shape="square"
+							user={{
+								account: null,
+								host: null,
+								identity: props.buffer.peerIdentity,
+								ircCloudAvatarId: props.buffer.ircCloudAvatarId,
+								nick: props.buffer.target,
+								username: null,
+							}}
+						/>
+						{activity.hasUnread ? (
+							<UnreadIconBadge count={unreadCount} />
+						) : null}
+						{props.presence && props.presence !== 'pending' ? (
+							<span
+								aria-hidden
+								className={cn(
+									'absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full shadow-[0_0_0_2px_#15181d]',
+									presenceDotTone(props.presence),
+								)}
+							/>
+						) : null}
+					</span>
 				) : (
 					<span className="relative flex size-5 shrink-0 items-center justify-center">
 						<Icon
@@ -89,6 +103,9 @@ export function ConnectionSidebarBufferRow(
 								props.selected ? 'text-primary' : 'text-[#929aa5]',
 							)}
 						/>
+						{activity.hasUnread ? (
+							<UnreadIconBadge count={unreadCount} />
+						) : null}
 					</span>
 				)}
 				<span
@@ -108,26 +125,23 @@ export function ConnectionSidebarBufferRow(
 						</span>
 					) : null}
 				</span>
-				{activity.hasUnread ? (
-					<span className="inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-[#3a414b] px-1.5 py-0.5 font-mono text-[11px] font-medium text-[#dce1e6]">
-						{unreadCount}
-					</span>
-				) : null}
-				{isQuery && props.presence && props.presence !== 'pending' ? (
-					<span
-						aria-hidden
-						className={cn('size-2 shrink-0 rounded-full', presenceDotTone(props.presence))}
-					/>
-				) : null}
 			</button>
 			<button
-				className="absolute right-1.5 top-1/2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-md bg-[#2a2d32] text-muted-foreground opacity-0 transition-opacity duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
+				className="absolute right-2 top-1/2 z-20 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
 				onClick={props.onClose}
 				aria-label={`Close ${props.buffer.target}`}
 			>
 				<X className="size-3" />
 			</button>
 		</div>
+	);
+}
+
+function UnreadIconBadge(props: { count: number }) {
+	return (
+		<span className="absolute -right-2.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#3a414b] px-1 font-mono text-[9px] font-semibold leading-none text-[#dce1e6] shadow-[0_0_0_2px_#15181d]">
+			{props.count}
+		</span>
 	);
 }
 

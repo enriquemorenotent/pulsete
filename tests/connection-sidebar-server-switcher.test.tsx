@@ -41,14 +41,14 @@ test('connection sidebar shows all servers but only the active server tabs', () 
   assert.doesNotMatch(markup, /Alpha<\/h2>/);
   assert.doesNotMatch(markup, /ml-3 min-w-0 space-y-px border-l border-white\/7 pl-2/);
   assert.match(markup, /class="min-w-0 w-full"/);
-  assert.match(markup, /aria-label="Connect Alpha \(sofia\)"/);
-  assert.match(markup, /aria-label="Close Alpha \(sofia\)"/);
+  assert.match(markup, /aria-label="Connect Alpha"/);
+  assert.match(markup, /aria-label="Close Alpha"/);
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
   assert.match(markup, /aria-label="Open #alpha"/);
   assert.doesNotMatch(markup, /aria-label="Open #beta"/);
 });
 
-test('connection sidebar puts server actions above the tab list', () => {
+test('connection sidebar puts server actions in the server header', () => {
   const alpha = makeSidebarNetwork({ id: 'alpha', name: 'Alpha' });
   const markup = renderConnectionSidebar({
     networks: [alpha],
@@ -59,10 +59,13 @@ test('connection sidebar puts server actions above the tab list', () => {
     selection: { kind: 'buffer', bufferId: 'alpha-server' },
   });
 
-  assert.doesNotMatch(markup, />connected<\/span>/);
-  assert.match(markup, /aria-label="Disconnect Alpha \(sofia\)"/);
-  assert.match(markup, />Disconnect<\/span>/);
-  assert.match(markup, /aria-label="Close Alpha \(sofia\)"/);
+  assert.match(markup, />Connected<\/span>/);
+  assert.match(markup, />Alpha<\/button>/);
+  assert.match(markup, /title="Open server"/);
+  assert.doesNotMatch(markup, /absolute inset-0 z-10 cursor-pointer/);
+  assert.match(markup, /aria-label="Disconnect Alpha"/);
+  assert.match(markup, /title="Disconnect"/);
+  assert.match(markup, /aria-label="Close Alpha"/);
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
 });
 
@@ -128,7 +131,8 @@ test('connection sidebar renders assigned server images when media is shown', ()
 
   assert.match(markup, /src="https:\/\/example.test\/alpha.png"/);
   assert.match(markup, /class="[^"]*size-full[^"]*rounded-\[inherit\][^"]*"/);
-  assert.match(markup, /class="block h-auto w-full object-contain grayscale opacity-60"/);
+  assert.match(markup, /class="absolute inset-0 size-full object-cover grayscale opacity-60"/);
+  assert.match(markup, /aria-label="Copy server image URL"/);
   assert.match(markup, /referrerPolicy="no-referrer"/);
 });
 
@@ -172,6 +176,7 @@ test('connection sidebar keeps the server rail and hides images when media is hi
   assert.match(markup, /class="min-w-0 w-full"/);
   assert.doesNotMatch(markup, /src="https:\/\/example.test\/alpha.png"/);
   assert.doesNotMatch(markup, /src="https:\/\/example.test\/beta.png"/);
+  assert.doesNotMatch(markup, /aria-label="Copy server image URL"/);
 });
 
 test('connection sidebar uses IRCCloud avatars when no server image is set', () => {
@@ -269,5 +274,5 @@ test('connection sidebar applies connection image state to the active banner', (
     selection: { kind: 'buffer', bufferId: 'offline-server' },
   });
 
-  assert.match(markup, /class="block h-auto w-full object-contain grayscale opacity-60"/);
+  assert.match(markup, /class="absolute inset-0 size-full object-cover grayscale opacity-60"/);
 });

@@ -53,7 +53,7 @@ export function ConnectionSidebarNetworkSection(
 				props.index > 0 && 'border-t border-white/6 pt-1.5',
 			)}
 		>
-			<div
+			{props.variant === 'server-switcher' ? null : <div
 				className={connectionSidebarRowClass(serverActivity, {
 					selected: connection.selectedServer,
 				})}
@@ -99,8 +99,7 @@ export function ConnectionSidebarNetworkSection(
 						</div>
 					</div>
 				</button>
-				{props.variant === 'server-switcher' ? null : (
-					<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+				<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
 						<button
 							className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
 							onClick={() =>
@@ -128,9 +127,8 @@ export function ConnectionSidebarNetworkSection(
 						>
 							<X className="size-3" />
 						</button>
-					</div>
-				)}
-			</div>
+				</div>
+			</div>}
 			{connection.childBuffers.length > 0 || connection.pendingChannels.length > 0 ? (
 				<div
 					className={cn(
