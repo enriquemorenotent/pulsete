@@ -26,6 +26,7 @@ import {
   messageTone,
   resolveMessageInlineImageRendering,
 } from './chat-pane-message-utils.js';
+import { formatTranscriptMessageForCopy } from './transcript/copy.js';
 
 type ChatPaneCompactMessageRowProps = {
   message: ChatMessage;
@@ -127,6 +128,11 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
       data-message-delivery={message.delivery === 'server-history' ? message.delivery : undefined}
       data-message-id={message.id}
       data-message-pinned={message.pinnedAt != null ? 'true' : undefined}
+      data-transcript-copy-text={formatTranscriptMessageForCopy(
+        message,
+        props.participant.label,
+        displayText,
+      )}
     >
       {showPinControl && props.onSetMessagePinned ? (
         <ChatMessagePinButton message={message} onSetMessagePinned={props.onSetMessagePinned} />

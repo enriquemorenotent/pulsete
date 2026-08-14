@@ -19,6 +19,7 @@ import {
   useTranscriptViewport,
   type TranscriptInitialScrollTarget,
 } from './transcript/viewport.js';
+import { handleTranscriptCopy } from './transcript/copy.js';
 
 type ChatTranscriptVirtuosoProps = {
   bufferId: string | null;
@@ -188,7 +189,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
   }
 
   return (
-    <div className="relative min-h-0 flex-1">
+    <div className="relative min-h-0 flex-1" onCopy={handleTranscriptCopy}>
       <Virtuoso
         ref={viewport.virtuosoRef}
         className="chat-transcript-scrollbar"
