@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Copy, PowerOff, RefreshCcw, X } from 'lucide-react';
+import { Check, Copy, Plug, Unplug, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
@@ -85,42 +85,42 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
 }) {
   const activeConnection = props.activeConnection;
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-2.5 py-1.5">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {activeConnection ? (
+        <ServerSwitcherHeader
+          connection={activeConnection}
+          externalAvatarsEnabled={props.externalAvatarsEnabled}
+          showMedia={props.showMedia}
+          onSelectNetwork={props.onSelectNetwork}
+          onReconnectNetwork={props.onReconnectNetwork}
+          onDisconnectNetwork={props.onDisconnectNetwork}
+          onCloseConnection={props.onCloseConnection}
+        />
+      ) : null}
       <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0 [&_[data-radix-scroll-area-viewport]>div]:!w-full">
-        <div className="min-w-0 pr-0.5">
+        <div className="min-w-0 px-2.5 py-1.5 pr-3">
           {props.connections.length === 0 ? (
             <div className="rounded-md bg-black/10 px-2 py-1.5 text-[12px] text-muted-foreground ring-1 ring-white/5">
               No open connections. Use Network Manager to connect.
             </div>
           ) : null}
           {activeConnection ? (
-            <>
-              <ServerSwitcherHeader
-                connection={activeConnection}
-                externalAvatarsEnabled={props.externalAvatarsEnabled}
-                showMedia={props.showMedia}
-                onSelectNetwork={props.onSelectNetwork}
-                onReconnectNetwork={props.onReconnectNetwork}
-                onDisconnectNetwork={props.onDisconnectNetwork}
-                onCloseConnection={props.onCloseConnection}
-              />
-              <ConnectionSidebarNetworkSection
-                connection={activeConnection}
-                index={0}
-                nickEmojis={props.nickEmojis}
-                queryPresence={props.queryPresence ?? {}}
-                onSelectNetwork={props.onSelectNetwork}
-                onSelectBuffer={props.onSelectBuffer}
-                onSelectPendingChannel={props.onSelectPendingChannel}
-                onReconnectNetwork={props.onReconnectNetwork}
-                onDisconnectNetwork={props.onDisconnectNetwork}
-                onCloseConnection={props.onCloseConnection}
-                onCloseChannel={props.onCloseChannel}
-                onCloseBuffer={props.onCloseBuffer}
-                showMedia={props.showMedia}
-                variant="server-switcher"
-              />
-            </>
+            <ConnectionSidebarNetworkSection
+              connection={activeConnection}
+              index={0}
+              nickEmojis={props.nickEmojis}
+              queryPresence={props.queryPresence ?? {}}
+              onSelectNetwork={props.onSelectNetwork}
+              onSelectBuffer={props.onSelectBuffer}
+              onSelectPendingChannel={props.onSelectPendingChannel}
+              onReconnectNetwork={props.onReconnectNetwork}
+              onDisconnectNetwork={props.onDisconnectNetwork}
+              onCloseConnection={props.onCloseConnection}
+              onCloseChannel={props.onCloseChannel}
+              onCloseBuffer={props.onCloseBuffer}
+              showMedia={props.showMedia}
+              variant="server-switcher"
+            />
           ) : null}
         </div>
       </ScrollArea>
@@ -153,7 +153,7 @@ function ServerSwitcherHeader(props: {
   return (
     <header
       className={cn(
-        'relative mb-5 flex overflow-hidden rounded-sm bg-[#111419]',
+        'relative mb-5 flex overflow-hidden bg-[#111419]',
         serverImage ? 'min-h-[116px]' : 'min-h-[82px] border border-[#292d33]',
       )}
     >
@@ -213,9 +213,9 @@ function ServerSwitcherHeader(props: {
               disabled={phase === 'connecting'}
             >
               {phase === 'connected' ? (
-                <PowerOff className="size-4" />
+                <Unplug className="size-4" />
               ) : (
-                <RefreshCcw className="size-4" />
+                <Plug className={cn('size-4', phase === 'connecting' && 'animate-pulse')} />
               )}
             </button>
             <button

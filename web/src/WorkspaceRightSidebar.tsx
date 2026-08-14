@@ -184,11 +184,11 @@ function RightSidebarTabs(props: {
   tabs: Array<{ content: ReactNode; icon: LucideIcon; label: string; value: string }>;
 }) {
   return (
-    <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col">
-      <div className="flex h-[72px] w-full shrink-0 items-center gap-2 border-b border-[#292d33] px-5">
+    <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col bg-[#15181c]">
+      <div className="flex h-12 w-full shrink-0 items-stretch">
         <TabsList
           aria-label="Sidebar views"
-          className="flex h-auto gap-1 rounded-none border-0 bg-transparent p-0"
+          className="flex h-full min-w-0 flex-1 rounded-none border-0 bg-transparent p-0"
         >
           {props.tabs.map((tab) => {
             const TabIcon = tab.icon;
@@ -198,7 +198,7 @@ function RightSidebarTabs(props: {
                 value={tab.value}
                 aria-label={tab.label}
                 title={tab.label}
-                className="size-7 min-w-0 rounded-lg border border-transparent p-0 text-muted-foreground/72 hover:bg-white/[0.055] hover:text-foreground data-[state=active]:border-primary/25 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                className="h-full min-w-0 flex-1 rounded-none border-0 border-b-2 border-transparent p-0 text-muted-foreground/72 hover:bg-white/[0.025] hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
               >
                 <TabIcon aria-hidden className="size-4" />
                 <span className="sr-only">{tab.label}</span>
@@ -206,9 +206,7 @@ function RightSidebarTabs(props: {
             );
           })}
         </TabsList>
-        <div className="ml-auto">
-          <RightSidebarCollapseButton onCollapse={props.onCollapse} />
-        </div>
+        <RightSidebarCollapseButton onCollapse={props.onCollapse} />
       </div>
       {props.tabs.map((tab) => (
         <TabsContent
@@ -230,7 +228,7 @@ function RightSidebarCollapseButton(props: { onCollapse: () => void }) {
       type="button"
       variant="ghost"
       size="icon"
-      className="hidden size-7 text-muted-foreground/72 lg:inline-flex"
+      className="hidden h-12 w-12 shrink-0 rounded-none text-muted-foreground/72 lg:inline-flex"
       aria-label="Collapse right sidebar"
       title="Collapse right sidebar"
       onClick={props.onCollapse}

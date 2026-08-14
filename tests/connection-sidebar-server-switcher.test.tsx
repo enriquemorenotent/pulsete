@@ -42,6 +42,7 @@ test('connection sidebar shows all servers but only the active server tabs', () 
   assert.doesNotMatch(markup, /ml-3 min-w-0 space-y-px border-l border-white\/7 pl-2/);
   assert.match(markup, /class="min-w-0 w-full"/);
   assert.match(markup, /aria-label="Connect Alpha"/);
+  assert.match(markup, /lucide-plug/);
   assert.match(markup, /aria-label="Close Alpha"/);
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
   assert.match(markup, /aria-label="Open #alpha"/);
@@ -65,6 +66,7 @@ test('connection sidebar puts server actions in the server header', () => {
   assert.doesNotMatch(markup, /absolute inset-0 z-10 cursor-pointer/);
   assert.match(markup, /aria-label="Disconnect Alpha"/);
   assert.match(markup, /title="Disconnect"/);
+  assert.match(markup, /lucide-unplug/);
   assert.match(markup, /aria-label="Close Alpha"/);
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
 });

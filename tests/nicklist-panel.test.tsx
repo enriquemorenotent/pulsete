@@ -95,6 +95,8 @@ test('nicklist groups users by privilege level', () => {
   assert.ok(markup.includes('alice'));
   assert.ok(markup.includes('bob'));
   assert.ok(markup.includes('zoe'));
+  assert.match(markup, />Users \(4\)<\/h2>/);
+  assert.doesNotMatch(markup, /Channel users|#help/);
   assert.match(markup, /placeholder="Filter users"/);
   assert.match(markup, /class="truncate text-rose-300">owner</);
   assert.match(markup, /class="truncate text-amber-300">alice</);

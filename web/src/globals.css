@@ -102,8 +102,7 @@ button {
   cursor: pointer;
 }
 
-button:focus-visible,
-input:focus-visible {
+button:focus-visible {
   outline: 2px solid rgba(242, 127, 104, 0.55);
   outline-offset: 2px;
 }
@@ -111,6 +110,39 @@ input:focus-visible {
 ::selection {
   background: rgba(109, 144, 219, 0.28);
   color: white;
+}
+
+.chat-transcript-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.chat-transcript-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-transcript-scrollbar::-webkit-scrollbar-button:vertical:start:decrement,
+.chat-transcript-scrollbar::-webkit-scrollbar-button:vertical:end:increment,
+.chat-transcript-scrollbar::-webkit-scrollbar-button:vertical:start:increment,
+.chat-transcript-scrollbar::-webkit-scrollbar-button:vertical:end:decrement {
+  -webkit-appearance: none;
+  background: transparent;
+  display: block;
+  height: 0;
+  min-height: 0;
+  width: 0;
+}
+
+.chat-transcript-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(127, 135, 147, 0.34);
+  background-clip: content-box;
+}
+
+.chat-transcript-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(174, 181, 190, 0.58);
+  background-clip: content-box;
 }
 
 [data-unread-divider] {

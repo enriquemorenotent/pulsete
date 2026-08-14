@@ -221,14 +221,14 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
                   key="right-sidebar-panel"
                     className={props.rightSidebarCollapsed
                     ? 'hidden'
-                    : 'min-h-0 bg-[#101215] lg:w-[var(--right-sidebar-width)] lg:max-w-[300px] lg:shrink-0'}
+                    : 'min-h-0 bg-[#15181c] lg:w-[var(--right-sidebar-width)] lg:max-w-[300px] lg:shrink-0'}
                 >
                   {props.rightSidebar}
                 </div>
                 {props.rightSidebarCollapsed ? (
                   <div
                     key="right-sidebar-rail"
-                    className="flex h-full w-10 shrink-0 items-start justify-center border-l border-white/[0.055] bg-black/[0.08] pt-1.5 backdrop-blur-xl"
+                    className="flex h-full w-10 shrink-0 items-start justify-center border-l border-[#292d33] bg-[#15181c] pt-1.5"
                   >
                     <Button
                       type="button"

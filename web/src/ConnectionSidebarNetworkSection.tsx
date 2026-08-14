@@ -1,4 +1,4 @@
-import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
+import { Hash, MessageSquareMore, Plug, Unplug, X } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
@@ -113,9 +113,14 @@ export function ConnectionSidebarNetworkSection(
 							disabled={connection.runtime?.phase === 'connecting'}
 						>
 							{connection.runtime?.phase === 'connected' ? (
-								<PowerOff className="size-3" />
+								<Unplug className="size-3" />
 							) : (
-								<RefreshCcw className="size-3" />
+								<Plug
+									className={cn(
+										'size-3',
+										connection.runtime?.phase === 'connecting' && 'animate-pulse',
+									)}
+								/>
 							)}
 						</button>
 						<button

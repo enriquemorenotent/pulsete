@@ -8,7 +8,7 @@ type InspectorPanelProps = {
 
 export function InspectorPanel(props: InspectorPanelProps) {
   return (
-    <aside className={cn('flex h-full min-h-0 flex-col gap-5 px-4 py-4', props.className)}>
+    <aside className={cn('flex h-full min-h-0 flex-col gap-5 bg-[#15181c] px-4 py-4', props.className)}>
       {props.children}
     </aside>
   );

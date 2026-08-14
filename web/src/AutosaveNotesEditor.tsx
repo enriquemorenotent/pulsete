@@ -119,7 +119,7 @@ export function AutosaveNotesEditor(props: {
           onChange={(event) => setDraftNotes(event.target.value)}
           placeholder={props.placeholder}
           className={cn(
-            'h-full min-h-full w-full resize-none outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring/35',
+            'h-full min-h-full w-full resize-none outline-none transition-colors',
             showHeader
               ? 'rounded-lg border border-white/[0.07] bg-black/15 px-3 py-2.5 text-[13px] leading-5 text-foreground/84 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-muted-foreground/54 hover:border-white/12 hover:bg-black/20 focus-visible:border-ring/60 focus-visible:bg-black/20'
               : 'rounded-sm border border-white/[0.04] bg-black/10 py-1.5 pl-2 pr-16 text-[12px] leading-5 text-foreground/78 placeholder:text-muted-foreground/50 hover:border-white/8 hover:bg-black/15 focus-visible:border-ring/50 focus-visible:bg-black/12',

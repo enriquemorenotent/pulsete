@@ -16,7 +16,6 @@ import { buildNicklistGroups } from './nicklist-groups.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import { NickEmojiEditorControl } from './NickEmojiEditorControl.js';
 import {
-  InspectorHeader,
   InspectorPanel,
   InspectorSection,
 } from './RightSidebarInspector.js';
@@ -61,11 +60,9 @@ export function NicklistPanel(props: NicklistPanelProps) {
 
   return (
     <InspectorPanel>
-      <InspectorHeader
-        eyebrow="Channel users"
-        title={props.channel.name}
-        subtitle={formatUserCount(props.channel.users.length)}
-      />
+      <h2 className="shrink-0 text-sm font-semibold tracking-tight text-foreground/92">
+        Users ({props.channel.users.length})
+      </h2>
       <InspectorSection className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {props.channel.users.length === 0 ? (
           <div className="px-1 py-1 text-[13px] text-muted-foreground">
@@ -183,8 +180,4 @@ export function NicklistPanel(props: NicklistPanelProps) {
       </InspectorSection>
     </InspectorPanel>
   );
-}
-
-function formatUserCount(count: number) {
-  return `${count} ${count === 1 ? 'user' : 'users'}`;
 }
