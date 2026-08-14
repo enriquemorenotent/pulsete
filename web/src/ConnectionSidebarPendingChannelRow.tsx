@@ -17,14 +17,14 @@ export function ConnectionSidebarPendingChannelRow(props: ConnectionSidebarPendi
       className={connectionSidebarRowClass(activity, { selected: props.selected, variant: 'selector' })}
     >
       <button
-        className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+        className="flex min-h-9 min-w-0 flex-1 items-center gap-2 px-2.5 py-1 text-left"
         onClick={props.onSelect}
         aria-label={`Open pending ${props.pendingChannel.channel}`}
       >
         <Hash className="size-3.5 shrink-0 text-muted-foreground/80" />
         <span
           className={cn(
-            'block min-w-0 flex-1 truncate text-[12px] font-medium',
+            'block min-w-0 flex-1 truncate text-[13px] font-medium',
             props.selected ? 'text-foreground' : 'text-muted-foreground/90',
           )}
         >

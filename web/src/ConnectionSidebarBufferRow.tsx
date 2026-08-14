@@ -54,7 +54,7 @@ export function ConnectionSidebarBufferRow(
 			})}
 		>
 			<button
-				className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg py-2 pl-3 pr-11 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/55"
+				className="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-lg py-1 pl-2.5 pr-10 text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/55"
 				onClick={props.onSelect}
 				aria-label={resolveBufferAriaLabel(
 					props.buffer.target,
@@ -63,10 +63,10 @@ export function ConnectionSidebarBufferRow(
 				)}
 			>
 				{isQuery ? (
-					<span className="relative flex size-8 shrink-0">
+					<span className="relative flex size-7 shrink-0">
 						<UserAvatar
 							className={cn(
-								'size-8 rounded-lg text-[11px] font-semibold text-[#111318]',
+								'size-7 rounded-md text-[10px] font-semibold text-[#111318]',
 								avatarTone(props.buffer.target),
 							)}
 							customAvatarUrl={visibleCustomAvatarUrl}
@@ -96,10 +96,10 @@ export function ConnectionSidebarBufferRow(
 						) : null}
 					</span>
 				) : (
-					<span className="relative flex size-5 shrink-0 items-center justify-center">
+					<span className="relative flex size-4 shrink-0 items-center justify-center">
 						<Icon
 							className={cn(
-								'size-5 shrink-0',
+								'size-4 shrink-0',
 								props.selected ? 'text-primary' : 'text-[#929aa5]',
 							)}
 						/>
@@ -115,7 +115,7 @@ export function ConnectionSidebarBufferRow(
 							offline: props.presence === 'offline',
 							selected: props.selected,
 						}),
-						'block min-w-0 flex-1 text-[14px]',
+						'block min-w-0 flex-1 text-[13px]',
 					)}
 				>
 					{displayBufferTarget(props.buffer)}
@@ -127,7 +127,7 @@ export function ConnectionSidebarBufferRow(
 				</span>
 			</button>
 			<button
-				className="absolute right-2 top-1/2 z-20 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
+				className="absolute right-1.5 top-1/2 z-20 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 group-hover:opacity-100 group-focus-within:opacity-100"
 				onClick={props.onClose}
 				aria-label={`Close ${props.buffer.target}`}
 			>

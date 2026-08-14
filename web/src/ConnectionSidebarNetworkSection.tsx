@@ -49,7 +49,7 @@ export function ConnectionSidebarNetworkSection(
 	return (
 		<section
 			className={cn(
-				'space-y-1.5',
+				'space-y-1',
 				props.index > 0 && 'border-t border-white/6 pt-1.5',
 			)}
 		>
@@ -179,7 +179,7 @@ export function ConnectionSidebarNetworkSection(
 						)}
 					</SidebarBufferGroup>
 					{queryBuffers.length > 0 ? (
-						<SidebarBufferGroup label="Direct messages" className="mt-7">
+						<SidebarBufferGroup label="Direct messages" className="mt-5">
 							{queryBuffers.map(({ buffer, selected }) => (
 								<ConnectionSidebarBufferRow
 								key={buffer.id}
@@ -219,10 +219,10 @@ function SidebarBufferGroup(props: {
 }) {
 	return (
 		<section className={props.className}>
-			<h2 className="mb-2 px-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[#77808c]">
+			<h2 className="mb-1.5 px-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[#77808c]">
 				{props.label}
 			</h2>
-			<div className="space-y-1">{props.children}</div>
+			<div className="space-y-0.5">{props.children}</div>
 		</section>
 	);
 }
