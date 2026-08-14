@@ -190,7 +190,7 @@ function SelectField(props: {
       <select
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
-        className="flex h-8 w-full rounded-sm border border-input bg-input px-2.5 py-1.5 text-[13px] text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50"
+        className="flex h-8 w-full rounded-sm border border-input bg-input px-2.5 py-1.5 text-[13px] text-foreground outline-none transition-colors focus-visible:border-ring"
       >
         {props.options.map((option) => (
           <option key={option.value} value={option.value}>

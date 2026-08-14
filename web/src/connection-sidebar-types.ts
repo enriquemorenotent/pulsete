@@ -1,8 +1,13 @@
 import type { BufferState, FriendState, NetworkProfile, NickEmojiState, PresenceStatus } from '../../shared/protocol-chat.js';
+import type { ReactNode } from 'react';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 
 export type ConnectionSidebarProps = {
   connections: SidebarConnectionView[];
+  railBrand?: ReactNode;
+  railPalette?: ReactNode;
+  railMediaToggle?: ReactNode;
+  railTools?: ReactNode;
   externalAvatarsEnabled?: boolean;
   friends: FriendState[];
   friendPresence: Record<string, PresenceStatus>;

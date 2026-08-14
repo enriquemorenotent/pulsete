@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Bug, ChevronDown, PanelsTopLeft, Settings2 } from 'lucide-react';
+import { Bug, ChevronDown, FolderSearch, PanelsTopLeft, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 
 type DesktopShellToolsMenuProps = {
+  iconOnly?: boolean;
   onDownloadDiagnostics: () => void;
+  onOpenLogInspector: () => void;
   onOpenNetworkManager: () => void;
   onOpenPreferences: () => void;
 };
@@ -40,23 +42,32 @@ export function DesktopShellToolsMenu(props: DesktopShellToolsMenuProps) {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size={props.iconOnly ? 'icon' : 'sm'}
         aria-label="Tools"
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((current) => !current)}
       >
         <Settings2 />
-        Tools
-        <ChevronDown className="size-3" />
+        {props.iconOnly ? <span className="sr-only">Tools</span> : <><span>Tools</span><ChevronDown className="size-3" /></>}
       </Button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-40 mt-2 min-w-48 overflow-hidden rounded-[0.9rem] border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+          className={props.iconOnly
+            ? 'absolute left-full bottom-0 z-40 ml-2 min-w-44 overflow-hidden rounded-md border border-white/10 bg-popover p-0.5 shadow-[0_12px_32px_rgba(0,0,0,0.34)]'
+            : 'absolute right-0 top-full z-40 mt-2 min-w-44 overflow-hidden rounded-md border border-white/10 bg-popover p-0.5 shadow-[0_12px_32px_rgba(0,0,0,0.34)]'}
         >
           <DesktopShellToolsMenuItem
-            icon={<Bug className="size-3.5" />}
+            icon={<FolderSearch style={toolsMenuIconStyle} />}
+            label="Logs"
+            onSelect={() => {
+              setOpen(false);
+              props.onOpenLogInspector();
+            }}
+          />
+          <DesktopShellToolsMenuItem
+            icon={<Bug style={toolsMenuIconStyle} />}
             label="Capture memory diagnostics"
             onSelect={() => {
               setOpen(false);
@@ -64,7 +75,7 @@ export function DesktopShellToolsMenu(props: DesktopShellToolsMenuProps) {
             }}
           />
           <DesktopShellToolsMenuItem
-            icon={<Settings2 className="size-3.5" />}
+            icon={<Settings2 style={toolsMenuIconStyle} />}
             label="Preferences"
             onSelect={() => {
               setOpen(false);
@@ -72,7 +83,7 @@ export function DesktopShellToolsMenu(props: DesktopShellToolsMenuProps) {
             }}
           />
           <DesktopShellToolsMenuItem
-            icon={<PanelsTopLeft className="size-3.5" />}
+            icon={<PanelsTopLeft style={toolsMenuIconStyle} />}
             label="Network Manager"
             onSelect={() => {
               setOpen(false);
@@ -94,7 +105,8 @@ function DesktopShellToolsMenuItem(props: {
     <button
       type="button"
       role="menuitem"
-      className="flex w-full items-center gap-2 rounded-[0.7rem] px-2.5 py-2 text-left text-[12px] text-foreground transition-colors hover:bg-white/[0.06]"
+      className="flex w-full items-center gap-1.5 rounded-sm px-2 py-1 text-left text-foreground/90 transition-colors hover:bg-white/[0.06] hover:text-foreground"
+      style={{ fontSize: '10px', lineHeight: '14px' }}
       onClick={props.onSelect}
     >
       <span className="text-muted-foreground">{props.icon}</span>
@@ -102,3 +114,5 @@ function DesktopShellToolsMenuItem(props: {
     </button>
   );
 }
+
+const toolsMenuIconStyle = { height: 10, width: 10 } as const;

@@ -108,15 +108,15 @@ test('open query buffers show saved contact presence cues', () => {
   assert.match(markup, /aria-label="Open carol \(online\)"/);
   assert.match(
     markup,
-    /<span class="truncate text-\[12px\] text-muted-foreground\/88 block min-w-0 flex-1">carol<span class="ml-1 text-\[12px\] leading-none" aria-hidden="true">🌙<\/span><\/span>/,
+    /carol<span class="ml-1 text-\[12px\] leading-none" aria-hidden="true">🌙<\/span>/,
   );
-  assert.match(markup, /text-red-400/);
-  assert.match(markup, /text-yellow-400/);
-  assert.match(markup, /text-emerald-400/);
+  assert.match(markup, /bg-\[#505762\]/);
+  assert.match(markup, /bg-\[#e0bc68\]/);
+  assert.match(markup, /bg-\[#8cc9b7\]/);
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });
 
-test('query rows use the overlaid dot for unread state instead of a trailing marker', () => {
+test('query rows combine a numeric unread badge with presence', () => {
   const network = makeNetwork();
   const unreadQuery = makeBuffer({
     id: 'query-1',
@@ -157,16 +157,13 @@ test('query rows use the overlaid dot for unread state instead of a trailing mar
   );
 
   assert.match(markup, /aria-label="Open alice \(online, unread\)"/);
-  assert.match(markup, /text-emerald-400/);
-  assert.match(markup, /bg-primary/);
-  assert.match(
-    markup,
-    /class="truncate text-\[12px\] text-foreground font-semibold block min-w-0 flex-1">alice<\/span>/,
-  );
+  assert.match(markup, /bg-\[#8cc9b7\]/);
+  assert.match(markup, /bg-\[#3a414b\]/);
+  assert.match(markup, />2<\/span>/);
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
 });
 
-test('query rows use the same blue overlaid dot for non-priority unread state', () => {
+test('query rows show the same numeric badge for non-priority unread state', () => {
   const network = makeNetwork();
   const unreadQuery = makeBuffer({
     id: 'query-1',
@@ -207,11 +204,8 @@ test('query rows use the same blue overlaid dot for non-priority unread state', 
   );
 
   assert.match(markup, /aria-label="Open alice \(away, unread\)"/);
-  assert.match(markup, /text-yellow-400/);
-  assert.match(markup, /bg-primary/);
-  assert.match(
-    markup,
-    /class="truncate text-\[12px\] text-foreground font-medium block min-w-0 flex-1">alice<\/span>/,
-  );
+  assert.match(markup, /bg-\[#e0bc68\]/);
+  assert.match(markup, /bg-\[#3a414b\]/);
+  assert.match(markup, />2<\/span>/);
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });

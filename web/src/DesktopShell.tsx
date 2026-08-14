@@ -6,6 +6,7 @@ import {
   selectSelectedBufferId,
 } from './app-selectors.js';
 import { useAppDispatch, useAppSelector } from './app-store.js';
+import { Image as ImageIcon, ImageOff, Search } from 'lucide-react';
 import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import {
@@ -27,6 +28,8 @@ import type { MediaVisibilityMode } from './media-visibility-settings.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
+import { DesktopShellBrand } from './DesktopShellBrand.js';
+import { DesktopShellToolsMenu } from './DesktopShellToolsMenu.js';
 
 export type DesktopShellProps = {
   actions: AppActions;
@@ -142,6 +145,38 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
         <ConnectionSidebarContainer
           actions={props.actions}
           externalAvatarsEnabled={props.externalAvatarsEnabled}
+          railBrand={ <DesktopShellBrand markOnly className="flex shrink-0 items-center justify-center" /> }
+          railPalette={(
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[0.07] hover:text-foreground"
+              aria-label="Open command palette"
+              title="Open command palette (⌘/Ctrl+K)"
+              onClick={props.ui.openCommandPalette}
+            >
+              <Search className="size-4" />
+            </button>
+          )}
+          railMediaToggle={(
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[0.07] hover:text-foreground"
+              aria-label={showMedia ? 'Hide media' : 'Show media'}
+              title={showMedia ? 'Hide media' : 'Show media'}
+              onClick={() => props.onSetMediaVisibilityMode(showMedia ? 'hide-media' : 'show-media')}
+            >
+              {showMedia ? <ImageOff className="size-4" /> : <ImageIcon className="size-4" />}
+            </button>
+          )}
+          railTools={(
+            <DesktopShellToolsMenu
+              iconOnly
+              onDownloadDiagnostics={props.onDownloadDiagnostics}
+              onOpenLogInspector={props.ui.openLogInspector}
+              onOpenNetworkManager={() => dispatch({ type: 'open-network-manager' })}
+              onOpenPreferences={props.ui.openPreferences}
+            />
+          )}
           showMedia={showMedia}
           ui={props.ui}
         />

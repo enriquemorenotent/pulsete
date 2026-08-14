@@ -181,7 +181,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
 
   if (props.model.flatRows.length === 0) {
     return (
-      <div className="h-full overflow-y-auto px-4 py-4 pt-0">
+      <div className="chat-transcript-scrollbar h-full overflow-y-auto px-4 py-4 pt-0">
         <TranscriptEmptyState body={props.emptyBody} />
       </div>
     );
@@ -191,6 +191,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     <div className="relative min-h-0 flex-1">
       <Virtuoso
         ref={viewport.virtuosoRef}
+        className="chat-transcript-scrollbar"
         style={{ height: '100%' }}
         alignToBottom
         atBottomStateChange={viewport.handleAtBottomStateChange}

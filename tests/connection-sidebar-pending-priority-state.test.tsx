@@ -121,13 +121,13 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
 
   const selectedRows =
     markup.match(
-      /border-primary\/35 border-l-primary bg-primary\/\[0\.13\] ring-1 ring-inset ring-primary\/25/g,
+      /rounded-lg transition-colors bg-\[#2a2d32\]/g,
     ) ?? [];
   assert.equal(selectedRows.length, 1);
   assert.match(markup, /aria-label="Open pending #Help"/);
 });
 
-test('priority unread buffers render a stronger unread marker instead of a count badge', () => {
+test('priority unread buffers render a numeric unread badge', () => {
   const network = makeNetwork();
   const channel = makeBuffer({
     id: 'channel-1',
@@ -167,20 +167,13 @@ test('priority unread buffers render a stronger unread marker instead of a count
   );
 
   assert.match(markup, /aria-label="Open #help \(unread\)"/);
-  assert.match(markup, /bg-primary/);
-  assert.doesNotMatch(
-    markup,
-    /border-primary\/24 border-l-primary\/70 bg-primary\/\[0\.045\]/,
-  );
-  assert.match(
-    markup,
-    /class="truncate text-\[12px\] text-foreground font-semibold block min-w-0 flex-1">#help<\/span>/,
-  );
+  assert.match(markup, /bg-\[#3a414b\]/);
+  assert.match(markup, />3<\/span>/);
+  assert.match(markup, />help<\/span>/);
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
-  assert.doesNotMatch(markup, />3</);
 });
 
-test('non-priority unread buffers render the same blue unread marker instead of a count badge', () => {
+test('non-priority unread buffers render a numeric unread badge', () => {
   const network = makeNetwork();
   const channel = makeBuffer({
     id: 'channel-1',
@@ -220,12 +213,8 @@ test('non-priority unread buffers render the same blue unread marker instead of 
   );
 
   assert.match(markup, /aria-label="Open #help \(unread\)"/);
-  assert.match(markup, /bg-primary/);
-  assert.doesNotMatch(markup, /border-white\/8 bg-white\/\[0\.024\]/);
-  assert.match(
-    markup,
-    /class="truncate text-\[12px\] text-foreground font-medium block min-w-0 flex-1">#help<\/span>/,
-  );
+  assert.match(markup, /bg-\[#3a414b\]/);
+  assert.match(markup, />3<\/span>/);
+  assert.match(markup, />help<\/span>/);
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
-  assert.doesNotMatch(markup, />3</);
 });

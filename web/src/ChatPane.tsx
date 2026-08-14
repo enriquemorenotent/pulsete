@@ -14,7 +14,6 @@ import type { QueryProfileAvatarUser } from './QueryProfileAvatarBanner.js';
 import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 import type { SearchBufferHistory } from './history-search-request.js';
 import { defaultMessageDisplayMode } from './message-display-mode.js';
-import { resolveChatPaneComposerTarget } from './chat-pane-composer-target.js';
 import { useChatPaneDialogs } from './useChatPaneDialogs.js';
 import type { WorkspaceView } from './workspace.js';
 
@@ -97,7 +96,6 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
     onDeleteHistory: props.onDeleteHistory,
     selectedBuffer: props.workspace.selectedBuffer,
   });
-  const composerTarget = resolveChatPaneComposerTarget(props.workspace);
   const showMedia = props.showMedia !== false;
   const inlineImageRendering: InlineImageRenderingMode =
     showMedia ? 'preview' : 'link';
@@ -188,7 +186,6 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           mode={props.workspace.composerMode}
           disabled={props.workspace.composerDisabled === true}
           placeholder={props.workspace.composerPlaceholder}
-          target={composerTarget}
           focusContextKey={props.focusContextKey}
           completionEnabled={props.completionEnabled}
           completionContextKey={props.completionContextKey}

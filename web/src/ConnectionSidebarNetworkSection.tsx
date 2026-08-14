@@ -1,4 +1,4 @@
-import { Hash, MessageSquareMore, PowerOff, RefreshCcw, X } from 'lucide-react';
+import { Hash, MessageSquareMore, Plug, Unplug, X } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
@@ -39,6 +39,12 @@ export function ConnectionSidebarNetworkSection(
 	const { connection } = props;
 	const serverActivity = resolveBufferActivityState(connection.serverBuffer);
 	const userAvatarsVisible = props.showMedia !== false;
+	const channelBuffers = connection.childBuffers.filter(
+		({ buffer }) => buffer.kind === 'channel',
+	);
+	const queryBuffers = connection.childBuffers.filter(
+		({ buffer }) => buffer.kind === 'query',
+	);
 
 	return (
 		<section
@@ -47,7 +53,7 @@ export function ConnectionSidebarNetworkSection(
 				props.index > 0 && 'border-t border-white/6 pt-1.5',
 			)}
 		>
-			<div
+			{props.variant === 'server-switcher' ? null : <div
 				className={connectionSidebarRowClass(serverActivity, {
 					selected: connection.selectedServer,
 				})}
@@ -93,8 +99,7 @@ export function ConnectionSidebarNetworkSection(
 						</div>
 					</div>
 				</button>
-				{props.variant === 'server-switcher' ? null : (
-					<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+				<div className="pointer-events-none flex shrink-0 items-center gap-0.5 px-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
 						<button
 							className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
 							onClick={() =>
@@ -108,9 +113,14 @@ export function ConnectionSidebarNetworkSection(
 							disabled={connection.runtime?.phase === 'connecting'}
 						>
 							{connection.runtime?.phase === 'connected' ? (
-								<PowerOff className="size-3" />
+								<Unplug className="size-3" />
 							) : (
-								<RefreshCcw className="size-3" />
+								<Plug
+									className={cn(
+										'size-3',
+										connection.runtime?.phase === 'connecting' && 'animate-pulse',
+									)}
+								/>
 							)}
 						</button>
 						<button
@@ -122,21 +132,19 @@ export function ConnectionSidebarNetworkSection(
 						>
 							<X className="size-3" />
 						</button>
-					</div>
-				)}
-			</div>
-			{connection.childBuffers.length > 0 ||
-			connection.pendingChannels.length > 0 ? (
+				</div>
+			</div>}
+			{connection.childBuffers.length > 0 || connection.pendingChannels.length > 0 ? (
 				<div
 					className={cn(
-						'min-w-0 space-y-px',
+						'min-w-0',
 						props.variant === 'server-switcher'
 							? 'w-full'
 							: 'ml-3 border-l border-white/7 pl-2',
 					)}
 				>
-					{connection.childBuffers.map(({ buffer, selected }) =>
-						buffer.kind === 'channel' ? (
+					<SidebarBufferGroup label="Channels">
+						{channelBuffers.map(({ buffer, selected }) => (
 							<ConnectionSidebarBufferRow
 								key={buffer.id}
 								buffer={buffer}
@@ -152,9 +160,28 @@ export function ConnectionSidebarNetworkSection(
 										buffer.target,
 									)
 								}
-							/>
-						) : (
-							<ConnectionSidebarBufferRow
+								/>
+						))}
+						{connection.pendingChannels.map(
+							({ pendingChannel, selected }) => (
+								<ConnectionSidebarPendingChannelRow
+									key={`${pendingChannel.networkId}:${pendingChannel.channel}`}
+									pendingChannel={pendingChannel}
+									selected={selected}
+									onSelect={() =>
+										props.onSelectPendingChannel(
+											pendingChannel.networkId,
+											pendingChannel.channel,
+										)
+									}
+								/>
+							),
+						)}
+					</SidebarBufferGroup>
+					{queryBuffers.length > 0 ? (
+						<SidebarBufferGroup label="Direct messages" className="mt-7">
+							{queryBuffers.map(({ buffer, selected }) => (
+								<ConnectionSidebarBufferRow
 								key={buffer.id}
 								buffer={buffer}
 								dimmed={connection.childBuffersDimmed}
@@ -176,25 +203,26 @@ export function ConnectionSidebarNetworkSection(
 								onSelect={() => props.onSelectBuffer(buffer)}
 								onClose={() => props.onCloseBuffer(buffer)}
 							/>
-						),
-					)}
-					{connection.pendingChannels.map(
-						({ pendingChannel, selected }) => (
-							<ConnectionSidebarPendingChannelRow
-								key={`${pendingChannel.networkId}:${pendingChannel.channel}`}
-								pendingChannel={pendingChannel}
-								selected={selected}
-								onSelect={() =>
-									props.onSelectPendingChannel(
-										pendingChannel.networkId,
-										pendingChannel.channel,
-									)
-								}
-							/>
-						),
-					)}
+							))}
+						</SidebarBufferGroup>
+					) : null}
 				</div>
 			) : null}
+		</section>
+	);
+}
+
+function SidebarBufferGroup(props: {
+	children: React.ReactNode;
+	className?: string;
+	label: string;
+}) {
+	return (
+		<section className={props.className}>
+			<h2 className="mb-2 px-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[#77808c]">
+				{props.label}
+			</h2>
+			<div className="space-y-1">{props.children}</div>
 		</section>
 	);
 }

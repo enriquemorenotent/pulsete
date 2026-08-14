@@ -166,7 +166,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 
   if (props.initialHistoryPending) {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pt-0">
+      <div className="chat-transcript-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 pt-0">
         <TranscriptLoadingState />
       </div>
     );
