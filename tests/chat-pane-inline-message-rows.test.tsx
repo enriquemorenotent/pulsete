@@ -182,6 +182,7 @@ test('compact rows suppress repeated timestamps for the same sender within the s
   const visibleTimestampMetadata = markup.match(/title="2026-03-11 02:(57|58):/g) ?? [];
   assert.equal(visibleTimestampMetadata.length, 2);
   assert.match(markup, /invisible shrink-0 font-sans tabular-nums text-\[11px\] leading-5 text-\[var\(--transcript-meta\)\]/);
+  assert.match(markup, /data-transcript-copy-text="\[02:57\] Joby: second"/);
 });
 
 test('private-message rows color self and peer nick labels differently', () => {

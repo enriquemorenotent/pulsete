@@ -7,6 +7,7 @@ import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
 import type { InlineImageRenderingMode } from './FormattedMessageText.js';
+import { handleTranscriptCopy } from './transcript/copy.js';
 
 type ChatTranscriptStaticProps = {
   channelUserModesByNick: ReadonlyMap<string, ChannelUserMode>;
@@ -42,7 +43,7 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-4 py-4 pt-0">
+    <div className="h-full overflow-y-auto px-4 py-4 pt-0" onCopy={handleTranscriptCopy}>
       {showLoadOlder ? (
         <div className="mb-2 flex justify-center">
           <Button

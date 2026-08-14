@@ -19,6 +19,7 @@ import type { MessageDisplayMode } from './message-display-mode.js';
 import type { MessageParticipantPresentation } from './message-participant-presentation.js';
 import { ChatMessagePinButton, isPinnableChatMessage } from './ChatMessagePinButton.js';
 import { useFocusedMessageScroll } from './useFocusedMessageScroll.js';
+import { formatTranscriptMessageForCopy } from './transcript/copy.js';
 
 export const ChatPaneExpandedMessageRow = (props: {
   message: ChatMessage;
@@ -51,6 +52,10 @@ export const ChatPaneExpandedMessageRow = (props: {
       data-message-delivery={props.message.delivery === 'server-history' ? props.message.delivery : undefined}
       data-message-id={props.message.id}
       data-message-pinned={props.message.pinnedAt != null ? 'true' : undefined}
+      data-transcript-copy-text={formatTranscriptMessageForCopy(
+        props.message,
+        props.participant.label,
+      )}
     >
       {showPinControl && props.onSetMessagePinned ? (
         <ChatMessagePinButton message={props.message} onSetMessagePinned={props.onSetMessagePinned} />

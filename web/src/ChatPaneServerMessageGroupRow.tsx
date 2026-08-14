@@ -21,6 +21,7 @@ import type {
   ChatTranscriptMessageRow,
   ChatTranscriptServerGroupRow,
 } from './transcript/model.js';
+import { formatTranscriptMessageForCopy } from './transcript/copy.js';
 
 type ChatPaneServerMessageGroupRowProps = {
   inlineImageRendering?: InlineImageRenderingMode;
@@ -88,6 +89,11 @@ function ServerMessageGroupLine(props: {
     <div
       className="grid min-w-0 grid-cols-[3.25rem_minmax(0,1fr)] gap-x-2 py-0.5"
       data-message-id={message.id}
+      data-transcript-copy-text={formatTranscriptMessageForCopy(
+        message,
+        undefined,
+        displayText,
+      )}
     >
       <ServerMessageTimestamp message={message} />
       <div className="min-w-0">
