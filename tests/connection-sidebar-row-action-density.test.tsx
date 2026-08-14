@@ -29,7 +29,7 @@ test('sidebar row actions are visually quiet until hover or keyboard focus', () 
   assert.match(markup, /aria-label="Close #help"/);
   assert.match(markup, /aria-label="Remove alice from watchlist"/);
   assert.match(markup, /opacity-0/);
-  assert.match(markup, /absolute right-2 top-1\/2 z-20/);
+  assert.match(markup, /absolute right-1\.5 top-1\/2 z-20/);
   assert.match(markup, /group-hover:opacity-100/);
   assert.match(markup, /group-focus-within:opacity-100/);
   assert.doesNotMatch(markup, /group-hover:w-7/);
