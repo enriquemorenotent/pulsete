@@ -6,8 +6,6 @@ type ConnectionSidebarLabelActivity = {
 };
 
 type ConnectionSidebarLabelOptions = {
-	dimmed?: boolean;
-	offline?: boolean;
 	selected?: boolean;
 	variant?: 'buffer' | 'network';
 };
@@ -15,23 +13,28 @@ type ConnectionSidebarLabelOptions = {
 export const connectionSidebarLabelClass = (
 	activity: ConnectionSidebarLabelActivity,
 	options: ConnectionSidebarLabelOptions = {},
-) =>
-	cn(
-		'truncate',
-		options.variant === 'network' ? 'text-[12.5px]' : 'text-[12px]',
-		options.selected || activity.hasUnread
-			? 'text-foreground'
-			: options.variant === 'network'
+) => {
+	const networkLabel = options.variant === 'network';
+
+	return cn(
+		'truncate transition-colors',
+		networkLabel ? 'text-[12.5px]' : 'text-[12px]',
+		networkLabel
+			? !options.selected && !activity.hasUnread
 				? 'text-foreground/88'
+				: 'text-foreground'
+			: options.selected || activity.hasUnread
+				? 'text-foreground'
 				: 'text-muted-foreground/88',
-		options.selected || activity.priority
-			? 'font-semibold'
-			: activity.hasUnread || options.variant === 'network'
-				? 'font-medium'
+		networkLabel
+			? options.selected || activity.priority
+				? 'font-semibold'
+				: 'font-medium'
+			: activity.hasUnread
+				? 'font-semibold'
 				: null,
-		options.dimmed && !activity.hasUnread && !options.selected && 'text-muted-foreground/62',
-		options.offline && !activity.hasUnread && !options.selected && 'text-muted-foreground/58',
 	);
+};
 
 type ConnectionSidebarRowOptions = {
 	dimmed?: boolean;

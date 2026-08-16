@@ -116,6 +116,54 @@ test('open query buffers show saved contact presence cues', () => {
   assert.doesNotMatch(markup, /aria-label="Unread messages"/);
 });
 
+test('hidden media keeps query placeholder avatars without loading images', () => {
+  const network = makeNetwork();
+  const query = makeBuffer({
+    id: 'query-1',
+    ircCloudAvatarId: '7',
+    kind: 'query',
+    target: 'alice',
+  });
+  const markup = renderToStaticMarkup(
+    <ConnectionSidebar
+      connections={buildConnectionSidebarView({
+        networks: [network],
+        conversation: buildConversationIndex({
+          buffers: [makeBuffer({ id: 'server-1' }), query],
+          channels: [],
+          pendingChannels: [],
+          messages: {},
+        }),
+        networkStates: { [network.id]: makeRuntime({ phase: 'connected' }) },
+        selection: { kind: 'buffer', bufferId: 'server-1' },
+      })}
+      friends={[] satisfies FriendState[]}
+      friendPresence={{}}
+      nickEmojis={[]}
+      queryPresence={{ [query.id]: 'online' }}
+      showMedia={false}
+      onAddFriend={async () => true}
+      onRemoveFriend={async () => true}
+      onSelectFriend={async () => undefined}
+      onToggleHideOfflineFriends={() => undefined}
+      onSelectNetwork={() => undefined}
+      onSelectBuffer={() => undefined}
+      onSelectPendingChannel={() => undefined}
+      onReconnectNetwork={() => undefined}
+      onDisconnectNetwork={() => undefined}
+      onCloseConnection={() => undefined}
+      onCloseChannel={() => undefined}
+      onCloseBuffer={() => undefined}
+    />,
+  );
+
+  assert.match(markup, /aria-label="Open alice \(online\)"/);
+  assert.match(markup, />A<\/span>/);
+  assert.match(markup, /bg-\[#8cc9b7\]/);
+  assert.doesNotMatch(markup, /<img/);
+  assert.doesNotMatch(markup, /avatar-redirect/);
+});
+
 test('query rows combine a numeric unread badge with presence', () => {
   const network = makeNetwork();
   const unreadQuery = makeBuffer({

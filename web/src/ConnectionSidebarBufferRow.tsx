@@ -73,6 +73,7 @@ export function ConnectionSidebarBufferRow(
 							enabled={props.userAvatarsVisible !== false}
 							placeholder="initial"
 							shape="square"
+							showPlaceholderWhenDisabled
 							user={{
 								account: null,
 								host: null,
@@ -111,8 +112,6 @@ export function ConnectionSidebarBufferRow(
 				<span
 					className={cn(
 						connectionSidebarLabelClass(activity, {
-							dimmed: props.dimmed,
-							offline: props.presence === 'offline',
 							selected: props.selected,
 						}),
 						'block min-w-0 flex-1 text-[13px]',
