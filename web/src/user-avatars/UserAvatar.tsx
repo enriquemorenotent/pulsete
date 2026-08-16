@@ -19,6 +19,7 @@ type UserAvatarProps = {
   placeholder?: 'initial' | 'none';
   preview?: boolean;
   shape?: 'circle' | 'square';
+  showPlaceholderWhenDisabled?: boolean;
   size?: 'lg' | 'md' | 'sm';
   user: (Pick<ChannelUserState, 'account' | 'host' | 'identity' | 'nick' | 'username'> & {
     ircCloudAvatarId?: string | null;
@@ -45,6 +46,7 @@ export function UserAvatar({
   placeholder = 'none',
   preview = false,
   shape = 'circle',
+  showPlaceholderWhenDisabled = false,
   size = 'sm',
   user,
 }: UserAvatarProps) {
@@ -62,8 +64,10 @@ export function UserAvatar({
   const [failedUrl, setFailedUrl] = useState<string | null>(() =>
     url && failedAvatarUrls.has(url) ? url : null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const disabledPlaceholderVisible =
+    showPlaceholderWhenDisabled && placeholder === 'initial';
 
-  if (!user || (!enabled && !resolvedCustomAvatarUrl)) {
+  if (!user || (!enabled && !resolvedCustomAvatarUrl && !disabledPlaceholderVisible)) {
     return null;
   }
 
