@@ -9,10 +9,10 @@ export type TranscriptScrollSnapshot =
   | { kind: 'anchor'; rowKey: string };
 
 export const resolveLatestFollowBehavior = (input: {
-  atLatest: boolean;
+  followingLatest: boolean;
   pendingSendToLatest: boolean;
 }): ScrollBehavior =>
-  input.pendingSendToLatest || input.atLatest ? 'auto' : false;
+  input.pendingSendToLatest || input.followingLatest ? 'auto' : false;
 
 export const resolveNextFirstItemIndex = (
   currentFirstItemIndex: number,
