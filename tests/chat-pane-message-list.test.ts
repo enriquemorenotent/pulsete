@@ -118,17 +118,17 @@ test('server transcript model groups consecutive routine rows by source and tone
   );
 });
 
-test('latest follow behavior autoscrolls only while pinned or after sending', () => {
+test('latest follow behavior autoscrolls only while following or after sending', () => {
   assert.equal(
-    resolveLatestFollowBehavior({ atLatest: true, pendingSendToLatest: false }),
+    resolveLatestFollowBehavior({ followingLatest: true, pendingSendToLatest: false }),
     'auto',
   );
   assert.equal(
-    resolveLatestFollowBehavior({ atLatest: false, pendingSendToLatest: true }),
+    resolveLatestFollowBehavior({ followingLatest: false, pendingSendToLatest: true }),
     'auto',
   );
   assert.equal(
-    resolveLatestFollowBehavior({ atLatest: false, pendingSendToLatest: false }),
+    resolveLatestFollowBehavior({ followingLatest: false, pendingSendToLatest: false }),
     false,
   );
 });

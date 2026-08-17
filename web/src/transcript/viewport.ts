@@ -38,6 +38,9 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const currentBufferIdRef = useRef<string | null>(null);
   const firstItemIndexRef = useRef(firstItemIndexBase);
   const isPinnedToLatestRef = useRef(true);
+  const isFollowingLatestRef = useRef(true);
+  const scrollerPointerDownRef = useRef(false);
+  const scrollerNodeRef = useRef<HTMLElement | null>(null);
   const pendingSendToLatestRef = useRef(false);
   const positionedBufferIdRef = useRef<string | null>(null);
   const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
@@ -83,6 +86,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     }
     previousFollowOutputRequestIdRef.current = params.followOutputRequestId;
     pendingSendToLatestRef.current = true;
+    isFollowingLatestRef.current = true;
   }, [params.followOutputRequestId]);
 
   useEffect(() => {
@@ -96,6 +100,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     transcriptScrollSnapshots.set(params.bufferId, { kind: 'latest' });
     visibleAnchorRowKeyRef.current = null;
     isPinnedToLatestRef.current = true;
+    isFollowingLatestRef.current = true;
     setIsPinnedToLatest(true);
     scrollToLatest(virtuosoRef.current);
   }, [params.bufferId, params.jumpToLatestRequestId, params.totalItemCount]);
@@ -114,6 +119,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     const rowKey = params.rowKeys[params.focusRowIndex] ?? null;
     visibleAnchorRowKeyRef.current = rowKey;
     isPinnedToLatestRef.current = false;
+    isFollowingLatestRef.current = false;
     setIsPinnedToLatest(false);
     if (rowKey) {
       transcriptScrollSnapshots.set(params.bufferId, { kind: 'anchor', rowKey });
@@ -139,6 +145,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     currentBufferIdRef.current = params.bufferId;
     firstItemIndexRef.current = firstItemIndexBase;
     isPinnedToLatestRef.current = true;
+    isFollowingLatestRef.current = true;
     resetOlderHistory();
     pendingSendToLatestRef.current = false;
     positionedBufferIdRef.current = null;
@@ -226,9 +233,9 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   );
 
   const followOutput = useCallback(
-    (atLatest: boolean): ScrollBehavior => {
+    (_atLatest: boolean): ScrollBehavior => {
       const behavior = resolveLatestFollowBehavior({
-        atLatest,
+        followingLatest: isFollowingLatestRef.current,
         pendingSendToLatest: pendingSendToLatestRef.current,
       });
       if (pendingSendToLatestRef.current && behavior !== false) {
@@ -242,6 +249,9 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const handleAtBottomStateChange = useCallback(
     (nextAtBottom: boolean) => {
       isPinnedToLatestRef.current = nextAtBottom;
+      if (nextAtBottom) {
+        isFollowingLatestRef.current = true;
+      }
       setIsPinnedToLatest(nextAtBottom);
     },
     [],
@@ -263,9 +273,74 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     [params.rowKeys],
   );
 
-  const setScrollerNode = useCallback((node: HTMLElement | null | Window) => {
-    scrollerRef.current = node instanceof HTMLElement ? node : null;
+  const stopFollowingLatest = useCallback(() => {
+    isFollowingLatestRef.current = false;
   }, []);
+
+  const handleScrollerWheel = useCallback((event: WheelEvent) => {
+    if (event.deltaY < 0) {
+      stopFollowingLatest();
+    }
+  }, [stopFollowingLatest]);
+
+  const handleScrollerKeyDown = useCallback((event: KeyboardEvent) => {
+    if (
+      event.key === 'ArrowUp'
+      || event.key === 'PageUp'
+      || event.key === 'Home'
+      || (event.key === ' ' && event.shiftKey)
+    ) {
+      stopFollowingLatest();
+    }
+  }, [stopFollowingLatest]);
+
+  const handleScrollerPointerDown = useCallback(() => {
+    scrollerPointerDownRef.current = true;
+  }, []);
+
+  const handleScrollerPointerUp = useCallback(() => {
+    scrollerPointerDownRef.current = false;
+  }, []);
+
+  const handleScrollerScroll = useCallback(() => {
+    const node = scrollerNodeRef.current;
+    if (
+      scrollerPointerDownRef.current
+      && node
+      && node.scrollHeight - node.clientHeight - node.scrollTop > 4
+    ) {
+      stopFollowingLatest();
+    }
+  }, [stopFollowingLatest]);
+
+  const setScrollerNode = useCallback((node: HTMLElement | null | Window) => {
+    const previousNode = scrollerNodeRef.current;
+    if (previousNode) {
+      previousNode.removeEventListener('wheel', handleScrollerWheel);
+      previousNode.removeEventListener('keydown', handleScrollerKeyDown);
+      previousNode.removeEventListener('pointerdown', handleScrollerPointerDown);
+      previousNode.removeEventListener('pointerup', handleScrollerPointerUp);
+      previousNode.removeEventListener('pointercancel', handleScrollerPointerUp);
+      previousNode.removeEventListener('scroll', handleScrollerScroll);
+    }
+    const nextNode = node instanceof HTMLElement ? node : null;
+    scrollerNodeRef.current = nextNode;
+    scrollerRef.current = nextNode;
+    if (nextNode) {
+      nextNode.addEventListener('wheel', handleScrollerWheel, { passive: true });
+      nextNode.addEventListener('keydown', handleScrollerKeyDown);
+      nextNode.addEventListener('pointerdown', handleScrollerPointerDown);
+      nextNode.addEventListener('pointerup', handleScrollerPointerUp);
+      nextNode.addEventListener('pointercancel', handleScrollerPointerUp);
+      nextNode.addEventListener('scroll', handleScrollerScroll, { passive: true });
+    }
+  }, [
+    handleScrollerKeyDown,
+    handleScrollerPointerDown,
+    handleScrollerPointerUp,
+    handleScrollerScroll,
+    handleScrollerWheel,
+  ]);
 
   return {
     atTopThreshold: topAutoLoadThreshold,
