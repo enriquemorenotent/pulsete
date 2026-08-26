@@ -4,10 +4,10 @@ import { join, resolve } from 'node:path';
 const sourceRoot = resolve(process.env.SITE_SOURCE_ROOT ?? 'site');
 const outputRoot = resolve(process.env.SITE_OUT_DIR ?? process.env.APT_SITE_ROOT ?? 'pages');
 const packageJson = JSON.parse(await readFile(resolve('package.json'), 'utf8'));
-const releaseVersion = packageJson.version;
+const releaseVersion = process.env.SITE_RELEASE_VERSION ?? packageJson.version;
 
 if (typeof releaseVersion !== 'string' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(releaseVersion)) {
-  throw new Error('package.json must contain a valid release version');
+  throw new Error('SITE_RELEASE_VERSION or package.json must contain a valid release version');
 }
 
 await buildLandingSite();
