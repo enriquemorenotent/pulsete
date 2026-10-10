@@ -135,10 +135,15 @@ function ServerSwitcherButton(props: {
 }) {
   const activity = resolveConnectionActivity(props.connection);
   const nick = props.connection.labelParts.nick;
+  const phase = props.connection.runtime?.phase ?? 'offline';
+  const statusLabel = phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline';
   const serverImage = props.showMedia === false ? null : resolveNetworkServerImage(props.connection.network, props.externalAvatarsEnabled === true);
   return (
-    <button type="button" className={cn('relative flex min-w-12 flex-1 flex-col items-center gap-2 rounded-lg py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary', props.active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground')} onClick={props.onSelect} aria-label={`Open ${props.connection.labelParts.name}${activity.hasUnread ? ' (unread)' : ''}`} title={`${props.connection.labelParts.name} · ${nick}`} aria-pressed={props.active}>
-      <span aria-hidden className={cn('relative flex size-10 items-center justify-center overflow-hidden rounded-lg border text-sm font-semibold', props.active ? 'border-primary/60 bg-primary/20 text-primary' : 'border-border bg-secondary text-foreground')}>{serverImage ? <ConnectionSidebarServerIcon className="absolute inset-0 size-full" iconUrl={serverImage.url} runtime={props.connection.runtime} fallbackLabel={nick.slice(0, 2).toUpperCase()} /> : nick.slice(0, 2).toUpperCase()}</span>
+    <button type="button" className={cn('relative flex min-w-12 flex-1 flex-col items-center gap-2 rounded-lg py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary', props.active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground')} onClick={props.onSelect} aria-label={`Open ${props.connection.labelParts.name}${activity.hasUnread ? ' (unread)' : ''}`} aria-description={statusLabel} title={`${props.connection.labelParts.name} · ${nick} · ${statusLabel}`} aria-pressed={props.active}>
+      <span aria-hidden className={cn('relative flex size-10 items-center justify-center overflow-hidden rounded-lg border text-sm font-semibold', props.active ? 'border-primary/60 bg-primary/20 text-primary' : 'border-border bg-secondary text-foreground')}>
+        {serverImage ? <ConnectionSidebarServerIcon className="absolute inset-0 size-full" iconUrl={serverImage.url} runtime={props.connection.runtime} fallbackLabel={nick.slice(0, 2).toUpperCase()} /> : nick.slice(0, 2).toUpperCase()}
+        <span className={cn('absolute bottom-1 right-1 size-1.5 rounded-full ring-2 ring-background', phase === 'connected' ? 'bg-emerald-300' : phase === 'connecting' ? 'bg-amber-300' : 'bg-slate-500')} />
+      </span>
       <span className="w-full truncate text-[11px] font-medium">{nick}</span>
       {activity.hasUnread ? <span className="absolute right-1 top-0 size-2.5 rounded-full bg-primary" aria-hidden /> : null}
     </button>
