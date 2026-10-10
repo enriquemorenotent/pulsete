@@ -14,6 +14,6 @@ export const headerIconButtonClass = (
   active = false,
   tone: HeaderIconButtonTone = 'primary',
 ) => cn(
-  'size-7 border',
+  'size-8 border',
   active ? activeHeaderIconButtonClasses[tone] : inactiveHeaderIconButtonClass,
 );

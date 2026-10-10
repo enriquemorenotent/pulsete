@@ -50,14 +50,14 @@ export const connectionSidebarRowClass = (
 		? cn(
 			'group relative flex items-stretch overflow-hidden rounded-lg transition-colors',
 			options.selected
-				? 'bg-[#2a2d32]'
+				? 'bg-primary/15 ring-1 ring-inset ring-primary/25'
 				: 'hover:bg-white/[0.035] focus-within:bg-white/[0.04]',
-			options.dimmed && !activity.hasUnread && !options.selected && 'opacity-70',
+			options.dimmed && !activity.hasUnread && !options.selected && 'opacity-100',
 		)
 		: cn(
 			'group relative flex items-stretch overflow-hidden rounded-sm border border-l-2 border-transparent transition-colors',
 			options.selected
 				? 'border-primary/35 border-l-primary bg-primary/[0.13] ring-1 ring-inset ring-primary/25'
 				: 'hover:border-white/10 hover:bg-white/[0.04] focus-within:bg-white/[0.045]',
-			options.dimmed && !activity.hasUnread && !options.selected && 'opacity-75',
+			options.dimmed && !activity.hasUnread && !options.selected && 'opacity-100',
 		);

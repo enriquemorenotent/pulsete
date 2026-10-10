@@ -4,6 +4,7 @@ export const createDesktopShellLayoutProps = (
   overrides: Partial<DesktopShellLayoutProps> = {},
 ): DesktopShellLayoutProps => ({
   header: {
+    developerMode: false,
     mediaVisibilityMode: 'show-media',
     onDownloadDiagnostics: () => undefined,
     onOpenLogInspector: () => undefined,

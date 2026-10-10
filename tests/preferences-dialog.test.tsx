@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { NetworkProfile } from '../shared/protocol-chat.js';
+import { PreferencesNotificationsPanel } from '../web/src/PreferencesNotificationsPanel.js';
+import { PreferencesNotificationAllowedChannels } from '../web/src/PreferencesNotificationAllowedChannels.js';
+import { PreferencesNotificationMutedNicks } from '../web/src/PreferencesNotificationMutedNicks.js';
+import { PreferencesBackupSection } from '../web/src/PreferencesBackupSection.js';
 import { PreferencesDialogBody } from '../web/src/PreferencesDialogBody.js';
 import type { ContactNotificationSettings } from '../web/src/contact-notifications/settings.js';
 import type { MediaVisibilitySettings } from '../web/src/media-visibility-settings.js';
@@ -38,9 +42,11 @@ const mediaVisibilitySettings: MediaVisibilitySettings = {
   mode: 'show-media',
 };
 
-test('preferences dialog renders notification controls and muted nick management', () => {
-  const markup = renderToStaticMarkup(
+test('settings categories preserve notification, media and backup controls', () => {
+  const settings = (
     <PreferencesDialogBody
+      developerMode={false}
+      onSetDeveloperMode={() => {}}
       contactNotifications={contactNotifications}
       mediaVisibilitySettings={mediaVisibilitySettings}
       userAvatarSettings={userAvatarSettings}
@@ -62,6 +68,16 @@ test('preferences dialog renders notification controls and muted nick management
     />
   );
 
+  const networkNameById = new Map(networks.map((network) => [network.id, network.name]));
+  const markup = renderToStaticMarkup(settings)
+    + renderToStaticMarkup(<PreferencesNotificationsPanel {...settings.props} />)
+    + renderToStaticMarkup(<PreferencesNotificationAllowedChannels channels={contactNotifications.channels} networkNameById={networkNameById} onRemoveChannel={() => {}} />)
+    + renderToStaticMarkup(<PreferencesNotificationMutedNicks mutedNicks={settings.props.mutedNicks} networkNameById={networkNameById} onRemoveMutedNick={async () => true} />)
+    + renderToStaticMarkup(<PreferencesBackupSection onExportBackup={async () => {}} onImportBackup={async () => {}} />);
+  assert.match(markup, /aria-label="Settings categories"/);
+  assert.match(markup, />Display<\/button>/);
+  assert.match(markup, />Backup<\/button>/);
+  assert.match(markup, />Advanced<\/button>/);
   assert.match(markup, /Media/);
   assert.match(markup, /Media display/);
   assert.match(markup, /aria-label="Media display"/);

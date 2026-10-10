@@ -40,3 +40,11 @@ test('assistant conversation replaces onboarding shortcuts with messages', () =>
   assert.doesNotMatch(markup, /Start with a shortcut/);
   assert.doesNotMatch(markup, />Summarize</);
 });
+
+test('assistant exposes Stop while a request is pending', () => {
+  const markup = renderToStaticMarkup(<AiAssistantChatView entries={[]} error="" input=""
+    pending pendingLabel="Thinking" onAsk={() => undefined} onCancel={() => undefined}
+    onChange={() => undefined} onSubmit={() => undefined} onUseSuggestion={() => undefined} />);
+  assert.match(markup, />Stop</);
+  assert.match(markup, /aria-busy="true"/);
+});

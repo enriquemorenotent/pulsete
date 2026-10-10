@@ -26,11 +26,11 @@ test('desktop shell renders a visible command palette trigger in the header', ()
 
   assert.match(markup, /Search Pulsete/);
   assert.match(markup, /aria-label="Search Pulsete"/);
-  assert.match(markup, /Ctrl\/Cmd\+K/);
-  assert.match(markup, /Logs/);
+  assert.match(markup, /Ctrl K/);
+  assert.match(markup, /Chat history/);
   assert.match(markup, /aria-label="Hide media"/);
-  assert.match(markup, />Hide media</);
-  assert.match(markup, /aria-label="Tools"/);
+  assert.match(markup, /aria-label="Preferences"/);
+  assert.doesNotMatch(markup, /aria-label="Capture memory diagnostics"/);
   assert.doesNotMatch(markup, />Preferences</);
   assert.doesNotMatch(markup, />Network Manager</);
 });
@@ -48,5 +48,14 @@ test('desktop shell media toggle points to showing media when media is hidden', 
   );
 
   assert.match(markup, /aria-label="Show media"/);
-  assert.match(markup, />Show media</);
+  assert.match(markup, /aria-label="Networks"/);
+});
+
+
+test('desktop shell shows diagnostics only when developer mode is enabled', () => {
+  const props = createDesktopShellLayoutProps();
+  const markup = renderToStaticMarkup(
+    <DesktopShellLayout {...props} header={{ ...props.header, developerMode: true }} />,
+  );
+  assert.match(markup, /aria-label="Capture memory diagnostics"/);
 });

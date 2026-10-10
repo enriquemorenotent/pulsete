@@ -83,6 +83,10 @@ Run the browser-based development environment:
 npm run dev
 ```
 
+Development clears React timing records every five seconds to avoid accumulating
+serialized component props. To keep those records for a dedicated profiling session,
+run `VITE_RETAIN_REACT_TIMINGS=1 npm run dev`. Production is unaffected.
+
 The dev server uses a local Node process on port `18487` and a Vite web client
 on port `18473`.
 

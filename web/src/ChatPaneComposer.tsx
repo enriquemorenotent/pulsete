@@ -57,6 +57,7 @@ type ChatPaneComposerProps = {
   mode: ComposerMode;
   disabled?: boolean;
   placeholder: string;
+  disabledPlaceholder?: string;
   focusContextKey?: string | null;
   focusRequestId?: number;
   completionEnabled?: boolean;
@@ -143,7 +144,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   };
 
   return (
-    <footer className="flex shrink-0 items-center gap-2 bg-[#101215] px-5 py-4">
+    <footer className="flex shrink-0 items-center gap-2 border-t border-border bg-[#171c25] px-5 py-4">
       {prompt.prefixSymbol ? (
         <div
           className="flex h-10 min-w-9 shrink-0 items-center justify-center rounded-lg bg-amber-300/12 px-2 font-mono text-[12px] font-semibold text-amber-300 ring-1 ring-inset ring-amber-300/20"
@@ -158,7 +159,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
         maxLength={maxDraftCharacters}
         disabled={props.disabled}
         className={cn(
-          'h-10 min-w-0 flex-1 border-[#2a2e34] bg-[#1a1d22] px-3 hover:border-white/15 focus-visible:border-ring/60',
+          'h-10 min-w-0 flex-1 border-[#2a2e34] bg-[#283140] px-3 hover:border-white/15 focus-visible:border-ring/60',
           prompt.variant === 'commands' && 'border-amber-300/15 bg-amber-400/[0.045]'
         )}
         onBlur={() => {
@@ -204,7 +205,8 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
             void props.onSend();
           }
         }}
-        placeholder={props.placeholder}
+        aria-label={prompt.variant === 'commands' ? 'Server command' : 'Message'}
+        placeholder={props.disabled ? props.disabledPlaceholder ?? 'Reconnect to send messages' : props.placeholder}
       />
       <Button
         size="sm"

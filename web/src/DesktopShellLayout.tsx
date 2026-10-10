@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { FolderSearch, Image as ImageIcon, ImageOff, PanelRightOpen, Search } from 'lucide-react';
+import { FolderSearch, Image as ImageIcon, ImageOff, PanelRightOpen, Search, Settings, Network } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { shouldOpenCommandPaletteFromKeydown } from './command-palette.js';
@@ -11,7 +11,7 @@ import {
 } from './desktop-shell-layout.js';
 import type { MediaVisibilityMode } from './media-visibility-settings.js';
 import { DesktopShellBrand } from './DesktopShellBrand.js';
-import { DesktopShellToolsMenu } from './DesktopShellToolsMenu.js';
+import { DesktopShellDiagnosticsButton } from './DesktopShellDiagnosticsButton.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
 import { useMediaQuery } from './useMediaQuery.js';
 import { useSidebarResize } from './useSidebarResize.js';
@@ -23,6 +23,7 @@ export type DesktopShellLayoutProps = {
   commandPalette: { onOpen: () => void; open: boolean };
   commandPaletteDialog: ReactNode;
   header: {
+    developerMode: boolean;
     mediaVisibilityMode: MediaVisibilityMode;
     onDownloadDiagnostics: () => void;
     onOpenLogInspector: () => void;
@@ -114,52 +115,30 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
 
   const showingMedia = props.header.mediaVisibilityMode === 'show-media';
   return (
-    <div className="fixed inset-0 flex min-h-0 overflow-hidden bg-[#101215] text-foreground">
-      <div className="hidden">
-        <DesktopShellBrand />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="h-8 min-w-[13rem] justify-start px-3"
-            aria-label="Search Pulsete"
-            onClick={props.commandPalette.onOpen}
-          >
-            <Search />
-            <span className="min-w-0 flex-1 truncate text-left">Search Pulsete</span>
-            <span className="hidden rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground sm:inline-flex">
-              Ctrl/Cmd+K
-            </span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={props.header.onOpenLogInspector}>
-            <FolderSearch />
-            Logs
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={showingMedia ? 'Hide media' : 'Show media'}
-            title={showingMedia ? 'Hide media' : 'Show media'}
-            onClick={props.header.onToggleMediaVisibilityMode}
-          >
-            {showingMedia ? <ImageOff /> : <ImageIcon />}
-            {showingMedia ? 'Hide media' : 'Show media'}
-          </Button>
-          <DesktopShellToolsMenu
-            onDownloadDiagnostics={props.header.onDownloadDiagnostics}
-            onOpenLogInspector={props.header.onOpenLogInspector}
-            onOpenNetworkManager={props.header.onOpenNetworkManager}
-            onOpenPreferences={props.header.onOpenPreferences}
-          />
-        </div>
-      </div>
+    <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[#171c25] text-foreground">
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-3 sm:gap-4 sm:px-5">
+        <div className="hidden sm:block"><DesktopShellBrand /></div>
+        <div className="sm:hidden"><DesktopShellBrand markOnly /></div>
+        <Button variant="outline" className="h-10 min-w-0 flex-1 justify-start gap-3 px-3 sm:max-w-lg" aria-label="Search Pulsete" onClick={props.commandPalette.onOpen}>
+          <Search />
+          <span className="min-w-0 flex-1 truncate text-left">Search Pulsete</span>
+          <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground sm:inline">Ctrl K</kbd>
+        </Button>
+        <nav aria-label="Workspace tools" className="ml-auto flex shrink-0 items-center gap-1">
+          <Button variant="ghost" className="hidden h-10 sm:inline-flex" onClick={props.header.onOpenLogInspector}><FolderSearch />Chat history</Button>
+          <Button variant="ghost" className="h-10" aria-label="Networks" onClick={props.header.onOpenNetworkManager}><Network /><span className="hidden md:inline">Networks</span></Button>
+          <Button variant="ghost" className="h-10" aria-label="Preferences" onClick={props.header.onOpenPreferences}><Settings /><span className="hidden md:inline">Settings</span></Button>
+          <Button variant="ghost" size="icon" className="hidden sm:inline-flex" aria-label={showingMedia ? 'Hide media' : 'Show media'} title={showingMedia ? 'Hide media' : 'Show media'} onClick={props.header.onToggleMediaVisibilityMode}>{showingMedia ? <ImageOff /> : <ImageIcon />}</Button>
+          {props.header.developerMode ? <DesktopShellDiagnosticsButton onDownloadDiagnostics={props.header.onDownloadDiagnostics} /> : null}
+        </nav>
+      </header>
 
       <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {compactLayout ? (
           <Tabs
             value={compactPane}
             onValueChange={(value) => setCompactPane(value as CompactWorkspacePane)}
-            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-black/20 p-3 shadow-[0_20px_70px_rgba(0,0,0,0.42)]"
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-background p-3"
           >
             <TabsList className={`grid w-full shrink-0 ${props.rightSidebarKind ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="browse" className="min-w-0">Browse</TabsTrigger>
@@ -188,9 +167,9 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           <div
             ref={layoutRef}
             style={layoutStyle}
-            className="flex h-full min-h-0 flex-1 overflow-hidden bg-[#101215] lg:flex-row"
+            className="flex h-full min-h-0 flex-1 overflow-hidden bg-[#171c25] lg:flex-row"
           >
-            <div className="min-h-0 bg-[#15181c] lg:w-(--sidebar-width) lg:min-w-[320px] lg:shrink-0">
+            <div className="min-h-0 bg-[#202733] lg:w-(--sidebar-width) lg:min-w-[280px] lg:shrink-0">
               {props.sidebar}
             </div>
             <SidebarResizeHandle
@@ -201,7 +180,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
               onNudge={leftSidebarResize.nudgeWidth}
               onReset={leftSidebarResize.resetWidth}
             />
-            <div className="min-h-0 min-w-0 flex-1 bg-[#101215]">
+            <div className="min-h-0 min-w-0 flex-1 bg-[#171c25]">
               {props.chat}
             </div>
             {props.rightSidebarKind ? (
@@ -221,14 +200,14 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
                   key="right-sidebar-panel"
                     className={props.rightSidebarCollapsed
                     ? 'hidden'
-                    : 'min-h-0 bg-[#15181c] lg:w-[var(--right-sidebar-width)] lg:max-w-[300px] lg:shrink-0'}
+                    : 'min-h-0 bg-[#202733] lg:w-[var(--right-sidebar-width)] lg:max-w-[320px] lg:shrink-0'}
                 >
                   {props.rightSidebar}
                 </div>
                 {props.rightSidebarCollapsed ? (
                   <div
                     key="right-sidebar-rail"
-                    className="flex h-full w-10 shrink-0 items-start justify-center border-l border-[#292d33] bg-[#15181c] pt-1.5"
+                    className="flex h-full w-10 shrink-0 items-start justify-center border-l border-[#3b4758] bg-[#202733] pt-1.5"
                   >
                     <Button
                       type="button"

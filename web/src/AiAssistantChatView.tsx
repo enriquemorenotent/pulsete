@@ -56,6 +56,7 @@ type AiAssistantChatViewProps = {
   error: string;
   input: string;
   onAsk: AssistantAskHandler;
+  onCancel?: () => void;
   onChange: (value: string) => void;
   onSubmit: () => void;
   onUseSuggestion: (value: string) => void;
@@ -88,6 +89,11 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
         <p role="alert" className="rounded-sm border border-amber-300/18 bg-amber-300/8 px-2.5 py-2 text-[12px] text-amber-100">
           {props.error}
         </p>
+      ) : null}
+      {props.pending ? (
+        <Button type="button" variant="outline" size="sm" onClick={props.onCancel}>
+          Stop
+        </Button>
       ) : null}
       <AssistantInput
         disabled={props.pending}

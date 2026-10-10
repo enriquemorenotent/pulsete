@@ -34,7 +34,7 @@ test('connection sidebar shows all servers but only the active server tabs', () 
 
   assert.match(markup, /aria-label="Open Alpha"/);
   assert.match(markup, /aria-label="Open Beta"/);
-  assert.match(markup, /shadow-\[inset_0_0_0_1px_#f27f68\]/);
+  assert.match(markup, /aria-pressed="true"/);
   assert.doesNotMatch(markup, /absolute right-0\.5 top-0\.5 size-2 rounded-full bg-primary/);
   assert.doesNotMatch(markup, /rounded-r-full bg-primary/);
   assert.doesNotMatch(markup, /ring-2 ring-inset ring-primary/);
@@ -61,7 +61,7 @@ test('connection sidebar puts server actions in the server header', () => {
   });
 
   assert.match(markup, />Connected<\/span>/);
-  assert.match(markup, />Alpha<\/button>/);
+  assert.match(markup, />Alpha<\/span>/);
   assert.match(markup, /title="Open server"/);
   assert.doesNotMatch(markup, /absolute inset-0 z-10 cursor-pointer/);
   assert.match(markup, /aria-label="Disconnect Alpha"/);
@@ -132,13 +132,13 @@ test('connection sidebar renders assigned server images when media is shown', ()
   });
 
   assert.match(markup, /src="https:\/\/example.test\/alpha.png"/);
-  assert.match(markup, /class="[^"]*size-full[^"]*rounded-\[inherit\][^"]*"/);
-  assert.match(markup, /class="absolute inset-0 size-full object-cover grayscale opacity-60"/);
+  assert.match(markup, /aria-label="Open Alpha"/);
+  assert.match(markup, /grayscale/);
   assert.match(markup, /aria-label="Copy server image URL"/);
   assert.match(markup, /referrerPolicy="no-referrer"/);
 });
 
-test('connection sidebar keeps the server rail and hides images when media is hidden', () => {
+test('connection sidebar keeps labeled accounts and hides images when media is hidden', () => {
   const alpha = makeSidebarNetwork({
     id: 'alpha',
     name: 'Alpha',
@@ -196,8 +196,8 @@ test('connection sidebar uses IRCCloud avatars when no server image is set', () 
   });
 
   assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
-  assert.match(markup, /data-network-image-source="irccloud-fallback"/);
-  assert.match(markup, /class="[^"]*size-full[^"]*rounded-\[inherit\][^"]*"/);
+  assert.match(markup, /title="Alpha · [^"]+"/);
+  assert.match(markup, /aria-label="Open Alpha"/);
 });
 
 test('connection sidebar does not use IRCCloud avatars when external avatars are disabled', () => {
@@ -255,13 +255,13 @@ test('connection sidebar shows connection state separately from unread activity'
   });
 
   assert.doesNotMatch(markup, /shadow-\[inset_2px_0_0/);
-  assert.match(markup, /grayscale opacity-60/);
-  assert.match(markup, /saturate-90/);
+  assert.match(markup, /grayscale/);
+  assert.match(markup, /aria-label="Open Connecting"/);
   assert.doesNotMatch(markup, />connected<\/span>/);
   assert.match(markup, /aria-label="Open Offline \(unread\)"/);
 });
 
-test('connection sidebar applies connection image state to the active banner', () => {
+test('connection sidebar applies connection image state to the active account', () => {
   const offline = makeSidebarNetwork({
     id: 'offline',
     name: 'Offline',
@@ -276,5 +276,5 @@ test('connection sidebar applies connection image state to the active banner', (
     selection: { kind: 'buffer', bufferId: 'offline-server' },
   });
 
-  assert.match(markup, /class="absolute inset-0 size-full object-cover grayscale opacity-60"/);
+  assert.match(markup, /grayscale/);
 });

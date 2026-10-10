@@ -21,10 +21,10 @@ const requestJson = async <T>(path: string, init?: RequestInit) => {
 };
 
 export const aiAssistantApi = {
-  ask: (bufferId: string, request: AiAssistantRequest) =>
+  ask: (bufferId: string, request: AiAssistantRequest, signal?: AbortSignal) =>
     requestJson<AiAssistantResponse>(
       `/api/buffers/${encodeURIComponent(bufferId)}/assistant`,
-      { method: 'POST', body: JSON.stringify(request) },
+      { method: 'POST', body: JSON.stringify(request), signal },
     ),
   status: () =>
     requestJson<AiAssistantProviderStatus>('/api/assistant/status'),

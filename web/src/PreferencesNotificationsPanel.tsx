@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { useMemo } from 'react';
 import type { MutedNickState, NetworkProfile } from '../../shared/protocol-chat.js';
 import type {
@@ -61,7 +62,7 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
         </p>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-border bg-secondary/30 px-4 py-4 text-[13px]">
+      <div className="space-y-5 text-sm">
         <div className="space-y-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Delivery Methods
@@ -83,21 +84,34 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
           onRequestPermission={props.onRequestContactNotificationSystemPermission}
           onSetEnabled={props.onSetContactNotificationSystemEnabled}
         />
+        <Tabs defaultValue="contacts">
+          <TabsList aria-label="Notification lists" className="max-w-full rounded-lg">
+            <TabsTrigger value="contacts" className="min-w-0">Contacts</TabsTrigger>
+            <TabsTrigger value="channels" className="min-w-0">Channels</TabsTrigger>
+            <TabsTrigger value="muted" className="min-w-0">Muted</TabsTrigger>
+          </TabsList>
+          <TabsContent value="contacts">
         <PreferencesNotificationAllowedContacts
           contacts={sortedAudioContacts}
           networkNameById={networkNameById}
           onRemoveContact={props.onRemoveContactNotificationContact}
         />
+          </TabsContent>
+          <TabsContent value="channels">
         <PreferencesNotificationAllowedChannels
           channels={sortedAudioChannels}
           networkNameById={networkNameById}
           onRemoveChannel={props.onRemoveContactNotificationChannel}
         />
+          </TabsContent>
+          <TabsContent value="muted">
         <PreferencesNotificationMutedNicks
           mutedNicks={sortedMutedNicks}
           networkNameById={networkNameById}
           onRemoveMutedNick={props.onRemoveMutedNick}
         />
+          </TabsContent>
+        </Tabs>
       </div>
     </section>
   );

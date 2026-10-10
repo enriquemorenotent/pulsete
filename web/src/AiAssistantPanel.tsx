@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { MessageSquarePlus } from 'lucide-react';
 import type { BufferState } from '../../shared/protocol-chat.js';
 import {
-  aiAssistantThreadMaxTurns,
   type AiAssistantMode,
   type AiAssistantProviderStatus,
   type AiAssistantSelection,
 } from '../../shared/protocol-ai.js';
+import { normalizeAssistantTurns } from '../../shared/ai-assistant-turns.js';
 import { Button } from '@/components/ui/button.js';
 import { aiAssistantApi } from './ai-assistant-client.js';
 import {
@@ -42,6 +42,13 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const [localStore] = useState(createAiAssistantStore);
   const store = props.store ?? localStore;
   const bufferId = props.buffer?.id ?? null;
+  const controllers = useRef(new Map<string, AbortController>());
+  const cancel = () => {
+    if (!bufferId) return;
+    controllers.current.get(bufferId)?.abort();
+    const requestId = store.getThread(bufferId).activeRequestId;
+    if (requestId !== null) store.failRequest(bufferId, requestId, 'Request cancelled');
+  };
   const thread = useAiAssistantThread(store, bufferId);
   const [status, setStatus] = useState<AiAssistantProviderStatus | null>(null);
   const [optimisticSelection, setOptimisticSelection] = useState<AiAssistantSelection | null>(null);
@@ -72,24 +79,30 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     if (currentRequestId === null) {
       return;
     }
+    const controller = new AbortController();
+    controllers.current.set(bufferId, controller);
     try {
       const response = await aiAssistantApi.ask(bufferId, {
         assistantTurns,
         mode,
         prompt,
         selection: resolvedSelection.selection,
-      });
+      }, controller.signal);
       setStatus(response.status);
       store.resolveRequest(bufferId, currentRequestId, {
         mode,
         text: response.answer,
+        context: response.context,
       });
     } catch (reason) {
       store.failRequest(
         bufferId,
         currentRequestId,
-        reason instanceof Error ? reason.message : 'Assistant request failed',
+        controller.signal.aborted ? 'Request cancelled'
+          : reason instanceof Error ? reason.message : 'Assistant request failed',
       );
+    } finally {
+      if (controllers.current.get(bufferId) === controller) controllers.current.delete(bufferId);
     }
   };
 
@@ -130,6 +143,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             disabled={!bufferId}
             onClick={() => {
               if (bufferId) {
+                controllers.current.get(bufferId)?.abort();
                 store.clearThread(bufferId);
               }
             }}
@@ -156,6 +170,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
               pending={thread.pending}
               pendingLabel={thread.pendingLabel}
               onAsk={ask}
+              onCancel={cancel}
               onChange={(value) => {
                 if (bufferId) {
                   store.setInput(bufferId, value);
@@ -172,10 +187,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
 }
 
 const buildAssistantTurns = (entries: readonly AssistantEntry[]) =>
-  entries
-    .slice(-aiAssistantThreadMaxTurns)
-    .map((entry) => ({ role: entry.role, text: entry.text.trim() }))
-    .filter((entry) => entry.text);
+  normalizeAssistantTurns(entries.map((entry) => ({ role: entry.role, text: entry.text })));
 
 const selectionsMatch = (
   left: AiAssistantSelection | null,

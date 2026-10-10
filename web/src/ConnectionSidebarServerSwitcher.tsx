@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
+import { resolveNetworkServerImage } from './network-server-image.js';
 import { Check, Copy, Plug, Unplug, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { ConnectionSidebarFriends } from './ConnectionSidebarFriends.js';
 import { ConnectionSidebarNetworkSection } from './ConnectionSidebarNetworkSection.js';
-import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
-import { NetworkServerImageFallbackCue } from './NetworkServerImageFallbackCue.js';
-import { networkImageRuntimeClass } from './network-image-state.js';
-import { isNetworkServerImageFallback, resolveNetworkServerImage } from './network-server-image.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
@@ -23,46 +21,14 @@ export function ConnectionSidebarServerSwitcher(
   );
 
   return (
-    <section className="flex min-h-0 flex-1 overflow-hidden">
-      <div className="flex w-[64px] shrink-0 flex-col items-center gap-2 border-r border-[#292d33] bg-[#0d0f12] px-2 py-4">
-        {props.railBrand ? (
-          <div className="mb-3 flex h-8 w-full items-center justify-center overflow-hidden">
-            {props.railBrand}
-          </div>
-        ) : null}
-        <ScrollArea className="min-h-0 w-full flex-1">
-          <div className="flex flex-col items-center gap-2">
-            {props.connections.map((connection) => (
-              <ServerSwitcherButton
-                key={connection.network.id}
-                connection={connection}
-                active={connection.network.id === activeConnection?.network.id}
-                externalAvatarsEnabled={props.externalAvatarsEnabled}
-                showMedia={props.showMedia}
-                onSelect={() => props.onSelectNetwork(connection.network)}
-              />
-            ))}
-          </div>
-        </ScrollArea>
-        {props.railPalette || props.railMediaToggle || props.railTools ? (
-          <div className="flex flex-col items-center gap-2">
-            {props.railPalette ? (
-              <div className="relative flex h-8 w-full items-center justify-center">
-                {props.railPalette}
-              </div>
-            ) : null}
-            {props.railMediaToggle ? (
-              <div className="relative flex h-8 w-full items-center justify-center">
-                {props.railMediaToggle}
-              </div>
-            ) : null}
-            {props.railTools ? (
-              <div className="relative flex h-8 w-full items-center justify-center">
-                {props.railTools}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-border px-3 py-4">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Accounts</h2>
+        <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Open accounts">
+          {props.connections.map((connection) => (
+            <ServerSwitcherButton key={connection.network.id} connection={connection} active={connection.network.id === activeConnection?.network.id} showMedia={props.showMedia} externalAvatarsEnabled={props.externalAvatarsEnabled} onSelect={() => props.onSelectNetwork(connection.network)} />
+          ))}
+        </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <ConnectionSwitcherDetail {...props} activeConnection={activeConnection} />
@@ -138,114 +104,66 @@ function ServerSwitcherHeader(props: {
   onCloseConnection: ConnectionSidebarProps['onCloseConnection'];
 }) {
   const phase = props.connection.runtime?.phase ?? 'offline';
-  const serverImage = props.showMedia === false
-    ? null
-    : resolveNetworkServerImage(
-        props.connection.network,
-        props.externalAvatarsEnabled === true,
-      );
-  const actionLabel =
-    phase === 'connected'
-      ? 'Disconnect'
-      : phase === 'connecting'
-        ? 'Connecting'
-        : 'Connect';
+  const serverImage = props.showMedia === false ? null : resolveNetworkServerImage(props.connection.network, props.externalAvatarsEnabled === true);
+  const actionLabel = phase === 'connected' ? 'Disconnect' : phase === 'connecting' ? 'Connecting' : 'Connect';
   return (
-    <header
-      className={cn(
-        'relative mb-5 flex overflow-hidden bg-[#111419]',
-        serverImage ? 'min-h-[116px]' : 'min-h-[82px] border border-[#292d33]',
-      )}
-    >
-      {serverImage ? (
-        <img
-          src={serverImage.url}
-          alt=""
-          className={cn(
-            'absolute inset-0 size-full object-cover',
-            networkImageRuntimeClass(props.connection.runtime),
-          )}
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-        />
-      ) : null}
-      <div
-        aria-hidden
-        className={cn(
-          'absolute inset-0',
-          serverImage
-            ? 'bg-[linear-gradient(180deg,rgba(5,7,10,0.48)_0%,rgba(5,7,10,0.18)_42%,rgba(5,7,10,0.82)_100%)]'
-            : 'bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent)]',
-        )}
-      />
-      {serverImage ? (
-        <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1.5">
-          {isNetworkServerImageFallback(serverImage) ? (
-            <NetworkServerImageFallbackCue className="static size-5" />
-          ) : null}
-          <CopyServerImageUrlButton url={serverImage.url} />
+    <header className="mb-4 shrink-0 border-b border-border px-4 py-5">
+      <div className="flex items-start justify-between gap-2">
+        <button type="button" className="min-w-0 text-left" onClick={() => props.onSelectNetwork(props.connection.network)} aria-label={`Open ${props.connection.labelParts.name}`} title="Open server">
+          <span className="block truncate text-base font-semibold text-foreground">{props.connection.labelParts.name}</span>
+          <span className="mt-1 block truncate text-sm text-muted-foreground">as {props.connection.labelParts.nick}</span>
+        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {serverImage ? <CopyServerImageUrlButton url={serverImage.url} /> : null}
+        <button type="button" className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground" onClick={() => props.onCloseConnection(props.connection.network)} aria-label={`Close ${props.connection.labelParts.name}`} title="Close server"><X className="size-4" /></button>
         </div>
-      ) : null}
-      <div className="pointer-events-none relative z-20 flex w-full flex-col justify-between p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 pt-0.5">
-            <button
-              type="button"
-              className="pointer-events-auto block max-w-full truncate rounded-sm text-left text-[15px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-              onClick={() => props.onSelectNetwork(props.connection.network)}
-              aria-label={`Open ${props.connection.labelParts.name}`}
-              title="Open server"
-            >
-              {props.connection.labelParts.name}
-            </button>
-          </div>
-          <div className="pointer-events-auto flex shrink-0 items-center gap-1">
-            <button
-              className="flex size-8 items-center justify-center rounded-md bg-black/35 text-white/85 backdrop-blur-sm transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50"
-              onClick={() =>
-                phase === 'connected'
-                  ? props.onDisconnectNetwork(props.connection.network.id)
-                  : props.onReconnectNetwork(props.connection.network)
-              }
-              aria-label={`${actionLabel} ${props.connection.labelParts.name}`}
-              title={actionLabel}
-              disabled={phase === 'connecting'}
-            >
-              {phase === 'connected' ? (
-                <Unplug className="size-4" />
-              ) : (
-                <Plug className={cn('size-4', phase === 'connecting' && 'animate-pulse')} />
-              )}
-            </button>
-            <button
-              className="flex size-8 items-center justify-center rounded-md bg-black/35 text-white/85 backdrop-blur-sm transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-              onClick={() => props.onCloseConnection(props.connection.network)}
-              aria-label={`Close ${props.connection.labelParts.name}`}
-              title="Close server"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] font-medium text-white/75 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-          <span
-            aria-hidden
-            className={cn(
-              'size-2 rounded-full',
-              phase === 'connected'
-                ? 'bg-[#8cc9b7]'
-                : phase === 'connecting'
-                  ? 'bg-[#e0bc68]'
-                  : 'bg-[#66707c]',
-            )}
-          />
-          <span>{connectionStatusLabel(phase)}</span>
-        </div>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-sm text-muted-foreground"><span aria-hidden className={cn('size-2 rounded-full', phase === 'connected' ? 'bg-emerald-300' : phase === 'connecting' ? 'bg-amber-300 animate-pulse' : 'bg-slate-400')} />{phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline'}</span>
+        <button type="button" className="flex h-8 items-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 text-sm font-medium text-primary hover:bg-primary/25 disabled:opacity-50" onClick={() => phase === 'connected' ? props.onDisconnectNetwork(props.connection.network.id) : props.onReconnectNetwork(props.connection.network)} aria-label={`${actionLabel} ${props.connection.labelParts.name}`} title={actionLabel} disabled={phase === 'connecting'}>{phase === 'connected' ? <Unplug className="size-3.5" /> : <Plug className="size-3.5" />}{actionLabel}</button>
       </div>
     </header>
   );
 }
+
+function ServerSwitcherButton(props: {
+  active: boolean;
+  connection: SidebarConnectionView;
+  showMedia?: boolean;
+  externalAvatarsEnabled?: boolean;
+  onSelect: () => void;
+}) {
+  const activity = resolveConnectionActivity(props.connection);
+  const nick = props.connection.labelParts.nick;
+  const serverImage = props.showMedia === false ? null : resolveNetworkServerImage(props.connection.network, props.externalAvatarsEnabled === true);
+  return (
+    <button type="button" className={cn('relative flex min-w-12 flex-1 flex-col items-center gap-2 rounded-lg py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary', props.active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground')} onClick={props.onSelect} aria-label={`Open ${props.connection.labelParts.name}${activity.hasUnread ? ' (unread)' : ''}`} title={`${props.connection.labelParts.name} · ${nick}`} aria-pressed={props.active}>
+      <span aria-hidden className={cn('relative flex size-10 items-center justify-center overflow-hidden rounded-lg border text-sm font-semibold', props.active ? 'border-primary/60 bg-primary/20 text-primary' : 'border-border bg-secondary text-foreground')}>{serverImage ? <ConnectionSidebarServerIcon className="absolute inset-0 size-full" iconUrl={serverImage.url} runtime={props.connection.runtime} fallbackLabel={nick.slice(0, 2).toUpperCase()} /> : nick.slice(0, 2).toUpperCase()}</span>
+      <span className="w-full truncate text-[11px] font-medium">{nick}</span>
+      {activity.hasUnread ? <span className="absolute right-1 top-0 size-2.5 rounded-full bg-primary" aria-hidden /> : null}
+    </button>
+  );
+}
+
+const resolveActiveConnection = (
+  connections: readonly SidebarConnectionView[],
+) =>
+  connections.find((connection) =>
+    connection.selectedServer
+    || connection.childBuffers.some((child) => child.selected)
+    || connection.pendingChannels.some((pending) => pending.selected),
+  ) ?? connections[0] ?? null;
+
+const resolveConnectionActivity = (connection: SidebarConnectionView) => {
+  const activities = [
+    resolveBufferActivityState(connection.serverBuffer),
+    ...connection.childBuffers.map(({ buffer }) => resolveBufferActivityState(buffer)),
+  ];
+  return {
+    hasUnread: activities.some((activity) => activity.hasUnread),
+    priority: activities.some((activity) => activity.priority),
+  };
+};
 
 function CopyServerImageUrlButton(props: { url: string }) {
   const [copied, setCopied] = useState(false);
@@ -293,91 +211,3 @@ function CopyServerImageUrlButton(props: { url: string }) {
     </button>
   );
 }
-
-const connectionStatusLabel = (phase: 'connected' | 'connecting' | 'offline') => {
-  if (phase === 'connected') return 'Connected';
-  if (phase === 'connecting') return 'Connecting';
-  return 'Offline';
-};
-
-function ServerSwitcherButton(props: {
-  active: boolean;
-  connection: SidebarConnectionView;
-  externalAvatarsEnabled?: boolean;
-  showMedia?: ConnectionSidebarProps['showMedia'];
-  onSelect: () => void;
-}) {
-  const activity = resolveConnectionActivity(props.connection);
-  const serverImage = props.showMedia === false
-    ? null
-    : resolveNetworkServerImage(
-        props.connection.network,
-        props.externalAvatarsEnabled === true,
-      );
-  return (
-    <div className="relative flex w-full justify-center">
-      <button
-        type="button"
-        className={cn(
-          'relative flex size-10 items-center justify-center overflow-hidden rounded-sm p-0 transition-colors',
-          props.active
-            ? 'bg-[#25282e] text-foreground'
-            : 'bg-white/[0.035] hover:bg-white/[0.07]',
-        )}
-        onClick={props.onSelect}
-        aria-label={
-          activity.hasUnread
-            ? `Open ${props.connection.labelParts.name} (unread)`
-            : `Open ${props.connection.labelParts.name}`
-        }
-        title={props.connection.labelParts.name}
-      >
-        <ConnectionSidebarServerIcon
-          className={serverImage ? 'absolute inset-0 size-full rounded-[inherit]' : 'size-4'}
-          iconUrl={serverImage?.url}
-          runtime={props.connection.runtime}
-        />
-        {isNetworkServerImageFallback(serverImage) ? (
-          <NetworkServerImageFallbackCue />
-        ) : null}
-        {props.active ? (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] shadow-[inset_0_0_0_1px_#f27f68]"
-          />
-        ) : null}
-        {activity.hasUnread ? (
-          <span
-            aria-hidden
-            className={cn(
-              'absolute bottom-0.5 right-0.5 z-20 rounded-full shadow-[0_0_0_2px_rgba(8,8,10,0.95)]',
-              activity.priority
-                ? 'size-2.5 bg-primary ring-2 ring-black/45'
-                : 'size-2 bg-primary',
-            )}
-          />
-        ) : null}
-      </button>
-    </div>
-  );
-}
-
-const resolveActiveConnection = (
-  connections: readonly SidebarConnectionView[],
-) =>
-  connections.find((connection) =>
-    connection.selectedServer
-    || connection.childBuffers.some((child) => child.selected)
-    || connection.pendingChannels.some((pending) => pending.selected),
-  ) ?? connections[0] ?? null;
-
-const resolveConnectionActivity = (connection: SidebarConnectionView) => {
-  const activities = [
-    resolveBufferActivityState(connection.serverBuffer),
-    ...connection.childBuffers.map(({ buffer }) => resolveBufferActivityState(buffer)),
-  ];
-  return {
-    hasUnread: activities.some((activity) => activity.hasUnread),
-    priority: activities.some((activity) => activity.priority),
-  };
-};

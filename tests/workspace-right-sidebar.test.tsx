@@ -212,3 +212,18 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   assert.match(markup, /Prefers encrypted routes/);
   assert.match(markup, /Saved/);
 });
+
+
+test('offline channels render a useful members state instead of an empty sidebar', () => {
+  const markup = renderToStaticMarkup(
+    <WorkspaceRightSidebar
+      workspace={{ ...workspace, mode: 'channel-offline', selectedRuntime: null, selectedBuffer: { ...serverBuffer, kind: 'channel', target: '#help' }, selectedChannel: null, showNicklist: false }}
+      nicklist={nicklist}
+      onReconnectNetwork={async () => true}
+    />,
+  );
+  assert.match(markup, /Members are unavailable/);
+  assert.match(markup, /Reconnect to see channel members/);
+  assert.match(markup, />Reconnect<\/button>/);
+  assert.match(markup, /aria-label="Members"/);
+});

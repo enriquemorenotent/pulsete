@@ -4,7 +4,7 @@ import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import type { WorkspaceView } from './workspace-types.js';
 
 const statusActionClassName =
-  'h-6 shrink-0 rounded-sm border border-white/[0.055] px-2 text-[11px] text-muted-foreground/78 hover:border-white/12 hover:bg-white/[0.045] hover:text-foreground';
+  'h-9 w-full shrink-0 rounded-md sm:w-auto border border-amber-300/50 bg-amber-300 px-4 text-sm font-semibold text-[#28200e] hover:bg-amber-200';
 
 type ChatPaneStatusBannerProps = {
   workspace: WorkspaceView;
@@ -20,7 +20,7 @@ export function ChatPaneStatusBanner(props: ChatPaneStatusBannerProps) {
   }
 
   return (
-    <div className="shrink-0 space-y-1 px-4 pt-1.5">
+    <div className="shrink-0 space-y-2 px-4 py-3">
       {props.mutedQueryNick ? (
         <StatusStrip
           tone="muted"
@@ -61,32 +61,32 @@ function StatusStrip(props: {
     <div
       role="status"
       className={cn(
-        'flex min-h-8 items-center justify-between gap-3 border-b py-1.5',
-        props.tone === 'warning'
-          ? 'border-amber-300/12'
-          : 'border-white/[0.045]',
+        'flex min-h-14 flex-col items-start justify-between gap-3 sm:flex-row sm:items-center rounded-lg border px-4 py-3',
+        props.tone === 'warning' || props.title === 'Offline'
+          ? 'border-amber-300/30 bg-amber-300/10'
+          : 'border-border bg-secondary/50',
       )}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2">
         <span
           aria-hidden
           className={cn(
             'size-1.5 shrink-0 rounded-full',
-            props.tone === 'warning' ? 'bg-amber-300/70' : 'bg-muted-foreground/45',
+            props.tone === 'warning' || props.title === 'Offline' ? 'bg-amber-300' : 'bg-muted-foreground',
           )}
         />
         <span
           className={cn(
-            'shrink-0 font-mono text-[10px] uppercase leading-4 tracking-[0.14em]',
-            props.tone === 'warning'
-              ? 'text-amber-200/78'
-              : 'text-muted-foreground/62',
+            'shrink-0 text-xs font-semibold uppercase leading-4 tracking-wider',
+            props.tone === 'warning' || props.title === 'Offline'
+              ? 'text-amber-200'
+              : 'text-muted-foreground',
           )}
         >
           {props.title}
         </span>
         <span aria-hidden className="h-3 w-px shrink-0 bg-white/[0.07]" />
-        <p className="min-w-0 flex-1 truncate text-[12px] leading-5 text-muted-foreground/72">
+        <p className="min-w-0 flex-1 basis-full text-sm sm:basis-40 leading-5 text-foreground">
           {props.body}
         </p>
       </div>

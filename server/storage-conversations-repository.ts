@@ -17,6 +17,8 @@ import {
   searchMessages,
   searchMessagesByBufferId,
 } from './storage-messages.js';
+import { listAssistantHistory } from './storage-assistant-history.js';
+import type { AssistantDateRange } from './ai-assistant-dates.js';
 import { listLogSources } from './storage-log-sources.js';
 import {
   deleteChannelByName,
@@ -129,6 +131,10 @@ export class StorageConversationsRepository {
 
   listMessagePage(networkId: string, target: string, limit: number, beforeMessageId?: string) {
     return listMessagePage(this.db, networkId, target, limit, beforeMessageId);
+  }
+
+  listAssistantHistory(bufferId: string, limit: number, range: AssistantDateRange | null = null) {
+    return listAssistantHistory(this.db, bufferId, limit, range);
   }
 
   listAllMessages(networkId: string, target: string) {

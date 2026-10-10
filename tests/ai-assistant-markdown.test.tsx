@@ -38,3 +38,11 @@ test('assistant markdown does not render raw HTML or remote images', () => {
   assert.doesNotMatch(markup, /src=/i);
   assert.match(markup, /\[Image: tracking\]/);
 });
+
+test('assistant citations link only to supplied message sources', () => {
+  const markup = renderToStaticMarkup(<AiAssistantMarkdown
+    sourcePrefix="assistant-source-7" sourceLabels={['S1']}
+  >{'The meeting was agreed [S1]. Unknown [S2].'}</AiAssistantMarkdown>);
+  assert.match(markup, /href="#assistant-source-7-S1"/);
+  assert.doesNotMatch(markup, /href="#assistant-source-7-S2"/);
+});

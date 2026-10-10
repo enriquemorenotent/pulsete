@@ -78,7 +78,7 @@ const renderBody = (
 test('log inspector body renders source browser controls', () => {
   const markup = renderBody(idleState);
 
-  assert.match(markup, /Log inspector/);
+  assert.match(markup, /Chat history/);
   assert.match(markup, /Sources/);
   assert.match(markup, /aria-label="Find log source"/);
   assert.match(markup, /aria-label="Filter sources by type"/);
@@ -88,7 +88,7 @@ test('log inspector body renders source browser controls', () => {
 test('log inspector body renders global search controls', () => {
   const markup = renderBody(idleState, { activeMode: 'search' });
 
-  assert.match(markup, /aria-label="Search all logs"/);
+  assert.match(markup, /aria-label="Search chat history"/);
   assert.match(markup, /aria-label="Filter logs by network"/);
   assert.match(markup, /aria-label="Filter logs by conversation"/);
   assert.match(markup, /disabled=""/);

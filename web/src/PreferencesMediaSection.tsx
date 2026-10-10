@@ -27,8 +27,8 @@ export function PreferencesMediaSection(props: PreferencesMediaSectionProps) {
         </p>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-border bg-secondary/30 px-4 py-4 text-[13px]">
-        <div className="space-y-2 rounded-md border border-white/6 bg-black/14 px-3 py-3">
+      <div className="space-y-3 border-b border-border pb-6 text-sm">
+        <div className="space-y-2">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">Media display</p>
             <p className="text-muted-foreground">

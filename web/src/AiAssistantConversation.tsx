@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef } from 'react';
 import { Bot, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
+import { AiAssistantSources } from './AiAssistantSources.js';
 import { cn } from '@/lib/utils.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 
@@ -61,12 +62,16 @@ function AssistantBubble(props: {
         <div className="min-w-0 space-y-2 break-words">
           {assistant ? (
             <Suspense fallback={<div className="whitespace-pre-wrap">{props.entry.text}</div>}>
-              <AiAssistantMarkdown>{props.entry.text}</AiAssistantMarkdown>
+              <AiAssistantMarkdown
+                sourcePrefix={`assistant-source-${props.entry.id}`}
+                sourceLabels={props.entry.context?.sources?.map((source) => source.label)}
+              >{props.entry.text}</AiAssistantMarkdown>
             </Suspense>
           ) : (
             <div className="whitespace-pre-wrap">{props.entry.text}</div>
           )}
         </div>
+        {props.entry.context ? <AiAssistantSources context={props.entry.context} sourcePrefix={`assistant-source-${props.entry.id}`} /> : null}
         {props.entry.mode === 'suggest-reply' ? (
           <Button
             size="sm"

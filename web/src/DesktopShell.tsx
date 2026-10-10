@@ -29,7 +29,7 @@ import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import { DesktopShellBrand } from './DesktopShellBrand.js';
-import { DesktopShellToolsMenu } from './DesktopShellToolsMenu.js';
+import { DesktopShellDiagnosticsButton } from './DesktopShellDiagnosticsButton.js';
 
 export type DesktopShellProps = {
   actions: AppActions;
@@ -47,8 +47,10 @@ export type DesktopShellProps = {
 
 export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps) {
   const dispatch = useAppDispatch();
+  const preferences = useAppSelector(selectPreferences);
   const showMedia = props.mediaVisibilityMode === 'show-media';
   const header = useMemo(() => ({
+    developerMode: preferences.developerMode,
     mediaVisibilityMode: props.mediaVisibilityMode,
     onDownloadDiagnostics: props.onDownloadDiagnostics,
     onOpenLogInspector: props.ui.openLogInspector,
@@ -62,6 +64,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
       );
     },
   }), [
+    preferences.developerMode,
     dispatch,
     props.mediaVisibilityMode,
     props.onSetMediaVisibilityMode,
@@ -72,7 +75,6 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
   const historyHasNewerByBufferId = useAppSelector(selectHistoryHasNewerByBufferId);
-  const preferences = useAppSelector(selectPreferences);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [jumpToLatestRequestId, requestJumpToLatest] = useReducer(
     (value: number) => value + 1,
@@ -169,13 +171,9 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
             </button>
           )}
           railTools={(
-            <DesktopShellToolsMenu
-              iconOnly
+            preferences.developerMode ? <DesktopShellDiagnosticsButton
               onDownloadDiagnostics={props.onDownloadDiagnostics}
-              onOpenLogInspector={props.ui.openLogInspector}
-              onOpenNetworkManager={() => dispatch({ type: 'open-network-manager' })}
-              onOpenPreferences={props.ui.openPreferences}
-            />
+            /> : null
           )}
           showMedia={showMedia}
           ui={props.ui}

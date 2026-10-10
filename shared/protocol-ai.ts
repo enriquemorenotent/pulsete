@@ -62,6 +62,11 @@ export type AiAssistantLoginResponse = {
 export type AiAssistantContext = {
   buffer: Pick<BufferState, 'id' | 'kind' | 'networkId' | 'target'>;
   messages: ChatMessage[];
+  sources?: { label: string; message: ChatMessage }[];
+  coverage?: {
+    description: string;
+    truncated: boolean;
+  };
 };
 
 export type AiAssistantResponse = {

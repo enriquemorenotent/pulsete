@@ -1,7 +1,8 @@
-import type { AiAssistantMode } from '../../shared/protocol-ai.js';
+import type { AiAssistantContext, AiAssistantMode } from '../../shared/protocol-ai.js';
 
 export type AssistantEntry = {
   id: number;
+  context?: AiAssistantContext;
   mode?: AiAssistantMode;
   role: 'assistant' | 'user';
   text: string;

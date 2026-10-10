@@ -5,6 +5,7 @@ import { PreferencesDialog } from './PreferencesDialog.js';
 import {
   selectManagedNetworkModel,
   selectMutedNicks,
+  selectPreferences,
   selectNetworkManagerState,
   selectNetworks,
   selectVisibleNetworks,
@@ -36,10 +37,13 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
   onSetMediaVisibilityMode,
   ui,
 }: PreferencesDialogContainerProps) {
+  const developerMode = useAppSelector(selectPreferences).developerMode;
   const mutedNicks = useAppSelector(selectMutedNicks);
   const networks = useAppSelector(selectNetworks);
   const model = useMemo(() => ({
     open: ui.preferencesOpen,
+    developerMode,
+    onSetDeveloperMode: (enabled: boolean) => { void actions.updatePreferences({ developerMode: enabled }); },
     contactNotifications: contactNotifications.settings,
     mediaVisibilitySettings: { mode: mediaVisibilityMode },
     userAvatarSettings: { externalAvatarsEnabled },
@@ -66,6 +70,7 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
     onExportBackup: actions.exportBackup,
     onImportBackup: actions.importBackup,
   }), [
+    developerMode,
     actions,
     contactNotifications,
     externalAvatarsEnabled,

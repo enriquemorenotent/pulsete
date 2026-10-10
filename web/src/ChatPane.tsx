@@ -186,6 +186,11 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
           mode={props.workspace.composerMode}
           disabled={props.workspace.composerDisabled === true}
           placeholder={props.workspace.composerPlaceholder}
+          disabledPlaceholder={props.workspace.selectedRuntime?.phase === 'connected'
+            ? 'Join this channel to send messages'
+            : props.workspace.selectedRuntime?.phase === 'connecting'
+              ? 'Connecting… Your history stays available'
+              : isServerBuffer ? 'Reconnect to run commands' : 'Reconnect to send messages'}
           focusContextKey={props.focusContextKey}
           completionEnabled={props.completionEnabled}
           completionContextKey={props.completionContextKey}

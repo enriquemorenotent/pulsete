@@ -78,6 +78,7 @@ test('channel composers render the active target as a prompt cue', () => {
   const markup = renderChatPane([]);
 
   assert.match(markup, />Send</);
+  assert.match(markup, /aria-label="Message"/);
   assert.match(markup, /placeholder="Message #help"/);
   assert.doesNotMatch(markup, />Message</);
   assert.doesNotMatch(markup, />Enter sends to #help</);
@@ -236,7 +237,7 @@ test('reconnecting channels rely on the inline status banner instead of header m
   );
 
   assert.match(markup, /History stays available while the connection returns\./);
-  assert.match(markup, /placeholder="Message #help/);
+  assert.match(markup, /placeholder="Connecting… Your history stays available"/);
   assert.match(markup, /<input[^>]*disabled=""/);
   assert.doesNotMatch(markup, />Connecting</);
   assert.doesNotMatch(markup, />Host</);

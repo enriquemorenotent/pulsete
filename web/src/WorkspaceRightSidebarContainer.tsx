@@ -48,6 +48,9 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   const pinnedMessagesLoadedByBufferId = useAppSelector(selectPinnedMessagesLoadedByBufferId);
   const serverProfileNetwork = useAppSelector(selectServerProfileNetwork);
   const workspace = useAppSelector(selectWorkspace);
+  const reconnectSelectedNetwork = useCallback(async () => {
+    return workspace.selectedNetwork ? actions.reconnectNetwork(workspace.selectedNetwork) : false;
+  }, [actions.reconnectNetwork, workspace.selectedNetwork]);
   const preferences = useAppSelector(selectPreferences);
   const queryBuffer = workspace.selectedBuffer?.kind === 'query'
     ? workspace.selectedBuffer
@@ -187,6 +190,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   return (
     <WorkspaceRightSidebar
       workspace={workspace}
+      onReconnectNetwork={reconnectSelectedNetwork}
       nicklist={nicklist}
       assistant={assistant}
       serverProfile={serverProfile}

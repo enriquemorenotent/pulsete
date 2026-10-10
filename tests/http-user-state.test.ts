@@ -26,6 +26,7 @@ test('preference and draft routes persist changes and broadcast snapshots', asyn
           model: 'gpt-5.6-luna',
           reasoningEffort: 'max',
         },
+        developerMode: true,
         hideOfflineFriends: true,
         leftSidebarWidth: 318,
         rightSidebarWidth: 346,
@@ -34,6 +35,8 @@ test('preference and draft routes persist changes and broadcast snapshots', asyn
     const preferenceBroadcast = await preferenceMessage;
 
     assert.equal(preferenceResponse.status, 200);
+    assert.equal((preferenceResponse.json.preferences as { developerMode: boolean }).developerMode, true);
+    assert.equal((preferenceBroadcast.preferences as { developerMode: boolean }).developerMode, true);
     assert.equal(
       (preferenceResponse.json.preferences as { hideOfflineFriends: boolean }).hideOfflineFriends,
       true,

@@ -1,4 +1,6 @@
 import { badRequest, notFound } from './app-error.js';
+import { readAssistantDateRange } from './ai-assistant-dates.js';
+import { limitAssistantMessages } from './ai-assistant-context-budget.js';
 import { planAiAssistantRetrieval } from './ai-assistant-retrieval.js';
 import { aiAssistantMessageLimit } from '../shared/protocol-ai.js';
 import type { AiAssistantContext } from '../shared/protocol-ai.js';
@@ -29,6 +31,7 @@ export const buildAiAssistantContext = (
   if (buffer.kind === 'server') {
     throw badRequest('Assistant is available in channels and private messages');
   }
+  const dateRange = readAssistantDateRange(request.prompt);
   const recentMessages = conversations.listRecentMessagesForBuffer(
     buffer.networkId,
     buffer.target,
@@ -39,25 +42,43 @@ export const buildAiAssistantContext = (
     mode: request.mode,
     prompt: request.prompt,
   });
-  const searchMessages = retrieveSearchMessages(conversations, buffer.id, retrieval.searchTerms);
+  const searchResult = retrieveSearchMessages(conversations, buffer.id, retrieval.searchTerms);
+  const searchMessages = searchResult.messages;
   const includeFullLog = retrieval.includeFullLog || (
     retrieval.fullLogWhenSearchMisses
     && retrieval.searchTerms.length > 0
     && searchMessages.length === 0
   );
+  const history = includeFullLog
+    ? conversations.listAssistantHistory(buffer.id, 600, dateRange)
+    : null;
+  const inRange = (messages: ChatMessage[]) => dateRange
+    ? messages.filter((message) => message.ts >= dateRange.start && message.ts < dateRange.end)
+    : messages;
+  const recent = limitAssistantMessages(inRange(recentMessages), 8_000);
+  const search = limitAssistantMessages(inRange(searchMessages), 8_000);
+  const saved = history ? limitAssistantMessages(history.messages, 16_000) : null;
+  const truncated = recent.truncated || search.truncated
+    || Boolean(saved?.truncated || history?.hasMore || (!history && searchResult.hasMore));
+  const sources = dedupeMessages([...recent.messages, ...search.messages, ...(saved?.messages ?? [])])
+    .map((message, index) => ({ label: `S${index + 1}`, message }));
   return {
+    coverage: {
+      description: dateRange ? `Saved messages for ${dateRange.label} (local calendar day)`
+        : history ? 'Saved conversation history' : 'Recent messages and matching history excerpts',
+      truncated,
+    },
+    sources,
     buffer: {
       id: buffer.id,
       kind: buffer.kind,
       networkId: buffer.networkId,
       target: buffer.target,
     },
-    fullLog: includeFullLog
-      ? { messages: conversations.listAllMessages(buffer.networkId, buffer.target) }
-      : null,
-    messages: recentMessages,
+    fullLog: saved ? { messages: saved.messages } : null,
+    messages: recent.messages,
     search: {
-      messages: searchMessages,
+      messages: search.messages,
       terms: retrieval.searchTerms,
     },
   };
@@ -68,13 +89,18 @@ export const toPublicAiAssistantContext = (
 ): AiAssistantContext => ({
   buffer: context.buffer,
   messages: context.messages,
+  sources: context.sources,
+  coverage: context.coverage,
 });
 
 export const renderAiAssistantContext = (context: AiAssistantPromptContext) =>
   [
     `Conversation: ${context.buffer.target} (${context.buffer.kind})`,
+    `Coverage: ${context.coverage?.description}. ${context.coverage?.truncated
+      ? 'INCOMPLETE: messages were omitted or shortened. Do not give exhaustive counts or claim absence.'
+      : 'Only the supplied saved messages are evidence; unsaved conversation is unknown.'}`,
     'Recent saved messages:',
-    renderAiAssistantMessages(context.messages) || '(none)',
+    renderContextMessages(context, context.messages) || '(none)',
     renderSearchSection(context),
     renderFullLogSection(context),
   ].filter(Boolean).join('\n\n');
@@ -91,31 +117,31 @@ const retrieveSearchMessages = (
   conversations: RuntimeConversationStore,
   bufferId: string,
   terms: readonly string[],
-) => dedupeMessages(
-  terms.flatMap((term) =>
-    conversations.searchMessagesByBufferId(bufferId, term, searchHitsPerTerm)
-      .messages
-      .flatMap((message) => conversations.getMessageWindow(
-        message.id,
-        searchWindowBefore,
-        searchWindowAfter,
-      )),
-  ),
-);
+) => {
+  let hasMore = false;
+  const messages = terms.flatMap((term) => {
+    const page = conversations.searchMessagesByBufferId(bufferId, term, searchHitsPerTerm);
+    hasMore ||= page.hasMore;
+    return page.messages.flatMap((message) => conversations.getMessageWindow(
+      message.id, searchWindowBefore, searchWindowAfter,
+    ));
+  });
+  return { messages: dedupeMessages(messages), hasMore };
+};
 
 const renderSearchSection = (context: AiAssistantPromptContext) =>
   context.search.terms.length === 0
     ? ''
     : [
         `Targeted history search (${context.search.terms.join(', ')}):`,
-        renderAiAssistantMessages(context.search.messages) || '(no matches)',
+        renderContextMessages(context, context.search.messages) || '(no matches)',
       ].join('\n');
 
 const renderFullLogSection = (context: AiAssistantPromptContext) =>
   context.fullLog
     ? [
-        'Full saved log for this conversation:',
-        renderAiAssistantMessages(context.fullLog.messages) || '(none)',
+        context.coverage?.truncated ? 'Selected saved history (incomplete):' : 'Full saved log for this conversation:',
+        renderContextMessages(context, context.fullLog.messages) || '(none)',
       ].join('\n')
     : '';
 
@@ -130,3 +156,9 @@ const dedupeMessages = (messages: readonly ChatMessage[]) => {
 const searchHitsPerTerm = 6;
 const searchWindowAfter = 2;
 const searchWindowBefore = 2;
+
+const renderContextMessages = (context: AiAssistantPromptContext, messages: readonly ChatMessage[]) =>
+  messages.map((message) => {
+    const label = context.sources?.find((source) => source.message.id === message.id)?.label;
+    return `[${label ?? 'source'}] ${renderAiAssistantMessage(message)}`;
+  }).join('\n');

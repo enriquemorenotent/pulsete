@@ -103,8 +103,8 @@ export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
-        <DialogTitle>Log inspector</DialogTitle>
-        <DialogDescription>All saved logs</DialogDescription>
+        <DialogTitle>Chat history</DialogTitle>
+        <DialogDescription>Saved conversations across all networks</DialogDescription>
       </DialogHeader>
       <Tabs
         value={props.activeMode}
@@ -147,8 +147,8 @@ export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
               ref={props.inputRef}
               value={props.query}
               onChange={(event) => props.onQueryChange(event.currentTarget.value)}
-              placeholder="Search all logs"
-              aria-label="Search all logs"
+              placeholder="Search chat history"
+              aria-label="Search chat history"
               className="md:flex-1"
             />
             <NetworkSelect

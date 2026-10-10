@@ -66,3 +66,38 @@ const withMissingCodexPath = async (run: () => Promise<void>) => {
     }
   }
 };
+
+test('disconnecting an assistant HTTP request aborts its provider work', async () => {
+  const context = await createHttpRuntimeContext();
+  const network = context.storage.networks.upsert(createNetworkInput());
+  const buffer = context.storage.conversations.upsertBuffer({
+    kind: 'channel', networkId: network.id, target: '#cancel',
+  });
+  let started!: () => void;
+  let cancelled!: () => void;
+  const start = new Promise<void>((resolve) => { started = resolve; });
+  const abort = new Promise<void>((resolve) => { cancelled = resolve; });
+  context.runtime.http.assistant.ask = async (_bufferId, _request, signal) => {
+    started();
+    return new Promise((_resolve, reject) => {
+      signal?.addEventListener('abort', () => {
+        cancelled();
+        reject(new Error('cancelled'));
+      }, { once: true });
+    });
+  };
+  const controller = new AbortController();
+  try {
+    const request = fetch(`http://127.0.0.1:${context.port}/api/buffers/${buffer.id}/assistant`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'answer', prompt: 'Hello' }), signal: controller.signal,
+    }).catch(() => undefined);
+    await start;
+    controller.abort();
+    await Promise.race([abort, new Promise<void>((_resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Provider was not cancelled')), 2_000);
+      timer.unref();
+    })]);
+    await request;
+  } finally { await context.close(); }
+});

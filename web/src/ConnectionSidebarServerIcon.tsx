@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Server } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
 import { networkImageRuntimeClass } from './network-image-state.js';
@@ -7,16 +8,19 @@ type ConnectionSidebarServerIconProps = {
   className?: string;
   iconUrl?: string | null;
   imageClassName?: string;
+  fallbackLabel?: string;
   runtime: NetworkRuntimeState | null;
 };
 
 export function ConnectionSidebarServerIcon(
   props: ConnectionSidebarServerIconProps,
 ) {
-  if (props.iconUrl) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  if (props.iconUrl && props.iconUrl !== failedUrl) {
     return (
       <img
         src={props.iconUrl}
+        onError={() => setFailedUrl(props.iconUrl ?? null)}
         alt=""
         className={cn(
           'shrink-0 rounded-sm object-cover',
@@ -29,6 +33,10 @@ export function ConnectionSidebarServerIcon(
         referrerPolicy="no-referrer"
       />
     );
+  }
+
+  if (props.fallbackLabel) {
+    return <span aria-hidden>{props.fallbackLabel}</span>;
   }
 
   return (

@@ -103,14 +103,14 @@ test('assistant context includes the full selected log for date references', () 
   });
   const context = buildAiAssistantContext(store, channelBuffer.id, {
     mode: 'answer',
-    prompt: 'Describe the one from June 12',
+    prompt: 'Describe the one from June 12 2026',
   });
 
-  assert.deepEqual(context.fullLog?.messages, [juneMessage, message]);
+  assert.deepEqual(context.fullLog?.messages, [juneMessage]);
   assert.match(renderAiAssistantContext(context), /June 12 scene details/);
 });
 
-test('assistant context includes full log for assistant-thread follow-ups', () => {
+test('assistant follow-ups do not load the whole history automatically', () => {
   const oldMessage = createMessage('message-old', 'Runner-up details live here', 10);
   const store = createConversationStore(channelBuffer, [message], {
     allMessages: [oldMessage, message],
@@ -123,8 +123,7 @@ test('assistant context includes full log for assistant-thread follow-ups', () =
     prompt: 'Describe that one',
   });
 
-  assert.deepEqual(context.fullLog?.messages, [oldMessage, message]);
-  assert.match(renderAiAssistantContext(context), /Runner-up details live here/);
+  assert.equal(context.fullLog, null);
 });
 
 test('assistant requests include prior sidebar Q&A for clarification prompts', async () => {
@@ -170,7 +169,10 @@ const createConversationStore = (
   getBuffer: (bufferId: string) => buffer?.id === bufferId ? buffer : null,
   getMessageWindow: (messageId: string) =>
     Object.values(options.search ?? {}).flat().filter((entry) => entry.id === messageId),
-  listAllMessages: () => options.allMessages ?? messages,
+  listAssistantHistory: (_bufferId: string, limit: number, range?: { start: number; end: number } | null) => {
+    const all = (options.allMessages ?? messages).filter((entry) => !range || (entry.ts >= range.start && entry.ts < range.end));
+    return { messages: all.slice(-limit), hasMore: all.length > limit };
+  },
   listRecentMessagesForBuffer: () => messages,
   searchMessagesByBufferId: (_bufferId: string, query: string) => ({
     hasMore: false,

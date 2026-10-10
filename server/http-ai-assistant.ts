@@ -23,7 +23,15 @@ export const handleAiAssistantRoutes = async ({
   if (askMatch && req.method === 'POST') {
     const bufferId = decodeRouteParam(askMatch[1]);
     const request = readAiAssistantRequest(await readJson(req));
-    writeJson(res, 200, await context.assistant.ask(bufferId, request));
+    const controller = new AbortController();
+    const cancel = () => { if (!res.writableEnded) controller.abort(); };
+    res.once('close', cancel);
+    try {
+      const response = await context.assistant.ask(bufferId, request, controller.signal);
+      if (!res.destroyed) writeJson(res, 200, response);
+    } finally {
+      res.off('close', cancel);
+    }
     return true;
   }
 

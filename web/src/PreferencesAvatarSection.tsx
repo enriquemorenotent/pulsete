@@ -20,8 +20,8 @@ export function PreferencesAvatarSection(props: PreferencesAvatarSectionProps) {
         </p>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-border bg-secondary/30 px-4 py-4 text-[13px]">
-        <div className="flex items-start justify-between gap-3 rounded-md border border-white/6 bg-black/14 px-3 py-3">
+      <div className="space-y-3 border-b border-border pb-6 text-sm">
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-secondary/50 px-4 py-4">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">Show external avatars</p>
             <p className="text-muted-foreground">

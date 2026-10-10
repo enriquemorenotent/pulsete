@@ -153,7 +153,7 @@ export function PaneHeader(props: {
   );
 
   return (
-    <div className="relative z-20 shrink-0 border-b border-[#292d33] bg-[#101215]">
+    <div className="relative z-20 shrink-0 border-b border-[#3b4758] bg-[#171c25]">
       {props.avatar ? (
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 px-4 py-4">
           <div className="-my-4 -ml-4 shrink-0">
@@ -165,7 +165,7 @@ export function PaneHeader(props: {
           </div>
         </div>
       ) : (
-        <div className="flex min-h-[72px] items-center justify-between gap-4 px-5 py-3">
+        <div className="flex min-h-[72px] flex-col items-start justify-between gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
           {identity}
           {props.actions}
         </div>

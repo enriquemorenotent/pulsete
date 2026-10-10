@@ -3,12 +3,16 @@ import Markdown, { type MarkdownToJSX } from 'markdown-to-jsx/react';
 
 type AiAssistantMarkdownProps = {
   children: string;
+  sourcePrefix?: string;
+  sourceLabels?: string[];
 };
 
 export function AiAssistantMarkdown(props: AiAssistantMarkdownProps) {
   return (
     <Markdown options={markdownOptions}>
-      {props.children}
+      {props.children.replace(/\[S(\d+)\]/g, (citation, number: string) =>
+        props.sourcePrefix && props.sourceLabels?.includes(`S${number}`)
+          ? `[${citation}](#${props.sourcePrefix}-S${number})` : citation)}
     </Markdown>
   );
 }
@@ -60,6 +64,13 @@ function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'>) {
   return (
     <a
       href={props.href}
+      onClick={() => {
+        if (props.href?.startsWith('#assistant-source-')) {
+          const source = document.getElementById(props.href.slice(1));
+          const details = source?.closest('details');
+          if (details) details.open = true;
+        }
+      }}
       title={props.title}
       target={external ? '_blank' : undefined}
       rel={external ? 'noopener noreferrer' : undefined}

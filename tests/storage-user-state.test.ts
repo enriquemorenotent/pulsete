@@ -39,6 +39,7 @@ test('workspace preferences, drafts, and avatar blobs survive a storage restart'
       }],
       channels: [{ networkId: network.id, channel: '#help' }],
     },
+    developerMode: true,
     externalAvatarsEnabled: true,
     hideOfflineFriends: true,
     leftSidebarWidth: 312,
@@ -82,6 +83,7 @@ test('durable user state starts with explicit defaults', () => {
   try {
     const snapshot = storage.snapshot();
     assert.deepEqual(snapshot.preferences, defaultWorkspacePreferences);
+    assert.equal(snapshot.preferences.developerMode, false);
     assert.deepEqual(snapshot.drafts, []);
     assert.deepEqual(snapshot.userAvatarOverrides, []);
     assert.equal(snapshot.browserStorageImportPending, true);

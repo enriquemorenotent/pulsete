@@ -22,6 +22,7 @@ import type { ServerSidebarAccordionState } from './server-sidebar-accordion-sta
 
 export type WorkspaceRightSidebarProps = {
   workspace: WorkspaceView;
+  onReconnectNetwork?: () => Promise<boolean>;
   nicklist: Omit<NicklistPanelProps, 'channel' | 'network'>;
   onCollapse?: () => void;
   assistant?: {
@@ -129,13 +130,13 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     );
   }
 
-  if (!props.workspace.showNicklist || !props.workspace.selectedChannel) {
+  if (props.workspace.selectedBuffer?.kind !== 'channel') {
     return null;
   }
 
   return (
     <RightSidebarTabs
-      key={props.workspace.selectedChannel.id}
+      key={props.workspace.selectedBuffer.id}
       defaultValue="members"
       onCollapse={props.onCollapse ?? (() => undefined)}
       tabs={[
@@ -144,7 +145,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
           label: 'Members',
           value: 'members',
           content: (
-            <NicklistPanel
+            props.workspace.showNicklist && props.workspace.selectedChannel ? <NicklistPanel
               network={props.workspace.selectedNetwork}
               channel={props.workspace.selectedChannel}
               friends={props.nicklist.friends}
@@ -156,7 +157,14 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
               showMedia={props.nicklist.showMedia}
               onSaveNickEmoji={props.nicklist.onSaveNickEmoji}
               onSelectNick={props.nicklist.onSelectNick}
-            />
+            /> : (
+              <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+                <Users className="size-12 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                <h3 className="text-base font-semibold">Members are unavailable {props.workspace.selectedRuntime?.phase === 'connected' ? 'until you join' : 'offline'}</h3>
+                <p className="text-sm leading-6 text-muted-foreground">{props.workspace.selectedRuntime?.phase === 'connected' ? 'Join this channel to see who is here.' : 'Your conversation history is still here. Reconnect to see channel members.'}</p>
+                {props.workspace.selectedRuntime?.phase !== 'connected' && props.onReconnectNetwork ? <Button variant="outline" onClick={() => void props.onReconnectNetwork?.()} disabled={props.workspace.selectedRuntime?.phase === 'connecting'}>{props.workspace.selectedRuntime?.phase === 'connecting' ? 'Connecting…' : 'Reconnect'}</Button> : null}
+              </div>
+            )
           ),
         },
         {
@@ -184,7 +192,7 @@ function RightSidebarTabs(props: {
   tabs: Array<{ content: ReactNode; icon: LucideIcon; label: string; value: string }>;
 }) {
   return (
-    <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col bg-[#15181c]">
+    <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col bg-[#202733]">
       <div className="flex h-12 w-full shrink-0 items-stretch">
         <TabsList
           aria-label="Sidebar views"
@@ -198,10 +206,10 @@ function RightSidebarTabs(props: {
                 value={tab.value}
                 aria-label={tab.label}
                 title={tab.label}
-                className="h-full min-w-0 flex-1 rounded-none border-0 border-b-2 border-transparent p-0 text-muted-foreground/72 hover:bg-white/[0.025] hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+                className="h-full min-w-0 flex-1 gap-2 rounded-none border-0 border-b-2 border-transparent px-2 text-muted-foreground hover:bg-white/5 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
               >
                 <TabIcon aria-hidden className="size-4" />
-                <span className="sr-only">{tab.label}</span>
+                <span>{tab.label}</span>
               </TabsTrigger>
             );
           })}

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { AiAssistantMode } from '../../shared/protocol-ai.js';
+import type { AiAssistantContext, AiAssistantMode } from '../../shared/protocol-ai.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 
 type Listener = () => void;
@@ -19,6 +19,7 @@ type StartRequestInput = {
 };
 
 type ResolveRequestInput = {
+  context?: AiAssistantContext;
   mode: AiAssistantMode;
   text: string;
 };
@@ -127,6 +128,7 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
           {
             id: nextEntryId++,
             mode: result.mode,
+            context: result.context,
             role: 'assistant',
             text: result.text,
           },

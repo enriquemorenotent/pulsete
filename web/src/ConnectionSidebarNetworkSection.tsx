@@ -219,7 +219,7 @@ function SidebarBufferGroup(props: {
 }) {
 	return (
 		<section className={props.className}>
-			<h2 className="mb-1.5 px-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[#77808c]">
+			<h2 className="mb-1.5 px-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
 				{props.label}
 			</h2>
 			<div className="space-y-0.5">{props.children}</div>

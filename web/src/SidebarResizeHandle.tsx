@@ -57,7 +57,7 @@ export function SidebarResizeHandle(props: SidebarResizeHandleProps) {
       >
         <div
           className={cn(
-            'h-full w-px bg-[#292d33] transition-colors group-hover:bg-[#42464f]',
+            'h-full w-px bg-[#3b4758] transition-colors group-hover:bg-[#42464f]',
             props.isResizing && 'bg-primary'
           )}
         />

@@ -1,4 +1,5 @@
 import type { AiAssistantRequest } from '../shared/protocol-ai.js';
+import { readAssistantDateRange } from './ai-assistant-dates.js';
 
 type AiAssistantRetrievalRequest = Pick<
   AiAssistantRequest,
@@ -20,9 +21,11 @@ export const planAiAssistantRetrieval = (
   }
   const followUp = isAssistantThreadFollowUp(prompt, request.assistantTurns);
   return {
-    fullLogWhenSearchMisses: followUp || hasHistoryIntent(prompt),
-    includeFullLog: followUp || needsFullLog(prompt) || hasDateReference(prompt),
-    searchTerms: extractSearchTerms(prompt),
+    fullLogWhenSearchMisses: hasHistoryIntent(prompt),
+    includeFullLog: needsFullLog(prompt) || hasDateReference(prompt),
+    searchTerms: extractSearchTerms(followUp
+      ? `${prompt} ${request.assistantTurns.filter((turn) => turn.role === 'user').at(-1)?.text ?? ''}`
+      : prompt),
   };
 };
 
@@ -33,17 +36,14 @@ const emptyRetrievalPlan: AiAssistantRetrievalPlan = {
 };
 
 const needsFullLog = (prompt: string) =>
-  /\b(all|always|any time|best|count|entire|ever|every|everything|first|frequency|full|how many|last time|least|most|never|total|whole|worst)\b/i
+  /\b(all|always|any time|count|entire|ever|every|everything|first|frequency|full|how many|last time|least|most|never|total|whole|alle|alles|gesamte|gesamt|jemals|wie oft|wie viele|häufigkeit|ersten|letzte mal)\b/i
     .test(prompt);
 
 const hasHistoryIntent = (prompt: string) =>
-  /\b(before|discussed|earlier|history|log|mentioned|older|past|previous|previously|remember|said|talked|when did)\b/i
+  /\b(before|discuss|discussed|earlier|history|log|mentioned|older|past|previous|previously|remember|said|talked|when did|früher|vorher|verlauf|besprochen|erwähnt|gesagt|erinnerst)\b/i
     .test(prompt);
 
-const hasDateReference = (prompt: string) =>
-  /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}\b/i
-    .test(prompt)
-  || /\b\d{4}-\d{1,2}-\d{1,2}\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(prompt);
+const hasDateReference = (prompt: string) => readAssistantDateRange(prompt) !== null;
 
 const isAssistantThreadFollowUp = (
   prompt: string,
@@ -73,6 +73,11 @@ const extractSearchTerms = (prompt: string) => {
 const searchTermLimit = 5;
 
 const searchStopWords = new Set([
+  'can', 'please', 'explain', 'briefly', 'discuss', 'discussed', 'yesterday', 'today',
+  'wie', 'oft', 'viele', 'haben', 'wir', 'uns', 'getroffen', 'was', 'wann', 'gestern',
+  'heute', 'vorgestern', 'bitte', 'kannst', 'erklären', 'diese', 'dieser', 'dieses',
+  'eine', 'einen', 'einem', 'einer', 'der', 'die', 'das', 'und', 'mit', 'für', 'ist',
+  'sind', 'hat', 'über', 'den', 'dem', 'aus', 'besprochen', 'jemals', 'alle',
   'about', 'after', 'again', 'answer', 'before', 'catch', 'conversation',
   'could', 'describe', 'did', 'does', 'ever', 'find', 'from', 'had', 'has',
   'have', 'history', 'how', 'many', 'message', 'messages', 'need', 'one',
