@@ -1,38 +1,14 @@
-import { useMemo, type FormEvent, type ReactNode, type RefObject } from 'react';
-import { Hash, Search, UserRound } from 'lucide-react';
-import type {
-  ChannelUserMode,
-  ChatMessage,
-  LogSource,
-  MutedNickState,
-  NetworkProfile,
-  NickEmojiState,
-} from '../../shared/protocol-chat.js';
-import { Badge } from '@/components/ui/badge.js';
+import { useMemo, useState, type FormEvent, type RefObject } from 'react';
+import { Search, X } from 'lucide-react';
+import type { ChatMessage, LogSource, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
-import {
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog.js';
+import { DialogClose, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
-import { ScrollArea } from '@/components/ui/scroll-area.js';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
-import { ChatTranscriptStatic } from './ChatTranscriptStatic.js';
-import { HistorySearchResults } from './HistorySearchDialogResults.js';
 import type { HistorySearchState } from './HistorySearchDialog.js';
-import { buildNickEmojiByNetworkNick } from './nick-emoji-utils.js';
-import { formatMessageTimestampTitle } from './chat-pane-message-utils.js';
-import { defaultMessageDisplayMode } from './message-display-mode.js';
-import { buildChatTranscriptModel } from './transcript/model.js';
+import { SourceList } from './HistoryConversationList.js';
+import { HistoryWorkspaceResults } from './HistoryWorkspaceResults.js';
+import { HistoryTranscriptPane } from './HistoryTranscriptPane.js';
 import { cn } from '@/lib/utils.js';
 
 export const allNetworksValue = '__all__';
@@ -51,16 +27,33 @@ export type LogSourceHistoryState = {
   status: 'idle' | 'loading' | 'loaded' | 'error';
   messages: ChatMessage[];
   hasMore: boolean;
+  hasNewer?: boolean;
   error: string | null;
 };
 
 export type LogInspectorDialogBodyProps = {
+  scopeBufferId: string;
+  scopeLabel: string;
+  searchDirty: boolean;
+  onScopeChange: (value: string) => void;
+  onClearFilters: () => void;
+  onSearchConversation: () => void;
+  onSourceLoadNewer: () => void;
+  onSourceLatest: () => void;
+  fromDate: string;
+  toDate: string;
+  searchNetworkValue: string;
+  loadingMore: boolean;
+  pageError: string | null;
+  onFromDateChange: (value: string) => void;
+  onToDateChange: (value: string) => void;
+  onSearchNetworkChange: (value: string) => void;
+  onLoadMore: () => void;
   activeMode: LogInspectorMode;
   expandedMessageId: string | null;
   inputRef: RefObject<HTMLInputElement | null>;
   loadingOlderSourceHistory: boolean;
   mutedNicks: MutedNickState[];
-  networkValue: string;
   networks: NetworkProfile[];
   nickEmojis: NickEmojiState[];
   query: string;
@@ -70,7 +63,6 @@ export type LogInspectorDialogBodyProps = {
   sourceKindValue: string;
   sourceQuery: string;
   sourceState: LogSourceListState;
-  target: string;
   onActiveModeChange: (value: LogInspectorMode) => void;
   onNetworkChange: (value: string) => void;
   onQueryChange: (value: string) => void;
@@ -81,353 +73,70 @@ export type LogInspectorDialogBodyProps = {
   onSourceSelect: (source: LogSource) => void;
   onSourceSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onTargetChange: (value: string) => void;
 };
 
 export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
-  const networkNamesById = useMemo(
-    () => new Map(props.networks.map((network) => [network.id, network.name])),
-    [props.networks],
-  );
-  const renderResultMeta = (message: ChatMessage) => (
-    <>
-      <Badge variant="secondary" className="normal-case tracking-normal">
-        {networkNamesById.get(message.networkId) ?? message.networkId}
-      </Badge>
-      <Badge variant="outline" className="normal-case tracking-normal">
-        {message.target}
-      </Badge>
-    </>
-  );
-
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
-        <DialogTitle>Chat history</DialogTitle>
-        <DialogDescription>Saved conversations across all networks</DialogDescription>
-      </DialogHeader>
-      <Tabs
-        value={props.activeMode}
-        onValueChange={(value) => props.onActiveModeChange(value as LogInspectorMode)}
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        <div className="shrink-0 border-b border-border px-4 py-2">
-          <TabsList>
-            <TabsTrigger value="sources">Sources</TabsTrigger>
-            <TabsTrigger value="search">Search</TabsTrigger>
-          </TabsList>
+  const [showReader, setShowReader] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const names = useMemo(() => new Map(props.networks.map((network) => [network.id, network.name])), [props.networks]);
+  const invalidDates = !!props.fromDate && !!props.toDate && props.fromDate > props.toDate;
+  return <div className="flex h-full min-h-0 flex-col">
+    <DialogHeader className="relative shrink-0 border-b border-border px-5 py-3 pr-14">
+      <DialogClose asChild><Button variant="ghost" size="icon" className="absolute right-3 top-3" aria-label="Close chat history"><X /></Button></DialogClose>
+      <DialogTitle>Chat history</DialogTitle>
+      <DialogDescription>Browse and search saved conversations</DialogDescription>
+    </DialogHeader>
+    <form onSubmit={(event) => { setShowReader(false); props.onSubmit(event); }} className="shrink-0 space-y-2 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap gap-2">
+        <Input ref={props.inputRef} value={props.query} onChange={(event) => props.onQueryChange(event.currentTarget.value)} placeholder="Search messages or browse by date" aria-label="Search chat history" className="min-w-0 flex-1" />
+        <div className={cn(showFilters ? 'contents' : 'hidden md:contents')}>
+        <select aria-label="Search scope" value={props.scopeBufferId ? 'conversation' : 'all'} className={selectClass} onChange={(event) => props.onScopeChange(event.target.value)}>
+          <option value="all">All conversations</option>
+          <option value="conversation" disabled={!props.selectedSource && !props.scopeBufferId}>This conversation{props.scopeLabel ? ` · ${props.scopeLabel}` : ''}</option>
+        </select>
+        <select aria-label="Filter logs by network" value={props.searchNetworkValue} className={selectClass} disabled={!!props.scopeBufferId} onChange={(event) => { props.onSearchNetworkChange(event.target.value); props.onNetworkChange(event.target.value); }}>
+          <option value={allNetworksValue}>All networks</option>
+          {props.networks.map((network) => <option key={network.id} value={network.id}>{network.name}</option>)}
+        </select>
         </div>
-        <TabsContent value="sources" className="m-0 flex min-h-0 flex-1 flex-col">
-          <SourceBrowser
-            loadingOlderHistory={props.loadingOlderSourceHistory}
-            mutedNicks={props.mutedNicks}
-            networkNamesById={networkNamesById}
-            networkValue={props.networkValue}
-            networks={props.networks}
-            nickEmojis={props.nickEmojis}
-            selectedSource={props.selectedSource}
-            sourceHistoryState={props.sourceHistoryState}
-            sourceKindValue={props.sourceKindValue}
-            sourceQuery={props.sourceQuery}
-            sourceState={props.sourceState}
-            onNetworkChange={props.onNetworkChange}
-            onSourceKindChange={props.onSourceKindChange}
-            onSourceLoadOlder={props.onSourceLoadOlder}
-            onSourceQueryChange={props.onSourceQueryChange}
-            onSourceSelect={props.onSourceSelect}
-            onSourceSubmit={props.onSourceSubmit}
-          />
-        </TabsContent>
-        <TabsContent value="search" className="m-0 flex min-h-0 flex-1 flex-col">
-          <form
-            onSubmit={props.onSubmit}
-            className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3 md:flex-row"
-          >
-            <Input
-              ref={props.inputRef}
-              value={props.query}
-              onChange={(event) => props.onQueryChange(event.currentTarget.value)}
-              placeholder="Search chat history"
-              aria-label="Search chat history"
-              className="md:flex-1"
-            />
-            <NetworkSelect
-              networkValue={props.networkValue}
-              networks={props.networks}
-              onNetworkChange={props.onNetworkChange}
-            />
-            <Input
-              value={props.target}
-              onChange={(event) => props.onTargetChange(event.currentTarget.value)}
-              placeholder="Conversation"
-              aria-label="Filter logs by conversation"
-              className="md:w-44"
-            />
-            <Button type="submit" disabled={!props.query.trim() || props.searchState.status === 'loading'}>
-              <Search />
-              Search
-            </Button>
+        <Button type="submit" disabled={invalidDates || props.searchState.status === 'loading'}><Search />Search</Button>
+      </div>
+      <Button type="button" variant="ghost" size="sm" className="md:hidden" aria-expanded={showFilters} onClick={() => setShowFilters((value) => !value)}>{showFilters ? 'Hide filters' : 'Filters'} · {props.scopeBufferId ? props.scopeLabel : 'All conversations'}</Button>
+      <div className={cn('flex-wrap items-center gap-x-4 gap-y-2', showFilters ? 'flex' : 'hidden md:flex')}>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">From<Input type="date" aria-label="From date" className="h-8 w-36" value={props.fromDate} max={props.toDate || undefined} onChange={(event) => props.onFromDateChange(event.target.value)} /></label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">To<Input type="date" aria-label="To date" className="h-8 w-36" value={props.toDate} min={props.fromDate || undefined} onChange={(event) => props.onToDateChange(event.target.value)} /></label>
+        <Button type="button" variant="ghost" size="sm" onClick={props.onClearFilters}>Clear filters</Button>
+        {invalidDates ? <p role="alert" className="text-xs text-destructive">Choose an end date on or after the start date.</p> : null}
+      </div>
+    </form>
+    <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(17rem,24rem)_minmax(0,1fr)]">
+      <Tabs value={props.activeMode} onValueChange={(value) => props.onActiveModeChange(value as LogInspectorMode)} className={cn('flex min-h-0 flex-col border-r border-border bg-black/10', showReader && 'hidden md:flex')}>
+        <TabsList className="m-2 shrink-0 self-start">
+          <TabsTrigger value="sources">Conversations</TabsTrigger>
+          <TabsTrigger value="search">Results{props.searchState.status === 'loaded' && !props.searchDirty ? ` (${props.searchState.results.length})` : ''}</TabsTrigger>
+        </TabsList>
+        <TabsContent forceMount value="sources" className="m-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+          <form onSubmit={props.onSourceSubmit} className="space-y-2 border-b border-border p-3">
+            <div className="flex gap-2"><Input value={props.sourceQuery} onChange={(event) => props.onSourceQueryChange(event.target.value)} placeholder="Find a conversation" aria-label="Find conversation" /><Button type="submit" variant="outline" disabled={props.sourceState.status === 'loading'}>Find</Button></div>
+            <select aria-label="Filter conversations by type" value={props.sourceKindValue} className={cn(selectClass, 'w-full')} onChange={(event) => props.onSourceKindChange(event.target.value)}>
+              <option value={allSourceKindsValue}>All types</option><option value="channel">Channels</option><option value="query">Direct messages</option>
+            </select>
           </form>
-          <ScrollArea className="min-h-0 flex-1">
-            <HistorySearchResults
-              expandedMessageId={props.expandedMessageId}
-              mode={defaultMessageDisplayMode}
-              renderResultMeta={renderResultMeta}
-              searchState={props.searchState}
-              onOpenChannel={() => undefined}
-              onResultToggle={props.onResultToggle}
-            />
-          </ScrollArea>
+          <div className="min-h-0 flex-1 overflow-y-auto"><SourceList networkNamesById={names} selectedSource={props.selectedSource} sourceState={props.sourceState} onSourceSelect={(source) => { props.onSourceSelect(source); setShowReader(true); }} /></div>
+        </TabsContent>
+        <TabsContent forceMount value="search" className="m-0 min-h-0 flex-1 overflow-y-auto data-[state=inactive]:hidden">
+          <HistoryWorkspaceResults state={props.searchState} dirty={props.searchDirty} names={names} selectedId={props.expandedMessageId} loadingMore={props.loadingMore} pageError={props.pageError} onLoadMore={props.onLoadMore} onSelect={(id) => { props.onResultToggle(id); setShowReader(true); }} />
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-function SourceBrowser(props: {
-  loadingOlderHistory: boolean;
-  mutedNicks: MutedNickState[];
-  networkNamesById: ReadonlyMap<string, string>;
-  networkValue: string;
-  networks: NetworkProfile[];
-  nickEmojis: NickEmojiState[];
-  selectedSource: LogSource | null;
-  sourceHistoryState: LogSourceHistoryState;
-  sourceKindValue: string;
-  sourceQuery: string;
-  sourceState: LogSourceListState;
-  onNetworkChange: (value: string) => void;
-  onSourceKindChange: (value: string) => void;
-  onSourceLoadOlder: () => void;
-  onSourceQueryChange: (value: string) => void;
-  onSourceSelect: (source: LogSource) => void;
-  onSourceSubmit: (event: FormEvent<HTMLFormElement>) => void;
-}) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <form
-        onSubmit={props.onSourceSubmit}
-        className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3 md:flex-row"
-      >
-        <Input
-          value={props.sourceQuery}
-          onChange={(event) => props.onSourceQueryChange(event.currentTarget.value)}
-          placeholder="Channel or PM"
-          aria-label="Find log source"
-          className="md:flex-1"
-        />
-        <NetworkSelect
-          networkValue={props.networkValue}
-          networks={props.networks}
-          onNetworkChange={props.onNetworkChange}
-        />
-        <Select value={props.sourceKindValue} onValueChange={props.onSourceKindChange}>
-          <SelectTrigger size="sm" className="w-full md:w-32" aria-label="Filter sources by type">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={allSourceKindsValue}>All sources</SelectItem>
-              <SelectItem value="channel">Channels</SelectItem>
-              <SelectItem value="query">PMs</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Button type="submit" disabled={props.sourceState.status === 'loading'}>
-          <Search />
-          Browse
-        </Button>
-      </form>
-      <div className="grid min-h-0 flex-1 md:grid-cols-[20rem_minmax(0,1fr)]">
-        <ScrollArea className="min-h-0 border-b border-border md:border-b-0 md:border-r">
-          <SourceList
-            networkNamesById={props.networkNamesById}
-            selectedSource={props.selectedSource}
-            sourceState={props.sourceState}
-            onSourceSelect={props.onSourceSelect}
-          />
-        </ScrollArea>
-        <SourceTranscript
-          historyState={props.sourceHistoryState}
-          loadingOlderHistory={props.loadingOlderHistory}
-          mutedNicks={props.mutedNicks}
-          nickEmojis={props.nickEmojis}
-          selectedSource={props.selectedSource}
-          onLoadOlder={props.onSourceLoadOlder}
-        />
-      </div>
-    </div>
-  );
-}
-
-function NetworkSelect(props: {
-  networkValue: string;
-  networks: NetworkProfile[];
-  onNetworkChange: (value: string) => void;
-}) {
-  return (
-    <Select value={props.networkValue} onValueChange={props.onNetworkChange}>
-      <SelectTrigger size="sm" className="w-full md:w-44" aria-label="Filter logs by network">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectItem value={allNetworksValue}>All networks</SelectItem>
-          {props.networks.map((network) => (
-            <SelectItem key={network.id} value={network.id}>
-              {network.name}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
-}
-
-function SourceList(props: {
-  networkNamesById: ReadonlyMap<string, string>;
-  selectedSource: LogSource | null;
-  sourceState: LogSourceListState;
-  onSourceSelect: (source: LogSource) => void;
-}) {
-  if (props.sourceState.status === 'idle') {
-    return <SourceEmptyState>Browse saved sources.</SourceEmptyState>;
-  }
-  if (props.sourceState.status === 'loading') {
-    return <SourceEmptyState>Loading sources...</SourceEmptyState>;
-  }
-  if (props.sourceState.status === 'error') {
-    return <SourceEmptyState>{props.sourceState.error ?? 'Failed to load sources'}</SourceEmptyState>;
-  }
-  if (props.sourceState.sources.length === 0) {
-    return <SourceEmptyState>No saved sources found.</SourceEmptyState>;
-  }
-  return (
-    <div className="flex flex-col gap-1 p-2">
-      {props.sourceState.sources.map((source) => (
-        <SourceRow
-          key={source.buffer.id}
-          networkName={props.networkNamesById.get(source.buffer.networkId) ?? source.buffer.networkId}
-          selected={props.selectedSource?.buffer.id === source.buffer.id}
-          source={source}
-          onSelect={() => props.onSourceSelect(source)}
-        />
-      ))}
-    </div>
-  );
-}
-
-function SourceRow(props: {
-  networkName: string;
-  selected: boolean;
-  source: LogSource;
-  onSelect: () => void;
-}) {
-  const kindLabel = props.source.buffer.kind === 'channel' ? 'Channel' : 'PM';
-  const Icon = props.source.buffer.kind === 'channel' ? Hash : UserRound;
-  return (
-    <button
-      type="button"
-      className={cn(
-        'w-full rounded-sm px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60',
-        props.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/70',
-      )}
-      onClick={props.onSelect}
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 truncate text-sm font-medium">{props.source.buffer.target}</span>
-      </div>
-      <div className="mt-1 flex flex-wrap gap-1.5">
-        <Badge variant="secondary" className="normal-case tracking-normal">{props.networkName}</Badge>
-        <Badge variant="outline" className="normal-case tracking-normal">{kindLabel}</Badge>
-        {!props.source.open ? (
-          <Badge variant="secondary" className="normal-case tracking-normal">Closed</Badge>
-        ) : null}
-        <Badge variant="secondary" className="normal-case tracking-normal">
-          {formatMessageCount(props.source.messageCount)}
-        </Badge>
-      </div>
-      {props.source.aliases.length > 0 ? (
-        <div className="mt-1 truncate text-[12px] text-muted-foreground">
-          aka {props.source.aliases.join(', ')}
+      <section aria-label="Conversation history" className={cn('flex min-h-0 min-w-0 flex-col', !showReader && 'hidden md:flex')}>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <div className="min-w-0"><Button variant="ghost" size="sm" className="mb-1 md:hidden" onClick={() => setShowReader(false)}>Back to list</Button><h3 className="truncate text-base font-semibold">{props.selectedSource?.buffer.target ?? 'Conversation history'}</h3><p className="text-xs text-muted-foreground">{props.selectedSource ? `${names.get(props.selectedSource.buffer.networkId) ?? props.selectedSource.buffer.networkId} · Saved messages` : 'Select a conversation or search result'}</p></div>
+          {props.selectedSource ? <div className="flex flex-wrap gap-1"><Button variant="ghost" size="sm" onClick={() => { props.onSearchConversation(); setShowReader(false); }}>Search this conversation</Button><Button variant="outline" size="sm" onClick={props.onSourceLatest}>Latest messages</Button></div> : null}
         </div>
-      ) : null}
-      {props.source.lastMessageTs ? (
-        <time className="mt-1 block text-[11px] text-muted-foreground">
-          {formatMessageTimestampTitle(props.source.lastMessageTs)}
-        </time>
-      ) : null}
-    </button>
-  );
-}
-
-function SourceTranscript(props: {
-  historyState: LogSourceHistoryState;
-  loadingOlderHistory: boolean;
-  mutedNicks: MutedNickState[];
-  nickEmojis: NickEmojiState[];
-  selectedSource: LogSource | null;
-  onLoadOlder: () => void;
-}) {
-  const nickEmojiByNetworkNick = useMemo(
-    () => buildNickEmojiByNetworkNick(props.nickEmojis),
-    [props.nickEmojis],
-  );
-  const model = useMemo(
-    () => buildChatTranscriptModel({
-      firstUnreadDividerIndex: null,
-      listKind: 'chat',
-      messages: props.historyState.messages,
-      mutedNicks: props.mutedNicks,
-      unreadDividerKey: `log-source:${props.selectedSource?.buffer.id ?? 'none'}`,
-    }),
-    [props.historyState.messages, props.mutedNicks, props.selectedSource?.buffer.id],
-  );
-
-  if (!props.selectedSource) {
-    return <SourceEmptyState>Select a source.</SourceEmptyState>;
-  }
-  if (props.historyState.status === 'loading') {
-    return <SourceEmptyState>Loading transcript...</SourceEmptyState>;
-  }
-  if (props.historyState.status === 'error') {
-    return <SourceEmptyState>{props.historyState.error ?? 'Failed to load transcript'}</SourceEmptyState>;
-  }
-
-  return (
-    <ChatTranscriptStatic
-      channelUserModesByNick={emptyChannelUserModes}
-      emptyBody="No saved messages."
-      expandedMutedGroupKeys={emptyExpandedMutedGroupKeys}
-      listKind="chat"
-      loadingOlderHistory={props.loadingOlderHistory}
-      mode={defaultMessageDisplayMode}
-      model={model}
-      nickEmojiByNetworkNick={nickEmojiByNetworkNick}
-      onLoadOlderHistory={props.historyState.hasMore ? async () => {
-        props.onLoadOlder();
-        return 0;
-      } : undefined}
-      onOpenChannel={() => undefined}
-      onToggleMutedGroup={() => undefined}
-      participantHighlightMode="none"
-    />
-  );
-}
-
-const emptyChannelUserModes = new Map<string, ChannelUserMode>();
-const emptyExpandedMutedGroupKeys = new Set<string>();
-
-const formatMessageCount = (count: number) =>
-  count === 1 ? '1 message' : `${count} messages`;
-
-function SourceEmptyState(props: { children: ReactNode }) {
-  return (
-    <div className="p-2">
-      <div className="rounded-sm border border-dashed border-border px-3 py-6 text-center text-[13px] text-muted-foreground">
-        {props.children}
-      </div>
+        <HistoryTranscriptPane state={props.sourceHistoryState} selectedId={props.expandedMessageId} bufferId={props.selectedSource?.buffer.id ?? null} mutedNicks={props.mutedNicks} nickEmojis={props.nickEmojis} loading={props.loadingOlderSourceHistory} onLoadOlder={props.onSourceLoadOlder} onLoadNewer={props.onSourceLoadNewer} />
+      </section>
     </div>
-  );
+  </div>;
 }
+
+const selectClass = 'h-9 min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50';

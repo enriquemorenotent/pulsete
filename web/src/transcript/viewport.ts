@@ -27,6 +27,9 @@ type UseTranscriptViewportParams = {
   jumpToLatestRequestId: number;
   loadingOlderHistory: boolean;
   onLoadOlderHistory?: () => Promise<number>;
+  onLoadNewerHistory?: () => Promise<number>;
+  hasNewerHistory?: boolean;
+  isRestoringWindow?: () => boolean;
   rowKeys: readonly string[];
   totalItemCount: number;
   unreadRowIndex: number | null;
@@ -40,6 +43,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const isPinnedToLatestRef = useRef(true);
   const isFollowingLatestRef = useRef(true);
   const scrollerPointerDownRef = useRef(false);
+  const olderScrollRequestedRef = useRef(false);
   const scrollerNodeRef = useRef<HTMLElement | null>(null);
   const pendingSendToLatestRef = useRef(false);
   const positionedBufferIdRef = useRef<string | null>(null);
@@ -127,7 +131,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     virtuosoRef.current?.scrollToIndex({
       align: 'center',
       behavior: 'auto',
-      index: firstItemIndexRef.current + params.focusRowIndex,
+      index: params.focusRowIndex,
     });
   }, [
     params.bufferId,
@@ -174,7 +178,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     }
 
     const restored = resolveRestoredTranscriptScrollIndex({
-      firstItemIndex: firstItemIndexRef.current,
+      firstItemIndex: 0,
       rowKeys: params.rowKeys,
       snapshot: transcriptScrollSnapshots.get(params.bufferId),
     });
@@ -187,7 +191,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     if (params.initialScrollTarget === 'first-unread' && params.unreadRowIndex !== null) {
       virtuosoRef.current?.scrollToIndex(
         resolveFirstUnreadScrollLocation(
-          firstItemIndexRef.current + params.unreadRowIndex,
+          params.unreadRowIndex,
           scrollerRef.current?.clientHeight ?? 0,
         ),
       );
@@ -212,11 +216,14 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
         && params.bufferId
         && positionedBufferIdRef.current === params.bufferId
         && !params.initialHistoryPending
+        && !params.isRestoringWindow?.()
+        && olderScrollRequestedRef.current
       ) {
+        olderScrollRequestedRef.current = false;
         void handleLoadOlderHistory();
       }
     },
-    [handleLoadOlderHistory, params.bufferId, params.initialHistoryPending],
+    [handleLoadOlderHistory, params.bufferId, params.initialHistoryPending, params.isRestoringWindow],
   );
 
   const handleStartReached = useCallback(
@@ -225,17 +232,20 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
         params.bufferId
         && positionedBufferIdRef.current === params.bufferId
         && !params.initialHistoryPending
+        && !params.isRestoringWindow?.()
+        && olderScrollRequestedRef.current
       ) {
+        olderScrollRequestedRef.current = false;
         void handleLoadOlderHistory();
       }
     },
-    [handleLoadOlderHistory, params.bufferId, params.initialHistoryPending],
+    [handleLoadOlderHistory, params.bufferId, params.initialHistoryPending, params.isRestoringWindow],
   );
 
   const followOutput = useCallback(
     (_atLatest: boolean): ScrollBehavior => {
       const behavior = resolveLatestFollowBehavior({
-        followingLatest: isFollowingLatestRef.current,
+        followingLatest: isFollowingLatestRef.current && !params.hasNewerHistory,
         pendingSendToLatest: pendingSendToLatestRef.current,
       });
       if (pendingSendToLatestRef.current && behavior !== false) {
@@ -243,18 +253,38 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
       }
       return behavior;
     },
-    [],
+    [params.hasNewerHistory],
   );
+
+  const newerFrameRef = useRef<number | null>(null);
+  const handleEndReached = useCallback(() => {
+    if (newerFrameRef.current !== null) cancelAnimationFrame(newerFrameRef.current);
+    // Let Virtuoso restore the anchor before deciding whether we're still at the end.
+    newerFrameRef.current = requestAnimationFrame(() => {
+      newerFrameRef.current = null;
+      const node = scrollerRef.current;
+      if (node && node.scrollHeight - node.clientHeight - node.scrollTop < 100
+        && positionedBufferIdRef.current === params.bufferId && !params.initialHistoryPending
+        && !params.isRestoringWindow?.()) {
+        void params.onLoadNewerHistory?.();
+      }
+    });
+  }, [params.bufferId, params.initialHistoryPending, params.onLoadNewerHistory, params.isRestoringWindow]);
+  useEffect(() => () => {
+    if (newerFrameRef.current !== null) cancelAnimationFrame(newerFrameRef.current);
+  }, [handleEndReached]);
 
   const handleAtBottomStateChange = useCallback(
     (nextAtBottom: boolean) => {
       isPinnedToLatestRef.current = nextAtBottom;
-      if (nextAtBottom) {
+      if (nextAtBottom && !params.hasNewerHistory) {
+        olderScrollRequestedRef.current = false;
         isFollowingLatestRef.current = true;
       }
+      if (nextAtBottom) handleEndReached();
       setIsPinnedToLatest(nextAtBottom);
     },
-    [],
+    [params.hasNewerHistory, handleEndReached],
   );
 
   const handleInlinePreviewLoad = useCallback(() => {
@@ -279,9 +309,13 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
 
   const handleScrollerWheel = useCallback((event: WheelEvent) => {
     if (event.deltaY < 0) {
+      olderScrollRequestedRef.current = true;
       stopFollowingLatest();
+      requestAnimationFrame(() => {
+        if ((scrollerRef.current?.scrollTop ?? Infinity) <= topAutoLoadThreshold) handleStartReached();
+      });
     }
-  }, [stopFollowingLatest]);
+  }, [stopFollowingLatest, handleStartReached]);
 
   const handleScrollerKeyDown = useCallback((event: KeyboardEvent) => {
     if (
@@ -290,12 +324,14 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
       || event.key === 'Home'
       || (event.key === ' ' && event.shiftKey)
     ) {
+      olderScrollRequestedRef.current = true;
       stopFollowingLatest();
     }
   }, [stopFollowingLatest]);
 
   const handleScrollerPointerDown = useCallback(() => {
     scrollerPointerDownRef.current = true;
+    olderScrollRequestedRef.current = true;
   }, []);
 
   const handleScrollerPointerUp = useCallback(() => {
@@ -303,6 +339,8 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   }, []);
 
   const handleScrollerScroll = useCallback(() => {
+    params.isRestoringWindow?.();
+    if (scrollerPointerDownRef.current) olderScrollRequestedRef.current = true;
     const node = scrollerNodeRef.current;
     if (
       scrollerPointerDownRef.current
@@ -311,7 +349,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     ) {
       stopFollowingLatest();
     }
-  }, [stopFollowingLatest]);
+  }, [stopFollowingLatest, params.isRestoringWindow]);
 
   const setScrollerNode = useCallback((node: HTMLElement | null | Window) => {
     const previousNode = scrollerNodeRef.current;
@@ -352,6 +390,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     handleItemsRendered,
     handleLoadOlderHistory,
     handleStartReached,
+    handleEndReached,
     scrollerRef: setScrollerNode,
     virtuosoRef,
   };

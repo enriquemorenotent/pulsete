@@ -50,7 +50,7 @@ export const connectionSidebarRowClass = (
 		? cn(
 			'group relative flex items-stretch overflow-hidden rounded-lg transition-colors',
 			options.selected
-				? 'bg-primary/15 ring-1 ring-inset ring-primary/25'
+				? 'bg-primary/10'
 				: 'hover:bg-white/[0.035] focus-within:bg-white/[0.04]',
 			options.dimmed && !activity.hasUnread && !options.selected && 'opacity-100',
 		)

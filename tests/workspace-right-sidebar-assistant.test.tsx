@@ -71,12 +71,12 @@ test('channel sidebar exposes members and assistant tabs', () => {
   assert.match(markup, /aria-label="Assistant"/);
   assert.match(markup, /lucide-sparkles/);
   assert.match(markup, /aria-label="Collapse right sidebar"/);
-  assert.match(markup, />New chat</);
+  assert.match(markup, /aria-label="New assistant chat"/);
   assert.doesNotMatch(markup, /Private assistant/);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);
 });
 
-test('private message sidebar exposes info and assistant tabs', () => {
+test('private message sidebar exposes context and assistant tabs', () => {
   const assistantStore = createAiAssistantStore();
   const markup = renderToStaticMarkup(
     <WorkspaceRightSidebar
@@ -99,12 +99,12 @@ test('private message sidebar exposes info and assistant tabs', () => {
   );
 
   assert.match(markup, /aria-label="Sidebar views"/);
-  assert.match(markup, /aria-label="Info"/);
-  assert.match(markup, /lucide-info/);
+  assert.match(markup, /aria-label="Context"/);
+  assert.match(markup, /lucide-notebook-pen/);
   assert.match(markup, /aria-label="Assistant"/);
   assert.match(markup, /lucide-sparkles/);
   assert.match(markup, /aria-label="Collapse right sidebar"/);
-  assert.doesNotMatch(markup, />New chat</);
+  assert.doesNotMatch(markup, /aria-label="New assistant chat"/);
   assert.doesNotMatch(markup, /Private assistant/);
   assert.match(markup, /content-assistant[\s\S]*data-\[state=inactive\]:hidden/);
 });

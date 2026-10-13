@@ -43,7 +43,7 @@ test('connection sidebar shows all servers but only the active server tabs', () 
   assert.match(markup, /class="min-w-0 w-full"/);
   assert.match(markup, /aria-label="Connect Alpha"/);
   assert.match(markup, /lucide-plug/);
-  assert.match(markup, /aria-label="Close Alpha"/);
+  assert.match(markup, /aria-label="Account actions for Alpha"/);
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
   assert.match(markup, /aria-label="Open #alpha"/);
   assert.doesNotMatch(markup, /aria-label="Open #beta"/);
@@ -60,14 +60,14 @@ test('connection sidebar puts server actions in the server header', () => {
     selection: { kind: 'buffer', bufferId: 'alpha-server' },
   });
 
-  assert.match(markup, />Connected<\/span>/);
+  assert.match(markup, /aria-description="Connected as sofia"/);
   assert.match(markup, />Alpha<\/span>/);
   assert.match(markup, /title="Open server"/);
   assert.doesNotMatch(markup, /absolute inset-0 z-10 cursor-pointer/);
   assert.match(markup, /aria-label="Disconnect Alpha"/);
   assert.match(markup, /title="Disconnect"/);
   assert.match(markup, /lucide-unplug/);
-  assert.match(markup, /aria-label="Close Alpha"/);
+  assert.match(markup, /aria-label="Account actions for Alpha"/);
   assert.doesNotMatch(markup, /group-hover:pointer-events-auto/);
 });
 
@@ -113,7 +113,7 @@ test('connection sidebar keeps watchlist visible below active server tabs', () =
     selection: { kind: 'buffer', bufferId: 'alpha-server' },
   });
 
-  assert.match(markup, /Watchlist<\/h2>/);
+  assert.match(markup, /aria-label="Collapse watchlist"/);
   assert.match(markup, /aria-label="Open Alpha"/);
   assert.match(markup, /Alice/);
 });
@@ -134,7 +134,8 @@ test('connection sidebar renders assigned server images when media is shown', ()
   assert.match(markup, /src="https:\/\/example.test\/alpha.png"/);
   assert.match(markup, /aria-label="Open Alpha"/);
   assert.match(markup, /grayscale/);
-  assert.match(markup, /aria-label="Copy server image URL"/);
+  assert.match(markup, /aria-label="Account actions for Alpha"/);
+  assert.doesNotMatch(markup, /aria-label="Copy server image URL"/);
   assert.match(markup, /referrerPolicy="no-referrer"/);
 });
 

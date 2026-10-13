@@ -15,7 +15,7 @@ const message: ChatMessage = {
   ts: 1,
 };
 
-test('loadOlderBufferHistory skips requests when no retained message capacity remains', async () => {
+test('loadOlderBufferHistory requests a full page without a retained message capacity gate', async () => {
   const dispatched: Array<{ type: string; [key: string]: unknown }> = [];
   let loaded = false;
 
@@ -23,7 +23,6 @@ test('loadOlderBufferHistory skips requests when no retained message capacity re
     beforeMessageId: message.id,
     bufferId: 'buffer-1',
     gatewayStatus: 'connected',
-    remainingMessageCapacity: 0,
     dispatch: (action) => {
       dispatched.push(action);
     },
@@ -35,8 +34,8 @@ test('loadOlderBufferHistory skips requests when no retained message capacity re
   });
 
   assert.equal(prependedCount, 0);
-  assert.equal(loaded, false);
-  assert.deepEqual(dispatched, []);
+  assert.equal(loaded, true);
+  assert.equal(dispatched[0]?.type, 'page-message-window');
 });
 
 test('loadOlderBufferHistory ignores a response after the selected buffer changes', async () => {
@@ -46,7 +45,6 @@ test('loadOlderBufferHistory ignores a response after the selected buffer change
     beforeMessageId: message.id,
     bufferId: 'buffer-1',
     gatewayStatus: 'connected',
-    remainingMessageCapacity: 1,
     dispatch: (action) => {
       dispatched.push(action);
     },

@@ -53,9 +53,6 @@ export const resolveAiAssistantSelection = (
   };
 };
 
-export const formatAssistantModelLabel = (label: string) =>
-  label.replace(/^GPT-\d+(?:\.\d+)+-/i, '');
-
 export const formatReasoningEffort = (effort: string) => {
   if (effort === 'xhigh') {
     return 'Extra high';

@@ -34,7 +34,11 @@ export type ResolvedCodexAssistantSelection = {
 export const readCodexAssistantModelCatalog = async (
   command: string,
 ): Promise<CodexAssistantModelCatalog> => {
-  const result = await runCommand(command, ['debug', 'models'], { timeoutMs: 10_000 });
+  // Model metadata includes long instruction strings, so it needs more room than diagnostics.
+  const result = await runCommand(command, ['debug', 'models'], {
+    timeoutMs: 10_000,
+    maxStdoutChars: 4_000_000,
+  });
   if (result.error?.code === 'ENOENT') {
     return unavailableCatalog('Install Codex CLI to choose an Assistant model.');
   }
@@ -46,11 +50,7 @@ export const readCodexAssistantModelCatalog = async (
     const visible = parsed.models
       .filter((model) => model.visibility === 'list')
       .sort((left, right) => (left.priority ?? 1_000) - (right.priority ?? 1_000));
-    const currentFamily = findCurrentModelFamily(visible.map(({ slug }) => slug));
-    const currentModels = currentFamily
-      ? visible.filter(({ slug }) => slug === currentFamily || slug.startsWith(`${currentFamily}-`))
-      : visible;
-    const models = currentModels.flatMap(toModelOption);
+    const models = visible.flatMap(toModelOption);
     return models.length > 0
       ? { error: null, models }
       : unavailableCatalog('Codex did not report any selectable Assistant models.');
@@ -102,16 +102,6 @@ export const resolveCodexAssistantSelection = (
     notice: notices.join(' ') || null,
     reasoningEffort,
   };
-};
-
-const findCurrentModelFamily = (slugs: readonly string[]) => {
-  for (const slug of slugs) {
-    const match = /^(gpt-\d+(?:\.\d+)+)(?:-|$)/.exec(slug);
-    if (match) {
-      return match[1];
-    }
-  }
-  return null;
 };
 
 const toModelOption = (

@@ -1,7 +1,6 @@
 import { memo, type ReactNode } from 'react';
 import {
-  Info,
-  Pin,
+  NotebookPen,
   PanelRightClose,
   Sparkles,
   Users,
@@ -9,10 +8,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
+import { useAssistantReadingMode } from './assistant-reading-mode.js';
 import { AiAssistantPanel } from './AiAssistantPanel.js';
 import { NicklistPanel, type NicklistPanelProps } from './NicklistPanel.js';
 import { QueryProfileSidebar } from './QueryProfileSidebar.js';
-import { PinnedMessagesSidebar, type PinnedMessagesLoadState } from './PinnedMessagesSidebar.js';
+import { type PinnedMessagesLoadState } from './PinnedMessagesSidebar.js';
 import { ServerProfileSidebar } from './ServerProfileSidebar.js';
 import type { WorkspaceView } from './workspace-types.js';
 import type { BufferState, ChatMessage, NetworkProfile } from '../../shared/protocol-chat.js';
@@ -82,32 +82,24 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     return (
       <RightSidebarTabs
         key={buffer?.id}
-        defaultValue="info"
+        defaultValue="context"
         onCollapse={props.onCollapse ?? (() => undefined)}
         tabs={[
           {
-            icon: Info,
-            label: 'Info',
-            value: 'info',
+            icon: NotebookPen,
+            label: 'Context',
+            value: 'context',
             content: (
               <QueryProfileSidebar
                 buffer={buffer}
                 onSaveNotes={props.queryProfile?.onSaveNotes ?? (async () => null)}
-              />
-            ),
-          },
-          {
-            icon: Pin,
-            label: 'Pinned',
-            value: 'pinned',
-            content: (
-              <PinnedMessagesSidebar
-                buffer={buffer}
-                messages={props.queryProfile?.pinnedMessages ?? []}
-                loadState={props.queryProfile?.pinnedMessagesLoadState ?? 'idle'}
-                onJump={props.queryProfile?.onJumpToPinnedMessage ?? (async () => false)}
-                onRetry={props.queryProfile?.onRetryPinnedMessages ?? (() => undefined)}
-                onUnpin={props.queryProfile?.onUnpinMessage ?? (async () => false)}
+                pinned={{
+                  messages: props.queryProfile?.pinnedMessages ?? [],
+                  loadState: props.queryProfile?.pinnedMessagesLoadState ?? 'idle',
+                  onJump: props.queryProfile?.onJumpToPinnedMessage ?? (async () => false),
+                  onRetry: props.queryProfile?.onRetryPinnedMessages ?? (() => undefined),
+                  onUnpin: props.queryProfile?.onUnpinMessage ?? (async () => false),
+                }}
               />
             ),
           },
@@ -191,8 +183,9 @@ function RightSidebarTabs(props: {
   onCollapse: () => void;
   tabs: Array<{ content: ReactNode; icon: LucideIcon; label: string; value: string }>;
 }) {
+  const reading = useAssistantReadingMode();
   return (
-    <Tabs defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col bg-[#202733]">
+    <Tabs onValueChange={() => reading?.setExpanded(false)} defaultValue={props.defaultValue} className="flex h-full min-h-0 flex-col bg-[#202733]">
       <div className="flex h-12 w-full shrink-0 items-stretch">
         <TabsList
           aria-label="Sidebar views"

@@ -171,6 +171,10 @@ export type MessageWindowPage = MessagePage & {
 };
 
 export type MessageSearchFilters = {
+  fromTs?: number;
+  toTs?: number;
+  beforeMessageId?: string;
+  bufferId?: string;
   networkId?: string;
   target?: string;
 };

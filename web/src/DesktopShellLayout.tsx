@@ -13,6 +13,7 @@ import type { MediaVisibilityMode } from './media-visibility-settings.js';
 import { DesktopShellBrand } from './DesktopShellBrand.js';
 import { DesktopShellDiagnosticsButton } from './DesktopShellDiagnosticsButton.js';
 import { SidebarResizeHandle } from './SidebarResizeHandle.js';
+import { AssistantReadingModeContext } from './assistant-reading-mode.js';
 import { useMediaQuery } from './useMediaQuery.js';
 import { useSidebarResize } from './useSidebarResize.js';
 
@@ -49,7 +50,12 @@ export type DesktopShellLayoutProps = {
 };
 
 export function DesktopShellLayout(props: DesktopShellLayoutProps) {
+  const [expandedBufferId, setExpandedBufferId] = useState<string | null>(null);
+  const readingExpanded = expandedBufferId !== null && expandedBufferId === props.selectedBufferId;
   const compactLayout = useMediaQuery(compactDesktopShellQuery);
+  useEffect(() => {
+    setExpandedBufferId(null);
+  }, [props.selectedBufferId, props.rightSidebarCollapsed, compactLayout]);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const previousSelectedBufferIdRef = useRef(props.selectedBufferId);
   const [compactPane, setCompactPane] = useState<CompactWorkspacePane>(() =>
@@ -115,6 +121,10 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
 
   const showingMedia = props.header.mediaVisibilityMode === 'show-media';
   return (
+    <AssistantReadingModeContext.Provider value={compactLayout ? null : {
+      expanded: readingExpanded,
+      setExpanded: (expanded) => setExpandedBufferId(expanded ? props.selectedBufferId : null),
+    }}>
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[#171c25] text-foreground">
       <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-3 sm:gap-4 sm:px-5">
         <div className="hidden sm:block"><DesktopShellBrand /></div>
@@ -185,7 +195,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
             </div>
             {props.rightSidebarKind ? (
               <>
-                {!props.rightSidebarCollapsed ? (
+                {!props.rightSidebarCollapsed && !readingExpanded ? (
                   <SidebarResizeHandle
                     key="right-sidebar-resize"
                     sidebarWidth={rightSidebarResize.sidebarWidth}
@@ -200,6 +210,8 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
                   key="right-sidebar-panel"
                     className={props.rightSidebarCollapsed
                     ? 'hidden'
+                    : readingExpanded
+                    ? 'min-h-0 bg-[#202733] lg:w-[min(560px,45vw)] lg:shrink-0'
                     : 'min-h-0 bg-[#202733] lg:w-[var(--right-sidebar-width)] lg:max-w-[320px] lg:shrink-0'}
                 >
                   {props.rightSidebar}
@@ -234,6 +246,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
       {props.preferencesDialog}
       {props.networkEditorDialog}
     </div>
+    </AssistantReadingModeContext.Provider>
   );
 }
 
@@ -256,4 +269,4 @@ function CompactPane(props: {
 }
 
 const rightSidebarLabel = (kind: NonNullable<DesktopShellLayoutProps['rightSidebarKind']>) =>
-  kind === 'profile' ? 'Profile' : kind === 'users' ? 'Users' : 'Notes';
+  kind === 'profile' ? 'Profile' : kind === 'users' ? 'Users' : 'Context';

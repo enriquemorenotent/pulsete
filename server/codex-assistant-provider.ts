@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { serviceUnavailable } from './app-error.js';
 import { readFailure, runCommand } from './codex-command-runner.js';
+import { resolveInstalledCodexCommand } from './codex-command-path.js';
 import type {
   AiAssistantLoginResponse,
   AiAssistantProviderStatus,
@@ -48,9 +49,22 @@ const modelCatalogCacheMs = 30_000;
 export const createCodexAssistantProvider = (
   options: CodexProviderOptions = {},
 ): CodexAssistantProvider => {
-  const command = options.command ?? 'codex';
   const env = options.env ?? process.env;
+  const command = options.command ?? resolveInstalledCodexCommand(env);
   const model = env.PULSETE_CODEX_MODEL?.trim() || null;
+  if (!command) {
+    const detail = 'Install Codex CLI and sign in with OpenAI to enable assistant requests.';
+    const unavailable: AiAssistantProviderStatus = {
+      connected: false, detail, provider: 'unavailable', model,
+      availableModels: [], modelsError: detail, reasoningEffort: null, selectionNotice: null,
+    };
+    return {
+      model,
+      status: async () => unavailable,
+      startLogin: async () => { throw serviceUnavailable(detail); },
+      request: async () => { throw serviceUnavailable(detail); },
+    };
+  }
   const readModelCatalog = createModelCatalogReader(command);
   let activeLoginInstructions: string | null = null;
   let loginProcess: CodexLoginProcess | null = null;

@@ -276,11 +276,14 @@ test('searchLogs calls the global log search endpoint with filters', async () =>
     const payload = await api.searchLogs('needle', {
       networkId: 'network-1',
       target: '#help',
+      fromTs: 1000,
+      toTs: 2000,
+      beforeMessageId: 'message-50',
     }, 7, {
       signal: controller.signal,
     });
 
-    assert.deepEqual(fetchCalls, ['/api/logs/search?q=needle&limit=7&networkId=network-1&target=%23help']);
+    assert.deepEqual(fetchCalls, ['/api/logs/search?q=needle&limit=7&networkId=network-1&target=%23help&fromTs=1000&toTs=2000&beforeMessageId=message-50']);
     assert.equal(receivedSignal, controller.signal);
     assert.deepEqual(payload, {
       query: 'needle',

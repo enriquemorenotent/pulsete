@@ -99,7 +99,7 @@ export type Action =
   | { type: 'complete-browser-storage-import' }
   | { type: 'friend-presence'; friendId: string; presence: PresenceStatus }
   | { type: 'query-presence'; bufferId: string; presence: PresenceStatus }
-  | { type: 'upsert-buffer'; buffer: BufferState }
+  | { type: 'upsert-buffer'; buffer: BufferState; onlyIfOpen?: boolean }
   | { type: 'remove-buffer'; bufferId: string; networkId: string; replacementBufferId?: string }
   | { type: 'select'; selection: SelectedBuffer | null }
   | { type: 'append-message'; message: ChatMessage }
@@ -138,6 +138,7 @@ export type Action =
   | { type: 'close-network-editor' }
   | { type: 'set-network-editor-tab'; tab: EditorTab }
   | { type: 'update-network-editor-form'; form: Partial<NetworkForm> }
+  | { type: 'page-message-window'; bufferId: string; cursor: string; direction: 'older' | 'newer'; messages: ChatMessage[]; hasMore: boolean }
   | { type: 'history-buffer-loaded'; bufferId: string; hasOlder: boolean; hasNewer?: boolean }
   | {
       type: 'replace-message-window';

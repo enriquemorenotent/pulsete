@@ -82,3 +82,13 @@ test('assistant threads do not carry into a new application session', () => {
 
   assert.equal(reloadedSession.getThread('buffer-a'), emptyAiAssistantThread);
 });
+
+test('assistant context scope stays with its conversation and survives draft updates', () => {
+  const store = createAiAssistantStore();
+  store.setScope('first', 'saved');
+  store.setInput('first', 'Find the meeting time');
+  assert.equal(store.getThread('first').scope, 'saved');
+  assert.equal(store.getThread('second').scope, 'recent');
+  store.clearThread('first');
+  assert.equal(store.getThread('first').scope, 'recent');
+});

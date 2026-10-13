@@ -33,10 +33,17 @@ export const searchMessages = (
   filters: MessageSearchFilters = {},
 ): MessageSearchPage => {
   const terms = parseSearchTerms(query);
-  if (limit <= 0 || terms.length === 0) {
+  if (limit <= 0) {
     return { messages: [], hasMore: false };
   }
   const scope = normalizeSearchFilters(filters);
+  if (terms.length === 0) {
+    const where = buildSearchScopeClause(scope);
+    const rows = db.prepare(`SELECT ${messageColumns} ${messageJoin}
+      WHERE 1 = 1${where.clause} ORDER BY m.ts DESC, m.rowid DESC LIMIT ?`)
+      .all(...where.args, limit + 1) as MessageRow[];
+    return buildSearchPage(db, rows, limit);
+  }
   if (terms.some((term) => term.length < minimumFtsTermLength)) {
     return searchMessagesWithScan(db, terms, limit, scope);
   }
@@ -157,6 +164,10 @@ const parseSearchTerms = (query: string) => {
 const minimumFtsTermLength = 3;
 
 type NormalizedMessageSearchFilters = {
+  fromTs?: number;
+  toTs?: number;
+  beforeMessageId?: string;
+  bufferId?: string;
   networkId?: string;
   target?: string;
 };
@@ -165,6 +176,10 @@ const normalizeSearchFilters = (filters: MessageSearchFilters): NormalizedMessag
   const networkId = filters.networkId?.trim();
   const target = filters.target ? normalizeSearchText(filters.target.trim()) : '';
   return {
+    bufferId: filters.bufferId,
+    fromTs: filters.fromTs,
+    toTs: filters.toTs,
+    beforeMessageId: filters.beforeMessageId,
     ...(networkId ? { networkId } : {}),
     ...(target ? { target } : {}),
   };
@@ -172,7 +187,23 @@ const normalizeSearchFilters = (filters: MessageSearchFilters): NormalizedMessag
 
 const buildSearchScopeClause = (filters: NormalizedMessageSearchFilters) => {
   const clauses: string[] = [];
-  const args: string[] = [];
+  const args: (string | number)[] = [];
+  if (filters.fromTs !== undefined) {
+    clauses.push('m.ts >= ?');
+    args.push(filters.fromTs);
+  }
+  if (filters.toTs !== undefined) {
+    clauses.push('m.ts < ?');
+    args.push(filters.toTs);
+  }
+  if (filters.beforeMessageId) {
+    clauses.push('(m.ts, m.rowid) < (SELECT ts, rowid FROM messages WHERE id = ?)');
+    args.push(filters.beforeMessageId);
+  }
+  if (filters.bufferId) {
+    clauses.push('m.bufferId = ?');
+    args.push(filters.bufferId);
+  }
   if (filters.networkId) {
     clauses.push('b.networkId = ?');
     args.push(filters.networkId);

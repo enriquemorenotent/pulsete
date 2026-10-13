@@ -138,6 +138,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     saveBufferNotes: (bufferId, notes) => publishMutation(conversationsService.saveBufferNotes(bufferId, notes)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
     searchHistory: (bufferId, query, limit) => conversationsService.searchBufferHistory(bufferId, query, limit),
+    messageHistoryWindow: (bufferId, messageId) => conversationsService.messageHistoryWindow(bufferId, messageId),
     searchLogs: (query, limit, filters) => conversationsService.searchLogs(query, limit, filters),
     listLogSources: (filters, limit) => conversationsService.listLogSources(filters, limit),
     exportHistory: (bufferId) => conversationsService.exportBufferHistory(bufferId),
@@ -219,6 +220,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       pinnedMessageHistoryWindow: conversations.pinnedMessageHistoryWindow,
     },
     logs: {
+      window: conversations.messageHistoryWindow,
       listSources: conversations.listLogSources,
       search: conversations.searchLogs,
     },

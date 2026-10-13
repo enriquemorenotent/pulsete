@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { MessageSquarePlus } from 'lucide-react';
+import { MessageSquarePlus, Maximize2, Minimize2 } from 'lucide-react';
 import type { BufferState } from '../../shared/protocol-chat.js';
 import {
   type AiAssistantMode,
@@ -15,6 +15,7 @@ import {
   type AiAssistantStoreApi,
   useAiAssistantThread,
 } from './ai-assistant-store.js';
+import { useAssistantReadingMode } from './assistant-reading-mode.js';
 import { AiAssistantChatView } from './AiAssistantChatView.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 import { AiAssistantConnectionPanel } from './AiAssistantConnectionPanel.js';
@@ -39,6 +40,7 @@ const defaultSelection: AiAssistantSelection = {
 };
 
 export function AiAssistantPanel(props: AiAssistantPanelProps) {
+  const reading = useAssistantReadingMode();
   const [localStore] = useState(createAiAssistantStore);
   const store = props.store ?? localStore;
   const bufferId = props.buffer?.id ?? null;
@@ -85,6 +87,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       const response = await aiAssistantApi.ask(bufferId, {
         assistantTurns,
         mode,
+        scope: thread.scope,
         prompt,
         selection: resolvedSelection.selection,
       }, controller.signal);
@@ -126,18 +129,16 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.045] pb-3">
         <div className="flex min-w-0 items-baseline gap-2">
           <h2 className="shrink-0 text-sm font-semibold tracking-tight text-foreground/92">
-            Assistant
+            {props.buffer?.target ?? 'Assistant'}
           </h2>
-          {props.buffer ? (
-            <p className="truncate font-mono text-[11px] text-muted-foreground/82">
-              {props.buffer.target}
-            </p>
-          ) : null}
         </div>
+        <div className="flex shrink-0 items-center gap-1">
         {hasThreadContent ? (
           <Button
             type="button"
-            size="sm"
+            size="icon"
+            aria-label="New assistant chat"
+            title="New chat"
             variant="ghost"
             className="shrink-0 text-foreground/72 hover:text-foreground"
             disabled={!bufferId}
@@ -149,9 +150,15 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             }}
           >
             <MessageSquarePlus />
-            New chat
           </Button>
         ) : null}
+        {reading ? <Button type="button" size="icon" variant="ghost"
+          className="size-7 text-muted-foreground" aria-label={reading.expanded ? 'Reduce assistant width' : 'Expand assistant'}
+          title={reading.expanded ? 'Reduce width' : 'Expand for reading'}
+          onClick={() => reading.setExpanded(!reading.expanded)}>
+          {reading.expanded ? <Minimize2 /> : <Maximize2 />}
+        </Button> : null}
+        </div>
       </header>
       <InspectorSection className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <AiAssistantConnectionPanel compact onStatusChange={setStatus} />
@@ -164,6 +171,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
               status={status}
             />
             <AiAssistantChatView
+              scope={thread.scope}
+              onScopeChange={(scope) => { if (bufferId) store.setScope(bufferId, scope); }}
               entries={thread.entries}
               error={thread.error}
               input={thread.input}

@@ -110,6 +110,9 @@ export const reduceConversationDomain = (
         },
       };
     case 'upsert-buffer': {
+      if (action.onlyIfOpen && !domain.buffers.some((buffer) => buffer.id === action.buffer.id)) {
+        return domain;
+      }
       const buffers = domain.buffers.filter((buffer) => buffer.id !== action.buffer.id);
       buffers.push(action.buffer);
       const pendingChannels =

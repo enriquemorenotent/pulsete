@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
 import { resolveNetworkServerImage } from './network-server-image.js';
-import { Check, Copy, Plug, Unplug, X } from 'lucide-react';
+import { Plug, Unplug } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { cn } from '@/lib/utils.js';
 import { resolveBufferActivityState } from './transcript/unread-state.js';
 import { ConnectionSidebarFriends } from './ConnectionSidebarFriends.js';
 import { ConnectionSidebarNetworkSection } from './ConnectionSidebarNetworkSection.js';
+import { ConnectionSidebarAccountMenu } from './ConnectionSidebarAccountMenu.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 
@@ -22,8 +23,8 @@ export function ConnectionSidebarServerSwitcher(
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-border px-3 py-4">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Accounts</h2>
+      <div className="shrink-0 border-b border-white/5 px-3 pb-2 pt-3">
+        <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground/75">Accounts</h2>
         <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Open accounts">
           {props.connections.map((connection) => (
             <ServerSwitcherButton key={connection.network.id} connection={connection} active={connection.network.id === activeConnection?.network.id} showMedia={props.showMedia} externalAvatarsEnabled={props.externalAvatarsEnabled} onSelect={() => props.onSelectNetwork(connection.network)} />
@@ -64,7 +65,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
         />
       ) : null}
       <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0 [&_[data-radix-scroll-area-viewport]>div]:!w-full">
-        <div className="min-w-0 px-2.5 py-1.5 pr-3">
+        <div className="min-w-0 px-2.5 pb-2 pt-1">
           {props.connections.length === 0 ? (
             <div className="rounded-md bg-black/10 px-2 py-1.5 text-[12px] text-muted-foreground ring-1 ring-white/5">
               No open connections. Use Network Manager to connect.
@@ -106,21 +107,36 @@ function ServerSwitcherHeader(props: {
   const phase = props.connection.runtime?.phase ?? 'offline';
   const serverImage = props.showMedia === false ? null : resolveNetworkServerImage(props.connection.network, props.externalAvatarsEnabled === true);
   const actionLabel = phase === 'connected' ? 'Disconnect' : phase === 'connecting' ? 'Connecting' : 'Connect';
+  const statusLabel = phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline';
   return (
-    <header className="mb-4 shrink-0 border-b border-border px-4 py-5">
-      <div className="flex items-start justify-between gap-2">
-        <button type="button" className="min-w-0 text-left" onClick={() => props.onSelectNetwork(props.connection.network)} aria-label={`Open ${props.connection.labelParts.name}`} title="Open server">
-          <span className="block truncate text-base font-semibold text-foreground">{props.connection.labelParts.name}</span>
-          <span className="mt-1 block truncate text-sm text-muted-foreground">as {props.connection.labelParts.nick}</span>
+    <header className="flex shrink-0 items-center gap-2 px-4 py-3">
+      <button
+        type="button"
+        className="min-w-0 flex-1 rounded-sm text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
+        onClick={() => props.onSelectNetwork(props.connection.network)}
+        aria-label={`Open ${props.connection.labelParts.name}`}
+        aria-description={`${statusLabel} as ${props.connection.labelParts.nick}`}
+        title="Open server"
+      >
+        <span className="block truncate text-[13px] font-semibold text-foreground/90">{props.connection.labelParts.name}</span>
+      </button>
+      <div className="flex shrink-0 items-center gap-0.5">
+        <button
+          type="button"
+          className={cn('flex size-7 items-center justify-center rounded-md outline-none hover:bg-white/5 focus-visible:ring-1 focus-visible:ring-primary/45 disabled:cursor-wait', phase === 'connected' ? 'text-muted-foreground hover:text-foreground' : phase === 'connecting' ? 'text-amber-300' : 'text-primary hover:text-primary/80')}
+          onClick={() => phase === 'connected' ? props.onDisconnectNetwork(props.connection.network.id) : props.onReconnectNetwork(props.connection.network)}
+          aria-label={`${actionLabel} ${props.connection.labelParts.name}`}
+          title={actionLabel}
+          disabled={phase === 'connecting'}
+        >
+          {phase === 'connected' ? <Unplug className="size-3.5" /> : <Plug className="size-3.5" />}
         </button>
-        <div className="flex shrink-0 items-center gap-1">
-          {serverImage ? <CopyServerImageUrlButton url={serverImage.url} /> : null}
-        <button type="button" className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground" onClick={() => props.onCloseConnection(props.connection.network)} aria-label={`Close ${props.connection.labelParts.name}`} title="Close server"><X className="size-4" /></button>
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-sm text-muted-foreground"><span aria-hidden className={cn('size-2 rounded-full', phase === 'connected' ? 'bg-emerald-300' : phase === 'connecting' ? 'bg-amber-300 animate-pulse' : 'bg-slate-400')} />{phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline'}</span>
-        <button type="button" className="flex h-8 items-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 text-sm font-medium text-primary hover:bg-primary/25 disabled:opacity-50" onClick={() => phase === 'connected' ? props.onDisconnectNetwork(props.connection.network.id) : props.onReconnectNetwork(props.connection.network)} aria-label={`${actionLabel} ${props.connection.labelParts.name}`} title={actionLabel} disabled={phase === 'connecting'}>{phase === 'connected' ? <Unplug className="size-3.5" /> : <Plug className="size-3.5" />}{actionLabel}</button>
+        <ConnectionSidebarAccountMenu
+          key={props.connection.network.id}
+          name={props.connection.labelParts.name}
+          imageUrl={serverImage?.url}
+          onClose={() => props.onCloseConnection(props.connection.network)}
+        />
       </div>
     </header>
   );
@@ -169,50 +185,3 @@ const resolveConnectionActivity = (connection: SidebarConnectionView) => {
     priority: activities.some((activity) => activity.priority),
   };
 };
-
-function CopyServerImageUrlButton(props: { url: string }) {
-  const [copied, setCopied] = useState(false);
-  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current);
-      }
-    },
-    [],
-  );
-
-  const copyImageUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(props.url);
-      setCopied(true);
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current);
-      }
-      feedbackTimeoutRef.current = setTimeout(() => {
-        setCopied(false);
-        feedbackTimeoutRef.current = null;
-      }, 1000);
-    } catch {
-      // Keep the resting state when clipboard access is unavailable.
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      className={cn(
-        'flex size-7 items-center justify-center rounded-md backdrop-blur-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
-        copied
-          ? 'bg-emerald-950/70 text-emerald-300'
-          : 'bg-black/45 text-white/80 hover:bg-black/65 hover:text-white',
-      )}
-      onClick={() => void copyImageUrl()}
-      aria-label={copied ? 'Server image URL copied' : 'Copy server image URL'}
-      title={copied ? 'Copied' : 'Copy image URL'}
-    >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-    </button>
-  );
-}

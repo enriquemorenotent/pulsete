@@ -9,6 +9,13 @@ import type { RouteArgs } from './http-types.js';
 import type { LogSourceKind } from '../shared/protocol-chat.js';
 
 export const handleLogRoutes = async ({ req, res, pathname, url, context }: RouteArgs) => {
+  if (pathname === '/api/logs/window' && req.method === 'GET') {
+    const bufferId = url.searchParams.get('bufferId');
+    const messageId = url.searchParams.get('messageId');
+    if (!bufferId || !messageId) throw badRequest('Conversation and message are required');
+    writeJson(res, 200, context.logs.window(bufferId, messageId));
+    return true;
+  }
   if (pathname === '/api/logs/sources' && req.method === 'GET') {
     const q = normalizeOptionalSearchFilter(url.searchParams.get('q'));
     const networkId = normalizeOptionalSearchFilter(url.searchParams.get('networkId'));
@@ -27,7 +34,16 @@ export const handleLogRoutes = async ({ req, res, pathname, url, context }: Rout
   }
   const query = normalizeHistorySearchQuery(url.searchParams.get('q'));
   const limit = normalizeHistorySearchLimit(url.searchParams.get('limit'));
+  const fromTs = normalizeTimestamp(url.searchParams.get('fromTs'));
+  const toTs = normalizeTimestamp(url.searchParams.get('toTs'));
+  if (fromTs !== undefined && toTs !== undefined && fromTs >= toTs) {
+    throw badRequest('The start date must not be after the end date');
+  }
   writeJson(res, 200, context.logs.search(query, limit, {
+    bufferId: normalizeOptionalSearchFilter(url.searchParams.get('bufferId')),
+    fromTs,
+    toTs,
+    beforeMessageId: normalizeOptionalSearchFilter(url.searchParams.get('beforeMessageId')),
     networkId: normalizeOptionalSearchFilter(url.searchParams.get('networkId')),
     target: normalizeOptionalSearchFilter(url.searchParams.get('target')),
   }));
@@ -43,4 +59,13 @@ const normalizeLogSourceKind = (value: string | null): LogSourceKind | undefined
     return trimmed;
   }
   throw badRequest('Invalid log source kind');
+};
+
+const normalizeTimestamp = (value: string | null): number | undefined => {
+  if (value === null) return undefined;
+  const timestamp = Number(value);
+  if (!value.trim() || !Number.isSafeInteger(timestamp) || Math.abs(timestamp) > 8640000000000000) {
+    throw badRequest('Invalid history date');
+  }
+  return timestamp;
 };

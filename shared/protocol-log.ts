@@ -12,6 +12,10 @@ export type BufferHistorySearchPayload = {
 };
 
 export type LogHistorySearchFilters = {
+  fromTs?: number;
+  toTs?: number;
+  beforeMessageId?: string;
+  bufferId?: string;
   networkId?: string | null;
   target?: string | null;
 };

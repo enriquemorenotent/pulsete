@@ -20,6 +20,7 @@ import { resolveNextSelection } from './app-state-selection.js';
 import { reduceRuntimeDomain } from './app-state-runtime.js';
 import { initialNetworkManagerState, reduceTransientAction } from './app-state-ui.js';
 import type { Action, State } from './app-types.js';
+import { resolveHistoryPageAction } from './conversation-history-window.js';
 import { defaultWorkspacePreferences } from '../../shared/protocol-preferences.js';
 
 export { initialChannelListState } from './app-state-channel-list.js';
@@ -92,11 +93,16 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
 });
 
 export const reducer = (state: State, action: Action): State => {
+  if (action.type === 'page-message-window') {
+    const replacement = resolveHistoryPageAction(state, action);
+    return replacement ? reducer(state, replacement) : state;
+  }
   const selectedBufferId = state.transient.selection?.kind === 'buffer'
     ? state.transient.selection.bufferId
     : null;
-  const suppressHistoricalAppend = action.type === 'append-message'
-    && state.transient.historyHasNewerByBufferId[action.message.bufferId] === true;
+  const suppressHistoricalAppend = (action.type === 'append-message' || action.type === 'upsert-message')
+    && state.transient.historyHasNewerByBufferId[action.message.bufferId] === true
+    && !state.domain.messages[action.message.bufferId]?.some(({ id }) => id === action.message.id);
   const reducedDomain = action.type === 'snapshot'
     ? reduceSnapshotDomain(state, action.snapshot)
     : suppressHistoricalAppend

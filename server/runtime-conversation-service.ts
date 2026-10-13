@@ -1,3 +1,4 @@
+import { notFound } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
 import {
   clearRuntimeConversationBufferHistory,
@@ -56,6 +57,15 @@ export class RuntimeConversationService {
 
   listBufferHistory(bufferId: string, limit: number, beforeMessageId?: string) {
     return listRuntimeConversationBufferHistory(this.options, bufferId, limit, beforeMessageId);
+  }
+
+  messageHistoryWindow(bufferId: string, messageId: string) {
+    const buffer = this.options.conversations.getBuffer(bufferId);
+    const message = this.options.conversations.getMessageById(messageId);
+    if (!buffer || !message || message.bufferId !== bufferId) throw notFound('Message not found in conversation');
+    const page = this.options.conversations.getMessageWindowPage(messageId, 124, 125);
+    if (!page) throw notFound('Message not found');
+    return { messages: page.messages, targetMessageId: messageId, hasOlder: page.hasMore, hasNewer: page.hasNewer };
   }
 
   searchBufferHistory(bufferId: string, query: string, limit: number) {

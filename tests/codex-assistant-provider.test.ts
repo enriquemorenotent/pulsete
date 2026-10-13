@@ -42,7 +42,7 @@ test('Codex assistant login keeps device instructions on repeated starts', async
   assert.equal(second.instructions, first.instructions);
 });
 
-test('Codex assistant provider discovers the current visible model family', async () => {
+test('Codex assistant provider keeps all visible model families in priority order from large metadata', async () => {
   const fake = createConnectedFakeCodexCommand();
   const provider = createCodexAssistantProvider({
     command: fake.command,
@@ -56,10 +56,10 @@ test('Codex assistant provider discovers the current visible model family', asyn
   assert.equal(status.reasoningEffort, 'medium');
   assert.deepEqual(
     status.availableModels.map(({ id }) => id),
-    ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna'],
+    ['gpt-6.1-sol', 'gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-daybreak-blue-latest'],
   );
   assert.deepEqual(
-    status.availableModels[1]?.reasoningEfforts,
+    status.availableModels.find(({ id }) => id === 'gpt-5.6-terra')?.reasoningEfforts,
     ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
   );
 });
@@ -126,7 +126,11 @@ const createConnectedFakeCodexCommand = () => {
   const command = join(dir, 'codex-fake.js');
   const argsPath = join(dir, 'exec-args.json');
   const modelsJson = JSON.stringify({
+    model_messages: { instructions: 'x'.repeat(700_000) },
     models: [
+      createModel('gpt-daybreak-blue-latest', 'Daybreak', 'medium', ['medium'], 11),
+      createModel('gpt-6.1-sol', 'GPT-6.1-Sol', 'low', ['low', 'high'], 0),
+      createModel('gpt-6-astra', 'GPT-6-Astra', 'medium', ['medium', 'high'], 0.5),
       createModel('gpt-5.6-sol', 'GPT-5.6-Sol', 'low', [
         'low', 'medium', 'high', 'xhigh', 'max', 'ultra',
       ], 1),
@@ -140,12 +144,14 @@ const createConnectedFakeCodexCommand = () => {
       createModel('gpt-5.5', 'GPT-5.5', 'medium', ['low', 'medium', 'high'], 7),
     ],
   });
+  const modelsPath = join(dir, 'models.json');
+  writeFileSync(modelsPath, modelsJson);
   writeFileSync(command, [
     '#!/usr/bin/env node',
-    'const { writeFileSync } = require("node:fs");',
+    'const { writeFileSync, readFileSync } = require("node:fs");',
     'const args = process.argv.slice(2);',
     'if (args.join(" ") === "login status") { console.log("Logged in"); process.exit(0); }',
-    `if (args.join(" ") === "debug models") { console.log(${JSON.stringify(modelsJson)}); process.exit(0); }`,
+    `if (args.join(" ") === "debug models") { writeFileSync(1, readFileSync(${JSON.stringify(modelsPath)})); process.exit(0); }`,
     'if (args[0] === "exec") {',
     `  writeFileSync(${JSON.stringify(argsPath)}, JSON.stringify(args));`,
     '  const outputIndex = args.indexOf("--output-last-message");',

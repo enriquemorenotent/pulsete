@@ -13,6 +13,7 @@ import type {
   NetworkProfile,
   NickEmojiState,
   PinnedMessageHistoryWindowPayload,
+  MessageHistoryWindowPayload,
 } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type {
@@ -185,6 +186,8 @@ export const api = {
       { signal: init?.signal },
     );
   },
+  loadMessageHistoryWindow: (bufferId: string, messageId: string, init?: Pick<RequestInit, 'signal'>) =>
+    apiRequest<MessageHistoryWindowPayload>(`/api/logs/window?${new URLSearchParams({ bufferId, messageId })}`, { signal: init?.signal }),
   searchLogs: (
     query: string,
     filters: LogHistorySearchFilters = {},
@@ -197,6 +200,9 @@ export const api = {
     }
     if (filters.target) {
       searchParams.set('target', filters.target);
+    }
+    for (const key of ['fromTs', 'toTs', 'beforeMessageId', 'bufferId'] as const) {
+      if (filters[key] !== undefined) searchParams.set(key, String(filters[key]));
     }
     return apiRequest<LogHistorySearchPayload>(
       `/api/logs/search?${searchParams.toString()}`,

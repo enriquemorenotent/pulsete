@@ -21,9 +21,9 @@ const renderView = (entries: Parameters<typeof AiAssistantChatView>[0]['entries'
 test('assistant empty state presents compact shortcuts and one composer', () => {
   const markup = renderView();
 
-  assert.match(markup, />Start with a shortcut</);
-  assert.match(markup, />Summarize</);
-  assert.match(markup, />Catch me up</);
+  assert.match(markup, />A little help with the conversation</);
+  assert.match(markup, /Summarize/);
+  assert.match(markup, /> Draft reply</);
   assert.match(markup, /aria-label="Message assistant"/);
   assert.match(markup, /aria-label="Ask assistant"/);
 });
@@ -37,8 +37,8 @@ test('assistant conversation replaces onboarding shortcuts with messages', () =>
   }]);
 
   assert.match(markup, /Here is the summary\./);
-  assert.doesNotMatch(markup, /Start with a shortcut/);
-  assert.doesNotMatch(markup, />Summarize</);
+  assert.doesNotMatch(markup, /A little help with the conversation/);
+  assert.doesNotMatch(markup, /Summarize/);
 });
 
 test('assistant exposes Stop while a request is pending', () => {

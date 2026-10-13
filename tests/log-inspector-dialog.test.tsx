@@ -29,17 +29,34 @@ const renderBody = (
     sourceHistoryMessages: ReturnType<typeof makeMessage>[];
     sourceState: 'idle' | 'loading' | 'loaded' | 'error';
     target: string;
+    dirty: boolean;
   }> = {},
 ) =>
   renderToStaticMarkup(
     <Dialog open>
       <LogInspectorDialogBody
+        scopeBufferId=""
+        scopeLabel=""
+        searchDirty={overrides.dirty ?? false}
+        onScopeChange={() => undefined}
+        onClearFilters={() => undefined}
+        onSearchConversation={() => undefined}
+        onSourceLoadNewer={() => undefined}
+        onSourceLatest={() => undefined}
+        fromDate=""
+        toDate=""
+        searchNetworkValue="__all__"
+        loadingMore={false}
+        pageError={null}
+        onFromDateChange={() => undefined}
+        onToDateChange={() => undefined}
+        onSearchNetworkChange={() => undefined}
+        onLoadMore={() => undefined}
         activeMode={overrides.activeMode ?? 'sources'}
         expandedMessageId={overrides.expandedMessageId ?? null}
         inputRef={createRef<HTMLInputElement>()}
         loadingOlderSourceHistory={false}
         mutedNicks={[]}
-        networkValue={overrides.networkValue ?? '__all__'}
         networks={[makeNetwork({ id: 'network-1', name: 'Cuff-Link' })]}
         nickEmojis={[]}
         query={overrides.query ?? ''}
@@ -59,7 +76,6 @@ const renderBody = (
           sources: overrides.selectedSource ? [overrides.selectedSource] : [],
           error: null,
         }}
-        target={overrides.target ?? ''}
         onActiveModeChange={() => undefined}
         onNetworkChange={() => undefined}
         onQueryChange={() => undefined}
@@ -70,7 +86,6 @@ const renderBody = (
         onSourceSelect={() => undefined}
         onSourceSubmit={(event) => event.preventDefault()}
         onSubmit={(event) => event.preventDefault()}
-        onTargetChange={() => undefined}
       />
     </Dialog>
   );
@@ -79,10 +94,10 @@ test('log inspector body renders source browser controls', () => {
   const markup = renderBody(idleState);
 
   assert.match(markup, /Chat history/);
-  assert.match(markup, /Sources/);
-  assert.match(markup, /aria-label="Find log source"/);
-  assert.match(markup, /aria-label="Filter sources by type"/);
-  assert.match(markup, /Browse saved sources\./);
+  assert.match(markup, /Conversations/);
+  assert.match(markup, /aria-label="Find conversation"/);
+  assert.match(markup, /aria-label="Filter conversations by type"/);
+  assert.match(markup, /Browse saved conversations\./);
 });
 
 test('log inspector body renders global search controls', () => {
@@ -90,9 +105,9 @@ test('log inspector body renders global search controls', () => {
 
   assert.match(markup, /aria-label="Search chat history"/);
   assert.match(markup, /aria-label="Filter logs by network"/);
-  assert.match(markup, /aria-label="Filter logs by conversation"/);
-  assert.match(markup, /disabled=""/);
-  assert.match(markup, /Enter a search term\./);
+  assert.match(markup, /aria-label="Search scope"/);
+  assert.doesNotMatch(markup, /type="submit" disabled/);
+  assert.match(markup, /Search messages, choose dates/);
 });
 
 test('log inspector body labels results by network and conversation', () => {
@@ -125,10 +140,10 @@ test('log inspector body labels results by network and conversation', () => {
 
   assert.match(markup, /Cuff-Link/);
   assert.match(markup, /#help/);
-  assert.match(markup, /needle line/);
-  assert.match(markup, /before/);
-  assert.match(markup, /after/);
-  assert.match(markup, /data-active="true"/);
+  assert.match(markup, /needle<\/mark> line/);
+  assert.doesNotMatch(markup, />before</);
+  assert.doesNotMatch(markup, />after</);
+  assert.match(markup, /aria-pressed="true"/);
 });
 
 test('log inspector body renders selected source transcript', () => {
@@ -162,8 +177,15 @@ test('log inspector body renders selected source transcript', () => {
 
   assert.match(markup, /Guide/);
   assert.match(markup, /Cuff-Link/);
-  assert.match(markup, /PM/);
+  assert.match(markup, /Direct message/);
   assert.match(markup, /Closed/);
   assert.match(markup, /aka MissD/);
   assert.match(markup, /private line/);
+});
+
+ test('history workspace hides stale results until changed filters are applied', () => {
+  const markup = renderBody({ status: 'loaded', query: 'old', results: [{ message: makeMessage({ body: 'outdated result' }), context: [] }], hasMore: true, error: null }, { activeMode: 'search', dirty: true });
+  assert.match(markup, /Filters changed. Search to update results./);
+  assert.doesNotMatch(markup, /outdated result/);
+  assert.doesNotMatch(markup, /Load more results/);
 });

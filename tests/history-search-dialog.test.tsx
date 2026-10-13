@@ -72,7 +72,7 @@ test('history search dialog body renders expanded context around a selected resu
     query: 'needle',
   });
 
-  assert.match(markup, /needle line/);
+  assert.match(markup, /needle<\/mark> line/);
   assert.match(markup, /before/);
   assert.match(markup, /after/);
   assert.match(markup, /data-active="true"/);

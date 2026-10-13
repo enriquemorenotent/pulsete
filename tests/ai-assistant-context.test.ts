@@ -197,3 +197,43 @@ const connectedStatus: AiAssistantProviderStatus = {
   reasoningEffort: null,
   selectionNotice: null,
 };
+
+test('explicit recent scope never retrieves older saved messages', () => {
+  const oldMessage = createMessage('old-scope', 'Earlier bridge plans', 10);
+  const store = createConversationStore(channelBuffer, [message], {
+    allMessages: [oldMessage, message], search: { bridge: [oldMessage] },
+  });
+  store.listAssistantHistory = () => { throw new Error('Recent scope must not read history'); };
+  store.searchMessagesByBufferId = () => { throw new Error('Recent scope must not search history'); };
+  const context = buildAiAssistantContext(store, channelBuffer.id, {
+    mode: 'answer', prompt: 'Summarize everything about the bridge since the beginning', scope: 'recent',
+  });
+  assert.equal(context.fullLog, null);
+  assert.deepEqual(context.search, { messages: [], terms: [] });
+  assert.deepEqual(context.sources?.map(({ message: entry }) => entry.id), [message.id]);
+  assert.equal(context.coverage?.description, 'Recent messages only');
+});
+
+test('explicit saved scope includes history even for a short generic prompt and reports limits', () => {
+  const history = Array.from({ length: 650 }, (_, index) => createMessage(`old-${index}`, 'Earlier detail', index));
+  const context = buildAiAssistantContext(createConversationStore(channelBuffer, [message], {
+    allMessages: history,
+  }), channelBuffer.id, { mode: 'answer', prompt: 'Summarize', scope: 'saved' });
+  assert.ok(context.fullLog?.messages.length);
+  assert.equal(context.coverage?.description, 'Saved conversation history');
+  assert.equal(context.coverage?.truncated, true);
+});
+
+test('assistant service forwards the selected recent scope to retrieval', async () => {
+  const store = createConversationStore(channelBuffer, [message]);
+  store.listAssistantHistory = () => { throw new Error('Recent scope must survive request routing'); };
+  store.searchMessagesByBufferId = () => { throw new Error('Recent scope must survive request routing'); };
+  const service = new RuntimeAiAssistantService({ conversations: store, provider: {
+    model: null,
+    request: async () => ({ answer: 'Summary', status: connectedStatus }),
+    status: async () => connectedStatus,
+    startLogin: async () => ({ instructions: null, status: connectedStatus }),
+  } });
+  const result = await service.ask(channelBuffer.id, { scope: 'recent', mode: 'answer', prompt: 'Summarize all saved history', assistantTurns: [], selection: { model: null, reasoningEffort: null } });
+  assert.equal(result.context.coverage?.description, 'Recent messages only');
+});

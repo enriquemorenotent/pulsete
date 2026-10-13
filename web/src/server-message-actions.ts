@@ -67,7 +67,11 @@ const toActions = (message: ServerMessage): Action[] => {
         presence: message.presence,
       }];
     case 'buffer.upsert':
-      return [{ type: 'upsert-buffer', buffer: message.buffer }];
+      return [{
+        type: 'upsert-buffer',
+        buffer: message.buffer,
+        ...(message.onlyIfOpen ? { onlyIfOpen: true } : {}),
+      }];
     case 'buffer.remove':
       return [{
         type: 'remove-buffer',

@@ -43,6 +43,7 @@ export type RuntimeConversationMutations = {
   saveBufferNotes: RuntimeConversationService['saveBufferNotes'];
   history: RuntimeConversationService['listBufferHistory'];
   searchHistory: RuntimeConversationService['searchBufferHistory'];
+  messageHistoryWindow: RuntimeConversationService['messageHistoryWindow'];
   searchLogs: RuntimeConversationService['searchLogs'];
   listLogSources: RuntimeConversationService['listLogSources'];
   exportHistory(bufferId: string): ReturnType<RuntimeConversationService['exportBufferHistory']>;
@@ -140,6 +141,7 @@ export type RuntimeHttpApi = {
     pinnedMessageHistoryWindow: RuntimeConversationMutations['pinnedMessageHistoryWindow'];
   };
   logs: {
+    window: RuntimeConversationMutations['messageHistoryWindow'];
     listSources: RuntimeConversationMutations['listLogSources'];
     search: RuntimeConversationMutations['searchLogs'];
   };

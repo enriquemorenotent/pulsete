@@ -152,6 +152,7 @@ export class RuntimeHost {
           this.runtime.http.buffers.pinnedMessageHistoryWindow(bufferId, messageId),
       },
       logs: {
+        window: (bufferId, messageId) => this.runtime.http.logs.window(bufferId, messageId),
         listSources: (filters, limit) => this.runtime.http.logs.listSources(filters, limit),
         search: (query, limit, filters) => this.runtime.http.logs.search(query, limit, filters),
       },

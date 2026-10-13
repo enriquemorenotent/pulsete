@@ -9,7 +9,7 @@ test('friend rows expose online and away cues when the server switcher is open',
     friendPresence: { [friend.id]: 'away' },
   });
 
-  assert.match(markup, /Watchlist<\/h2>/);
+  assert.match(markup, /aria-label="Collapse watchlist"/);
   assert.doesNotMatch(markup, />1 online</);
   assert.match(markup, /aria-label="Open Alice \(away\)"/);
   assert.match(markup, /bg-yellow-400/);
@@ -63,7 +63,7 @@ test('friends header includes a direct offline visibility button', () => {
     ],
   });
 
-  assert.match(markup, /Watchlist<\/h2>/);
+  assert.match(markup, /aria-label="Collapse watchlist"/);
   assert.match(markup, /aria-label="Hide offline nicks"/);
   assert.match(markup, /aria-pressed="false"/);
   assert.match(markup, /lucide-eye-off/);

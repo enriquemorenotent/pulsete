@@ -192,23 +192,23 @@ test('server profile sidebar hides empty capabilities', () => {
 test('query profile sidebar renders the per-DM notes editor', () => {
   const markup = renderQueryProfileSidebar();
 
-  assert.match(markup, /aria-label="Info"/);
-  assert.match(markup, /aria-label="Pinned"/);
+  assert.match(markup, /aria-label="Context"/);
+  assert.match(markup, /Pinned messages/);
   assert.match(markup, /aria-label="Assistant"/);
   assert.match(markup, /aria-label="Collapse right sidebar"/);
   assert.match(markup, /Notes/);
   assert.doesNotMatch(markup, /Private message/);
-  assert.doesNotMatch(markup, /<h2[^>]*>Sofia<\/h2>/);
+
   assert.doesNotMatch(markup, /Sofia on RoleplayNet/);
   assert.doesNotMatch(markup, /Details/);
   assert.doesNotMatch(markup, /Identity/);
   assert.doesNotMatch(markup, /aria-label="Edit emoji tag for Sofia"/);
   assert.doesNotMatch(markup, /aria-label="(?:Custom )?Avatar for Sofia"/);
   assert.doesNotMatch(markup, /avatar-redirect/);
-  assert.match(markup, /flex min-h-0 flex-1 px-4 py-4/);
-  assert.match(markup, /flex min-h-0 flex-col flex-1 gap-2\.5/);
-  assert.match(markup, /relative flex-1 min-h-40[\s\S]*query-profile-notes/);
-  assert.doesNotMatch(markup, /h-\[min\(32dvh,18rem\)\]/);
+  assert.match(markup, /aria-label="Conversation context"/);
+
+  assert.match(markup, /query-profile-notes/);
+  assert.match(markup, /resize-none overflow-hidden/);
   assert.match(markup, /Prefers encrypted routes/);
   assert.match(markup, /Saved/);
 });

@@ -25,7 +25,7 @@ test('sidebar row actions are visually quiet until hover or keyboard focus', () 
   });
 
   assert.match(markup, /aria-label="Disconnect Cuff-Link"/);
-  assert.match(markup, /aria-label="Close Cuff-Link"/);
+  assert.match(markup, /aria-label="Account actions for Cuff-Link"/);
   assert.match(markup, /aria-label="Close #help"/);
   assert.match(markup, /aria-label="Remove alice from watchlist"/);
   assert.match(markup, /opacity-0/);

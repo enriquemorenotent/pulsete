@@ -10,7 +10,7 @@ import type { ChannelUserMode } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { Button } from '@/components/ui/button.js';
 import { TranscriptEmptyState } from './ChatPaneTranscriptDecorations.js';
-import type { ChatTranscriptModel } from './transcript/model.js';
+import type { ChatTranscriptModel, ChatTranscriptRow as TranscriptRow } from './transcript/model.js';
 import { ChatTranscriptRow } from './ChatTranscriptRow.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 import type { ParticipantHighlightMode } from './message-participant-presentation.js';
@@ -19,6 +19,7 @@ import {
   useTranscriptViewport,
   type TranscriptInitialScrollTarget,
 } from './transcript/viewport.js';
+import { useTranscriptWindowAnchor } from './transcript/window-anchor.js';
 import { handleTranscriptCopy } from './transcript/copy.js';
 
 type ChatTranscriptVirtuosoProps = {
@@ -42,6 +43,7 @@ type ChatTranscriptVirtuosoProps = {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
+  onLoadNewerHistory?: () => Promise<number>;
   onToggleMutedGroup: (key: string) => void;
   canPinMessages?: boolean;
   onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
@@ -83,8 +85,12 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     () => props.model.flatRows.map((row) => row.key),
     [props.model.flatRows],
   );
+  const windowAnchor = useTranscriptWindowAnchor(
+    rowKeys, props.hasNewerHistory, props.jumpToLatestRequestId, props.focusRequestId, props.focusRowIndex,
+  );
   const viewport = useTranscriptViewport({
     bufferId: props.bufferId,
+    isRestoringWindow: windowAnchor.isRestoring,
     followOutputRequestId: props.followOutputRequestId,
     focusRequestId: props.focusRequestId,
     focusRowIndex: props.focusRowIndex,
@@ -93,6 +99,8 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     jumpToLatestRequestId: props.jumpToLatestRequestId,
     loadingOlderHistory: props.loadingOlderHistory ?? false,
     onLoadOlderHistory: props.onLoadOlderHistory,
+    onLoadNewerHistory: props.onLoadNewerHistory,
+    hasNewerHistory: props.hasNewerHistory,
     rowKeys,
     totalItemCount: props.model.flatRows.length,
     unreadRowIndex: props.model.unreadRowIndex,
@@ -113,33 +121,24 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
             </div>
           )
         : undefined,
+      Footer: props.onLoadNewerHistory
+        ? () => <div className="flex justify-center py-2 pb-14">
+            <Button variant="outline" size="sm" disabled={props.loadingOlderHistory}
+              onClick={() => void props.onLoadNewerHistory?.()}>Load newer</Button>
+          </div>
+        : undefined,
       List: TranscriptList,
     }),
     [
       props.loadingOlderHistory,
       props.onLoadOlderHistory,
+      props.onLoadNewerHistory,
       viewport.handleLoadOlderHistory,
     ],
   );
-  const computeItemKey = useCallback(
-    (index: number) =>
-      resolveTranscriptVirtuosoItemKey(
-        index,
-        props.model,
-        viewport.firstItemIndex,
-      ),
-    [props.model, viewport.firstItemIndex],
-  );
+  const computeItemKey = useCallback((_index: number, row: TranscriptRow) => row.key, []);
   const renderItemContent = useCallback(
-    (index: number) => {
-      const row = resolveTranscriptVirtuosoRow(
-        index,
-        props.model,
-        viewport.firstItemIndex,
-      );
-      if (!row) {
-        return null;
-      }
+    (_index: number, row: TranscriptRow) => {
       return (
         <ChatTranscriptRow
           row={row}
@@ -189,8 +188,10 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
   }
 
   return (
-    <div className="relative min-h-0 flex-1" onCopy={handleTranscriptCopy}>
+    <div ref={windowAnchor.containerRef} className="relative min-h-0 flex-1" onCopy={handleTranscriptCopy}>
       <Virtuoso
+        key={windowAnchor.key}
+        {...(windowAnchor.initialTopMostItemIndex ? { initialTopMostItemIndex: windowAnchor.initialTopMostItemIndex } : {})}
         ref={viewport.virtuosoRef}
         className="chat-transcript-scrollbar"
         style={{ height: '100%' }}
@@ -204,10 +205,11 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         followOutput={viewport.followOutput}
         increaseViewportBy={{ bottom: 320, top: 160 }}
         itemContent={renderItemContent}
-        itemsRendered={viewport.handleItemsRendered}
+        itemsRendered={(items) => { windowAnchor.isRestoring(); viewport.handleItemsRendered(items); }}
         scrollerRef={viewport.scrollerRef}
         startReached={viewport.handleStartReached}
-        totalCount={props.model.flatRows.length}
+        endReached={viewport.handleEndReached}
+        data={props.model.flatRows}
       />
       {props.hasNewerHistory && props.onReturnToLatest ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">

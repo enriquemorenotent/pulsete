@@ -176,9 +176,10 @@ export function useDesktopChatModel({
       initialHistoryPending: selectedBufferHistory.initialHistoryPending,
       loadingOlderHistory: selectedBufferHistory.isLoadingOlderHistory,
       onLoadOlderHistory: selectedBufferHistory.loadOlderHistory,
+      onLoadNewerHistory: selectedBufferHistory.loadNewerHistory,
       hasNewerHistory: selectedBufferHistory.hasNewerHistory,
-      onReturnToLatest: selectedQueryBuffer
-        ? () => actions.returnBufferToLatest(selectedQueryBuffer.id)
+      onReturnToLatest: selectedBufferId
+        ? () => actions.returnBufferToLatest(selectedBufferId)
         : undefined,
       canPinMessages: Boolean(selectedQueryBuffer),
       onSetMessagePinned: actions.setMessagePinned,

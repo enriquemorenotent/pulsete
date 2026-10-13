@@ -1,3 +1,4 @@
+import { highlightSearchText } from './highlight-search-text.js';
 import type { CSSProperties } from 'react';
 import type { MessageTextPart } from './formatted-message.js';
 import {
@@ -11,14 +12,16 @@ export const renderFormattedMessageParts = (
   parts: MessageTextPart[],
   insideLink: boolean,
   tokenIndex: number,
+  highlightQuery?: string,
 ) => parts.map((part, partIndex) => {
   const style = resolveSpanStyle(part.style, insideLink);
+  const text = highlightQuery ? highlightSearchText(part.text, highlightQuery) : part.text;
   if (!style) {
-    return part.text;
+    return text;
   }
   return (
     <span key={`part-${tokenIndex}-${partIndex}`} style={style}>
-      {part.text}
+      {text}
     </span>
   );
 });

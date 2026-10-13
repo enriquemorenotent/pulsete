@@ -1,3 +1,4 @@
+import { highlightSearchText } from './highlight-search-text.js';
 import { Fragment, memo, useMemo } from 'react';
 import {
   parseFormattedMessageContent,
@@ -21,6 +22,7 @@ export { InlineImagePreviewDialogBody } from './InlineImagePreviewDialogBody.js'
 export { InlineMediaPreviewDialogBody } from './InlineMediaPreviewDialogBody.js';
 
 type FormattedMessageTextProps = {
+  highlightQuery?: string;
   inlineImageRendering?: InlineImageRenderingMode;
   onInlinePreviewLoad?: () => void;
   parsedContent?: ParsedFormattedMessageContent;
@@ -42,7 +44,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
     ?? inlineImageRendering === 'preview';
 
   if (content.rawMode) {
-    return <span className="font-mono">{content.rawText}</span>;
+    return <span className="font-mono">{highlightSearchText(content.rawText, props.highlightQuery)}</span>;
   }
 
   return (
@@ -52,6 +54,7 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
           token.parts,
           token.type !== 'text',
           tokenIndex,
+          props.highlightQuery,
         );
         if (token.type === 'text') {
           return <Fragment key={`text-${tokenIndex}`}>{renderedContent}</Fragment>;

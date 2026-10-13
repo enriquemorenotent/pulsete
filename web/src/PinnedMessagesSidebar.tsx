@@ -14,6 +14,7 @@ import { InspectorPanel } from './RightSidebarInspector.js';
 export type PinnedMessagesLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
 export function PinnedMessagesSidebar(props: {
+  embedded?: boolean;
   buffer: BufferState | null;
   loadState: PinnedMessagesLoadState;
   messages: ChatMessage[];
@@ -25,17 +26,18 @@ export function PinnedMessagesSidebar(props: {
     return null;
   }
 
+  const Container = props.embedded ? 'div' : InspectorPanel;
   return (
-    <InspectorPanel className="gap-0 px-0 py-0">
-      <header className="shrink-0 border-b border-white/[0.045] px-4 py-3">
+    <Container className="gap-0 px-0 py-0">
+      {!props.embedded ? <header className="shrink-0 border-b border-white/[0.045] px-4 py-3">
         <h2 className="text-sm font-semibold tracking-tight text-foreground/92">
           Pinned messages
         </h2>
-        <p className="mt-0.5 text-[11px] text-muted-foreground/72">
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
           Local to this device · {props.messages.length} {props.messages.length === 1 ? 'pin' : 'pins'}
         </p>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+      </header> : null}
+      <div className={props.embedded ? 'pt-2' : 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-2'}>
         {props.loadState === 'loading' || props.loadState === 'idle' ? (
           <PinnedMessagesEmptyState>Loading pinned messages...</PinnedMessagesEmptyState>
         ) : props.loadState === 'error' ? (
@@ -45,7 +47,7 @@ export function PinnedMessagesSidebar(props: {
           </PinnedMessagesEmptyState>
         ) : props.messages.length === 0 ? (
           <PinnedMessagesEmptyState>
-            Hover a text or action message in this PM and select the pin.
+            Keep useful messages here. Hover a message in the conversation and choose the pin.
           </PinnedMessagesEmptyState>
         ) : (
           <div className="flex flex-col gap-1">
@@ -60,7 +62,7 @@ export function PinnedMessagesSidebar(props: {
           </div>
         )}
       </div>
-    </InspectorPanel>
+    </Container>
   );
 }
 
@@ -140,7 +142,7 @@ function PinnedMessageCard(props: {
 
 function PinnedMessagesEmptyState(props: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-36 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-white/[0.08] px-4 py-6 text-center text-[12px] leading-5 text-muted-foreground/72">
+    <div className="flex flex-col items-start gap-3 py-3 text-[12px] leading-5 text-muted-foreground">
       {props.children}
     </div>
   );

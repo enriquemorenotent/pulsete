@@ -49,12 +49,14 @@ export const chatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
-export type PinnedMessageHistoryWindowPayload = {
+export type MessageHistoryWindowPayload = {
   messages: ChatMessage[];
   targetMessageId: string;
   hasOlder: boolean;
   hasNewer: boolean;
 };
+
+export type PinnedMessageHistoryWindowPayload = MessageHistoryWindowPayload;
 
 export type {
   BufferHistorySearchPayload,

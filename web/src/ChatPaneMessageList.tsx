@@ -44,6 +44,7 @@ type ChatPaneMessageListProps = {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
+  onLoadNewerHistory?: () => Promise<number>;
   hasNewerHistory?: boolean;
   onReturnToLatest?: () => Promise<boolean>;
   canPinMessages?: boolean;
@@ -189,6 +190,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
         onSetMessagePinned={props.onSetMessagePinned}
         hasNewerHistory={props.hasNewerHistory}
         onReturnToLatest={props.onReturnToLatest}
+        onLoadNewerHistory={props.onLoadNewerHistory}
         onLoadOlderHistory={loadOlderHistory}
         onToggleMutedGroup={toggleMutedGroup}
         onOpenChannel={props.onOpenChannel}
@@ -200,6 +202,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
 
   return (
     <ChatTranscriptVirtuoso
+      key={props.selectedBuffer?.id ?? 'none'}
       bufferId={props.selectedBuffer?.id ?? null}
       channelUserModesByNick={channelUserModesByNick}
       emptyBody={props.emptyBody}
@@ -221,6 +224,7 @@ export const ChatPaneMessageList = memo(function ChatPaneMessageList(
       onSetMessagePinned={props.onSetMessagePinned}
       hasNewerHistory={props.hasNewerHistory}
       onReturnToLatest={props.onReturnToLatest}
+      onLoadNewerHistory={props.onLoadNewerHistory}
       onLoadOlderHistory={loadOlderHistory}
       onToggleMutedGroup={toggleMutedGroup}
       onOpenChannel={props.onOpenChannel}

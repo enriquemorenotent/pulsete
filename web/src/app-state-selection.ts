@@ -25,6 +25,9 @@ export const resolveNextSelection = (
     case 'snapshot':
       return getConversation().normalizeSelection(domain.networks, previous.transient.selection);
     case 'upsert-buffer':
+      if (action.onlyIfOpen && !domain.buffers.some((buffer) => buffer.id === action.buffer.id)) {
+        return selection;
+      }
       if (
         previous.transient.selection?.kind === 'pending-channel'
         && previous.transient.selection.networkId === action.buffer.networkId

@@ -1,9 +1,11 @@
-import { Eye, EyeOff } from 'lucide-react';
+import { useId, useState } from 'react';
+import { ChevronRight, Eye, EyeOff } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import { FriendRow } from './ConnectionSidebarFriendRow.js';
 import { resolveUniqueNickEmoji } from './nick-emoji-utils.js';
+import { cn } from '@/lib/utils.js';
 
 type ConnectionSidebarFriendsProps = Pick<
 	ConnectionSidebarProps,
@@ -19,6 +21,8 @@ type ConnectionSidebarFriendsProps = Pick<
 };
 
 export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
+	const contentId = useId();
+	const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
 	const hideOfflineFriends = props.hideOfflineFriends ?? false;
 	const variant = props.variant ?? 'bottom';
 	const offlineVisibilityLabel = hideOfflineFriends
@@ -43,6 +47,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 	const visibleFriends = hideOfflineFriends
 		? activeFriends
 		: [...activeFriends, ...offlineFriends];
+	const expanded = expandedOverride ?? (variant === 'panel' || visibleFriends.length > 0);
 
 	return (
 		<>
@@ -50,15 +55,24 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 				className={
 					variant === 'panel'
 						? 'flex min-h-0 flex-1 flex-col px-2.5 py-1.5'
-						: 'shrink-0 border-t border-white/8 px-2.5 py-1.5'
+						: 'shrink-0 border-t border-white/5 px-2.5 py-2'
 				}
 			>
 				<div className="flex items-center justify-between gap-2 px-1 py-0.5">
-					<div className="min-w-0">
-						<h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/75">
-							Watchlist
-						</h2>
-					</div>
+					<h2 className="min-w-0 flex-1">
+						<button
+							type="button"
+							className="flex w-full items-center gap-1.5 rounded-sm py-1 text-left text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground/75 outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/45"
+							aria-expanded={expanded}
+							aria-controls={contentId}
+							aria-label={`${expanded ? 'Collapse' : 'Expand'} watchlist`}
+							onClick={() => setExpandedOverride(!expanded)}
+						>
+							<ChevronRight aria-hidden className={cn('size-3 shrink-0', expanded && 'rotate-90')} />
+							<span>Watchlist</span>
+							<span className="ml-1 font-normal tabular-nums tracking-normal text-muted-foreground/55" title={`${activeFriends.length} active`}>{activeFriends.length}</span>
+						</button>
+					</h2>
 					<Button
 						type="button"
 						variant="ghost"
@@ -77,6 +91,8 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 					</Button>
 				</div>
 				<div
+					id={contentId}
+					hidden={!expanded}
 					className={
 						variant === 'panel'
 							? 'mt-0.5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5'

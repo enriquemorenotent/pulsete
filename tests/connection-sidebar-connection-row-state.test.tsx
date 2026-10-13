@@ -87,7 +87,7 @@ test('offline connections keep channel and query rows visible and selectable', (
   assert.match(markup, /Direct messages<\/h2>/);
   assert.doesNotMatch(markup, /aria-label="Open #help"[^>]*disabled/);
   assert.doesNotMatch(markup, /aria-label="Open alice"[^>]*disabled/);
-  assert.match(markup, />Offline</);
+  assert.match(markup, /aria-description="Offline as sofia"/);
 });
 
 test('connected server headers show the server name and status', () => {
@@ -123,10 +123,10 @@ test('connected server headers show the server name and status', () => {
     />,
   );
 
-  assert.match(markup, />Connected</);
+  assert.match(markup, /aria-description="Connected as sofia"/);
   assert.doesNotMatch(markup, />as sofia</);
-  assert.match(markup, /bg-\[#8cc9b7\]/);
-  assert.match(markup, />Cuff-Link<\/button>/);
+  assert.match(markup, /bg-emerald-300/);
+  assert.match(markup, />Cuff-Link<\/span>/);
 });
 
 test('connecting rows use the amber server icon and connecting action', () => {
@@ -162,9 +162,9 @@ test('connecting rows use the amber server icon and connecting action', () => {
     />,
   );
 
-  assert.match(markup, />Connecting</);
+  assert.match(markup, /aria-description="Connecting as sofia"/);
   assert.doesNotMatch(markup, />as sofia</);
-  assert.match(markup, /bg-\[#e0bc68\]/);
+  assert.match(markup, /bg-amber-300/);
 });
 
 test('server rows use the overlaid dot for unread state instead of a trailing marker', () => {
@@ -205,8 +205,8 @@ test('server rows use the overlaid dot for unread state instead of a trailing ma
   );
 
   assert.match(markup, /aria-label="Open Cuff-Link \(unread\)"/);
-  assert.match(markup, /bg-\[#8cc9b7\]/);
+  assert.match(markup, /bg-emerald-300/);
   assert.match(markup, /bg-primary/);
-  assert.match(markup, />Cuff-Link<\/button>/);
+  assert.match(markup, />Cuff-Link<\/span>/);
   assert.doesNotMatch(markup, /aria-label="Unread messages requiring attention"/);
 });

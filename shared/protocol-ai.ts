@@ -25,7 +25,11 @@ export const aiAssistantTurnSchema = z.object({
 });
 export type AiAssistantTurn = z.infer<typeof aiAssistantTurnSchema>;
 
+export const aiAssistantScopeSchema = z.enum(['recent', 'saved']);
+export type AiAssistantScope = z.infer<typeof aiAssistantScopeSchema>;
+
 export const aiAssistantRequestSchema = z.object({
+  scope: aiAssistantScopeSchema.optional(),
   assistantTurns: z.array(aiAssistantTurnSchema).max(aiAssistantThreadMaxTurns).default([]),
   mode: aiAssistantModeSchema.default('answer'),
   prompt: z.string().max(aiAssistantPromptMaxLength).default(''),

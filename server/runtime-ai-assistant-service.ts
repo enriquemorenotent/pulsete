@@ -46,6 +46,7 @@ export class RuntimeAiAssistantService {
     const context = buildAiAssistantContext(this.options.conversations, bufferId, {
       assistantTurns,
       mode: request.mode,
+      scope: request.scope,
       prompt,
     });
     const result = await this.provider.request({

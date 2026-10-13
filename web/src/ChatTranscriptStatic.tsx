@@ -23,6 +23,7 @@ type ChatTranscriptStaticProps = {
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onLoadOlderHistory?: () => Promise<number>;
+  onLoadNewerHistory?: () => Promise<number>;
   onToggleMutedGroup: (key: string) => void;
   canPinMessages?: boolean;
   onSetMessagePinned?: (bufferId: string, messageId: string, pinned: boolean) => Promise<boolean>;
@@ -77,6 +78,8 @@ export function ChatTranscriptStatic(props: ChatTranscriptStaticProps) {
           />
         ))}
       </div>
+      {props.onLoadNewerHistory ? <Button disabled={props.loadingOlderHistory}
+        onClick={() => void props.onLoadNewerHistory?.()}>Load newer</Button> : null}
       {props.hasNewerHistory && props.onReturnToLatest ? (
         <div className="sticky bottom-3 mt-3 flex justify-center">
           <Button variant="secondary" size="sm" onClick={() => void props.onReturnToLatest?.()}>

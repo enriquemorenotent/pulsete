@@ -1,8 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
-import {
-  resolveNextFirstItemIndex,
-  resolvePrependedRowCountFromAnchor,
-} from './viewport-positioning.js';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 type SetFirstItemIndex = (value: number | ((current: number) => number)) => void;
 
@@ -24,28 +20,22 @@ export const useTranscriptOlderHistory = (
     pendingOlderHistoryAnchorKeyRef.current = null;
   }, []);
 
+  // Update the index together with the rows, before Virtuoso sees either change.
+  const [previousRows, setPreviousRows] = useState(params.rowKeys);
+  if (previousRows !== params.rowKeys) {
+    setPreviousRows(params.rowKeys);
+    const nextIndexes = new Map(params.rowKeys.map((key, index) => [key, index]));
+    const previousIndex = previousRows.findIndex((key) =>
+      !key.startsWith('day-divider:') && !key.startsWith('unread-divider:') && nextIndexes.has(key));
+    if (previousIndex >= 0) {
+      const nextIndex = nextIndexes.get(previousRows[previousIndex]!)!;
+      const delta = previousIndex - nextIndex;
+      if (delta) params.setFirstItemIndex((current) => Math.max(1, current + delta));
+    }
+  }
   useLayoutEffect(() => {
-    const anchorKey = pendingOlderHistoryAnchorKeyRef.current;
-    if (!anchorKey) {
-      return;
-    }
-
-    const prependedRowCount = resolvePrependedRowCountFromAnchor(
-      anchorKey,
-      params.rowKeys,
-    );
-    if (prependedRowCount !== null && prependedRowCount > 0) {
-      params.setFirstItemIndex((current) =>
-        resolveNextFirstItemIndex(current, prependedRowCount),
-      );
-      pendingOlderHistoryAnchorKeyRef.current = null;
-      return;
-    }
-
-    if (!params.loadingOlderHistory) {
-      pendingOlderHistoryAnchorKeyRef.current = null;
-    }
-  }, [params.loadingOlderHistory, params.rowKeys, params.setFirstItemIndex]);
+    if (!params.loadingOlderHistory) pendingOlderHistoryAnchorKeyRef.current = null;
+  }, [params.rowKeys, params.loadingOlderHistory]);
 
   const handleLoadOlderHistory = useCallback(async () => {
     if (

@@ -1,3 +1,4 @@
+import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 import type {
   AiAssistantProviderStatus,
   AiAssistantSelection,
@@ -10,7 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select.js';
 import {
-  formatAssistantModelLabel,
   formatReasoningEffort,
   resolveAiAssistantSelection,
 } from './ai-assistant-model-selection.js';
@@ -35,8 +35,14 @@ export function AiAssistantModelControls(props: AiAssistantModelControlsProps) {
   const model = resolved.model;
   const reasoningEffort = resolved.selection.reasoningEffort;
   return (
-    <section aria-label="Assistant model settings" className="shrink-0 space-y-1.5">
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(6.5rem,0.8fr)] gap-2">
+    <section aria-label="Assistant model settings" className="shrink-0">
+      <details className="group/settings">
+        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md py-1.5 text-xs text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+          <SlidersHorizontal className="size-3.5 shrink-0" aria-hidden />
+          <span className="min-w-0 truncate">{model.label} · {formatReasoningEffort(reasoningEffort)}</span>
+          <ChevronDown className="ml-auto size-3.5 shrink-0 transition-transform group-open/settings:rotate-180" aria-hidden />
+        </summary>
+      <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-2 rounded-md border border-white/[0.07] bg-black/10 p-2.5 mt-1">
         <div className="min-w-0 space-y-1">
           <span id="assistant-model-label" className="block text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/68">
             Model
@@ -59,7 +65,7 @@ export function AiAssistantModelControls(props: AiAssistantModelControlsProps) {
               size="sm"
               className="h-7 w-full min-w-0 border-white/[0.08] bg-white/[0.025] px-2 text-[11px] shadow-none"
             >
-              <SelectValue>{formatAssistantModelLabel(model.label)}</SelectValue>
+              <SelectValue>{model.label}</SelectValue>
             </SelectTrigger>
             <SelectContent align="start">
               {props.status.availableModels.map((option) => (
@@ -99,6 +105,7 @@ export function AiAssistantModelControls(props: AiAssistantModelControlsProps) {
           </Select>
         </div>
       </div>
+      </details>
       {resolved.notice ? (
         <p role="status" className="text-[10px] leading-4 text-amber-200/78">
           {resolved.notice}

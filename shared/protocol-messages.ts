@@ -113,7 +113,11 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     bufferId: z.string(),
     presence: presenceStatusSchema,
   }),
-  baseServerSchema.extend({ type: z.literal('buffer.upsert'), buffer: bufferSchema }),
+  baseServerSchema.extend({
+    type: z.literal('buffer.upsert'),
+    buffer: bufferSchema,
+    onlyIfOpen: z.boolean().optional(),
+  }),
   baseServerSchema.extend({
     type: z.literal('buffer.remove'),
     networkId: z.string(),

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { AiAssistantContext, AiAssistantMode } from '../../shared/protocol-ai.js';
+import type { AiAssistantContext, AiAssistantMode, AiAssistantScope } from '../../shared/protocol-ai.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 
 type Listener = () => void;
@@ -11,6 +11,7 @@ export type AiAssistantThreadState = {
   input: string;
   pending: boolean;
   pendingLabel: string;
+  scope: AiAssistantScope;
 };
 
 type StartRequestInput = {
@@ -34,6 +35,7 @@ export type AiAssistantStoreApi = {
     requestId: number,
     result: ResolveRequestInput,
   ) => void;
+  setScope: (bufferId: string, scope: AiAssistantScope) => void;
   setInput: (bufferId: string, input: string) => void;
   startRequest: (bufferId: string, input: StartRequestInput) => number | null;
   subscribe: (listener: Listener) => () => void;
@@ -48,6 +50,7 @@ export const emptyAiAssistantThread: AiAssistantThreadState = {
   input: '',
   pending: false,
   pendingLabel: 'Thinking',
+  scope: 'recent',
 };
 
 export const createAiAssistantStore = (): AiAssistantStoreApi => {
@@ -88,6 +91,9 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
   };
 
   return {
+    setScope(bufferId, scope) {
+      updateThread(bufferId, (current) => current.scope === scope ? current : { ...current, scope });
+    },
     clearThread(bufferId) {
       if (!(bufferId in threads)) {
         return;

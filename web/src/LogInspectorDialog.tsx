@@ -17,8 +17,7 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog.js';
-import type { HistorySearchState } from './HistorySearchDialog.js';
-import type { BufferHistoryPayload } from './client.js';
+import { api, type BufferHistoryPayload } from './client.js';
 import {
   allNetworksValue,
   allSourceKindsValue,
@@ -28,10 +27,8 @@ import {
   type LogSourceListState,
 } from './LogInspectorDialogBody.js';
 import { scheduleAnimationFrameFocus } from './animation-frame-focus.js';
-import {
-  runLogSearchRequest,
-  type SearchLogs,
-} from './history-search-request.js';
+import type { SearchLogs } from './history-search-request.js';
+import { useLogHistorySearch } from './useLogHistorySearch.js';
 
 export { LogInspectorDialogBody } from './LogInspectorDialogBody.js';
 export type { LogInspectorDialogBodyProps } from './LogInspectorDialogBody.js';
@@ -58,14 +55,6 @@ type LoadSourceHistory = (
   init?: Pick<RequestInit, 'signal'>,
 ) => Promise<BufferHistoryPayload>;
 
-const initialSearchState: HistorySearchState = {
-  status: 'idle',
-  query: '',
-  results: [],
-  hasMore: false,
-  error: null,
-};
-
 const initialSourceState: LogSourceListState = {
   status: 'idle',
   query: '',
@@ -82,18 +71,15 @@ const initialSourceHistoryState: LogSourceHistoryState = {
 
 export function LogInspectorDialog(props: LogInspectorDialogProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const requestAbortRef = useRef<AbortController | null>(null);
-  const requestRef = useRef(0);
+  const search = useLogHistorySearch(props.open, props.onSearch);
   const sourceAbortRef = useRef<AbortController | null>(null);
   const sourceRequestRef = useRef(0);
   const sourceHistoryAbortRef = useRef<AbortController | null>(null);
   const sourceHistoryRequestRef = useRef(0);
   const [activeMode, setActiveMode] = useState<LogInspectorMode>('sources');
-  const [query, setQuery] = useState('');
   const [networkValue, setNetworkValue] = useState(allNetworksValue);
-  const [target, setTarget] = useState('');
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
-  const [searchState, setSearchState] = useState<HistorySearchState>(initialSearchState);
+  const [scopeLabel, setScopeLabel] = useState('');
   const [sourceQuery, setSourceQuery] = useState('');
   const [sourceKindValue, setSourceKindValue] = useState(allSourceKindsValue);
   const [sourceState, setSourceState] = useState<LogSourceListState>(initialSourceState);
@@ -103,9 +89,6 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
   const [loadingOlderSourceHistory, setLoadingOlderSourceHistory] = useState(false);
 
   useEffect(() => {
-    requestRef.current += 1;
-    requestAbortRef.current?.abort();
-    requestAbortRef.current = null;
     sourceRequestRef.current += 1;
     sourceAbortRef.current?.abort();
     sourceAbortRef.current = null;
@@ -113,12 +96,10 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
     sourceHistoryAbortRef.current?.abort();
     sourceHistoryAbortRef.current = null;
     setActiveMode('sources');
-    setQuery('');
     setNetworkValue(allNetworksValue);
-    setTarget('');
     setExpandedMessageId(null);
-    setSearchState(initialSearchState);
     setSourceQuery('');
+    setScopeLabel('');
     setSourceKindValue(allSourceKindsValue);
     setSourceState(initialSourceState);
     setSelectedSource(null);
@@ -135,9 +116,6 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
       });
     }
     return () => {
-      requestRef.current += 1;
-      requestAbortRef.current?.abort();
-      requestAbortRef.current = null;
       sourceRequestRef.current += 1;
       sourceAbortRef.current?.abort();
       sourceAbortRef.current = null;
@@ -165,11 +143,6 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
     sourceAbortRef.current?.abort();
     const controller = new AbortController();
     sourceAbortRef.current = controller;
-    sourceHistoryRequestRef.current += 1;
-    sourceHistoryAbortRef.current?.abort();
-    sourceHistoryAbortRef.current = null;
-    setSelectedSource(null);
-    setSourceHistoryState(initialSourceHistoryState);
     setSourceState({
       status: 'loading',
       query: trimmedQuery,
@@ -208,13 +181,13 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
     }
   };
 
-  const loadSourceHistory = async (source: LogSource, beforeMessageId?: string) => {
+  const loadSourceHistory = async (source: LogSource, beforeMessageId?: string, aroundMessageId?: string, newer = false) => {
     const requestId = sourceHistoryRequestRef.current + 1;
     sourceHistoryRequestRef.current = requestId;
     sourceHistoryAbortRef.current?.abort();
     const controller = new AbortController();
     sourceHistoryAbortRef.current = controller;
-    if (beforeMessageId) {
+    if (beforeMessageId || newer) {
       setLoadingOlderSourceHistory(true);
     } else {
       setSourceHistoryState({
@@ -225,9 +198,8 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
       });
     }
     try {
-      const payload = await props.onLoadHistory(source.buffer.id, beforeMessageId, {
-        signal: controller.signal,
-      });
+      const window = aroundMessageId ? await api.loadMessageHistoryWindow(source.buffer.id, aroundMessageId, { signal: controller.signal }) : null;
+      const payload = window ? { messages: window.messages, hasMore: window.hasOlder } : await props.onLoadHistory(source.buffer.id, beforeMessageId, { signal: controller.signal });
       if (
         sourceHistoryRequestRef.current !== requestId
         || sourceHistoryAbortRef.current !== controller
@@ -236,10 +208,11 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
       }
       setSourceHistoryState((current) => ({
         status: 'loaded',
-        messages: beforeMessageId
+        messages: newer ? mergeOlderMessages(current.messages, payload.messages) : beforeMessageId
           ? mergeOlderMessages(payload.messages, current.messages)
           : payload.messages,
-        hasMore: payload.hasMore,
+        hasMore: newer ? current.hasMore : payload.hasMore,
+        hasNewer: beforeMessageId ? current.hasNewer : window?.hasNewer ?? false,
         error: null,
       }));
     } catch (error) {
@@ -250,77 +223,18 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
         return;
       }
       setSourceHistoryState((current) => ({
-        status: 'error',
-        messages: beforeMessageId ? current.messages : [],
-        hasMore: false,
+        status: beforeMessageId || newer ? 'loaded' : 'error',
+        messages: beforeMessageId || newer ? current.messages : [],
+        hasMore: current.hasMore,
+        hasNewer: current.hasNewer,
         error: error instanceof Error ? error.message : 'Failed to load transcript',
       }));
     } finally {
       if (sourceHistoryAbortRef.current === controller) {
         sourceHistoryAbortRef.current = null;
       }
-      setLoadingOlderSourceHistory(false);
+      if (sourceHistoryRequestRef.current === requestId) setLoadingOlderSourceHistory(false);
     }
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmedQuery = query.trim();
-    if (!trimmedQuery) {
-      requestRef.current += 1;
-      requestAbortRef.current?.abort();
-      requestAbortRef.current = null;
-      setSearchState(initialSearchState);
-      return;
-    }
-    const requestId = requestRef.current + 1;
-    requestRef.current = requestId;
-    requestAbortRef.current?.abort();
-    const controller = new AbortController();
-    requestAbortRef.current = controller;
-    setExpandedMessageId(null);
-    setSearchState({
-      status: 'loading',
-      query: trimmedQuery,
-      results: [],
-      hasMore: false,
-      error: null,
-    });
-    await runLogSearchRequest({
-      filters: {
-        networkId: networkValue === allNetworksValue ? null : networkValue,
-        target: target.trim() || null,
-      },
-      query: trimmedQuery,
-      signal: controller.signal,
-      search: props.onSearch,
-      isCurrentRequest: () =>
-        requestRef.current === requestId
-        && requestAbortRef.current === controller,
-      onLoaded: (payload) => {
-        setSearchState({
-          status: 'loaded',
-          query: payload.query,
-          results: payload.results,
-          hasMore: payload.hasMore,
-          error: null,
-        });
-      },
-      onError: (message) => {
-        setSearchState({
-          status: 'error',
-          query: trimmedQuery,
-          results: [],
-          hasMore: false,
-          error: message,
-        });
-      },
-      onSettled: () => {
-        if (requestAbortRef.current === controller) {
-          requestAbortRef.current = null;
-        }
-      },
-    });
   };
 
   const handleSourceSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -330,16 +244,12 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
 
   const handleActiveModeChange = (value: LogInspectorMode) => {
     setActiveMode(value);
-    if (value === 'sources') {
-      void loadSources();
-    }
+
   };
 
   const handleNetworkChange = (value: string) => {
     setNetworkValue(value);
-    if (activeMode === 'sources') {
-      void loadSources({ network: value });
-    }
+    void loadSources({ network: value });
   };
 
   const handleSourceKindChange = (value: string) => {
@@ -349,6 +259,11 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
 
   const handleSourceSelect = (source: LogSource) => {
     setSelectedSource(source);
+    setExpandedMessageId(null);
+    search.setBufferId(source.buffer.id);
+    setScopeLabel(source.buffer.target);
+    search.setNetworkValue(source.buffer.networkId);
+    handleNetworkChange(source.buffer.networkId);
     void loadSourceHistory(source);
   };
 
@@ -368,38 +283,72 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
     void loadSourceHistory(selectedSource, beforeMessageId);
   };
 
+  const searchConversation = () => {
+    if (!selectedSource) return;
+    search.setBufferId(selectedSource.buffer.id);
+    setScopeLabel(selectedSource.buffer.target);
+    search.setNetworkValue(selectedSource.buffer.networkId);
+    handleNetworkChange(selectedSource.buffer.networkId);
+    setActiveMode('search');
+    inputRef.current?.focus();
+  };
+  const selectResult = (id: string) => {
+    const message = search.state.results.find((result) => result.message.id === id)?.message;
+    if (!message) return;
+    const source = sourceState.sources.find((item) => item.buffer.id === message.bufferId) ?? {
+      buffer: { id: message.bufferId, networkId: message.networkId, target: message.target, kind: message.target.startsWith('#') ? 'channel' : 'query', unread: 0, priorityUnread: 0, lastReadTs: null, lastReadMessageId: null },
+      aliases: [], open: false, messageCount: 0, firstMessageTs: message.ts, lastMessageTs: message.ts,
+    } as LogSource;
+    setSelectedSource(source);
+    setExpandedMessageId(id);
+    void loadSourceHistory(source, undefined, id);
+  };
+
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="h-[min(86dvh,46rem)] max-h-[86dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),58rem)]">
+      <DialogContent onOpenAutoFocus={(event) => { event.preventDefault(); inputRef.current?.focus(); }} className="h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-none gap-0 overflow-hidden p-0 md:h-[calc(100dvh-2rem)] md:w-[calc(100vw-2rem)] xl:p-0">
         <LogInspectorDialogBody
+          scopeBufferId={search.bufferId}
+          scopeLabel={scopeLabel}
+          searchDirty={search.dirty}
+          onScopeChange={(value) => { if (value === 'all') { search.setBufferId(''); search.setNetworkValue(allNetworksValue); handleNetworkChange(allNetworksValue); } else searchConversation(); }}
+          onClearFilters={() => { search.setQuery(''); search.setFromDate(''); search.setToDate(''); search.setBufferId(''); search.setNetworkValue(allNetworksValue); handleNetworkChange(allNetworksValue); }}
+          onSearchConversation={searchConversation}
+          onSourceLatest={() => { if (selectedSource) { setExpandedMessageId(null); void loadSourceHistory(selectedSource); } }}
+          onSourceLoadNewer={() => { const last = sourceHistoryState.messages.at(-1); if (selectedSource && last && !loadingOlderSourceHistory) void loadSourceHistory(selectedSource, undefined, last.id, true); }}
           activeMode={activeMode}
           expandedMessageId={expandedMessageId}
           inputRef={inputRef}
           loadingOlderSourceHistory={loadingOlderSourceHistory}
           mutedNicks={props.mutedNicks}
-          networkValue={networkValue}
           networks={props.networks}
           nickEmojis={props.nickEmojis}
-          query={query}
-          searchState={searchState}
+          query={search.query}
+          searchState={search.state}
           selectedSource={selectedSource}
           sourceHistoryState={sourceHistoryState}
           sourceKindValue={sourceKindValue}
           sourceQuery={sourceQuery}
           sourceState={sourceState}
-          target={target}
           onActiveModeChange={handleActiveModeChange}
           onNetworkChange={handleNetworkChange}
-          onQueryChange={setQuery}
-          onResultToggle={(messageId) =>
-            setExpandedMessageId((current) => (current === messageId ? null : messageId))}
+          onQueryChange={search.setQuery}
+          onResultToggle={selectResult}
           onSourceKindChange={handleSourceKindChange}
           onSourceLoadOlder={handleSourceLoadOlder}
           onSourceQueryChange={setSourceQuery}
           onSourceSelect={handleSourceSelect}
           onSourceSubmit={handleSourceSubmit}
-          onSubmit={handleSubmit}
-          onTargetChange={setTarget}
+          onSubmit={(event) => { setActiveMode('search'); search.submit(event); }}
+          searchNetworkValue={search.networkValue}
+          onSearchNetworkChange={search.setNetworkValue}
+          fromDate={search.fromDate}
+          toDate={search.toDate}
+          onFromDateChange={search.setFromDate}
+          onToDateChange={search.setToDate}
+          loadingMore={search.loadingMore}
+          pageError={search.pageError}
+          onLoadMore={search.loadMore}
         />
       </DialogContent>
     </Dialog>

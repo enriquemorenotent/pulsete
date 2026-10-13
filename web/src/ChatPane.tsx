@@ -61,6 +61,7 @@ export type ChatPaneProps = {
   initialHistoryPending?: boolean;
   loadingOlderHistory?: boolean;
   onLoadOlderHistory?: () => Promise<number>;
+  onLoadNewerHistory?: () => Promise<number>;
   hasNewerHistory?: boolean;
   onReturnToLatest?: () => Promise<boolean>;
   canPinMessages?: boolean;
@@ -174,6 +175,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         loadingOlderHistory={props.loadingOlderHistory}
         onOpenChannel={props.onOpenMentionedChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
+        onLoadNewerHistory={props.onLoadNewerHistory}
         onLoadOlderHistory={props.onLoadOlderHistory}
         hasNewerHistory={props.hasNewerHistory}
         onReturnToLatest={props.onReturnToLatest ? handleReturnToLatest : undefined}

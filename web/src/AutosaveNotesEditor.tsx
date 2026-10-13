@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label.js';
 import { cn } from '@/lib/utils.js';
 
 type AutosaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
-type NotesEditorVariant = 'default' | 'compact';
+type NotesEditorVariant = 'default' | 'compact' | 'document';
 
 const autosaveDelayMs = 600;
 
@@ -16,6 +16,9 @@ export function AutosaveNotesEditor(props: {
   scopeKey: string;
   variant?: NotesEditorVariant;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [recentlySaved, setRecentlySaved] = useState(false);
+  const savedFeedbackRef = useRef({ scope: props.scopeKey, notes: props.notes });
   const savedNotes = props.notes;
   const fill = props.fill ?? true;
   const variant = props.variant ?? 'default';
@@ -79,8 +82,36 @@ export function AutosaveNotesEditor(props: {
     };
   }, [draftNotes, savedNotes]);
 
+  useEffect(() => {
+    const previous = savedFeedbackRef.current;
+    savedFeedbackRef.current = { scope: props.scopeKey, notes: savedNotes };
+    setRecentlySaved(previous.scope === props.scopeKey && previous.notes !== savedNotes);
+    const timer = setTimeout(() => setRecentlySaved(false), 2_000);
+    return () => clearTimeout(timer);
+  }, [props.scopeKey, savedNotes]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (variant !== 'document' || !textarea) return;
+    const resize = () => {
+      if (textarea.clientWidth === 0) return;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    };
+    resize();
+    let previousWidth = textarea.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (textarea.clientWidth !== previousWidth) {
+        previousWidth = textarea.clientWidth;
+        resize();
+      }
+    });
+    observer.observe(textarea);
+    return () => observer.disconnect();
+  }, [draftNotes, variant]);
+
   const statusText = getAutosaveStatusText(autosaveState, draftNotes, savedNotes);
-  const showCompactStatus = !showHeader && statusText !== 'Saved';
+  const showCompactStatus = !showHeader && (statusText !== 'Saved' || (variant === 'document' && recentlySaved));
 
   return (
     <div
@@ -108,25 +139,29 @@ export function AutosaveNotesEditor(props: {
       <div
         className={cn(
           'relative',
-          fill ? 'flex-1' : 'h-[min(32dvh,18rem)]',
+          fill ? 'flex-1' : '',
           showHeader ? fill && 'min-h-40' : 'min-h-32',
         )}
       >
         <textarea
+          ref={textareaRef}
           id={props.id}
           aria-label={showHeader ? undefined : 'Notes'}
           value={draftNotes}
           onChange={(event) => setDraftNotes(event.target.value)}
           placeholder={props.placeholder}
           className={cn(
-            'h-full min-h-full w-full resize-none outline-none transition-colors',
-            showHeader
-              ? 'rounded-lg border border-white/[0.07] bg-black/15 px-3 py-2.5 text-[13px] leading-5 text-foreground/84 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-muted-foreground/54 hover:border-white/12 hover:bg-black/20 focus-visible:border-ring/60 focus-visible:bg-black/20'
+            'w-full outline-none transition-colors',
+            variant === 'document' ? 'min-h-24 resize-none overflow-hidden' : fill ? 'h-full min-h-full resize-none' : 'h-[min(32dvh,18rem)] min-h-32 resize-y',
+            variant === 'document'
+              ? 'rounded-sm border border-transparent bg-transparent px-1 py-2 text-[13px] leading-6 text-foreground/90 placeholder:text-muted-foreground focus-visible:border-ring/50'
+              : showHeader
+              ? 'rounded-lg border border-white/[0.07] bg-black/15 px-3 py-2.5 text-[13px] leading-5 text-foreground/84 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-muted-foreground hover:border-white/12 hover:bg-black/20 focus-visible:border-ring/60 focus-visible:bg-black/20'
               : 'rounded-sm border border-white/[0.04] bg-black/10 py-1.5 pl-2 pr-16 text-[12px] leading-5 text-foreground/78 placeholder:text-muted-foreground/50 hover:border-white/8 hover:bg-black/15 focus-visible:border-ring/50 focus-visible:bg-black/12',
           )}
         />
         {showCompactStatus ? (
-          <div className="pointer-events-none absolute right-2 top-2 rounded-sm border border-white/[0.06] bg-background/90 px-1.5 py-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.24)]">
+          <div className={variant === 'document' ? 'text-right' : 'pointer-events-none absolute right-2 top-2 rounded-sm border border-white/[0.06] bg-background/90 px-1.5 py-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.24)]'}>
             <AutosaveStatus state={autosaveState} statusText={statusText} />
           </div>
         ) : null}
@@ -141,7 +176,7 @@ function AutosaveStatus(props: { state: AutosaveState; statusText: string }) {
       aria-live="polite"
       className={cn(
         'text-[11px] leading-none',
-        props.state === 'error' ? 'text-destructive' : 'text-muted-foreground/68',
+        props.state === 'error' ? 'text-destructive' : 'text-muted-foreground',
       )}
     >
       {props.statusText}

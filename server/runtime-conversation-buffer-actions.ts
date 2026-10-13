@@ -14,6 +14,7 @@ import { normalizeQueryTarget } from './irc-validate.js';
 import { assertNotSelfPrivateMessageTarget } from './runtime-self-target.js';
 import { historySearchContextAfter, historySearchContextBefore } from '../shared/protocol-chat.js';
 import type {
+  BufferState,
   BufferHistorySearchPayload,
   LogSourceKind,
   LogSourceListFilters,
@@ -61,7 +62,7 @@ export const closeRuntimeConversationBuffer = (options: RuntimeConversationServi
 
 export const markRuntimeConversationBufferRead = (options: RuntimeConversationServiceOptions, bufferId: string) => {
   const buffer = markConversationBufferRead(options.conversations, bufferId);
-  return { buffer, messages: [{ type: 'buffer.upsert', buffer } satisfies ServerMessage] };
+  return { buffer, messages: openBufferUpdateMessages(options, buffer) };
 };
 
 export const clearRuntimeConversationBufferHistory = (
@@ -79,7 +80,7 @@ export const clearRuntimeConversationBufferHistory = (
           messageIds: deletedMessages.map((message) => message.id),
         } satisfies ServerMessage]
       : []),
-    { type: 'buffer.upsert', buffer },
+    ...openBufferUpdateMessages(options, buffer),
   ];
   return { buffer, messages };
 };
@@ -90,8 +91,18 @@ export const saveRuntimeConversationBufferNotes = (
   notes: string,
 ) => {
   const buffer = saveConversationBufferNotes(options.conversations, bufferId, notes);
-  return { buffer, messages: [{ type: 'buffer.upsert', buffer } satisfies ServerMessage] };
+  return { buffer, messages: openBufferUpdateMessages(options, buffer) };
 };
+
+// Metadata changes must not reopen a closed conversation, including when an
+// HTTP response arrives after the client has already processed buffer.remove.
+const openBufferUpdateMessages = (
+  options: RuntimeConversationServiceOptions,
+  buffer: BufferState,
+): ServerMessage[] =>
+  options.conversations.getBufferByTarget(buffer.networkId, buffer.target)?.id === buffer.id
+    ? [{ type: 'buffer.upsert', buffer, onlyIfOpen: true }]
+    : [];
 
 export const listRuntimeConversationBufferHistory = (
   options: RuntimeConversationServiceOptions,
@@ -135,6 +146,10 @@ export const searchRuntimeConversationLogs = (
     requireStoredNetwork(options.networks, networkId);
   }
   const page = options.conversations.searchMessages(trimmedQuery, limit, {
+    bufferId: filters.bufferId,
+    fromTs: filters.fromTs,
+    toTs: filters.toTs,
+    beforeMessageId: filters.beforeMessageId,
     ...(networkId ? { networkId } : {}),
     ...(target ? { target } : {}),
   });

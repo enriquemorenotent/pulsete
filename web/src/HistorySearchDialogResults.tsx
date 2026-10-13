@@ -1,8 +1,9 @@
+import { Button } from '@/components/ui/button.js';
+import { highlightSearchText } from './highlight-search-text.js';
 import type { BufferHistorySearchResult, ChatMessage } from '../../shared/protocol-chat.js';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils.js';
 import {
-  formatMessageTime,
   formatMessageTimestampDateTime,
   formatMessageTimestampTitle,
   messageTone,
@@ -16,6 +17,9 @@ import type { HistorySearchState } from './HistorySearchDialog.js';
 import type { MessageDisplayMode } from './message-display-mode.js';
 
 export function HistorySearchResults(props: {
+  loadingMore?: boolean;
+  pageError?: string | null;
+  onLoadMore?: () => void;
   expandedMessageId: string | null;
   inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
@@ -39,9 +43,11 @@ export function HistorySearchResults(props: {
   }
   return (
     <div className="flex flex-col gap-1 p-2">
+      <p className="px-2 py-1 text-xs text-muted-foreground" role="status">{searchState.results.length} {searchState.results.length === 1 ? 'result' : 'results'}{searchState.hasMore ? ' · more available' : ''}</p>
       {searchState.results.map((result) => (
         <HistorySearchResultRow
           key={result.message.id}
+          query={searchState.query}
           expanded={props.expandedMessageId === result.message.id}
           inlineImageRendering={props.inlineImageRendering}
           mode={props.mode}
@@ -51,9 +57,14 @@ export function HistorySearchResults(props: {
           onToggle={() => props.onResultToggle(result.message.id)}
         />
       ))}
+      {props.pageError ? <p role="alert" className="px-2 py-2 text-sm text-destructive">{props.pageError}</p> : null}
       {searchState.hasMore ? (
-        <div className="px-2 py-2 text-[12px] text-muted-foreground">
-          Showing first results. Refine the search to narrow it down.
+        <div className="flex justify-center px-2 py-3">
+          {props.onLoadMore ? (
+            <Button variant="outline" disabled={props.loadingMore} onClick={props.onLoadMore}>
+              {props.loadingMore ? 'Loading more...' : 'Load more'}
+            </Button>
+          ) : <span className="text-xs text-muted-foreground">Showing first results. Refine the search to narrow it down.</span>}
         </div>
       ) : null}
     </div>
@@ -61,6 +72,7 @@ export function HistorySearchResults(props: {
 }
 
 function HistorySearchResultRow(props: {
+  query: string;
   expanded: boolean;
   inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
@@ -82,6 +94,7 @@ function HistorySearchResultRow(props: {
       >
         <MessageTimestamp message={props.result.message} />
         <MessageSummary
+        query={props.query}
           meta={props.resultMeta}
           inlineImageRendering={props.inlineImageRendering}
           message={props.result.message}
@@ -93,6 +106,7 @@ function HistorySearchResultRow(props: {
         <div className="mx-2 mb-2 rounded-sm border border-border bg-background/55 px-2 py-1.5">
           {props.result.context.map((message) => (
             <HistorySearchContextLine
+              query={props.query}
               key={message.id}
               active={message.id === props.result.message.id}
               inlineImageRendering={props.inlineImageRendering}
@@ -108,6 +122,7 @@ function HistorySearchResultRow(props: {
 }
 
 function HistorySearchContextLine(props: {
+  query: string;
   active: boolean;
   inlineImageRendering?: InlineImageRenderingMode;
   message: ChatMessage;
@@ -125,6 +140,7 @@ function HistorySearchContextLine(props: {
     >
       <MessageTimestamp message={props.message} />
       <MessageSummary
+        query={props.query}
         message={props.message}
         inlineImageRendering={props.inlineImageRendering}
         mode={props.mode}
@@ -135,6 +151,7 @@ function HistorySearchContextLine(props: {
 }
 
 function MessageSummary(props: {
+  query: string;
   meta?: ReactNode;
   inlineImageRendering?: InlineImageRenderingMode;
   message: ChatMessage;
@@ -149,9 +166,10 @@ function MessageSummary(props: {
           {props.meta}
         </div>
       ) : null}
-      {speaker ? <span className="mr-2 font-medium text-muted-foreground">{speaker}</span> : null}
+      {speaker ? <><span className="mr-2 font-medium text-muted-foreground">{highlightSearchText(speaker, props.query)}</span>{' '}</> : null}
       <span className="text-foreground">
         <FormattedMessageText
+          highlightQuery={props.query}
           text={props.message.body}
           inlineImageRendering={resolveMessageInlineImageRendering(
             props.message,
@@ -169,11 +187,12 @@ function MessageSummary(props: {
 function MessageTimestamp(props: { message: ChatMessage }) {
   return (
     <time
-      className="shrink-0 font-sans tabular-nums text-[11px] leading-5 text-muted-foreground"
+      className="w-24 shrink-0 font-sans tabular-nums text-xs leading-5 text-muted-foreground"
       dateTime={formatMessageTimestampDateTime(props.message.ts)}
       title={formatMessageTimestampTitle(props.message.ts)}
     >
-      {formatMessageTime(props.message.ts)}
+      <span className="block">{searchDateFormatter.format(props.message.ts)}</span>
+      <span className="block">{searchTimeFormatter.format(props.message.ts)}</span>
     </time>
   );
 }
@@ -187,3 +206,6 @@ function EmptySearchState(props: { children: ReactNode }) {
     </div>
   );
 }
+
+const searchDateFormatter = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+const searchTimeFormatter = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });

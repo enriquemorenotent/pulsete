@@ -10,7 +10,7 @@ export type CommandResult = {
 export const runCommand = (
   command: string,
   args: string[],
-  options: { input?: string; timeoutMs: number; signal?: AbortSignal; killGraceMs?: number },
+  options: { input?: string; timeoutMs: number; signal?: AbortSignal; killGraceMs?: number; maxStdoutChars?: number },
 ) => new Promise<CommandResult>((resolve) => {
   const grouped = process.platform !== 'win32';
   const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], detached: grouped });
@@ -50,7 +50,7 @@ export const runCommand = (
   const cancel = () => stop('ABORT_ERR', 'Assistant request cancelled');
   const timer = setTimeout(() => stop('ETIMEDOUT', 'Assistant request timed out'), options.timeoutMs);
   // Bound CLI diagnostics so a noisy or malfunctioning process cannot exhaust memory.
-  child.stdout.on('data', (chunk) => { stdout = (stdout + chunk.toString('utf8')).slice(-64_000); });
+  child.stdout.on('data', (chunk) => { stdout = (stdout + chunk.toString('utf8')).slice(-(options.maxStdoutChars ?? 64_000)); });
   child.stderr.on('data', (chunk) => { stderr = (stderr + chunk.toString('utf8')).slice(-64_000); });
   child.once('error', (error: NodeJS.ErrnoException) => {
     finish({ code: null, error, stderr, stdout });

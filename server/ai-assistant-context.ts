@@ -9,7 +9,7 @@ import type { AiAssistantRequest } from '../shared/protocol-ai.js';
 import type { RuntimeConversationStore } from './runtime-store.js';
 
 type AiAssistantContextRequest = Pick<AiAssistantRequest, 'mode' | 'prompt'>
-  & Partial<Pick<AiAssistantRequest, 'assistantTurns'>>;
+  & Partial<Pick<AiAssistantRequest, 'assistantTurns' | 'scope'>>;
 
 export type AiAssistantPromptContext = AiAssistantContext & {
   fullLog: { messages: ChatMessage[] } | null;
@@ -42,13 +42,15 @@ export const buildAiAssistantContext = (
     mode: request.mode,
     prompt: request.prompt,
   });
-  const searchResult = retrieveSearchMessages(conversations, buffer.id, retrieval.searchTerms);
+  const searchResult = request.scope === 'recent'
+    ? { messages: [], hasMore: false }
+    : retrieveSearchMessages(conversations, buffer.id, retrieval.searchTerms);
   const searchMessages = searchResult.messages;
-  const includeFullLog = retrieval.includeFullLog || (
+  const includeFullLog = request.scope !== 'recent' && (request.scope === 'saved' || retrieval.includeFullLog || (
     retrieval.fullLogWhenSearchMisses
     && retrieval.searchTerms.length > 0
     && searchMessages.length === 0
-  );
+  ));
   const history = includeFullLog
     ? conversations.listAssistantHistory(buffer.id, 600, dateRange)
     : null;
@@ -64,8 +66,8 @@ export const buildAiAssistantContext = (
     .map((message, index) => ({ label: `S${index + 1}`, message }));
   return {
     coverage: {
-      description: dateRange ? `Saved messages for ${dateRange.label} (local calendar day)`
-        : history ? 'Saved conversation history' : 'Recent messages and matching history excerpts',
+      description: dateRange ? `${request.scope === 'recent' ? 'Recent' : 'Saved'} messages for ${dateRange.label} (local calendar day)`
+        : history ? 'Saved conversation history' : request.scope === 'recent' ? 'Recent messages only' : 'Recent messages and matching history excerpts',
       truncated,
     },
     sources,
@@ -79,7 +81,7 @@ export const buildAiAssistantContext = (
     messages: recent.messages,
     search: {
       messages: search.messages,
-      terms: retrieval.searchTerms,
+      terms: request.scope === 'recent' ? [] : retrieval.searchTerms,
     },
   };
 };

@@ -23,3 +23,5 @@ pages/
 .playwright-cli/
 current-ui.png
 main-space-fixed.png
+/pulsete.secret
+/:memory:
