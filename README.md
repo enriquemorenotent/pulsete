@@ -134,7 +134,10 @@ git push origin v0.1.3
 
 The `Desktop Release` workflow builds the Ubuntu `.deb`, uploads it as a CI
 artifact, attaches it to the GitHub Release, and publishes the signed APT
-repository. The `Pages` workflow republishes the landing page after every push
+repository. Before packaging or publishing, it runs the shared CI workflow on
+the release commit. All build checks, tests, and the shipped dependency audit
+must pass; failed or cancelled validation blocks the release.
+The `Pages` workflow republishes the landing page after every push
 to `main`, while keeping the APT repository on the latest published release.
 
 ## Repository Layout
