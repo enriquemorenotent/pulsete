@@ -1,22 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 145 132" role="img" aria-label="Pulsete">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Pulsete">
   <defs>
-    <linearGradient id="pulsete-signal" x1="18" y1="28" x2="128" y2="104" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#22d3ee"/>
-      <stop offset="1" stop-color="#34d399"/>
-    </linearGradient>
+    <mask id="pulse-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128">
+      <rect width="128" height="128" fill="white"/>
+      <path d="M10 70H48L61 44L74 77L84 62H98" fill="none" stroke="black" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
   </defs>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path
-      d="M28 69h29l10-20 19 41 14-21h24"
-      stroke="url(#pulsete-signal)"
-      stroke-width="9"
-    />
-    <path
-      d="M23 42c0-10 8-18 18-18h73c10 0 18 8 18 18v48c0 10-8 18-18 18H68l-28 17v-17"
-      stroke="#e5e7eb"
-      stroke-opacity=".78"
-      stroke-width="7"
-    />
-    <circle cx="124" cy="69" r="6" fill="#34d399" stroke="none"/>
-  </g>
+  <path d="M16 44C16 27 27 16 44 16H76C100 16 116 32 116 58V62C116 86 100 102 76 102H49L25 120C21 123 16 120 16 115Z" fill="#43EFC0" mask="url(#pulse-cut)"/>
 </svg>
