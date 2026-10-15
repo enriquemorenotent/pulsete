@@ -10,7 +10,7 @@
   <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/enriquemorenotent/pulsete?style=flat-square">
   </a>
-  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.3/pulsete_0.1.3_amd64.deb">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.4/pulsete_0.1.4_amd64.deb">
     <img alt="Ubuntu deb package" src="https://img.shields.io/badge/Ubuntu%2024.04-.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white">
   </a>
   <a href="./LICENSE">
@@ -52,8 +52,8 @@ Download the latest package from [GitHub Releases][latest-release], or install
 the current amd64 package directly:
 
 ```sh
-curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.3/pulsete_0.1.3_amd64.deb
-sudo apt install ./pulsete_0.1.3_amd64.deb
+curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.4/pulsete_0.1.4_amd64.deb
+sudo apt install ./pulsete_0.1.4_amd64.deb
 ```
 
 Installing the `.deb` also installs the Pulsete APT source and signing key.
@@ -131,6 +131,8 @@ gh workflow run desktop-release.yml --ref main
 
 Download the `pulsete-linux-amd64-deb` artifact from that successful run and
 verify installation, upgrade, and startup. Record the tested package's SHA-256.
+Keep the candidate commit at a branch tip until promotion completes; if `main`
+has advanced, push a release branch pointing to that commit.
 Then run `Promote Tested Release` with the candidate run ID and checksum. It
 checks the successful candidate run, package version, architecture, and checksum,
 publishes that exact package to GitHub Releases, and publishes the signed APT
