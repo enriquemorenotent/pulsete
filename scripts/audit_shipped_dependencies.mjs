@@ -95,14 +95,19 @@ function resolveDependencyPath(packages, parentPath, dependencyName) {
 
 function verifyNodeBundles(roots) {
   const classified = new Set(roots);
-  for (const sourceMapPath of ['build/server/index.cjs.map', 'build/desktop/main.cjs.map']) {
+  const bundles = [
+    ['build/server/index.cjs.map', true],
+    ['build/desktop/main.cjs.map', false],
+    ['build/desktop/server-process-entry.cjs.map', true],
+  ];
+  for (const [sourceMapPath, requiresWebSocket] of bundles) {
     const sourceMap = readJson(sourceMapPath);
     const bundled = new Set(sourceMap.sources.flatMap(packageNamesFromSource));
     const unclassified = [...bundled].filter((name) => !classified.has(name));
     if (unclassified.length > 0) {
       fail(`${sourceMapPath} contains unclassified packages: ${unclassified.join(', ')}`);
     }
-    if (!bundled.has('ws')) {
+    if (requiresWebSocket && !bundled.has('ws')) {
       fail(`${sourceMapPath} does not contain the expected ws runtime dependency`);
     }
   }
