@@ -10,7 +10,7 @@
   <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/enriquemorenotent/pulsete?style=flat-square">
   </a>
-  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.6/pulsete_0.1.6_amd64.deb">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.7/pulsete_0.1.7_amd64.deb">
     <img alt="Ubuntu deb package" src="https://img.shields.io/badge/Ubuntu%2024.04-.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white">
   </a>
   <a href="./LICENSE">
@@ -52,8 +52,8 @@ Download the latest package from [GitHub Releases][latest-release], or install
 the current amd64 package directly:
 
 ```sh
-curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.6/pulsete_0.1.6_amd64.deb
-sudo apt install ./pulsete_0.1.6_amd64.deb
+curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.7/pulsete_0.1.7_amd64.deb
+sudo apt install ./pulsete_0.1.7_amd64.deb
 ```
 
 Installing the `.deb` also installs the Pulsete APT source and signing key.

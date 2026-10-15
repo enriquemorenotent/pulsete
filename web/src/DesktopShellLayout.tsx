@@ -126,7 +126,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
       setExpanded: (expanded) => setExpandedBufferId(expanded ? props.selectedBufferId : null),
     }}>
     <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-[#171c25] text-foreground">
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-3 sm:gap-4 sm:px-5">
+      <header className="desktop-titlebar flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-3 sm:gap-4 sm:px-5">
         <div className="hidden sm:block"><DesktopShellBrand /></div>
         <div className="sm:hidden"><DesktopShellBrand markOnly /></div>
         <Button variant="outline" className="h-10 min-w-0 flex-1 justify-start gap-3 px-3 sm:max-w-lg" aria-label="Search Pulsete" onClick={props.commandPalette.onOpen}>

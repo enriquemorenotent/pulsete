@@ -5,6 +5,19 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "tailwindcss";
 
+/* Reserve the native window buttons' space; ordinary browsers use no inset. */
+.desktop-titlebar {
+  -webkit-app-region: drag;
+  padding-left: calc(env(titlebar-area-x, 0px) + 20px);
+  padding-right: calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%) + 20px);
+}
+
+.desktop-titlebar button,
+.desktop-titlebar a,
+.desktop-titlebar input {
+  -webkit-app-region: no-drag;
+}
+
 :root {
   color-scheme: dark;
   --background: #171c25;

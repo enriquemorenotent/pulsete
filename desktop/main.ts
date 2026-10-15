@@ -71,6 +71,12 @@ function createMainWindow(server: PulseteServerHandle) {
     minWidth: 960,
     minHeight: 640,
     show: false,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#202733',
+      symbolColor: '#aebdce',
+      height: 64,
+    },
     title: 'Pulsete',
     icon: join(app.getAppPath(), 'build-resources', 'icons', '512x512.png'),
     webPreferences: {
