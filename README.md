@@ -119,24 +119,27 @@ separate from development data.
 
 ## Release Flow
 
-GitHub Actions publishes desktop releases when a tag matching `v*` is pushed.
-
-For a new release:
+Build and test a candidate before publishing:
 
 ```sh
 npm version patch --no-git-tag-version
 git add package.json package-lock.json
-git commit -m "Release v0.1.3"
-git tag -a v0.1.3 -m "Pulsete v0.1.3"
+git commit -m "Prepare release candidate"
 git push origin main
-git push origin v0.1.3
+gh workflow run desktop-release.yml --ref main
 ```
 
-The `Desktop Release` workflow builds the Ubuntu `.deb`, uploads it as a CI
-artifact, attaches it to the GitHub Release, and publishes the signed APT
-repository. Before packaging or publishing, it runs the shared CI workflow on
-the release commit. All build checks, tests, and the shipped dependency audit
-must pass; failed or cancelled validation blocks the release.
+Download the `pulsete-linux-amd64-deb` artifact from that successful run and
+verify installation, upgrade, and startup. Record the tested package's SHA-256.
+Then run `Promote Tested Release` with the candidate run ID and checksum. It
+checks the successful candidate run, package version, architecture, and checksum,
+publishes that exact package to GitHub Releases, and publishes the signed APT
+repository. Existing release tags cannot be replaced through promotion.
+
+Both candidate builds and promotion require the shared CI checks to pass.
+Pushing a `v*` tag directly still builds and publishes a new package; use the
+promotion workflow to preserve an already-tested artifact.
+
 The `Pages` workflow republishes the landing page after every push
 to `main`, while keeping the APT repository on the latest published release.
 

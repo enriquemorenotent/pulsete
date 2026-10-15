@@ -1,0 +1,82 @@
+name: Promote Tested Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: Successful Desktop Release candidate run ID
+        required: true
+        type: string
+      expected_sha256:
+        description: SHA-256 of the tested Debian package
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+  id-token: write
+  pages: write
+
+concurrency:
+  group: release-promotion
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify And Publish Tested Package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]
+
+          gh api "repos/$GH_REPO/actions/runs/$CANDIDATE_RUN_ID" > run.json
+          jq -e '.conclusion == "success" and .status == "completed"
+            and .event == "workflow_dispatch" and .head_branch == "main"
+            and .path == ".github/workflows/desktop-release.yml"' run.json
+          commit="$(jq -r '.head_sha' run.json)"
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+          gh api "repos/$GH_REPO/contents/package.json?ref=$commit" \
+            --jq '.content' | base64 --decode > package.json
+          version="$(jq -r '.version' package.json)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+
+          gh run download "$CANDIDATE_RUN_ID" \
+            --name pulsete-linux-amd64-deb --dir candidate
+          mapfile -t packages < <(find candidate -maxdepth 1 -type f -name '*.deb')
+          test "${#packages[@]}" -eq 1
+          package="${packages[0]}"
+          test "$(basename "$package")" = "pulsete_${version}_amd64.deb"
+          test "$(sha256sum "$package" | awk '{ print $1 }')" = "$EXPECTED_SHA256"
+          test "$(dpkg-deb -f "$package" Package)" = pulsete
+          test "$(dpkg-deb -f "$package" Version)" = "$version"
+          test "$(dpkg-deb -f "$package" Architecture)" = amd64
+
+          # Refuse to replace an existing release or move an existing tag.
+          gh api "repos/$GH_REPO/git/matching-refs/tags/v$version" > refs.json
+          jq -e --arg ref "refs/tags/v$version" \
+            'all(.[]; .ref != $ref)' refs.json
+          printf 'Tested Ubuntu amd64 package from commit `%s`.\n\nSHA-256: `%s`\n' \
+            "$commit" "$EXPECTED_SHA256" > notes.md
+          # The workflow token prevents the newly created tag from triggering a rebuild.
+          gh release create "v$version" "$package" --target "$commit" \
+            --title "Pulsete $version" --notes-file notes.md --latest
+
+  publish-apt:
+    needs: publish
+    uses: ./.github/workflows/pages.yml
+    secrets: inherit
