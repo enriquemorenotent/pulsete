@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, Menu, shell } from 'electron';
 import { join } from 'node:path';
 import { startPulseteServer, type PulseteServerHandle } from '../server/server-app.js';
 import {
@@ -51,6 +51,8 @@ process.once('SIGTERM', () => {
 });
 
 async function startDesktopApp() {
+  Menu.setApplicationMenu(null);
+
   serverHandle = await startPulseteServer({
     assetRoot: join(app.getAppPath(), 'dist'),
     dataDirectory: app.getPath('userData'),
