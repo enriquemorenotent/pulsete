@@ -10,7 +10,7 @@
   <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/enriquemorenotent/pulsete?style=flat-square">
   </a>
-  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.9/pulsete_0.1.9_amd64.deb">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.10/pulsete_0.1.10_amd64.deb">
     <img alt="Ubuntu deb package" src="https://img.shields.io/badge/Ubuntu%2024.04-.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white">
   </a>
   <a href="./LICENSE">
@@ -52,8 +52,8 @@ Download the latest package from [GitHub Releases][latest-release], or install
 the current amd64 package directly:
 
 ```sh
-curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.9/pulsete_0.1.9_amd64.deb
-sudo apt install ./pulsete_0.1.9_amd64.deb
+curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.10/pulsete_0.1.10_amd64.deb
+sudo apt install ./pulsete_0.1.10_amd64.deb
 ```
 
 Installing the `.deb` also installs the Pulsete APT source and signing key.
@@ -65,6 +65,13 @@ sudo apt upgrade
 ```
 
 [latest-release]: https://github.com/enriquemorenotent/pulsete/releases/latest
+
+## Desktop Zoom
+
+Use **Ctrl++** (or **Ctrl+=**) to enlarge the whole app, **Ctrl+-** to shrink it,
+and **Ctrl+0** to return to 100%. Number-pad plus and minus also work. Zoom ranges
+from 50% to 200% and is remembered on this computer in `desktop-zoom.json` in the
+app's data folder. These shortcuts do not require a menu bar.
 
 ## Development
 

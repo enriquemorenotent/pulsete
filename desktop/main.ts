@@ -6,6 +6,7 @@ import {
   restrictDesktopNavigationToOrigin,
 } from './navigation-history.js';
 import { configureNotificationPermissions } from './notification-permissions.js';
+import { configureDesktopZoom } from './zoom.js';
 
 let mainWindow: BrowserWindow | null = null;
 let serverHandle: DesktopServer | null = null;
@@ -94,6 +95,7 @@ function createMainWindow(server: DesktopServer) {
   });
 
   configureNotificationPermissions(window.webContents.session, window, server.url);
+  configureDesktopZoom(window, join(app.getPath('userData'), 'desktop-zoom.json'));
 
   window.once('ready-to-show', () => {
     window.show();
