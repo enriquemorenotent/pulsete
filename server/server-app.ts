@@ -57,6 +57,7 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
         return;
       }
       closed = true;
+      runtimeHost.close();
       await closeServer(server);
     },
   };
@@ -87,6 +88,9 @@ const closeServer = (server: Server) => new Promise<void>((resolve, reject) => {
     }
     resolve();
   });
+  // A closing renderer may stop consuming a large backup response. Do not wait
+  // indefinitely for that HTTP transfer after its window has gone away.
+  server.closeAllConnections();
 });
 
 const resolveListeningPort = (server: Server, fallback: number) => {

@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu, shell } from 'electron';
 import { join } from 'node:path';
-import { startPulseteServer, type PulseteServerHandle } from '../server/server-app.js';
+import { startDesktopServer, type DesktopServer } from './server-process.js';
 import {
   handleDesktopNavigationCommand,
   restrictDesktopNavigationToOrigin,
@@ -8,8 +8,9 @@ import {
 import { configureNotificationPermissions } from './notification-permissions.js';
 
 let mainWindow: BrowserWindow | null = null;
-let serverHandle: PulseteServerHandle | null = null;
+let serverHandle: DesktopServer | null = null;
 let isQuitting = false;
+let shutdownComplete = false;
 
 const hasInstanceLock = app.requestSingleInstanceLock();
 
@@ -33,9 +34,15 @@ if (!hasInstanceLock) {
   });
 }
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  if (shutdownComplete) return;
+  event.preventDefault();
+  if (isQuitting) return;
   isQuitting = true;
-  void stopServer();
+  void stopServer().finally(() => {
+    shutdownComplete = true;
+    app.quit();
+  });
 });
 
 app.on('window-all-closed', () => {
@@ -53,18 +60,18 @@ process.once('SIGTERM', () => {
 async function startDesktopApp() {
   Menu.setApplicationMenu(null);
 
-  serverHandle = await startPulseteServer({
+  serverHandle = await startDesktopServer({
     assetRoot: join(app.getAppPath(), 'dist'),
     dataDirectory: app.getPath('userData'),
     host: '127.0.0.1',
     port: 0,
-  });
+  }, () => app.quit());
 
   mainWindow = createMainWindow(serverHandle);
   await mainWindow.loadURL(serverHandle.clientUrl);
 }
 
-function createMainWindow(server: PulseteServerHandle) {
+function createMainWindow(server: DesktopServer) {
   const window = new BrowserWindow({
     width: 1280,
     height: 820,

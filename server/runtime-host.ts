@@ -57,9 +57,9 @@ export class RuntimeHost {
       const replacement = prepared.stageReplacement();
       try {
         this.close();
-        replacement.activate();
         let current: ReturnType<RuntimeHost['openRuntime']> | null = null;
         try {
+          replacement.activate();
           current = this.openRuntime();
           this.assertRuntimeHealthy(current);
           replacement.commit();

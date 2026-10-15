@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { gzipSync, gunzipSync } from 'node:zlib';
+import { decodeBackupArchive, encodeBackupArchive } from '../server/storage-backup-format.js';
 import test from 'node:test';
 import { createHttpHandler } from '../server/http-router.js';
 import { RuntimeHost } from '../server/runtime-host.js';
@@ -176,19 +176,16 @@ test('current-version backups must contain the durable user-state tables', async
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
-    const envelope = JSON.parse(gunzipSync(
-      Buffer.from(await exportResponse.arrayBuffer()),
-    ).toString('utf8')) as { database: string };
+    const archive = decodeBackupArchive(Buffer.from(await exportResponse.arrayBuffer()));
     const damagedPath = join(context.dir, 'damaged.sqlite');
-    writeFileSync(damagedPath, Buffer.from(envelope.database, 'base64'));
+    writeFileSync(damagedPath, archive.database);
     const db = openSqliteDatabase(damagedPath);
     db.exec('DROP TABLE buffer_drafts');
     db.close();
-    envelope.database = readFileSync(damagedPath).toString('base64');
 
     const response = await fetch(`http://127.0.0.1:${context.port}/api/backups/import`, {
       method: 'POST',
-      body: gzipSync(Buffer.from(JSON.stringify(envelope))),
+      body: Buffer.from(encodeBackupArchive(archive.metadata as object, readFileSync(damagedPath))),
     });
     const body = await response.json() as { message: string };
 

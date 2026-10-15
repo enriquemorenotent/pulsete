@@ -71,6 +71,44 @@ test('production server entrypoint requires its generated per-launch credential'
   }
 });
 
+test('production server shutdown closes authenticated live sockets', { timeout: 10_000 }, async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pulsete-server-shutdown-'));
+  const server = await startPulseteServer({ dataDirectory: directory, port: 0 });
+  const credential = new URL(server.clientUrl).hash.slice('#pulsete-bootstrap='.length);
+  const { cookie } = await bootstrap(server.port, credential);
+  const socket = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, { headers: { Cookie: cookie } });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      socket.once('open', resolve);
+      socket.once('error', reject);
+    });
+    const closed = new Promise<number>((resolve) => socket.once('close', resolve));
+    await server.close();
+    assert.equal(await closed, 1001);
+    await server.close();
+  } finally {
+    socket.terminate();
+    await server.close();
+  }
+});
+
+test('server shutdown does not wait for an unfinished HTTP response', { timeout: 10_000 }, async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pulsete-server-transfer-'));
+  const server = await startPulseteServer({ dataDirectory: directory, port: 0 });
+  server.server.removeAllListeners('request');
+  server.server.on('request', (_request, response) => {
+    response.writeHead(200);
+    response.write('unfinished download');
+  });
+  const response = await fetch(server.url);
+  try {
+    await server.close();
+    await assert.rejects(() => response.text());
+  } finally {
+    await server.close();
+  }
+});
+
 test('HTTP APIs reject missing and invalid client credentials before routing', async () => {
   const context = await startAuthenticatedServer();
   try {

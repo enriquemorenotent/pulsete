@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { gunzipSync } from 'node:zlib';
+import { decodeBackupArchive } from '../server/storage-backup-format.js';
 import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { makeStorageFile, openSqliteDatabase, Storage } from './helpers/storage-test-helpers.js';
 import { createNetworkInput } from './helpers/runtime-test-common.js';
@@ -88,11 +88,9 @@ test('database backups include message pin metadata', () => {
   storage.conversations.setMessagePinned(message.id, true, 777);
 
   const backup = storage.exportBackup({});
-  const envelope = JSON.parse(gunzipSync(backup.content).toString('utf8')) as {
-    database: string;
-  };
+  const archive = decodeBackupArchive(backup.content);
   const backupFile = join(mkdtempSync(join(tmpdir(), 'pulsete-pin-backup-')), 'backup.sqlite');
-  writeFileSync(backupFile, Buffer.from(envelope.database, 'base64'));
+  writeFileSync(backupFile, archive.database);
   const backupDb = openSqliteDatabase(backupFile);
   const row = backupDb.prepare('SELECT pinnedAt FROM messages WHERE id = ?').get(message.id) as {
     pinnedAt: number | null;

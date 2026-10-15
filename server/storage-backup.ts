@@ -8,7 +8,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { gzipSync, gunzipSync } from 'node:zlib';
+import { decodeBackupArchive, encodeBackupArchive } from './storage-backup-format.js';
 import { badRequest } from './app-error.js';
 import { isValidNetworkSecretContent } from './network-secret.js';
 import type { AppPaths } from './app-paths.js';
@@ -21,7 +21,7 @@ import { hasEncryptedNetworkPasswords } from './storage-networks.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
 import { userStateStorageSchemaVersion } from './storage-user-state-schema.js';
 
-const backupFormat = 'pulsete.backup.v1';
+const backupFormat = 'pulsete.backup.v2';
 const sqliteHeader = 'SQLite format 3\u0000';
 
 export type BrowserPreferences = Record<string, string>;
@@ -42,8 +42,7 @@ export type PreparedStorageRestore = {
 type BackupEnvelope = {
   browserPreferences: BrowserPreferences;
   createdAt: string;
-  database: string;
-  format: typeof backupFormat;
+  format: 'pulsete.backup.v1' | typeof backupFormat;
   secret: string | null;
   storageSchemaVersion: number;
 };
@@ -68,13 +67,12 @@ export const createStorageBackup = (input: {
     const envelope: BackupEnvelope = {
       browserPreferences: normalizeBrowserPreferences(input.browserPreferences),
       createdAt: createdAt.toISOString(),
-      database: readFileSync(backupDatabasePath).toString('base64'),
       format: backupFormat,
       secret: readNetworkSecret(input.paths.networkSecretPath),
       storageSchemaVersion: currentStorageSchemaVersion,
     };
     return {
-      content: gzipSync(Buffer.from(JSON.stringify(envelope), 'utf8')),
+      content: encodeBackupArchive(envelope, readFileSync(backupDatabasePath)),
       fileName: `pulsete-backup-${formatBackupTimestamp(createdAt)}.pulsete-backup`,
     };
   } finally {
@@ -122,17 +120,20 @@ export const prepareStorageBackupRestore = (input: {
 };
 
 const parseStorageBackup = (content: Buffer): ParsedBackup => {
-  let parsed: unknown;
+  let archive: ReturnType<typeof decodeBackupArchive>;
   try {
-    parsed = JSON.parse(gunzipSync(content).toString('utf8'));
+    archive = decodeBackupArchive(content);
   } catch {
     throw badRequest('Invalid backup file');
   }
-  const envelope = readBackupEnvelope(parsed);
+  const envelope = readBackupEnvelope(archive.metadata);
   if (envelope.storageSchemaVersion > currentStorageSchemaVersion) {
     throw badRequest('Backup was created by a newer Pulsete version');
   }
-  const database = decodeDatabase(envelope.database);
+  const database = archive.database;
+  if (database.subarray(0, sqliteHeader.length).toString('utf8') !== sqliteHeader) {
+    throw badRequest('Invalid backup database');
+  }
   const secret = normalizeSecret(envelope.secret);
   return {
     browserPreferences: normalizeBrowserPreferences(envelope.browserPreferences),
@@ -148,9 +149,8 @@ const readBackupEnvelope = (value: unknown): BackupEnvelope => {
   }
   const envelope = value as Partial<BackupEnvelope>;
   if (
-    envelope.format !== backupFormat
+    ![backupFormat, 'pulsete.backup.v1'].includes(envelope.format ?? '')
     || typeof envelope.createdAt !== 'string'
-    || typeof envelope.database !== 'string'
     || typeof envelope.storageSchemaVersion !== 'number'
     || !Number.isInteger(envelope.storageSchemaVersion)
     || !envelope.browserPreferences
@@ -160,14 +160,6 @@ const readBackupEnvelope = (value: unknown): BackupEnvelope => {
     throw badRequest('Invalid backup file');
   }
   return envelope as BackupEnvelope;
-};
-
-const decodeDatabase = (value: string) => {
-  const database = Buffer.from(value, 'base64');
-  if (database.length === 0 || database.subarray(0, sqliteHeader.length).toString('utf8') !== sqliteHeader) {
-    throw badRequest('Invalid backup database');
-  }
-  return database;
 };
 
 const validateBackupDatabase = (databasePath: string, declaredVersion: number, hasSecret: boolean) => {

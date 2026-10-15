@@ -28,9 +28,10 @@ if (shouldBuildDesktop) {
   await rm('build/desktop', { recursive: true, force: true });
   await build({
     ...commonOptions,
-    entryPoints: ['desktop/main.ts'],
+    entryPoints: ['desktop/main.ts', 'desktop/server-process-entry.ts'],
     external: ['better-sqlite3', 'electron'],
     format: 'cjs',
-    outfile: 'build/desktop/main.cjs',
+    outdir: 'build/desktop',
+    outExtension: { '.js': '.cjs' },
   });
 }

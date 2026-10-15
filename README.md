@@ -10,7 +10,7 @@
   <a href="https://github.com/enriquemorenotent/pulsete/releases/latest">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/enriquemorenotent/pulsete?style=flat-square">
   </a>
-  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.7/pulsete_0.1.7_amd64.deb">
+  <a href="https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.8/pulsete_0.1.8_amd64.deb">
     <img alt="Ubuntu deb package" src="https://img.shields.io/badge/Ubuntu%2024.04-.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white">
   </a>
   <a href="./LICENSE">
@@ -52,8 +52,8 @@ Download the latest package from [GitHub Releases][latest-release], or install
 the current amd64 package directly:
 
 ```sh
-curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.7/pulsete_0.1.7_amd64.deb
-sudo apt install ./pulsete_0.1.7_amd64.deb
+curl -LO https://github.com/enriquemorenotent/pulsete/releases/download/v0.1.8/pulsete_0.1.8_amd64.deb
+sudo apt install ./pulsete_0.1.8_amd64.deb
 ```
 
 Installing the `.deb` also installs the Pulsete APT source and signing key.
@@ -109,6 +109,17 @@ npm run dist:linux
 The generated `.deb` is written to `release/`.
 
 ## Data Locations
+
+Full backups include the SQLite database and saved-password key. New exports use
+the binary `pulsete.backup.v2` format to avoid the old base64 text-size limit.
+Imports still accept legacy `pulsete.backup.v1` files. New backups require a
+version of Pulsete that supports v2; versions through 0.1.7 cannot import them.
+Backup files remain unencrypted. Import replaces the current profile and retains
+its previous database and key in the local `backups/pre-restore-*` directory.
+The existing 512 MiB compressed import limit still applies. The desktop app runs
+its local server in a background process so backup work does not freeze the
+window. Backup & Restore asks for confirmation before replacing data and shows
+an activity indicator while preparing or restoring the file.
 
 New or previously empty app profiles include Libera.Chat and OFTC as saved
 networks, using TLS on port 6697. They do not connect or join channels until

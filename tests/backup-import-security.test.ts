@@ -4,7 +4,8 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { gunzipSync, gzipSync } from 'node:zlib';
+import { gzipSync } from 'node:zlib';
+import { decodeBackupArchive } from '../server/storage-backup-format.js';
 import { createHttpHandler } from '../server/http-router.js';
 import { RuntimeHost } from '../server/runtime-host.js';
 import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
@@ -126,6 +127,17 @@ test('backup import rejects a mismatched encryption secret before replacement', 
   }
 });
 
+test('backup import leaves the runtime usable when safety-backup creation fails', async () => {
+  const context = await createBackupServer();
+  try {
+    const backup = context.host.currentStorage().exportBackup({}).content;
+    writeFileSync(join(context.dir, 'backups'), 'not a directory');
+    await assertRejectedImportPreservesRuntime(context, backup, 500);
+  } finally {
+    await context.close();
+  }
+});
+
 test('backup import restores the original database when replacement startup fails', async () => {
   const context = await createBackupServer();
   try {
@@ -179,7 +191,9 @@ const createDamagedBackup = (
   mutate: (db: SqliteDb, envelope: BackupEnvelope) => void,
 ) => {
   const backup = context.host.currentStorage().exportBackup({}).content;
-  const envelope = JSON.parse(gunzipSync(backup).toString('utf8')) as BackupEnvelope;
+  const archive = decodeBackupArchive(backup);
+  const envelope = { ...(archive.metadata as BackupEnvelope), format: 'pulsete.backup.v1',
+    database: archive.database.toString('base64') };
   const databasePath = join(context.dir, 'candidate.sqlite');
   writeFileSync(databasePath, Buffer.from(envelope.database, 'base64'));
   const db = openSqliteDatabase(databasePath);
