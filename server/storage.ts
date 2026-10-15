@@ -34,13 +34,13 @@ export class Storage {
   readonly drafts: StorageDraftsRepository;
   readonly avatarOverrides: StorageAvatarOverridesRepository;
 
-  constructor(paths: AppPaths | string) {
+  constructor(paths: AppPaths | string, options: { seedDefaultNetworks?: boolean } = {}) {
     this.paths = typeof paths === 'string' ? resolveAppPaths({ databasePath: paths }) : paths;
     this.databasePath = this.paths.databasePath;
     const resources = openStorageResources(this.paths);
     this.db = resources.db;
     this.secretBox = resources.secretBox;
-    initializeStorageDefaults(resources);
+    initializeStorageDefaults(resources, options);
     this.networks = new StorageNetworksRepository(this.db, this.secretBox);
     this.conversations = new StorageConversationsRepository(this.db);
     this.friends = new StorageFriendsRepository(this.db);

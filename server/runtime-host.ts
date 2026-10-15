@@ -19,9 +19,9 @@ export class RuntimeHost {
   readonly http: RuntimeHttpApi & { backups: BackupHttpApi };
   readonly ws: RuntimeWebSocketApi;
 
-  constructor(paths: AppPaths | string) {
+  constructor(paths: AppPaths | string, options: { seedDefaultNetworks?: boolean } = {}) {
     this.paths = typeof paths === 'string' ? resolveAppPaths({ databasePath: paths }) : paths;
-    const current = this.openRuntime();
+    const current = this.openRuntime(this.paths, options.seedDefaultNetworks);
     this.storage = current.storage;
     this.runtime = current.runtime;
     this.http = this.createHttpApi();
@@ -37,8 +37,8 @@ export class RuntimeHost {
     this.storage.close();
   }
 
-  private openRuntime(paths = this.paths) {
-    const storage = new Storage(paths);
+  private openRuntime(paths = this.paths, seedDefaultNetworks = false) {
+    const storage = new Storage(paths, { seedDefaultNetworks });
     try {
       return {
         runtime: createRuntime(storage),

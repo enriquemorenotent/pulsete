@@ -26,7 +26,7 @@ export type PulseteServerHandle = {
 export const startPulseteServer = async (options: PulseteServerOptions = {}): Promise<PulseteServerHandle> => {
   const listenHost = options.host ?? '127.0.0.1';
   const listenPort = options.port ?? Number(process.env.PORT ?? 18487);
-  const runtimeHost = new RuntimeHost(resolveAppPaths(options));
+  const runtimeHost = new RuntimeHost(resolveAppPaths(options), { seedDefaultNetworks: true });
   const authentication = createClientAuthentication();
   const server = createServer(createHttpHandler(runtimeHost.http, {
     assetRoot: options.assetRoot,

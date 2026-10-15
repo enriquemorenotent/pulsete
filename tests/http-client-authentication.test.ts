@@ -59,6 +59,13 @@ test('production server entrypoint requires its generated per-launch credential'
     assert.equal(missing.status, 401);
     assert.equal(authenticated.response.status, 204);
     assert.equal(allowed.status, 200);
+    const networks = await fetch(`${server.url}/api/networks`, {
+      headers: { Cookie: authenticated.cookie },
+    }).then((response) => response.json()) as {
+      networks: Array<{ name: string; workspaceOpen: boolean }>;
+    };
+    assert.deepEqual(networks.networks.map((network) => network.name), ['Libera.Chat', 'OFTC']);
+    assert.ok(networks.networks.every((network) => !network.workspaceOpen));
   } finally {
     await server.close();
   }
