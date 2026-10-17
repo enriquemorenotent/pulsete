@@ -113,6 +113,7 @@ export type SidebarActionSet = Pick<
   | 'removeFriend'
   | 'selectFriend'
   | 'selectNetworkBuffer'
+  | 'switchNetwork'
   | 'selectPendingTab'
   | 'selectTabBuffer'
 >;

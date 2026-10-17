@@ -60,6 +60,7 @@ export type AppDomainState = {
 
 export type AppTransientState = {
   selection: SelectedBuffer | null;
+  lastSelectionByNetworkId: Record<string, SelectedBuffer>;
   banner: Banner;
   channelList: ChannelListState;
   historyLoadedByBufferId: Record<string, true>;
@@ -102,6 +103,7 @@ export type Action =
   | { type: 'upsert-buffer'; buffer: BufferState; onlyIfOpen?: boolean }
   | { type: 'remove-buffer'; bufferId: string; networkId: string; replacementBufferId?: string }
   | { type: 'select'; selection: SelectedBuffer | null }
+  | { type: 'switch-network'; networkId: string }
   | { type: 'append-message'; message: ChatMessage }
   | { type: 'upsert-message'; message: ChatMessage }
   | { type: 'message-pin-updated'; message: ChatMessage }

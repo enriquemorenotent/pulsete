@@ -20,6 +20,7 @@ export type ConnectionSidebarProps = {
   onSelectFriend: (friend: FriendState) => Promise<void>;
   onToggleHideOfflineFriends?: () => void;
   onSelectNetwork: (network: NetworkProfile) => void;
+  onSwitchNetwork?: (network: NetworkProfile) => void;
   onSelectBuffer: (buffer: BufferState) => void;
   onSelectPendingChannel: (networkId: string, channel: string) => void;
   onReconnectNetwork: (network: NetworkProfile) => void;

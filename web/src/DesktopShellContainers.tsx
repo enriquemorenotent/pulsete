@@ -96,6 +96,7 @@ export const ConnectionSidebarContainer = memo(function ConnectionSidebarContain
     onSelectFriend: actions.selectFriend,
     onToggleHideOfflineFriends: ui.toggleHideOfflineFriends,
     onSelectNetwork: actions.selectNetworkBuffer,
+    onSwitchNetwork: actions.switchNetwork,
     onSelectBuffer: actions.selectTabBuffer,
     onSelectPendingChannel: actions.selectPendingTab,
     onReconnectNetwork: actions.reconnectNetwork,

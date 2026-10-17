@@ -22,6 +22,15 @@ export const resolveNextSelection = (
   };
 
   switch (action.type) {
+    case 'switch-network':
+      if (!domain.networks.some((network) => network.id === action.networkId && network.workspaceOpen)) {
+        return selection;
+      }
+      return getConversation().normalizeSelection(
+        domain.networks,
+        previous.transient.lastSelectionByNetworkId[action.networkId] ?? null,
+        action.networkId,
+      );
     case 'snapshot':
       return getConversation().normalizeSelection(domain.networks, previous.transient.selection);
     case 'upsert-buffer':

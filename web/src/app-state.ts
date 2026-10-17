@@ -17,6 +17,7 @@ import {
 } from './app-state-conversations.js';
 import { initialChannelListState } from './app-state-channel-list.js';
 import { resolveNextSelection } from './app-state-selection.js';
+import { rememberNetworkSelection } from './network-selection.js';
 import { reduceRuntimeDomain } from './app-state-runtime.js';
 import { initialNetworkManagerState, reduceTransientAction } from './app-state-ui.js';
 import type { Action, State } from './app-types.js';
@@ -48,6 +49,7 @@ const initialDomainState: AppDomainState = {
 
 const initialTransientState: AppTransientState = {
   selection: null,
+  lastSelectionByNetworkId: {},
   banner: null,
   channelList: initialChannelListState,
   historyLoadedByBufferId: {},
@@ -111,6 +113,7 @@ export const reducer = (state: State, action: Action): State => {
       ?? reduceConversationDomain(state.domain, action, selectedBufferId)
       ?? state.domain;
   const selection = resolveNextSelection(state, reducedDomain, action);
+  const lastSelectionByNetworkId = rememberNetworkSelection(state, reducedDomain, selection);
   const nextSelectedBufferId = selection?.kind === 'buffer' ? selection.bufferId : null;
   const messages = retainConversationMessageBudget(
     reducedDomain.messages,
@@ -127,6 +130,7 @@ export const reducer = (state: State, action: Action): State => {
     ? {
         ...state.transient,
         selection,
+        lastSelectionByNetworkId,
         banner: null,
         channelList: initialChannelListState,
         historyLoadedByBufferId: {},
@@ -136,8 +140,9 @@ export const reducer = (state: State, action: Action): State => {
         messageFocusRequest: null,
       }
     : selection === state.transient.selection
+      && lastSelectionByNetworkId === state.transient.lastSelectionByNetworkId
       ? state.transient
-      : { ...state.transient, selection };
+      : { ...state.transient, selection, lastSelectionByNetworkId };
   const reducedTransient = action.type === 'snapshot'
     ? transientBase
     : reduceTransientAction(transientBase, action) ?? transientBase;

@@ -27,7 +27,7 @@ export function ConnectionSidebarServerSwitcher(
         <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground/75">Accounts</h2>
         <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Open accounts">
           {props.connections.map((connection) => (
-            <ServerSwitcherButton key={connection.network.id} connection={connection} active={connection.network.id === activeConnection?.network.id} showMedia={props.showMedia} externalAvatarsEnabled={props.externalAvatarsEnabled} onSelect={() => props.onSelectNetwork(connection.network)} />
+            <ServerSwitcherButton key={connection.network.id} connection={connection} active={connection.network.id === activeConnection?.network.id} showMedia={props.showMedia} externalAvatarsEnabled={props.externalAvatarsEnabled} onSelect={() => (props.onSwitchNetwork ?? props.onSelectNetwork)(connection.network)} />
           ))}
         </div>
       </div>

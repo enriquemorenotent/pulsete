@@ -157,6 +157,10 @@ export const createNetworkActions = ({
     }
   };
 
+  const switchNetwork = (network: NetworkProfile) => {
+    dispatch({ type: 'switch-network', networkId: network.id });
+  };
+
   const toggleCurrentChannelAutoJoin = async () => {
     const state = getState();
     const workspace = readWorkspace(getState, getWorkspace);
@@ -187,6 +191,7 @@ export const createNetworkActions = ({
     saveFavorite,
     saveNetworkNotes,
     selectNetworkBuffer,
+    switchNetwork,
     submitNetwork,
     toggleCurrentChannelAutoJoin,
   };
