@@ -50,7 +50,15 @@ test('escape jumps the selected chat only when no blocking UI owns it', () => {
   );
 });
 
-test('escape jump ignores modified, composing, and already-handled key events', () => {
+test('escape jump ignores repeated, modified, composing, and already-handled key events', () => {
+  assert.equal(
+    shouldJumpChatToLatestFromKeydown({ ...escapeEvent, repeat: true }, {
+      blockingDialogOpen: false,
+      hasSelectedBuffer: true,
+      menuOpen: false,
+    }),
+    false,
+  );
   assert.equal(
     shouldJumpChatToLatestFromKeydown({ ...escapeEvent, ctrlKey: true }, {
       blockingDialogOpen: false,

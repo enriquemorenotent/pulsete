@@ -5,6 +5,7 @@ export type DesktopShellShortcutKeyEvent = {
   isComposing?: boolean;
   key: string;
   metaKey: boolean;
+  repeat?: boolean;
   shiftKey: boolean;
 };
 
@@ -17,6 +18,7 @@ export const shouldJumpChatToLatestFromKeydown = (
   },
 ) =>
   !event.defaultPrevented
+  && !event.repeat
   && !event.isComposing
   && input.hasSelectedBuffer
   && !input.blockingDialogOpen

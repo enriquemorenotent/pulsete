@@ -35,7 +35,9 @@ export function useTranscriptWindowAnchor(rowKeys: readonly string[], hasNewerHi
     if (window.focusRequestId !== focusRequestId && focusRowIndex !== null) {
       anchor = { index: focusRowIndex, offset: 0, align: 'center' };
     }
-    if (window.jumpToLatestRequestId !== jumpToLatestRequestId && rowKeys.length) {
+    // Ordinary jumps use the viewport's scrollToIndex without remounting the list.
+    // Only override restoration when a history-window eviction needs a remount.
+    if (evicted && window.jumpToLatestRequestId !== jumpToLatestRequestId && rowKeys.length) {
       anchor = { index: rowKeys.length - 1, offset: 0, align: 'end' };
     }
     setWindow({ rows: rowKeys, hasNewerHistory, jumpToLatestRequestId, focusRequestId, revision: window.revision + (anchor ? 1 : 0),
