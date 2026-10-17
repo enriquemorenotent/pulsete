@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { codexCommandEnvironment } from './codex-command-path.js';
 import type {
   AiAssistantLoginResponse,
   AiAssistantProviderStatus,
@@ -47,7 +48,9 @@ export const startCodexLogin = (
   readStatus: () => Promise<AiAssistantProviderStatus>,
   onProcess: (process: CodexLoginProcess) => void,
 ) => new Promise<AiAssistantLoginResponse>((resolve, reject) => {
-  const child = spawn(command, ['login', '--device-auth'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(command, ['login', '--device-auth'], {
+    stdio: ['ignore', 'pipe', 'pipe'], env: codexCommandEnvironment(command),
+  });
   let settled = false;
   let output = '';
   onProcess(child);

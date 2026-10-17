@@ -54,15 +54,15 @@ test('assistant ask route returns Codex provider errors without losing conversat
 });
 
 const withMissingCodexPath = async (run: () => Promise<void>) => {
-  const previous = process.env.PATH;
-  process.env.PATH = '';
+  const keys = ['PATH', 'HOME', 'NVM_DIR', 'NPM_CONFIG_PREFIX'] as const;
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  for (const key of keys) process.env[key] = '';
   try {
     await run();
   } finally {
-    if (previous === undefined) {
-      delete process.env.PATH;
-    } else {
-      process.env.PATH = previous;
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
     }
   }
 };

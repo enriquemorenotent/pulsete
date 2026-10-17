@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { codexCommandEnvironment } from './codex-command-path.js';
 
 export type CommandResult = {
   code: number | null;
@@ -13,7 +14,9 @@ export const runCommand = (
   options: { input?: string; timeoutMs: number; signal?: AbortSignal; killGraceMs?: number; maxStdoutChars?: number },
 ) => new Promise<CommandResult>((resolve) => {
   const grouped = process.platform !== 'win32';
-  const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], detached: grouped });
+  const child = spawn(command, args, {
+    stdio: ['pipe', 'pipe', 'pipe'], detached: grouped, env: codexCommandEnvironment(command),
+  });
   let settled = false;
   let stopping = false;
   let stderr = '';
