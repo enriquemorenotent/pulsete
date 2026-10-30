@@ -73,7 +73,7 @@ export const workspacePreferencesSchema = z.object({
   hideOfflineFriends: z.boolean().default(false),
   leftSidebarWidth: sidebarWidthSchema.default(defaultSidebarWidth),
   rightSidebarWidth: sidebarWidthSchema.default(defaultSidebarWidth),
-  serverSidebarAccordions: z.record(serverSidebarAccordionStateSchema).default({}),
+  serverSidebarAccordions: z.record(z.string(), serverSidebarAccordionStateSchema).default({}),
 });
 export type WorkspacePreferences = z.infer<typeof workspacePreferencesSchema>;
 
@@ -89,7 +89,7 @@ export const workspacePreferencesPatchSchema = z.object({
   hideOfflineFriends: z.boolean().optional(),
   leftSidebarWidth: sidebarWidthSchema.optional(),
   rightSidebarWidth: sidebarWidthSchema.optional(),
-  serverSidebarAccordions: z.record(serverSidebarAccordionStateSchema).optional(),
+  serverSidebarAccordions: z.record(z.string(), serverSidebarAccordionStateSchema).optional(),
 }).strict();
 export type WorkspacePreferencesPatch = z.infer<typeof workspacePreferencesPatchSchema>;
 

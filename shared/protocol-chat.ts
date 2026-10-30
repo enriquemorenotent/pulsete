@@ -186,7 +186,7 @@ export const networkRuntimeCapabilitiesSchema = z.object({
   offered: z.array(z.string()).default([]),
   negotiated: z.array(z.string()).default([]),
   pending: z.array(z.string()).default([]),
-  values: z.record(z.string()).optional(),
+  values: z.record(z.string(), z.string()).optional(),
 });
 export type NetworkRuntimeCapabilities = z.infer<typeof networkRuntimeCapabilitiesSchema>;
 

@@ -11,7 +11,7 @@ import type { BackupRouteArgs } from './http-types.js';
 import type { BrowserPreferences } from './storage-backup.js';
 
 const exportInputSchema = z.object({
-  browserPreferences: z.record(z.string()).optional(),
+  browserPreferences: z.record(z.string(), z.string()).optional(),
 });
 
 export const handleBackupRoutes = async ({ req, res, pathname, context }: BackupRouteArgs) => {

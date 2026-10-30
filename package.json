@@ -1,6 +1,6 @@
 {
   "name": "pulsete",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "A local IRC client with durable workspace state.",
   "homepage": "https://enriquemorenotent.github.io/pulsete/",
   "private": true,
@@ -89,7 +89,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^9.2.1",
-    "electron": "41.10.7",
+    "electron": "42.11.16",
     "electron-builder": "^26.8.1",
     "esbuild": "^0.28.0",
     "lucide-react": "^0.577.0",
@@ -103,6 +103,6 @@
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.0",
-    "zod": "^3.25.76"
+    "zod": "4.6.7"
   }
 }
