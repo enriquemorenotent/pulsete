@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import type { AiAssistantRequest } from '../shared/protocol-ai.js';
+import type { AiAssistantRequest, AiAssistantProgress } from '../shared/protocol-ai.js';
 import type { CodexAssistantProvider } from './codex-assistant-provider.js';
 import type { RuntimeConversationStore } from './runtime-store.js';
 import { renderAiAssistantContext, type AiAssistantPromptContext } from './ai-assistant-context.js';
-import { readAssistantDateRange } from './ai-assistant-dates.js';
+import { type AssistantDateRange, readAssistantDateRange } from './ai-assistant-dates.js';
 
 const offset = z.number().int().min(0).max(1_000_000_000).default(0);
 const actionSchema = z.discriminatedUnion('action', [
@@ -23,19 +23,29 @@ export async function researchAssistantHistory(input: {
   context: AiAssistantPromptContext;
   request: AiAssistantRequest;
   signal?: AbortSignal;
+  dateRange?: AssistantDateRange | null;
+  researchDeadline?: number;
+  onProgress?: (stage: AiAssistantProgress) => void;
 }) {
   const { store, provider, context, request, signal } = input;
-  const range = readAssistantDateRange(request.prompt);
+  const range = input.dateRange !== undefined ? input.dateRange : readAssistantDateRange(request.prompt);
   const snapshot = store.assistantHistorySnapshot(context.buffer.id, range);
   const observations: string[] = [];
   const sources = context.sources ?? [];
   const fullyRead = new Set(context.coverage?.truncated ? [] : sources.map((source) => source.message.id));
   let remainingBytes = 120_000;
   let limited = true;
+  const seen = new Set<string>();
+  let duplicates = 0;
   for (let step = 0; step < 8; step++) {
     signal?.throwIfAborted();
-    const response = await provider.request({
-      signal, selection: request.selection,
+    if (step === 0) input.onProgress?.('searching');
+    const remainingMs = (input.researchDeadline ?? Date.now() + 90_000) - Date.now();
+    if (remainingMs <= 0) { observations.push('Research time limit reached.'); break; }
+    const researchSignal = AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(remainingMs)]);
+    let response;
+    try { response = await provider.request({
+      signal: researchSignal, selection: request.selection,
       instructions: researchInstructions,
       prompt: [
         `User question: ${request.prompt}`,
@@ -45,7 +55,12 @@ export async function researchAssistantHistory(input: {
         ...observations,
         `Research operations remaining: ${8 - step}. Return one JSON object.`,
       ].join('\n\n'),
-    });
+    }); } catch (error) {
+      signal?.throwIfAborted();
+      if (!researchSignal.aborted) throw error;
+      observations.push('Research time limit reached.');
+      break;
+    }
     signal?.throwIfAborted();
     let action: AssistantResearchAction;
     try {
@@ -55,6 +70,15 @@ export async function researchAssistantHistory(input: {
       continue;
     }
     if (action.action === 'done') { limited = false; break; }
+    const key = JSON.stringify(action);
+    if (seen.has(key)) {
+      observations.push('Repeated operation: use the result already supplied; choose a different operation or done.');
+      if (++duplicates >= 2) { observations.push('Stopped repeated research without new evidence.'); break; }
+      continue;
+    }
+    duplicates = 0;
+    seen.add(key);
+    input.onProgress?.(action.action === 'read' || action.action === 'page' ? 'reading' : 'searching');
     const result = store.queryAssistantHistory(context.buffer.id, snapshot.maxRowid, range, action);
     const resultBytes = Buffer.byteLength(JSON.stringify(result)) + 2_000;
     if (resultBytes > remainingBytes) {

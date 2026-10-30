@@ -133,7 +133,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
         messages,
       });
     },
-    clearBufferHistory: (bufferId) => publishMutation(conversationsService.clearBufferHistory(bufferId)),
+    clearBufferHistory: (bufferId) => {
+      assistantService.clear(bufferId);
+      return publishMutation(conversationsService.clearBufferHistory(bufferId));
+    },
     markBufferRead: (bufferId) => publishMutation(conversationsService.markBufferRead(bufferId)),
     saveBufferNotes: (bufferId, notes) => publishMutation(conversationsService.saveBufferNotes(bufferId, notes)),
     history: (bufferId, limit, beforeMessageId) => conversationsService.listBufferHistory(bufferId, limit, beforeMessageId),
@@ -191,7 +194,8 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   };
   const http: RuntimeHttpApi = {
     assistant: {
-      ask: (bufferId, request) => assistantService.ask(bufferId, request),
+      ask: (bufferId, request, signal, options) => assistantService.ask(bufferId, request, signal, options),
+      clear: (bufferId, token, sessionId) => assistantService.clear(bufferId, token, sessionId),
       startLogin: () => assistantService.startLogin(),
       status: () => assistantService.status(),
     },

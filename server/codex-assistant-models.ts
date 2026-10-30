@@ -33,10 +33,11 @@ export type ResolvedCodexAssistantSelection = {
 
 export const readCodexAssistantModelCatalog = async (
   command: string,
+  signal?: AbortSignal,
 ): Promise<CodexAssistantModelCatalog> => {
   // Model metadata includes long instruction strings, so it needs more room than diagnostics.
   const result = await runCommand(command, ['debug', 'models'], {
-    timeoutMs: 10_000,
+    signal, timeoutMs: 10_000,
     maxStdoutChars: 4_000_000,
   });
   if (result.error?.code === 'ENOENT') {

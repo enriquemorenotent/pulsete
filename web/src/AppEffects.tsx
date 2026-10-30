@@ -11,7 +11,7 @@ import {
   selectDrafts,
   selectBrowserStorageImportPending,
 } from './app-selectors.js';
-import { useAppDispatch, useAppSelector } from './app-store.js';
+import { useAppStore, useAppDispatch, useAppSelector } from './app-store.js';
 import type { AppTransientUiState } from './useAppUiState.js';
 import { gatewayReconnectMessage } from './gateway.js';
 import { useGatewayConnection } from './useGatewayConnection.js';
@@ -30,7 +30,7 @@ import type { ApplyServerMessages } from './app-actions-types.js';
 type AppEffectsProps = {
   applySocketMessage: (message: ServerMessage) => void;
   applyServerMessages: ApplyServerMessages;
-  assistantStore: Pick<AiAssistantStoreApi, 'pruneThreads'>;
+  assistantStore: Pick<AiAssistantStoreApi, 'pruneThreads' | 'clearThread'>;
   composer: Pick<ComposerStoreApi, 'applyServerDrafts' | 'pruneContexts' | 'subscribeDrafts'>;
   saveDraft: AppActions['saveDraft'];
   ui: Pick<
@@ -42,6 +42,12 @@ type AppEffectsProps = {
 
 export function AppEffects(props: AppEffectsProps) {
   const dispatch = useAppDispatch();
+  const appStore = useAppStore();
+  useEffect(() => appStore.subscribeActions(({ action, state }) => {
+    if (action.type !== 'remove-messages') return;
+    const bufferId = action.bufferId ?? state.domain.buffers.find((buffer) => buffer.networkId === action.networkId && buffer.target === action.target)?.id;
+    if (bufferId && (state.domain.messages[bufferId]?.length ?? 0) === 0) props.assistantStore.clearThread(bufferId);
+  }), [appStore, props.assistantStore]);
   const banner = useAppSelector(selectBanner);
   const buffers = useAppSelector(selectBuffers);
   const workspaceNetworkCount = useAppSelector(selectWorkspaceNetworkCount);

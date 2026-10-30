@@ -5,6 +5,7 @@ import type { AssistantEntry } from './AiAssistantChatTypes.js';
 type Listener = () => void;
 
 export type AiAssistantThreadState = {
+  continuationToken?: string;
   activeRequestId: number | null;
   entries: readonly AssistantEntry[];
   error: string;
@@ -20,12 +21,14 @@ type StartRequestInput = {
 };
 
 type ResolveRequestInput = {
+  continuationToken?: string;
   context?: AiAssistantContext;
   mode: AiAssistantMode;
   text: string;
 };
 
 export type AiAssistantStoreApi = {
+  updateProgress: (bufferId: string, requestId: number, label: string) => void;
   clearThread: (bufferId: string) => void;
   failRequest: (bufferId: string, requestId: number, error: string) => void;
   getThread: (bufferId: string | null) => AiAssistantThreadState;
@@ -91,8 +94,11 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
   };
 
   return {
+    updateProgress(bufferId, requestId, pendingLabel) {
+      finishRequest(bufferId, requestId, (current) => ({ ...current, pendingLabel }));
+    },
     setScope(bufferId, scope) {
-      updateThread(bufferId, (current) => current.scope === scope ? current : { ...current, scope });
+      updateThread(bufferId, (current) => current.scope === scope ? current : { ...current, scope, continuationToken: undefined });
     },
     clearThread(bufferId) {
       if (!(bufferId in threads)) {
@@ -128,6 +134,7 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
     resolveRequest(bufferId, requestId, result) {
       finishRequest(bufferId, requestId, (current) => ({
         ...current,
+        continuationToken: result.continuationToken,
         activeRequestId: null,
         entries: [
           ...current.entries,

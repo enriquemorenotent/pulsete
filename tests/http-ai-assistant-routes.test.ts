@@ -101,3 +101,25 @@ test('disconnecting an assistant HTTP request aborts its provider work', async (
     await request;
   } finally { await context.close(); }
 });
+
+test('assistant route streams progress and final result, and encodes late errors', async () => {
+  const context = await createHttpRuntimeContext();
+  try {
+    context.runtime.http.assistant.ask = async (_buffer, _request, signal, options) => {
+      assert.ok(signal); assert.ok(options?.sessionId);
+      options.onProgress?.('reading');
+      return { answer: 'Test answer', mode: 'answer', context: { buffer: { id: 'test', kind: 'channel', networkId: 'n', target: '#test' }, messages: [] },
+        status: { connected: false, detail: '', provider: 'unavailable', model: null, availableModels: [], modelsError: null, reasoningEffort: null, selectionNotice: null } };
+    };
+    const ask = () => fetch(`http://127.0.0.1:${context.port}/api/buffers/test/assistant`, { method: 'POST',
+      headers: { Accept: 'application/x-ndjson', 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Hello' }) });
+    const response = await ask();
+    assert.match(response.headers.get('content-type')!, /ndjson/);
+    const events = (await response.text()).trim().split('\n').map((line) => JSON.parse(line));
+    assert.deepEqual(events.map((event) => event.type), ['progress', 'result']);
+    assert.equal(events[0].stage, 'reading');
+    context.runtime.http.assistant.ask = async () => { throw new Error('private failure'); };
+    const failed = (await (await ask()).text()).trim();
+    assert.deepEqual(JSON.parse(failed), { type: 'error', message: 'Internal server error' });
+  } finally { await context.close(); }
+});

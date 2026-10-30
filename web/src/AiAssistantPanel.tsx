@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MessageSquarePlus, Maximize2, Minimize2 } from 'lucide-react';
 import type { BufferState } from '../../shared/protocol-chat.js';
 import {
@@ -30,6 +30,7 @@ type AiAssistantPanelProps = {
   buffer: BufferState | null;
   onSelectionChange?: (selection: AiAssistantSelection) => boolean | Promise<boolean>;
   onUseSuggestion: (value: string) => void;
+  onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
   selection?: AiAssistantSelection;
   store?: AiAssistantStoreApi;
 };
@@ -45,6 +46,10 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const store = props.store ?? localStore;
   const bufferId = props.buffer?.id ?? null;
   const controllers = useRef(new Map<string, AbortController>());
+  useEffect(() => () => { for (const controller of controllers.current.values()) controller.abort(); }, []);
+  useEffect(() => store.subscribe(() => {
+    for (const [id, controller] of controllers.current) if (!store.getThread(id).pending) controller.abort();
+  }), [store]);
   const cancel = () => {
     if (!bufferId) return;
     controllers.current.get(bufferId)?.abort();
@@ -86,16 +91,20 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     try {
       const response = await aiAssistantApi.ask(bufferId, {
         assistantTurns,
+        continuationToken: store.getThread(bufferId).continuationToken,
         mode,
         scope: thread.scope,
         prompt,
         selection: resolvedSelection.selection,
-      }, controller.signal);
+      }, controller.signal, (stage) => store.updateProgress(bufferId, currentRequestId, progressLabels[stage]));
+      controller.signal.throwIfAborted();
+      if (store.getThread(bufferId).activeRequestId !== currentRequestId) return;
       setStatus(response.status);
       store.resolveRequest(bufferId, currentRequestId, {
         mode,
         text: response.answer,
         context: response.context,
+        continuationToken: response.continuationToken,
       });
     } catch (reason) {
       store.failRequest(
@@ -145,6 +154,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             onClick={() => {
               if (bufferId) {
                 controllers.current.get(bufferId)?.abort();
+                const token = store.getThread(bufferId).continuationToken;
+                if (token) void aiAssistantApi.clear(bufferId, token).catch(() => undefined);
                 store.clearThread(bufferId);
               }
             }}
@@ -187,6 +198,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
               }}
               onSubmit={submit}
               onUseSuggestion={props.onUseSuggestion}
+              onOpenSource={props.onOpenSource}
             />
           </>
         ) : null}
@@ -202,3 +214,5 @@ const selectionsMatch = (
   left: AiAssistantSelection | null,
   right: AiAssistantSelection,
 ) => left?.model === right.model && left.reasoningEffort === right.reasoningEffort;
+
+const progressLabels = { preparing: 'Preparing context', searching: 'Searching history', reading: 'Reading messages', writing: 'Writing answer', checking: 'Checking sources' };

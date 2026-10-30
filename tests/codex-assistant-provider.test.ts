@@ -76,13 +76,16 @@ test('Codex assistant provider applies a validated model and reasoning effort pe
   const args = JSON.parse(readFileSync(fake.argsPath, 'utf8')) as string[];
 
   assert.equal(response.answer, 'Test answer');
+  assert.ok(args.includes('shell_tool'));
+  assert.ok(args.includes('unified_exec'));
+  assert.ok(args.includes('web_search="disabled"'));
   assert.equal(response.status.model, 'gpt-5.6-terra');
   assert.equal(response.status.reasoningEffort, 'ultra');
   assert.deepEqual(args.slice(args.indexOf('--model'), args.indexOf('--model') + 2), [
     '--model',
     'gpt-5.6-terra',
   ]);
-  assert.deepEqual(args.slice(args.indexOf('--config'), args.indexOf('--config') + 2), [
+  assert.deepEqual(args.slice(args.indexOf('model_reasoning_effort="ultra"') - 1, args.indexOf('model_reasoning_effort="ultra"') + 1), [
     '--config',
     'model_reasoning_effort="ultra"',
   ]);

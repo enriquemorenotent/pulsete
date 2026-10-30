@@ -30,6 +30,7 @@ export type AiAssistantScope = z.infer<typeof aiAssistantScopeSchema>;
 
 export const aiAssistantRequestSchema = z.object({
   scope: aiAssistantScopeSchema.optional(),
+  continuationToken: z.string().uuid().optional(),
   assistantTurns: z.array(aiAssistantTurnSchema).max(aiAssistantThreadMaxTurns).default([]),
   mode: aiAssistantModeSchema.default('answer'),
   prompt: z.string().max(aiAssistantPromptMaxLength).default(''),
@@ -78,7 +79,15 @@ export type AiAssistantContext = {
   };
 };
 
+export type AiAssistantProgress = 'preparing' | 'searching' | 'reading' | 'writing' | 'checking';
+
+export type AiAssistantStreamEvent =
+  | { type: 'progress'; stage: AiAssistantProgress }
+  | { type: 'result'; response: AiAssistantResponse }
+  | { type: 'error'; message: string };
+
 export type AiAssistantResponse = {
+  continuationToken?: string;
   answer: string;
   context: AiAssistantContext;
   mode: AiAssistantMode;

@@ -14,6 +14,7 @@ const AiAssistantMarkdown = lazy(async () => {
 type AiAssistantConversationProps = {
   entries: readonly AssistantEntry[];
   onUseSuggestion: (value: string) => void;
+  onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
   pending: boolean;
   pendingLabel: string;
 };
@@ -36,7 +37,7 @@ export function AiAssistantConversation(props: AiAssistantConversationProps) {
           <AssistantBubble
             key={entry.id}
             entry={entry}
-            onUseSuggestion={props.onUseSuggestion}
+            onUseSuggestion={props.onUseSuggestion} onOpenSource={props.onOpenSource}
           />
         ))}
         {props.pending ? <AssistantPendingBubble label={props.pendingLabel} /> : null}
@@ -48,6 +49,7 @@ export function AiAssistantConversation(props: AiAssistantConversationProps) {
 function AssistantBubble(props: {
   entry: AssistantEntry;
   onUseSuggestion: (value: string) => void;
+  onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
 }) {
   const assistant = props.entry.role === 'assistant';
   return (
@@ -65,13 +67,14 @@ function AssistantBubble(props: {
               <AiAssistantMarkdown
                 sourcePrefix={`assistant-source-${props.entry.id}`}
                 sourceLabels={props.entry.context?.sources?.map((source) => source.label)}
+                onSourceClick={(label) => { const element = document.getElementById(`assistant-source-${props.entry.id}-${label}`); element?.querySelector<HTMLButtonElement>('button')?.click(); }}
               >{props.entry.text}</AiAssistantMarkdown>
             </Suspense>
           ) : (
             <div className="whitespace-pre-wrap">{props.entry.text}</div>
           )}
         </div>
-        {props.entry.context ? <AiAssistantSources context={props.entry.context} sourcePrefix={`assistant-source-${props.entry.id}`} /> : null}
+        {props.entry.context ? <AiAssistantSources context={props.entry.context} sourcePrefix={`assistant-source-${props.entry.id}`} onOpenSource={props.onOpenSource} /> : null}
         {props.entry.mode === 'suggest-reply' ? (
           <Button
             size="sm"

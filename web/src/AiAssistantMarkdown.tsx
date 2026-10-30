@@ -5,11 +5,12 @@ type AiAssistantMarkdownProps = {
   children: string;
   sourcePrefix?: string;
   sourceLabels?: string[];
+  onSourceClick?: (label: string) => void;
 };
 
 export function AiAssistantMarkdown(props: AiAssistantMarkdownProps) {
   return (
-    <Markdown options={markdownOptions}>
+    <Markdown options={{ ...markdownOptions, overrides: { ...markdownOptions.overrides, a: { component: AssistantMarkdownLink, props: { onSourceClick: props.onSourceClick } } } }}>
       {props.children.replace(/\[S(\d+)\]/g, (citation, number: string) =>
         props.sourcePrefix && props.sourceLabels?.includes(`S${number}`)
           ? `[${citation}](#${props.sourcePrefix}-S${number})` : citation)}
@@ -59,7 +60,7 @@ const markdownOptions = {
   },
 } satisfies MarkdownToJSX.Options;
 
-function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'>) {
+function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'> & { onSourceClick?: (label: string) => void }) {
   const external = isExternalLink(props.href);
   return (
     <a
@@ -69,6 +70,8 @@ function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'>) {
           const source = document.getElementById(props.href.slice(1));
           const details = source?.closest('details');
           if (details) details.open = true;
+          const label = props.href.match(/-(S\d+)$/)?.[1];
+          if (label) props.onSourceClick?.(label);
         }
       }}
       title={props.title}

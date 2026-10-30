@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import { openExistingNetworkEditor } from './network-editor-actions.js';
 import {
@@ -11,7 +11,8 @@ import {
   selectServerProfileNetwork,
   selectWorkspace,
 } from './app-selectors.js';
-import { useAppDispatch, useAppSelector } from './app-store.js';
+import { api } from './client.js';
+import { useAppStore, useAppDispatch, useAppSelector } from './app-store.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
 import type { ContactNotificationsController } from './contact-notifications/controller.js';
@@ -41,6 +42,8 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   onCollapse,
 }: WorkspaceRightSidebarContainerProps) {
   const dispatch = useAppDispatch();
+  const appStore = useAppStore();
+  const sourceRequest = useRef(0);
   const friends = useAppSelector(selectFriends);
   const mutedNicks = useAppSelector(selectMutedNicks);
   const nickEmojis = useAppSelector(selectNickEmojis);
@@ -176,12 +179,23 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
       buffer,
       onSelectionChange: (selection: typeof preferences.aiAssistant) =>
         actions.updatePreferences({ aiAssistant: selection }),
+      onOpenSource: async (bufferId: string, messageId: string) => {
+        const requestId = ++sourceRequest.current;
+        const payload = await api.loadMessageHistoryWindow(bufferId, messageId);
+        const selection = appStore.getState().transient.selection;
+        if (requestId !== sourceRequest.current || selection?.kind !== 'buffer' || selection.bufferId !== bufferId) return false;
+        dispatch({ type: 'replace-message-window', bufferId, messages: payload.messages,
+          hasOlder: payload.hasOlder, hasNewer: payload.hasNewer, focusMessageId: payload.targetMessageId, focusRequestId: requestId });
+        return true;
+      },
       onUseSuggestion: (value: string) => composer.setDraft(buffer?.id ?? null, value),
       selection: preferences.aiAssistant,
       store: assistantStore,
     };
   }, [
     actions.updatePreferences,
+    appStore,
+    dispatch,
     assistantStore,
     composer,
     preferences.aiAssistant,

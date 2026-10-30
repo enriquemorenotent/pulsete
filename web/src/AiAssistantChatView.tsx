@@ -14,6 +14,7 @@ type AiAssistantChatViewProps = {
   onChange: (value: string) => void;
   onSubmit: () => void;
   onUseSuggestion: (value: string) => void;
+  onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
   pending: boolean;
   pendingLabel: string;
   scope?: AiAssistantScope;
@@ -48,7 +49,7 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
         </div>
       ) : (
         <AiAssistantConversation entries={props.entries} pending={props.pending}
-          pendingLabel={props.pendingLabel} onUseSuggestion={props.onUseSuggestion} />
+          pendingLabel={props.pendingLabel} onUseSuggestion={props.onUseSuggestion} onOpenSource={props.onOpenSource} />
       )}
       {props.error ? (
         <p role="alert" className="rounded-sm border border-amber-300/18 bg-amber-300/8 px-2.5 py-2 text-[12px] text-amber-100">{props.error}</p>

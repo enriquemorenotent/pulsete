@@ -18,8 +18,9 @@ export type CodexLoginProcess = ReturnType<typeof spawn>;
 
 export const readCodexConnectionStatus = async (
   command: string,
+  signal?: AbortSignal,
 ): Promise<CodexConnectionStatus> => {
-  const result = await runCommand(command, ['login', 'status'], { timeoutMs: 10_000 });
+  const result = await runCommand(command, ['login', 'status'], { signal, timeoutMs: 10_000 });
   if (result.error?.code === 'ENOENT') {
     return {
       connected: false,

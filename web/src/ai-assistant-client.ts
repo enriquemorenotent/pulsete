@@ -1,4 +1,6 @@
+import { readAssistantStream } from './ai-assistant-stream.js';
 import type {
+  AiAssistantProgress,
   AiAssistantLoginResponse,
   AiAssistantProviderStatus,
   AiAssistantRequest,
@@ -21,11 +23,19 @@ const requestJson = async <T>(path: string, init?: RequestInit) => {
 };
 
 export const aiAssistantApi = {
-  ask: (bufferId: string, request: AiAssistantRequest, signal?: AbortSignal) =>
-    requestJson<AiAssistantResponse>(
-      `/api/buffers/${encodeURIComponent(bufferId)}/assistant`,
-      { method: 'POST', body: JSON.stringify(request), signal },
-    ),
+  ask: async (bufferId: string, request: AiAssistantRequest, signal?: AbortSignal,
+    onProgress?: (stage: AiAssistantProgress) => void): Promise<AiAssistantResponse> => {
+    const response = await fetch(`/api/buffers/${encodeURIComponent(bufferId)}/assistant`, {
+      method: 'POST', body: JSON.stringify(request), signal,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
+    });
+    if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.message ?? `Request failed (${response.status})`); }
+    if (response.headers.get('content-type')?.includes('application/x-ndjson')) return readAssistantStream(response, onProgress, signal);
+    return response.json();
+  },
+  clear: (bufferId: string, continuationToken: string) => requestJson(`/api/buffers/${encodeURIComponent(bufferId)}/assistant`, {
+    method: 'DELETE', body: JSON.stringify({ continuationToken }),
+  }),
   status: () =>
     requestJson<AiAssistantProviderStatus>('/api/assistant/status'),
   login: () =>

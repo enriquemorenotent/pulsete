@@ -114,6 +114,7 @@ export type RuntimeAvatarOverrideMutations = {
 export type RuntimeHttpApi = {
   assistant: {
     ask: RuntimeAiAssistantService['ask'];
+    clear?: RuntimeAiAssistantService['clear'];
     startLogin: RuntimeAiAssistantService['startLogin'];
     status: RuntimeAiAssistantService['status'];
   };

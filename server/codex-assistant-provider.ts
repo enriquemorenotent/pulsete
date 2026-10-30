@@ -107,7 +107,7 @@ export const createCodexAssistantProvider = (
 const readCodexProviderStatus = async (
   command: string,
   configuredModel: string | null,
-  readModelCatalog: () => Promise<CodexAssistantModelCatalog>,
+  readModelCatalog: (signal?: AbortSignal) => Promise<CodexAssistantModelCatalog>,
 ) => {
   const [connection, catalog] = await Promise.all([
     readCodexConnectionStatus(command),
@@ -123,7 +123,7 @@ const readCodexProviderStatus = async (
 const requestCodexAnswer = async (
   command: string,
   configuredModel: string | null,
-  readModelCatalog: () => Promise<CodexAssistantModelCatalog>,
+  readModelCatalog: (signal?: AbortSignal) => Promise<CodexAssistantModelCatalog>,
   input: {
     instructions: string;
     prompt: string;
@@ -133,8 +133,8 @@ const requestCodexAnswer = async (
 ): Promise<CodexAssistantProviderResponse> => {
   input.signal?.throwIfAborted();
   const [connection, catalog] = await Promise.all([
-    readCodexConnectionStatus(command),
-    readModelCatalog(),
+    readCodexConnectionStatus(command, input.signal),
+    readModelCatalog(input.signal),
   ]);
   input.signal?.throwIfAborted();
   const selection = resolveCodexAssistantSelection(
@@ -174,6 +174,10 @@ const buildCodexExecArgs = (
 ) => [
   'exec',
   '--ephemeral',
+  '--strict-config',
+  '--disable', 'shell_tool',
+  '--disable', 'unified_exec',
+  '--config', 'web_search="disabled"',
   '--ignore-rules',
   '--ignore-user-config',
   '--skip-git-repo-check',
@@ -205,11 +209,13 @@ const createModelCatalogReader = (command: string) => {
     expiresAt: number;
     value: CodexAssistantModelCatalog;
   } | null = null;
-  return async () => {
+  return async (signal?: AbortSignal) => {
+    signal?.throwIfAborted();
     if (cached && cached.expiresAt > Date.now()) {
       return cached.value;
     }
-    const value = await readCodexAssistantModelCatalog(command);
+    const value = await readCodexAssistantModelCatalog(command, signal);
+    signal?.throwIfAborted();
     cached = {
       expiresAt: Date.now() + modelCatalogCacheMs,
       value,

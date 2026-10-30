@@ -1,5 +1,5 @@
 import { badRequest, notFound } from './app-error.js';
-import { readAssistantDateRange } from './ai-assistant-dates.js';
+import { type AssistantDateRange, readAssistantDateRange } from './ai-assistant-dates.js';
 import { limitAssistantMessages } from './ai-assistant-context-budget.js';
 import { planAiAssistantRetrieval } from './ai-assistant-retrieval.js';
 import { aiAssistantMessageLimit } from '../shared/protocol-ai.js';
@@ -9,7 +9,8 @@ import type { AiAssistantRequest } from '../shared/protocol-ai.js';
 import type { RuntimeConversationStore } from './runtime-store.js';
 
 type AiAssistantContextRequest = Pick<AiAssistantRequest, 'mode' | 'prompt'>
-  & Partial<Pick<AiAssistantRequest, 'assistantTurns' | 'scope'>>;
+  & Partial<Pick<AiAssistantRequest, 'assistantTurns' | 'scope'>>
+  & { dateRange?: AssistantDateRange | null };
 
 export type AiAssistantPromptContext = AiAssistantContext & {
   fullLog: { messages: ChatMessage[] } | null;
@@ -31,7 +32,7 @@ export const buildAiAssistantContext = (
   if (buffer.kind === 'server') {
     throw badRequest('Assistant is available in channels and private messages');
   }
-  const dateRange = readAssistantDateRange(request.prompt);
+  const dateRange = request.dateRange !== undefined ? request.dateRange : readAssistantDateRange(request.prompt);
   const recentMessages = conversations.listRecentMessagesForBuffer(
     buffer.networkId,
     buffer.target,
