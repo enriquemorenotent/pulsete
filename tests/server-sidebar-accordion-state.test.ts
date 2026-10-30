@@ -22,8 +22,11 @@ test('server sidebar accordion state parses only known boolean sections', () => 
   );
 });
 
-test('server sidebar accordion sections default open when no preference exists', () => {
+test('server sidebar keeps connection visible and secondary details collapsed by default', () => {
   assert.equal(isServerSidebarAccordionOpen({}, 'connection'), true);
+  assert.equal(isServerSidebarAccordionOpen({}, 'history'), false);
+  assert.equal(isServerSidebarAccordionOpen({}, 'notes'), false);
+  assert.equal(isServerSidebarAccordionOpen({ history: true }, 'history'), true);
   assert.equal(isServerSidebarAccordionOpen({ history: false }, 'history'), false);
 });
 

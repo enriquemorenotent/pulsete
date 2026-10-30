@@ -17,6 +17,8 @@ import {
   searchMessages,
   searchMessagesByBufferId,
 } from './storage-messages.js';
+import { assistantHistorySnapshot, queryAssistantHistory } from './storage-assistant-research.js';
+import type { AssistantResearchAction } from './ai-assistant-research.js';
 import { listAssistantHistory } from './storage-assistant-history.js';
 import type { AssistantDateRange } from './ai-assistant-dates.js';
 import { listLogSources } from './storage-log-sources.js';
@@ -131,6 +133,15 @@ export class StorageConversationsRepository {
 
   listMessagePage(networkId: string, target: string, limit: number, beforeMessageId?: string) {
     return listMessagePage(this.db, networkId, target, limit, beforeMessageId);
+  }
+
+  assistantHistorySnapshot(bufferId: string, range: AssistantDateRange | null) {
+    return assistantHistorySnapshot(this.db, bufferId, range);
+  }
+
+  queryAssistantHistory(bufferId: string, maxRowid: number, range: AssistantDateRange | null,
+    action: Exclude<AssistantResearchAction, { action: 'done' }>) {
+    return queryAssistantHistory(this.db, bufferId, maxRowid, range, action);
   }
 
   listAssistantHistory(bufferId: string, limit: number, range: AssistantDateRange | null = null) {

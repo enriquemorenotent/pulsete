@@ -76,7 +76,7 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
   const sourceRequestRef = useRef(0);
   const sourceHistoryAbortRef = useRef<AbortController | null>(null);
   const sourceHistoryRequestRef = useRef(0);
-  const [activeMode, setActiveMode] = useState<LogInspectorMode>('sources');
+  const [activeMode, setActiveMode] = useState<LogInspectorMode>('search');
   const [networkValue, setNetworkValue] = useState(allNetworksValue);
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
   const [scopeLabel, setScopeLabel] = useState('');
@@ -95,7 +95,7 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
     sourceHistoryRequestRef.current += 1;
     sourceHistoryAbortRef.current?.abort();
     sourceHistoryAbortRef.current = null;
-    setActiveMode('sources');
+    setActiveMode('search');
     setNetworkValue(allNetworksValue);
     setExpandedMessageId(null);
     setSourceQuery('');
@@ -312,7 +312,7 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
           scopeLabel={scopeLabel}
           searchDirty={search.dirty}
           onScopeChange={(value) => { if (value === 'all') { search.setBufferId(''); search.setNetworkValue(allNetworksValue); handleNetworkChange(allNetworksValue); } else searchConversation(); }}
-          onClearFilters={() => { search.setQuery(''); search.setFromDate(''); search.setToDate(''); search.setBufferId(''); search.setNetworkValue(allNetworksValue); handleNetworkChange(allNetworksValue); }}
+          onClearFilters={() => { search.setFromDate(''); search.setToDate(''); search.setBufferId(''); search.setNetworkValue(allNetworksValue); handleNetworkChange(allNetworksValue); }}
           onSearchConversation={searchConversation}
           onSourceLatest={() => { if (selectedSource) { setExpandedMessageId(null); void loadSourceHistory(selectedSource); } }}
           onSourceLoadNewer={() => { const last = sourceHistoryState.messages.at(-1); if (selectedSource && last && !loadingOlderSourceHistory) void loadSourceHistory(selectedSource, undefined, last.id, true); }}

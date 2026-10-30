@@ -75,7 +75,7 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
           </button>
         </div>
         <p className="text-[11px] leading-4 text-muted-foreground">
-          {scope === 'recent' ? 'Uses up to 120 recent messages; long messages may be shortened.' : 'Searches saved history. Long histories may be incomplete.'}
+          {scope === 'recent' ? 'Uses up to 120 recent messages; long messages may be shortened.' : 'Can search all saved messages in this conversation and read more as needed.'}
         </p>
         <div className="relative rounded-md border border-white/[0.12] bg-black/10 transition-colors focus-within:border-ring/60">
           <textarea ref={inputRef} aria-label="Message assistant" rows={3} value={props.input}

@@ -13,7 +13,7 @@ export const buildCommandPaletteActionEntries = (
   const entries: CommandPaletteEntrySpec[] = [
     createActionEntry('open-preferences', 'Preferences', 'App settings and notifications', ['settings', 'preferences', 'notifications']),
     createActionEntry('open-log-inspector', 'Search chat history', 'Saved messages across networks', ['logs', 'history', 'search', 'messages', 'transcript', 'find']),
-    createActionEntry('open-network-manager', 'Network Manager', 'Saved networks and live connection state', ['networks', 'connections', 'server']),
+    createActionEntry('open-network-manager', 'Networks', 'Saved networks and live connection state', ['networks', 'connections', 'server']),
   ];
 
   if (input.selectedNetwork.available) {

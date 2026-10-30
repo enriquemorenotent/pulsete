@@ -17,3 +17,15 @@ test('source details show actual supplied excerpts, timestamps and incomplete co
   assert.match(markup, /alice/);
   assert.match(markup, /sent to OpenAI/);
 });
+
+test('research coverage distinguishes inspected excerpts from all searchable history and shows the limit', () => {
+  const markup = renderToStaticMarkup(<AiAssistantSources sourcePrefix="assistant-source-research" context={{
+    buffer: { id: 'buffer', networkId: 'network', kind: 'channel', target: '#test' }, messages: [], sources: [],
+    coverage: { description: 'Searched saved history of this conversation', truncated: true,
+      totalMessages: 12000, inspectedMessages: 40, firstTs: 1700000000000, lastTs: 1800000000000,
+      researchLimited: true },
+  }} />);
+  assert.match(markup, /40 messages used · 12000 saved/);
+  assert.match(markup, /Saved dates:/);
+  assert.match(markup, /Search limit reached/);
+});

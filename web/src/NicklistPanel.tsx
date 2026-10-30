@@ -150,7 +150,7 @@ export function NicklistPanel(props: NicklistPanelProps) {
                               </span>
                             ) : null}
                             {userContactState ? (
-                              <div className="ml-1 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-[[aria-pressed=true]]:opacity-100">
+                              <div className="flex max-w-0 shrink-0 items-center gap-0.5 overflow-hidden opacity-0 transition-opacity group-hover:max-w-40 group-hover:opacity-100 group-focus-within:max-w-40 group-focus-within:opacity-100 has-[[aria-pressed=true]]:max-w-40 has-[[aria-pressed=true]]:opacity-100 has-[[aria-expanded=true]]:max-w-40 has-[[aria-expanded=true]]:opacity-100">
                                 <NickEmojiEditorControl
                                   emoji={userNickEmoji?.emoji ?? null}
                                   nick={user.nick}

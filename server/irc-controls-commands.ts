@@ -1,3 +1,4 @@
+import { isSameIrcIdentifier } from './irc-parser.js';
 import { hasNegotiatedCapability } from './irc-capabilities.js';
 import { createSelfActionMessage, createSelfMessage, sendTrackedRaw } from './irc-connection-io.js';
 import { emitMessage, emitStatus } from './irc-emit.js';
@@ -32,7 +33,8 @@ export const createIrcCommandControls = (connection: IrcConnectionState) => ({
       connection,
       `PRIVMSG ${target} :${text}`,
       sourceTarget,
-      createMessageReplyContext(sourceTarget, target, selfMessage?.id, 'PRIVMSG', isCommandLikeMessage(text)),
+      createMessageReplyContext(sourceTarget, target, selfMessage?.id, 'PRIVMSG', isCommandLikeMessage(text),
+        isSameIrcIdentifier(sourceTarget, target) && !text.startsWith('/') ? text : `/msg ${target} ${text}`),
     ) && selfMessage) {
       emitMessage(connection, selfMessage);
     }
@@ -45,7 +47,8 @@ export const createIrcCommandControls = (connection: IrcConnectionState) => ({
         connection,
         `PRIVMSG ${target} :\u0001ACTION ${text}\u0001`,
         sourceTarget,
-        createMessageReplyContext(sourceTarget, target, selfMessage?.id),
+        createMessageReplyContext(sourceTarget, target, selfMessage?.id, 'PRIVMSG', false,
+          isSameIrcIdentifier(sourceTarget, target) ? `/me ${text}` : undefined),
       )
       && selfMessage
     ) {

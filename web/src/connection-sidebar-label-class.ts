@@ -18,14 +18,14 @@ export const connectionSidebarLabelClass = (
 
 	return cn(
 		'truncate transition-colors',
-		networkLabel ? 'text-[12.5px]' : 'text-[12px]',
+		'text-[14px]',
 		networkLabel
 			? !options.selected && !activity.hasUnread
 				? 'text-foreground/88'
 				: 'text-foreground'
 			: options.selected || activity.hasUnread
 				? 'text-foreground'
-				: 'text-muted-foreground/88',
+				: 'text-muted-foreground',
 		networkLabel
 			? options.selected || activity.priority
 				? 'font-semibold'
@@ -50,7 +50,7 @@ export const connectionSidebarRowClass = (
 		? cn(
 			'group relative flex items-stretch overflow-hidden rounded-lg transition-colors',
 			options.selected
-				? 'bg-primary/10'
+				? 'bg-primary/15 ring-1 ring-inset ring-primary/25'
 				: 'hover:bg-white/[0.035] focus-within:bg-white/[0.04]',
 			options.dimmed && !activity.hasUnread && !options.selected && 'opacity-100',
 		)

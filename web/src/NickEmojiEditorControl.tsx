@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { Popover } from 'radix-ui';
 import { Check, Smile, X } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
 
@@ -26,30 +27,6 @@ type NickEmojiEditorControlProps = {
 export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const pickerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const handlePointerDown = (event: PointerEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
-
   const saveEmoji = async (nextEmoji: string | null) => {
     if (saving) {
       return;
@@ -69,36 +46,39 @@ export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
   };
 
   return (
-    <div ref={pickerRef} className="relative inline-flex shrink-0">
-      <button
-        type="button"
-        className={cn(
-          'inline-flex size-7 shrink-0 items-center justify-center rounded-sm border text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60',
-          props.emoji ? 'border-primary/25 bg-primary/10 text-primary hover:text-primary' : 'border-transparent',
-        )}
-        aria-label={`Edit emoji tag for ${props.nick}`}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        title={`Edit emoji tag for ${props.nick}`}
-        onClick={() => setOpen((current) => !current)}
-      >
-        {props.emoji ? (
-          <span aria-hidden className="text-[15px] leading-none">
-            {props.emoji}
-          </span>
-        ) : (
-          <Smile className="size-4" />
-        )}
-      </button>
-      {open ? (
-        <NickEmojiPickerMenu
-          emoji={props.emoji}
-          nick={props.nick}
-          saving={saving}
-          onSelect={(emoji) => void saveEmoji(emoji)}
-        />
-      ) : null}
-    </div>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'inline-flex size-7 shrink-0 items-center justify-center rounded-sm border text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60',
+            props.emoji ? 'border-primary/25 bg-primary/10 text-primary hover:text-primary' : 'border-transparent',
+          )}
+          aria-label={`Edit emoji tag for ${props.nick}`}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          title={`Edit emoji tag for ${props.nick}`}
+        >
+          {props.emoji ? (
+            <span aria-hidden className="text-[15px] leading-none">
+              {props.emoji}
+            </span>
+          ) : (
+            <Smile className="size-4" />
+          )}
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content align="end" sideOffset={8} collisionPadding={8} className="z-50 outline-none">
+          <NickEmojiPickerMenu
+            emoji={props.emoji}
+            nick={props.nick}
+            saving={saving}
+            onSelect={(emoji) => void saveEmoji(emoji)}
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -114,7 +94,7 @@ export function NickEmojiPickerMenu(props: NickEmojiPickerMenuProps) {
     <div
       role="menu"
       aria-label={`Emoji tags for ${props.nick}`}
-      className="absolute right-0 top-full z-40 mt-2 w-44 rounded-md border border-white/10 bg-popover p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+      className="w-44 rounded-md border border-white/10 bg-popover p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
     >
       <div className="grid grid-cols-4 gap-1">
         {nickEmojiTagOptions.map((option) => (

@@ -35,8 +35,8 @@ function App() {
     }
   }, [store, updateBanner]);
   const serverMessages = useMemo(
-    () => createServerMessageBridge(store),
-    [store],
+    () => createServerMessageBridge(store, { recoverRejectedDraft: composer.recoverRejectedDraft }),
+    [store, composer],
   );
   const actions = useMemo(
     () =>

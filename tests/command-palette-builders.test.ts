@@ -33,7 +33,7 @@ test('command palette builds buffers, watchlist entries, and current-buffer acti
       'friends:Joby',
       'actions:Preferences',
       'actions:Search chat history',
-      'actions:Network Manager',
+      'actions:Networks',
       'actions:List Channels',
       'actions:Enable Autojoin',
       'actions:Download History',
@@ -68,7 +68,7 @@ test('command palette promotes unread buffers into a top section without duplica
       'friends:Joby',
       'actions:Preferences',
       'actions:Search chat history',
-      'actions:Network Manager',
+      'actions:Networks',
       'actions:List Channels',
     ],
   );

@@ -31,7 +31,7 @@ test('desktop shell renders a visible command palette trigger in the header', ()
   assert.match(markup, /aria-label="Hide media"/);
   assert.match(markup, /aria-label="Preferences"/);
   assert.doesNotMatch(markup, /aria-label="Capture memory diagnostics"/);
-  assert.doesNotMatch(markup, />Preferences</);
+  assert.match(markup, />Preferences</);
   assert.doesNotMatch(markup, />Network Manager</);
 });
 

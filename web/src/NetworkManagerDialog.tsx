@@ -62,7 +62,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
               <div className="shrink-0 border-b border-white/6 px-5 py-5">
                 <div className="flex items-start justify-between gap-4">
                   <DialogHeader className="space-y-1">
-                    <DialogTitle>Network Manager</DialogTitle>
+                    <DialogTitle>Networks</DialogTitle>
                     <DialogDescription>Saved networks and live connection state.</DialogDescription>
                   </DialogHeader>
                   <span className="rounded-full bg-white/[0.05] px-2.5 py-1 font-mono text-[11px] text-muted-foreground">

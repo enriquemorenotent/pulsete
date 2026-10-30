@@ -13,8 +13,8 @@ export function HistoryWorkspaceResults(props: {
   onSelect: (id: string) => void;
   onLoadMore: () => void;
 }) {
-  if (props.dirty) return <p role="status" className="p-5 text-sm text-muted-foreground">Filters changed. Search to update results.</p>;
-  if (props.state.status !== 'loaded') return <p role="status" className="p-5 text-sm text-muted-foreground">{props.state.status === 'loading' ? 'Searching history…' : props.state.error ?? 'Search messages, choose dates, or browse all saved messages.'}</p>;
+  if (props.dirty) return <p role="status" className="p-5 text-sm text-muted-foreground">Search or filters changed. Search to update results.</p>;
+  if (props.state.status !== 'loaded') return <p role="status" className="p-5 text-sm text-muted-foreground">{props.state.status === 'loading' ? 'Searching history…' : props.state.error ?? 'Enter a message to find, or search with an empty field to see all saved messages.'}</p>;
   if (!props.state.results.length) return <p role="status" className="p-5 text-sm text-muted-foreground">No messages found. Try different words or dates.</p>;
   return <div>
     {props.state.results.map(({ message }) => <button type="button" key={message.id} aria-pressed={message.id === props.selectedId} onClick={() => props.onSelect(message.id)} className={cn('block w-full border-b border-l-4 border-b-border border-l-transparent px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring', message.id === props.selectedId ? 'border-l-primary bg-primary/15' : 'hover:bg-accent/50')}>

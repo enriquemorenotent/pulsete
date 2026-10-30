@@ -70,6 +70,11 @@ export type AiAssistantContext = {
   coverage?: {
     description: string;
     truncated: boolean;
+    totalMessages?: number;
+    inspectedMessages?: number;
+    firstTs?: number | null;
+    lastTs?: number | null;
+    researchLimited?: boolean;
   };
 };
 

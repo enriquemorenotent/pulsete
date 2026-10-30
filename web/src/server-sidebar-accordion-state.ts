@@ -38,7 +38,7 @@ export const getServerSidebarAccordionStorageKey = (
 export const isServerSidebarAccordionOpen = (
   state: ServerSidebarAccordionState,
   id: ServerSidebarAccordionId,
-) => state[id] ?? true;
+) => state[id] ?? id === 'connection';
 
 export const parseServerSidebarAccordionState = (
   value: string | null | undefined,

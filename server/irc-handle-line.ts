@@ -169,6 +169,7 @@ const handleNumericReply = (
         target: replyContext.target,
         message: lineText,
         rollbackMessageId: replyContext.optimisticMessageId,
+        retryDraft: replyContext.retryDraft,
       });
       continue;
     }
@@ -193,6 +194,7 @@ const handleStandardReply = (
         target: replyContext.target,
         message: lineText,
         rollbackMessageId: replyContext.optimisticMessageId,
+        retryDraft: replyContext.retryDraft,
       });
       continue;
     }

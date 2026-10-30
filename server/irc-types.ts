@@ -40,6 +40,7 @@ export type RuntimeEvent =
       target: string;
       message: string;
       rollbackMessageId?: string;
+      retryDraft?: string;
     }
   | { type: 'channel-pending'; networkId: string; channel: string }
   | { type: 'channel-pending-remove'; networkId: string; channel: string }

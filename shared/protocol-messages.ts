@@ -186,6 +186,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('error'),
     networkId: z.string().nullable(),
     message: z.string(),
+    retryDraft: z.object({ bufferId: z.string(), body: z.string() }).optional(),
   }),
 ]);
 export type ServerMessage = z.infer<typeof serverMessageSchema>;

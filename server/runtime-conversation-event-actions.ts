@@ -54,7 +54,11 @@ export const handleRuntimeConversationSendFailure = (
       });
     }
   }
-  messages.push({ type: 'error', networkId: event.networkId, message: event.message });
+  const source = findOpenBufferByTarget(options, event.networkId, event.sourceTarget);
+  messages.push({
+    type: 'error', networkId: event.networkId, message: event.message,
+    ...(source && event.retryDraft ? { retryDraft: { bufferId: source.id, body: event.retryDraft } } : {}),
+  });
   return messages;
 };
 

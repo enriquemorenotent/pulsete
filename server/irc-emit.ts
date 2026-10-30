@@ -32,6 +32,7 @@ export const emitSendFailure = (
     target: string;
     message: string;
     rollbackMessageId?: string;
+    retryDraft?: string;
   }
 ) => {
   emitEvent(connection, {
@@ -41,6 +42,7 @@ export const emitSendFailure = (
     target: input.target,
     message: input.message,
     rollbackMessageId: input.rollbackMessageId,
+    retryDraft: input.retryDraft,
   });
 };
 

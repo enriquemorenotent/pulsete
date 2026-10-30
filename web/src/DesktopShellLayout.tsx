@@ -137,7 +137,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
         <nav aria-label="Workspace tools" className="ml-auto flex shrink-0 items-center gap-1">
           <Button variant="ghost" className="hidden h-10 sm:inline-flex" onClick={props.header.onOpenLogInspector}><FolderSearch />Chat history</Button>
           <Button variant="ghost" className="h-10" aria-label="Networks" onClick={props.header.onOpenNetworkManager}><Network /><span className="hidden md:inline">Networks</span></Button>
-          <Button variant="ghost" className="h-10" aria-label="Preferences" onClick={props.header.onOpenPreferences}><Settings /><span className="hidden md:inline">Settings</span></Button>
+          <Button variant="ghost" className="h-10" aria-label="Preferences" onClick={props.header.onOpenPreferences}><Settings /><span className="hidden md:inline">Preferences</span></Button>
           <Button variant="ghost" size="icon" className="hidden sm:inline-flex" aria-label={showingMedia ? 'Hide media' : 'Show media'} title={showingMedia ? 'Hide media' : 'Show media'} onClick={props.header.onToggleMediaVisibilityMode}>{showingMedia ? <ImageOff /> : <ImageIcon />}</Button>
           {props.header.developerMode ? <DesktopShellDiagnosticsButton onDownloadDiagnostics={props.header.onDownloadDiagnostics} /> : null}
         </nav>

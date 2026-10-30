@@ -193,6 +193,7 @@ test('connected profiles do not reconnect when only an unused password changes',
 test('connecting connections reject client commands before registration completes', () => {
   const writes: string[] = [];
   const errors: Array<{ target?: string; message: string }> = [];
+  const rejectedDrafts: Array<{ target: string; draft?: string }> = [];
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -212,6 +213,9 @@ test('connecting connections reject client commands before registration complete
       onEvent: (event) => {
         if (event.type === 'status' && event.kind === 'error') {
           errors.push({ target: event.target, message: event.message });
+        } else if (event.type === 'send-failed') {
+          assert.equal(event.message, 'Still connecting to server');
+          rejectedDrafts.push({ target: event.sourceTarget, draft: event.retryDraft });
         }
       },
     }
@@ -230,9 +234,9 @@ test('connecting connections reject client commands before registration complete
   assert.equal(connection.replyTracker.pendingNick, null);
   assert.deepEqual(connection.replyTracker.pendingReplyContexts, []);
   assert.deepEqual(writes, []);
+  assert.deepEqual(rejectedDrafts, [{ target: '#chat', draft: '/msg alice hello' }]);
   assert.deepEqual(errors, [
     { target: '#join', message: 'Still connecting to server' },
-    { target: '#chat', message: 'Still connecting to server' },
     { target: '#raw', message: 'Still connecting to server' },
     { target: '#nick', message: 'Still connecting to server' },
   ]);

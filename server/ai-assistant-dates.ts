@@ -1,31 +1,47 @@
 export type AssistantDateRange = { start: number; end: number; label: string };
 
 export const readAssistantDateRange = (prompt: string, now = new Date()): AssistantDateRange | null => {
-  const relative = /\b(yesterday|gestern|today|heute|vorgestern)\b/i.exec(prompt);
-  if (relative) {
-    const offset = /yesterday|gestern/i.test(relative[1]) ? -1 : 0;
-    return dayRange(now.getFullYear(), now.getMonth(), now.getDate() +
-      (relative[1].toLowerCase() === 'vorgestern' ? -2 : offset), relative[1]);
+  const days: Array<AssistantDateRange | null> = [];
+  for (const relative of prompt.matchAll(/\b(yesterday|gestern|today|heute|vorgestern)\b/gi)) {
+    const word = relative[1].toLowerCase();
+    const offset = word === 'vorgestern' ? -2 : /yesterday|gestern/.test(word) ? -1 : 0;
+    days.push(dayRange(now.getFullYear(), now.getMonth(), now.getDate() + offset, relative[0]));
   }
-  const iso = /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/.exec(prompt);
-  if (iso) return checkedDay(+iso[1], +iso[2] - 1, +iso[3], iso[0]);
-  const numeric = /\b(\d{1,2})([./])(\d{1,2})(?:[./](\d{4}))?\b/.exec(prompt);
-  if (numeric) return checkedDay(numeric[4] ? +numeric[4] : now.getFullYear(),
-    +(numeric[2] === '.' ? numeric[3] : numeric[1]) - 1,
-    +(numeric[2] === '.' ? numeric[1] : numeric[3]), numeric[0]);
+  for (const iso of prompt.matchAll(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g)) {
+    days.push(checkedDay(+iso[1], +iso[2] - 1, +iso[3], iso[0]));
+  }
+  for (const numeric of prompt.matchAll(/\b(\d{1,2})([./])(\d{1,2})(?:[./](\d{4}))?\b/g)) {
+    days.push(checkedDay(numeric[4] ? +numeric[4] : now.getFullYear(),
+      +(numeric[2] === '.' ? numeric[3] : numeric[1]) - 1,
+      +(numeric[2] === '.' ? numeric[1] : numeric[3]), numeric[0]));
+  }
   const months = ['jan(?:uary|uar)?', 'feb(?:ruary|ruar)?', 'mar(?:ch)?|märz|maerz',
     'apr(?:il)?', 'may|mai', 'jun(?:e|i)?', 'jul(?:y|i)?', 'aug(?:ust)?',
     'sep(?:t(?:ember)?)?', 'oct(?:ober)?|okt(?:ober)?', 'nov(?:ember)?', 'dec(?:ember)?|dez(?:ember)?'];
   for (let month = 0; month < months.length; month++) {
     const pattern = months[month];
-    const english = new RegExp(`\\b(${pattern})\\s+(\\d{1,2})(?:,?\\s+(\\d{4}))?\\b`, 'i').exec(prompt);
-    const german = new RegExp(`\\b(\\d{1,2})\\.?\\s+(${pattern})(?:\\s+(\\d{4}))?\\b`, 'i').exec(prompt);
-    if (english || german) {
-      const hit = (english ?? german)!;
-      return checkedDay(hit[3] ? +hit[3] : now.getFullYear(), month, +(english ? hit[2] : hit[1]), hit[0]);
+    const english = new RegExp(`\\b(${pattern})\\s+(\\d{1,2})(?:\\s*(?:through|to|until|[-–])\\s*(\\d{1,2}))?(?:,?\\s+(\\d{4}))?\\b`, 'gi');
+    const german = new RegExp(`\\b(\\d{1,2})\\.?(?:\\s*(?:bis|[-–])\\s*(\\d{1,2})\\.?)?\\s+(${pattern})(?:\\s+(\\d{4}))?\\b`, 'gi');
+    for (const hit of prompt.matchAll(english)) {
+      const year = hit[4] ? +hit[4] : now.getFullYear();
+      days.push(checkedDay(year, month, +hit[2], hit[0]));
+      if (hit[3]) days.push(checkedDay(year, month, +hit[3], hit[0]));
+    }
+    for (const hit of prompt.matchAll(german)) {
+      const year = hit[4] ? +hit[4] : now.getFullYear();
+      days.push(checkedDay(year, month, +hit[1], hit[0]));
+      if (hit[2]) days.push(checkedDay(year, month, +hit[2], hit[0]));
     }
   }
-  return null;
+  // A multi-day question must retain every referenced day, including the last.
+  // Invalid dates leave retrieval unrestricted rather than silently dropping days.
+  if (days.length === 0 || days.some((day) => day === null)) return null;
+  const valid = days as AssistantDateRange[];
+  return {
+    start: Math.min(...valid.map((day) => day.start)),
+    end: Math.max(...valid.map((day) => day.end)),
+    label: [...new Set(valid.map((day) => day.label))].join(' – '),
+  };
 };
 
 const checkedDay = (year: number, month: number, day: number, label: string) => {

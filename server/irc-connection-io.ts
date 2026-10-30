@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { IrcClientIoContext, IrcRawIoContext } from './irc-contexts.js';
-import { emitStatus } from './irc-emit.js';
+import { emitSendFailure, emitStatus } from './irc-emit.js';
 import { handleIrcLine } from './irc-handle-line.js';
 import { maxBufferedIrcBytes, maxIrcCommandBytes } from './irc-limits.js';
 import { createReplyContextFromRaw, type PendingReplyContext } from './irc-reply-context.js';
@@ -11,21 +11,24 @@ import { encodeIrcMessageTags, parseIrcMessageTags } from './irc-message-tags.js
 import type { MessageInput } from './storage-types.js';
 import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 
-export const sendRaw = (connection: IrcRawIoContext, raw: string, statusTarget?: string) => {
+export const sendRaw = (
+  connection: IrcRawIoContext, raw: string, statusTarget?: string,
+  onFailure = (message: string) => emitStatus(connection, message, 'error', statusTarget),
+) => {
   const lifecycle = connection.lifecycle;
   if (!lifecycle.socket) {
-    emitStatus(connection, 'Not connected', 'error', statusTarget);
+    onFailure('Not connected');
     return false;
   }
   if (Buffer.byteLength(raw, 'utf8') > maxIrcCommandBytes) {
-    emitStatus(connection, `IRC command exceeds the ${maxIrcCommandBytes}-byte limit`, 'error', statusTarget);
+    onFailure(`IRC command exceeds the ${maxIrcCommandBytes}-byte limit`);
     return false;
   }
   try {
     lifecycle.socket.write(`${raw}\r\n`);
   } catch {
     lifecycle.lastFailureMessage = 'Connection is no longer writable';
-    emitStatus(connection, lifecycle.lastFailureMessage, 'error', statusTarget);
+    onFailure(lifecycle.lastFailureMessage);
     lifecycle.socket.destroy();
     return false;
   }
@@ -137,13 +140,22 @@ export const sendTrackedRaw = (
   sourceTarget: string,
   replyContext: PendingReplyContext | null
 ) => {
+  const onFailure = (message: string) => {
+    if (replyContext?.kind === 'message' && replyContext.retryDraft) {
+      emitSendFailure(connection, {
+        sourceTarget, target: replyContext.target, message, retryDraft: replyContext.retryDraft,
+      });
+    } else {
+      emitStatus(connection, message, 'error', sourceTarget);
+    }
+  };
   if (!connection.lifecycle.connected) {
-    emitStatus(connection, connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected', 'error', sourceTarget);
+    onFailure(connection.lifecycle.socket ? 'Still connecting to server' : 'Not connected');
     return false;
   }
   const labeledReplyContext = replyContext ? attachReplyLabel(connection, raw, replyContext) : null;
   const outgoingRaw = labeledReplyContext?.raw ?? raw;
-  if (!sendRaw(connection, outgoingRaw, sourceTarget)) {
+  if (!sendRaw(connection, outgoingRaw, sourceTarget, onFailure)) {
     return false;
   }
   if (labeledReplyContext?.context) {

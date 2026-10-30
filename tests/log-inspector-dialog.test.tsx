@@ -94,7 +94,7 @@ test('log inspector body renders source browser controls', () => {
   const markup = renderBody(idleState);
 
   assert.match(markup, /Chat history/);
-  assert.match(markup, /Conversations/);
+  assert.match(markup, /Browse conversations/);
   assert.match(markup, /aria-label="Find conversation"/);
   assert.match(markup, /aria-label="Filter conversations by type"/);
   assert.match(markup, /Browse saved conversations\./);
@@ -107,7 +107,7 @@ test('log inspector body renders global search controls', () => {
   assert.match(markup, /aria-label="Filter logs by network"/);
   assert.match(markup, /aria-label="Search scope"/);
   assert.doesNotMatch(markup, /type="submit" disabled/);
-  assert.match(markup, /Search messages, choose dates/);
+  assert.match(markup, /Enter a message to find/);
 });
 
 test('log inspector body labels results by network and conversation', () => {
@@ -185,7 +185,7 @@ test('log inspector body renders selected source transcript', () => {
 
  test('history workspace hides stale results until changed filters are applied', () => {
   const markup = renderBody({ status: 'loaded', query: 'old', results: [{ message: makeMessage({ body: 'outdated result' }), context: [] }], hasMore: true, error: null }, { activeMode: 'search', dirty: true });
-  assert.match(markup, /Filters changed. Search to update results./);
+  assert.match(markup, /Search or filters changed. Search to update results./);
   assert.doesNotMatch(markup, /outdated result/);
   assert.doesNotMatch(markup, /Load more results/);
 });

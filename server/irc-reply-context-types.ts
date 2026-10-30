@@ -18,6 +18,7 @@ export type PendingReplyContext =
       maxExpiresAt?: number;
       replyNick?: string | null;
       optimisticMessageId?: string;
+      retryDraft?: string;
     })
   | (PendingReplyBase & { kind: 'whois'; sourceTarget: string; nick: string })
   | (PendingReplyBase & { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string })

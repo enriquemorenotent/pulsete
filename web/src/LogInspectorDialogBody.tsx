@@ -1,5 +1,5 @@
-import { useMemo, useState, type FormEvent, type RefObject } from 'react';
-import { Search, X } from 'lucide-react';
+import { useId, useMemo, useState, type FormEvent, type RefObject } from 'react';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
 import type { ChatMessage, LogSource, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
 import { DialogClose, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog.js';
@@ -78,8 +78,16 @@ export type LogInspectorDialogBodyProps = {
 export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
   const [showReader, setShowReader] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const filtersId = useId();
   const names = useMemo(() => new Map(props.networks.map((network) => [network.id, network.name])), [props.networks]);
   const invalidDates = !!props.fromDate && !!props.toDate && props.fromDate > props.toDate;
+  const filterCount = Number(!!props.scopeBufferId || props.searchNetworkValue !== allNetworksValue)
+    + Number(!!props.fromDate) + Number(!!props.toDate);
+  const scopeSummary = props.scopeBufferId
+    ? `${props.scopeLabel} · ${names.get(props.searchNetworkValue) ?? props.searchNetworkValue}`
+    : props.searchNetworkValue === allNetworksValue ? 'All conversations · All accounts'
+      : `All conversations · ${names.get(props.searchNetworkValue) ?? props.searchNetworkValue}`;
+  const filterSummary = [scopeSummary, props.fromDate && `From ${props.fromDate}`, props.toDate && `To ${props.toDate}`].filter(Boolean).join(' · ');
   return <div className="flex h-full min-h-0 flex-col">
     <DialogHeader className="relative shrink-0 border-b border-border px-5 py-3 pr-14">
       <DialogClose asChild><Button variant="ghost" size="icon" className="absolute right-3 top-3" aria-label="Close chat history"><X /></Button></DialogClose>
@@ -87,35 +95,42 @@ export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
       <DialogDescription>Browse and search saved conversations</DialogDescription>
     </DialogHeader>
     <form onSubmit={(event) => { setShowReader(false); props.onSubmit(event); }} className="shrink-0 space-y-2 border-b border-border px-4 py-3">
-      <div className="flex flex-wrap gap-2">
-        <Input ref={props.inputRef} value={props.query} onChange={(event) => props.onQueryChange(event.currentTarget.value)} placeholder="Search messages or browse by date" aria-label="Search chat history" className="min-w-0 flex-1" />
-        <div className={cn(showFilters ? 'contents' : 'hidden md:contents')}>
-        <select aria-label="Search scope" value={props.scopeBufferId ? 'conversation' : 'all'} className={selectClass} onChange={(event) => props.onScopeChange(event.target.value)}>
-          <option value="all">All conversations</option>
-          <option value="conversation" disabled={!props.selectedSource && !props.scopeBufferId}>This conversation{props.scopeLabel ? ` · ${props.scopeLabel}` : ''}</option>
-        </select>
-        <select aria-label="Filter logs by network" value={props.searchNetworkValue} className={selectClass} disabled={!!props.scopeBufferId} onChange={(event) => { props.onSearchNetworkChange(event.target.value); props.onNetworkChange(event.target.value); }}>
-          <option value={allNetworksValue}>All networks</option>
-          {props.networks.map((network) => <option key={network.id} value={network.id}>{network.name}</option>)}
-        </select>
-        </div>
+      <div className="flex items-center gap-2">
+        <Input ref={props.inputRef} value={props.query} onChange={(event) => props.onQueryChange(event.currentTarget.value)} placeholder="Search saved messages" aria-label="Search chat history" className="min-w-0 flex-1" />
         <Button type="submit" disabled={invalidDates || props.searchState.status === 'loading'}><Search />Search</Button>
+        <Button type="button" variant="outline" aria-expanded={showFilters} aria-controls={filtersId} onClick={() => setShowFilters((value) => !value)}><SlidersHorizontal />Filters{filterCount ? ` (${filterCount})` : ''}</Button>
       </div>
-      <Button type="button" variant="ghost" size="sm" className="md:hidden" aria-expanded={showFilters} onClick={() => setShowFilters((value) => !value)}>{showFilters ? 'Hide filters' : 'Filters'} · {props.scopeBufferId ? props.scopeLabel : 'All conversations'}</Button>
-      <div className={cn('flex-wrap items-center gap-x-4 gap-y-2', showFilters ? 'flex' : 'hidden md:flex')}>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">From<Input type="date" aria-label="From date" className="h-8 w-36" value={props.fromDate} max={props.toDate || undefined} onChange={(event) => props.onFromDateChange(event.target.value)} /></label>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">To<Input type="date" aria-label="To date" className="h-8 w-36" value={props.toDate} min={props.fromDate || undefined} onChange={(event) => props.onToDateChange(event.target.value)} /></label>
-        <Button type="button" variant="ghost" size="sm" onClick={props.onClearFilters}>Clear filters</Button>
-        {invalidDates ? <p role="alert" className="text-xs text-destructive">Choose an end date on or after the start date.</p> : null}
+      <div className="flex min-w-0 items-center gap-3">
+        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={filterSummary}>{filterSummary}</p>
+        {filterCount ? <Button type="button" variant="ghost" size="sm" className="h-6 shrink-0 px-2 text-xs" onClick={props.onClearFilters}>Clear filters</Button> : null}
       </div>
+      <div id={filtersId} hidden={!showFilters}>
+        <div className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-muted/20 p-3">
+          <label className="flex min-w-0 flex-1 basis-48 flex-col gap-1 text-xs text-muted-foreground">Conversation
+            <select aria-label="Search scope" value={props.scopeBufferId ? 'conversation' : 'all'} className={selectClass} onChange={(event) => props.onScopeChange(event.target.value)}>
+              <option value="all">All conversations</option>
+              <option value="conversation" disabled={!props.selectedSource && !props.scopeBufferId}>This conversation{props.scopeLabel ? ` · ${props.scopeLabel}` : ''}</option>
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-1 basis-48 flex-col gap-1 text-xs text-muted-foreground">Account
+            <select aria-label="Filter logs by network" value={props.searchNetworkValue} className={selectClass} disabled={!!props.scopeBufferId} onChange={(event) => { props.onSearchNetworkChange(event.target.value); props.onNetworkChange(event.target.value); }}>
+              <option value={allNetworksValue}>All accounts</option>
+              {props.networks.map((network) => <option key={network.id} value={network.id}>{network.name}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">From<Input type="date" aria-label="From date" className="w-40" value={props.fromDate} max={props.toDate || undefined} onChange={(event) => props.onFromDateChange(event.target.value)} /></label>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">To<Input type="date" aria-label="To date" className="w-40" value={props.toDate} min={props.fromDate || undefined} onChange={(event) => props.onToDateChange(event.target.value)} /></label>
+        </div>
+      </div>
+      {invalidDates ? <p role="alert" className="text-xs text-destructive">Choose an end date on or after the start date.</p> : null}
     </form>
     <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(17rem,24rem)_minmax(0,1fr)]">
       <Tabs value={props.activeMode} onValueChange={(value) => props.onActiveModeChange(value as LogInspectorMode)} className={cn('flex min-h-0 flex-col border-r border-border bg-black/10', showReader && 'hidden md:flex')}>
         <TabsList className="m-2 shrink-0 self-start">
-          <TabsTrigger value="sources">Conversations</TabsTrigger>
-          <TabsTrigger value="search">Results{props.searchState.status === 'loaded' && !props.searchDirty ? ` (${props.searchState.results.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="search">Messages{props.searchState.status === 'loaded' && !props.searchDirty ? ` (${props.searchState.results.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="sources">Browse conversations</TabsTrigger>
         </TabsList>
-        <TabsContent forceMount value="sources" className="m-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
+        <TabsContent value="sources" className="m-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
           <form onSubmit={props.onSourceSubmit} className="space-y-2 border-b border-border p-3">
             <div className="flex gap-2"><Input value={props.sourceQuery} onChange={(event) => props.onSourceQueryChange(event.target.value)} placeholder="Find a conversation" aria-label="Find conversation" /><Button type="submit" variant="outline" disabled={props.sourceState.status === 'loading'}>Find</Button></div>
             <select aria-label="Filter conversations by type" value={props.sourceKindValue} className={cn(selectClass, 'w-full')} onChange={(event) => props.onSourceKindChange(event.target.value)}>

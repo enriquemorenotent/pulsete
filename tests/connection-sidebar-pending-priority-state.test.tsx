@@ -121,7 +121,7 @@ test('pending channel selection ignores IRC casing in the sidebar', () => {
 
   const selectedRows =
     markup.match(
-      /rounded-lg transition-colors bg-primary\/10/g,
+      /rounded-lg transition-colors bg-primary\/15/g,
     ) ?? [];
   assert.equal(selectedRows.length, 1);
   assert.match(markup, /aria-label="Open pending #Help"/);

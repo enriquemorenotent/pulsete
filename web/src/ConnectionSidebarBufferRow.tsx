@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import { useEffect, useRef, type ComponentType } from 'react';
 import { X } from 'lucide-react';
 import type { BufferState, PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
@@ -28,6 +28,10 @@ type ConnectionSidebarBufferRowProps = {
 export function ConnectionSidebarBufferRow(
 	props: ConnectionSidebarBufferRowProps,
 ) {
+	const rowRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (props.selected) rowRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+	}, [props.selected, props.buffer.id]);
 	const Icon = props.icon;
 	const activity = resolveBufferActivityState(props.buffer);
 	const avatarTarget = props.buffer.kind === 'query'
@@ -47,6 +51,7 @@ export function ConnectionSidebarBufferRow(
 
 	return (
 		<div
+			ref={rowRef}
 			className={connectionSidebarRowClass(activity, {
 				dimmed: props.dimmed,
 				selected: props.selected,

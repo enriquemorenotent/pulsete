@@ -74,7 +74,7 @@ test('settings categories preserve notification, media and backup controls', () 
     + renderToStaticMarkup(<PreferencesNotificationAllowedChannels channels={contactNotifications.channels} networkNameById={networkNameById} onRemoveChannel={() => {}} />)
     + renderToStaticMarkup(<PreferencesNotificationMutedNicks mutedNicks={settings.props.mutedNicks} networkNameById={networkNameById} onRemoveMutedNick={async () => true} />)
     + renderToStaticMarkup(<PreferencesBackupSection onExportBackup={async () => {}} onImportBackup={async () => {}} />);
-  assert.match(markup, /aria-label="Settings categories"/);
+  assert.match(markup, /aria-label="Preferences categories"/);
   assert.match(markup, />Display<\/button>/);
   assert.match(markup, />Backup<\/button>/);
   assert.match(markup, />Advanced<\/button>/);

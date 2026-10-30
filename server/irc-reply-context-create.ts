@@ -7,6 +7,7 @@ export const createMessageReplyContext = (
   optimisticMessageId?: string,
   outboundCommand: 'PRIVMSG' | 'NOTICE' = 'PRIVMSG',
   commandLike = false,
+  retryDraft?: string,
 ): PendingReplyContext => {
   const expiresAt = Date.now() + replyContextTtlMs;
   const completion = commandLike ? 'burst' : 'single';
@@ -20,6 +21,7 @@ export const createMessageReplyContext = (
     maxExpiresAt: completion === 'burst' ? expiresAt : undefined,
     replyNick: null,
     optimisticMessageId,
+    retryDraft,
     expiresAt,
   };
 };

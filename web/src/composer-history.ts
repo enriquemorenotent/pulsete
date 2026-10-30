@@ -159,6 +159,27 @@ export const pushComposerHistoryEntryForContext = (
   });
 };
 
+// A late send failure must not end an in-progress history browsing session.
+export const appendRejectedComposerHistoryEntry = (
+  state: ComposerDraftState,
+  contextKey: string,
+  entry: string,
+): ComposerDraftState => {
+  const current = state[contextKey] ?? initialComposerContextState;
+  const next = pushComposerHistoryEntry(current.history, entry);
+  if (next === current.history) return state;
+  const dropped = current.history.entries.length + 1 - next.entries.length;
+  return writeComposerContextState(state, contextKey, {
+    draft: current.draft,
+    history: {
+      ...next,
+      // -1 means the viewed entry was evicted; Down reaches the first retained entry.
+      index: current.history.index === null ? null : Math.max(-1, current.history.index - dropped),
+      draftBeforeNavigation: current.history.draftBeforeNavigation,
+    },
+  });
+};
+
 export const stepComposerHistoryForContext = (
   state: ComposerDraftState,
   contextKey: string | null,

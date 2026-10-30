@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
 import { resolveNetworkServerImage } from './network-server-image.js';
 import { Plug, Unplug } from 'lucide-react';
@@ -23,9 +23,9 @@ export function ConnectionSidebarServerSwitcher(
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-white/5 px-3 pb-2 pt-3">
-        <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground/75">Accounts</h2>
-        <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Open accounts">
+      <div className="flex max-h-[40%] min-h-0 shrink-0 flex-col border-b border-white/5 px-3 py-3">
+        <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">Accounts</h2>
+        <div className="flex min-h-0 flex-col gap-1 overflow-y-auto overflow-x-hidden p-0.5" aria-label="Open accounts">
           {props.connections.map((connection) => (
             <ServerSwitcherButton key={connection.network.id} connection={connection} active={connection.network.id === activeConnection?.network.id} showMedia={props.showMedia} externalAvatarsEnabled={props.externalAvatarsEnabled} onSelect={() => (props.onSwitchNetwork ?? props.onSelectNetwork)(connection.network)} />
           ))}
@@ -68,7 +68,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
         <div className="min-w-0 px-2.5 pb-2 pt-1">
           {props.connections.length === 0 ? (
             <div className="rounded-md bg-black/10 px-2 py-1.5 text-[12px] text-muted-foreground ring-1 ring-white/5">
-              No open connections. Use Network Manager to connect.
+              No open connections. Use Networks to connect.
             </div>
           ) : null}
           {activeConnection ? (
@@ -109,7 +109,7 @@ function ServerSwitcherHeader(props: {
   const actionLabel = phase === 'connected' ? 'Disconnect' : phase === 'connecting' ? 'Connecting' : 'Connect';
   const statusLabel = phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline';
   return (
-    <header className="flex shrink-0 items-center gap-2 px-4 py-3">
+    <header className="flex shrink-0 items-center gap-2 px-4 py-2.5">
       <button
         type="button"
         className="min-w-0 flex-1 rounded-sm text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"
@@ -149,19 +149,26 @@ function ServerSwitcherButton(props: {
   externalAvatarsEnabled?: boolean;
   onSelect: () => void;
 }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (props.active) buttonRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [props.active]);
   const activity = resolveConnectionActivity(props.connection);
   const nick = props.connection.labelParts.nick;
   const phase = props.connection.runtime?.phase ?? 'offline';
   const statusLabel = phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline';
   const serverImage = props.showMedia === false ? null : resolveNetworkServerImage(props.connection.network, props.externalAvatarsEnabled === true);
   return (
-    <button type="button" className={cn('relative flex min-w-12 flex-1 flex-col items-center gap-2 rounded-lg py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary', props.active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground')} onClick={props.onSelect} aria-label={`Open ${props.connection.labelParts.name}${activity.hasUnread ? ' (unread)' : ''}`} aria-description={statusLabel} title={`${props.connection.labelParts.name} · ${nick} · ${statusLabel}`} aria-pressed={props.active}>
-      <span aria-hidden className={cn('relative flex size-10 items-center justify-center overflow-hidden rounded-lg border text-sm font-semibold', props.active ? 'border-primary/60 bg-primary/20 text-primary' : 'border-border bg-secondary text-foreground')}>
+    <button ref={buttonRef} type="button" className={cn('relative flex w-full min-w-0 shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary', props.active ? 'bg-primary/10 text-primary ring-1 ring-inset ring-primary/25' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground')} onClick={props.onSelect} aria-label={`Open ${props.connection.labelParts.name}${activity.hasUnread ? ' (unread)' : ''}`} aria-description={statusLabel} title={`${props.connection.labelParts.name} · ${nick} · ${statusLabel}`} aria-pressed={props.active}>
+      <span aria-hidden className={cn('relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border text-sm font-semibold', props.active ? 'border-primary/60 bg-primary/20 text-primary' : 'border-border bg-secondary text-foreground')}>
         {serverImage ? <ConnectionSidebarServerIcon className="absolute inset-0 size-full" iconUrl={serverImage.url} runtime={props.connection.runtime} fallbackLabel={nick.slice(0, 2).toUpperCase()} /> : nick.slice(0, 2).toUpperCase()}
         <span className={cn('absolute bottom-1 right-1 size-1.5 rounded-full ring-2 ring-background', phase === 'connected' ? 'bg-emerald-300' : phase === 'connecting' ? 'bg-amber-300' : 'bg-slate-500')} />
       </span>
-      <span className="w-full truncate text-[11px] font-medium">{nick}</span>
-      {activity.hasUnread ? <span className="absolute right-1 top-0 size-2.5 rounded-full bg-primary" aria-hidden /> : null}
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block truncate text-[13px] font-semibold text-foreground">{nick}</span>
+        <span className="block truncate text-[11px] text-muted-foreground">{props.connection.labelParts.name} · {statusLabel}</span>
+      </span>
+      {activity.hasUnread ? <span className="size-2 shrink-0 rounded-full bg-primary" aria-hidden /> : null}
     </button>
   );
 }

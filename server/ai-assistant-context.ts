@@ -66,7 +66,7 @@ export const buildAiAssistantContext = (
     .map((message, index) => ({ label: `S${index + 1}`, message }));
   return {
     coverage: {
-      description: dateRange ? `${request.scope === 'recent' ? 'Recent' : 'Saved'} messages for ${dateRange.label} (local calendar day)`
+      description: dateRange ? `${request.scope === 'recent' ? 'Recent' : 'Saved'} messages for ${dateRange.label} (local calendar dates)`
         : history ? 'Saved conversation history' : request.scope === 'recent' ? 'Recent messages only' : 'Recent messages and matching history excerpts',
       truncated,
     },

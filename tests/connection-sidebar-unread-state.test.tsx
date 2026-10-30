@@ -29,7 +29,7 @@ test('channel and direct-message labels separate selection color from unread wei
   assert.match(activeRead, /text-foreground/);
   assert.match(activeRead, /transition-colors/);
   assert.doesNotMatch(activeRead, /font-(?:medium|semibold)/);
-  assert.match(inactiveRead, /text-muted-foreground\/88/);
+  assert.match(inactiveRead, /(?:^|\s)text-muted-foreground(?:\s|$)/);
   assert.doesNotMatch(inactiveRead, /(?:^|\s)text-foreground(?:\s|$)/);
   assert.doesNotMatch(inactiveRead, /font-(?:medium|semibold)/);
   assert.match(inactiveUnread, /text-foreground/);

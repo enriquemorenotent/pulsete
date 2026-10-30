@@ -20,6 +20,7 @@ type ServerMessageBridgeOptions = Partial<{
   maxTrackedMutationIds: number;
   mutationEchoTtlMs: number;
   now: () => number;
+  recoverRejectedDraft: (bufferId: string, body: string) => 'restored' | 'history';
 }>;
 
 const defaultMutationEchoTtlMs = 30_000;
@@ -157,6 +158,15 @@ export const createServerMessageBridge = (
   const pendingMutations: MutationEchoStore = new Map();
   const seenSocketMutations: MutationEchoStore = new Map();
   const dispatch = readDispatch(target);
+  const dispatchMessage = (message: ServerMessage) => {
+    if (message.type === 'error' && message.retryDraft && options.recoverRejectedDraft) {
+      const result = options.recoverRejectedDraft(message.retryDraft.bufferId, message.retryDraft.body);
+      message = { ...message, message: `${message.message}. ${result === 'restored'
+        ? 'Message restored to its conversation draft.'
+        : 'Your newer draft was kept. Press Up in the original conversation to recover the rejected message.'}` };
+    }
+    dispatchInboundServerMessage(message, dispatch);
+  };
 
   const applyMutationMessages = (messages: readonly ServerMessage[]) => {
     const messagesToDispatch = trackPendingMutationEchoes(
@@ -167,7 +177,7 @@ export const createServerMessageBridge = (
     );
     runBatched(target, () => {
       for (const message of messagesToDispatch) {
-        dispatchInboundServerMessage(message, dispatch);
+        dispatchMessage(message);
       }
     });
   };
@@ -177,7 +187,7 @@ export const createServerMessageBridge = (
       return;
     }
     runBatched(target, () => {
-      dispatchInboundServerMessage(message, dispatch);
+      dispatchMessage(message);
     });
     if (message.mutationId) {
       trackMutationEcho(seenSocketMutations, message.mutationId, settings);

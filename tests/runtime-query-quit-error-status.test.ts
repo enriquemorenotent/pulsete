@@ -127,7 +127,7 @@ test('system status events keep their originating buffer target and message kind
   });
 });
 
-test('send failures roll back optimistic private messages and surface only a banner error', () => {
+test('send failures roll back optimistic messages and include the originating retry draft', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-runtime-'));
   const storage = new Storage(join(dir, 'db.sqlite'));
   const network = storage.networks.upsert(createNetworkInput());
@@ -162,6 +162,7 @@ test('send failures roll back optimistic private messages and surface only a ban
       target: 'helper',
       message: '* No such nick/channel: helper',
       rollbackMessageId: optimisticId,
+      retryDraft: 'hello there',
     }
   );
 
@@ -178,6 +179,7 @@ test('send failures roll back optimistic private messages and surface only a ban
     type: 'error',
     networkId: network.id,
     message: '* No such nick/channel: helper',
+    retryDraft: { bufferId: storage.conversations.getBufferByTarget(network.id, 'helper')!.id, body: 'hello there' },
   });
   assert.equal(sent.some((message) => message.type === 'message.append'), false);
 });

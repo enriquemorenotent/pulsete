@@ -70,7 +70,7 @@ function EditProfileButton(props: { disabled: boolean; onClick: () => void }) {
     <Button
       variant="ghost"
       size="sm"
-      className="h-7 border border-white/[0.055] bg-transparent px-2 text-muted-foreground/86 hover:border-white/12 hover:bg-white/[0.045] hover:text-foreground"
+      className="h-7 border border-white/[0.055] bg-transparent px-2 text-muted-foreground hover:border-white/12 hover:bg-white/[0.045] hover:text-foreground"
       onClick={props.onClick}
       disabled={props.disabled}
     >
@@ -109,7 +109,7 @@ function HistoryAccordion(props: {
     <ServerInspectorAccordionItem
       accordion={props.accordion}
       itemId="history"
-      title="History"
+      title="History details"
     >
       <dl className="space-y-1.5">
         <MetadataRow label="Backfill" value={summary.backfill} />
@@ -160,7 +160,7 @@ function ServerInspectorAccordionItem(props: {
       open={props.accordion.isOpen(props.itemId)}
       onToggle={(event) => props.accordion.setOpen(props.itemId, event.currentTarget.open)}
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground/72 outline-none transition-colors hover:text-foreground/84 focus-visible:ring-2 focus-visible:ring-ring/45 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:text-foreground/84 focus-visible:ring-2 focus-visible:ring-ring/45 [&::-webkit-details-marker]:hidden">
         <span>{props.title}</span>
         <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
       </summary>

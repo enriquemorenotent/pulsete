@@ -21,7 +21,7 @@ export const buildEmptyWorkspace = (workspaceNetworks: NetworkProfile[]): Worksp
   composerMode: 'hidden',
   composerDisabled: true,
   composerPlaceholder: '',
-  emptyBody: 'Open Network Manager to connect a network.',
+  emptyBody: 'Open Networks to connect a network.',
   showNicklist: false,
 });
 

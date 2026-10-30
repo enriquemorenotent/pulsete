@@ -1,3 +1,4 @@
+import { researchAssistantHistory } from './ai-assistant-research.js';
 import { normalizeAssistantTurns } from '../shared/ai-assistant-turns.js';
 import { badRequest } from './app-error.js';
 import {
@@ -49,9 +50,14 @@ export class RuntimeAiAssistantService {
       scope: request.scope,
       prompt,
     });
+    const research = request.scope === 'saved' ? await researchAssistantHistory({
+      store: this.options.conversations, provider: this.provider, context,
+      request: { ...request, assistantTurns, prompt }, signal,
+    }) : '';
+    signal?.throwIfAborted();
     const result = await this.provider.request({
       instructions: buildInstructions(request.mode),
-      prompt: buildPrompt({ assistantTurns, context, prompt }),
+      prompt: [buildPrompt({ assistantTurns, context, prompt }), research].filter(Boolean).join('\n\n'),
       signal,
       selection: request.selection,
     });

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Hash, LoaderCircle } from 'lucide-react';
 import type { PendingChannelState } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
@@ -10,10 +11,15 @@ type ConnectionSidebarPendingChannelRowProps = {
 };
 
 export function ConnectionSidebarPendingChannelRow(props: ConnectionSidebarPendingChannelRowProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (props.selected) rowRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [props.selected, props.pendingChannel.networkId, props.pendingChannel.channel]);
   const activity = { hasUnread: false, priority: false };
 
   return (
     <div
+      ref={rowRef}
       className={connectionSidebarRowClass(activity, { selected: props.selected, variant: 'selector' })}
     >
       <button

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import {
+  appendRejectedComposerHistoryEntry,
   hasStoredComposerDraft,
   initialComposerDraftState,
   type ComposerController,
@@ -15,6 +16,7 @@ import type { BufferDraft } from '../../shared/protocol-preferences.js';
 type Listener = () => void;
 
 export type ComposerStoreApi = ComposerController & {
+  recoverRejectedDraft: (bufferId: string, body: string) => 'restored' | 'history';
   getState: () => ComposerDraftState;
   subscribe: (listener: Listener) => () => void;
   subscribeDrafts: (listener: (bufferId: string, body: string) => void) => () => void;
@@ -48,6 +50,16 @@ export const createComposerStore = (
   };
 
   return {
+    recoverRejectedDraft: (bufferId, body) => {
+      if (readComposerDraft(state, bufferId) || state[bufferId]?.history.index != null) {
+        update((current) => appendRejectedComposerHistoryEntry(current, bufferId, body));
+        return 'history';
+      }
+      update((current) => setComposerDraftForContext(current, bufferId, body));
+      dirtyDrafts.set(bufferId, body);
+      for (const listener of draftListeners) listener(bufferId, body);
+      return 'restored';
+    },
     applyServerDrafts: (drafts) => {
       const incoming = new Map(drafts.map((draft) => [draft.bufferId, draft.body]));
       const nextServerDraftBufferIds = new Set(incoming.keys());

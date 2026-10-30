@@ -39,6 +39,27 @@ test('explicit dates validate calendar dates and support German and English nota
   assert.equal(readAssistantDateRange('2026-02-30'), null);
 });
 
+test('date ranges and comparisons include every referenced local day', () => {
+  const now = new Date(2026, 9, 9, 12);
+  for (const prompt of [
+    'Summarize 2026-10-01 through 2026-10-07',
+    'Compare 2026-10-07 with 2026-10-01',
+    'October 1 through October 7',
+    'October 1 through 7, 2026',
+    'Vom 1. bis 7. Oktober 2026',
+    '01.10.2026 bis 07.10.2026',
+    '10/1/2026 to 10/7/2026',
+  ]) {
+    const range = readAssistantDateRange(prompt, now);
+    assert.equal(range?.start, new Date(2026, 9, 1).getTime(), prompt);
+    assert.equal(range?.end, new Date(2026, 9, 8).getTime(), prompt);
+  }
+  const relative = readAssistantDateRange('Compare yesterday with today', now);
+  assert.equal(relative?.start, new Date(2026, 9, 8).getTime());
+  assert.equal(relative?.end, new Date(2026, 9, 10).getTime());
+  assert.equal(readAssistantDateRange('2026-02-28 through 2026-02-30', now), null);
+});
+
 test('long generated answers remain valid in Unicode-heavy follow-up requests', () => {
   const assistantTurns = normalizeAssistantTurns(Array.from({ length: 12 }, (_, index) => ({
     role: index % 2 ? 'assistant' as const : 'user' as const, text: '😀'.repeat(10_000),

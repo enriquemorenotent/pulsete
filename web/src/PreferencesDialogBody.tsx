@@ -51,7 +51,7 @@ const categories = [
 export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
   return (
     <Tabs defaultValue="display" orientation="vertical" className="flex h-full min-h-0 min-w-0 flex-col sm:flex-row">
-      <TabsList aria-label="Settings categories" className="flex h-auto w-full min-w-0 shrink-0 justify-start gap-1 overflow-x-auto rounded-none border-0 border-b border-border bg-card p-3 sm:w-44 sm:flex-col sm:items-stretch sm:border-b-0 sm:border-r">
+      <TabsList aria-label="Preferences categories" className="flex h-auto w-full min-w-0 shrink-0 justify-start gap-1 overflow-x-auto rounded-none border-0 border-b border-border bg-card p-3 sm:w-44 sm:flex-col sm:items-stretch sm:border-b-0 sm:border-r">
         {categories.map(({ value, label, icon: Icon }) => (
           <TabsTrigger key={value} value={value} className="min-w-0 shrink-0 justify-start gap-2 rounded-lg px-3 py-3 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
             <Icon className="size-4 shrink-0" />{label}
