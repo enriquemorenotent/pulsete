@@ -118,7 +118,8 @@ export class RuntimeHost {
   private createHttpApi(): RuntimeHost['http'] {
     return {
       assistant: {
-        ask: (bufferId, request) => this.runtime.http.assistant.ask(bufferId, request),
+        ask: (bufferId, request, signal, options) => this.runtime.http.assistant.ask(bufferId, request, signal, options),
+        clear: (bufferId, token, sessionId) => this.runtime.http.assistant.clear?.(bufferId, token, sessionId),
         startLogin: () => this.runtime.http.assistant.startLogin(),
         status: () => this.runtime.http.assistant.status(),
       },
