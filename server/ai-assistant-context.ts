@@ -55,7 +55,8 @@ export const buildAiAssistantContext = (
     ? conversations.listAssistantHistory(buffer.id, 600, dateRange)
     : null;
   const inRange = (messages: ChatMessage[]) => dateRange
-    ? messages.filter((message) => message.ts >= dateRange.start && message.ts < dateRange.end)
+    ? messages.filter((message) => (dateRange.start === null || message.ts >= dateRange.start)
+      && (dateRange.end === null || message.ts < dateRange.end))
     : messages;
   const recent = limitAssistantMessages(inRange(recentMessages), 8_000);
   const search = limitAssistantMessages(inRange(searchMessages), 8_000);
@@ -162,5 +163,5 @@ const searchWindowBefore = 2;
 const renderContextMessages = (context: AiAssistantPromptContext, messages: readonly ChatMessage[]) =>
   messages.map((message) => {
     const label = context.sources?.find((source) => source.message.id === message.id)?.label;
-    return `[${label ?? 'source'}] ${renderAiAssistantMessage(message)}`;
+    return `[${label ?? 'source'}] messageId=${JSON.stringify(message.id)} ${renderAiAssistantMessage(message)}`;
   }).join('\n');

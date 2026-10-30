@@ -5,8 +5,10 @@ import type { AssistantDateRange } from './ai-assistant-dates.js';
 
 export const listAssistantHistory = (db: SqliteDb, bufferId: string, limit: number,
   range: AssistantDateRange | null = null) => {
-  const clause = range ? ' AND m.ts >= ? AND m.ts < ?' : '';
-  const args = range ? [bufferId, range.start, range.end] : [bufferId];
+  const clause = (range?.start != null ? ' AND m.ts >= ?' : '')
+    + (range?.end != null ? ' AND m.ts < ?' : '');
+  const args = [bufferId, ...(range?.start != null ? [range.start] : []),
+    ...(range?.end != null ? [range.end] : [])];
   // Bound imported message bodies before SQLite hydrates the result page.
   const columns = messageColumns.replace('m.body', 'substr(m.body, 1, 2001) AS body');
   const rows = db.prepare(`SELECT ${columns} ${messageJoin}

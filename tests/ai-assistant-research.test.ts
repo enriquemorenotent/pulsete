@@ -135,3 +135,41 @@ test('saved history research includes the final day of a requested date range', 
     assert.deepEqual(result.context.sources?.map((source) => source.message.id), ['date-range-1', 'date-range-7']);
   } finally { storage.close(); }
 });
+
+test('research reads a shortened initial message directly by its supplied ID and cites the continuation', async () => {
+  const { storage, buffer, network } = fixture();
+  try {
+    const id = 'memo-"quoted"';
+    storage.conversations.appendMessage({ id, networkId: network.id, target: '#test', nick: 'alice',
+      kind: 'line', self: false, ts: 700, body: 'Launch memo: ' + 'x'.repeat(4500) + ' Access code QUARTZ-681.' });
+    let calls = 0;
+    let continuationLabel = '';
+    const service = new RuntimeAiAssistantService({ conversations: storage.conversations, provider: provider(async (input) => {
+      calls++;
+      if (calls === 1) {
+        assert.doesNotMatch(input.prompt, /QUARTZ-681/);
+        assert.match(input.instructions, /Source labels such as S1 are citations, never message IDs/);
+        const match = input.prompt.match(/messageId=("(?:\\.|[^"\\])*") \[[^\]]+\] alice: Launch memo:/);
+        assert.ok(match, 'Initial context supplies the readable message ID');
+        return JSON.stringify({ action: 'read', messageId: JSON.parse(match[1]), offset: 4000 });
+      }
+      assert.match(input.prompt, /QUARTZ-681/);
+      if (calls === 2) {
+        const observation = input.prompt.split('\n\n').find((section) => section.startsWith('{"operation":'));
+        assert.ok(observation);
+        const result = JSON.parse(observation);
+        assert.equal(result.operation.messageId, id);
+        assert.equal(result.messages[0].id, id);
+        continuationLabel = result.messages[0].source;
+        return '{"action":"done"}';
+      }
+      assert.match(input.instructions, /Do not include them in the answer/);
+      return `The code is QUARTZ-681. [${continuationLabel}]`;
+    }) });
+    const result = await service.ask(buffer.id, { ...request, prompt: 'What code appears at the end of the launch memo?' });
+    assert.equal(calls, 3);
+    assert.equal(result.answer, `The code is QUARTZ-681. [${continuationLabel}]`);
+    assert.ok(result.context.sources?.some((source) => source.label === continuationLabel
+      && source.message.id === id && source.message.body.includes('QUARTZ-681')));
+  } finally { storage.close(); }
+});

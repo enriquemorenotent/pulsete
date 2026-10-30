@@ -69,3 +69,26 @@ test('long generated answers remain valid in Unicode-heavy follow-up requests', 
   assert.ok(Buffer.byteLength(JSON.stringify(request)) < 64 * 1024);
   assert.ok(assistantTurns.every((turn) => turn.text.length <= 1_000));
 });
+
+test('directional dates exclude the named local day and keep the other bound open', () => {
+  const now = new Date(2026, 9, 9, 12);
+  for (const [date, month, day] of [
+    ['2026-10-08', 9, 8], ['8. Oktober 2026', 9, 8], ['October 8, 2026', 9, 8],
+    ['08.10.2026', 9, 8], ['10/8/2026', 9, 8], ['yesterday', 9, 8],
+    ['gestern', 9, 8], ['today', 9, 9], ['heute', 9, 9], ['vorgestern', 9, 7],
+    ['2026-03-29', 2, 29],
+  ] as const) {
+    for (const direction of ['before', 'vor', 'after', 'nach']) {
+      const before = direction === 'before' || direction === 'vor';
+      assert.deepEqual(readAssistantDateRange(`Meeting ${direction} ${date}?`, now), {
+        start: before ? null : new Date(2026, month, day + 1).getTime(),
+        end: before ? new Date(2026, month, day).getTime() : null,
+        label: `${direction} ${date}`,
+      });
+    }
+  }
+  for (const prompt of ['before 2026-01-03 and after 2026-01-01',
+    'before January 1 through 7, 2026', 'before or after 2026-01-01', 'before 2026-02-30']) {
+    assert.equal(readAssistantDateRange(prompt, now), null, prompt);
+  }
+});

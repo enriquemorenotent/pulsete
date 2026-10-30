@@ -169,8 +169,8 @@ const createConversationStore = (
   getBuffer: (bufferId: string) => buffer?.id === bufferId ? buffer : null,
   getMessageWindow: (messageId: string) =>
     Object.values(options.search ?? {}).flat().filter((entry) => entry.id === messageId),
-  listAssistantHistory: (_bufferId: string, limit: number, range?: { start: number; end: number } | null) => {
-    const all = (options.allMessages ?? messages).filter((entry) => !range || (entry.ts >= range.start && entry.ts < range.end));
+  listAssistantHistory: (_bufferId: string, limit: number, range?: { start: number | null; end: number | null } | null) => {
+    const all = (options.allMessages ?? messages).filter((entry) => !range || ((range.start === null || entry.ts >= range.start) && (range.end === null || entry.ts < range.end)));
     return { messages: all.slice(-limit), hasMore: all.length > limit };
   },
   listRecentMessagesForBuffer: () => messages,
@@ -236,4 +236,15 @@ test('assistant service forwards the selected recent scope to retrieval', async 
   } });
   const result = await service.ask(channelBuffer.id, { scope: 'recent', mode: 'answer', prompt: 'Summarize all saved history', assistantTurns: [], selection: { model: null, reasoningEffort: null } });
   assert.equal(result.context.coverage?.description, 'Recent messages only');
+});
+
+test('context renders escaped message IDs alongside citation labels', () => {
+  for (const id of ['message-1', 'message-"quoted"\\path\nnext']) {
+    const entry = { ...message, id };
+    const context = buildAiAssistantContext(createConversationStore(channelBuffer, [entry]), channelBuffer.id);
+    const rendered = renderAiAssistantContext(context);
+    assert.ok(rendered.includes(`[S1] messageId=${JSON.stringify(id)} [2026-01-01T12:00:00.000Z]`));
+    assert.ok(!rendered.includes('path\nnext'));
+    assert.equal(context.sources?.[0].message.id, id);
+  }
 });

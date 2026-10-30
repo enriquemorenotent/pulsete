@@ -97,9 +97,10 @@ All operations are restricted to the selected conversation and the question's da
 Return ONLY one JSON object:
 {"action":"search","query":"literal phrase","offset":0} searches ALL saved message bodies, oldest first, with paging.
 {"action":"page","offset":0,"order":"oldest"} reads chronological history (or order newest).
-{"action":"read","messageId":"id from a result","offset":0} reads a long message in 2000-character chunks; offset is a character offset.
+{"action":"read","messageId":"messageId from context or id from a result","offset":0} reads a long message in 2000-character chunks; offset is a character offset.
 {"action":"count","query":"literal phrase"} counts matching messages across ALL saved history; empty query counts all messages.
 {"action":"done"} when you have enough evidence.
+For read operations, copy the exact messageId from the initial context or id from a research result. Source labels such as S1 are citations, never message IDs.
 Pages contain 20 messages; use nextOffset to continue. Long bodies are shortened; use read to inspect more.
 Search is literal substring matching, case-insensitive for ASCII. Try synonyms and different phrases when needed.
 For whole-history questions, inspect the history and counts; never equate matching messages with real-world events.

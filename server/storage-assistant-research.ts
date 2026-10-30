@@ -6,9 +6,10 @@ import type { AssistantResearchAction } from './ai-assistant-research.js';
 
 function scope(bufferId: string, range: AssistantDateRange | null, maxRowid?: number) {
   return {
-    where: 'm.bufferId = ?' + (range ? ' AND m.ts >= ? AND m.ts < ?' : '')
+    where: 'm.bufferId = ?' + (range?.start != null ? ' AND m.ts >= ?' : '')
+      + (range?.end != null ? ' AND m.ts < ?' : '')
       + (maxRowid !== undefined ? ' AND m.rowid <= ?' : ''),
-    args: [bufferId, ...(range ? [range.start, range.end] : []), ...(maxRowid !== undefined ? [maxRowid] : [])],
+    args: [bufferId, ...(range?.start != null ? [range.start] : []), ...(range?.end != null ? [range.end] : []), ...(maxRowid !== undefined ? [maxRowid] : [])],
   };
 }
 
