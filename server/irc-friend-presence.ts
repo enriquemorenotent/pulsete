@@ -1,3 +1,4 @@
+import { emitEvent } from './irc-emit.js';
 import type { IrcFriendPresenceContext } from './irc-contexts.js';
 import {
 	clearFriendPresenceTimer,
@@ -93,6 +94,7 @@ export const setFriendPresenceMonitorSupport = (
 export const disableFriendPresence = (
 	connection: IrcFriendPresenceContext,
 ) => {
+	emitEvent(connection, { type: 'friend-observation', networkId: connection.profile.id, presences: {}, transport: null });
 	connection.friendPresence.enabled = false;
 	connection.friendPresence.pendingIsonSnapshot = null;
 	connection.friendPresence.resolvedNicks.clear();
@@ -118,15 +120,18 @@ const syncFriendPresenceTransport = (
 		clearFriendPresenceTimer(connection);
 		return;
 	}
+	if (presence.activeTransport !== transport) {
+		emitEvent(connection, { type: 'friend-observation', networkId: connection.profile.id, presences: {}, transport: null });
+	}
 	if (presence.activeTransport === 'monitor' && transport !== 'monitor') {
 		clearMonitorSubscriptions(connection);
 	}
 	if (transport !== 'ison') {
 		presence.pendingIsonSnapshot = null;
-		clearFriendPresenceTimer(connection);
 	}
 	presence.activeTransport = transport;
 	if (transport === 'monitor') {
+		ensureFriendPresenceTimer(connection);
 		syncMonitorSubscriptions(connection);
 		return;
 	}

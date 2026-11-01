@@ -19,7 +19,10 @@ export const ensureFriendPresenceTimer = (
 		return;
 	}
 	const timer = setInterval(
-		() => requestIsonSnapshot(connection),
+		() => {
+			if (connection.friendPresence.activeTransport === 'monitor') connection.sendRaw('MONITOR S');
+			else requestIsonSnapshot(connection);
+		},
 		friendPresenceRefreshMs,
 	);
 	timer.unref?.();
@@ -65,7 +68,7 @@ export const handleFriendPresenceIsonReply = (
 	if (unsupported) {
 		presence.resolvedNicks.clear();
 		clearFriendPresenceTimer(connection);
-		updateFriendPresenceStatuses(connection, new Map());
+		updateFriendPresenceStatuses(connection, new Map(), true);
 		return;
 	}
 	presence.resolvedNicks = retainTrackedPresenceKeys(
@@ -79,7 +82,7 @@ export const handleFriendPresenceIsonReply = (
 	for (const normalizedNick of pendingSnapshot.onlineNickKeys) {
 		nextPresenceByKey.set(normalizedNick, 'online');
 	}
-	updateFriendPresenceStatuses(connection, nextPresenceByKey);
+	updateFriendPresenceStatuses(connection, nextPresenceByKey, true);
 };
 
 export const requestIsonSnapshot = (

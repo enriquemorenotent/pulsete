@@ -1,4 +1,5 @@
-import { useId, useState } from 'react';
+import type { FriendState } from '../../shared/protocol-chat.js';
+import { lazy, Suspense, useId, useState } from 'react';
 import { ChevronRight, Eye, EyeOff } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { Button } from '@/components/ui/button.js';
@@ -6,6 +7,8 @@ import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
 import { FriendRow } from './ConnectionSidebarFriendRow.js';
 import { resolveUniqueNickEmoji } from './nick-emoji-utils.js';
 import { cn } from '@/lib/utils.js';
+
+const WatchlistActivityDialog = lazy(() => import('./WatchlistActivityDialog.js').then((module) => ({ default: module.WatchlistActivityDialog })));
 
 type ConnectionSidebarFriendsProps = Pick<
 	ConnectionSidebarProps,
@@ -22,6 +25,7 @@ type ConnectionSidebarFriendsProps = Pick<
 
 export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 	const contentId = useId();
+	const [activityFriend, setActivityFriend] = useState<FriendState | null>(null);
 	const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
 	const hideOfflineFriends = props.hideOfflineFriends ?? false;
 	const variant = props.variant ?? 'bottom';
@@ -51,6 +55,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 
 	return (
 		<>
+			{activityFriend && props.friends.some((friend) => friend.id === activityFriend.id) && <Suspense fallback={null}><WatchlistActivityDialog key={activityFriend.id} friend={activityFriend} onClose={() => setActivityFriend(null)} /></Suspense>}
 			<section
 				className={
 					variant === 'panel'
@@ -112,6 +117,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 							{visibleFriends.map((friend) => (
 								<FriendRow
 									key={friend.id}
+									onActivity={() => setActivityFriend(friend)}
 									friend={friend}
 									presence={resolvePresence(
 										props.friendPresence[friend.id],

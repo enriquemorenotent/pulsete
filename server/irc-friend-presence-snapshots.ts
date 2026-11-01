@@ -1,7 +1,7 @@
 import type { PresenceStatus } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { IrcFriendPresenceContext } from './irc-contexts.js';
-import { emitFriendPresence } from './irc-emit.js';
+import { emitEvent, emitFriendPresence } from './irc-emit.js';
 
 export const dedupeFriendNicks = (nicks: string[]) => {
 	const seen = new Set<string>();
@@ -46,6 +46,7 @@ export const filterPresenceByTrackedNicks = (
 export const updateFriendPresenceStatuses = (
 	connection: IrcFriendPresenceContext,
 	presenceByKey: Map<string, PresenceStatus>,
+	confirmed = false,
 ) => {
 	const nextPresenceByKey = normalizePresenceMap(
 		filterPresenceByTrackedNicks(connection.friendPresence.nicks, presenceByKey),
@@ -55,6 +56,14 @@ export const updateFriendPresenceStatuses = (
 		nextPresenceByKey,
 	);
 	connection.friendPresence.presenceByKey = nextPresenceByKey;
+	if (confirmed) {
+		emitEvent(connection, {
+			type: 'friend-observation', networkId: connection.profile.id,
+			transport: connection.friendPresence.activeTransport,
+			presences: buildResolvedPresenceSnapshot(connection.friendPresence.nicks,
+				connection.friendPresence.resolvedNicks, nextPresenceByKey),
+		});
+	}
 	if (presenceMapsEqual(connection.friendPresence.snapshotByKey, nextSnapshotByKey)) {
 		return;
 	}

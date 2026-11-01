@@ -1,3 +1,4 @@
+import type { WatchlistActivity } from '../shared/watchlist-activity.js';
 import type WebSocket from 'ws';
 import type { BufferState, NetworkProfile } from '../shared/protocol-chat.js';
 import type { ClientMessage, ServerMessage } from '../shared/protocol-messages.js';
@@ -147,6 +148,7 @@ export type RuntimeHttpApi = {
     search: RuntimeConversationMutations['searchLogs'];
   };
   friends: {
+    activity(friendId: string): WatchlistActivity;
     add: RuntimeFriendMutations['upsertFriend'];
     remove: RuntimeFriendMutations['removeFriend'];
   };

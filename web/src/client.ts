@@ -1,3 +1,4 @@
+import type { WatchlistActivity } from '../../shared/watchlist-activity.js';
 import { historySearchLimit, historyWindowLimit } from '../../shared/protocol-chat.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type {
@@ -58,6 +59,8 @@ const apiRequest = async <T>(path: string, init?: RequestInit) => {
 };
 
 export const api = {
+  watchlistActivity: (friendId: string, signal?: AbortSignal) =>
+    apiRequest<WatchlistActivity>(`/api/friends/${encodeURIComponent(friendId)}/activity`, { signal }),
   updatePreferences: (patch: WorkspacePreferencesPatch) =>
     apiRequest<{ preferences: WorkspacePreferences; messages: ServerMessage[] }>(
       '/api/preferences',

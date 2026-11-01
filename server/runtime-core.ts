@@ -1,3 +1,4 @@
+import { RuntimeWatchlistActivity } from './runtime-watchlist-activity.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
@@ -49,7 +50,9 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const assistantService = new RuntimeAiAssistantService({
     conversations: store.conversations,
   });
+  const activity = new RuntimeWatchlistActivity(store.friends, store.networks);
   const eventRouter = new RuntimeEventRouter({
+    activity,
     buffers: store.conversations,
     conversations: conversationsService,
     friends: store.friends,
@@ -229,6 +232,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       search: conversations.searchLogs,
     },
     friends: {
+      activity: (friendId) => activity.read(friendId),
       add: friends.upsertFriend,
       remove: friends.removeFriend,
     },

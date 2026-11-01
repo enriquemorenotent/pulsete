@@ -1,3 +1,4 @@
+import type { RuntimeWatchlistActivity } from './runtime-watchlist-activity.js';
 import type { FriendState, NetworkProfile } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
@@ -12,6 +13,7 @@ import { createRuntimeProjectionSnapshot } from './runtime-snapshot-projector.js
 import type { RuntimeConversationStore, RuntimeFriendStore } from './runtime-store.js';
 
 type RuntimeEventRouterOptions = {
+  activity?: RuntimeWatchlistActivity;
   conversations: RuntimeConversationService;
   buffers: Pick<RuntimeConversationStore, 'listBuffers' | 'listQueryNickAliases'>;
   friends: Pick<RuntimeFriendStore, 'list'>;
@@ -28,11 +30,13 @@ export class RuntimeEventRouter {
   }
 
   clearAll() {
+    this.options.activity?.close();
     this.channelLists.clearAll();
     this.friendPresence.clearAll();
   }
 
   clearNetwork(networkId: string) {
+    this.options.activity?.clearNetwork(networkId);
     this.channelLists.clearNetwork(networkId);
   }
 
@@ -60,6 +64,7 @@ export class RuntimeEventRouter {
 
   removeNetworks(networkIds: readonly string[]) {
     for (const networkId of networkIds) {
+      this.options.activity?.clearNetwork(networkId);
       this.channelLists.clearNetwork(networkId);
     }
     return this.friendPresence.removeNetworks(
@@ -70,6 +75,7 @@ export class RuntimeEventRouter {
   }
 
   deleteFriendPresenceCache(friendId: string) {
+    this.options.activity?.removeFriend(friendId);
     this.friendPresence.deleteFriendPresenceCache(friendId);
   }
 
@@ -81,6 +87,7 @@ export class RuntimeEventRouter {
   }
 
   route(event: RuntimeEvent): ServerMessage[] {
+    this.options.activity?.route(event);
     const routedMessages: ServerMessage[] = [];
     if (event.type === 'friend-presence') {
       const inferredNickMessages = this.createKnownAliasNickChangeMessages(event);

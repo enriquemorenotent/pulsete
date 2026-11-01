@@ -163,3 +163,28 @@ database moved through the perfect migration path.
 - Server buffers are operational; channel and query buffers are conversational.
 - Search, history windows, unread state, and query aliases are buffer-scoped.
 - Tests should describe product scenarios, not just storage mechanics.
+
+### Watchlist activity
+
+The Activity button beside each watched nick opens a desktop view of its last
+30 days of observed presence. Histories are scoped to the Watchlist entry and
+network. They are local SQLite data and are removed when that entry or network
+is deleted. Old intervals are pruned at startup and hourly; long-running
+intervals are clipped to the 30-day window when calculating statistics.
+
+Only backend presence observations contribute. MONITOR replies confirm the
+specific nicks they contain; a five-minute MONITOR status refresh restores a
+baseline after gaps. ISON replies confirm snapshots, with a six-minute freshness
+limit around the five-minute polling schedule. Detection times are approximate,
+and polling can miss brief sessions. Thirty-second checkpoints preserve ongoing
+observations. Process pauses longer than 90 seconds and restarts leave unknown
+gaps rather than extending old observations across them. A crash can lose the
+last uncheckpointed seconds.
+
+The heatmap divides connected time (online plus away) by observed time for each
+local weekday/hour. It never uses disconnected time as offline evidence. Away
+time is also available in each cell's details. Arrivals require an observed
+offline-to-connected transition within continuous observation; an initial online
+baseline is not an arrival. Typical connection times require at least seven
+observed dates, five arrivals overall, and arrivals in the leading hour on at
+least three separate dates. These describe observed patterns, not predictions.

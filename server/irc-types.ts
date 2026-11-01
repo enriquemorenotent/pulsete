@@ -17,6 +17,7 @@ import type { ChannelListEntry } from '../shared/protocol-chat.js';
 import type { MessageInput, RuntimeNetworkProfile } from './storage-types.js';
 
 export type RuntimeEvent =
+  | { type: 'friend-observation'; networkId: string; presences: Record<string, PresenceStatus>; transport: 'monitor' | 'ison' | null }
   | {
       type: 'state';
       networkId: string;

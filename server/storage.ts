@@ -83,6 +83,7 @@ export class Storage {
       return;
     }
     this.closed = true;
+    this.friends.activity.closed = true;
     this.db.close();
   }
 }

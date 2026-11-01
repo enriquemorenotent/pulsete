@@ -1,3 +1,4 @@
+import { ensureWatchlistActivityStorage } from './storage-watchlist-activity.js';
 import {
   ensureNickEmojiTable,
   migrateIdentityScopedTables,
@@ -191,4 +192,5 @@ export const storageMigrations: readonly StorageMigration[] = [
       `);
     },
   },
+  { version: 32, apply: ensureWatchlistActivityStorage },
 ];

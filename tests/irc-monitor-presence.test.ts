@@ -97,6 +97,14 @@ test('irc connection uses MONITOR updates for tracked friend presence without lo
       )
   );
   assert.equal(received.some((line) => line.startsWith('ISON ')), false);
+  const observations = events.filter((event) => event.type === 'friend-observation' && event.transport === 'monitor');
+  assert.deepEqual(observations.map((event) => event.presences), [
+    { Alice: 'online' },
+    { Bob: 'offline' },
+  ]);
+  connection.consume(':irc.example 730 tester :Alice!user@host\r\n');
+  assert.equal(events.filter((event) => event.type === 'friend-observation' && event.transport === 'monitor').length, 3);
+
   assert.equal(
     events.some(
       (event) =>

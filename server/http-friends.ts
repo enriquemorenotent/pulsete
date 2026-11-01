@@ -14,6 +14,12 @@ export const handleFriendRoutes = async ({ req, res, pathname, context }: RouteA
     return true;
   }
 
+  const activityMatch = pathname.match(/^\/api\/friends\/([^/]+)\/activity$/);
+  if (activityMatch && req.method === 'GET') {
+    writeJson(res, 200, context.friends.activity(decodeRouteParam(activityMatch[1])));
+    return true;
+  }
+
   const friendMatch = pathname.match(/^\/api\/friends\/([^/]+)$/);
   if (friendMatch && req.method === 'DELETE') {
     const friendId = decodeRouteParam(friendMatch[1]);

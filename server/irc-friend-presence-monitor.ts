@@ -1,3 +1,4 @@
+import { emitEvent } from './irc-emit.js';
 import type { PresenceStatus } from '../shared/protocol-chat.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { IrcFriendPresenceContext } from './irc-contexts.js';
@@ -31,6 +32,12 @@ export const handleFriendPresenceMonitorUpdate = (
 		connection.friendPresence.presenceByKey.delete(normalizedNick);
 	}
 	if (handled) {
+		emitEvent(connection, {
+			type: 'friend-observation', networkId: connection.profile.id, transport: 'monitor',
+			presences: Object.fromEntries(nicks
+				.filter((nick) => isTrackedMonitorNick(connection.friendPresence, normalizeIrcIdentifier(nick)))
+				.map((nick) => [nick, presence])),
+		});
 		updateFriendPresenceStatuses(connection, connection.friendPresence.presenceByKey);
 	}
 	return handled;

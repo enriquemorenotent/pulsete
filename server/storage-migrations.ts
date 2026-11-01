@@ -1,3 +1,4 @@
+import { ensureWatchlistActivityStorage } from './storage-watchlist-activity.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import { ensureQueryPeerIdentityStorage } from './storage-query-identities.js';
 import {
@@ -36,6 +37,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
       version = migration.version;
     }
   }
+  ensureWatchlistActivityStorage(db);
   ensureCurrentNetworkColumns(db);
   ensureCurrentBufferColumns(db);
   ensureCurrentMessageColumns(db);

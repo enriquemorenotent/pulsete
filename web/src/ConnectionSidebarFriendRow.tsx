@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { ChartNoAxesColumnIncreasing, X } from 'lucide-react';
 import type { PresenceStatus } from '../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
@@ -9,6 +9,7 @@ type FriendRowProps = {
 	presence: PresenceStatus;
 	onOpen: () => void;
 	onRemove: () => void;
+	onActivity?: () => void;
 };
 
 export function FriendRow(props: FriendRowProps) {
@@ -43,6 +44,11 @@ export function FriendRow(props: FriendRowProps) {
 					</span>
 				) : null}
 			</button>
+			{props.onActivity && <button type="button"
+				className="flex w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground/65 hover:bg-white/5 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/35"
+				aria-label={`Activity for ${props.friend.nick}`} title="Activity" onClick={props.onActivity}>
+				<ChartNoAxesColumnIncreasing className="size-3" />
+			</button>}
 			<button
 				type="button"
 				className="flex w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground/80 opacity-0 transition-opacity duration-150 hover:bg-white/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/35 group-hover:opacity-100 group-focus-within:opacity-100"

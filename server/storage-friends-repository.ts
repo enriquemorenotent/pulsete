@@ -1,9 +1,14 @@
+import { StorageWatchlistActivity } from './storage-watchlist-activity.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import { getFriend, listFriends, removeFriend, upsertFriend } from './storage-friends.js';
 import type { FriendInput } from './storage-types.js';
 
 export class StorageFriendsRepository {
-  constructor(private readonly db: SqliteDb) {}
+  readonly activity: StorageWatchlistActivity;
+
+  constructor(private readonly db: SqliteDb) {
+    this.activity = new StorageWatchlistActivity(db);
+  }
 
   list() {
     return listFriends(this.db);
