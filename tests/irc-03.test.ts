@@ -125,37 +125,35 @@ test('irc connection batches ISON snapshots for tracked nicks and keeps them out
   );
 
   const trackedFriends = Array.from({ length: 80 }, (_, index) => `Friend${index.toString().padStart(3, '0')}`);
-  connection.setFriendNicks(trackedFriends);
-  connection.connect();
+  try {
+    connection.setFriendNicks(trackedFriends);
+    connection.connect();
 
-  await waitFor(() => received.some((line) => line.startsWith('ISON ')));
-  const expectedOnline = received
-    .filter((line) => line.startsWith('ISON '))
-    .flatMap((line) => line.slice('ISON '.length).trim().split(/\s+/))
-    .filter(Boolean)
-    .sort();
-  await waitFor(
-    () =>
-      events.some(
-        (event) =>
-          event.type === 'friend-presence'
+    // Network reads can split the outgoing batches. Wait for the complete
+    // expected snapshot rather than sampling whichever batches arrived first.
+    const expectedOnline = [...trackedFriends].sort().join(',');
+    await waitFor(
+      () => events.some(
+        (event) => event.type === 'friend-presence'
           && Object.entries(event.presences as Record<string, string>)
             .filter(([, presence]) => presence === 'online')
-            .map(([nick]) => nick)
-            .sort()
-            .join(',') === expectedOnline.join(',')
+            .map(([nick]) => nick).sort().join(',') === expectedOnline
       )
-  );
-  assert.ok(received.filter((line) => line.startsWith('ISON ')).length < trackedFriends.length);
-  assert.equal(
-    events.some(
-      (event) => event.type === 'status' && typeof event.message === 'string' && event.message.startsWith('* Online:')
-    ),
-    false,
-  );
-
-  connection.disconnect();
-  server.close();
+    );
+    const batches = received.filter((line) => line.startsWith('ISON '));
+    assert.ok(batches.length < trackedFriends.length);
+    assert.equal(batches.flatMap((line) => line.slice('ISON '.length).trim().split(/\s+/))
+      .sort().join(','), expectedOnline);
+    assert.equal(
+      events.some(
+        (event) => event.type === 'status' && typeof event.message === 'string' && event.message.startsWith('* Online:')
+      ),
+      false,
+    );
+  } finally {
+    connection.disconnect();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });
 
 test('irc connection ignores stale ISON replies when snapshots overlap', () => {
