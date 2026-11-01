@@ -167,9 +167,10 @@ database moved through the perfect migration path.
 ### Watchlist activity
 
 The Activity button beside each watched nick opens a desktop view of its last
-30 days of observed presence. Histories are scoped to the Watchlist entry and
-network. They are local SQLite data and are removed when that entry or network
-is deleted. Old intervals are pruned at startup and hourly; long-running
+30 days of observed presence. The view combines observations from every
+connection for the Watchlist entry, matching its global presence indicator.
+Observations are stored locally in SQLite and removed when their Watchlist
+entry or source connection is deleted. Old intervals are pruned at startup and hourly; long-running
 intervals are clipped to the 30-day window when calculating statistics.
 
 Only backend presence observations contribute. MONITOR replies confirm the
@@ -180,6 +181,11 @@ and polling can miss brief sessions. Thirty-second checkpoints preserve ongoing
 observations. Process pauses longer than 90 seconds and restarts leave unknown
 gaps rather than extending old observations across them. A crash can lose the
 last uncheckpointed seconds.
+
+Overlapping observations count once. Online takes precedence over away, and
+either takes precedence over offline. Arrivals on another connection while the
+nick is already connected do not count again. Raw observations keep their
+connection IDs so existing data can be combined without a migration.
 
 The heatmap divides connected time (online plus away) by observed time for each
 local weekday/hour. It never uses disconnected time as offline evidence. Away

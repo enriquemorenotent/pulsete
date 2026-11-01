@@ -1,10 +1,11 @@
+import { combineActivityTimeline } from './watchlist-activity-timeline.js';
 import type { WatchlistActivity } from './watchlist-activity.js';
 
 export type ActivityCell = { observedMs: number; connectedMs: number; awayMs: number };
 const minuteMs = 60_000;
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export const buildActivityStatistics = (activity: WatchlistActivity, networkId: string, timeZone: string) => {
+export const buildActivityStatistics = (activity: WatchlistActivity, timeZone: string) => {
   const cells: ActivityCell[] = Array.from({ length: 168 }, () => ({ observedMs: 0, connectedMs: 0, awayMs: 0 }));
   const days = new Set<string>();
   const arrivals: { hour: number; date: string }[] = [];
@@ -18,11 +19,14 @@ export const buildActivityStatistics = (activity: WatchlistActivity, networkId: 
     return { day: weekdays.indexOf(parts.weekday!), hour: Number(parts.hour), date: `${parts.year}-${parts.month}-${parts.day}` };
   };
   for (const interval of activity.intervals) {
-    if (interval.networkId !== networkId) continue;
+    if (interval.status !== 'offline' && interval.end >= activity.since && interval.start <= activity.until) {
+      lastOnline = Math.max(lastOnline ?? 0, Math.min(interval.end, activity.until));
+    }
+  }
+  for (const interval of combineActivityTimeline(activity)) {
     const start = Math.max(interval.start, activity.since);
     const end = Math.min(interval.end, activity.until);
     if (end < start) continue;
-    if (interval.status !== 'offline') lastOnline = Math.max(lastOnline ?? 0, end);
     if (interval.arrival && interval.start >= activity.since && interval.start <= activity.until) {
       const { hour, date } = local(interval.start);
       arrivals.push({ hour, date });
