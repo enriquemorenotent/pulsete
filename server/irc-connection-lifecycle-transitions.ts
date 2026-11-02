@@ -52,6 +52,9 @@ export const applyOfflineTransition = (
     clearPendingNick?: boolean;
   }
 ) => {
+  connection.lifecycle.stopVpnTunnel?.();
+  connection.lifecycle.stopVpnTunnel = undefined;
+  connection.lifecycle.vpnServer = undefined;
   clearConnectDeadlineTimer(connection);
   clearReconnectTimer(connection);
   clearIrcHeartbeat(connection);

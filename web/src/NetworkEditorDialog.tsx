@@ -1,3 +1,4 @@
+import { NordVpnSettings } from './NordVpnSettings.js';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.js';
@@ -142,6 +143,8 @@ function ServerTab(props: {
         ) : null}
         {showPassword ? <PasswordField form={props.form} onChange={props.onChange} /> : null}
       </div>
+
+      <NordVpnSettings form={props.form} onChange={props.onChange} />
 
       {!showPassword ? (
         <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">

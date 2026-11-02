@@ -41,6 +41,7 @@ export const toNetworkProfile = (
   },
 ): StoredNetworkProfile => {
   const profile = {
+    ...(row.nordVpnLocation ? { nordVpnLocation: row.nordVpnLocation } : {}),
     id: row.id,
     workspaceOpen: Boolean(row.workspaceOpen),
     name: row.name,

@@ -77,6 +77,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     networkId: z.string(),
     phase: networkRuntimePhaseSchema,
     serverName: z.string().nullable(),
+  vpnServer: z.string().optional(),
     nick: z.string(),
     capabilities: networkRuntimeCapabilitiesSchema.optional(),
   }),

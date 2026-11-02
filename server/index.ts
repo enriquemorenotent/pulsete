@@ -10,6 +10,9 @@ void startPulseteServer({
   host: HOST,
   port: PORT,
 }).then((server) => {
+  const stop = () => { void server.close().then(() => process.exit(0)); };
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
   console.log(`Pulsete server listening on ${server.url}`);
   const clientUrl = process.env.PULSETE_CLIENT_ORIGIN
     ? createClientBootstrapUrl(

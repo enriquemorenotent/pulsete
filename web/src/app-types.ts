@@ -121,6 +121,7 @@ export type Action =
       networkId: string;
       phase: NetworkRuntimeState['phase'];
       serverName: string | null;
+      vpnServer?: string;
       nick: string;
       capabilities: NonNullable<NetworkRuntimeState['capabilities']>;
     }

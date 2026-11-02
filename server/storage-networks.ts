@@ -1,3 +1,4 @@
+import { hasNordVpnCredentials, readNordVpnCredentials, saveNordVpnCredentials } from './storage-nordvpn.js';
 import { randomUUID } from 'node:crypto';
 import type { SqliteDb } from './storage-sqlite.js';
 import { defaultNetworkAuthMethod, resolveNetworkAuthTarget, type StoredNetworkProfile } from '../shared/network-model.js';
@@ -17,16 +18,16 @@ import type { NetworkInput, NetworkRow, RuntimeNetworkProfile } from './storage-
 import { encryptNetworkPassword, toNetworkProfile, toRuntimeNetworkProfile } from './storage-utils.js';
 
 const networkColumns =
-  'id, workspaceOpen, name, host, port, tls, nick, username, iconUrl, realName, password, authMethod, authTarget, authAccount, favorite, notes, createdAt, updatedAt';
+  'nordVpnLocation, id, workspaceOpen, name, host, port, tls, nick, username, iconUrl, realName, password, authMethod, authTarget, authAccount, favorite, notes, createdAt, updatedAt';
 
 export const listNetworks = (db: SqliteDb): StoredNetworkProfile[] => {
   const sql = `SELECT ${networkColumns} FROM networks ORDER BY favorite DESC, createdAt ASC`;
-  return (db.prepare(sql).all() as NetworkRow[]).map((row) => toNetworkProfile(row, readNetworkLists(db, row.id)));
+  return (db.prepare(sql).all() as NetworkRow[]).map((row) => ({ ...toNetworkProfile(row, readNetworkLists(db, row.id)), ...(hasNordVpnCredentials(db) ? { hasNordVpnCredentials: true } : {}) }));
 };
 
 export const getNetwork = (db: SqliteDb, networkId: string): StoredNetworkProfile | null => {
   const row = getNetworkRow(db, networkId);
-  return row ? toNetworkProfile(row, readNetworkLists(db, row.id)) : null;
+  return row ? ({ ...toNetworkProfile(row, readNetworkLists(db, row.id)), ...(hasNordVpnCredentials(db) ? { hasNordVpnCredentials: true } : {}) }) : null;
 };
 
 export const getRuntimeNetwork = (
@@ -35,7 +36,7 @@ export const getRuntimeNetwork = (
   secretBox: SecretBox
 ): RuntimeNetworkProfile | null => {
   const row = getNetworkRow(db, networkId);
-  return row ? toRuntimeNetworkProfile(row, secretBox, readNetworkLists(db, row.id)) : null;
+  return row ? ({ ...toRuntimeNetworkProfile(row, secretBox, readNetworkLists(db, row.id)), nordVpnCredentials: readNordVpnCredentials(db, secretBox) }) : null;
 };
 
 export const upsertNetwork = (
@@ -55,6 +56,10 @@ export const upsertNetwork = (
   const storedIconUrl = resolveStoredIconUrl(input, existing);
   const storedNotes = input.notes ?? existing?.notes ?? '';
   requireStoredPasswordForAuthMethod(storedAuthMethod, storedPassword);
+  if ((input.nordVpnLocation ?? existing?.nordVpnLocation) && !hasNordVpnCredentials(db) && !(input.nordVpnUsername && input.nordVpnPassword)) {
+    throw badRequest('Enter NordVPN service credentials before choosing a proxy');
+  }
+  saveNordVpnCredentials(db, secretBox, input.nordVpnUsername, input.nordVpnPassword);
   db.prepare(
     `INSERT INTO networks
        (id, workspaceOpen, name, host, port, tls, nick, username, iconUrl, realName, password, authMethod, authTarget, authAccount, favorite, notes, createdAt, updatedAt)
@@ -96,6 +101,7 @@ export const upsertNetwork = (
     now,
     now
   );
+  db.prepare('UPDATE networks SET nordVpnLocation = ? WHERE id = ?').run(input.nordVpnLocation ?? existing?.nordVpnLocation ?? '', id);
   replaceNetworkAltNicks(db, id, input.altNicks ?? []);
   replaceNetworkHistoricalSelfNicks(db, id, input.historicalSelfNicks ?? []);
   replaceNetworkAutoJoinChannels(db, id, input.autoJoin ?? []);
@@ -117,7 +123,7 @@ export const setWorkspaceOpen = (db: SqliteDb, networkId: string, workspaceOpen:
 };
 
 export const hasEncryptedNetworkPasswords = (db: SqliteDb) =>
-  (db.prepare('SELECT password FROM networks WHERE password IS NOT NULL').all() as Array<{ password: string }>)
+  hasNordVpnCredentials(db) || (db.prepare('SELECT password FROM networks WHERE password IS NOT NULL').all() as Array<{ password: string }>)
     .some((row) => isEncryptedSecret(row.password));
 
 const getNetworkRow = (db: SqliteDb, networkId: string) =>

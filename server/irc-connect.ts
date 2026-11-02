@@ -1,3 +1,7 @@
+import { nordVpnCountry } from '../shared/nordvpn-countries.js';
+import { connectNordVpnCountry } from './irc-nordvpn-tunnel.js';
+import { SocksClient } from 'socks';
+import { nordVpnHost } from '../shared/nordvpn.js';
 import net from 'node:net';
 import tls from 'node:tls';
 import type { IrcConnectContext } from './irc-contexts.js';
@@ -16,10 +20,23 @@ export const connectSocket = (connection: IrcConnectContext) => {
     return;
   }
   connection.clearReconnectTimer();
+  const country = nordVpnCountry(connection.profile.nordVpnLocation ?? '');
+  if (country) {
+    connectNordVpnCountry(connection, country, attachSocket);
+    return;
+  }
+  if (connection.profile.nordVpnLocation) {
+    connectProxy(connection);
+    return;
+  }
   emitStatus(connection, `Looking up ${connection.profile.host}`);
   const socket = connection.profile.tls
     ? tls.connect({ host: connection.profile.host, port: connection.profile.port, servername: connection.profile.host })
     : net.connect({ host: connection.profile.host, port: connection.profile.port });
+  attachSocket(connection, socket);
+};
+
+const attachSocket = (connection: IrcConnectContext, socket: net.Socket | tls.TLSSocket, alreadyConnected = false) => {
   connection.openSocket(socket);
   const isCurrentSocket = () => connection.lifecycle.socket === socket;
   socket.setEncoding('utf8');
@@ -64,7 +81,8 @@ export const connectSocket = (connection: IrcConnectContext) => {
   if (connection.profile.tls) {
     (socket as tls.TLSSocket).on('secureConnect', beginLogin);
   } else {
-    socket.on('connect', beginLogin);
+    if (alreadyConnected) beginLogin();
+    else socket.on('connect', beginLogin);
   }
   socket.on('data', (chunk) => {
     if (isCurrentSocket()) {
@@ -83,4 +101,45 @@ export const connectSocket = (connection: IrcConnectContext) => {
 const getConnectTimeoutMs = () => {
   const parsed = Number(process.env.PULSETE_IRC_CONNECT_TIMEOUT_MS ?? defaultConnectTimeoutMs);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultConnectTimeoutMs;
+};
+
+const connectProxy = (connection: IrcConnectContext) => {
+  const profile = connection.profile;
+  const raw = new net.Socket();
+  connection.openSocket(raw);
+  const current = () => connection.lifecycle.socket === raw;
+  const host = nordVpnHost(profile.nordVpnLocation ?? '');
+  const credentials = profile.nordVpnCredentials;
+  const fail = () => {
+    if (!current()) return;
+    connection.markConnectionFailure('NordVPN proxy connection failed. Check service credentials and location.');
+    raw.destroy();
+  };
+  raw.on('error', fail);
+  raw.on('close', () => connection.handleSocketClosed(raw));
+  const deadline = setTimeout(fail, getConnectTimeoutMs());
+  deadline.unref?.();
+  connection.setConnectDeadlineTimer(deadline);
+  if (!host || !credentials) {
+    fail();
+    return;
+  }
+  emitStatus(connection, `Connecting through NordVPN (${profile.nordVpnLocation})`);
+  raw.connect({ host, port: 1080 }, () => {
+    if (!current()) { raw.destroy(); return; }
+    void SocksClient.createConnection({
+      command: 'connect',
+      proxy: { host, port: 1080, type: 5, userId: credentials.username, password: credentials.password },
+      destination: { host: profile.host, port: profile.port },
+      existing_socket: raw,
+      timeout: getConnectTimeoutMs(),
+    }).then(({ socket }) => {
+      if (!current()) { socket.destroy(); return; }
+      clearTimeout(deadline);
+      raw.removeListener('error', fail);
+      raw.removeAllListeners('close');
+      const transport = profile.tls ? tls.connect({ socket, servername: profile.host }) : socket;
+      attachSocket(connection, transport, !profile.tls);
+    }).catch(fail);
+  });
 };

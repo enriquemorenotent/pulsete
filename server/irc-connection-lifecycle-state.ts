@@ -93,7 +93,7 @@ export const resolveProfileUpdateStrategy = (
 };
 
 const requiresSocketRestart = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
-  current.host !== next.host || current.port !== next.port || current.tls !== next.tls;
+  current.nordVpnLocation !== next.nordVpnLocation || current.host !== next.host || current.port !== next.port || current.tls !== next.tls;
 
 const requiresConnectingReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) =>
   current.nick !== next.nick || requiresSessionReconnect(current, next);

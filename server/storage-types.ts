@@ -4,6 +4,7 @@ import type { AppSnapshot } from '../shared/protocol-app.js';
 import type { NetworkUserIdentity, UserIdentityKind } from '../shared/user-identity.js';
 
 export type NetworkRow = {
+  nordVpnLocation?: string;
   id: string;
   workspaceOpen: number;
   name: string;
@@ -98,10 +99,13 @@ export type NickEmojiRow = {
 };
 
 export type RuntimeNetworkProfile = StoredNetworkProfile & {
+  nordVpnCredentials?: { username: string; password: string };
   password?: string;
 };
 
 type NetworkWriteInput = {
+  nordVpnUsername?: string;
+  nordVpnPassword?: string;
   id?: string;
   password?: string;
   clearPassword?: boolean;

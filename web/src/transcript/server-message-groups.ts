@@ -149,7 +149,8 @@ const buildServerRow = (
   }
   return {
     kind: 'server-group',
-    key: `server-group:${firstMessage.id}:${lastMessage.id}`,
+    // Appending status messages must not look like history eviction to Virtuoso.
+    key: `server-group:${firstMessage.id}`,
     messageRows,
     sourceLabel,
     tone,

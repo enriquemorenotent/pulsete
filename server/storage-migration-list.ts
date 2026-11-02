@@ -193,4 +193,5 @@ export const storageMigrations: readonly StorageMigration[] = [
     },
   },
   { version: 32, apply: ensureWatchlistActivityStorage },
+  { version: 33, apply: (db) => { ensureColumn(db, 'networks', 'nordVpnLocation', "TEXT NOT NULL DEFAULT ''"); } },
 ];

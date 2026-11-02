@@ -183,3 +183,39 @@ to `main`, while keeping the APT repository on the latest published release.
 ## License
 
 Pulsete is released under the [MIT License](./LICENSE).
+
+### NordVPN proxies
+
+In a network's editor, use **Servers → NordVPN proxy** to select a location.
+Enter the **service username and password** from Nord Account's manual setup page;
+these differ from your normal Nord Account login. Credentials are stored encrypted
+locally and shared by all connections. Leave both credential fields blank to keep
+saved credentials. Each connection saves its own location; choose **Direct
+connection** to stop using a proxy. Saving a different location reconnects an active
+connection.
+
+The dropdown offers 111 VPN countries from the pinned Gluetun v3.41.3 server
+catalog, plus the existing SOCKS5 locations. Country selections need Docker Engine
+running locally, permission to use Docker, and `/dev/net/tun` (Linux). Each IRC
+connection gets its own Gluetun container with a firewall, a randomly assigned
+loopback-only proxy port, and a random proxy password. Pulsete waits for the VPN
+health check before sending IRC traffic. Your host NordVPN settings are not changed.
+
+The first country connection downloads the pinned Gluetun image. Startup can take a
+few minutes. Service credentials are passed in temporary owner-only files, not
+command arguments; normal disconnect and application shutdown remove the container
+and these files. If Pulsete is forcibly killed or Docker becomes unavailable,
+cleanup may not finish: inspect containers labeled `org.pulsete.vpn=true` and
+remove only the unused `pulsete-vpn-*` containers. Temporary credential directories
+are named `pulsete-vpn-*` under the OS temporary directory and can be removed after
+their containers have stopped.
+
+Available servers and countries can change, and simultaneous tunnels count toward
+your NordVPN account's connection limits. Selecting a country does not guarantee
+that a working server is available. A failed tunnel never falls back to direct IRC.
+Keep **Use TLS** enabled for encryption between the VPN server and IRC server.
+
+The country list is generated from:
+`docker run --rm qmcgaw/gluetun:v3.41.3 format-servers -nordvpn -format json`
+(filter OpenVPN servers with UDP support). Update the catalog and pinned image
+together. Provider setup: https://github.com/qdm12/gluetun-wiki/blob/main/setup/providers/nordvpn.md

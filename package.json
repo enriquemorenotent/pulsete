@@ -38,6 +38,7 @@
       "react-dom",
       "react-virtuoso",
       "tailwind-merge",
+      "socks",
       "ws",
       "zod"
     ]
@@ -68,6 +69,7 @@
   "dependencies": {
     "@openai/codex-security": "^0.1.1",
     "better-sqlite3": "12.11.1",
+    "socks": "2.8.10",
     "ws": "8.21.3"
   },
   "devDependencies": {

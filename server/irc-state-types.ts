@@ -54,6 +54,8 @@ export type IrcHeartbeatState = {
 };
 
 export type IrcLifecycleState = {
+  stopVpnTunnel?: () => void;
+  vpnServer?: string;
   socket: IrcSocket | null;
   buffer: string;
   connectDeadlineTimer: ReturnType<typeof setTimeout> | null;

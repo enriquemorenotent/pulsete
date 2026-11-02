@@ -1,3 +1,4 @@
+import { closeNordVpnTunnels } from './nordvpn-tunnel.js';
 import { createServer, type Server } from 'node:http';
 import { resolveAppPaths, type AppPathInput } from './app-paths.js';
 import { createHttpHandler } from './http-router.js';
@@ -58,6 +59,7 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
       }
       closed = true;
       runtimeHost.close();
+      await closeNordVpnTunnels();
       await closeServer(server);
     },
   };

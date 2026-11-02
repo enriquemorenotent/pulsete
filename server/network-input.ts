@@ -1,3 +1,5 @@
+import { nordVpnCountry } from '../shared/nordvpn-countries.js';
+import { nordVpnHost } from '../shared/nordvpn.js';
 import { z } from 'zod';
 import { networkAuthMethodSchema } from '../shared/protocol-chat.js';
 import { badRequest } from './app-error.js';
@@ -5,6 +7,9 @@ import { normalizeAuthTarget, normalizeChannelTarget, requireIrcToken, requireSi
 import type { NetworkInput } from './storage-types.js';
 
 const networkInputSchema = z.object({
+  nordVpnLocation: z.string().refine(value => value === '' || Boolean(nordVpnHost(value)) || Boolean(nordVpnCountry(value)), 'Choose a valid NordVPN location').optional(),
+  nordVpnUsername: z.string().trim().min(1).max(255).optional(),
+  nordVpnPassword: z.string().min(1).max(255).optional(),
   workspaceOpen: z.boolean().optional(),
   name: z.string().trim().min(1, 'Network name is required'),
   host: z.string().trim().min(1, 'Server address is required'),

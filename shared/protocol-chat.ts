@@ -73,6 +73,8 @@ export const networkAuthMethodSchema = z.enum(['none', 'server-pass', 'nickserv'
 export type NetworkAuthMethod = z.infer<typeof networkAuthMethodSchema>;
 
 export const networkSchema = z.object({
+  nordVpnLocation: z.string().optional(),
+  hasNordVpnCredentials: z.boolean().optional(),
   id: z.string(),
   workspaceOpen: z.boolean().default(false),
   name: z.string(),
@@ -199,6 +201,7 @@ export const emptyNetworkRuntimeCapabilities = (): NetworkRuntimeCapabilities =>
 export const networkRuntimeStateSchema = z.object({
   phase: networkRuntimePhaseSchema,
   serverName: z.string().nullable(),
+  vpnServer: z.string().optional(),
   nick: z.string(),
   capabilities: networkRuntimeCapabilitiesSchema.optional(),
 });

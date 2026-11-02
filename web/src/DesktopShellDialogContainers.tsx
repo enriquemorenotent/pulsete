@@ -138,6 +138,7 @@ export const NetworkEditorDialogContainer = memo(function NetworkEditorDialogCon
   externalAvatarsEnabled: boolean;
 }) {
   const dispatch = useAppDispatch();
+  const networks = useAppSelector(selectNetworks);
   const networkManager = useAppSelector(selectNetworkManagerState);
   const model = useNetworkEditorController({
     actions,
@@ -150,7 +151,7 @@ export const NetworkEditorDialogContainer = memo(function NetworkEditorDialogCon
     <NetworkEditorDialog
       activeTab={model.activeTab}
       externalAvatarsEnabled={externalAvatarsEnabled}
-      form={model.form}
+      form={{ ...model.form, hasNordVpnCredentials: model.form.hasNordVpnCredentials || networks.some(network => network.hasNordVpnCredentials) }}
       onTabChange={model.onTabChange}
       onClose={model.onClose}
       onSubmit={model.onSubmit}

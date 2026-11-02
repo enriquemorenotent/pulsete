@@ -103,22 +103,20 @@ export function ConnectionSidebarNetworkSection(
 						<button
 							className="rounded-sm p-1.5 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/45 disabled:pointer-events-none disabled:opacity-50"
 							onClick={() =>
-								connection.runtime?.phase === 'connected'
+								(connection.runtime?.phase === 'connected' || connection.runtime?.phase === 'connecting')
 									? props.onDisconnectNetwork(
 											connection.network.id,
 										)
 									: props.onReconnectNetwork(connection.network)
 							}
-							aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : 'Reconnect'} ${connection.label}`}
-							disabled={connection.runtime?.phase === 'connecting'}
+							aria-label={`${connection.runtime?.phase === 'connected' ? 'Disconnect' : connection.runtime?.phase === 'connecting' ? 'Cancel connection' : 'Reconnect'} ${connection.label}`}
 						>
-							{connection.runtime?.phase === 'connected' ? (
+							{connection.runtime?.phase === 'connecting' ? <X className="size-3" /> : connection.runtime?.phase === 'connected' ? (
 								<Unplug className="size-3" />
 							) : (
 								<Plug
 									className={cn(
 										'size-3',
-										connection.runtime?.phase === 'connecting' && 'animate-pulse',
 									)}
 								/>
 							)}

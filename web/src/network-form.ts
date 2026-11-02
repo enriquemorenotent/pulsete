@@ -8,6 +8,10 @@ import {
 export type EditorTab = 'servers' | 'autojoin';
 
 export type NetworkForm = {
+  nordVpnLocation?: string;
+  nordVpnUsername?: string;
+  nordVpnPassword?: string;
+  hasNordVpnCredentials?: boolean;
   id?: string;
   name: string;
   host: string;
@@ -31,6 +35,9 @@ export type NetworkForm = {
 };
 
 export type SaveNetworkPayload = {
+  nordVpnLocation?: string;
+  nordVpnUsername?: string;
+  nordVpnPassword?: string;
   id?: string;
   name: string;
   host: string;
@@ -80,6 +87,8 @@ export const parseAutoJoin = (text: string) =>
     .filter(Boolean);
 
 export const toForm = (network: NetworkProfile): NetworkForm => ({
+  ...(network.nordVpnLocation ? { nordVpnLocation: network.nordVpnLocation } : {}),
+  ...(network.hasNordVpnCredentials ? { hasNordVpnCredentials: true } : {}),
   id: network.id,
   name: network.name,
   host: network.host,
@@ -107,6 +116,9 @@ export const toSaveNetworkPayload = (form: NetworkForm): SaveNetworkPayload => {
   const password = form.authMethod === 'none' ? '' : form.password;
   const authAccount = usesAuthAccount ? form.authAccount.trim() : '';
   return {
+    nordVpnLocation: form.nordVpnLocation ?? '',
+    nordVpnUsername: form.nordVpnUsername?.trim() || undefined,
+    nordVpnPassword: form.nordVpnPassword || undefined,
     id: form.id,
     name: form.name.trim(),
     host: form.host.trim(),

@@ -205,3 +205,19 @@ test('local day rollover refreshes dynamic day divider labels', () => {
     ['Yesterday', 'Today'],
   );
 });
+
+test('connect and cancel status messages preserve server group identity without hiding real history eviction', () => {
+  const starting = makeMessage('message-1', { nick: null, kind: 'system', body: 'Preparing VPN connection', ts: 1000 });
+  const canceled = makeMessage('message-2', { nick: null, kind: 'system', body: 'Disconnected from server', ts: 2000 });
+  const first = derive(makeInput([starting], { listKind: 'server' }));
+  const nextInput = makeInput([starting, canceled], { listKind: 'server' });
+  const next = derive(nextInput, first);
+  const firstGroup = first.model.flatRows.find(row => row.kind === 'server-group');
+  const nextGroup = next.model.flatRows.find(row => row.kind === 'server-group');
+  assert.ok(firstGroup && nextGroup);
+  assert.equal(nextGroup.key, firstGroup.key);
+  assert.equal(nextGroup.messageRows.length, 2);
+  assertMatchesFullBuild(next, nextInput);
+  const evicted = derive(makeInput([canceled], { listKind: 'server' }), next);
+  assert.notEqual(evicted.model.flatRows.find(row => row.kind === 'server-group')?.key, firstGroup.key);
+});

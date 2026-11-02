@@ -61,6 +61,7 @@ test('network state messages dispatch runtime capabilities', () => {
     networkId: 'network-1',
     phase: 'connecting',
     serverName: null,
+    vpnServer: 'de1566.nordvpn.com',
     nick: 'tester',
     capabilities: {
       offered: ['account-tag', 'echo-message'],
@@ -74,6 +75,7 @@ test('network state messages dispatch runtime capabilities', () => {
     networkId: 'network-1',
     phase: 'connecting',
     serverName: null,
+    vpnServer: 'de1566.nordvpn.com',
     nick: 'tester',
     capabilities: {
       offered: ['account-tag', 'echo-message'],

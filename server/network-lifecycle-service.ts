@@ -31,6 +31,7 @@ export class NetworkLifecycleService {
     const duplicate = this.context.networks.upsert({
       workspaceOpen: false,
       name: createDuplicateNetworkName(network.name, this.context.networks.list()),
+      nordVpnLocation: network.nordVpnLocation,
       host: network.host,
       port: network.port,
       tls: network.tls,
@@ -58,7 +59,9 @@ export class NetworkLifecycleService {
     }
     const network = this.context.networks.upsert(input);
     const messages = createNetworkUpsertMessages(this.context.conversations, [network]);
-    this.context.connectionManager.updateProfiles([network.id]);
+    this.context.connectionManager.updateProfiles(input.nordVpnUsername !== undefined
+      ? this.context.networks.list().map(profile => profile.id)
+      : [network.id]);
     return { network, serverBuffer: this.context.conversations.getServerBuffer(network.id), messages };
   }
 

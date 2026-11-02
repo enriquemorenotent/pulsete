@@ -24,6 +24,7 @@ export const ensureColumn = (
 };
 
 export const ensureCurrentNetworkColumns = (db: SqliteDb) => {
+  ensureColumn(db, 'networks', 'nordVpnLocation', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'networks', 'workspaceOpen', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'networks', 'username', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'networks', 'iconUrl', "TEXT NOT NULL DEFAULT ''");

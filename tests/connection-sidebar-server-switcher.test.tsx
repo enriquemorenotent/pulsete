@@ -279,3 +279,18 @@ test('connection sidebar applies connection image state to the active account', 
 
   assert.match(markup, /grayscale/);
 });
+
+test('connecting account exposes an enabled cancel action in the server header', () => {
+  const network = makeSidebarNetwork({ id: 'pending', name: 'Pending VPN' });
+  const markup = renderConnectionSidebar({
+    networks: [network],
+    networkStates: { pending: makeSidebarRuntime({ phase: 'connecting' }) },
+    buffers: [makeSidebarBuffer({ id: 'pending-server', networkId: 'pending' })],
+    selection: { kind: 'buffer', bufferId: 'pending-server' },
+  });
+  const button = markup.match(/<button[^>]*aria-label="Cancel connection Pending VPN"[^>]*>/)?.[0];
+  assert.ok(button);
+  assert.doesNotMatch(button, /\sdisabled(?:=|\s|>)/);
+  assert.match(button, /title="Cancel connection"/);
+  assert.match(markup, /lucide-x/);
+});

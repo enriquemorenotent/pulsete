@@ -1,3 +1,4 @@
+import { ensureNordVpnStorage } from './storage-nordvpn.js';
 import { ensureWatchlistActivityStorage } from './storage-watchlist-activity.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import { ensureQueryPeerIdentityStorage } from './storage-query-identities.js';
@@ -39,6 +40,7 @@ export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationCo
   }
   ensureWatchlistActivityStorage(db);
   ensureCurrentNetworkColumns(db);
+  ensureNordVpnStorage(db);
   ensureCurrentBufferColumns(db);
   ensureCurrentMessageColumns(db);
   ensureNickEmojiTable(db);
