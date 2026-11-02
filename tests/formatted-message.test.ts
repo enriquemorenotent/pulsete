@@ -1,3 +1,4 @@
+import { assertProxiedMedia } from './helpers/assert-proxied-media.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createElement } from 'react';
@@ -497,11 +498,3 @@ test('renders raw mode with visible escape sequences instead of hidden control c
   assert.ok(!html.includes('\u0003'));
   assert.ok(!html.includes('\u0002'));
 });
-
-function assertProxiedMedia(markup: string, tag: string, source: string) {
-  const match = new RegExp(`<${tag}[^>]*src="([^"]+)"`).exec(markup);
-  assert.ok(match);
-  const url = new URL(match[1]!.replaceAll('&amp;', '&'), 'http://localhost');
-  assert.equal(url.pathname, '/api/media/resource');
-  assert.equal(url.searchParams.get('url'), source);
-}
