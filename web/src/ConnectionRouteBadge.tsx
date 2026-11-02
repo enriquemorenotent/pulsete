@@ -34,6 +34,6 @@ export function ConnectionRouteBadge({ network, phase, vpnServer, embedded = fal
   )}>
     {flag ? <span aria-hidden="true" className="text-xs leading-none">{flag}</span> : null}
     <Icon aria-hidden="true" className="size-3" />
-    <span aria-hidden="true">{text}{phase === 'connecting' ? '…' : phase === 'offline' ? ' · Offline' : ''}{serverNumber ? ` #${serverNumber}` : ''}</span>
+    <span aria-hidden="true">{text}{serverNumber ? ` #${serverNumber}` : ''}</span>
   </span>;
 }

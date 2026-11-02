@@ -39,6 +39,8 @@
       "react-virtuoso",
       "tailwind-merge",
       "socks",
+      "smart-buffer",
+      "ip-address",
       "ws",
       "zod"
     ]
