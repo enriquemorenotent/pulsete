@@ -1,3 +1,4 @@
+import { Image } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -17,41 +18,22 @@ type PreferencesMediaSectionProps = {
 
 export function PreferencesMediaSection(props: PreferencesMediaSectionProps) {
   return (
-    <section className="space-y-4">
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold tracking-tight text-foreground">
-          Media
-        </h3>
-        <p className="text-[13px] text-muted-foreground">
-          Choose whether passive images and previews are shown while using Pulsete.
-        </p>
+    <section className="flex items-center gap-3 border-b border-white/6 py-5">
+      <Image aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <h4 className="text-sm font-medium">Media display</h4>
+        <p className="text-xs leading-relaxed text-muted-foreground">Show or hide artwork, avatars, and previews across your workspace.</p>
       </div>
-
-      <div className="space-y-3 border-b border-border pb-6 text-sm">
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">Media display</p>
-            <p className="text-muted-foreground">
-              Hide media keeps server artwork, avatars, inline previews, and profile images out of passive views.
-            </p>
-          </div>
-          <Select
-            value={props.mode}
-            onValueChange={(value) => props.onSetMode(value as MediaVisibilityMode)}
-          >
-            <SelectTrigger
-              aria-label="Media display"
-              size="sm"
-              className={preferenceSelectTriggerClassName}
-            >
-              <SelectValue placeholder="Select media display" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="show-media">Show media</SelectItem>
-              <SelectItem value="hide-media">Hide media</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="w-36 shrink-0">
+        <Select value={props.mode} onValueChange={(value) => props.onSetMode(value as MediaVisibilityMode)}>
+          <SelectTrigger aria-label="Media display" size="sm" className={preferenceSelectTriggerClassName}>
+            <SelectValue placeholder="Select media display" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="show-media">Show media</SelectItem>
+            <SelectItem value="hide-media">Hide media</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </section>
   );

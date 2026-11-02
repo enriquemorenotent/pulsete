@@ -1,3 +1,4 @@
+import { UserRound } from 'lucide-react';
 import { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox.js';
 import type { UserAvatarSettings } from './user-avatars/settings.js';
@@ -10,36 +11,15 @@ type PreferencesAvatarSectionProps = {
 export function PreferencesAvatarSection(props: PreferencesAvatarSectionProps) {
   const externalAvatarsId = useId();
   return (
-    <section className="space-y-4">
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold tracking-tight text-foreground">
-          Avatars
-        </h3>
-        <p className="text-[13px] text-muted-foreground">
-          Show public IRCCloud avatars when Pulsete can identify a user from channel presence or private messages.
-        </p>
+    <section className="flex items-center gap-3 py-5">
+      <UserRound aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <label htmlFor={externalAvatarsId} className="cursor-pointer text-sm font-medium">External avatars</label>
+        <p className="text-xs leading-relaxed text-muted-foreground">Use public IRCCloud avatars for matching users when media is shown.</p>
       </div>
-
-      <div className="space-y-3 border-b border-border pb-6 text-sm">
-        <div className="flex items-start justify-between gap-3 rounded-lg bg-secondary/50 px-4 py-4">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">Show external avatars</p>
-            <p className="text-muted-foreground">
-              Loads matching avatar images from IRCCloud&apos;s CDN in nicklists and private-message headers.
-            </p>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
-            <Checkbox
-              id={externalAvatarsId}
-              checked={props.settings.externalAvatarsEnabled}
-              onCheckedChange={(checked) =>
-                props.onSetExternalAvatarsEnabled(checked === true)}
-              aria-label="Show external IRCCloud avatars"
-            />
-            <label htmlFor={externalAvatarsId} className="cursor-pointer">External</label>
-          </div>
-        </div>
-      </div>
+      <Checkbox id={externalAvatarsId} checked={props.settings.externalAvatarsEnabled}
+        onCheckedChange={(checked) => props.onSetExternalAvatarsEnabled(checked === true)}
+        aria-label="Show external IRCCloud avatars" />
     </section>
   );
 }

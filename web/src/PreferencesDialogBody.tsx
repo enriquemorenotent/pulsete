@@ -58,7 +58,12 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
           </TabsTrigger>
         ))}
       </TabsList>
-      <TabsContent value="display" className="m-0 min-h-0 min-w-0 flex-1 space-y-8 overflow-y-auto p-6">
+      <TabsContent value="display" className="m-0 min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto p-6">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold tracking-tight">Display</h3>
+        <p className="text-[13px] text-muted-foreground">Choose which images appear in your workspace.</p>
+      </div>
+      <div className="border-y border-white/6">
       <PreferencesMediaSection
         mode={props.mediaVisibilitySettings.mode}
         onSetMode={props.onSetMediaVisibilityMode}
@@ -67,6 +72,7 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
         settings={props.userAvatarSettings}
         onSetExternalAvatarsEnabled={props.onSetExternalAvatarsEnabled}
       />
+      </div>
       </TabsContent>
       <TabsContent value="ai" className="m-0 min-h-0 min-w-0 flex-1 overflow-y-auto p-6"><PreferencesAiSection /></TabsContent>
       <TabsContent value="notifications" className="m-0 min-h-0 min-w-0 flex-1 overflow-y-auto p-6">

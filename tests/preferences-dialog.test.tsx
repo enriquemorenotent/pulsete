@@ -81,9 +81,9 @@ test('settings categories preserve notification, media and backup controls', () 
   assert.match(markup, /Media/);
   assert.match(markup, /Media display/);
   assert.match(markup, /aria-label="Media display"/);
-  assert.match(markup, /Hide media keeps server artwork/i);
-  assert.match(markup, /Avatars/);
-  assert.match(markup, /Show external avatars/);
+  assert.match(markup, /Show or hide artwork, avatars, and previews/);
+  assert.match(markup, /External avatars/);
+  assert.match(markup, /Show external IRCCloud avatars/);
   assert.match(markup, /IRCCloud/);
   assert.match(markup, /Notifications/);
   assert.match(markup, /Desktop notifications/);
