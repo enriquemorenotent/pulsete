@@ -14,25 +14,22 @@ export function PreferencesNotificationAllowedContacts(
   return (
     <div className="space-y-2">
       <div className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-          Notification Contacts
-        </p>
-        <p className="text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Contacts with notifications enabled.
         </p>
       </div>
 
       {props.contacts.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-white/6">
           {props.contacts.map((contact) => {
             const networkName = props.networkNameById.get(contact.networkId) ?? contact.networkId;
             return (
               <li
                 key={`${contact.networkId}:${identityKey(contact.identity ?? identityFromNick(contact.nick))}`}
-                className="flex items-center justify-between gap-3 rounded-md border border-white/6 bg-black/14 px-3 py-2"
+                className="flex items-center justify-between gap-3 px-1 py-2"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{contact.nick}</p>
+                <div className="flex min-w-0 flex-1 items-baseline gap-3">
+                  <p className="w-32 shrink-0 truncate text-sm font-medium text-foreground">{contact.nick}</p>
                   <p className="truncate text-[12px] text-muted-foreground">{networkName}</p>
                 </div>
                 <Button
@@ -48,7 +45,7 @@ export function PreferencesNotificationAllowedContacts(
           })}
         </ul>
       ) : (
-        <p className="text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           No notification contacts yet.
         </p>
       )}

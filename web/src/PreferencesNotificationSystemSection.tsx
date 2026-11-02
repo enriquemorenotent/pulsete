@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
 
@@ -23,43 +24,20 @@ export function PreferencesNotificationSystemSection(
 ) {
   const systemEnabledId = useId();
   return (
-    <div className="space-y-3 rounded-md border border-white/6 bg-black/14 px-3 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">Show system notifications</p>
-          <p className="text-muted-foreground">
-            Show OS-level alerts for allowed conversations and watchlist presence while this app is in the background.
-          </p>
-        </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground">
-          <Checkbox
-            id={systemEnabledId}
-            checked={props.enabled}
-            disabled={props.permission !== 'granted'}
-            onCheckedChange={(checked) => props.onSetEnabled(checked === true)}
-            aria-label="Show system notifications for allowed conversations and watchlist presence"
-          />
-          <label htmlFor={systemEnabledId} className="cursor-pointer">System</label>
+    <div className="flex items-start gap-3 py-4">
+      <Bell aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <label htmlFor={systemEnabledId} className="cursor-pointer text-sm font-medium">Desktop notifications</label>
+        <p className="text-xs text-muted-foreground">Messages and watchlist presence while Pulsete is in the background.</p>
+        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
+          <span>{notificationPermissionCopy[props.permission]}</span>
+          {props.permission === 'default' ? <Button variant="outline" size="sm" onClick={async () => {
+            const permission = await props.onRequestPermission();
+            if (permission === 'granted') props.onSetEnabled(true);
+          }}>Allow in Browser</Button> : null}
         </div>
       </div>
-
-      <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
-        <span>{notificationPermissionCopy[props.permission]}</span>
-        {props.permission === 'default' ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              const permission = await props.onRequestPermission();
-              if (permission === 'granted') {
-                props.onSetEnabled(true);
-              }
-            }}
-          >
-            Allow in Browser
-          </Button>
-        ) : null}
-      </div>
+      <Checkbox id={systemEnabledId} checked={props.enabled} disabled={props.permission !== 'granted'} onCheckedChange={(checked) => props.onSetEnabled(checked === true)} aria-label="Show system notifications for allowed conversations and watchlist presence" />
     </div>
   );
 }

@@ -13,25 +13,22 @@ export function PreferencesNotificationAllowedChannels(
   return (
     <div className="space-y-2">
       <div className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-          Notification Channels
-        </p>
-        <p className="text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Channels with notifications enabled.
         </p>
       </div>
 
       {props.channels.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-white/6">
           {props.channels.map((channel) => {
             const networkName = props.networkNameById.get(channel.networkId) ?? channel.networkId;
             return (
               <li
                 key={`${channel.networkId}:${channel.channel.toLowerCase()}`}
-                className="flex items-center justify-between gap-3 rounded-md border border-white/6 bg-black/14 px-3 py-2"
+                className="flex items-center justify-between gap-3 px-1 py-2"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{channel.channel}</p>
+                <div className="flex min-w-0 flex-1 items-baseline gap-3">
+                  <p className="w-32 shrink-0 truncate text-sm font-medium text-foreground">{channel.channel}</p>
                   <p className="truncate text-[12px] text-muted-foreground">{networkName}</p>
                 </div>
                 <Button
@@ -47,7 +44,7 @@ export function PreferencesNotificationAllowedChannels(
           })}
         </ul>
       ) : (
-        <p className="text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           No notification channels yet.
         </p>
       )}

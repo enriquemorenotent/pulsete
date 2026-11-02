@@ -55,22 +55,15 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
     <section className="space-y-4">
       <div className="space-y-1">
         <h3 className="text-sm font-semibold tracking-tight text-foreground">
-          Conversation Notifications
+          Notifications
         </h3>
         <p className="text-[13px] text-muted-foreground">
-          Turn notifications on from a PM or channel header, then choose how they should be delivered here.
+          Enable alerts from a conversation’s header, then manage them here.
         </p>
       </div>
 
       <div className="space-y-5 text-sm">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Delivery Methods
-          </p>
-          <p className="text-muted-foreground">
-            Notification conversations can use one or both delivery methods below.
-          </p>
-        </div>
+        <div className="border-y border-white/6">
         <PreferencesNotificationSoundSection
           enabled={props.contactNotifications.enabled}
           sound={props.contactNotifications.sound}
@@ -84,11 +77,12 @@ export function PreferencesNotificationsPanel(props: PreferencesNotificationsPan
           onRequestPermission={props.onRequestContactNotificationSystemPermission}
           onSetEnabled={props.onSetContactNotificationSystemEnabled}
         />
+        </div>
         <Tabs defaultValue="contacts">
           <TabsList aria-label="Notification lists" className="max-w-full rounded-lg">
-            <TabsTrigger value="contacts" className="min-w-0">Contacts</TabsTrigger>
-            <TabsTrigger value="channels" className="min-w-0">Channels</TabsTrigger>
-            <TabsTrigger value="muted" className="min-w-0">Muted</TabsTrigger>
+            <TabsTrigger value="contacts" className="min-w-0">Contacts <span className="ml-1 text-xs text-muted-foreground">{sortedAudioContacts.length}</span></TabsTrigger>
+            <TabsTrigger value="channels" className="min-w-0">Channels <span className="ml-1 text-xs text-muted-foreground">{sortedAudioChannels.length}</span></TabsTrigger>
+            <TabsTrigger value="muted" className="min-w-0">Muted <span className="ml-1 text-xs text-muted-foreground">{sortedMutedNicks.length}</span></TabsTrigger>
           </TabsList>
           <TabsContent value="contacts">
         <PreferencesNotificationAllowedContacts
