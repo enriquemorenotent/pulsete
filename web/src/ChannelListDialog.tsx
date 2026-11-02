@@ -1,3 +1,5 @@
+import { Hash, Search, Users, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils.js';
 import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import type { ChannelListEntry, NetworkProfile } from '../../shared/protocol-chat.js';
@@ -7,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog.js';
@@ -22,72 +23,61 @@ type ChannelListDialogProps = {
 
 export function ChannelListDialog(props: ChannelListDialogProps) {
   const [query, setQuery] = useState('');
+  const [selection, setSelection] = useState<{ networkId: string | null; name: string } | null>(null);
   const deferredQuery = useDeferredValue(query);
   const search = deferredQuery.trim().toLowerCase();
-  const filteredEntries = useMemo(
-    () => filterChannelListEntries(props.state.entries, search),
-    [props.state.entries, search],
-  );
+  const filteredEntries = useMemo(() => filterChannelListEntries(props.state.entries, search), [props.state.entries, search]);
+  const selected = filteredEntries.find(entry => selection?.networkId === props.state.networkId && entry.name === selection.name) ?? filteredEntries[0] ?? null;
 
   useEffect(() => {
-    if (!props.state.open) {
-      setQuery('');
-    }
+    setQuery('');
+    setSelection(null);
   }, [props.state.networkId, props.state.open]);
 
   return (
     <Dialog open={props.state.open} onOpenChange={(open) => !open && props.onClose()}>
       <DialogContent className="h-[min(90dvh,44rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),72rem)]">
         <div className="flex h-full min-h-0 flex-col">
-          <div className="shrink-0 space-y-3 border-b border-border px-4 py-3">
+          <div className="shrink-0 space-y-4 border-b border-white/6 px-5 py-4">
             <DialogHeader className="space-y-1">
               <DialogTitle>Channel List</DialogTitle>
-              <DialogDescription>
-                {props.network?.name ?? 'Server'} · {buildStatusText(props.state, filteredEntries.length, search.length > 0)}
-              </DialogDescription>
+              <DialogDescription>{props.network?.name ?? 'Server'} · Find a conversation to join.</DialogDescription>
             </DialogHeader>
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search channel names or topics"
-            />
-          </div>
-
-          <div className="grid shrink-0 grid-cols-[minmax(0,16rem)_5rem_minmax(0,1fr)_6rem] gap-3 border-b border-border bg-secondary/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            <span>Channel</span>
-            <span className="text-right">Users</span>
-            <span>Topic</span>
-            <span className="text-right">Action</span>
-          </div>
-
-          <div className="min-h-0 flex-1">
-            {filteredEntries.length > 0 ? (
-              <Virtuoso
-                style={{ height: '100%' }}
-                data={filteredEntries}
-                computeItemKey={resolveChannelListItemKey}
-                itemContent={(_index, entry) => (
-                  <ChannelListRow entry={entry} onJoin={props.onJoin} />
-                )}
-              />
-            ) : (
-              <div className="flex h-full min-h-60 items-center justify-center px-6 py-8">
-                <div className="max-w-md border border-border bg-card px-4 py-5 text-center text-[13px] text-muted-foreground">
-                  {buildEmptyStateText(props.state, search.length > 0)}
-                </div>
+            <div className="flex items-center gap-4">
+              <div className="relative min-w-0 flex-1">
+                <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input aria-label="Search channels" className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search channel names or topics" />
               </div>
-            )}
+              <p role="status" className="shrink-0 text-xs text-muted-foreground">{buildStatusText(props.state, filteredEntries.length, search.length > 0)}</p>
+            </div>
           </div>
-
-          <div className="shrink-0 border-t border-border px-4 py-3">
-            <DialogFooter className="sm:flex-row sm:justify-between">
-              <div className="text-[12px] text-muted-foreground">
-                {props.state.error ? props.state.error : buildFooterText(props.state)}
+          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="min-h-0 min-w-0 py-3">
+              {filteredEntries.length ? <Virtuoso
+                style={{ height: '100%' }} data={filteredEntries} computeItemKey={resolveChannelListItemKey}
+                itemContent={(_index, entry) => <ChannelListRow entry={entry} selected={entry.name === selected?.name} onSelect={() => setSelection({ networkId: props.state.networkId, name: entry.name })} />}
+              /> : <div className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground">{buildEmptyStateText(props.state, search.length > 0)}</div>}
+            </div>
+            <section aria-label="Selected channel" className="flex min-h-0 flex-col border-l border-white/6 bg-black/10">
+              <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                <p className="mb-4 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Selected channel</p>
+                {selected ? <>
+                  <h3 className="break-words text-lg font-semibold text-foreground">{selected.name}</h3>
+                  <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Users aria-hidden className="size-3.5" />{selected.users} {selected.users === 1 ? 'user' : 'users'}</p>
+                  <div className="mt-6 border-t border-white/6 pt-4">
+                    <h4 className="mb-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Topic</h4>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/85">{selected.topic || 'No topic set.'}</p>
+                  </div>
+                </> : <p className="text-sm text-muted-foreground">{filteredEntries.length ? 'Select a channel to see its topic.' : 'No channel selected.'}</p>}
               </div>
-              <Button variant="outline" onClick={props.onClose}>
-                Close
-              </Button>
-            </DialogFooter>
+              <div className="border-t border-white/6 p-4">
+                <Button className="w-full" disabled={!selected} aria-label={selected ? `Join ${selected.name}` : 'Join channel'} onClick={() => { if (selected) void props.onJoin(selected.name); }}><ArrowRight />Join channel</Button>
+              </div>
+            </section>
+          </div>
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/6 px-5 py-3">
+            <p className="text-xs text-muted-foreground">{props.state.error || buildFooterText(props.state)}</p>
+            <Button variant="outline" onClick={props.onClose}>Close</Button>
           </div>
         </div>
       </DialogContent>
@@ -95,22 +85,15 @@ export function ChannelListDialog(props: ChannelListDialogProps) {
   );
 }
 
-const ChannelListRow = memo(function ChannelListRow(props: {
-  entry: ChannelListEntry;
-  onJoin: (channel: string) => Promise<void>;
-}) {
-  return (
-    <div className="grid grid-cols-[minmax(0,16rem)_5rem_minmax(0,1fr)_6rem] gap-3 border-b border-border px-4 py-2 text-[13px]">
-      <span className="truncate font-medium text-foreground">{props.entry.name}</span>
-      <span className="text-right font-mono text-muted-foreground">{props.entry.users}</span>
-      <span className="truncate text-muted-foreground">{props.entry.topic || 'No topic'}</span>
-      <div className="flex justify-end">
-        <Button size="sm" variant="outline" onClick={() => void props.onJoin(props.entry.name)}>
-          Join
-        </Button>
-      </div>
-    </div>
-  );
+const ChannelListRow = memo(function ChannelListRow(props: { entry: ChannelListEntry; selected: boolean; onSelect: () => void }) {
+  return <div className="px-3 pb-1">
+    <button type="button" aria-label={`Select ${props.entry.name}`} aria-pressed={props.selected} onClick={props.onSelect}
+      className={cn('flex w-full min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-left ring-1 ring-inset ring-border outline-none focus-visible:ring-2 focus-visible:ring-primary', props.selected ? 'bg-primary/10' : 'hover:bg-white/5')}>
+      <Hash aria-hidden className={cn('size-4 shrink-0', props.selected ? 'text-primary' : 'text-muted-foreground')} />
+      <span className="flex min-w-0 flex-1 items-center gap-3"><span className="w-32 shrink-0 truncate text-sm font-semibold">{props.entry.name}</span><span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{props.entry.topic || 'No topic'}</span></span>
+      <span title={`${props.entry.users} users`} className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted-foreground"><Users aria-hidden className="size-3" />{props.entry.users}</span>
+    </button>
+  </div>;
 });
 
 const filterChannelListEntries = (entries: ChannelListEntry[], search: string) => {
