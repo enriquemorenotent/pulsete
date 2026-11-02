@@ -27,7 +27,7 @@ export function ConnectionRouteBadge({ network, phase, vpnServer, embedded = fal
   const flag = nordVpnCountryFlag(network.nordVpnLocation ?? '');
   return <span role="img" aria-label={label} title={label} className={cn(
     'inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[9px] font-medium leading-none',
-    embedded ? 'w-[104px] justify-center self-stretch rounded-r-lg border-l px-1.5' : 'rounded border px-1.5 py-0.5',
+    embedded ? 'w-[104px] justify-start self-stretch rounded-r-lg border-l px-1.5' : 'rounded border px-1.5 py-0.5',
     phase === 'connected' ? 'border-emerald-400/15 bg-emerald-400/5 text-emerald-300'
       : phase === 'connecting' ? 'border-amber-400/15 bg-amber-400/5 text-amber-300'
         : 'border-border/60 text-muted-foreground',
