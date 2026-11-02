@@ -70,45 +70,43 @@ export function PreferencesBackupSection(props: PreferencesBackupSectionProps) {
           Backup & Restore
         </h3>
         <p className="text-[13px] text-muted-foreground">
-          Export or replace all local Pulsete data, including chat history and saved account passwords.
+          Back up your networks, chat history, settings, and saved passwords.
         </p>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-border bg-secondary/30 px-4 py-4 text-[13px]">
-        <div className="flex flex-col gap-3 rounded-md border border-white/6 bg-black/14 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">Full backup</p>
-            <p className="text-muted-foreground">
-              Backup files are plain files. Store them somewhere private.
-            </p>
+      <div className="divide-y divide-white/6 border-y border-white/6">
+        <div className="flex items-center gap-3 py-5">
+          <Download aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1 space-y-1">
+            <h4 className="text-sm font-medium">Export backup</h4>
+            <p className="text-xs text-muted-foreground">Save a full copy of your current data.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busyTask !== null || pendingImport !== null}
-              onClick={() => void runTask('export', props.onExportBackup)}
-            >
-              <Download />
-              {busyTask === 'export' ? 'Exporting' : 'Export Backup'}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={busyTask !== null || pendingImport !== null}
-              onClick={() => inputRef.current?.click()}
-            >
-              <Upload />
-              {busyTask === 'import' ? 'Importing' : 'Import Backup'}
-            </Button>
-          </div>
+          <Button type="button" variant="secondary" size="sm"
+            disabled={busyTask !== null || pendingImport !== null}
+            onClick={() => void runTask('export', props.onExportBackup)}>
+            {busyTask === 'export' ? 'Exporting' : 'Export Backup'}
+          </Button>
         </div>
-        {message ? (
-          <p role={message.kind === 'error' ? 'alert' : 'status'} className={message.kind === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
-            {message.text}
-          </p>
-        ) : null}
+        <div className="flex items-start gap-3 py-5">
+          <Upload aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1 space-y-1">
+            <h4 className="text-sm font-medium">Restore backup</h4>
+            <p className="text-xs text-muted-foreground">Replace your current data with a saved backup.</p>
+            <p className="pt-1 text-xs text-muted-foreground">You’ll review and confirm before anything is replaced.</p>
+          </div>
+          <Button type="button" variant="outline" size="sm"
+            disabled={busyTask !== null || pendingImport !== null}
+            onClick={() => inputRef.current?.click()}>
+            {busyTask === 'import' ? 'Restoring' : 'Choose Backup'}
+          </Button>
+        </div>
       </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">Backup files contain saved passwords and are not encrypted. Store them somewhere private.</p>
+      {message ? (
+        <p role={message.kind === 'error' ? 'alert' : 'status'} className={message.kind === 'error' ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>
+          {message.text}
+        </p>
+      ) : null}
 
       <Dialog open={pendingImport !== null} onOpenChange={(open) => !open && setPendingImport(null)}>
         <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(event) => {

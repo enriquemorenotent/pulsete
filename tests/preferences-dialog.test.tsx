@@ -106,5 +106,5 @@ test('settings categories preserve notification, media and backup controls', () 
   assert.match(markup, />MissD</);
   assert.match(markup, /Backup &amp; Restore/);
   assert.match(markup, /Export Backup/);
-  assert.match(markup, /Import Backup/);
+  assert.match(markup, /Choose Backup/);
 });
