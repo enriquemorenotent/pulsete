@@ -1,3 +1,5 @@
+import { useId } from 'react';
+import { Server, UserRound, KeyRound, Shield, Hash } from 'lucide-react';
 import type { NetworkProfile } from '../../shared/protocol-chat.js';
 import { NetworkIdentityWarning } from './NetworkIdentityWarning.js';
 import { NordVpnSettings } from './NordVpnSettings.js';
@@ -27,7 +29,7 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
       <DialogContent
         aria-describedby={undefined}
-        className="h-[min(90dvh,40rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),56rem)]"
+        className="h-[min(90dvh,42rem)] max-h-[90dvh] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-1rem),58rem)]"
       >
         <div className="flex h-full min-h-0 flex-col">
           <div className="shrink-0 space-y-3 border-b border-border px-4 py-3">
@@ -41,29 +43,41 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
           <Tabs
             value={props.activeTab}
             onValueChange={(value) => props.onTabChange(value as EditorTab)}
-            className="flex min-h-0 flex-1 flex-col"
+            orientation="vertical"
+            className="flex min-h-0 flex-1"
           >
-            <div className="border-b border-border px-4 py-2">
-              <TabsList>
-                <TabsTrigger value="servers">Servers</TabsTrigger>
-                <TabsTrigger value="autojoin">Autojoin</TabsTrigger>
-              </TabsList>
-            </div>
+            <TabsList aria-label="Network settings" className="h-auto w-40 shrink-0 flex-col items-stretch justify-start gap-1 rounded-none border-r border-border bg-black/10 p-3">
+              {[['servers', 'Connection', Server], ['identity', 'Identity', UserRound], ['login', 'Login', KeyRound], ['vpn', 'VPN', Shield], ['autojoin', 'Autojoin', Hash]].map(([value, label, Icon]) => {
+                const TabIcon = Icon as typeof Server;
+                return <TabsTrigger key={value as string} value={value as string} className="justify-start gap-2 rounded-lg px-3 py-2.5 data-[state=active]:bg-primary/15 data-[state=active]:text-primary"><TabIcon className="size-4" />{label as string}</TabsTrigger>;
+              })}
+            </TabsList>
 
             <ScrollArea className="min-h-0 h-full flex-1">
-              <div className="px-4 py-3">
+              <div className="p-6">
                 <TabsContent value="servers" className="mt-0">
+                  <SectionHeading title="Connection" description="Where to connect and how to save this network." />
+                  <ConnectionFields form={props.form} onChange={props.onChange} />
+                </TabsContent>
+                <TabsContent value="identity" className="mt-0">
+                  <SectionHeading title="Identity" description="How you appear on this IRC network." />
                   <NetworkIdentityWarning form={props.form} networks={props.networks ?? []} />
-                  <ServerTab
-                    externalAvatarsEnabled={props.externalAvatarsEnabled}
-                    form={props.form}
-                    onChange={props.onChange}
-                  />
+                  <IdentityFields externalAvatarsEnabled={props.externalAvatarsEnabled} form={props.form} onChange={props.onChange} />
+                </TabsContent>
+                <TabsContent value="login" className="mt-0">
+                  <SectionHeading title="Login" description="Identify your registered IRC account after connecting." />
+                  <LoginFields form={props.form} onChange={props.onChange} />
+                </TabsContent>
+                <TabsContent value="vpn" className="mt-0">
+                  <SectionHeading title="VPN" description="Choose the route used by this connection." />
+                  <NordVpnSettings form={props.form} onChange={props.onChange} />
                 </TabsContent>
                 <TabsContent value="autojoin" className="mt-0">
+                  <SectionHeading title="Autojoin" description="Choose which channels to open when you connect." />
                   <AutojoinTab form={props.form} onChange={props.onChange} />
                 </TabsContent>
               </div>
+
             </ScrollArea>
           </Tabs>
 
@@ -72,7 +86,7 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
               <Button variant="outline" onClick={props.onClose}>
                 Close
               </Button>
-              <Button variant="secondary" onClick={props.onSubmit}>
+              <Button onClick={props.onSubmit}>
                 Save
               </Button>
             </DialogFooter>
@@ -83,26 +97,27 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
   );
 }
 
-function ServerTab(props: {
-  externalAvatarsEnabled?: boolean;
-  form: NetworkForm;
-  onChange: (form: Partial<NetworkForm>) => void;
-}) {
-  const showPassword = props.form.authMethod !== 'none';
-  const showAuthTarget = props.form.authMethod === 'nickserv';
-  const showAuthAccount = props.form.authMethod === 'nickserv' || props.form.authMethod === 'sasl-plain';
+type FieldProps = { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void };
 
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-2 md:grid-cols-2">
-        <ToggleField label="Use TLS" checked={props.form.tls} onCheckedChange={(checked) => props.onChange({ tls: checked })} />
-        <ToggleField label="Favorite" checked={props.form.favorite} onCheckedChange={(checked) => props.onChange({ favorite: checked })} />
-      </div>
+function SectionHeading(props: { title: string; description: string }) {
+  return <div className="mb-5 space-y-1"><h3 className="text-base font-semibold">{props.title}</h3><p className="text-[13px] text-muted-foreground">{props.description}</p></div>;
+}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <TextField label="Network name" value={props.form.name} onChange={(value) => props.onChange({ name: value })} />
-        <TextField label="Server" value={props.form.host} onChange={(value) => props.onChange({ host: value })} />
-        <TextField label="Port" value={props.form.port} onChange={(value) => props.onChange({ port: value })} />
+function ConnectionFields(props: FieldProps) {
+  return <div className="space-y-5">
+    <div className="space-y-1"><TextField label="Network name" value={props.form.name} onChange={(name) => props.onChange({ name })} />
+    <p className="text-xs text-muted-foreground">Only visible in Pulsete.</p></div>
+    <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+      <TextField label="Server" value={props.form.host} onChange={(host) => props.onChange({ host })} />
+      <TextField label="Port" value={props.form.port} onChange={(port) => props.onChange({ port })} />
+    </div>
+    <ToggleField label="Use TLS" checked={props.form.tls} onCheckedChange={(tls) => props.onChange({ tls })} />
+    <ToggleField label="Favorite" checked={props.form.favorite} onCheckedChange={(favorite) => props.onChange({ favorite })} />
+  </div>;
+}
+
+function IdentityFields(props: FieldProps & { externalAvatarsEnabled?: boolean }) {
+  return <div className="space-y-4"><div className="grid grid-cols-2 gap-4">
         <TextField label="Nick name" value={props.form.nick} onChange={(value) => props.onChange({ nick: value })} />
         <TextField
           label="Username / ident"
@@ -110,6 +125,10 @@ function ServerTab(props: {
           placeholder={props.form.nick || 'Uses Nick name when blank'}
           onChange={(value) => props.onChange({ username: value })}
         />
+
+        <TextField label="Second choice" value={props.form.nick2} onChange={(value) => props.onChange({ nick2: value })} />
+        <TextField label="Third choice" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />
+        <TextField label="Real name" placeholder="IRC user (when blank)" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
         <NetworkServerImageField
           networkId={props.form.id}
           blockRemote={Boolean(props.form.nordVpnLocation) && !props.form.id}
@@ -118,9 +137,16 @@ function ServerTab(props: {
           value={props.form.iconUrl}
           onChange={(value) => props.onChange({ iconUrl: value })}
         />
-        <TextField label="Second choice" value={props.form.nick2} onChange={(value) => props.onChange({ nick2: value })} />
-        <TextField label="Third choice" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />
-        <TextField label="Real name" placeholder="IRC user (when blank)" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
+
+    </div><p className="text-xs text-muted-foreground">Real name is sent to the IRC network. Leave it blank to send “IRC user”. Your saved connection name stays private.</p>
+  </div>;
+}
+
+function LoginFields(props: FieldProps) {
+  const showPassword = props.form.authMethod !== 'none';
+  const showAuthTarget = props.form.authMethod === 'nickserv';
+  const showAuthAccount = props.form.authMethod === 'nickserv' || props.form.authMethod === 'sasl-plain';
+  return <div className="space-y-4"><div className="grid grid-cols-2 gap-4">
         <SelectField
           label="Authentication"
           value={props.form.authMethod}
@@ -148,18 +174,8 @@ function ServerTab(props: {
           />
         ) : null}
         {showPassword ? <PasswordField form={props.form} onChange={props.onChange} /> : null}
-      </div>
-
-      <p className="text-xs text-muted-foreground">Real name is sent to the IRC network. Leave it blank to send “IRC user”. Your saved connection name stays private.</p>
-
-      <NordVpnSettings form={props.form} onChange={props.onChange} />
-
-      {!showPassword ? (
-        <div className="border border-border bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
-          No automatic identify command will be sent after connect.
-        </div>
-      ) : null}
-
+    </div>
+    {!showPassword ? <p className="text-[13px] text-muted-foreground">No automatic identify command will be sent after connect.</p> : null}
       {props.form.hasSavedPassword ? (
         <ToggleField
           label="Remove saved password on save"
@@ -167,8 +183,7 @@ function ServerTab(props: {
           onCheckedChange={(checked) => props.onChange({ clearPassword: checked, password: '' })}
         />
       ) : null}
-    </div>
-  );
+  </div>;
 }
 
 function AutojoinTab(props: { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void }) {
@@ -195,10 +210,12 @@ function SelectField(props: {
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
 }) {
+  const id = useId();
   return (
     <div className="space-y-1">
-      <Label>{props.label}</Label>
+      <Label htmlFor={id}>{props.label}</Label>
       <select
+        id={id}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
         className="flex h-8 w-full rounded-sm border border-input bg-input px-2.5 py-1.5 text-[13px] text-foreground outline-none transition-colors focus-visible:border-ring"
@@ -214,10 +231,11 @@ function SelectField(props: {
 }
 
 function TextField(props: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  const id = useId();
   return (
     <div className="space-y-1">
-      <Label>{props.label}</Label>
-      <Input value={props.value} placeholder={props.placeholder} onChange={(event) => props.onChange(event.target.value)} />
+      <Label htmlFor={id}>{props.label}</Label>
+      <Input id={id} value={props.value} placeholder={props.placeholder} onChange={(event) => props.onChange(event.target.value)} />
     </div>
   );
 }
@@ -228,7 +246,7 @@ function ToggleField(props: {
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 border border-border bg-secondary px-3 py-2 text-[13px] text-foreground">
+    <label className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-[13px] text-foreground">
       <Checkbox checked={props.checked} onCheckedChange={(checked) => props.onCheckedChange(checked === true)} />
       <span>{props.label}</span>
     </label>
@@ -236,6 +254,7 @@ function ToggleField(props: {
 }
 
 function PasswordField(props: { form: NetworkForm; onChange: (form: Partial<NetworkForm>) => void }) {
+  const id = useId();
   const label = props.form.authMethod === 'server-pass'
     ? 'Server password'
     : props.form.authMethod === 'sasl-plain'
@@ -247,8 +266,9 @@ function PasswordField(props: { form: NetworkForm; onChange: (form: Partial<Netw
 
   return (
     <div className="space-y-1">
-      <Label>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       <Input
+        id={id}
         type="password"
         value={props.form.password}
         placeholder={placeholder}

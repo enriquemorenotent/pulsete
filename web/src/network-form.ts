@@ -5,7 +5,7 @@ import {
   resolveNetworkAuthTarget,
 } from '../../shared/network-model.js';
 
-export type EditorTab = 'servers' | 'autojoin';
+export type EditorTab = 'servers' | 'identity' | 'login' | 'vpn' | 'autojoin';
 
 export type NetworkForm = {
   nordVpnLocation?: string;
