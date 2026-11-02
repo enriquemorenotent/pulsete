@@ -32,7 +32,12 @@ test('network manager rows use IRCCloud avatar fallbacks when enabled', () => {
     />,
   );
 
-  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  const source = /src="([^"]+)"/.exec(markup)?.[1];
+  assert.ok(source);
+  const url = new URL(source.replaceAll('&amp;', '&'), 'http://localhost');
+  assert.equal(url.pathname, '/api/media/resource');
+  assert.equal(url.searchParams.get('networkId'), 'network-1');
+  assert.equal(url.searchParams.get('url'), 'https://static.irccloud-cdn.com/avatar-redirect/7');
   assert.match(markup, /data-network-image-source="irccloud-fallback"/);
 });
 

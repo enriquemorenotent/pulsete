@@ -1,7 +1,7 @@
-import { Copy, Heart, PencilLine, Server, Trash2 } from 'lucide-react';
+import { Heart, Server } from 'lucide-react';
 import type { NetworkProfile, NetworkRuntimeState } from '../../shared/protocol-chat.js';
-import { Badge } from '@/components/ui/badge.js';
-import { Button } from '@/components/ui/button.js';
+import { ConnectionRouteBadge } from './ConnectionRouteBadge.js';
+import { NetworkManagerActions } from './NetworkManagerActions.js';
 import { cn } from '@/lib/utils.js';
 import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
 import { NetworkServerImageFallbackCue } from './NetworkServerImageFallbackCue.js';
@@ -35,38 +35,40 @@ export function NetworkManagerListRow(props: {
   return (
     <button
       className={cn(
-        'group block w-full rounded-[1rem] px-4 py-3.5 text-left transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring/50',
+        'group flex w-full min-w-0 items-stretch rounded-lg p-0 text-left ring-1 ring-inset ring-border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary',
         props.selected
-          ? 'bg-white/[0.06] ring-1 ring-inset ring-primary/30 shadow-[0_10px_28px_rgba(0,0,0,0.18)]'
+          ? 'bg-primary/10'
           : 'hover:bg-white/[0.03]',
       )}
+      aria-pressed={props.selected}
+      aria-description={getNetworkManagerStatusLabel(props.runtime)}
       onClick={() => props.onSelect(props.network.id)}
     >
-      <div className="flex items-center gap-3">
-        <div className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.05] text-muted-foreground">
+      <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
+        <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.05] text-muted-foreground">
           <ConnectionSidebarServerIcon
             className={serverImage ? 'size-full rounded-[inherit]' : 'size-3.5'}
+            networkId={props.network.id}
             iconUrl={serverImage?.url}
             runtime={props.runtime}
           />
           {isNetworkServerImageFallback(serverImage) ? (
             <NetworkServerImageFallbackCue />
           ) : null}
+          <span title={getNetworkManagerStatusLabel(props.runtime)} aria-hidden className={cn("absolute bottom-1 right-1 size-2 rounded-full ring-2 ring-background", statusDotClassName(rowStatus))} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="truncate text-[14px] font-medium text-foreground">{props.network.name}</span>
-            <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.14em]', statusPillClassName(rowStatus))}>
-              <span className={cn('size-1.5 rounded-full', statusDotClassName(rowStatus))} />
-              {statusPillLabel(rowStatus)}
-            </span>
+
           </div>
-          <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
             {props.network.host}:{props.network.port}
           </p>
         </div>
         {props.network.favorite ? <Heart className="size-3.5 fill-current text-rose-300" /> : null}
       </div>
+      <ConnectionRouteBadge network={props.network} phase={props.runtime?.phase ?? 'offline'} vpnServer={props.runtime?.vpnServer} embedded />
     </button>
   );
 }
@@ -81,7 +83,6 @@ export function SelectedNetworkPane(props: {
   onFavorite: () => void;
   onRemove: () => void;
 }) {
-  const status = getNetworkManagerRowStatus(props.runtime);
   const serverImage = props.serverImagesVisible === false
     ? null
     : resolveNetworkServerImage(
@@ -97,7 +98,8 @@ export function SelectedNetworkPane(props: {
           <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.05] text-muted-foreground">
             <ConnectionSidebarServerIcon
               className={serverImage ? 'size-full rounded-[inherit]' : 'size-4'}
-              iconUrl={serverImage?.url}
+              networkId={props.network.id}
+            iconUrl={serverImage?.url}
               runtime={props.runtime}
             />
             {isNetworkServerImageFallback(serverImage) ? (
@@ -109,8 +111,6 @@ export function SelectedNetworkPane(props: {
               <h3 className="truncate text-lg font-semibold tracking-tight text-foreground">
                 {props.network.name}
               </h3>
-              {status === 'online' ? <Badge variant="success">Online</Badge> : null}
-              {status === 'connecting' ? <Badge variant="outline">Connecting</Badge> : null}
               {props.network.favorite ? <Heart className="size-3.5 fill-current text-rose-300" /> : null}
             </div>
           </div>
@@ -120,31 +120,9 @@ export function SelectedNetworkPane(props: {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button variant="outline" size="sm" onClick={props.onEdit} className="justify-start">
-          <PencilLine />
-          Edit
-        </Button>
-        <Button variant="outline" size="sm" onClick={props.onDuplicate} className="justify-start">
-          <Copy />
-          Duplicate
-        </Button>
-        <Button variant="outline" size="sm" onClick={props.onFavorite} className="justify-start">
-          <Heart className={cn(props.network.favorite ? 'fill-current text-rose-300' : '')} />
-          {props.network.favorite ? 'Unfavorite' : 'Favorite'}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={props.onRemove}
-          className="justify-start border-destructive/25 text-destructive hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-        >
-          <Trash2 />
-          Remove
-        </Button>
-      </div>
+      <NetworkManagerActions name={props.network.name} favorite={props.network.favorite} onEdit={props.onEdit} onFavorite={props.onFavorite} onDuplicate={props.onDuplicate} onRemove={props.onRemove} />
 
-      <dl className="space-y-3 rounded-[1rem] bg-white/[0.03] p-4 text-[13px] ring-1 ring-white/[0.05]">
+      <dl className="space-y-4 border-t border-white/6 pt-4 text-[13px]">
         <DetailRow label="Status" value={getNetworkManagerStatusLabel(props.runtime)} />
         <DetailRow label="Nick" value={props.network.nick} />
         <DetailRow label="Authentication" value={getNetworkManagerAuthLabel(props.network)} />
@@ -168,32 +146,12 @@ export function EmptySelectionPane() {
 
 function DetailRow(props: { label: string; value: string }) {
   return (
-    <div className="space-y-1">
+    <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3">
       <dt className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{props.label}</dt>
-      <dd className="font-medium text-foreground">{props.value}</dd>
+      <dd className="break-words font-medium text-foreground">{props.value}</dd>
     </div>
   );
 }
-
-const statusPillLabel = (status: ReturnType<typeof getNetworkManagerRowStatus>) => {
-  if (status === 'online') {
-    return 'Online';
-  }
-  if (status === 'connecting') {
-    return 'Connecting';
-  }
-  return 'Offline';
-};
-
-const statusPillClassName = (status: ReturnType<typeof getNetworkManagerRowStatus>) => {
-  if (status === 'online') {
-    return 'bg-emerald-500/10 text-emerald-300';
-  }
-  if (status === 'connecting') {
-    return 'bg-amber-400/10 text-amber-200';
-  }
-  return 'bg-white/[0.05] text-muted-foreground';
-};
 
 const statusDotClassName = (status: ReturnType<typeof getNetworkManagerRowStatus>) => {
   if (status === 'online') {
