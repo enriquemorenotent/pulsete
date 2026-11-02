@@ -36,7 +36,7 @@ export function translateRuntimeEvent(
       networkId: event.networkId,
       phase: event.phase,
       serverName: event.serverName,
-      vpnServer: event.vpnServer,
+      ...(event.vpnServer ? { vpnServer: event.vpnServer } : {}),
       nick: event.nick,
       capabilities: event.capabilities,
     } satisfies ServerMessage];

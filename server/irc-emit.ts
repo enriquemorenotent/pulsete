@@ -53,7 +53,7 @@ export const emitState = (connection: IrcStateContext) => {
     networkId: connection.profile.id,
     phase: lifecycle.connected ? 'connected' : lifecycle.socket ? 'connecting' : 'offline',
     serverName: lifecycle.serverName,
-      vpnServer: lifecycle.vpnServer,
+      ...(lifecycle.vpnServer ? { vpnServer: lifecycle.vpnServer } : {}),
     nick: lifecycle.currentNick,
     capabilities: snapshotIrcCapabilities(lifecycle.capabilities),
   });

@@ -23,7 +23,7 @@ const toActions = (message: ServerMessage): Action[] => {
         networkId: message.networkId,
         phase: message.phase,
         serverName: message.serverName,
-      vpnServer: message.vpnServer,
+      ...(message.vpnServer ? { vpnServer: message.vpnServer } : {}),
         nick: message.nick,
         capabilities: message.capabilities ?? emptyNetworkRuntimeCapabilities(),
       }];

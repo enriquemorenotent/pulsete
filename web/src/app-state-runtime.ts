@@ -120,7 +120,7 @@ export const reduceRuntimeDomain = (
           [action.networkId]: {
             phase: action.phase,
             serverName: action.serverName,
-      vpnServer: action.vpnServer,
+      ...(action.vpnServer ? { vpnServer: action.vpnServer } : {}),
             nick: action.nick,
             capabilities: action.capabilities,
           },
