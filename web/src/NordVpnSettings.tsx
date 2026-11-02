@@ -53,7 +53,7 @@ export function NordVpnSettings({ form, onChange }: {
       </div> : null}
       <div className="space-y-1">
         <label htmlFor={`${id}-location`} className="text-[13px]">Location for this connection</label>
-        <select id={`${id}-location`} className="flex h-8 w-full rounded-sm border border-input bg-input px-2 text-[13px] text-foreground focus-visible:outline-ring" value={form.nordVpnLocation ?? ''} onChange={event => onChange({ nordVpnLocation: event.target.value })}>
+        <select id={`${id}-location`} className="flex h-8 w-full rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[13px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/60" value={form.nordVpnLocation ?? ''} onChange={event => onChange({ nordVpnLocation: event.target.value })}>
           <option value="">Direct connection</option>
           <optgroup label="VPN countries · requires Docker">
             {nordVpnCountries.map(country => <option key={country} value={`country:${country}`}>{country}</option>)}

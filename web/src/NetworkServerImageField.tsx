@@ -1,5 +1,5 @@
 import { useAccountMediaUrl } from './account-media.js';
-import { useId, useState, type ChangeEvent } from 'react';
+import { useId, useRef, useState, type ChangeEvent } from 'react';
 import { ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
@@ -23,6 +23,8 @@ type NetworkServerImageFieldProps = {
 
 export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
   const inputId = useId();
+  const urlId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [cropSource, setCropSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const hasImage = props.value.trim().length > 0;
@@ -48,7 +50,7 @@ export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
 
   return (
     <div className="space-y-1">
-      <Label>Server image</Label>
+      <Label htmlFor={urlId}>Server image</Label>
       <div className="flex gap-2">
         <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-secondary">
           {serverImage ? (
@@ -61,6 +63,7 @@ export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
           ) : null}
         </div>
         <Input
+          id={urlId}
           value={props.value}
           placeholder="https://example.com/server.png"
           onChange={(event) => {
@@ -69,16 +72,15 @@ export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
           }}
         />
         <input
+          ref={inputRef}
           id={inputId}
           type="file"
           accept="image/*"
-          className="sr-only"
+          className="hidden"
           onChange={handleFileChange}
         />
-        <Button asChild variant="outline" size="icon" title="Choose image">
-          <label htmlFor={inputId} className="cursor-pointer">
-            <ImageIcon className="size-4" aria-hidden />
-          </label>
+        <Button type="button" variant="outline" size="icon" aria-label="Choose image" title="Choose image" onClick={() => inputRef.current?.click()}>
+          <ImageIcon className="size-4" aria-hidden />
         </Button>
         {hasImage ? (
           <Button
@@ -86,6 +88,7 @@ export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
             variant="outline"
             size="icon"
             title="Clear image"
+            aria-label="Clear image"
             onClick={() => {
               setError(null);
               props.onChange('');

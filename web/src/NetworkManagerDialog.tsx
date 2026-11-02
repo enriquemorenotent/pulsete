@@ -66,7 +66,7 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                     <DialogDescription>Saved networks and live connection state.</DialogDescription>
                   </DialogHeader>
                   <span className="rounded-full bg-white/[0.05] px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
-                    {props.networks.length} saved
+                    {props.networks.length} {props.showFavoritesOnly ? 'favorites' : 'saved'}
                   </span>
                 </div>
 
@@ -93,7 +93,8 @@ export function NetworkManagerDialog(props: NetworkManagerDialogProps) {
                       <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-white/[0.05] text-muted-foreground">
                         <Server className="size-4" />
                       </div>
-                      <p className="mt-4 text-sm font-medium text-foreground">No networks configured.</p>
+                      <p className="mt-4 text-sm font-medium text-foreground">{props.showFavoritesOnly ? 'No favorite networks.' : 'No networks configured.'}</p>
+                      {props.showFavoritesOnly ? <Button variant="link" size="sm" onClick={props.onToggleFavorites}>Show all networks</Button> : null}
                     </div>
                   ) : null}
 
