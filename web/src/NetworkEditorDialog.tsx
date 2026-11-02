@@ -1,3 +1,5 @@
+import type { NetworkProfile } from '../../shared/protocol-chat.js';
+import { NetworkIdentityWarning } from './NetworkIdentityWarning.js';
 import { NordVpnSettings } from './NordVpnSettings.js';
 import { Button } from '@/components/ui/button.js';
 import { Checkbox } from '@/components/ui/checkbox.js';
@@ -10,6 +12,7 @@ import { NetworkServerImageField } from './NetworkServerImageField.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
 
 export type NetworkEditorDialogProps = {
+  networks?: readonly NetworkProfile[];
   externalAvatarsEnabled?: boolean;
   form: NetworkForm;
   activeTab: EditorTab;
@@ -50,6 +53,7 @@ export function NetworkEditorDialog(props: NetworkEditorDialogProps) {
             <ScrollArea className="min-h-0 h-full flex-1">
               <div className="px-4 py-3">
                 <TabsContent value="servers" className="mt-0">
+                  <NetworkIdentityWarning form={props.form} networks={props.networks ?? []} />
                   <ServerTab
                     externalAvatarsEnabled={props.externalAvatarsEnabled}
                     form={props.form}
@@ -116,7 +120,7 @@ function ServerTab(props: {
         />
         <TextField label="Second choice" value={props.form.nick2} onChange={(value) => props.onChange({ nick2: value })} />
         <TextField label="Third choice" value={props.form.nick3} onChange={(value) => props.onChange({ nick3: value })} />
-        <TextField label="Real name" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
+        <TextField label="Real name" placeholder="IRC user (when blank)" value={props.form.realName} onChange={(value) => props.onChange({ realName: value })} />
         <SelectField
           label="Authentication"
           value={props.form.authMethod}
@@ -145,6 +149,8 @@ function ServerTab(props: {
         ) : null}
         {showPassword ? <PasswordField form={props.form} onChange={props.onChange} /> : null}
       </div>
+
+      <p className="text-xs text-muted-foreground">Real name is sent to the IRC network. Leave it blank to send “IRC user”. Your saved connection name stays private.</p>
 
       <NordVpnSettings form={props.form} onChange={props.onChange} />
 

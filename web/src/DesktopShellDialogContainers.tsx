@@ -149,6 +149,7 @@ export const NetworkEditorDialogContainer = memo(function NetworkEditorDialogCon
 
   return model.open ? (
     <NetworkEditorDialog
+      networks={networks}
       activeTab={model.activeTab}
       externalAvatarsEnabled={externalAvatarsEnabled}
       form={{ ...model.form, hasNordVpnCredentials: model.form.hasNordVpnCredentials || networks.some(network => network.hasNordVpnCredentials) }}

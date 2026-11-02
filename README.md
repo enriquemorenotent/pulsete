@@ -238,3 +238,10 @@ checked again before being fetched.
 Opening an external link asks for confirmation: the browser uses its own network
 connection and cookies, not the account's VPN. This routing does not hide IRC
 account names, real-name fields, or other information sent to the IRC network.
+
+When Real name is blank, registration sends the neutral value `IRC user`, never
+the saved connection label. Explicit real names are sent unchanged. This applies
+on the next connection; it does not erase values already seen by an IRC server.
+The account editor warns about matching usernames, explicit real names, or
+NickServ/SASL accounts among profiles using the same server address. The warning
+does not block saving and cannot detect aliases for other servers on that network.

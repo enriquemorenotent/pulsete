@@ -1,3 +1,4 @@
+import { reportedRealName } from '../shared/irc-identity.js';
 import { abortActiveChannelList, clearDrainingChannelList } from './irc-channel-list.js';
 import { createIdleSaslState } from './irc-auth.js';
 import { clearChannelSessions } from './irc-channel-state.js';
@@ -105,9 +106,8 @@ const requiresSessionReconnect = (current: RuntimeNetworkProfile, next: RuntimeN
   || requiresAuthAccountReconnect(current, next)
   || requiresAuthTargetReconnect(current, next)
   || current.username !== next.username
-  || getReportedRealName(current) !== getReportedRealName(next);
+  || reportedRealName(current) !== reportedRealName(next);
 
-const getReportedRealName = (profile: RuntimeNetworkProfile) => profile.realName || profile.name;
 
 const requiresAuthTargetReconnect = (current: RuntimeNetworkProfile, next: RuntimeNetworkProfile) => {
   const currentMethod = resolveNetworkAuthMethod(current);
