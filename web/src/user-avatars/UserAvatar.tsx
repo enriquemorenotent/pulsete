@@ -1,3 +1,4 @@
+import { useAccountMediaUrl } from '../account-media.js';
 import { useMemo, useState } from 'react';
 import type { ChannelUserState } from '../../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
@@ -60,7 +61,7 @@ export function UserAvatar({
     () => (enabled && user ? resolveIrcCloudAvatarUrl(user) : null),
     [enabled, user],
   );
-  const url = resolvedCustomAvatarUrl || externalUrl;
+  const url = useAccountMediaUrl(resolvedCustomAvatarUrl || externalUrl, customAvatarTarget?.networkId);
   const [failedUrl, setFailedUrl] = useState<string | null>(() =>
     url && failedAvatarUrls.has(url) ? url : null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -129,7 +130,7 @@ export function UserAvatar({
         <DialogContent className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0">
           <DialogTitle className="sr-only">{altText}</DialogTitle>
           <DialogDescription className="sr-only">Expanded avatar preview.</DialogDescription>
-          <InlineImagePreviewDialogBody href={url} altText={altText} />
+          <InlineImagePreviewDialogBody href={(resolvedCustomAvatarUrl || externalUrl)!} networkId={customAvatarTarget?.networkId} altText={altText} />
         </DialogContent>
       ) : null}
     </Dialog>

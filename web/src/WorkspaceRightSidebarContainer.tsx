@@ -1,3 +1,4 @@
+import { AccountMediaProvider } from './account-media.js';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar.js';
 import { openExistingNetworkEditor } from './network-editor-actions.js';
@@ -202,7 +203,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     workspace.selectedBuffer,
   ]);
   return (
-    <WorkspaceRightSidebar
+    <AccountMediaProvider network={workspace.selectedNetwork} runtime={workspace.selectedRuntime}><WorkspaceRightSidebar
       workspace={workspace}
       onReconnectNetwork={reconnectSelectedNetwork}
       nicklist={nicklist}
@@ -210,6 +211,6 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
       serverProfile={serverProfile}
       queryProfile={queryProfile}
       onCollapse={onCollapse}
-    />
+    /></AccountMediaProvider>
   );
 });

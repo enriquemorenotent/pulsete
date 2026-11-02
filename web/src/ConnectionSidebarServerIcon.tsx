@@ -1,3 +1,4 @@
+import { useAccountMediaUrl } from './account-media.js';
 import { useState } from 'react';
 import { Server } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
@@ -5,6 +6,7 @@ import { networkImageRuntimeClass } from './network-image-state.js';
 import type { NetworkRuntimeState } from './workspace.js';
 
 type ConnectionSidebarServerIconProps = {
+  networkId?: string;
   className?: string;
   iconUrl?: string | null;
   imageClassName?: string;
@@ -15,12 +17,13 @@ type ConnectionSidebarServerIconProps = {
 export function ConnectionSidebarServerIcon(
   props: ConnectionSidebarServerIconProps,
 ) {
+  const mediaUrl = useAccountMediaUrl(props.iconUrl, props.networkId);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  if (props.iconUrl && props.iconUrl !== failedUrl) {
+  if (mediaUrl && mediaUrl !== failedUrl) {
     return (
       <img
-        src={props.iconUrl}
-        onError={() => setFailedUrl(props.iconUrl ?? null)}
+        src={mediaUrl}
+        onError={() => setFailedUrl(mediaUrl ?? null)}
         alt=""
         className={cn(
           'shrink-0 rounded-sm object-cover',

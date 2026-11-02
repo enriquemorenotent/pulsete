@@ -1,3 +1,4 @@
+import { AccountMediaProvider } from './account-media.js';
 import { ConnectionRouteBadge, connectionRouteLabel } from './ConnectionRouteBadge.js';
 import { useEffect, useMemo, useRef } from 'react';
 import { ConnectionSidebarServerIcon } from './ConnectionSidebarServerIcon.js';
@@ -53,7 +54,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
 }) {
   const activeConnection = props.activeConnection;
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <AccountMediaProvider network={activeConnection?.network ?? null} runtime={activeConnection?.runtime}><section className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {activeConnection ? (
         <ServerSwitcherHeader
           connection={activeConnection}
@@ -92,7 +93,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
           ) : null}
         </div>
       </ScrollArea>
-    </section>
+    </section></AccountMediaProvider>
   );
 }
 
@@ -159,15 +160,15 @@ function ServerSwitcherButton(props: {
   const statusLabel = phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline';
   const serverImage = props.showMedia === false ? null : resolveNetworkServerImage(props.connection.network, props.externalAvatarsEnabled === true);
   return (
-    <button ref={buttonRef} type="button" className={cn('relative flex w-full min-w-0 shrink-0 items-center gap-2.5 rounded-lg p-0 text-sm ring-1 ring-inset ring-border outline-none focus-visible:ring-2 focus-visible:ring-primary', props.active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground')} onClick={props.onSelect} aria-label={`Open ${props.connection.labelParts.name}${activity.hasUnread ? ' (unread)' : ''}`} aria-description={[statusLabel, connectionRouteLabel(props.connection.network, phase, props.connection.runtime?.vpnServer)].filter(Boolean).join(' · ')} title={`${props.connection.labelParts.name} · ${nick} · ${statusLabel}`} aria-pressed={props.active}>
+    <AccountMediaProvider network={props.connection.network} runtime={props.connection.runtime}><button ref={buttonRef} type="button" className={cn('relative flex w-full min-w-0 shrink-0 items-center gap-2.5 rounded-lg p-0 text-sm ring-1 ring-inset ring-border outline-none focus-visible:ring-2 focus-visible:ring-primary', props.active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground')} onClick={props.onSelect} aria-label={`Open ${props.connection.labelParts.name}${activity.hasUnread ? ' (unread)' : ''}`} aria-description={[statusLabel, connectionRouteLabel(props.connection.network, phase, props.connection.runtime?.vpnServer)].filter(Boolean).join(' · ')} title={`${props.connection.labelParts.name} · ${nick} · ${statusLabel}`} aria-pressed={props.active}>
       <span aria-hidden className={cn('relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border text-sm font-semibold', props.active ? 'border-primary/60 bg-primary/20 text-primary' : 'border-border bg-secondary text-foreground')}>
-        {serverImage ? <ConnectionSidebarServerIcon className="absolute inset-0 size-full" iconUrl={serverImage.url} runtime={props.connection.runtime} fallbackLabel={nick.slice(0, 2).toUpperCase()} /> : nick.slice(0, 2).toUpperCase()}
+        {serverImage ? <ConnectionSidebarServerIcon networkId={props.connection.network.id} className="absolute inset-0 size-full" iconUrl={serverImage.url} runtime={props.connection.runtime} fallbackLabel={nick.slice(0, 2).toUpperCase()} /> : nick.slice(0, 2).toUpperCase()}
         <span className={cn('absolute bottom-1 right-1 size-1.5 rounded-full ring-2 ring-background', phase === 'connected' ? 'bg-emerald-300' : phase === 'connecting' ? 'bg-amber-300' : 'bg-slate-500')} />
       </span>
       <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-foreground">{nick}</span>
       {activity.hasUnread ? <span className="size-2 shrink-0 rounded-full bg-primary" aria-hidden /> : null}
       <ConnectionRouteBadge network={props.connection.network} phase={phase} vpnServer={props.connection.runtime?.vpnServer} embedded />
-    </button>
+    </button></AccountMediaProvider>
   );
 }
 

@@ -54,6 +54,7 @@ export type IrcHeartbeatState = {
 };
 
 export type IrcLifecycleState = {
+  stopAccountMedia?: () => void;
   stopVpnTunnel?: () => void;
   vpnServer?: string;
   socket: IrcSocket | null;

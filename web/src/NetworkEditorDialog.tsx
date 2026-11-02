@@ -107,6 +107,8 @@ function ServerTab(props: {
           onChange={(value) => props.onChange({ username: value })}
         />
         <NetworkServerImageField
+          networkId={props.form.id}
+          blockRemote={Boolean(props.form.nordVpnLocation) && !props.form.id}
           externalAvatarsEnabled={props.externalAvatarsEnabled}
           username={props.form.username}
           value={props.form.iconUrl}

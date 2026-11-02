@@ -307,10 +307,10 @@ export const api = {
     }),
   resolvePagePreview: (
     url: string,
-    init?: Pick<RequestInit, 'signal'>,
+    init?: Pick<RequestInit, 'signal'> & { networkId?: string },
   ) => apiRequest<PagePreviewResponse>('/api/media/page-preview', {
     method: 'POST',
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, networkId: init?.networkId }),
     signal: init?.signal,
   }),
 };

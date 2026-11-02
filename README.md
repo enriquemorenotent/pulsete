@@ -219,3 +219,22 @@ The country list is generated from:
 `docker run --rm qmcgaw/gluetun:v3.41.3 format-servers -nordvpn -format json`
 (filter OpenVPN servers with UDP support). Update the catalog and pinned image
 together. Provider setup: https://github.com/qdm12/gluetun-wiki/blob/main/setup/providers/nordvpn.md
+
+### External content and account VPNs
+
+Images, avatars, videos, and page previews are fetched by Pulsete for their owning
+account. VPN accounts use their existing tunnel (including DNS via encrypted DNS
+through that tunnel); SOCKS5 accounts use their configured proxy. A stopped or
+unavailable route blocks loading, with no direct fallback. Preview caches are
+separate by account and connection state. Requests forward neither browser
+cookies nor referrers, and responses are not cached by the browser.
+
+Remote content without an identifiable account is blocked when any saved account
+uses a VPN or proxy. Local uploaded images remain available. External content is
+limited to public HTTP/HTTPS destinations and supported image/video formats up
+to 20 MiB; SVG and embedded webpages are not loaded. Redirect destinations are
+checked again before being fetched.
+
+Opening an external link asks for confirmation: the browser uses its own network
+connection and cookies, not the account's VPN. This routing does not hide IRC
+account names, real-name fields, or other information sent to the IRC network.

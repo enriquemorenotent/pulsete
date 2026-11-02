@@ -153,7 +153,7 @@ test('renders inline previews for direct image links', () => {
   );
 
   assert.match(html, /<button[^>]*type="button"/);
-  assert.match(html, /<img[^>]*src="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assertProxiedMedia(html, 'img', 'https://cdn.example.com/cat.PNG?size=full');
   assert.match(html, /alt="Inline image preview: cat\.PNG"/);
   assert.match(html, /Look/);
   assert.doesNotMatch(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
@@ -169,7 +169,7 @@ test('renders inline previews when the image format is carried in query params',
   );
 
   assert.match(html, /<button[^>]*type="button"/);
-  assert.match(html, /<img[^>]*src="https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large"/);
+  assertProxiedMedia(html, 'img', 'https://pbs.twimg.com/media/HEWTgcrbIAAQ4Ta?format=jpg&name=large');
   assert.doesNotMatch(html, /href="https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large"/);
   assert.doesNotMatch(html, />https:\/\/pbs\.twimg\.com\/media\/HEWTgcrbIAAQ4Ta\?format=jpg&amp;name=large</);
 });
@@ -188,8 +188,8 @@ test('renders inline previews for PNJ image links', () => {
     })
   );
 
-  assert.match(extensionHtml, /<img[^>]*src="https:\/\/cdn\.example\.com\/cat\.PNJ"/);
-  assert.match(queryHtml, /<img[^>]*src="https:\/\/cdn\.example\.com\/image\?id=cat&amp;format=pnj"/);
+  assertProxiedMedia(extensionHtml, 'img', 'https://cdn.example.com/cat.PNJ');
+  assertProxiedMedia(queryHtml, 'img', 'https://cdn.example.com/image?id=cat&format=pnj');
 });
 
 test('renders Imgur GIFV links as looping MP4 video previews', () => {
@@ -200,7 +200,7 @@ test('renders Imgur GIFV links as looping MP4 video previews', () => {
     })
   );
 
-  assert.match(html, /<video[^>]*src="https:\/\/i\.imgur\.com\/TEHJoGS\.mp4"/);
+  assertProxiedMedia(html, 'video', 'https://i.imgur.com/TEHJoGS.mp4');
   assert.match(html, /<video[^>]*autoPlay=""/i);
   assert.match(html, /<video[^>]*loop=""/i);
   assert.match(html, /<video[^>]*muted=""/i);
@@ -218,7 +218,7 @@ test('renders direct MP4 links as on-demand video players', () => {
     })
   );
 
-  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.MP4\?token=abc#t=2"/);
+  assertProxiedMedia(html, 'video', 'https://cdn.example.com/media/clip.MP4?token=abc#t=2');
   assert.match(html, /<video[^>]*controls=""/i);
   assert.match(html, /<video[^>]*muted=""/i);
   assert.match(html, /<video[^>]*playsInline=""/i);
@@ -238,7 +238,7 @@ test('renders direct MOV links as on-demand video players', () => {
     })
   );
 
-  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.MOV\?token=abc#t=2"/);
+  assertProxiedMedia(html, 'video', 'https://cdn.example.com/media/clip.MOV?token=abc#t=2');
   assert.match(html, /<video[^>]*controls=""/i);
   assert.match(html, /<video[^>]*muted=""/i);
   assert.match(html, /<video[^>]*playsInline=""/i);
@@ -282,7 +282,7 @@ test('renders Tumblr GIFV links as negotiated image previews', () => {
     })
   );
 
-  assert.match(html, /<img[^>]*src="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
+  assertProxiedMedia(html, 'img', 'https://64.media.tumblr.com/hash/revision/s400x600/clip.gifv');
   assert.match(html, /alt="Inline image preview: clip\.gifv"/);
   assert.doesNotMatch(html, /<video/);
   assert.doesNotMatch(html, /href="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
@@ -333,7 +333,7 @@ test('inline GIFV dialog plays video with controls and links to the original rou
     createElement(InlineMediaPreviewDialogBody, { media })
   );
 
-  assert.match(html, /<video[^>]*src="https:\/\/i\.imgur\.com\/TEHJoGS\.mp4"/);
+  assertProxiedMedia(html, 'video', 'https://i.imgur.com/TEHJoGS.mp4');
   assert.match(html, /<video[^>]*controls=""/i);
   assert.match(html, /href="https:\/\/i\.imgur\.com\/TEHJoGS\.gifv"/);
   assert.match(html, />Open original</);
@@ -346,7 +346,7 @@ test('inline MP4 dialog waits for playback and links to the original video', () 
     createElement(InlineMediaPreviewDialogBody, { media })
   );
 
-  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mp4"/);
+  assertProxiedMedia(html, 'video', 'https://cdn.example.com/media/clip.mp4');
   assert.match(html, /<video[^>]*controls=""/i);
   assert.match(html, /<video[^>]*muted=""/i);
   assert.doesNotMatch(html, /<video[^>]*autoPlay=""/i);
@@ -361,7 +361,7 @@ test('inline MOV dialog waits for playback and links to the original video', () 
     createElement(InlineMediaPreviewDialogBody, { media })
   );
 
-  assert.match(html, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mov"/);
+  assertProxiedMedia(html, 'video', 'https://cdn.example.com/media/clip.mov');
   assert.match(html, /<video[^>]*controls=""/i);
   assert.match(html, /<video[^>]*muted=""/i);
   assert.doesNotMatch(html, /<video[^>]*autoPlay=""/i);
@@ -377,7 +377,7 @@ test('inline image preview dialog exposes the full-size image and original link'
   );
 
   assert.match(html, /Inline image preview: cat\.PNG/);
-  assert.match(html, /<img[^>]*src="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
+  assertProxiedMedia(html, 'img', 'https://cdn.example.com/cat.PNG?size=full');
   assert.match(html, /href="https:\/\/cdn\.example\.com\/cat\.PNG\?size=full"/);
   assert.match(html, />Open original</);
 });
@@ -497,3 +497,11 @@ test('renders raw mode with visible escape sequences instead of hidden control c
   assert.ok(!html.includes('\u0003'));
   assert.ok(!html.includes('\u0002'));
 });
+
+function assertProxiedMedia(markup: string, tag: string, source: string) {
+  const match = new RegExp(`<${tag}[^>]*src="([^"]+)"`).exec(markup);
+  assert.ok(match);
+  const url = new URL(match[1]!.replaceAll('&amp;', '&'), 'http://localhost');
+  assert.equal(url.pathname, '/api/media/resource');
+  assert.equal(url.searchParams.get('url'), source);
+}

@@ -1,3 +1,4 @@
+import { useAccountMediaUrl } from './account-media.js';
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils.js';
 import {
@@ -48,11 +49,11 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  const sourceUrl = useAccountMediaUrl(customAvatarUrl || realUrl, props.networkId);
   if (!props.user) {
     return null;
   }
 
-  const sourceUrl = customAvatarUrl || realUrl;
   const showInitial = !sourceUrl || failedUrl === sourceUrl || failedAvatarUrls.has(sourceUrl);
   const altText = customAvatarUrl
     ? `Custom avatar for ${props.user.nick}`
@@ -112,7 +113,7 @@ export function QueryProfileAvatarBanner(props: QueryProfileAvatarBannerProps) {
             <DialogContent className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0">
               <DialogTitle className="sr-only">{altText}</DialogTitle>
               <DialogDescription className="sr-only">Expanded avatar preview.</DialogDescription>
-              <InlineImagePreviewDialogBody href={sourceUrl} altText={altText} />
+              <InlineImagePreviewDialogBody href={(customAvatarUrl || realUrl)!} networkId={props.networkId} altText={altText} />
             </DialogContent>
           ) : null}
         </Dialog>

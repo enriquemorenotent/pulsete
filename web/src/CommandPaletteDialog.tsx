@@ -1,3 +1,4 @@
+import { accountMediaUrl } from './account-media.js';
 import {
   useEffect,
   useMemo,
@@ -178,7 +179,7 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
                         {entry.networkIconUrl ? (
                           <span className="relative size-8 shrink-0 overflow-hidden rounded-sm">
                             <img
-                              src={entry.networkIconUrl}
+                              src={accountMediaUrl(entry.networkIconUrl, entry.mediaNetworkId)}
                               alt=""
                               className={cn('size-full object-cover', networkImageRuntimePhaseClass(entry.networkRuntimePhase))}
                               loading="lazy"

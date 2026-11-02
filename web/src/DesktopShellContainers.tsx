@@ -1,3 +1,4 @@
+import { AccountMediaProvider } from './account-media.js';
 import { memo, useMemo, type ReactNode } from 'react';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
 import { ChatPane } from './ChatPane.js';
@@ -184,7 +185,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     selectedMessages,
     workspace,
   });
-  return <ChatPane {...model} jumpToLatestRequestId={jumpToLatestRequestId} />;
+  return <AccountMediaProvider network={workspace.selectedNetwork} runtime={workspace.selectedRuntime}><ChatPane {...model} jumpToLatestRequestId={jumpToLatestRequestId} /></AccountMediaProvider>;
 });
 
 export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogContainer({

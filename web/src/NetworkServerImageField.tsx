@@ -1,3 +1,4 @@
+import { useAccountMediaUrl } from './account-media.js';
 import { useId, useState, type ChangeEvent } from 'react';
 import { ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
@@ -12,6 +13,8 @@ import {
 } from './network-server-image.js';
 
 type NetworkServerImageFieldProps = {
+  networkId?: string;
+  blockRemote?: boolean;
   externalAvatarsEnabled?: boolean;
   username?: string;
   value: string;
@@ -28,6 +31,7 @@ export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
     props.externalAvatarsEnabled === true,
   );
 
+  const source = useAccountMediaUrl(props.blockRemote ? undefined : serverImage?.url, props.networkId);
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
@@ -48,7 +52,7 @@ export function NetworkServerImageField(props: NetworkServerImageFieldProps) {
       <div className="flex gap-2">
         <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-secondary">
           {serverImage ? (
-            <img src={serverImage.url} alt="" className="size-full object-cover" />
+            <img src={source} alt="" className="size-full object-cover" />
           ) : (
             <ImageIcon className="size-4 text-muted-foreground" aria-hidden />
           )}

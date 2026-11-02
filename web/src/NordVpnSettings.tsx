@@ -1,6 +1,7 @@
+import { ExternalLink } from './ExternalLink.js';
 import { nordVpnCountries } from '../../shared/nordvpn-countries.js';
 import { useId, useState } from 'react';
-import { ExternalLink, ShieldCheck } from 'lucide-react';
+import { ExternalLink as ExternalLinkIcon, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { nordVpnLocations } from '../../shared/nordvpn.js';
@@ -25,9 +26,9 @@ export function NordVpnSettings({ form, onChange }: {
           <p className="text-xs text-muted-foreground">{saved ? 'Credentials saved · shared by all connections' : 'Set up once, then choose a location for each connection.'}</p>
         </div>
         <Button asChild variant="outline">
-          <a href={nordAccountSetupUrl} target="_blank" rel="noopener noreferrer" onClick={() => setEditing(true)}>
-            {saved ? 'Open Nord Account' : 'Connect to NordVPN'}<ExternalLink aria-hidden="true" />
-          </a>
+          <ExternalLink href={nordAccountSetupUrl} target="_blank" rel="noopener noreferrer" onClick={() => setEditing(true)}>
+            {saved ? 'Open Nord Account' : 'Connect to NordVPN'}<ExternalLinkIcon aria-hidden="true" />
+          </ExternalLink>
         </Button>
       </div>
       {!saved ? <p className="text-[13px] text-muted-foreground">Opens Nord Account in your browser. If you’re already signed in there, you may not need to sign in again. Copy your service credentials back here once to finish setup.</p> : null}

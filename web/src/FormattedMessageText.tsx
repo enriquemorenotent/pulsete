@@ -1,3 +1,4 @@
+import { ExternalLink } from './ExternalLink.js';
 import { highlightSearchText } from './highlight-search-text.js';
 import { Fragment, memo, useMemo } from 'react';
 import {
@@ -76,14 +77,14 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
         }
         return (
           <Fragment key={`link-${token.href}-${tokenIndex}`}>
-            <a
+            <ExternalLink
               href={token.href}
               target={token.external ? '_blank' : undefined}
               rel={token.external ? 'noreferrer' : undefined}
               className="font-medium text-primary/90 underline decoration-primary/35 decoration-1 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/80 hover:opacity-90"
             >
               {renderedContent}
-            </a>
+            </ExternalLink>
             {renderPagePreviewStatus
               && content.pagePreviewHrefs.includes(token.href) ? (
                 <PagePreviewUnavailableIndicator href={token.href} />

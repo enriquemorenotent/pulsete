@@ -1,3 +1,4 @@
+import { useAccountMediaUrl } from './account-media.js';
 import { Maximize2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog.js';
@@ -85,10 +86,11 @@ function InlineMediaPreviewTile(props: {
 
 function InlineMediaThumbnail(props: { media: InlineMedia; onLoad?: () => void }) {
   const { media } = props;
+  const source = useAccountMediaUrl(media.sourceHref);
   if (media.kind === 'image') {
     return (
       <img
-        src={media.sourceHref}
+        src={source}
         alt={buildInlineMediaLabel(media)}
         loading="lazy"
         decoding="async"
@@ -102,7 +104,7 @@ function InlineMediaThumbnail(props: { media: InlineMedia; onLoad?: () => void }
   const loopingAnimation = media.playback === 'looping-animation';
   return (
     <video
-      src={media.sourceHref}
+      src={source}
       aria-hidden={loopingAnimation ? 'true' : undefined}
       aria-label={loopingAnimation ? undefined : buildInlineMediaLabel(media)}
       autoPlay={loopingAnimation}

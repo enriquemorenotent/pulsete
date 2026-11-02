@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell } from 'electron';
+import { app, BrowserWindow, Menu, shell, dialog } from 'electron';
 import { join } from 'node:path';
 import { startDesktopServer, type DesktopServer } from './server-process.js';
 import {
@@ -158,7 +158,12 @@ function openTrustedExternalUrl(value: string) {
     if (!['http:', 'https:', 'mailto:'].includes(url.protocol)) {
       return;
     }
-    void shell.openExternal(url.toString());
+    void dialog.showMessageBox({
+      type: 'warning', title: 'Open external link?',
+      message: 'This link opens outside the account’s VPN connection.',
+      detail: 'Your browser uses its own connection and cookies. The website may be able to link this visit to your other activity.',
+      buttons: ['Cancel', 'Open in browser'], defaultId: 0, cancelId: 0,
+    }).then(result => { if (result.response === 1) return shell.openExternal(url.toString()); }).catch(() => {});
   } catch {
     // Ignore malformed navigation targets from renderer content.
   }

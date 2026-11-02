@@ -79,6 +79,7 @@ const buildBufferEntries = (
         label: connection.labelParts.name,
         networkIconSource: networkImage?.source,
         networkIconUrl: networkImage?.url,
+        mediaNetworkId: connection.network.id,
         networkRuntimePhase,
         subtitle: `Server buffer · as ${connection.labelParts.nick}`,
         keywords: [
@@ -154,6 +155,7 @@ const buildBufferEntries = (
         label: pending.pendingChannel.channel,
         networkIconSource: networkImage?.source,
         networkIconUrl: networkImage?.url,
+        mediaNetworkId: connection.network.id,
         networkRuntimePhase,
         subtitle: `Joining on ${connection.label}`,
         keywords: [

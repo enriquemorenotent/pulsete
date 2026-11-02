@@ -52,6 +52,8 @@ export const applyOfflineTransition = (
     clearPendingNick?: boolean;
   }
 ) => {
+  connection.lifecycle.stopAccountMedia?.();
+  connection.lifecycle.stopAccountMedia = undefined;
   connection.lifecycle.stopVpnTunnel?.();
   connection.lifecycle.stopVpnTunnel = undefined;
   connection.lifecycle.vpnServer = undefined;

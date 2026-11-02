@@ -1,3 +1,4 @@
+import { ExternalLink } from './ExternalLink.js';
 import type { ComponentPropsWithoutRef } from 'react';
 import Markdown, { type MarkdownToJSX } from 'markdown-to-jsx/react';
 
@@ -63,7 +64,7 @@ const markdownOptions = {
 function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'> & { onSourceClick?: (label: string) => void }) {
   const external = isExternalLink(props.href);
   return (
-    <a
+    <ExternalLink
       href={props.href}
       onClick={() => {
         if (props.href?.startsWith('#assistant-source-')) {
@@ -80,7 +81,7 @@ function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'> & { onSource
       className="font-medium text-primary underline decoration-primary/45 underline-offset-2 hover:decoration-primary"
     >
       {props.children}
-    </a>
+    </ExternalLink>
   );
 }
 

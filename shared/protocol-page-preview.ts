@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const pagePreviewUrlMaxLength = 2_048;
 
 export const pagePreviewRequestSchema = z.object({
+  networkId: z.string().min(1).optional(),
   url: z.string().trim().min(1).max(pagePreviewUrlMaxLength),
 });
 

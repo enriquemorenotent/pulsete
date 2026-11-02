@@ -1,3 +1,4 @@
+import { handleAccountMediaRoutes } from './http-account-media.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toAppError } from './app-error.js';
 import { handleAiAssistantRoutes } from './http-ai-assistant.js';
@@ -56,6 +57,7 @@ export const createHttpHandler = (
       if (
         (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))
         || await handleAiAssistantRoutes(args)
+        || await handleAccountMediaRoutes(args)
         || await handlePagePreviewRoutes(args, pagePreviewResolver)
         || await handlePreferenceRoutes(args)
         || await handleAvatarOverrideRoutes(args)

@@ -115,3 +115,20 @@ test('renders an icon and tooltip only for confirmed not-found responses', () =>
   assert.doesNotMatch(notFoundHtml, />Page not found</);
   assert.equal(silentHtml, '');
 });
+
+test('preview caches are separated by account and connection state', async () => {
+  const originalFetch = globalThis.fetch;
+  const accounts: unknown[] = [];
+  globalThis.fetch = (async (_url, init) => {
+    accounts.push(JSON.parse(String(init?.body)).networkId);
+    return Response.json({ preview: null, unavailableReason: null });
+  }) as typeof fetch;
+  try {
+    const href = 'https://account-cache.example/post';
+    await resolvePagePreviewResult(href, 'account-a', 'connected');
+    await resolvePagePreviewResult(href, 'account-a', 'connected');
+    await resolvePagePreviewResult(href, 'account-b', 'connected');
+    await resolvePagePreviewResult(href, 'account-a', 'reconnected');
+    assert.deepEqual(accounts, ['account-a', 'account-b', 'account-a']);
+  } finally { globalThis.fetch = originalFetch; }
+});

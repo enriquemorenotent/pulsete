@@ -1,3 +1,4 @@
+import { useMediaAccount } from './account-media.js';
 import { useEffect, useState } from 'react';
 import type {
   PagePreview,
@@ -41,19 +42,20 @@ export const pagePreviewToInlineMedia = (
   sourceHref: preview.imageUrl,
 });
 
-export const resolvePagePreviewResult = (href: string) => {
-  const cached = pagePreviewCache.get(href);
+export const resolvePagePreviewResult = (href: string, networkId?: string, scope = '') => {
+  const cacheKey = JSON.stringify([networkId, scope, href]);
+  const cached = pagePreviewCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.promise;
   }
   if (cached) {
-    pagePreviewCache.delete(href);
+    pagePreviewCache.delete(cacheKey);
   }
   const entry: PagePreviewCacheEntry = {
     expiresAt: Number.POSITIVE_INFINITY,
     promise: Promise.resolve(silentPagePreviewResult),
   };
-  entry.promise = api.resolvePagePreview(href)
+  entry.promise = api.resolvePagePreview(href, { networkId })
     .then(({ preview, unavailableReason }) => ({
       media: preview ? pagePreviewToInlineMedia(href, preview) : null,
       unavailableReason,
@@ -65,7 +67,7 @@ export const resolvePagePreviewResult = (href: string) => {
       );
       return result;
     });
-  pagePreviewCache.set(href, entry);
+  pagePreviewCache.set(cacheKey, entry);
   trimPagePreviewCache();
   return entry.promise;
 };
@@ -74,7 +76,8 @@ export const resolvePagePreviewMedia = (href: string) =>
   resolvePagePreviewResult(href).then((result) => result.media);
 
 export const usePagePreviewMedia = (hrefs: readonly string[]) => {
-  const key = hrefs.join('\n');
+  const account = useMediaAccount();
+  const key = account.cacheKey + '\n' + hrefs.join('\n');
   const [state, setState] = useState<PagePreviewMediaState>({
     key: '',
     media: [],
@@ -82,13 +85,13 @@ export const usePagePreviewMedia = (hrefs: readonly string[]) => {
 
   useEffect(() => {
     let active = true;
-    if (!key) {
+    if (!hrefs.length) {
       setState({ key, media: [] });
       return () => {
         active = false;
       };
     }
-    void Promise.all(hrefs.map(resolvePagePreviewResult)).then((resolved) => {
+    void Promise.all(hrefs.map(href => resolvePagePreviewResult(href, account.networkId, account.cacheKey))).then((resolved) => {
       if (!active) {
         return;
       }
@@ -108,6 +111,8 @@ export const usePagePreviewMedia = (hrefs: readonly string[]) => {
 };
 
 export const usePagePreviewUnavailableReason = (href: string) => {
+  const account = useMediaAccount();
+  const key = account.cacheKey + href;
   const [state, setState] = useState<PagePreviewUnavailableState>({
     href: '',
     reason: null,
@@ -115,17 +120,17 @@ export const usePagePreviewUnavailableReason = (href: string) => {
 
   useEffect(() => {
     let active = true;
-    void resolvePagePreviewResult(href).then((result) => {
+    void resolvePagePreviewResult(href, account.networkId, account.cacheKey).then((result) => {
       if (active) {
-        setState({ href, reason: result.unavailableReason });
+        setState({ href: key, reason: result.unavailableReason });
       }
     });
     return () => {
       active = false;
     };
-  }, [href]);
+  }, [key]);
 
-  return state.href === href ? state.reason : null;
+  return state.href === key ? state.reason : null;
 };
 
 const silentPagePreviewResult: ResolvedPagePreview = {

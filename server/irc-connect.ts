@@ -1,3 +1,4 @@
+import { registerAccountMediaRoute } from './account-media-route.js';
 import { nordVpnCountry } from '../shared/nordvpn-countries.js';
 import { connectNordVpnCountry } from './irc-nordvpn-tunnel.js';
 import { SocksClient } from 'socks';
@@ -106,6 +107,8 @@ const getConnectTimeoutMs = () => {
 const connectProxy = (connection: IrcConnectContext) => {
   const profile = connection.profile;
   const raw = new net.Socket();
+  const mediaController = new AbortController();
+  connection.lifecycle.stopAccountMedia = () => mediaController.abort();
   connection.openSocket(raw);
   const current = () => connection.lifecycle.socket === raw;
   const host = nordVpnHost(profile.nordVpnLocation ?? '');
@@ -139,6 +142,31 @@ const connectProxy = (connection: IrcConnectContext) => {
       raw.removeListener('error', fail);
       raw.removeAllListeners('close');
       const transport = profile.tls ? tls.connect({ socket, servername: profile.host }) : socket;
+      registerAccountMediaRoute(profile.id, {
+        location: profile.nordVpnLocation!, signal: mediaController.signal,
+        connect: async (destinationHost, destinationPort) => {
+          mediaController.signal.throwIfAborted();
+          const mediaSocket = new net.Socket();
+          const abort = () => mediaSocket.destroy();
+          mediaController.signal.addEventListener('abort', abort, { once: true });
+          mediaSocket.once('close', () => mediaController.signal.removeEventListener('abort', abort));
+          try {
+            await new Promise<void>((resolve, reject) => {
+              mediaSocket.once('error', reject);
+              mediaSocket.once('close', () => reject(new Error('VPN media connection closed')));
+              mediaSocket.setTimeout(10000, () => mediaSocket.destroy(new Error('VPN media connection timed out')));
+              mediaSocket.connect({ host, port: 1080 }, resolve);
+            });
+            const result = await SocksClient.createConnection({
+              command: 'connect', proxy: { host, port: 1080, type: 5, userId: credentials.username, password: credentials.password },
+              destination: { host: destinationHost, port: destinationPort }, existing_socket: mediaSocket, timeout: 10000,
+            });
+            mediaController.signal.throwIfAborted();
+            mediaSocket.setTimeout(0);
+            return result.socket;
+          } catch (error) { mediaSocket.destroy(); throw error; }
+        },
+      });
       attachSocket(connection, transport, !profile.tls);
     }).catch(fail);
   });

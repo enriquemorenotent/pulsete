@@ -33,6 +33,7 @@ export type CommandPaletteEntrySpec = {
   section: CommandPaletteEntrySection;
   label: string;
   emoji?: string | null;
+  mediaNetworkId?: string;
   networkIconSource?: NetworkServerImageSource | null;
   networkIconUrl?: string | null;
   networkRuntimePhase?: NetworkImageRuntimePhase | null;

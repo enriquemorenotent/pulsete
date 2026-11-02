@@ -1,3 +1,4 @@
+import { registerAccountMediaRoute } from './account-media-route.js';
 import net from 'node:net';
 import tls from 'node:tls';
 import { NordVpnTunnelError, startNordVpnTunnel } from './nordvpn-tunnel.js';
@@ -25,6 +26,10 @@ export function connectNordVpnCountry(connection: IrcConnectContext, country: st
     });
     release = lease.release;
     if (!current()) { await release(); return; }
+    registerAccountMediaRoute(connection.profile.id, {
+      location: connection.profile.nordVpnLocation!, signal: controller.signal,
+      connect: (host, port) => connectHttpTunnel(new net.Socket(), lease, { host, port }, controller.signal),
+    });
     connection.lifecycle.vpnServer = lease.hostname;
     emitState(connection);
     emitStatus(connection, 'NordVPN is ready. Connecting to the IRC server');
