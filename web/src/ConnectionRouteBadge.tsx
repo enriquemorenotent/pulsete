@@ -17,7 +17,7 @@ export function connectionRouteLabel(network: NetworkProfile, phase: NetworkRunt
   return `${service} · ${destination}${country && phase !== 'offline' && vpnServer ? ` · ${vpnServer}` : ''} · ${state}`;
 }
 
-export function ConnectionRouteBadge({ network, phase, vpnServer }: { network: NetworkProfile; phase: NetworkRuntimeState['phase']; vpnServer?: string }) {
+export function ConnectionRouteBadge({ network, phase, vpnServer, embedded = false }: { network: NetworkProfile; phase: NetworkRuntimeState['phase']; vpnServer?: string; embedded?: boolean }) {
   const label = connectionRouteLabel(network, phase, vpnServer);
   if (!label) return null;
   const vpn = Boolean(nordVpnCountry(network.nordVpnLocation ?? ''));
@@ -26,13 +26,14 @@ export function ConnectionRouteBadge({ network, phase, vpnServer }: { network: N
   const text = vpn ? 'VPN' : 'Proxy';
   const flag = nordVpnCountryFlag(network.nordVpnLocation ?? '');
   return <span role="img" aria-label={label} title={label} className={cn(
-    'inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none',
-    phase === 'connected' ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300'
-      : phase === 'connecting' ? 'border-amber-400/25 bg-amber-400/10 text-amber-300'
-        : 'border-border text-muted-foreground',
+    'inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[9px] font-medium leading-none',
+    embedded ? 'w-[104px] justify-center self-stretch rounded-r-lg border-l px-1.5' : 'rounded border px-1.5 py-0.5',
+    phase === 'connected' ? 'border-emerald-400/15 bg-emerald-400/5 text-emerald-300'
+      : phase === 'connecting' ? 'border-amber-400/15 bg-amber-400/5 text-amber-300'
+        : 'border-border/60 text-muted-foreground',
   )}>
-    {flag ? <span aria-hidden="true" className="text-sm leading-none">{flag}</span> : null}
+    {flag ? <span aria-hidden="true" className="text-xs leading-none">{flag}</span> : null}
     <Icon aria-hidden="true" className="size-3" />
-    <span aria-hidden="true">{text}{phase === 'connecting' ? '…' : phase === 'offline' ? ' off' : ''}{serverNumber ? ` #${serverNumber}` : ''}</span>
+    <span aria-hidden="true">{text}{phase === 'connecting' ? '…' : phase === 'offline' ? ' · Offline' : ''}{serverNumber ? ` #${serverNumber}` : ''}</span>
   </span>;
 }

@@ -10,7 +10,7 @@ for (const phase of ['connected', 'connecting', 'offline'] as const) test(`VPN b
  assert.ok(markup.includes("🇳🇱"));
  assert.ok(markup.includes(phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Configured, offline'));
  assert.ok(markup.includes(phase === 'connected' ? 'text-emerald-300' : phase === 'connecting' ? 'text-amber-300' : 'text-muted-foreground'));
- if (phase === 'offline') assert.match(markup, /VPN off/);
+ if (phase === 'offline') assert.match(markup, /VPN · Offline/);
 });
 test('SOCKS5 routes are identified as proxies rather than VPN tunnels', () => {
  const markup = renderToStaticMarkup(<ConnectionRouteBadge network={{ ...makeSidebarNetwork(), nordVpnLocation: 'amsterdam' }} phase="connected" />);
