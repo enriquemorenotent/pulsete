@@ -12,6 +12,7 @@ import { ConnectionSidebarNetworkSection } from './ConnectionSidebarNetworkSecti
 import { ConnectionSidebarAccountMenu } from './ConnectionSidebarAccountMenu.js';
 import type { SidebarConnectionView } from './connection-sidebar-view.js';
 import type { ConnectionSidebarProps } from './connection-sidebar-types.js';
+import { useWatchlistHeight } from './use-watchlist-height.js';
 
 type ConnectionSidebarServerSwitcherProps = ConnectionSidebarProps;
 
@@ -22,6 +23,7 @@ export function ConnectionSidebarServerSwitcher(
     () => resolveActiveConnection(props.connections),
     [props.connections],
   );
+  const watchlistLayout = useWatchlistHeight(activeConnection?.network.id);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -33,9 +35,11 @@ export function ConnectionSidebarServerSwitcher(
           ))}
         </div>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <ConnectionSwitcherDetail {...props} activeConnection={activeConnection} />
+      <div ref={watchlistLayout.containerRef} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <ConnectionSwitcherDetail {...props} activeConnection={activeConnection} layout={watchlistLayout} />
         <ConnectionSidebarFriends
+          sectionRef={watchlistLayout.watchlistRef}
+          availableHeight={watchlistLayout.availableHeight}
           friends={props.friends}
           friendPresence={props.friendPresence}
           hideOfflineFriends={props.hideOfflineFriends}
@@ -51,12 +55,14 @@ export function ConnectionSidebarServerSwitcher(
 
 function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & {
   activeConnection: SidebarConnectionView | null;
+  layout: ReturnType<typeof useWatchlistHeight>;
 }) {
   const activeConnection = props.activeConnection;
   return (
     <AccountMediaProvider network={activeConnection?.network ?? null} runtime={activeConnection?.runtime}><section className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {activeConnection ? (
         <ServerSwitcherHeader
+          headerRef={props.layout.channelHeaderRef}
           connection={activeConnection}
           externalAvatarsEnabled={props.externalAvatarsEnabled}
           showMedia={props.showMedia}
@@ -67,7 +73,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
         />
       ) : null}
       <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0 [&_[data-radix-scroll-area-viewport]>div]:!w-full">
-        <div className="min-w-0 px-2.5 pb-2 pt-1">
+        <div ref={props.layout.channelContentRef} className="min-w-0 px-2.5 pb-2 pt-1">
           {props.connections.length === 0 ? (
             <div className="rounded-md bg-black/10 px-2 py-1.5 text-[12px] text-muted-foreground ring-1 ring-white/5">
               No open connections. Use Networks to connect.
@@ -98,6 +104,7 @@ function ConnectionSwitcherDetail(props: ConnectionSidebarServerSwitcherProps & 
 }
 
 function ServerSwitcherHeader(props: {
+  headerRef: React.Ref<HTMLElement>;
   connection: SidebarConnectionView;
   externalAvatarsEnabled?: boolean;
   showMedia?: ConnectionSidebarProps['showMedia'];
@@ -111,7 +118,7 @@ function ServerSwitcherHeader(props: {
   const actionLabel = phase === 'connected' ? 'Disconnect' : phase === 'connecting' ? 'Cancel connection' : 'Connect';
   const statusLabel = phase === 'connected' ? 'Connected' : phase === 'connecting' ? 'Connecting' : 'Offline';
   return (
-    <header className="flex shrink-0 items-center gap-2 px-4 py-2.5">
+    <header ref={props.headerRef} className="flex shrink-0 items-center gap-2 px-4 py-2.5">
       <button
         type="button"
         className="min-w-0 flex-1 rounded-sm text-left outline-none focus-visible:ring-1 focus-visible:ring-primary/45"

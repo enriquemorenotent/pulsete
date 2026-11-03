@@ -20,6 +20,8 @@ type ConnectionSidebarFriendsProps = Pick<
 	| 'onSelectFriend'
 	| 'onToggleHideOfflineFriends'
 > & {
+	sectionRef?: React.Ref<HTMLElement>;
+	availableHeight?: number;
 	variant?: 'bottom' | 'panel';
 };
 
@@ -57,6 +59,7 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 		<>
 			{activityFriend && props.friends.some((friend) => friend.id === activityFriend.id) && <Suspense fallback={null}><WatchlistActivityDialog key={activityFriend.id} friend={activityFriend} onClose={() => setActivityFriend(null)} /></Suspense>}
 			<section
+				ref={props.sectionRef}
 				className={
 					variant === 'panel'
 						? 'flex min-h-0 flex-1 flex-col px-2.5 py-1.5'
@@ -97,6 +100,9 @@ export function ConnectionSidebarFriends(props: ConnectionSidebarFriendsProps) {
 				</div>
 				<div
 					id={contentId}
+					style={variant === 'bottom' && props.availableHeight ? {
+						maxHeight: `max(min(28dvh, 14rem), ${props.availableHeight}px)`,
+					} : undefined}
 					hidden={!expanded}
 					className={
 						variant === 'panel'
