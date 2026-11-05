@@ -81,7 +81,8 @@ function createMainWindow(server: DesktopServer) {
     show: false,
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#202733',
+      // Let the web title bar (including modal backdrops) show behind native controls.
+      color: '#00000000',
       symbolColor: '#aebdce',
       height: 64,
     },
