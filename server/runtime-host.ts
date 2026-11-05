@@ -124,6 +124,8 @@ export class RuntimeHost {
         status: () => this.runtime.http.assistant.status(),
       },
       networks: {
+        getAccountImage: (id, url) => this.runtime.http.networks.getAccountImage(id, url),
+        saveAccountImage: (id, url, type, data) => this.runtime.http.networks.saveAccountImage(id, url, type, data),
         list: () => this.runtime.http.networks.list(),
         save: (data, networkId) => this.runtime.http.networks.save(data, networkId),
         duplicate: (networkId) => this.runtime.http.networks.duplicate(networkId),

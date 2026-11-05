@@ -1,4 +1,4 @@
-import { accountMediaUrl } from './account-media.js';
+import { CommandPaletteEntryImage } from './CommandPaletteEntryImage.js';
 import {
   useEffect,
   useMemo,
@@ -25,8 +25,6 @@ import {
   type CommandPaletteEntrySection,
 } from './command-palette.js';
 import { scheduleAnimationFrameFocus } from './animation-frame-focus.js';
-import { NetworkServerImageFallbackCue } from './NetworkServerImageFallbackCue.js';
-import { networkImageRuntimePhaseClass } from './network-image-state.js';
 
 type CommandPaletteDialogProps = {
   open: boolean;
@@ -177,19 +175,7 @@ export function CommandPaletteDialogBody(props: CommandPaletteDialogBodyProps) {
                         }}
                       >
                         {entry.networkIconUrl ? (
-                          <span className="relative size-8 shrink-0 overflow-hidden rounded-sm">
-                            <img
-                              src={accountMediaUrl(entry.networkIconUrl, entry.mediaNetworkId)}
-                              alt=""
-                              className={cn('size-full object-cover', networkImageRuntimePhaseClass(entry.networkRuntimePhase))}
-                              loading="lazy"
-                              decoding="async"
-                              referrerPolicy="no-referrer"
-                            />
-                            {entry.networkIconSource === 'irccloud-fallback' ? (
-                              <NetworkServerImageFallbackCue className="right-0 top-0" />
-                            ) : null}
-                          </span>
+                          <CommandPaletteEntryImage entry={entry} />
                         ) : null}
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium">

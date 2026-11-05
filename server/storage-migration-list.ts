@@ -1,3 +1,4 @@
+import { accountImagesSchemaSql } from './storage-account-images.js';
 import { ensureWatchlistActivityStorage } from './storage-watchlist-activity.js';
 import {
   ensureNickEmojiTable,
@@ -194,4 +195,5 @@ export const storageMigrations: readonly StorageMigration[] = [
   },
   { version: 32, apply: ensureWatchlistActivityStorage },
   { version: 33, apply: (db) => { ensureColumn(db, 'networks', 'nordVpnLocation', "TEXT NOT NULL DEFAULT ''"); } },
+  { version: 34, apply: (db) => { db.exec(accountImagesSchemaSql); } },
 ];

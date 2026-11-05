@@ -1,3 +1,4 @@
+import { accountImagesSchemaSql } from './storage-account-images.js';
 import {
   historyImportBatchesSchemaSql,
   messageSearchSchemaSql,
@@ -167,4 +168,5 @@ ${messageSearchSchemaSql}
     ON muted_nicks(networkId, nick COLLATE NOCASE, createdAt ASC);
 
 ${userStateSchemaSql}
+${accountImagesSchemaSql}
 `;

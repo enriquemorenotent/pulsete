@@ -1,3 +1,4 @@
+import { assertProxiedMedia } from './helpers/assert-proxied-media.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { FriendState } from '../shared/protocol-chat.js';
@@ -131,7 +132,7 @@ test('connection sidebar renders assigned server images when media is shown', ()
     selection: { kind: 'buffer', bufferId: 'alpha-server' },
   });
 
-  assert.match(markup, /src="https:\/\/example.test\/alpha.png"/);
+  assertProxiedMedia(markup, 'img', 'https://example.test/alpha.png');
   assert.match(markup, /aria-label="Open Alpha"/);
   assert.match(markup, /grayscale/);
   assert.match(markup, /aria-label="Account actions for Alpha"/);
@@ -196,7 +197,7 @@ test('connection sidebar uses IRCCloud avatars when no server image is set', () 
     selection: { kind: 'buffer', bufferId: 'alpha-server' },
   });
 
-  assert.match(markup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  assertProxiedMedia(markup, 'img', 'https://static.irccloud-cdn.com/avatar-redirect/7');
   assert.match(markup, /title="Alpha · [^"]+"/);
   assert.match(markup, /aria-label="Open Alpha"/);
 });

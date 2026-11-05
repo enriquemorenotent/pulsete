@@ -157,3 +157,17 @@ const readBackupMessageCount = (dir: string) => {
   backup.close();
   return count.count;
 };
+
+test('existing databases gain the persistent account picture cache', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
+  const file = join(dir, 'db.sqlite');
+  const storage = new Storage(file);
+  storage.close();
+  const db = openSqliteDatabase(file);
+  db.exec('DROP TABLE account_images; PRAGMA user_version = 33');
+  db.close();
+  const upgraded = new Storage(file);
+  try {
+    assert.equal(upgraded.networks.getAccountImage('missing', 'https://example.com/avatar.png'), undefined);
+  } finally { upgraded.close(); }
+});

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { CommandPaletteEntryImage } from '../web/src/CommandPaletteEntryImage.js';
 import { CommandPaletteDialogBody } from '../web/src/CommandPaletteDialog.js';
 import type { CommandPaletteEntry } from '../web/src/command-palette.js';
 import { Dialog } from '../web/src/components/ui/dialog.js';
@@ -64,7 +65,7 @@ test('command palette body keeps the top chrome fixed above a flexible results p
   assert.match(markup, /Unread/);
   assert.match(
     markup,
-    /<span class="relative size-8 shrink-0 overflow-hidden rounded-sm"><img src="data:image\/png;base64,cHVsc2V0ZQ==" alt="" class="size-full object-cover grayscale opacity-60"/,
+    /<img src="data:image\/png;base64,cHVsc2V0ZQ==" alt="" class="size-full object-cover grayscale opacity-60"/,
   );
   assert.match(
     markup,
@@ -99,4 +100,25 @@ test('command palette marks fallback network images', () => {
 
   assert.match(markup, /data-network-image-source="irccloud-fallback"/);
   assert.match(markup, /title="Using IRCCloud avatar fallback"/);
+});
+
+
+test('palette pictures request their owning account and retry on connection changes', () => {
+  const picture = { ...entries[0]!, mediaNetworkId: 'account-two', networkIconUrl: 'https://example.com/avatar.png' };
+  const offline = renderToStaticMarkup(<CommandPaletteEntryImage entry={picture} />);
+  const connected = renderToStaticMarkup(<CommandPaletteEntryImage entry={{ ...picture, networkRuntimePhase: 'connected' }} />);
+  const source = (markup: string) => new URL(/src="([^"]+)"/.exec(markup)![1]!.replaceAll('&amp;', '&'), 'http://localhost');
+  assert.equal(source(offline).pathname, '/api/media/resource');
+  assert.equal(source(offline).searchParams.get('networkId'), 'account-two');
+  assert.equal(source(offline).searchParams.get('url'), picture.networkIconUrl);
+  assert.notEqual(source(offline).href, source(connected).href);
+});
+
+test('palette pictures show initials without a source badge when no usable image URL exists', () => {
+  const markup = renderToStaticMarkup(<CommandPaletteEntryImage entry={{
+    ...entries[0]!, networkIconSource: 'irccloud-fallback', networkIconUrl: 'invalid-url',
+  }} />);
+  assert.doesNotMatch(markup, /<img/);
+  assert.doesNotMatch(markup, /data-network-image-source/);
+  assert.match(markup, />OP<\/span>/);
 });

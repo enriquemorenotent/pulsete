@@ -17,7 +17,10 @@ type ConnectionSidebarServerIconProps = {
 export function ConnectionSidebarServerIcon(
   props: ConnectionSidebarServerIconProps,
 ) {
-  const mediaUrl = useAccountMediaUrl(props.iconUrl, props.networkId);
+  const sourceUrl = useAccountMediaUrl(props.iconUrl, props.networkId);
+  const mediaUrl = sourceUrl?.startsWith('/api/media/resource?')
+    ? `${sourceUrl}&accountRoute=${encodeURIComponent(`${props.runtime?.phase}:${props.runtime?.vpnServer}`)}`
+    : sourceUrl;
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   if (mediaUrl && mediaUrl !== failedUrl) {
     return (

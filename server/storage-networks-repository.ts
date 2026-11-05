@@ -1,3 +1,4 @@
+import { getAccountImage, saveAccountImage } from './storage-account-images.js';
 import type { SecretBox } from './network-secret.js';
 import {
   deleteNetwork,
@@ -17,6 +18,14 @@ export class StorageNetworksRepository {
     private readonly db: SqliteDb,
     private readonly secretBox: SecretBox,
   ) {}
+
+  getAccountImage(networkId: string, sourceUrl: string) {
+    return getAccountImage(this.db, networkId, sourceUrl);
+  }
+
+  saveAccountImage(networkId: string, sourceUrl: string, mimeType: string, imageData: Buffer) {
+    saveAccountImage(this.db, networkId, sourceUrl, mimeType, imageData);
+  }
 
   list() {
     return listNetworks(this.db);

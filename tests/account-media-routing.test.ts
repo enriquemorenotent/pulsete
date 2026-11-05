@@ -87,3 +87,84 @@ test('media download is aborted when its VPN disconnects', async () => {
   website.closeAllConnections();
   await new Promise<void>(resolve => website.close(() => resolve()));
 });
+
+test('account pictures stay available offline, refresh through the VPN, and remain account scoped', async () => {
+  let visits = 0;
+  const website = createServer((_req, res) => {
+    visits++;
+    res.setHeader('Content-Type', 'image/png');
+    res.end(`picture-${visits}`);
+  });
+  const port = await listen(website);
+  const context = await createHttpRuntimeContext();
+  const controller = new AbortController();
+  const sourceUrl = 'http://1.1.1.1/account.png';
+  const input = createNetworkInput({ iconUrl: sourceUrl, nordVpnUsername: 'dummy', nordVpnPassword: 'dummy', nordVpnLocation: 'country:Germany' });
+  const account = context.storage.networks.upsert(input);
+  const other = context.storage.networks.upsert({ ...input, name: 'Other account' });
+  const resource = (id = account.id, url = sourceUrl) =>
+    `http://127.0.0.1:${context.port}/api/media/resource?${new URLSearchParams({ networkId: id, url })}`;
+  const expire = async () => {
+    const { openSqliteDatabase } = await import('../server/storage-sqlite.js');
+    const db = openSqliteDatabase(context.storage.databasePath);
+    try { db.prepare('UPDATE account_images SET updatedAt = 0').run(); }
+    finally { db.close(); }
+  };
+  try {
+    assert.equal((await fetch(resource())).status, 400);
+    assert.equal(visits, 0);
+    registerAccountMediaRoute(account.id, {
+      location: input.nordVpnLocation!, signal: controller.signal,
+      connect: async () => net.connect(port, '127.0.0.1'),
+    });
+    const first = await fetch(resource());
+    assert.equal(first.status, 200);
+    assert.equal(await first.text(), 'picture-1');
+    assert.equal(await (await fetch(resource())).text(), 'picture-1');
+    assert.equal(visits, 1);
+    await expire();
+    assert.equal(await (await fetch(resource())).text(), 'picture-2');
+    assert.equal(visits, 2);
+    controller.abort();
+    await expire();
+    const offline = await fetch(resource());
+    assert.equal(offline.status, 200);
+    assert.equal(offline.headers.get('content-type'), 'image/png');
+    assert.equal(await offline.text(), 'picture-2');
+    assert.equal((await fetch(resource(other.id))).status, 400);
+    assert.equal((await fetch(resource(account.id, 'http://1.1.1.1/unrelated.png'))).status, 400);
+    context.storage.networks.upsert({ ...input, id: account.id, iconUrl: 'http://1.1.1.1/new.png' });
+    assert.equal((await fetch(resource())).status, 400);
+    assert.equal((await fetch(resource(account.id, 'http://1.1.1.1/new.png'))).status, 400);
+    assert.equal(visits, 2);
+  } finally {
+    controller.abort();
+    await context.close();
+    website.closeAllConnections();
+    await new Promise<void>(resolve => website.close(() => resolve()));
+  }
+  const { Storage } = await import('../server/storage.js');
+  const reopened = new Storage(context.storage.databasePath);
+  try {
+    assert.equal(reopened.networks.getAccountImage(account.id, sourceUrl)?.imageData.toString(), 'picture-2');
+    assert.equal(reopened.networks.getAccountImage(other.id, sourceUrl), undefined);
+    reopened.networks.delete(account.id);
+    assert.equal(reopened.networks.getAccountImage(account.id, sourceUrl), undefined);
+  } finally { reopened.close(); }
+});
+
+test('saved IRCCloud account pictures are available offline only for the current identity', async () => {
+  const context = await createHttpRuntimeContext();
+  const sourceUrl = 'https://static.irccloud-cdn.com/avatar-redirect/7';
+  const input = createNetworkInput({ username: 'uid7', nordVpnUsername: 'dummy', nordVpnPassword: 'dummy', nordVpnLocation: 'country:Germany' });
+  const account = context.storage.networks.upsert(input);
+  context.storage.networks.saveAccountImage(account.id, sourceUrl, 'image/png', Buffer.from('saved-avatar'));
+  const resource = `http://127.0.0.1:${context.port}/api/media/resource?${new URLSearchParams({ networkId: account.id, url: sourceUrl })}`;
+  try {
+    const response = await fetch(resource);
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), 'saved-avatar');
+    context.storage.networks.upsert({ ...input, id: account.id, username: 'uid8' });
+    assert.equal((await fetch(resource)).status, 400);
+  } finally { await context.close(); }
+});

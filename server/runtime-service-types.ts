@@ -120,6 +120,8 @@ export type RuntimeHttpApi = {
     status: RuntimeAiAssistantService['status'];
   };
   networks: {
+    getAccountImage: RuntimeStore['networks']['getAccountImage'];
+    saveAccountImage: RuntimeStore['networks']['saveAccountImage'];
     list: RuntimeNetworkCatalog['list'];
     save: RuntimeNetworkMutations['saveNetwork'];
     duplicate: RuntimeNetworkMutations['duplicateNetwork'];

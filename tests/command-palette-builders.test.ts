@@ -135,6 +135,10 @@ test('command palette carries server images for network-backed entries', () => {
       .map((entry) => entry.networkRuntimePhase),
     ['offline', 'offline', 'offline', 'offline'],
   );
+  assert.deepEqual(
+    entries.filter((entry) => entry.networkIconUrl).map((entry) => entry.mediaNetworkId),
+    [network.id, network.id, network.id, network.id],
+  );
   assert.equal(entries.find((entry) => entry.id === `friend:${friend.id}`)?.networkIconUrl, undefined);
 });
 

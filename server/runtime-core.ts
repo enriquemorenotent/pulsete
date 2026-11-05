@@ -203,6 +203,8 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       status: () => assistantService.status(),
     },
     networks: {
+      getAccountImage: (id, url) => store.networks.getAccountImage(id, url),
+      saveAccountImage: (id, url, type, data) => store.networks.saveAccountImage(id, url, type, data),
       list: () => store.networks.list(),
       save: networks.saveNetwork,
       duplicate: networks.duplicateNetwork,

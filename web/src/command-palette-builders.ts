@@ -123,6 +123,7 @@ const buildBufferEntries = (
         label: child.buffer.target,
         networkIconSource: queryAvatarUrl ? null : networkImage?.source,
         networkIconUrl: queryAvatarUrl ?? networkImage?.url,
+        mediaNetworkId: connection.network.id,
         networkRuntimePhase,
         emoji: child.buffer.kind === 'query'
           ? resolveNickEmoji(nickEmojiByNetworkNick, child.buffer.networkId, child.buffer.target)
