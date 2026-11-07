@@ -1,4 +1,4 @@
-# Desktop transcript regression tests
+# Desktop browser regression tests
 
 Run `npm run test:browser` with Google Chrome installed. For a visible browser,
 run `npm run test:browser -- --headed`.
@@ -14,3 +14,7 @@ messages, bounded older/newer windows, automatic history loading, message jumps,
 and returning to latest. Console errors and Vite error overlays fail the tests.
 Failure screenshots go to `/tmp/pulsete-playwright`; the successful history-view
 screenshot goes to `/tmp/pulsete-transcript-history.png`.
+
+The media-preview fixture also checks account pictures, user avatars, DM profile
+pictures, and message images against the shared viewer: full-size loading, original
+links, account routing, Escape, outside-click closing, and missing-picture menus.

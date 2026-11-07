@@ -1,12 +1,11 @@
 import { useAccountMediaUrl } from './account-media.js';
 import { Maximize2 } from 'lucide-react';
 import { memo, useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog.js';
+import { MediaPreviewDialog } from './MediaPreviewDialog.js';
 import {
   buildInlineMediaLabel,
   type InlineMedia,
 } from './formatted-message-inline-media.js';
-import { InlineMediaPreviewDialogBody } from './InlineMediaPreviewDialogBody.js';
 import { usePagePreviewMedia } from './page-preview-media.js';
 
 export const FormattedMessageInlinePreviews = memo(function FormattedMessageInlinePreviews(
@@ -26,7 +25,12 @@ export const FormattedMessageInlinePreviews = memo(function FormattedMessageInli
   }
 
   return (
-    <Dialog open={activeMedia !== null} onOpenChange={(open) => !open && setActiveHref(null)}>
+    <MediaPreviewDialog
+      open={activeMedia !== null}
+      onOpenChange={(open) => !open && setActiveHref(null)}
+      media={activeMedia}
+      description={`Expanded inline ${activeMedia?.kind ?? 'image'} preview.`}
+    >
       <span className="mt-2 flex flex-wrap gap-2">
         {media.map((entry) => (
           <InlineMediaPreviewTile
@@ -37,16 +41,7 @@ export const FormattedMessageInlinePreviews = memo(function FormattedMessageInli
           />
         ))}
       </span>
-      {activeMedia ? (
-        <DialogContent className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0">
-          <DialogTitle className="sr-only">{buildInlineMediaLabel(activeMedia)}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Expanded inline {activeMedia.kind} preview.
-          </DialogDescription>
-          <InlineMediaPreviewDialogBody media={activeMedia} />
-        </DialogContent>
-      ) : null}
-    </Dialog>
+    </MediaPreviewDialog>
   );
 });
 

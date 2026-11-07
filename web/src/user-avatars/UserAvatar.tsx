@@ -2,8 +2,7 @@ import { useAccountMediaUrl } from '../account-media.js';
 import { useMemo, useState } from 'react';
 import type { ChannelUserState } from '../../../shared/protocol-chat.js';
 import { cn } from '@/lib/utils.js';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog.js';
-import { InlineImagePreviewDialogBody } from '../InlineImagePreviewDialogBody.js';
+import { ImagePreviewDialog } from '../MediaPreviewDialog.js';
 import { failedAvatarUrls } from './failure-cache.js';
 import { resolveIrcCloudAvatarUrl } from './irccloud.js';
 import {
@@ -114,7 +113,14 @@ export function UserAvatar({
   }
 
   return (
-    <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+    <ImagePreviewDialog
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      href={resolvedCustomAvatarUrl || externalUrl}
+      networkId={customAvatarTarget?.networkId}
+      label={altText}
+      description="Expanded avatar preview."
+    >
       <button
         type="button"
         aria-label={altText}
@@ -126,14 +132,7 @@ export function UserAvatar({
       >
         {avatar}
       </button>
-      {previewOpen ? (
-        <DialogContent className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0">
-          <DialogTitle className="sr-only">{altText}</DialogTitle>
-          <DialogDescription className="sr-only">Expanded avatar preview.</DialogDescription>
-          <InlineImagePreviewDialogBody href={(resolvedCustomAvatarUrl || externalUrl)!} networkId={customAvatarTarget?.networkId} altText={altText} />
-        </DialogContent>
-      ) : null}
-    </Dialog>
+    </ImagePreviewDialog>
   );
 }
 

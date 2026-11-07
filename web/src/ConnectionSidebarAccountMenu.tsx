@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react';
 import { Check, Copy, Ellipsis, ImageIcon, X } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.js';
-import { InlineImagePreviewDialogBody } from './InlineImagePreviewDialogBody.js';
+import { ImagePreviewDialog } from './MediaPreviewDialog.js';
 
 export function ConnectionSidebarAccountMenu(props: {
   name: string;
@@ -24,7 +23,17 @@ export function ConnectionSidebarAccountMenu(props: {
   };
 
   return (
-    <Dialog open={previewOpen && !!props.imageUrl} onOpenChange={setPreviewOpen}>
+    <ImagePreviewDialog
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      href={props.imageUrl}
+      label={imageLabel}
+      description="Full-size account profile picture."
+      onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        menuButtonRef.current?.focus();
+      }}
+    >
       <DropdownMenu.Root onOpenChange={() => setCopyStatus('idle')}>
         <DropdownMenu.Trigger asChild>
           <button
@@ -71,20 +80,7 @@ export function ConnectionSidebarAccountMenu(props: {
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
-      {previewOpen && props.imageUrl ? (
-        <DialogContent
-          className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0"
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            menuButtonRef.current?.focus();
-          }}
-        >
-          <DialogTitle className="sr-only">{imageLabel}</DialogTitle>
-          <DialogDescription className="sr-only">Full-size account profile picture.</DialogDescription>
-          <InlineImagePreviewDialogBody href={props.imageUrl} altText={imageLabel} />
-        </DialogContent>
-      ) : null}
-    </Dialog>
+    </ImagePreviewDialog>
   );
 }
 
