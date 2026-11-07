@@ -8,16 +8,18 @@ export function captureTranscriptScrollSnapshot(
   scroller: HTMLElement,
   rowKeys: readonly string[],
   hasNewerHistory: boolean,
+  options: { isAtLatest?: (distance: number) => boolean; acceptRow?: (key: string) => boolean } = {},
 ): TranscriptScrollSnapshot | null {
-  if (!hasNewerHistory
-    && scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= latestScrollSnapshotThreshold) {
+  const distance = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+  const atLatest = options.isAtLatest?.(distance) ?? (distance <= latestScrollSnapshotThreshold);
+  if (!hasNewerHistory && atLatest) {
     return { kind: 'latest' };
   }
   const viewport = scroller.getBoundingClientRect();
   for (const element of scroller.querySelectorAll<HTMLElement>('[data-index]')) {
     const rect = element.getBoundingClientRect();
     const rowKey = rowKeys[Number(element.dataset.index)];
-    if (rowKey && rect.bottom > viewport.top && rect.top < viewport.bottom) {
+    if (rowKey && (!options.acceptRow || options.acceptRow(rowKey)) && rect.bottom > viewport.top && rect.top < viewport.bottom) {
       return { kind: 'anchor', rowKey, offset: viewport.top - rect.top };
     }
   }

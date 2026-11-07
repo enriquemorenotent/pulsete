@@ -3,7 +3,6 @@ import {
   memo,
   useCallback,
   useMemo,
-  useState,
   type ComponentPropsWithoutRef,
 } from 'react';
 import { Virtuoso } from 'react-virtuoso';
@@ -20,9 +19,6 @@ import {
   useTranscriptViewport,
   type TranscriptInitialScrollTarget,
 } from './transcript/viewport.js';
-import { transcriptScrollSnapshots } from './transcript/scroll-snapshot-store.js';
-import { resolveRestoredTranscriptScrollIndex } from './transcript/viewport-positioning.js';
-import { useTranscriptWindowAnchor } from './transcript/window-anchor.js';
 import { handleTranscriptCopy } from './transcript/copy.js';
 
 type ChatTranscriptVirtuosoProps = {
@@ -88,20 +84,8 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     () => props.model.flatRows.map((row) => row.key),
     [props.model.flatRows],
   );
-  const [savedScrollSnapshot] = useState(() =>
-    props.bufferId ? transcriptScrollSnapshots.get(props.bufferId) : null,
-  );
-  const initialScrollLocation = resolveRestoredTranscriptScrollIndex({
-    firstItemIndex: 0,
-    rowKeys,
-    snapshot: savedScrollSnapshot,
-  }) ?? (props.initialScrollTarget === 'latest' ? { index: 'LAST' as const, align: 'end' as const } : undefined);
-  const windowAnchor = useTranscriptWindowAnchor(
-    rowKeys, props.hasNewerHistory, props.jumpToLatestRequestId, props.focusRequestId, props.focusRowIndex,
-  );
   const viewport = useTranscriptViewport({
     bufferId: props.bufferId,
-    isRestoringWindow: windowAnchor.isRestoring,
     followOutputRequestId: props.followOutputRequestId,
     focusRequestId: props.focusRequestId,
     focusRowIndex: props.focusRowIndex,
@@ -116,6 +100,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     totalItemCount: props.model.flatRows.length,
     unreadRowIndex: props.model.unreadRowIndex,
   });
+  const { windowAnchor, initialScrollLocation } = viewport;
   const components = useMemo(
     () => ({
       Header: props.onLoadOlderHistory
