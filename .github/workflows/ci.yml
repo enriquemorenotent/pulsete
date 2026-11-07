@@ -44,3 +44,17 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Install Desktop Test Browser
+        run: npx playwright install --with-deps chrome
+
+      - name: Test Desktop Browser Flows
+        run: npm run test:browser
+
+      - name: Retain Browser Failure Evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-browser-failures
+          path: /tmp/pulsete-playwright
+          if-no-files-found: ignore
