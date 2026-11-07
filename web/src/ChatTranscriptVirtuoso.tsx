@@ -3,6 +3,7 @@ import {
   memo,
   useCallback,
   useMemo,
+  useState,
   type ComponentPropsWithoutRef,
 } from 'react';
 import { Virtuoso } from 'react-virtuoso';
@@ -19,6 +20,8 @@ import {
   useTranscriptViewport,
   type TranscriptInitialScrollTarget,
 } from './transcript/viewport.js';
+import { transcriptScrollSnapshots } from './transcript/scroll-snapshot-store.js';
+import { resolveRestoredTranscriptScrollIndex } from './transcript/viewport-positioning.js';
 import { useTranscriptWindowAnchor } from './transcript/window-anchor.js';
 import { handleTranscriptCopy } from './transcript/copy.js';
 
@@ -85,6 +88,14 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     () => props.model.flatRows.map((row) => row.key),
     [props.model.flatRows],
   );
+  const [savedScrollSnapshot] = useState(() =>
+    props.bufferId ? transcriptScrollSnapshots.get(props.bufferId) : null,
+  );
+  const initialScrollLocation = resolveRestoredTranscriptScrollIndex({
+    firstItemIndex: 0,
+    rowKeys,
+    snapshot: savedScrollSnapshot,
+  }) ?? (props.initialScrollTarget === 'latest' ? { index: 'LAST' as const, align: 'end' as const } : undefined);
   const windowAnchor = useTranscriptWindowAnchor(
     rowKeys, props.hasNewerHistory, props.jumpToLatestRequestId, props.focusRequestId, props.focusRowIndex,
   );
@@ -191,7 +202,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
     <div ref={windowAnchor.containerRef} className="relative min-h-0 flex-1" onCopy={handleTranscriptCopy}>
       <Virtuoso
         key={windowAnchor.key}
-        {...(windowAnchor.initialTopMostItemIndex ? { initialTopMostItemIndex: windowAnchor.initialTopMostItemIndex } : {})}
+        initialTopMostItemIndex={windowAnchor.initialTopMostItemIndex ?? initialScrollLocation}
         ref={viewport.virtuosoRef}
         className="chat-transcript-scrollbar"
         style={{ height: '100%' }}
@@ -205,7 +216,7 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         followOutput={viewport.followOutput}
         increaseViewportBy={{ bottom: 320, top: 160 }}
         itemContent={renderItemContent}
-        itemsRendered={(items) => { windowAnchor.isRestoring(); viewport.handleItemsRendered(items); }}
+        itemsRendered={() => { windowAnchor.isRestoring(); viewport.handleItemsRendered(); }}
         scrollerRef={viewport.scrollerRef}
         startReached={viewport.handleStartReached}
         endReached={viewport.handleEndReached}

@@ -6,7 +6,7 @@ export type ScrollBehavior = 'auto' | false;
 
 export type TranscriptScrollSnapshot =
   | { kind: 'latest' }
-  | { kind: 'anchor'; rowKey: string };
+  | { kind: 'anchor'; rowKey: string; offset?: number };
 
 export const resolveLatestFollowBehavior = (input: {
   followingLatest: boolean;
@@ -40,7 +40,12 @@ export const resolveRestoredTranscriptScrollIndex = (input: {
   }
   const rowIndex = input.rowKeys.indexOf(input.snapshot.rowKey);
   return rowIndex >= 0
-    ? { align: 'start' as const, behavior: 'auto' as const, index: input.firstItemIndex + rowIndex }
+    ? {
+        align: 'start' as const,
+        behavior: 'auto' as const,
+        index: input.firstItemIndex + rowIndex,
+        ...(input.snapshot.offset !== undefined ? { offset: input.snapshot.offset } : {}),
+      }
     : null;
 };
 

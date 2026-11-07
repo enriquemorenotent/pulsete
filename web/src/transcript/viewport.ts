@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { ListItem, VirtuosoHandle } from 'react-virtuoso';
+import type { VirtuosoHandle } from 'react-virtuoso';
 import {
   firstItemIndexBase,
   resolveFirstUnreadScrollLocation,
   resolveLatestFollowBehavior,
   resolveRestoredTranscriptScrollIndex,
-  resolveRowKeyFromItemIndex,
   scrollToLatest,
   topAutoLoadThreshold,
   type ScrollBehavior,
+  type TranscriptScrollSnapshot,
 } from './viewport-positioning.js';
 import { useTranscriptOlderHistory } from './viewport-older-history.js';
+import { captureTranscriptScrollSnapshot } from './capture-scroll-snapshot.js';
 import { transcriptScrollSnapshots } from './scroll-snapshot-store.js';
 
 export { resolveFirstUnreadScrollLocation, resolveLatestFollowBehavior, resolveNextFirstItemIndex, resolvePrependedRowCountFromAnchor, resolveRestoredTranscriptScrollIndex, type TranscriptScrollSnapshot } from './viewport-positioning.js';
@@ -50,6 +51,8 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
   const previousFocusRequestIdRef = useRef(0);
   const previousJumpToLatestRequestIdRef = useRef(params.jumpToLatestRequestId);
+  const captureSnapshotRef = useRef<() => void>(() => {});
+  const measuredSnapshotRef = useRef<TranscriptScrollSnapshot | null>(null);
   const visibleAnchorRowKeyRef = useRef<string | null>(null);
   const [firstItemIndex, setFirstItemIndexValue] = useState(firstItemIndexBase);
   const [isPinnedToLatest, setIsPinnedToLatest] = useState(true);
@@ -72,6 +75,10 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
 
   const saveBufferScrollSnapshot = useCallback((bufferId: string | null) => {
     if (!bufferId || positionedBufferIdRef.current !== bufferId) {
+      return;
+    }
+    if (measuredSnapshotRef.current) {
+      transcriptScrollSnapshots.set(bufferId, measuredSnapshotRef.current);
       return;
     }
     if (isPinnedToLatestRef.current) {
@@ -147,6 +154,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     }
     saveBufferScrollSnapshot(currentBufferIdRef.current);
     currentBufferIdRef.current = params.bufferId;
+    measuredSnapshotRef.current = null;
     firstItemIndexRef.current = firstItemIndexBase;
     isPinnedToLatestRef.current = true;
     isFollowingLatestRef.current = true;
@@ -158,10 +166,12 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     setIsPinnedToLatest(true);
   }, [params.bufferId, resetOlderHistory, saveBufferScrollSnapshot, setFirstItemIndex]);
 
-  useEffect(
-    () => () => saveBufferScrollSnapshot(currentBufferIdRef.current),
-    [saveBufferScrollSnapshot],
-  );
+  // Read the final DOM before React detaches it. Render callbacks can run
+  // before the newly visible rows have actually been committed.
+  useLayoutEffect(() => () => {
+    captureSnapshotRef.current();
+    saveBufferScrollSnapshot(currentBufferIdRef.current);
+  }, [saveBufferScrollSnapshot]);
 
   useLayoutEffect(() => {
     if (
@@ -183,6 +193,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
       snapshot: transcriptScrollSnapshots.get(params.bufferId),
     });
     if (restored !== null) {
+      isFollowingLatestRef.current = restored.index === 'LAST';
       virtuosoRef.current?.scrollToIndex(restored);
       positionedBufferIdRef.current = params.bufferId;
       return;
@@ -293,15 +304,17 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     }
   }, [isPinnedToLatest]);
 
-  const handleItemsRendered = useCallback(
-    (items: ListItem<unknown>[]) => {
-      const firstRecordItem = items.find((item) => item.type !== 'group') ?? null;
-      visibleAnchorRowKeyRef.current = firstRecordItem
-        ? resolveRowKeyFromItemIndex(firstRecordItem.index, params.rowKeys, firstItemIndexRef.current)
-        : null;
-    },
-    [params.rowKeys],
-  );
+  const handleItemsRendered = useCallback(() => {
+    const node = scrollerRef.current;
+    if (node && positionedBufferIdRef.current === params.bufferId && !params.isRestoringWindow?.()) {
+      const snapshot = captureTranscriptScrollSnapshot(node, params.rowKeys, params.hasNewerHistory ?? false);
+      if (snapshot) measuredSnapshotRef.current = snapshot;
+    }
+  }, [params.bufferId, params.rowKeys, params.hasNewerHistory, params.isRestoringWindow]);
+
+  useLayoutEffect(() => {
+    captureSnapshotRef.current = handleItemsRendered;
+  }, [handleItemsRendered]);
 
   const stopFollowingLatest = useCallback(() => {
     isFollowingLatestRef.current = false;
@@ -339,7 +352,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   }, []);
 
   const handleScrollerScroll = useCallback(() => {
-    params.isRestoringWindow?.();
+    handleItemsRendered();
     if (scrollerPointerDownRef.current) olderScrollRequestedRef.current = true;
     const node = scrollerNodeRef.current;
     if (
@@ -349,7 +362,7 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     ) {
       stopFollowingLatest();
     }
-  }, [stopFollowingLatest, params.isRestoringWindow]);
+  }, [stopFollowingLatest, handleItemsRendered]);
 
   const setScrollerNode = useCallback((node: HTMLElement | null | Window) => {
     const previousNode = scrollerNodeRef.current;
