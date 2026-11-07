@@ -2,6 +2,13 @@ name: Pages
 
 on:
   workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      expected_sha256:
+        required: true
+        type: string
   push:
     branches:
       - main
@@ -39,8 +46,13 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
         run: |
-          tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
+          set -euo pipefail
+          tag="$REQUESTED_TAG"
+          if [[ -z "$tag" ]]; then
+            tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
+          fi
           version="${tag#v}"
 
           if [[ "$tag" != "v$version" || ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
@@ -54,9 +66,11 @@ jobs:
       - name: Download Published Debian Package
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
+          set -euo pipefail
           mkdir release
           gh release download "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
@@ -65,6 +79,9 @@ jobs:
 
           mapfile -t packages < <(find release -maxdepth 1 -type f -name '*.deb' -print)
           test "${#packages[@]}" -eq 1
+          if [[ -n "$EXPECTED_SHA256" ]]; then
+            echo "$EXPECTED_SHA256  ${packages[0]}" | sha256sum -c -
+          fi
           test "$(dpkg-deb -f "${packages[0]}" Package)" = "pulsete"
           test "$(dpkg-deb -f "${packages[0]}" Architecture)" = "amd64"
           test "$(dpkg-deb -f "${packages[0]}" Version)" = "$RELEASE_VERSION"

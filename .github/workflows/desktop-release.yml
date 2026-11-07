@@ -2,90 +2,58 @@ name: Desktop Release
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 permissions:
-  contents: write
-  id-token: write
-  pages: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  contents: read
 
 jobs:
   validate:
-    permissions:
-      contents: read
     uses: ./.github/workflows/ci.yml
 
   linux-deb:
     needs: validate
     runs-on: ubuntu-24.04
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
+    timeout-minutes: 30
     steps:
-      - name: Check Out
-        uses: actions/checkout@v6
-
-      - name: Set Up Node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           cache: npm
           node-version-file: .nvmrc
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build Debian Package
+      - run: npm ci
+      - name: Build Candidate Once
         run: npm run dist:linux
-
-      - name: Upload Debian Artifact
+      - name: Download Currently Published Baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/release-checks/baseline.sh
+      - name: Verify Installation And Upgrade In Ubuntu Containers
+        run: |
+          set -euo pipefail
+          packages=(release/*.deb)
+          test "${#packages[@]}" -eq 1
+          bash scripts/release-checks/verify.sh candidate "${packages[0]}" baseline/baseline.deb results
+          sha256=$(sha256sum "${packages[0]}" | awk '{print $1}')
+          baseline_sha256=$(sha256sum baseline/baseline.deb | awk '{print $1}')
+          jq -n --arg commit "$GITHUB_SHA" --arg sha256 "$sha256" \
+            --arg baseline_sha256 "$baseline_sha256" --arg baseline "$(cat baseline/tag.txt)" \
+            '{commit:$commit, sha256:$sha256, baseline_sha256:$baseline_sha256,
+              baseline:$baseline, fresh:"passed", upgrade:"passed"}' > results/verification.json
+          echo "Candidate SHA-256: $sha256" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain Test Results Even On Failure
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-verification
+          path: results/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Retain Tested Package And Baseline
         uses: actions/upload-artifact@v7
         with:
           name: pulsete-linux-amd64-deb
-          path: release/*.deb
-
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v3
-        with:
-          files: release/*.deb
-
-      - name: Import APT Signing Key
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          PULSETE_APT_GPG_PRIVATE_KEY: ${{ secrets.PULSETE_APT_GPG_PRIVATE_KEY }}
-          PULSETE_APT_GPG_PASSPHRASE: ${{ secrets.PULSETE_APT_GPG_PASSPHRASE }}
-        run: |
-          test -n "$PULSETE_APT_GPG_PRIVATE_KEY"
-          test -n "$PULSETE_APT_GPG_PASSPHRASE"
-          printf '%s' "$PULSETE_APT_GPG_PRIVATE_KEY" | gpg --batch --import
-          passphrase_file="$RUNNER_TEMP/pulsete-apt-gpg-passphrase"
-          printf '%s' "$PULSETE_APT_GPG_PASSPHRASE" > "$passphrase_file"
-          echo "APT_GPG_PASSPHRASE_FILE=$passphrase_file" >> "$GITHUB_ENV"
-
-      - name: Build APT Repository
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          APT_GPG_KEY_ID: ${{ secrets.PULSETE_APT_GPG_KEY_ID }}
-        run: npm run dist:apt
-
-      - name: Configure Pages
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/configure-pages@v6
-
-      - name: Upload Pages Artifact
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: pages
-
-      - name: Deploy Pages
-        if: startsWith(github.ref, 'refs/tags/')
-        id: deployment
-        uses: actions/deploy-pages@v5
+          path: |
+            release/*.deb
+            baseline/
+          if-no-files-found: error
+          retention-days: 90

@@ -153,21 +153,57 @@ git push origin main
 gh workflow run desktop-release.yml --ref main
 ```
 
-Download the `pulsete-linux-amd64-deb` artifact from that successful run and
-verify installation, upgrade, and startup. Record the tested package's SHA-256.
+`Desktop Release` builds one candidate package. It downloads the currently
+published release and runs two disposable Ubuntu 24.04 containers: a fresh
+candidate install, and an upgrade from the published version. Both must start
+Pulsete, show a desktop window, serve its page and JavaScript, and stay running.
+The upgrade also starts the old version first and preserves its profile.
+Nothing is installed on your computer.
+
+When the run succeeds, copy the SHA-256 from its summary and promote it:
+
+```sh
+gh workflow run promote-release.yml --ref main \
+  -f candidate_run_id=RUN_ID -f expected_sha256=SHA256
+```
+
 Keep the candidate commit at a branch tip until promotion completes; if `main`
-has advanced, push a release branch pointing to that commit.
-Then run `Promote Tested Release` with the candidate run ID and checksum. It
-checks the successful candidate run, package version, architecture, and checksum,
-publishes that exact package to GitHub Releases, and publishes the signed APT
-repository. Existing release tags cannot be replaced through promotion.
-
+has advanced, push a release branch pointing to that commit. Promotion requires
+a successful candidate run on `main`, matching verification results, commit,
+package metadata and checksum. It refuses promotion if the published baseline
+has changed: build and test a new candidate in that case. Existing release
+records and tags cannot be replaced. Direct tag pushes no longer publish.
 Both candidate builds and promotion require the shared CI checks to pass.
-Pushing a `v*` tag directly still builds and publishes a new package; use the
-promotion workflow to preserve an already-tested artifact.
 
-The `Pages` workflow republishes the landing page after every push
-to `main`, while keeping the APT repository on the latest published release.
+Promotion uploads the exact tested package, then publishes that same version
+and checksum to signed APT. A final Ubuntu container installs the retained old
+release, uses its installed signing key and repository configuration, waits up
+to five minutes for APT availability, checks the downloaded package checksum,
+and runs normal `apt-get upgrade` followed by the startup check. A failed final
+check makes promotion fail, but does not undo or replace the published release.
+Inspect the results before retrying; a full promotion rerun deliberately refuses
+an existing tag. GitHub Actions can rerun only failed jobs after publication.
+
+Candidate packages, the baseline package, checksums, startup logs and exit
+statuses are retained as run artifacts for 90 days (`pulsete-linux-amd64-deb`,
+`release-verification`, and `published-release-verification`). Expired candidate
+artifacts require a new build. The `Pages` workflow also republishes the landing
+page on pushes to `main`, keeping APT on the latest published release.
+
+To test the installation scripts locally without installing on the host, use
+Docker and two existing packages (candidate version must be newer):
+
+```sh
+bash scripts/release-checks/verify.sh candidate /path/to/candidate.deb /path/to/old.deb /tmp/pulsete-results
+```
+
+The containers use a virtual 1280×820 display and Electron's `--no-sandbox`
+flag because they run as root. These are package/startup smoke checks; they do
+not test host desktop integration, sandbox policy, or interactive IRC behavior.
+GitHub artifact handoff, release creation, signing secrets, Pages deployment,
+and public APT propagation need a real release to verify end to end. Running
+`verify.sh published` only reads the existing public repository and tests it
+inside a container; it never publishes anything.
 
 ## Repository Layout
 
