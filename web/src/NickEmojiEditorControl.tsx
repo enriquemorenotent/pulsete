@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Popover } from 'radix-ui';
 import { Check, Smile, X } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
+import { Button } from '@/components/ui/button.js';
+import { headerIconButtonClass } from './header-icon-button-style.js';
 
 export const nickEmojiTagOptions = [
   { emoji: '✅', label: 'Worth talking' },
@@ -48,12 +50,11 @@ export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button
+        <Button
           type="button"
-          className={cn(
-            'inline-flex size-7 shrink-0 items-center justify-center rounded-sm border text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60',
-            props.emoji ? 'border-primary/25 bg-primary/10 text-primary hover:text-primary' : 'border-transparent',
-          )}
+          size="icon"
+          variant="ghost"
+          className={cn('shrink-0', headerIconButtonClass(Boolean(props.emoji)))}
           aria-label={`Edit emoji tag for ${props.nick}`}
           aria-expanded={open}
           aria-haspopup="menu"
@@ -66,7 +67,7 @@ export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
           ) : (
             <Smile className="size-4" />
           )}
-        </button>
+        </Button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content align="end" sideOffset={8} collisionPadding={8} className="z-50 outline-none">

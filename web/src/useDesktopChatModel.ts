@@ -120,6 +120,7 @@ export function useDesktopChatModel({
     () => ({
       workspace,
       nickEmojis,
+      onSaveNickEmoji: actions.saveNickEmoji,
       selectedQueryIdentity,
       selectedQueryUser,
       externalAvatarsEnabled,

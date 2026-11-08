@@ -96,6 +96,7 @@ export type ChatActionSet = Pick<
   | 'reconnectNetwork'
   | 'requestWhois'
   | 'returnBufferToLatest'
+  | 'saveNickEmoji'
   | 'searchBufferHistory'
   | 'selectPrivateBuffer'
   | 'setMessagePinned'

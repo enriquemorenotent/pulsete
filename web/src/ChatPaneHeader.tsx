@@ -15,6 +15,7 @@ import {
 import { resolveChatPaneStatusBanner } from './chat-pane-status.js';
 import { ContactRuleControls } from './contact-notifications/ContactRuleControls.js';
 import type { ContactRuleHandlers, ContactRuleState } from './contact-notifications/contact-rules.js';
+import { NickEmojiEditorControl } from './NickEmojiEditorControl.js';
 import { findNickEmoji } from './nick-emoji-utils.js';
 import type { InlineImageRenderingMode } from './FormattedMessageText.js';
 import type { WorkspaceView } from './workspace.js';
@@ -22,6 +23,12 @@ import type { WorkspaceView } from './workspace.js';
 type ChatPaneHeaderProps = {
   workspace: WorkspaceView;
   nickEmojis: NickEmojiState[];
+  onSaveNickEmoji?: (
+    networkId: string,
+    nick: string,
+    emoji: string | null,
+    identity?: NetworkUserIdentity | null,
+  ) => Promise<boolean>;
   selectedQueryIdentity?: NetworkUserIdentity | null;
   selectedQueryUser?: QueryProfileAvatarUser | null;
   contactRuleHandlers: ContactRuleHandlers;
@@ -56,7 +63,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           props.nickEmojis,
           selectedBuffer.networkId,
           selectedBuffer.target,
-          props.selectedQueryIdentity,
+          props.selectedQueryIdentity ?? selectedBuffer.peerIdentity,
         )
       : null;
   const selectedQueryAvatarUser = props.selectedQueryUser ?? (selectedBuffer?.kind === 'query'
@@ -153,6 +160,18 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           contactControls={
             selectedBuffer?.kind === 'query' && selectedQueryAvatarUser ? (
               <>
+                {props.onSaveNickEmoji ? (
+                  <NickEmojiEditorControl
+                    emoji={selectedNickEmoji?.emoji ?? null}
+                    nick={selectedBuffer.target}
+                    onSave={(emoji) => props.onSaveNickEmoji!(
+                      selectedBuffer.networkId,
+                      selectedBuffer.target,
+                      emoji,
+                      props.selectedQueryIdentity ?? selectedBuffer.peerIdentity,
+                    )}
+                  />
+                ) : null}
                 {props.selectedQueryContactRule ? (
                   <ContactRuleControls
                     className="flex shrink-0 items-center gap-1 sm:gap-1.5"

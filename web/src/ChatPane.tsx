@@ -21,6 +21,12 @@ export type ChatPaneProps = {
   workspace: WorkspaceView;
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
+  onSaveNickEmoji?: (
+    networkId: string,
+    nick: string,
+    emoji: string | null,
+    identity?: NetworkUserIdentity | null,
+  ) => Promise<boolean>;
   selectedQueryIdentity?: NetworkUserIdentity | null;
   selectedQueryUser?: QueryProfileAvatarUser | null;
   selectedMessages: ChatMessage[];
@@ -127,6 +133,7 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       <ChatPaneHeader
         workspace={props.workspace}
         nickEmojis={props.nickEmojis}
+        onSaveNickEmoji={props.onSaveNickEmoji}
         selectedQueryIdentity={props.selectedQueryIdentity}
         selectedQueryUser={props.selectedQueryUser}
         contactRuleHandlers={props.contactRuleHandlers}
