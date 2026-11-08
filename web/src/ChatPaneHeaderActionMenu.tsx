@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
+import { headerIconButtonClass } from './header-icon-button-style.js';
 import type { ChatPaneHeaderAction } from './chat-pane-header-actions.js';
 
 type ChatPaneHeaderActionMenuProps = {
@@ -42,9 +43,9 @@ export function ChatPaneHeaderActionMenu(props: ChatPaneHeaderActionMenuProps) {
     <div ref={menuRef} className="relative">
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon"
-        className="size-7"
+        className={headerIconButtonClass()}
         aria-label="More actions"
         aria-expanded={open}
         aria-haspopup="menu"
