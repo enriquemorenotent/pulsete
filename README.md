@@ -240,8 +240,9 @@ health check before sending IRC traffic. Your host NordVPN settings are not chan
 The first country connection downloads the pinned Gluetun image. Startup can take a
 few minutes. Service credentials are passed in temporary owner-only files, not
 command arguments; normal disconnect and application shutdown remove the container
-and these files. If Pulsete is forcibly killed or Docker becomes unavailable,
-cleanup may not finish: inspect containers labeled `org.pulsete.vpn=true` and
+and these files. Failed cleanup stays tracked and retries every five seconds while
+Pulsete is running, with another attempt during shutdown. If Pulsete is forcibly
+killed or Docker remains unavailable when it exits, cleanup may not finish: inspect containers labeled `org.pulsete.vpn=true` and
 remove only the unused `pulsete-vpn-*` containers. Temporary credential directories
 are named `pulsete-vpn-*` under the OS temporary directory and can be removed after
 their containers have stopped.

@@ -1,56 +1,45 @@
-import { ensureNordVpnStorage } from './storage-nordvpn.js';
-import { ensureWatchlistActivityStorage } from './storage-watchlist-activity.js';
 import type { SqliteDb } from './storage-sqlite.js';
-import { ensureQueryPeerIdentityStorage } from './storage-query-identities.js';
 import {
-  ensureIdentityIndexes,
-  ensureNickEmojiTable,
-} from './storage-identity-migration.js';
-import {
-  dropLegacyMessageSearchArtifacts,
-  ensureMessageSearchArtifacts,
-} from './storage-schema-helpers.js';
-import { storageBootstrapSchemaSql } from './storage-bootstrap-schema.js';
-import {
-  ensureCurrentBufferColumns,
-  ensureCurrentMessageColumns,
-  ensureCurrentNetworkColumns,
-  type StorageMigrationContext,
-} from './storage-migration-helpers.js';
+  storageBootstrapSchemaSql,
+  storageBootstrapSchemaVersion,
+} from './storage-bootstrap-schema.js';
+import type { StorageMigrationContext } from './storage-migration-helpers.js';
 import { storageMigrations } from './storage-migration-list.js';
+import { repairStorageSchema } from './storage-schema-repair.js';
 
 export const currentStorageSchemaVersion = storageMigrations[storageMigrations.length - 1]!.version;
 
-export const bootstrapStorageSchema = (db: SqliteDb) => db.exec(storageBootstrapSchemaSql);
-
 export const applyStorageMigrations = (db: SqliteDb, context: StorageMigrationContext) => {
-  let version = getUserVersion(db);
-  if (!context.existedBeforeOpen && version === 0) {
-    setUserVersion(db, currentStorageSchemaVersion);
-    version = currentStorageSchemaVersion;
-  } else {
-    for (const migration of storageMigrations) {
-      if (version >= migration.version) {
-        continue;
-      }
-      migration.apply(db, context);
-      setUserVersion(db, migration.version);
-      version = migration.version;
+  if (!context.existedBeforeOpen) {
+    // Commit the starting schema and its version together so an interrupted
+    // first launch cannot leave modern tables labeled as a version-0 database.
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.exec(storageBootstrapSchemaSql);
+      setUserVersion(db, storageBootstrapSchemaVersion);
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
     }
   }
-  ensureWatchlistActivityStorage(db);
-  ensureCurrentNetworkColumns(db);
-  ensureNordVpnStorage(db);
-  ensureCurrentBufferColumns(db);
-  ensureCurrentMessageColumns(db);
-  ensureNickEmojiTable(db);
-  ensureQueryPeerIdentityStorage(db);
-  ensureIdentityIndexes(db);
-  dropLegacyMessageSearchArtifacts(db);
-  ensureMessageSearchArtifacts(db);
+
+  let version = getStorageSchemaVersion(db);
+  for (const migration of storageMigrations) {
+    if (version >= migration.version) {
+      continue;
+    }
+    migration.apply(db, context);
+    setUserVersion(db, migration.version);
+    version = migration.version;
+  }
+
+  if (context.existedBeforeOpen) {
+    repairStorageSchema(db);
+  }
 };
 
-const getUserVersion = (db: SqliteDb) =>
+export const getStorageSchemaVersion = (db: SqliteDb) =>
   Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
 
 const setUserVersion = (db: SqliteDb, version: number) => db.exec(`PRAGMA user_version = ${version}`);

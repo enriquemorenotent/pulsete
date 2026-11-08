@@ -20,7 +20,7 @@ export function MediaPreviewDialog({ children, media, open, onOpenChange, label,
       {children}
       {open && media ? (
         <DialogContent
-          className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] gap-0 overflow-hidden p-0"
+          className="w-[min(calc(100vw-1rem),64rem)] max-h-[90dvh] grid-cols-[minmax(0,1fr)] gap-0 overflow-hidden p-0 xl:p-0"
           onCloseAutoFocus={onCloseAutoFocus}
         >
           <DialogTitle className="sr-only">{label ?? buildInlineMediaLabel(media)}</DialogTitle>

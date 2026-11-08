@@ -13,8 +13,8 @@ export function InlineMediaPreviewDialogBody(props: { label?: string; media: Inl
   const loopingAnimation = media.kind === 'video' && media.playback === 'looping-animation';
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-0 flex-1 items-center justify-center bg-black/40 p-3 sm:p-4">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-black/40 p-3 sm:p-4">
         {media.kind === 'image' ? (
           <img
             src={source}
@@ -37,13 +37,13 @@ export function InlineMediaPreviewDialogBody(props: { label?: string; media: Inl
           />
         )}
       </div>
-      <DialogFooter className="shrink-0 border-t border-white/8 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="min-w-0 truncate text-sm text-muted-foreground">{label}</span>
+      <DialogFooter className="min-w-0 shrink-0 border-t border-white/8 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <span title={label} className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{label}</span>
         <ExternalLink
           href={media.originalHref}
           target="_blank"
           rel="noreferrer"
-          className="font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
+          className="shrink-0 whitespace-nowrap font-medium text-primary underline decoration-primary/80 decoration-2 underline-offset-2 transition-colors hover:decoration-primary hover:opacity-85"
         >
           Open original
         </ExternalLink>

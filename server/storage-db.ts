@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
   applyStorageMigrations,
-  bootstrapStorageSchema,
+  getStorageSchemaVersion,
   currentStorageSchemaVersion,
 } from './storage-migrations.js';
 import { openSqliteDatabase, type SqliteDb } from './storage-sqlite.js';
@@ -14,10 +14,7 @@ export const createDatabase = (filePath: string, backupDirectory: string) => {
   const db = openSqliteDatabase(filePath);
   applyDatabasePragmas(db);
   const hasUserTables = databaseHasUserTables(db);
-  if (!hasUserTables) {
-    bootstrapStorageSchema(db);
-  }
-  const version = getDatabaseUserVersion(db);
+  const version = getStorageSchemaVersion(db);
   if (existedBeforeOpen && hasUserTables && version < currentStorageSchemaVersion) {
     createPreMigrationBackup(db, filePath, backupDirectory, version);
   }
@@ -42,9 +39,6 @@ const databaseHasUserTables = (db: SqliteDb) =>
       `).get() as { count?: number } | undefined
     )?.count ?? 0
   ) > 0;
-
-const getDatabaseUserVersion = (db: SqliteDb) =>
-  Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
 
 const createPreMigrationBackup = (
   db: SqliteDb,

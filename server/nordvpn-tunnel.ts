@@ -1,3 +1,4 @@
+import { createNordVpnCleanup, retryNordVpnCleanups } from './nordvpn-cleanup.js';
 import { resolveNordVpnEndpoint } from './nordvpn-server.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -45,12 +46,21 @@ async function openNordVpnTunnel(country: string, credentials: { username: strin
   const directory = await mkdtemp(join(tmpdir(), 'pulsete-vpn-'));
   const username = 'pulsete';
   const password = randomBytes(32).toString('hex');
-  let started = false;
-  let released: Promise<void> | undefined;
-  const release = () => released ??= (async () => {
-    if (started) await command(['rm', '--force', name]);
+  let containerMayExist = false;
+  const release = createNordVpnCleanup(async () => {
+    if (containerMayExist) {
+      try {
+        await command(['rm', '--force', name]);
+      } catch (error) {
+        // --rm containers may have exited before cleanup. Docker being
+        // unavailable is different: retain the resources and retry later.
+        const stderr = (error as { stderr?: unknown } | null)?.stderr;
+        if (typeof stderr !== 'string' || !stderr.includes(`No such container: ${name}`)) throw error;
+      }
+      containerMayExist = false;
+    }
     await rm(directory, { recursive: true, force: true });
-  })();
+  });
   try {
     for (const [file, value] of Object.entries({ openvpn_user: credentials.username, openvpn_password: credentials.password, httpproxy_user: username, httpproxy_password: password })) {
       await writeFile(join(directory, file), value, { mode: 0o600 });
@@ -64,9 +74,9 @@ async function openNordVpnTunnel(country: string, credentials: { username: strin
     }
     signal.throwIfAborted();
     progress('Preparing NordVPN helper');
+    containerMayExist = true;
     await command(tunnelArguments(name, directory, country, endpoint.address));
     progress(`Connecting to NordVPN in ${country}`);
-    started = true;
     signal.throwIfAborted();
     const deadline = Date.now() + 120_000;
     let tunnelEstablished = false;
@@ -95,9 +105,8 @@ async function openNordVpnTunnel(country: string, credentials: { username: strin
       ? 'NordVPN connected, but its internet connectivity check did not pass within two minutes.'
       : 'NordVPN did not establish a VPN connection within two minutes. Try another country.');
   } catch (error) {
-    // A failed Docker run may still have created the named container.
-    try { await command(['rm', '--force', name]); } catch { /* May not exist. */ }
-    await rm(directory, { recursive: true, force: true });
+    // Preserve the setup error; failed cleanup remains registered for retries.
+    await release().catch(() => {});
     if (signal.aborted || error instanceof NordVpnTunnelError) throw error;
     throw new NordVpnTunnelError('Unable to start the NordVPN helper. Check that Docker is running and accessible.');
   }
@@ -126,4 +135,5 @@ export async function closeNordVpnTunnels() {
   await Promise.allSettled(tasks.map(async ([controller, task]) => {
     try { await (await task).release(); } finally { activeTunnels.delete(controller); }
   }));
+  await retryNordVpnCleanups();
 }

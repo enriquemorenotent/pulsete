@@ -1,4 +1,3 @@
-import { accountImagesSchemaSql } from './storage-account-images.js';
 import {
   historyImportBatchesSchemaSql,
   messageSearchSchemaSql,
@@ -6,6 +5,10 @@ import {
   queryNickAliasesSchemaSql,
 } from './storage-schema-helpers.js';
 import { userStateSchemaSql } from './storage-user-state-schema.js';
+
+// Fixed starting point for new databases. Add future schema changes only to
+// storage-migration-list.ts; fresh databases run every migration after version 30.
+export const storageBootstrapSchemaVersion = 30;
 
 export const storageBootstrapSchemaSql = `
   PRAGMA journal_mode = WAL;
@@ -110,8 +113,7 @@ export const storageBootstrapSchemaSql = `
     body TEXT NOT NULL,
     kind TEXT NOT NULL,
     self INTEGER NOT NULL,
-    ts INTEGER NOT NULL,
-    pinnedAt INTEGER
+    ts INTEGER NOT NULL
   );
 
 ${historyImportBatchesSchemaSql}
@@ -168,5 +170,4 @@ ${messageSearchSchemaSql}
     ON muted_nicks(networkId, nick COLLATE NOCASE, createdAt ASC);
 
 ${userStateSchemaSql}
-${accountImagesSchemaSql}
 `;
