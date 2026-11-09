@@ -15,79 +15,39 @@ const escapeEvent: DesktopShellShortcutKeyEvent = {
   shiftKey: false,
 };
 
-test('escape jumps the selected chat only when no blocking UI owns it', () => {
-  assert.equal(
-    shouldJumpChatToLatestFromKeydown(escapeEvent, {
-      blockingDialogOpen: false,
-      hasSelectedBuffer: true,
-      menuOpen: false,
-    }),
-    true,
-  );
-  assert.equal(
-    shouldJumpChatToLatestFromKeydown(escapeEvent, {
-      blockingDialogOpen: true,
-      hasSelectedBuffer: true,
-      menuOpen: false,
-    }),
-    false,
-  );
-  assert.equal(
-    shouldJumpChatToLatestFromKeydown(escapeEvent, {
-      blockingDialogOpen: false,
-      hasSelectedBuffer: true,
-      menuOpen: true,
-    }),
-    false,
-  );
-  assert.equal(
-    shouldJumpChatToLatestFromKeydown(escapeEvent, {
-      blockingDialogOpen: false,
-      hasSelectedBuffer: false,
-      menuOpen: false,
-    }),
-    false,
-  );
+test('escape jumps only when a chat is selected', () => {
+  assert.equal(shouldJumpChatToLatestFromKeydown(escapeEvent, { hasSelectedBuffer: true }), true);
+  assert.equal(shouldJumpChatToLatestFromKeydown(escapeEvent, { hasSelectedBuffer: false }), false);
 });
 
 test('escape jump ignores repeated, modified, composing, and already-handled key events', () => {
   assert.equal(
     shouldJumpChatToLatestFromKeydown({ ...escapeEvent, repeat: true }, {
-      blockingDialogOpen: false,
       hasSelectedBuffer: true,
-      menuOpen: false,
     }),
     false,
   );
   assert.equal(
     shouldJumpChatToLatestFromKeydown({ ...escapeEvent, ctrlKey: true }, {
-      blockingDialogOpen: false,
       hasSelectedBuffer: true,
-      menuOpen: false,
     }),
     false,
   );
   assert.equal(
     shouldJumpChatToLatestFromKeydown({ ...escapeEvent, isComposing: true }, {
-      blockingDialogOpen: false,
       hasSelectedBuffer: true,
-      menuOpen: false,
     }),
     false,
   );
   assert.equal(
     shouldJumpChatToLatestFromKeydown({ ...escapeEvent, defaultPrevented: true }, {
-      blockingDialogOpen: false,
       hasSelectedBuffer: true,
-      menuOpen: false,
     }),
     false,
   );
   assert.equal(
     shouldJumpChatToLatestFromKeydown({ ...escapeEvent, key: 'Enter' }, {
-      blockingDialogOpen: false,
       hasSelectedBuffer: true,
-      menuOpen: false,
     }),
     false,
   );

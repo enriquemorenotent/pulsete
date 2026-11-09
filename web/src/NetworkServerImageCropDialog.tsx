@@ -1,4 +1,4 @@
-import { useState, type PointerEvent } from 'react';
+import { useState, type ComponentProps, type PointerEvent } from 'react';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -21,6 +21,7 @@ type NetworkServerImageCropDialogProps = {
   title?: string;
   onCancel: () => void;
   onConfirm: (value: string) => void;
+  onCloseAutoFocus?: ComponentProps<typeof DialogContent>['onCloseAutoFocus'];
 };
 
 export function NetworkServerImageCropDialog(
@@ -70,6 +71,7 @@ export function NetworkServerImageCropDialog(
   return (
     <Dialog open onOpenChange={(open) => !open && props.onCancel()}>
       <DialogContent
+        onCloseAutoFocus={props.onCloseAutoFocus}
         aria-describedby={undefined}
         className="w-[min(calc(100vw-1rem),28rem)]"
       >

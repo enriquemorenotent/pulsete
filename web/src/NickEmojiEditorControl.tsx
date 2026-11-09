@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { containOverlayKeyDown } from '@/components/ui/overlay-keyboard.js';
 import { Popover } from 'radix-ui';
 import { Check, Smile, X } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
@@ -70,7 +71,7 @@ export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" sideOffset={8} collisionPadding={8} className="z-50 outline-none">
+        <Popover.Content onKeyDown={containOverlayKeyDown} align="end" sideOffset={8} collisionPadding={8} className="z-50 outline-none">
           <NickEmojiPickerMenu
             emoji={props.emoji}
             nick={props.nick}

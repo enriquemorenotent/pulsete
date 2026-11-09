@@ -266,14 +266,14 @@ export function useConversationNavigationHistory() {
     };
     const unsubscribe = store.subscribeActions(controller.handleStoreAction);
     window.addEventListener('popstate', handlePopState);
-    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown);
     controller.initialize(store.getState());
 
     return () => {
       controller.dispose();
       unsubscribe();
       window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [store]);
 }

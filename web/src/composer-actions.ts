@@ -1,3 +1,4 @@
+import type { UpdateBanner } from './banner.js';
 import type { BufferState } from '../../shared/protocol-chat.js';
 import type { SocketHandle } from './client.js';
 import type { WorkspaceView } from './workspace-types.js';
@@ -9,7 +10,7 @@ type ComposerParams = {
   draft: string;
   setDraft: (value: string) => void;
   socket: SocketHandle | null;
-  updateBanner: (kind: 'notice' | 'error', message: string) => void;
+  updateBanner: UpdateBanner;
   workspace: WorkspaceView;
   onJoinChannel: (networkId: string, channel: string, sourceBufferId?: string) => Promise<void>;
   onOpenChannelList: (networkId: string) => Promise<void>;

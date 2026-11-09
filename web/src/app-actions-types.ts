@@ -1,3 +1,4 @@
+import type { UpdateBanner } from './banner.js';
 import type {
   BufferHistorySearchPayload,
   BufferState,
@@ -33,11 +34,11 @@ export type AppActionContext = {
   socketRef: MutableRef<SocketHandle | null>;
   recordComposerEntry: (value: string, contextKey?: string | null) => void;
   setDraft: (value: string, contextKey?: string | null) => void;
-  updateBanner: (kind: 'notice' | 'error', message: string) => void;
+  updateBanner: UpdateBanner;
 };
 
 export type BannerActions = {
-  updateBanner: (kind: 'notice' | 'error', message: string) => void;
+  updateBanner: UpdateBanner;
 };
 
 export type GatewayActionParams = BannerActions & {

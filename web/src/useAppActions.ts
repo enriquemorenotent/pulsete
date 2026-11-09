@@ -1,3 +1,4 @@
+import type { UpdateBanner } from './banner.js';
 import { createChatActions } from './app-actions-chat.js';
 import { downloadFullBackup, importFullBackup } from './backup-client.js';
 import { createConversationActions } from './app-actions-conversation.js';
@@ -26,7 +27,7 @@ type CreateAppActionsParams = {
   socketRef: MutableRef<SocketHandle | null>;
   recordComposerEntry: AppActionContext['recordComposerEntry'];
   setDraft: AppActionContext['setDraft'];
-  updateBanner: (kind: 'notice' | 'error', message: string) => void;
+  updateBanner: UpdateBanner;
 };
 
 export const createAppActions = (params: CreateAppActionsParams) => {

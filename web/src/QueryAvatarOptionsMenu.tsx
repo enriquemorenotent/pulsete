@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import {
   CaseUpper,
   Cloud,
@@ -7,6 +7,7 @@ import {
   RotateCcw,
   type LucideIcon,
 } from 'lucide-react';
+import { DropdownMenu } from '@/components/ui/dropdown-menu.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { NetworkServerImageCropDialog } from './NetworkServerImageCropDialog.js';
@@ -38,7 +39,7 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [cropSource, setCropSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const avatarTarget = useMemo(
     () => resolveUserAvatarTarget(props.networkId, props.user),
@@ -67,28 +68,6 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
   const sourcePresentation = avatarSourcePresentations[source];
   const SourceIcon = sourcePresentation.icon;
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const handlePointerDown = (event: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
-
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
@@ -108,7 +87,7 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
   const label = `Avatar options for ${props.user.nick}`;
   return (
     <>
-      <div ref={menuRef} className="relative">
+      <DropdownMenu.Root open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (!nextOpen) setError(null); }}>
         <input
           ref={inputRef}
           type="file"
@@ -118,29 +97,23 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
             void handleFileChange(event);
           }}
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={sourcePresentation.buttonClassName}
-          aria-label={label}
-          aria-description={`Avatar source: ${sourcePresentation.label}`}
-          aria-expanded={open}
-          aria-haspopup="menu"
-          data-avatar-source={source}
-          title={`${label}. Avatar source: ${sourcePresentation.label}`}
-          onClick={() => {
-            setError(null);
-            setOpen((current) => !current);
-          }}
-        >
-          <SourceIcon className="size-4" />
-        </Button>
-        {open ? (
-          <div
-            role="menu"
-            className="absolute right-0 top-full z-30 mt-2 min-w-52 overflow-hidden rounded-[0.9rem] border border-white/10 bg-popover p-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+        <DropdownMenu.Trigger asChild>
+          <Button
+            ref={triggerRef}
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={sourcePresentation.buttonClassName}
+            aria-label={label}
+            aria-description={`Avatar source: ${sourcePresentation.label}`}
+            data-avatar-source={source}
+            title={`${label}. Avatar source: ${sourcePresentation.label}`}
           >
+            <SourceIcon className="size-4" />
+          </Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content className="min-w-52">
             <div
               className="flex items-center gap-2.5 px-2.5 py-2"
               data-avatar-source-summary={source}
@@ -163,34 +136,40 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
                 </span>
               </span>
             </div>
-            <div role="separator" className="mx-1 mb-1 h-px bg-white/[0.07]" />
-            <AvatarMenuItem
-              icon={<ImagePlus />}
-              label="Set custom avatar"
-              onSelect={() => inputRef.current?.click()}
-            />
-            {avatarOverride.url ? (
+            <DropdownMenu.Separator className="mx-1 mb-1 h-px bg-border" />
+            <DropdownMenu.Group>
               <AvatarMenuItem
-                icon={<RotateCcw />}
-                label="Use original avatar"
-                onSelect={() => {
-                  avatarOverride.setUrl(null);
-                  setOpen(false);
-                }}
+                icon={<ImagePlus />}
+                label="Set custom avatar"
+                onSelect={() => inputRef.current?.click()}
               />
-            ) : null}
+              {avatarOverride.url ? (
+                <AvatarMenuItem
+                  icon={<RotateCcw />}
+                  label="Use original avatar"
+                  onSelect={() => {
+                    avatarOverride.setUrl(null);
+                    setOpen(false);
+                  }}
+                />
+              ) : null}
+            </DropdownMenu.Group>
             {error ? (
               <p role="alert" className="px-2.5 py-2 text-[11px] leading-4 text-rose-300">
                 {error}
               </p>
             ) : null}
-          </div>
-        ) : null}
-      </div>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
       {cropSource ? (
         <NetworkServerImageCropDialog
           source={cropSource}
           title="Crop Avatar"
+          onCloseAutoFocus={event => {
+            event.preventDefault();
+            triggerRef.current?.focus();
+          }}
           onCancel={() => setCropSource(null)}
           onConfirm={(value) => {
             setCropSource(null);
@@ -232,18 +211,9 @@ function AvatarMenuItem(props: {
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      role="menuitem"
-      className={cn(
-        'flex w-full items-center gap-2 rounded-[0.7rem] px-2.5 py-2 text-left text-[12px] text-foreground transition-colors',
-        'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/70',
-        '[&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground',
-      )}
-      onClick={props.onSelect}
-    >
+    <DropdownMenu.Item onSelect={props.onSelect}>
       {props.icon}
       <span>{props.label}</span>
-    </button>
+    </DropdownMenu.Item>
   );
 }

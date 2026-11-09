@@ -1,5 +1,5 @@
 import { Copy, Ellipsis, Heart, PencilLine, Trash2 } from 'lucide-react';
-import { DropdownMenu } from 'radix-ui';
+import { DropdownMenu } from '@/components/ui/dropdown-menu.js';
 import { Button } from '@/components/ui/button.js';
 
 export function NetworkManagerActions(props: {
@@ -22,9 +22,11 @@ export function NetworkManagerActions(props: {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+          <DropdownMenu.Group>
           <DropdownMenu.Item className={itemClass} onSelect={props.onDuplicate}><Copy className="size-4" />Duplicate</DropdownMenu.Item>
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
           <DropdownMenu.Item className={`${itemClass} text-destructive`} onSelect={props.onRemove}><Trash2 className="size-4" />Remove</DropdownMenu.Item>
+          </DropdownMenu.Group>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

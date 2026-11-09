@@ -91,10 +91,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
 
   useEffect(() => {
     const handleWindowKeyDown = (event: KeyboardEvent) => {
-      const dialogOpen = document.querySelector('[role="dialog"]') !== null;
-      const menuOpen = document.querySelector('[role="menu"]') !== null;
       if (shouldOpenCommandPaletteFromKeydown(event, {
-        blockingDialogOpen: !props.commandPalette.open && dialogOpen,
         paletteOpen: props.commandPalette.open,
       })) {
         event.preventDefault();
@@ -102,9 +99,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
         return;
       }
       if (shouldJumpChatToLatestFromKeydown(event, {
-        blockingDialogOpen: dialogOpen,
         hasSelectedBuffer: props.selectedBufferId !== null,
-        menuOpen,
       })) {
         event.preventDefault();
         props.onJumpChatToLatest();

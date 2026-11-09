@@ -140,7 +140,6 @@ test('command palette navigation and hotkey helpers keep their current behavior'
     defaultPrevented: false,
     isComposing: false,
   }, {
-    blockingDialogOpen: false,
     paletteOpen: false,
   }), true);
 
@@ -150,10 +149,9 @@ test('command palette navigation and hotkey helpers keep their current behavior'
     metaKey: false,
     altKey: false,
     shiftKey: false,
-    defaultPrevented: false,
+    defaultPrevented: true,
     isComposing: false,
   }, {
-    blockingDialogOpen: true,
     paletteOpen: false,
   }), false);
 
@@ -166,7 +164,6 @@ test('command palette navigation and hotkey helpers keep their current behavior'
     defaultPrevented: false,
     isComposing: true,
   }, {
-    blockingDialogOpen: false,
     paletteOpen: false,
   }), false);
 });

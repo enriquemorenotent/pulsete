@@ -1,3 +1,4 @@
+import { createBanner } from '../web/src/banner.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -78,7 +79,7 @@ test('diagnostics report contains structural memory evidence without conversatio
     },
     transient: {
       selection: { kind: 'buffer', bufferId: buffer.id },
-      banner: { kind: 'error', message: secrets.topic },
+      banner: createBanner('error', secrets.topic),
     },
   });
   const report = await captureClientDiagnostics(state, { now: () => 1_700_000_000_000 });

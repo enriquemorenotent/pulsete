@@ -1,6 +1,7 @@
 import type { Action, AppTransientState, Banner, NetworkManagerState } from './app-types.js';
 import { reduceChannelListState } from './app-state-channel-list.js';
-import { gatewayReconnectMessage } from './gateway.js';
+import { createBanner } from './banner.js';
+import { gatewayReconnectBannerOptions } from './gateway.js';
 
 export const initialNetworkManagerState: NetworkManagerState = {
   mode: 'closed',
@@ -23,7 +24,7 @@ export const reduceTransientAction = (
     case 'select':
       return withChannelList({ banner: null, messageFocusRequest: null });
     case 'set-banner':
-      return withChannelList({ banner: action.banner });
+      return withChannelList({ banner: action.banner ? createBanner(action.banner.kind, action.banner.message, action.banner) : null });
     case 'gateway-connected':
       return withChannelList({ banner: clearReconnectBanner(transient.banner) });
     case 'gateway-disconnected':
@@ -210,7 +211,7 @@ export const reduceTransientAction = (
 };
 
 const clearReconnectBanner = (banner: Banner) =>
-  banner?.message === gatewayReconnectMessage ? null : banner;
+  banner?.id === gatewayReconnectBannerOptions.id ? null : banner;
 
 const omitHistoryBuffer = <T extends Record<string, unknown>>(map: T, bufferId: string) => {
   if (!(bufferId in map)) {

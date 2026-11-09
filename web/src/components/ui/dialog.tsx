@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { containOverlayKeyDown } from './overlay-keyboard.js';
 import { cn } from '@/lib/utils.js';
 
 const Dialog = DialogPrimitive.Root;
@@ -22,7 +23,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, ...props }, ref) => (
+>(({ className, onKeyDown, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -32,6 +33,7 @@ const DialogContent = React.forwardRef<
         className
       )}
       {...props}
+      onKeyDown={event => { onKeyDown?.(event); containOverlayKeyDown(event); }}
     />
   </DialogPortal>
 ));

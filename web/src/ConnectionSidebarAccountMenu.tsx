@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Check, Copy, Ellipsis, ImageIcon, X } from 'lucide-react';
-import { DropdownMenu } from 'radix-ui';
+import { DropdownMenu } from '@/components/ui/dropdown-menu.js';
 import { ImagePreviewDialog } from './MediaPreviewDialog.js';
 
 export function ConnectionSidebarAccountMenu(props: {
@@ -54,6 +54,7 @@ export function ConnectionSidebarAccountMenu(props: {
             collisionPadding={8}
             className="z-50 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg"
           >
+            <DropdownMenu.Group>
             {props.imageUrl ? (
               <>
                 <DropdownMenu.Item className={menuItemClass} onSelect={() => setPreviewOpen(true)}>
@@ -77,6 +78,7 @@ export function ConnectionSidebarAccountMenu(props: {
               <X className="size-3.5" />
               Close account
             </DropdownMenu.Item>
+            </DropdownMenu.Group>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>

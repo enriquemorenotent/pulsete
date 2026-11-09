@@ -5,6 +5,17 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "tailwindcss";
 
+.watchlist-activity-cell[aria-pressed="true"] {
+  border-color: #6ee7b7;
+  box-shadow: inset 0 0 0 2px #6ee7b7;
+}
+
+.watchlist-activity-cell:hover,
+.watchlist-activity-cell:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
 /* Reserve the native window buttons' space; ordinary browsers use no inset. */
 .desktop-titlebar {
   -webkit-app-region: drag;

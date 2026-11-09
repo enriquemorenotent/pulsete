@@ -1,11 +1,11 @@
-import { gatewayReconnectMessage } from './gateway.js';
+import { gatewayReconnectMessage, gatewayReconnectBannerOptions } from './gateway.js';
 import type { GatewayActionParams, GatewayActions } from './app-actions-types.js';
 
 export const createGatewayActions = (params: GatewayActionParams): GatewayActions => {
   const getGatewaySocket = (showBanner = true) => {
     if (params.getState().domain.gatewayStatus !== 'connected' || !params.socketRef.current) {
       if (showBanner) {
-        params.updateBanner('error', gatewayReconnectMessage);
+        params.updateBanner('error', gatewayReconnectMessage, gatewayReconnectBannerOptions);
       }
       return null;
     }
@@ -22,7 +22,7 @@ export const createGatewayActions = (params: GatewayActionParams): GatewayAction
       return true;
     } catch {
       if (showBanner) {
-        params.updateBanner('error', gatewayReconnectMessage);
+        params.updateBanner('error', gatewayReconnectMessage, gatewayReconnectBannerOptions);
       }
       return false;
     }

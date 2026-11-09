@@ -34,12 +34,11 @@ export const buildCommandPaletteActionEntries = (
 
 export const shouldOpenCommandPaletteFromKeydown = (
   event: CommandPaletteHotkeyEvent,
-  input: { blockingDialogOpen: boolean; paletteOpen: boolean },
+  input: { paletteOpen: boolean },
 ) =>
   !event.defaultPrevented
   && !event.isComposing
   && !input.paletteOpen
-  && !input.blockingDialogOpen
   && (event.ctrlKey || event.metaKey)
   && !event.altKey
   && !event.shiftKey

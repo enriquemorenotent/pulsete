@@ -7,17 +7,20 @@ import {
 } from './navigation-history.js';
 import { configureNotificationPermissions } from './notification-permissions.js';
 import { configureDesktopZoom } from './zoom.js';
+import { configureDesktopDiagnostics, observeDesktopWindow } from './diagnostics.js';
 
 let mainWindow: BrowserWindow | null = null;
 let serverHandle: DesktopServer | null = null;
 let isQuitting = false;
 let shutdownComplete = false;
+let diagnosticLog: ReturnType<typeof configureDesktopDiagnostics> = () => {};
 
 const hasInstanceLock = app.requestSingleInstanceLock();
 
 if (!hasInstanceLock) {
   app.quit();
 } else {
+  diagnosticLog = configureDesktopDiagnostics(app);
   app.on('second-instance', () => {
     if (!mainWindow) {
       return;
@@ -29,6 +32,7 @@ if (!hasInstanceLock) {
   });
 
   app.whenReady().then(startDesktopApp).catch((error: unknown) => {
+    diagnosticLog('startup-failed', { message: error instanceof Error ? error.stack : String(error) });
     console.error('Failed to start Pulsete desktop app', error);
     process.exitCode = 1;
     app.quit();
@@ -66,7 +70,10 @@ async function startDesktopApp() {
     dataDirectory: app.getPath('userData'),
     host: '127.0.0.1',
     port: 0,
-  }, () => app.quit());
+  }, () => {
+    diagnosticLog('server-unexpected-exit');
+    app.quit();
+  });
 
   mainWindow = createMainWindow(serverHandle);
   await mainWindow.loadURL(serverHandle.clientUrl);
@@ -96,6 +103,7 @@ function createMainWindow(server: DesktopServer) {
   });
 
   configureNotificationPermissions(window.webContents.session, window, server.url);
+  observeDesktopWindow(window, diagnosticLog);
   configureDesktopZoom(window, join(app.getPath('userData'), 'desktop-zoom.json'));
 
   window.once('ready-to-show', () => {

@@ -13,7 +13,7 @@ import {
 } from './app-selectors.js';
 import { useAppStore, useAppDispatch, useAppSelector } from './app-store.js';
 import type { AppTransientUiState } from './useAppUiState.js';
-import { gatewayReconnectMessage } from './gateway.js';
+import { useBannerDismissal } from './useBannerDismissal.js';
 import { useGatewayConnection } from './useGatewayConnection.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import { transcriptScrollSnapshots } from './transcript/scroll-snapshot-store.js';
@@ -76,16 +76,7 @@ export function AppEffects(props: AppEffectsProps) {
     dispatch,
   });
 
-  useEffect(() => {
-    if (!banner || banner.message === gatewayReconnectMessage) {
-      return;
-    }
-    const timer = window.setTimeout(
-      () => dispatch({ type: 'set-banner', banner: null }),
-      4200,
-    );
-    return () => window.clearTimeout(timer);
-  }, [banner, dispatch]);
+  useBannerDismissal(banner, dispatch);
 
   useGatewayConnection({
     applySocketMessage: props.applySocketMessage,

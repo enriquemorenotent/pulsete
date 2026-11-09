@@ -12,17 +12,13 @@ export type DesktopShellShortcutKeyEvent = {
 export const shouldJumpChatToLatestFromKeydown = (
   event: DesktopShellShortcutKeyEvent,
   input: {
-    blockingDialogOpen: boolean;
     hasSelectedBuffer: boolean;
-    menuOpen: boolean;
   },
 ) =>
   !event.defaultPrevented
   && !event.repeat
   && !event.isComposing
   && input.hasSelectedBuffer
-  && !input.blockingDialogOpen
-  && !input.menuOpen
   && !event.altKey
   && !event.ctrlKey
   && !event.metaKey

@@ -9,7 +9,8 @@ import type {
   WorkspacePreferences,
 } from '../../shared/protocol-preferences.js';
 
-export type Banner = { kind: 'notice' | 'error'; message: string } | null;
+import type { Banner, BannerInput } from './banner.js';
+export type { Banner } from './banner.js';
 export type GatewayStatus = 'connecting' | 'connected' | 'disconnected';
 
 export type ChannelListState = {
@@ -125,7 +126,7 @@ export type Action =
       nick: string;
       capabilities: NonNullable<NetworkRuntimeState['capabilities']>;
     }
-  | { type: 'set-banner'; banner: Banner }
+  | { type: 'set-banner'; banner: BannerInput | null }
   | { type: 'open-channel-list'; networkId: string }
   | { type: 'close-channel-list' }
   | { type: 'channel-list-started'; networkId: string; requestId: string }

@@ -11,7 +11,7 @@ import {
 import { createAppMutationExecutor } from './app-mutation.js';
 import { api } from './client.js';
 import { sendComposerMessage } from './composer-actions.js';
-import { toGatewayErrorMessage } from './gateway.js';
+import { toGatewayErrorMessage, isGatewaySocketClosedError, gatewayReconnectBannerOptions } from './gateway.js';
 
 type ChatActionParams = Pick<
   AppActionContext,
@@ -160,6 +160,7 @@ export const createChatActions = ({
       },
       errorMessage: 'Failed to send message',
       formatError: toGatewayErrorMessage,
+      errorOptions: error => isGatewaySocketClosedError(error) ? gatewayReconnectBannerOptions : undefined,
       failureValue: false,
     });
   };

@@ -6,7 +6,7 @@ import {
   type ClientSocketInstrumentation,
   type SocketHandle,
 } from './client.js';
-import { gatewayReconnectMessage, getGatewayReconnectDelayMs } from './gateway.js';
+import { gatewayReconnectMessage, gatewayReconnectBannerOptions, getGatewayReconnectDelayMs } from './gateway.js';
 import { dispatchInboundServerMessage } from './server-message-actions.js';
 
 type MutableRef<T> = { current: T };
@@ -106,7 +106,7 @@ export const createGatewaySocketCallbacks = ({
     }
     socketRef.current = null;
     dispatch({ type: 'gateway-disconnected' });
-    dispatch({ type: 'set-banner', banner: { kind: 'error', message: gatewayReconnectMessage } });
+    dispatch({ type: 'set-banner', banner: { kind: 'error', message: gatewayReconnectMessage, ...gatewayReconnectBannerOptions } });
     if (reconnectTimerRef.current !== null) {
       window.clearTimeout(reconnectTimerRef.current);
     }

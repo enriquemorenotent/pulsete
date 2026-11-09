@@ -1,3 +1,4 @@
+import { createBanner } from '../web/src/banner.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BufferState, ChannelState, NetworkProfile } from '../shared/protocol-chat.js';
@@ -68,7 +69,7 @@ test('workspace selector keeps the same reference across unrelated banner update
     ...state,
     transient: {
       ...state.transient,
-      banner: { kind: 'notice', message: 'Saved' },
+      banner: createBanner('notice', 'Saved'),
     },
   });
 

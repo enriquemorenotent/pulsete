@@ -1,3 +1,4 @@
+export const gatewayReconnectBannerOptions = { id: 'gateway-reconnect', dismissAfterMs: null } as const;
 export const gatewayReconnectMessage = 'Reconnecting to gateway';
 export const gatewaySocketClosedMessage = 'Gateway socket is not open';
 

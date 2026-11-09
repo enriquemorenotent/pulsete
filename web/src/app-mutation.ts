@@ -1,3 +1,4 @@
+import type { BannerOptions, UpdateBanner } from './banner.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
 
@@ -13,11 +14,12 @@ type AppMutationExecutorOptions<TResult, TValue> = {
   successMessage?: string | null | ((result: TResult) => string | null);
   errorMessage: string;
   formatError?(error: unknown, fallback: string): string;
+  errorOptions?(error: unknown): BannerOptions | undefined;
 };
 
 type AppMutationExecutorParams = {
   applyServerMessages: ApplyServerMessages;
-  updateBanner: (kind: 'notice' | 'error', message: string) => void;
+  updateBanner: UpdateBanner;
 };
 
 const readMutationMessages = (result: unknown): readonly ServerMessage[] => {
@@ -42,6 +44,7 @@ export const createAppMutationExecutor = ({
   successMessage,
   errorMessage,
   formatError = toErrorMessage,
+  errorOptions,
 }: AppMutationExecutorOptions<TResult, TValue>): Promise<TValue> => {
   try {
     const result = await request();
@@ -53,7 +56,7 @@ export const createAppMutationExecutor = ({
     }
     return mapResult ? mapResult(result) : (result as TValue);
   } catch (error) {
-    updateBanner('error', formatError(error, errorMessage));
+    updateBanner('error', formatError(error, errorMessage), errorOptions?.(error));
     return failureValue;
   }
 };

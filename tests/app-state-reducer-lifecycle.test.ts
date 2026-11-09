@@ -1,14 +1,15 @@
+import { createBanner } from '../web/src/banner.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { initialChannelListState,initialState,reducer } from '../web/src/app-state.js';
 import { indexConversationMessages } from '../web/src/conversation-message-state.js';
-import { gatewayReconnectMessage } from '../web/src/gateway.js';
+import { gatewayReconnectMessage, gatewayReconnectBannerOptions } from '../web/src/gateway.js';
 import { emptySnapshot, makeBuffer, makeFriend, makeMessage, makeNetwork, makePendingChannel, makeState } from './helpers/app-state-test-helpers.js';
 
 test('snapshot enters the ready phase and clears any banner', () => {
   const dirtyState = makeState({
     transient: {
-      banner: { kind: 'notice', message: 'Stale banner' },
+      banner: createBanner('notice', 'Stale banner'),
     },
   });
 
@@ -162,7 +163,7 @@ test('gateway transitions reset transport state and clear the reconnect banner o
       },
     },
     transient: {
-      banner: { kind: 'error', message: gatewayReconnectMessage },
+      banner: createBanner('error', gatewayReconnectMessage, gatewayReconnectBannerOptions),
       channelList: {
         open: true,
         networkId: 'network-1',
