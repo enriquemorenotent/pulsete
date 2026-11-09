@@ -1,3 +1,4 @@
+import { requestJson as apiRequest, requestResponse } from './api-request.js';
 import type { WatchlistActivity } from '../../shared/watchlist-activity.js';
 import { historySearchLimit, historyWindowLimit } from '../../shared/protocol-chat.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
@@ -40,22 +41,6 @@ export {
 export type BufferHistoryPayload = {
   messages: ChatMessage[];
   hasMore: boolean;
-};
-
-const apiRequest = async <T>(path: string, init?: RequestInit) => {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(body?.message ?? `Request failed (${response.status})`);
-  }
-  return body as T;
 };
 
 export const api = {
@@ -233,11 +218,7 @@ export const api = {
     );
   },
   downloadBufferHistory: async (bufferId: string) => {
-    const response = await fetch(`/api/buffers/${bufferId}/history/download`);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      throw new Error(body?.message ?? `Request failed (${response.status})`);
-    }
+    const response = await requestResponse(`/api/buffers/${bufferId}/history/download`);
     const blob = await response.blob();
     const fileName = parseDownloadFileName(response.headers.get('Content-Disposition'))
       ?? `history-${bufferId}.txt`;

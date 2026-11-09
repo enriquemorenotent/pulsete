@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createBanner } from '../web/src/banner.js';
 import { initialState, reducer } from '../web/src/app-state.js';
 import { createGatewayActions } from '../web/src/app-actions-gateway.js';
-import { gatewayReconnectBannerOptions, gatewayReconnectMessage } from '../web/src/gateway.js';
+import { GatewaySocketClosedError, gatewayReconnectBannerOptions, gatewayReconnectMessage } from '../web/src/gateway.js';
 import type { SocketHandle } from '../web/src/client.js';
 
 test('notification lifetime is explicit and independent of its wording', () => {
@@ -26,7 +26,7 @@ test('both unavailable and failing gateway sockets publish persistent identified
   for (const connected of [false, true]) {
     const banners = [] as ReturnType<typeof createBanner>[];
     const state = { ...initialState, domain: { ...initialState.domain, gatewayStatus: connected ? 'connected' as const : 'disconnected' as const } };
-    const socket = connected ? { send() { throw new Error('closed'); } } as unknown as SocketHandle : null;
+    const socket = connected ? { send() { throw new GatewaySocketClosedError(); } } as unknown as SocketHandle : null;
     const actions = createGatewayActions({
       getState: () => state,
       socketRef: { current: socket },

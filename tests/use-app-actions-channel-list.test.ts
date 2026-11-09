@@ -7,7 +7,7 @@ import type { Action,State } from '../web/src/app-types.js';
 import type { AppSessionSnapshot } from './helpers/app-actions-test-session.js';
 import type { SocketHandle } from '../web/src/client.js';
 import { buildConversationModel } from '../web/src/conversation-model.js';
-import { gatewayReconnectMessage } from '../web/src/gateway.js';
+import { GatewaySocketClosedError, gatewayReconnectMessage } from '../web/src/gateway.js';
 import { createAppActionsForTest as createAppActions } from './helpers/app-actions-test-session.js';
 import type { WorkspaceView } from '../web/src/workspace-types.js';
 
@@ -230,7 +230,7 @@ test('openChannelList does not wedge loading state when the socket send fails', 
   const { params, actions: dispatched, banners } = createParams({
     socket: {
       send() {
-        throw new Error('Gateway socket is not open');
+        throw new GatewaySocketClosedError();
       },
       close() {},
     },

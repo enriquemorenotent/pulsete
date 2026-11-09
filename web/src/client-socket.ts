@@ -1,6 +1,6 @@
 import { clientMessageSchema, decodeServer, encode } from '../../shared/protocol-messages.js';
 import type { ClientMessage, ServerMessage } from '../../shared/protocol-messages.js';
-import { gatewaySocketClosedMessage } from './gateway.js';
+import { GatewaySocketClosedError } from './gateway.js';
 
 export type SocketHandle = {
   send: (message: ClientMessage) => void;
@@ -119,16 +119,16 @@ export const connectSocket = ({
       const parsed = clientMessageSchema.parse(message);
       if (socket.readyState !== WebSocket.OPEN) {
         closeAndRetireSocket();
-        throw new Error(gatewaySocketClosedMessage);
+        throw new GatewaySocketClosedError();
       }
+      const payload = encode(parsed);
       try {
-        const payload = encode(parsed);
         socket.send(payload);
-        instrumentation?.onSend?.(parsed.type, payload.length);
-      } catch {
+      } catch (cause) {
         closeAndRetireSocket();
-        throw new Error(gatewaySocketClosedMessage);
+        throw new GatewaySocketClosedError({ cause });
       }
+      instrumentation?.onSend?.(parsed.type, payload.length);
     },
     close() {
       closeAndRetireSocket();

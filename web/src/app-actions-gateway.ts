@@ -1,4 +1,4 @@
-import { gatewayReconnectMessage, gatewayReconnectBannerOptions } from './gateway.js';
+import { gatewayReconnectMessage, gatewayReconnectBannerOptions, toGatewayErrorMessage, toGatewayErrorOptions } from './gateway.js';
 import type { GatewayActionParams, GatewayActions } from './app-actions-types.js';
 
 export const createGatewayActions = (params: GatewayActionParams): GatewayActions => {
@@ -20,9 +20,9 @@ export const createGatewayActions = (params: GatewayActionParams): GatewayAction
     try {
       socket.send(message);
       return true;
-    } catch {
+    } catch (error) {
       if (showBanner) {
-        params.updateBanner('error', gatewayReconnectMessage, gatewayReconnectBannerOptions);
+        params.updateBanner('error', toGatewayErrorMessage(error, 'Failed to send message'), toGatewayErrorOptions(error));
       }
       return false;
     }

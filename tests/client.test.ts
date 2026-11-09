@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { api, connectSocket } from '../web/src/client.js';
-import { gatewaySocketClosedMessage,getGatewayReconnectDelayMs } from '../web/src/gateway.js';
+import { GatewaySocketClosedError, gatewaySocketClosedMessage, getGatewayReconnectDelayMs } from '../web/src/gateway.js';
 
 class FakeWebSocket {
   static CONNECTING = 0;
@@ -173,13 +173,62 @@ test('connectSocket throws a stable error and retires the socket when send is at
 
     const socket = FakeWebSocket.instances[0]!;
 
-    assert.throws(() => handle.send({ type: 'network.connect', networkId: 'net-1' }), /Gateway socket is not open/);
+    assert.throws(() => handle.send({ type: 'network.connect', networkId: 'net-1' }), GatewaySocketClosedError);
     assert.equal(socket.closeCalls, 1);
     assert.equal(closeCalls, 1);
     assert.equal(socket.readyState, FakeWebSocket.CLOSED);
     assert.equal(socket.listenerCount('open'), 0);
     assert.equal(socket.listenerCount('message'), 0);
     assert.equal(socket.listenerCount('close'), 0);
+  } finally {
+    restore();
+  }
+});
+
+test('connectSocket preserves the cause of a transport failure and retires the socket', () => {
+  const restore = installFakeWebSocket();
+  try {
+    let closes = 0;
+    const handle = connectSocket({ onMessage() {}, onClose() { closes += 1; } });
+    const socket = FakeWebSocket.instances[0]!;
+    socket.readyState = FakeWebSocket.OPEN;
+    const cause = new Error('Transport failed');
+    socket.send = () => { throw cause; };
+    assert.throws(() => handle.send({ type: 'network.connect', networkId: 'net-1' }),
+      error => error instanceof GatewaySocketClosedError && error.cause === cause);
+    assert.equal(socket.closeCalls, 1);
+    assert.equal(closes, 1);
+  } finally {
+    restore();
+  }
+});
+
+test('invalid outgoing messages do not retire a healthy socket', () => {
+  const restore = installFakeWebSocket();
+  try {
+    const handle = connectSocket({ onMessage() {} });
+    const socket = FakeWebSocket.instances[0]!;
+    socket.readyState = FakeWebSocket.OPEN;
+    assert.throws(() => handle.send({ type: 'network.connect', networkId: 123 } as unknown as Parameters<typeof handle.send>[0]),
+      error => error instanceof Error && !(error instanceof GatewaySocketClosedError));
+    assert.equal(socket.closeCalls, 0);
+    handle.send({ type: 'network.connect', networkId: 'net-1' });
+    assert.equal(socket.sent.length, 1);
+  } finally {
+    restore();
+  }
+});
+
+test('diagnostic callback failures do not retire a healthy socket', () => {
+  const restore = installFakeWebSocket();
+  try {
+    const failure = new Error('Diagnostics failed');
+    const handle = connectSocket({ onMessage() {} }, { onSend() { throw failure; } });
+    const socket = FakeWebSocket.instances[0]!;
+    socket.readyState = FakeWebSocket.OPEN;
+    assert.throws(() => handle.send({ type: 'network.connect', networkId: 'net-1' }), error => error === failure);
+    assert.equal(socket.closeCalls, 0);
+    assert.equal(socket.sent.length, 1);
   } finally {
     restore();
   }

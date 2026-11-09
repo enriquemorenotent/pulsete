@@ -1,3 +1,4 @@
+import { requestJson, requestResponse } from './api-request.js';
 import {
   parseDownloadFileName,
   triggerFileDownload,
@@ -12,15 +13,11 @@ export { readPulseteBrowserPreferences, type BrowserPreferences };
 export const restorePulseteBrowserPreferences = restoreLegacyBrowserPreferences;
 
 export const downloadFullBackup = async () => {
-  const response = await fetch('/api/backups/export', {
+  const response = await requestResponse('/api/backups/export', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.message ?? `Request failed (${response.status})`);
-  }
   const blob = await response.blob();
   const fileName = parseDownloadFileName(response.headers.get('Content-Disposition'))
     ?? 'pulsete-backup.pulsete-backup';
@@ -28,14 +25,10 @@ export const downloadFullBackup = async () => {
 };
 
 export const importFullBackup = async (file: Blob) => {
-  const response = await fetch('/api/backups/import', {
+  const body = await requestJson<unknown>('/api/backups/import', {
     method: 'POST',
     body: file,
   });
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(body?.message ?? `Request failed (${response.status})`);
-  }
   const browserPreferences = readBrowserPreferencesResponse(body);
   restoreLegacyBrowserPreferences(browserPreferences);
   window.location.reload();

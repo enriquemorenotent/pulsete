@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { DraftSaveQueue } from './draft-save-queue.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
 import {
   selectBanner,
@@ -95,55 +96,26 @@ export function AppEffects(props: AppEffectsProps) {
     props.composer.applyServerDrafts(drafts);
   }, [buffers, drafts, props.composer]);
 
+  const [draftSaveQueue] = useState(() => new DraftSaveQueue(props.saveDraft));
   useEffect(() => {
-    const timers = new Map<string, number>();
-    const latest = new Map<string, string>();
-    let active = true;
-    const save = (bufferId: string) => {
-      const body = latest.get(bufferId);
-      if (body === undefined) {
-        return;
-      }
-      latest.delete(bufferId);
-      timers.delete(bufferId);
-      void props.saveDraft(bufferId, body).then((saved) => {
-        if (!active || saved || latest.has(bufferId)) {
-          return;
-        }
-        latest.set(bufferId, body);
-        timers.set(bufferId, window.setTimeout(() => save(bufferId), 2_000));
-      });
-    };
+    draftSaveQueue.setSaveDraft(props.saveDraft);
+  }, [draftSaveQueue, props.saveDraft]);
+
+  useEffect(() => {
+    draftSaveQueue.resume();
     const unsubscribe = props.composer.subscribeDrafts((bufferId, body) => {
-      const existing = timers.get(bufferId);
-      if (existing !== undefined) {
-        window.clearTimeout(existing);
-      }
-      latest.set(bufferId, body);
-      if (!body) {
-        save(bufferId);
-        return;
-      }
-      timers.set(bufferId, window.setTimeout(() => save(bufferId), 250));
+      draftSaveQueue.enqueue(bufferId, body);
     });
-    const flush = () => {
-      for (const bufferId of [...latest.keys()]) {
-        save(bufferId);
-      }
-    };
+    const flush = () => draftSaveQueue.flush();
     window.addEventListener('blur', flush);
     window.addEventListener('pagehide', flush);
     return () => {
-      active = false;
       unsubscribe();
       window.removeEventListener('blur', flush);
       window.removeEventListener('pagehide', flush);
-      for (const timer of timers.values()) {
-        window.clearTimeout(timer);
-      }
-      flush();
+      draftSaveQueue.stop();
     };
-  }, [props.composer, props.saveDraft]);
+  }, [props.composer, draftSaveQueue]);
 
   useEffect(() => {
     if (phase !== 'ready' || !browserStorageImportPending) {
