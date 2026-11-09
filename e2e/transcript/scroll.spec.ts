@@ -129,3 +129,22 @@ test('reaching the end of older history loads newer messages', async ({ page }) 
   }).toBe('Tab a; older 1; newer 1');
 });
 
+
+test('opening an unread channel renders its unread message and preserves the previous channel anchor', async ({ page }) => {
+  await readHistory(page);
+  const saved = await anchor(page);
+  await page.getByRole('button', { name: 'Unread channel', exact: true }).click();
+  await expect(scroller(page)).toBeVisible();
+  await expect(page.getByText(/^Message 200:/)).toBeInViewport();
+  await page.getByRole('button', { name: 'Switch tab', exact: true }).click();
+  await expectAnchor(page, saved);
+});
+
+test('an empty channel positions at its unread message when history arrives', async ({ page }) => {
+  await page.getByRole('button', { name: 'Empty channel', exact: true }).click();
+  await expect(page.getByText('Empty', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Finish loading', exact: true }).click();
+  await expect(scroller(page)).toBeVisible();
+  await expect(page.getByText(/^Message 200:/)).toBeInViewport();
+  await page.screenshot({ path: '/tmp/pulsete-channel-investigation/history-loaded.png' });
+});

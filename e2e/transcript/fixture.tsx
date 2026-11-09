@@ -6,6 +6,7 @@ import '../../web/src/globals.css';
 
 function Fixture() {
   const [tab, setTab] = useState('a');
+  const [historyPending, setHistoryPending] = useState(false);
   const [range, setRange] = useState({ start: 100, end: 350 });
   const [focus, setFocus] = useState({ id: 0, index: null as number | null });
   const [latest, setLatest] = useState(0);
@@ -13,15 +14,15 @@ function Fixture() {
   const [newerLoads, setNewerLoads] = useState(0);
   const [bounded, setBounded] = useState(false);
   const model = useMemo<ChatTranscriptModel>(() => ({
-    groups: [], unreadRowIndex: null,
-    flatRows: Array.from({ length: range.end - range.start }, (_, index) => {
+    groups: [], unreadRowIndex: tab === 'unread' || tab === 'loading' ? 100 : null,
+    flatRows: Array.from({ length: historyPending ? 0 : range.end - range.start }, (_, index) => {
       const id = range.start + index;
       return { kind: 'message', key: `message-${id}`, hideTimestamp: false,
         message: { id: `message-${id}`, bufferId: tab, networkId: 'test', target: '#test',
           nick: 'reader', body: `Message ${id}: ${'Some text for variable height rows. '.repeat(id % 5 + 1)}`,
           kind: 'line', self: false, ts: 1700000000000 + id * 1000 } };
     }),
-  }), [range, tab]);
+  }), [range, tab, historyPending]);
   const older = async () => {
     setOlderLoads(n => n + 1);
     setRange(r => ({ start: r.start - 50, end: bounded ? r.end - 50 : r.end }));
@@ -36,6 +37,9 @@ function Fixture() {
   return <main style={{ width: 900, margin: 20 }}>
     <nav style={{ display: 'flex', gap: 16 }}>
       <button onClick={() => setTab(t => t === 'a' ? 'b' : 'a')}>Switch tab</button>
+      <button onClick={() => setTab('unread')}>Unread channel</button>
+      <button onClick={() => { setTab('loading'); setHistoryPending(true); }}>Empty channel</button>
+      <button onClick={() => setHistoryPending(false)}>Finish loading</button>
       <button onClick={() => setRange(r => ({ ...r, end: r.end + 1 }))}>Incoming</button>
       <button onClick={() => void older()}>Older</button>
       <button onClick={() => void newer()}>Newer</button>
@@ -48,7 +52,9 @@ function Fixture() {
       <ChatTranscriptVirtuoso key={tab} bufferId={tab} model={model}
         channelUserModesByNick={new Map()} expandedMutedGroupKeys={new Set()}
         nickEmojiByNetworkNick={new Map()} emptyBody="Empty" followOutputRequestId={0}
-        focusRequestId={focus.id} focusRowIndex={focus.index} initialScrollTarget="latest"
+        focusRequestId={focus.id} focusRowIndex={focus.index}
+        initialHistoryPending={historyPending}
+        initialScrollTarget={historyPending ? 'wait' : tab === 'unread' || tab === 'loading' ? 'first-unread' : 'latest'}
         jumpToLatestRequestId={latest} listKind="chat" mode="colors"
         onOpenChannel={() => {}} onToggleMutedGroup={() => {}} participantHighlightMode="none"
         onLoadOlderHistory={older} onLoadNewerHistory={range.end < 350 ? newer : undefined}

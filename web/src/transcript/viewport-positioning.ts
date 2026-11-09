@@ -49,6 +49,20 @@ export const resolveRestoredTranscriptScrollIndex = (input: {
     : null;
 };
 
+// Virtuoso accepts a number or a location object, but not explicit undefined.
+// Resolve every startup state before passing the position to the list.
+export const resolveInitialTranscriptScrollLocation = (input: {
+  rowKeys: readonly string[];
+  snapshot: TranscriptScrollSnapshot | null;
+  target: 'latest' | 'first-unread' | 'wait';
+  unreadRowIndex: number | null;
+}) => resolveRestoredTranscriptScrollIndex({ ...input, firstItemIndex: 0 })
+  ?? (input.target === 'latest'
+    ? { index: 'LAST' as const, align: 'end' as const }
+    : input.target === 'first-unread' && input.unreadRowIndex !== null
+      ? { index: input.unreadRowIndex, align: 'start' as const }
+      : 0);
+
 export const resolveFirstUnreadScrollLocation = (
   unreadRowIndex: number,
   scrollerHeight: number,

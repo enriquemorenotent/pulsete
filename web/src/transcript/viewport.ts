@@ -3,6 +3,7 @@ import type { VirtuosoHandle } from 'react-virtuoso';
 import {
   firstItemIndexBase,
   resolveFirstUnreadScrollLocation,
+  resolveInitialTranscriptScrollLocation,
   resolveRestoredTranscriptScrollIndex,
   scrollToLatest,
   topAutoLoadThreshold,
@@ -46,9 +47,10 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   const [savedScrollSnapshot] = useState(() =>
     params.bufferId ? transcriptScrollSnapshots.get(params.bufferId) : null,
   );
-  const initialScrollLocation = resolveRestoredTranscriptScrollIndex({
-    firstItemIndex: 0, rowKeys: params.rowKeys, snapshot: savedScrollSnapshot,
-  }) ?? (params.initialScrollTarget === 'latest' ? { index: 'LAST' as const, align: 'end' as const } : undefined);
+  const initialScrollLocation = resolveInitialTranscriptScrollLocation({
+    rowKeys: params.rowKeys, snapshot: savedScrollSnapshot,
+    target: params.initialScrollTarget, unreadRowIndex: params.unreadRowIndex,
+  });
   const scrollerPointerDownRef = useRef(false);
   const olderScrollRequestedRef = useRef(false);
   const positionedBufferIdRef = useRef<string | null>(null);
