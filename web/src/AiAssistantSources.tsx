@@ -1,15 +1,17 @@
-import { useState } from 'react';
 import type { AiAssistantContext } from '../../shared/protocol-ai.js';
 
-export function AiAssistantSources({ context, sourcePrefix, onOpenSource }: { context: AiAssistantContext; sourcePrefix: string; onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean> }) {
-  const [error, setError] = useState('');
-  const open = async (id: string) => {
-    setError('');
-    try { if (!await onOpenSource?.(context.buffer.id, id)) setError('The original message is unavailable. The saved excerpt is shown below.'); }
-    catch { setError('The original message is unavailable. The saved excerpt is shown below.'); }
-  };
+type AiAssistantSourcesProps = {
+  context: AiAssistantContext;
+  sourcePrefix: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  error: string;
+  onOpenSource?: (label: string) => void;
+};
+
+export function AiAssistantSources({ context, sourcePrefix, open, onOpenChange, error, onOpenSource }: AiAssistantSourcesProps) {
   return (
-    <details className="mt-2 border-t border-white/10 pt-2 text-[11px] text-muted-foreground">
+    <details open={open} onToggle={event => onOpenChange(event.currentTarget.open)} className="mt-2 border-t border-white/10 pt-2 text-[11px] text-muted-foreground">
       <summary className="cursor-pointer">
         Sources ({context.sources?.length ?? 0}){context.coverage?.truncated ? ' · Incomplete history' : ''}
       </summary>
@@ -28,7 +30,7 @@ export function AiAssistantSources({ context, sourcePrefix, onOpenSource }: { co
         {context.sources?.map(({ label, message }) => (
           <li key={label} id={`${sourcePrefix}-${label}`}>
             <span className="font-medium">[{label}] {message.speakerNick ?? message.nick ?? 'unknown'} · {new Date(message.ts).toLocaleString()}</span>
-            {onOpenSource ? <button type="button" className="ml-2 text-primary underline" onClick={() => void open(message.id)}>Open message</button> : null}
+            {onOpenSource ? <button type="button" className="ml-2 text-primary underline" onClick={() => onOpenSource(label)}>Open message</button> : null}
             <p className="whitespace-pre-wrap break-words">{message.body}</p>
           </li>
         ))}

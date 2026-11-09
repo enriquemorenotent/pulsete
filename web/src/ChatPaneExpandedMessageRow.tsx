@@ -25,7 +25,6 @@ export const ChatPaneExpandedMessageRow = (props: {
   message: ChatMessage;
   inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
-  onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   participant: MessageParticipantPresentation;
@@ -94,7 +93,6 @@ export const ChatPaneExpandedMessageRow = (props: {
             props.inlineImageRendering,
           )}
           mode={props.mode}
-          onInlinePreviewLoad={props.onInlinePreviewLoad}
           onOpenChannel={props.onOpenChannel}
         />
       </p>

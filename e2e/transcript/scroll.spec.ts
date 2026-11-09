@@ -148,3 +148,75 @@ test('an empty channel positions at its unread message when history arrives', as
   await expect(page.getByText(/^Message 200:/)).toBeInViewport();
   await page.screenshot({ path: '/tmp/pulsete-channel-investigation/history-loaded.png' });
 });
+
+
+async function growRenderedRow(page: Page, aboveViewport = false) {
+  await scroller(page).evaluate((node, above) => {
+    const rows = [...node.querySelectorAll<HTMLElement>('[data-index]')];
+    const row = above
+      ? rows.find(row => row.getBoundingClientRect().bottom <= node.getBoundingClientRect().top)
+      : rows.at(-1);
+    if (!row) throw new Error('No row available to resize');
+    row.style.paddingBottom = '180px';
+  }, aboveViewport);
+}
+
+test('any row growth follows latest without a media-specific callback', async ({ page }) => {
+  await growRenderedRow(page);
+  await expect.poll(() => gap(page)).toBeLessThan(2);
+  await settle(page);
+  await expect.poll(() => gap(page)).toBeLessThan(2);
+});
+
+test('row growth above the reading position preserves the visible message and offset', async ({ page }) => {
+  await readHistory(page);
+  const saved = await anchor(page);
+  await growRenderedRow(page, true);
+  await settle(page);
+  await expectAnchor(page, saved);
+});
+
+test('resizing the transcript preserves reading intent and latest intent', async ({ page }) => {
+  await readHistory(page);
+  const saved = await anchor(page);
+  await page.locator('section').evaluate(node => { node.style.height = '450px'; });
+  await settle(page);
+  await expectAnchor(page, saved);
+  await page.getByRole('button', { name: 'Incoming', exact: true }).click();
+  await settle(page);
+  await expectAnchor(page, saved);
+  await page.getByRole('button', { name: 'Latest', exact: true }).click();
+  await expect.poll(() => gap(page)).toBeLessThan(2);
+  await page.locator('section').evaluate(node => { node.style.height = '350px'; });
+  await expect.poll(() => gap(page)).toBeLessThan(2);
+});
+
+test('a small scroll up and back down resumes following', async ({ page }) => {
+  await scroller(page).hover();
+  await page.mouse.wheel(0, -10);
+  await expect.poll(() => gap(page)).toBeGreaterThan(0);
+  await settle(page);
+  await page.mouse.wheel(0, 10);
+  await expect.poll(() => gap(page)).toBeLessThan(2);
+  await settle(page);
+  await page.getByRole('button', { name: 'Incoming', exact: true }).click();
+  await expect.poll(() => gap(page)).toBeLessThan(2);
+});
+
+for (const input of ['wheel', 'keyboard'] as const) {
+  test(`downward ${input} at an existing history boundary loads newer messages`, async ({ page }) => {
+    await page.getByRole('button', { name: 'Bounded: false', exact: true }).click();
+    await page.getByRole('button', { name: 'Older', exact: true }).click();
+    await settle(page);
+    await expect.poll(() => gap(page)).toBeLessThan(2);
+    await expect(page.locator('output')).toHaveText('Tab a; older 1; newer 0');
+    if (input === 'wheel') {
+      await scroller(page).hover();
+      await page.mouse.wheel(0, 1000);
+    } else {
+      await scroller(page).focus();
+      await page.keyboard.press('End');
+    }
+    await expect(page.locator('output')).toHaveText('Tab a; older 1; newer 1');
+  });
+}

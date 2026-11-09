@@ -20,7 +20,6 @@ type ChatTranscriptMessageRowProps = {
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
-  onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   participantHighlightMode: ParticipantHighlightMode;
@@ -56,7 +55,6 @@ export function ChatTranscriptMessageRow(props: ChatTranscriptMessageRowProps) {
         hideTimestamp={props.row.hideTimestamp}
         inlineImageRendering={props.inlineImageRendering}
         mode={props.mode}
-        onInlinePreviewLoad={props.onInlinePreviewLoad}
         onOpenChannel={props.onOpenChannel}
         onOpenParticipantQuery={props.onOpenParticipantQuery}
         highlighted={props.highlighted}
@@ -71,7 +69,6 @@ export function ChatTranscriptMessageRow(props: ChatTranscriptMessageRowProps) {
       message={props.row.message}
       inlineImageRendering={props.inlineImageRendering}
       mode={props.mode}
-      onInlinePreviewLoad={props.onInlinePreviewLoad}
       onOpenChannel={props.onOpenChannel}
       onOpenParticipantQuery={props.onOpenParticipantQuery}
       participant={participant}

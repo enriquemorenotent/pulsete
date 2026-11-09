@@ -11,7 +11,7 @@ type AiAssistantMarkdownProps = {
 
 export function AiAssistantMarkdown(props: AiAssistantMarkdownProps) {
   return (
-    <Markdown options={{ ...markdownOptions, overrides: { ...markdownOptions.overrides, a: { component: AssistantMarkdownLink, props: { onSourceClick: props.onSourceClick } } } }}>
+    <Markdown options={{ ...markdownOptions, overrides: { ...markdownOptions.overrides, a: { component: AssistantMarkdownLink, props: { onSourceClick: props.onSourceClick, sourcePrefix: props.sourcePrefix, sourceLabels: props.sourceLabels } } } }}>
       {props.children.replace(/\[S(\d+)\]/g, (citation, number: string) =>
         props.sourcePrefix && props.sourceLabels?.includes(`S${number}`)
           ? `[${citation}](#${props.sourcePrefix}-S${number})` : citation)}
@@ -61,18 +61,16 @@ const markdownOptions = {
   },
 } satisfies MarkdownToJSX.Options;
 
-function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'> & { onSourceClick?: (label: string) => void }) {
+function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'> & Pick<AiAssistantMarkdownProps, 'onSourceClick' | 'sourcePrefix' | 'sourceLabels'>) {
   const external = isExternalLink(props.href);
   return (
     <ExternalLink
       href={props.href}
-      onClick={() => {
-        if (props.href?.startsWith('#assistant-source-')) {
-          const source = document.getElementById(props.href.slice(1));
-          const details = source?.closest('details');
-          if (details) details.open = true;
-          const label = props.href.match(/-(S\d+)$/)?.[1];
-          if (label) props.onSourceClick?.(label);
+      onClick={(event) => {
+        const label = props.sourceLabels?.find(label => props.href === `#${props.sourcePrefix}-${label}`);
+        if (label && props.onSourceClick) {
+          event.preventDefault();
+          props.onSourceClick(label);
         }
       }}
       title={props.title}

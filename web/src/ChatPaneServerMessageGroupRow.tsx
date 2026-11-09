@@ -26,7 +26,6 @@ import { formatTranscriptMessageForCopy } from './transcript/copy.js';
 type ChatPaneServerMessageGroupRowProps = {
   inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
-  onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   row: ChatTranscriptServerGroupRow;
 };
@@ -54,7 +53,6 @@ export function ChatPaneServerMessageGroupRow(props: ChatPaneServerMessageGroupR
             key={messageRow.key}
             inlineImageRendering={props.inlineImageRendering}
             mode={props.mode}
-            onInlinePreviewLoad={props.onInlinePreviewLoad}
             onOpenChannel={props.onOpenChannel}
             row={messageRow}
           />
@@ -67,7 +65,6 @@ export function ChatPaneServerMessageGroupRow(props: ChatPaneServerMessageGroupR
 function ServerMessageGroupLine(props: {
   inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
-  onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   row: ChatTranscriptMessageRow;
 }) {
@@ -103,7 +100,6 @@ function ServerMessageGroupLine(props: {
               text={displayText}
               inlineImageRendering={inlineImageRendering === 'link' ? 'link' : 'hidden'}
               mode={props.mode}
-              onInlinePreviewLoad={props.onInlinePreviewLoad}
               onOpenChannel={props.onOpenChannel}
               parsedContent={parsedContent}
               renderInlinePreviews={false}
@@ -114,7 +110,6 @@ function ServerMessageGroupLine(props: {
         {inlineImageRendering === 'preview' ? (
           <FormattedMessageInlinePreviews
             media={parsedContent.inlineMedia}
-            onInlinePreviewLoad={props.onInlinePreviewLoad}
             pageHrefs={parsedContent.pagePreviewHrefs}
           />
         ) : null}

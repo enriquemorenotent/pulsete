@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Bot, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -52,6 +52,24 @@ function AssistantBubble(props: {
   onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
 }) {
   const assistant = props.entry.role === 'assistant';
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [sourceError, setSourceError] = useState('');
+  const sourceRequestRef = useRef(0);
+  const openSource = async (label: string) => {
+    const request = ++sourceRequestRef.current;
+    const context = props.entry.context;
+    const source = context?.sources?.find(source => source.label === label);
+    setSourcesOpen(true);
+    setSourceError('');
+    try {
+      if (context && source && await props.onOpenSource?.(context.buffer.id, source.message.id)) return;
+    } catch {
+      // Keep the saved excerpt available when navigation fails.
+    }
+    if (request === sourceRequestRef.current) {
+      setSourceError('The original message is unavailable. The saved excerpt is shown below.');
+    }
+  };
   return (
     <div className={cn('flex', assistant ? 'justify-start' : 'justify-end')}>
       <div className={cn(
@@ -67,14 +85,23 @@ function AssistantBubble(props: {
               <AiAssistantMarkdown
                 sourcePrefix={`assistant-source-${props.entry.id}`}
                 sourceLabels={props.entry.context?.sources?.map((source) => source.label)}
-                onSourceClick={(label) => { const element = document.getElementById(`assistant-source-${props.entry.id}-${label}`); element?.querySelector<HTMLButtonElement>('button')?.click(); }}
+                onSourceClick={(label) => void openSource(label)}
               >{props.entry.text}</AiAssistantMarkdown>
             </Suspense>
           ) : (
             <div className="whitespace-pre-wrap">{props.entry.text}</div>
           )}
         </div>
-        {props.entry.context ? <AiAssistantSources context={props.entry.context} sourcePrefix={`assistant-source-${props.entry.id}`} onOpenSource={props.onOpenSource} /> : null}
+        {props.entry.context ? (
+          <AiAssistantSources
+            context={props.entry.context}
+            sourcePrefix={`assistant-source-${props.entry.id}`}
+            open={sourcesOpen}
+            onOpenChange={setSourcesOpen}
+            error={sourceError}
+            onOpenSource={props.onOpenSource ? (label) => void openSource(label) : undefined}
+          />
+        ) : null}
         {props.entry.mode === 'suggest-reply' ? (
           <Button
             size="sm"

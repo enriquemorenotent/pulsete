@@ -34,7 +34,6 @@ type ChatPaneCompactMessageRowProps = {
   hideTimestamp?: boolean;
   inlineImageRendering?: InlineImageRenderingMode;
   mode: MessageDisplayMode;
-  onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   highlighted?: boolean;
@@ -148,7 +147,6 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
                   text={displayText}
                   inlineImageRendering={inlineImageRendering === 'link' ? 'link' : 'hidden'}
                   mode={props.mode}
-                  onInlinePreviewLoad={props.onInlinePreviewLoad}
                   onOpenChannel={props.onOpenChannel}
                   parsedContent={parsedContent}
                   renderInlinePreviews={false}
@@ -160,7 +158,6 @@ export function ChatPaneCompactMessageRow(props: ChatPaneCompactMessageRowProps)
           {inlineImageRendering === 'preview' ? (
             <FormattedMessageInlinePreviews
               media={parsedContent.inlineMedia}
-              onInlinePreviewLoad={props.onInlinePreviewLoad}
               pageHrefs={parsedContent.pagePreviewHrefs}
             />
           ) : null}

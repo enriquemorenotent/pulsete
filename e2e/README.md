@@ -11,7 +11,8 @@ not connect to IRC, touch the local database, or install the desktop application
 The tests cover tab return near the bottom, exact visible-row restoration,
 incoming output while reading, wheel and keyboard scrolling, prepending older
 messages, bounded older/newer windows, automatic history loading, message jumps,
-and returning to latest. Console errors and Vite error overlays fail the tests.
+returning to latest, growing content above the reading position, and resizing
+the transcript while following or reading. Console errors and Vite error overlays fail the tests.
 Failure screenshots go to `/tmp/pulsete-playwright`; the successful history-view
 screenshot goes to `/tmp/pulsete-transcript-history.png`.
 

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import type { VirtuosoHandle } from 'react-virtuoso';
 import type { TranscriptViewportController } from './viewport-controller.js';
 
 // A bounded window can remove rows from both ends. Reset Virtuoso's measurements
@@ -16,21 +17,23 @@ export function useTranscriptWindowAnchor(rowKeys: readonly string[], controller
       align: anchor?.align ?? window.align });
   }
   const readyRevisionRef = useRef(0);
-  const isRestoring = useCallback(() => {
-    if (readyRevisionRef.current === window.revision) return false;
-    const scroller = containerRef.current?.querySelector('[data-virtuoso-scroller]');
-    const row = scroller?.querySelector(`[data-index="${window.index}"]`);
-    if (scroller && row && (window.index === 0 || scroller.scrollTop > 0)
-      && row.getBoundingClientRect().bottom > scroller.getBoundingClientRect().top
-      && row.getBoundingClientRect().top < scroller.getBoundingClientRect().bottom) {
-      readyRevisionRef.current = window.revision;
-      return false;
-    }
-    return true;
-  }, [window.revision, window.index, window.offset]);
+  const requestedRevisionRef = useRef(0);
+  const isRestoring = useCallback(() => readyRevisionRef.current !== window.revision, [window.revision]);
+  const restore = useCallback((virtuoso: VirtuosoHandle | null) => {
+    if (!virtuoso || requestedRevisionRef.current === window.revision) return;
+    requestedRevisionRef.current = window.revision;
+    // Virtuoso owns measurement and scrolling. Its completion callback releases
+    // history loading only after the requested position has been applied.
+    virtuoso.scrollIntoView({
+      index: window.index,
+      calculateViewLocation: () => ({ index: window.index, align: window.align, offset: window.offset, behavior: 'auto' }),
+      done: () => { readyRevisionRef.current = window.revision; },
+    });
+  }, [window.revision, window.index, window.align, window.offset]);
   return {
     containerRef,
     isRestoring,
+    restore,
     key: window.revision,
     initialTopMostItemIndex: window.revision
       ? { index: window.index, align: window.align, offset: window.offset }

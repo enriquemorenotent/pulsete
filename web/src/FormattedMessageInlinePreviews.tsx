@@ -11,7 +11,6 @@ import { usePagePreviewMedia } from './page-preview-media.js';
 export const FormattedMessageInlinePreviews = memo(function FormattedMessageInlinePreviews(
   props: {
     media: readonly InlineMedia[];
-    onInlinePreviewLoad?: () => void;
     pageHrefs?: readonly string[];
   },
 ) {
@@ -37,7 +36,6 @@ export const FormattedMessageInlinePreviews = memo(function FormattedMessageInli
             key={entry.originalHref}
             media={entry}
             onActivate={() => setActiveHref(entry.originalHref)}
-            onLoad={props.onInlinePreviewLoad}
           />
         ))}
       </span>
@@ -48,13 +46,12 @@ export const FormattedMessageInlinePreviews = memo(function FormattedMessageInli
 function InlineMediaPreviewTile(props: {
   media: InlineMedia;
   onActivate: () => void;
-  onLoad?: () => void;
 }) {
   const label = buildInlineMediaLabel(props.media);
   if (props.media.kind === 'video' && props.media.playback === 'on-demand') {
     return (
       <span className="relative block max-w-full overflow-hidden rounded-sm border border-border/80 bg-card/70 p-1">
-        <InlineMediaThumbnail media={props.media} onLoad={props.onLoad} />
+        <InlineMediaThumbnail media={props.media} />
         <button
           type="button"
           aria-label={`Expand ${label}`}
@@ -74,12 +71,12 @@ function InlineMediaPreviewTile(props: {
       onClick={props.onActivate}
       className="block max-w-full cursor-zoom-in overflow-hidden rounded-sm border border-border/80 bg-card/70 p-1 transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
     >
-      <InlineMediaThumbnail media={props.media} onLoad={props.onLoad} />
+      <InlineMediaThumbnail media={props.media} />
     </button>
   );
 }
 
-function InlineMediaThumbnail(props: { media: InlineMedia; onLoad?: () => void }) {
+function InlineMediaThumbnail(props: { media: InlineMedia }) {
   const { media } = props;
   const source = useAccountMediaUrl(media.sourceHref);
   if (media.kind === 'image') {
@@ -89,8 +86,6 @@ function InlineMediaThumbnail(props: { media: InlineMedia; onLoad?: () => void }
         alt={buildInlineMediaLabel(media)}
         loading="lazy"
         decoding="async"
-        onError={props.onLoad}
-        onLoad={props.onLoad}
         referrerPolicy="no-referrer"
         className="block max-h-80 max-w-full rounded-sm object-contain"
       />
@@ -108,8 +103,6 @@ function InlineMediaThumbnail(props: { media: InlineMedia; onLoad?: () => void }
       muted
       playsInline
       preload="metadata"
-      onError={props.onLoad}
-      onLoadedMetadata={props.onLoad}
       className={`${loopingAnimation ? 'pointer-events-none ' : ''}block max-h-80 max-w-full rounded-sm object-contain`}
     />
   );

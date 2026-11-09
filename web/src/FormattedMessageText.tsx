@@ -25,7 +25,6 @@ export { InlineMediaPreviewDialogBody } from './InlineMediaPreviewDialogBody.js'
 type FormattedMessageTextProps = {
   highlightQuery?: string;
   inlineImageRendering?: InlineImageRenderingMode;
-  onInlinePreviewLoad?: () => void;
   parsedContent?: ParsedFormattedMessageContent;
   renderInlinePreviews?: boolean;
   renderPagePreviewStatus?: boolean;
@@ -95,7 +94,6 @@ export const FormattedMessageText = memo(function FormattedMessageText(props: Fo
       {props.renderInlinePreviews === false || inlineImageRendering !== 'preview' ? null : (
         <FormattedMessageInlinePreviews
           media={content.inlineMedia}
-          onInlinePreviewLoad={props.onInlinePreviewLoad}
           pageHrefs={content.pagePreviewHrefs}
         />
       )}

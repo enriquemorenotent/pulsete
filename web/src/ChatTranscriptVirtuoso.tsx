@@ -136,23 +136,24 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
   const renderItemContent = useCallback(
     (_index: number, row: TranscriptRow) => {
       return (
-        <ChatTranscriptRow
-          row={row}
-          channelUserModesByNick={props.channelUserModesByNick}
-          expandedMutedGroupKeys={props.expandedMutedGroupKeys}
-          highlightedMessageId={props.highlightedMessageId}
-          canPinMessages={props.canPinMessages}
-          onSetMessagePinned={props.onSetMessagePinned}
-          inlineImageRendering={props.inlineImageRendering}
-          nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
-          listKind={props.listKind}
-          mode={props.mode}
-          onInlinePreviewLoad={viewport.handleInlinePreviewLoad}
-          onOpenChannel={props.onOpenChannel}
-          onOpenParticipantQuery={props.onOpenParticipantQuery}
-          onToggleMutedGroup={props.onToggleMutedGroup}
-          participantHighlightMode={props.participantHighlightMode}
-        />
+        <div data-transcript-row-key={row.key}>
+          <ChatTranscriptRow
+            row={row}
+            channelUserModesByNick={props.channelUserModesByNick}
+            expandedMutedGroupKeys={props.expandedMutedGroupKeys}
+            highlightedMessageId={props.highlightedMessageId}
+            canPinMessages={props.canPinMessages}
+            onSetMessagePinned={props.onSetMessagePinned}
+            inlineImageRendering={props.inlineImageRendering}
+            nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
+            listKind={props.listKind}
+            mode={props.mode}
+            onOpenChannel={props.onOpenChannel}
+            onOpenParticipantQuery={props.onOpenParticipantQuery}
+            onToggleMutedGroup={props.onToggleMutedGroup}
+            participantHighlightMode={props.participantHighlightMode}
+          />
+        </div>
       );
     },
     [
@@ -164,14 +165,11 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
       props.nickEmojiByNetworkNick,
       props.listKind,
       props.mode,
-      props.model,
       props.onOpenChannel,
       props.onOpenParticipantQuery,
       props.onSetMessagePinned,
       props.onToggleMutedGroup,
       props.participantHighlightMode,
-      viewport.firstItemIndex,
-      viewport.handleInlinePreviewLoad,
     ],
   );
 
@@ -192,19 +190,16 @@ export const ChatTranscriptVirtuoso = memo(function ChatTranscriptVirtuoso(
         className="chat-transcript-scrollbar"
         style={{ height: '100%' }}
         alignToBottom
-        atBottomStateChange={viewport.handleAtBottomStateChange}
-        atTopStateChange={viewport.handleAtTopStateChange}
-        atTopThreshold={viewport.atTopThreshold}
+        atBottomThreshold={viewport.atBottomThreshold}
+        totalListHeightChanged={viewport.handleLayoutChange}
         components={components}
         computeItemKey={computeItemKey}
         firstItemIndex={viewport.firstItemIndex}
         followOutput={viewport.followOutput}
         increaseViewportBy={{ bottom: 320, top: 160 }}
         itemContent={renderItemContent}
-        itemsRendered={() => { windowAnchor.isRestoring(); viewport.handleItemsRendered(); }}
+        itemsRendered={() => windowAnchor.restore(viewport.virtuosoRef.current)}
         scrollerRef={viewport.scrollerRef}
-        startReached={viewport.handleStartReached}
-        endReached={viewport.handleEndReached}
         data={props.model.flatRows}
       />
       {props.hasNewerHistory && props.onReturnToLatest ? (

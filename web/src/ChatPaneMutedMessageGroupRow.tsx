@@ -16,7 +16,6 @@ type ChatPaneMutedMessageGroupRowProps = {
   nickEmojiByNetworkNick: ReadonlyMap<string, string>;
   listKind: 'chat' | 'server';
   mode: MessageDisplayMode;
-  onInlinePreviewLoad?: () => void;
   onOpenChannel: (channel: string) => void;
   onOpenParticipantQuery?: (nick: string, identity?: NetworkUserIdentity | null) => void;
   onToggle: (key: string) => void;
@@ -65,7 +64,6 @@ export function ChatPaneMutedMessageGroupRow(props: ChatPaneMutedMessageGroupRow
               nickEmojiByNetworkNick={props.nickEmojiByNetworkNick}
               listKind={props.listKind}
               mode={props.mode}
-              onInlinePreviewLoad={props.onInlinePreviewLoad}
               onOpenChannel={props.onOpenChannel}
               onOpenParticipantQuery={props.onOpenParticipantQuery}
               participantHighlightMode={props.participantHighlightMode}

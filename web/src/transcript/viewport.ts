@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import {
   firstItemIndexBase,
@@ -7,11 +7,11 @@ import {
   resolveRestoredTranscriptScrollIndex,
   scrollToLatest,
   topAutoLoadThreshold,
-  type ScrollBehavior,
 } from './viewport-positioning.js';
 import { useTranscriptOlderHistory } from './viewport-older-history.js';
 import { TranscriptViewportController } from './viewport-controller.js';
 import { useTranscriptWindowAnchor } from './window-anchor.js';
+import { latestScrollSnapshotThreshold } from './capture-scroll-snapshot.js';
 import { transcriptScrollSnapshots } from './scroll-snapshot-store.js';
 
 export { resolveFirstUnreadScrollLocation, resolveLatestFollowBehavior, resolveNextFirstItemIndex, resolvePrependedRowCountFromAnchor, resolveRestoredTranscriptScrollIndex, type TranscriptScrollSnapshot } from './viewport-positioning.js';
@@ -52,7 +52,10 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     target: params.initialScrollTarget, unreadRowIndex: params.unreadRowIndex,
   });
   const scrollerPointerDownRef = useRef(false);
-  const olderScrollRequestedRef = useRef(false);
+  const followingLatest = useSyncExternalStore(
+    controller.subscribe,
+    () => controller.shouldFollowLatest(params.hasNewerHistory ?? false),
+  );
   const positionedBufferIdRef = useRef<string | null>(null);
   const previousFollowOutputRequestIdRef = useRef(params.followOutputRequestId);
   const previousFocusRequestIdRef = useRef(0);
@@ -173,6 +176,8 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     }
 
     if (params.initialScrollTarget === 'first-unread' && params.unreadRowIndex !== null) {
+      const rowKey = params.rowKeys[params.unreadRowIndex];
+      if (rowKey) controller.jump(rowKey);
       virtuosoRef.current?.scrollToIndex(
         resolveFirstUnreadScrollLocation(
           params.unreadRowIndex,
@@ -194,67 +199,48 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
     params.unreadRowIndex,
   ]);
 
-  const handleStartReached = useCallback(
-    () => {
-      if (
-        params.bufferId
-        && positionedBufferIdRef.current === params.bufferId
-        && !params.initialHistoryPending
-        && !isRestoringWindow()
-        && olderScrollRequestedRef.current
-      ) {
-        olderScrollRequestedRef.current = false;
-        void handleLoadOlderHistory();
-      }
-    },
-    [handleLoadOlderHistory, params.bufferId, params.initialHistoryPending, isRestoringWindow],
-  );
-
-  const handleAtTopStateChange = useCallback((atTop: boolean) => {
-    if (atTop) handleStartReached();
-  }, [handleStartReached]);
-
-  const followOutput = useCallback(
-    (_atLatest: boolean): ScrollBehavior => {
-      return controller.followOutput(params.hasNewerHistory ?? false);
-    },
-    [controller, params.hasNewerHistory],
-  );
-
-  const newerFrameRef = useRef<number | null>(null);
-  const handleEndReached = useCallback(() => {
-    if (newerFrameRef.current !== null) cancelAnimationFrame(newerFrameRef.current);
-    // Let Virtuoso restore the anchor before deciding whether we're still at the end.
-    newerFrameRef.current = requestAnimationFrame(() => {
-      newerFrameRef.current = null;
-      const node = scrollerRef.current;
-      if (node && node.scrollHeight - node.clientHeight - node.scrollTop < 100
-        && positionedBufferIdRef.current === params.bufferId && !params.initialHistoryPending
-        && !isRestoringWindow()) {
-        void params.onLoadNewerHistory?.();
-      }
+  const resolveScrollBoundary = useCallback(() => {
+    const node = scrollerRef.current;
+    if (!node || positionedBufferIdRef.current !== params.bufferId
+      || params.initialHistoryPending || isRestoringWindow()) return;
+    const action = controller.resolveScrollBoundary({
+      atTop: node.scrollTop <= topAutoLoadThreshold,
+      atBottom: node.scrollHeight - node.clientHeight - node.scrollTop <= latestScrollSnapshotThreshold,
+      hasNewerHistory: params.hasNewerHistory ?? false,
     });
-  }, [params.bufferId, params.initialHistoryPending, params.onLoadNewerHistory, isRestoringWindow]);
-  useEffect(() => () => {
-    if (newerFrameRef.current !== null) cancelAnimationFrame(newerFrameRef.current);
-  }, [handleEndReached]);
+    if (action === 'older') void handleLoadOlderHistory();
+    if (action === 'newer') void params.onLoadNewerHistory?.();
+  }, [controller, params.bufferId, params.initialHistoryPending, params.hasNewerHistory,
+    params.onLoadNewerHistory, handleLoadOlderHistory, isRestoringWindow]);
 
-  const handleAtBottomStateChange = useCallback(
-    (nextAtBottom: boolean) => {
-      controller.bottomChanged(nextAtBottom, params.hasNewerHistory ?? false);
-      if (nextAtBottom && !params.hasNewerHistory) olderScrollRequestedRef.current = false;
-      if (nextAtBottom) handleEndReached();
-    },
-    [controller, params.hasNewerHistory, handleEndReached],
-  );
+  const requestScroll = useCallback((direction: 'older' | 'newer') => {
+    controller.requestHistory(direction);
+    // At an existing edge the browser cannot move, so no scroll event follows.
+    resolveScrollBoundary();
+  }, [controller, resolveScrollBoundary]);
 
-  const handleInlinePreviewLoad = useCallback(() => {
-    if (controller.shouldFollowPreview) {
-      virtuosoRef.current?.autoscrollToBottom();
+  // Every height change uses the same intent, regardless of which row grew.
+  // Capture on scroll, not render: layout changes must not replace the old anchor
+  // before we have restored it.
+  const handleLayoutChange = useCallback(() => {
+    if (positionedBufferIdRef.current !== params.bufferId || isRestoringWindow()) return;
+    if (controller.shouldFollowLatest(params.hasNewerHistory ?? false)) {
+      scrollToLatest(virtuosoRef.current);
+    } else {
+      const position = controller.snapshot;
+      const node = scrollerRef.current;
+      if (node && position?.kind === 'anchor') {
+        const row = [...node.querySelectorAll<HTMLElement>('[data-transcript-row-key]')]
+          .find(row => row.dataset.transcriptRowKey === position.rowKey);
+        if (row) {
+          const correction = row.getBoundingClientRect().top - node.getBoundingClientRect().top + (position.offset ?? 0);
+          if (Math.abs(correction) >= 1) virtuosoRef.current?.scrollBy({ top: correction, behavior: 'auto' });
+        }
+      }
     }
-  }, [controller]);
+  }, [controller, params.bufferId, params.hasNewerHistory, isRestoringWindow]);
 
-  const handleItemsRendered = useCallback(() => {
+  const capturePosition = useCallback(() => {
     const node = scrollerRef.current;
     if (node && positionedBufferIdRef.current === params.bufferId && !isRestoringWindow()) {
       controller.capture(node, params.rowKeys, params.hasNewerHistory ?? false);
@@ -262,8 +248,8 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   }, [controller, params.bufferId, params.rowKeys, params.hasNewerHistory, isRestoringWindow]);
 
   useLayoutEffect(() => {
-    captureSnapshotRef.current = handleItemsRendered;
-  }, [handleItemsRendered]);
+    captureSnapshotRef.current = capturePosition;
+  }, [capturePosition]);
 
   const stopFollowingLatest = useCallback(() => {
     controller.readHistory();
@@ -271,13 +257,11 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
 
   const handleScrollerWheel = useCallback((event: WheelEvent) => {
     if (event.deltaY < 0) {
-      olderScrollRequestedRef.current = true;
-      stopFollowingLatest();
-      requestAnimationFrame(() => {
-        if ((scrollerRef.current?.scrollTop ?? Infinity) <= topAutoLoadThreshold) handleStartReached();
-      });
+      requestScroll('older');
+    } else if (event.deltaY > 0) {
+      requestScroll('newer');
     }
-  }, [stopFollowingLatest, handleStartReached]);
+  }, [requestScroll]);
 
   const handleScrollerKeyDown = useCallback((event: KeyboardEvent) => {
     if (
@@ -286,32 +270,37 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
       || event.key === 'Home'
       || (event.key === ' ' && event.shiftKey)
     ) {
-      olderScrollRequestedRef.current = true;
-      stopFollowingLatest();
+      requestScroll('older');
+    } else if (['ArrowDown', 'PageDown', 'End', ' '].includes(event.key)) {
+      requestScroll('newer');
     }
-  }, [stopFollowingLatest]);
+  }, [requestScroll]);
 
   const handleScrollerPointerDown = useCallback(() => {
     scrollerPointerDownRef.current = true;
-    olderScrollRequestedRef.current = true;
   }, []);
 
   const handleScrollerPointerUp = useCallback(() => {
     scrollerPointerDownRef.current = false;
   }, []);
 
+  const previousScrollTopRef = useRef(0);
   const handleScrollerScroll = useCallback(() => {
-    handleItemsRendered();
-    if (scrollerPointerDownRef.current) olderScrollRequestedRef.current = true;
     const node = scrollerRef.current;
+    if (node && scrollerPointerDownRef.current) {
+      controller.requestHistory(node.scrollTop < previousScrollTopRef.current ? 'older' : 'newer');
+    }
+    previousScrollTopRef.current = node?.scrollTop ?? 0;
     if (
       scrollerPointerDownRef.current
       && node
-      && node.scrollHeight - node.clientHeight - node.scrollTop > 4
+      && node.scrollHeight - node.clientHeight - node.scrollTop > latestScrollSnapshotThreshold
     ) {
       stopFollowingLatest();
     }
-  }, [stopFollowingLatest, handleItemsRendered]);
+    resolveScrollBoundary();
+    capturePosition();
+  }, [controller, stopFollowingLatest, capturePosition, resolveScrollBoundary]);
 
   const setScrollerNode = useCallback((node: HTMLElement | null | Window) => {
     const previousNode = scrollerRef.current;
@@ -344,16 +333,11 @@ export function useTranscriptViewport(params: UseTranscriptViewportParams) {
   return {
     windowAnchor,
     initialScrollLocation,
-    atTopThreshold: topAutoLoadThreshold,
     firstItemIndex,
-    followOutput,
-    handleAtBottomStateChange,
-    handleAtTopStateChange,
-    handleInlinePreviewLoad,
-    handleItemsRendered,
+    followOutput: followingLatest ? 'auto' as const : false as const,
+    handleLayoutChange,
+    atBottomThreshold: latestScrollSnapshotThreshold,
     handleLoadOlderHistory,
-    handleStartReached,
-    handleEndReached,
     scrollerRef: setScrollerNode,
     virtuosoRef,
   };

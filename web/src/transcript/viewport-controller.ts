@@ -10,63 +10,90 @@ type ViewportState =
 // input, explicit requests, or reaching the live bottom change what we follow.
 export class TranscriptViewportController {
   private state: ViewportState = { kind: 'following-latest', position: null };
-  private atBottom = true;
+  private listeners = new Set<() => void>();
+  private historyDirection: 'older' | 'newer' | null = null;
   private pendingSend = false;
+
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  };
+
+  private changed() {
+    for (const listener of this.listeners) listener();
+  }
 
   reset() {
     this.state = { kind: 'following-latest', position: null };
-    this.atBottom = true;
+    this.historyDirection = null;
     this.pendingSend = false;
+    this.changed();
   }
 
   followLatest(send = false) {
     this.state = { kind: 'following-latest', position: null };
     this.pendingSend = send;
-    if (!send) this.atBottom = true;
+    this.historyDirection = null;
+    this.changed();
   }
 
   readHistory() {
+    this.pendingSend = false;
     if (this.state.kind !== 'reading-history') {
       this.state = { kind: 'reading-history', position: this.state.position };
     }
+    this.changed();
   }
 
   jump(rowKey: string) {
     this.state = { kind: 'jumping', rowKey, position: null };
-    this.atBottom = false;
+    this.pendingSend = false;
+    this.historyDirection = null;
+    this.changed();
   }
 
   restore(position: TranscriptScrollSnapshot) {
     this.state = position.kind === 'latest'
       ? { kind: 'following-latest', position: null }
       : { kind: 'reading-history', position };
+    this.pendingSend = false;
+    this.changed();
   }
 
-  bottomChanged(atBottom: boolean, hasNewerHistory: boolean) {
-    this.atBottom = atBottom;
-    if (atBottom && !hasNewerHistory) this.followLatest(this.pendingSend);
+  shouldFollowLatest(hasNewerHistory: boolean) {
+    return this.state.kind === 'following-latest' && (!hasNewerHistory || this.pendingSend);
   }
 
-  followOutput(hasNewerHistory: boolean): 'auto' | false {
-    if (this.pendingSend || (this.state.kind === 'following-latest' && !hasNewerHistory)) {
-      this.pendingSend = false;
-      return 'auto';
+  requestHistory(direction: 'older' | 'newer') {
+    this.historyDirection = direction;
+    if (direction === 'older') this.readHistory();
+  }
+
+  resolveScrollBoundary(input: { atTop: boolean; atBottom: boolean; hasNewerHistory: boolean }): 'older' | 'newer' | null {
+    // Only a user request can cross a boundary. Layout measurements alone do
+    // not change intent, even if they put the viewport at the live bottom.
+    if (this.historyDirection === 'older' && input.atTop) {
+      this.historyDirection = null;
+      return 'older';
     }
-    return false;
-  }
-
-  get shouldFollowPreview() {
-    return this.atBottom || this.pendingSend;
+    if (this.historyDirection === 'newer' && input.atBottom) {
+      this.historyDirection = null;
+      if (input.hasNewerHistory) return 'newer';
+      this.followLatest();
+    }
+    return null;
   }
 
   capture(scroller: HTMLElement, rowKeys: readonly string[], hasNewerHistory: boolean) {
-    const position = captureTranscriptScrollSnapshot(scroller, rowKeys, hasNewerHistory);
+    const position = captureTranscriptScrollSnapshot(scroller, rowKeys, hasNewerHistory, {
+      isAtLatest: () => this.shouldFollowLatest(hasNewerHistory),
+    });
     if (position) this.state = { ...this.state, position };
   }
 
   get snapshot(): TranscriptScrollSnapshot | null {
+    if (this.state.kind === 'following-latest' && this.state.position?.kind !== 'anchor') return { kind: 'latest' };
     if (this.state.position) return this.state.position;
-    if (this.state.kind === 'following-latest') return { kind: 'latest' };
     return (this.state.kind === 'jumping'
       ? { kind: 'anchor', rowKey: this.state.rowKey } : null);
   }
@@ -105,8 +132,7 @@ export class TranscriptViewportController {
   private windowLocation(scroller: HTMLElement, previousRows: readonly string[], rowKeys: readonly string[], hasNewerHistory: boolean) {
     const retained = new Set(rowKeys);
     const position = captureTranscriptScrollSnapshot(scroller, previousRows, hasNewerHistory, {
-      // Keep the existing stricter live-bottom rule during window eviction.
-      isAtLatest: distance => distance < 4,
+      isAtLatest: () => this.shouldFollowLatest(hasNewerHistory),
       acceptRow: key => retained.has(key) && !key.startsWith('day-divider:') && !key.startsWith('unread-divider:'),
     });
     return resolveRestoredTranscriptScrollIndex({ firstItemIndex: 0, rowKeys, snapshot: position });
