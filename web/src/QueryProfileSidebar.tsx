@@ -26,7 +26,7 @@ export function QueryProfileSidebar(props: {
           notes={buffer.notes ?? ''}
           onSave={(notes) => props.onSaveNotes(buffer, notes).then(Boolean)}
           placeholder="Add details you want to remember…"
-          scopeKey={buffer.id}
+          scopeKey={`buffer:${buffer.id}`}
         />
       </details>
       <details open className="group/pins pt-3">

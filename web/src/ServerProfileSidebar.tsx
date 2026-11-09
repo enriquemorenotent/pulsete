@@ -139,7 +139,7 @@ function NotesAccordion(props: {
         notes={props.network.notes ?? ''}
         onSave={(notes) => props.onSaveNotes(props.network, notes).then(Boolean)}
         placeholder="Character, aliases, plot hooks..."
-        scopeKey={props.network.id}
+        scopeKey={`network:${props.network.id}`}
         variant="compact"
       />
     </ServerInspectorAccordionItem>

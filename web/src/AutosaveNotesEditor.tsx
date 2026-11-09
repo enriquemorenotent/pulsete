@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label.js';
 import { cn } from '@/lib/utils.js';
 
-type AutosaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+import type { AutosaveState as QueueState } from './autosave-queue.js';
+import { notesAutosave } from './notes-autosave.js';
+
+type AutosaveState = 'idle' | QueueState;
 type NotesEditorVariant = 'default' | 'compact' | 'document';
 
-const autosaveDelayMs = 600;
-
-export function AutosaveNotesEditor(props: {
+type NotesEditorProps = {
   fill?: boolean;
   id: string;
   notes: string;
@@ -15,7 +16,13 @@ export function AutosaveNotesEditor(props: {
   placeholder: string;
   scopeKey: string;
   variant?: NotesEditorVariant;
-}) {
+};
+
+export function AutosaveNotesEditor(props: NotesEditorProps) {
+  return <NotesEditor key={props.scopeKey} {...props} />;
+}
+
+function NotesEditor(props: NotesEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [recentlySaved, setRecentlySaved] = useState(false);
   const savedFeedbackRef = useRef({ scope: props.scopeKey, notes: props.notes });
@@ -23,64 +30,37 @@ export function AutosaveNotesEditor(props: {
   const fill = props.fill ?? true;
   const variant = props.variant ?? 'default';
   const showHeader = variant === 'default';
-  const [draftNotes, setDraftNotes] = useState(savedNotes);
-  const [autosaveState, setAutosaveState] = useState<AutosaveState>('idle');
-  const previousScopeKeyRef = useRef(props.scopeKey);
+  const [draftNotes, setDraftNotes] = useState(() => notesAutosave.getSnapshot(props.scopeKey)?.value ?? savedNotes);
+  const [autosaveState, setAutosaveState] = useState<AutosaveState>(() => notesAutosave.getSnapshot(props.scopeKey)?.state ?? 'idle');
   const previousSavedNotesRef = useRef(savedNotes);
-  const saveVersionRef = useRef(0);
-  const onSaveRef = useRef(props.onSave);
 
   useEffect(() => {
-    onSaveRef.current = props.onSave;
-  }, [props.onSave]);
+    const unsubscribe = notesAutosave.subscribe(props.scopeKey, snapshot => {
+      setAutosaveState(snapshot.state);
+    });
+    const flush = () => notesAutosave.flush(props.scopeKey);
+    window.addEventListener('blur', flush);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('blur', flush);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [props.scopeKey]);
 
   useEffect(() => {
-    const previousScopeKey = previousScopeKeyRef.current;
-    const previousSavedNotes = previousSavedNotesRef.current;
-    previousScopeKeyRef.current = props.scopeKey;
+    const previous = previousSavedNotesRef.current;
     previousSavedNotesRef.current = savedNotes;
-
-    if (props.scopeKey !== previousScopeKey) {
-      saveVersionRef.current += 1;
-      setDraftNotes(savedNotes);
-      setAutosaveState('idle');
-      return;
+    if (!notesAutosave.getSnapshot(props.scopeKey)) {
+      setDraftNotes(current => current === previous ? savedNotes : current);
     }
-
-    setDraftNotes((current) => current === previousSavedNotes ? savedNotes : current);
   }, [props.scopeKey, savedNotes]);
 
-  useEffect(() => {
-    if (draftNotes === savedNotes) {
-      setAutosaveState('idle');
-      return;
-    }
-
-    const saveVersion = saveVersionRef.current + 1;
-    saveVersionRef.current = saveVersion;
-    let cancelled = false;
-    setAutosaveState('pending');
-    const timer = setTimeout(() => {
-      setAutosaveState('saving');
-      void onSaveRef.current(draftNotes).then(
-        (saved) => {
-          if (!cancelled && saveVersionRef.current === saveVersion) {
-            setAutosaveState(saved ? 'saved' : 'error');
-          }
-        },
-        () => {
-          if (!cancelled && saveVersionRef.current === saveVersion) {
-            setAutosaveState('error');
-          }
-        },
-      );
-    }, autosaveDelayMs);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [draftNotes, savedNotes]);
+  const changeNotes = (value: string) => {
+    setDraftNotes(value);
+    notesAutosave.enqueue(props.scopeKey, value, (_key, notes) => props.onSave(notes));
+  };
 
   useEffect(() => {
     const previous = savedFeedbackRef.current;
@@ -148,7 +128,7 @@ export function AutosaveNotesEditor(props: {
           id={props.id}
           aria-label={showHeader ? undefined : 'Notes'}
           value={draftNotes}
-          onChange={(event) => setDraftNotes(event.target.value)}
+          onChange={(event) => changeNotes(event.target.value)}
           placeholder={props.placeholder}
           className={cn(
             'w-full outline-none transition-colors',
@@ -189,7 +169,7 @@ const getAutosaveStatusText = (
   draftNotes: string,
   savedNotes: string,
 ) => {
-  if (draftNotes === savedNotes || state === 'saved') {
+  if (state === 'saved' || (state === 'idle' && draftNotes === savedNotes)) {
     return 'Saved';
   }
   if (state === 'error') {

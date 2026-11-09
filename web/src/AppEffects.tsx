@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DraftSaveQueue } from './draft-save-queue.js';
+import { AutosaveQueue } from './autosave-queue.js';
 import type { ServerMessage } from '../../shared/protocol-messages.js';
 import {
   selectBanner,
@@ -96,9 +96,9 @@ export function AppEffects(props: AppEffectsProps) {
     props.composer.applyServerDrafts(drafts);
   }, [buffers, drafts, props.composer]);
 
-  const [draftSaveQueue] = useState(() => new DraftSaveQueue(props.saveDraft));
+  const [draftSaveQueue] = useState(() => new AutosaveQueue(props.saveDraft, { delayMs: value => value ? 250 : 0 }));
   useEffect(() => {
-    draftSaveQueue.setSaveDraft(props.saveDraft);
+    draftSaveQueue.setSave(props.saveDraft);
   }, [draftSaveQueue, props.saveDraft]);
 
   useEffect(() => {

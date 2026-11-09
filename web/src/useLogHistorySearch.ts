@@ -1,7 +1,8 @@
+import { LatestRequest } from './latest-request.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { LogHistorySearchFilters } from '../../shared/protocol-chat.js';
 import type { HistorySearchState } from './HistorySearchDialog.js';
-import type { SearchLogs } from './history-search-request.js';
+import { runLogSearchRequest, type SearchLogs } from './history-search-request.js';
 
 const initialState: HistorySearchState = {
   status: 'idle', query: '', results: [], hasMore: false, error: null,
@@ -18,12 +19,11 @@ export function useLogHistorySearch(open: boolean, search: SearchLogs) {
   const [state, setState] = useState(initialState);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
-  const controllerRef = useRef<AbortController | null>(null);
+  const [requests] = useState(() => new LatestRequest());
   const submittedRef = useRef<{ query: string; filters: LogHistorySearchFilters } | null>(null);
 
   useEffect(() => {
-    controllerRef.current?.abort();
-    controllerRef.current = null;
+    requests.cancel();
     submittedRef.current = null;
     setQuery('');
     setNetworkValue('__all__');
@@ -35,38 +35,31 @@ export function useLogHistorySearch(open: boolean, search: SearchLogs) {
     setLoadingMore(false);
     setPageError(null);
     return () => {
-      controllerRef.current?.abort();
-      controllerRef.current = null;
+      requests.cancel();
     };
-  }, [open]);
+  }, [open, requests]);
 
   const load = async (submitted: { query: string; filters: LogHistorySearchFilters }, beforeMessageId?: string) => {
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
     setPageError(null);
     setLoadingMore(!!beforeMessageId);
     if (!beforeMessageId) setState({ ...initialState, status: 'loading', query: submitted.query });
-    try {
-      const payload = await search(submitted.query, { ...submitted.filters, beforeMessageId }, { signal: controller.signal });
-      if (controllerRef.current !== controller) return;
-      setState((current) => ({
-        status: 'loaded', query: payload.query, hasMore: payload.hasMore, error: null,
-        results: beforeMessageId
-          ? [...new Map([...current.results, ...payload.results].map((result) => [result.message.id, result])).values()]
-          : payload.results,
-      }));
-    } catch (error) {
-      if (controllerRef.current !== controller) return;
-      const message = error instanceof Error ? error.message : 'Failed to search history';
-      if (beforeMessageId) setPageError(message);
-      else setState({ ...initialState, status: 'error', query: submitted.query, error: message });
-    } finally {
-      if (controllerRef.current === controller) {
-        controllerRef.current = null;
-        setLoadingMore(false);
-      }
-    }
+    await runLogSearchRequest({
+      requests, search, query: submitted.query,
+      filters: { ...submitted.filters, beforeMessageId },
+      onLoaded: payload => {
+        setState((current) => ({
+          status: 'loaded', query: payload.query, hasMore: payload.hasMore, error: null,
+          results: beforeMessageId
+            ? [...new Map([...current.results, ...payload.results].map((result) => [result.message.id, result])).values()]
+            : payload.results,
+        }));
+      },
+      onError: message => {
+        if (beforeMessageId) setPageError(message);
+        else setState({ ...initialState, status: 'error', query: submitted.query, error: message });
+      },
+      onSettled: () => setLoadingMore(false),
+    });
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -89,7 +82,7 @@ export function useLogHistorySearch(open: boolean, search: SearchLogs) {
   };
 
   const loadMore = () => {
-    if (controllerRef.current || !state.hasMore || !submittedRef.current) return;
+    if (requests.pending || !state.hasMore || !submittedRef.current) return;
     const cursor = state.results.at(-1)?.message.id;
     if (cursor) void load(submittedRef.current, cursor);
   };

@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DraftSaveQueue } from '../web/src/draft-save-queue.js';
+import { AutosaveQueue } from '../web/src/autosave-queue.js';
 
 function setup() {
   const timers = new Map<number, { callback: () => void; delay: number }>();
   let timerId = 0;
   const calls: { bufferId: string; body: string; resolve: (saved: boolean) => void; reject: (error: Error) => void }[] = [];
-  const queue = new DraftSaveQueue((bufferId, body) => new Promise<boolean>((resolve, reject) => {
+  const queue = new AutosaveQueue((bufferId, body) => new Promise<boolean>((resolve, reject) => {
     calls.push({ bufferId, body, resolve, reject });
-  }), {
+  }), { delayMs: value => value ? 250 : 0, scheduler: {
     setTimeout(callback, delay) { const id = ++timerId; timers.set(id, { callback, delay }); return id; },
     clearTimeout(timer) { timers.delete(timer as number); },
-  });
+  } });
   const tick = () => {
     for (const [id, timer] of [...timers]) {
       timers.delete(id);
@@ -126,7 +126,7 @@ test('resuming after effect cleanup preserves in-flight ordering and uses the cu
   queue.stop();
   queue.resume();
   const next: string[] = [];
-  queue.setSaveDraft(async (_id, body) => { next.push(body); return true; });
+  queue.setSave(async (_id, body) => { next.push(body); return true; });
   queue.enqueue('a', 'new');
   tick();
   assert.deepEqual(next, []);

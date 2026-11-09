@@ -1,3 +1,4 @@
+import { LatestRequest } from './latest-request.js';
 import {
   useEffect,
   useRef,
@@ -72,10 +73,8 @@ const initialSourceHistoryState: LogSourceHistoryState = {
 export function LogInspectorDialog(props: LogInspectorDialogProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const search = useLogHistorySearch(props.open, props.onSearch);
-  const sourceAbortRef = useRef<AbortController | null>(null);
-  const sourceRequestRef = useRef(0);
-  const sourceHistoryAbortRef = useRef<AbortController | null>(null);
-  const sourceHistoryRequestRef = useRef(0);
+  const [sourceRequests] = useState(() => new LatestRequest());
+  const [historyRequests] = useState(() => new LatestRequest());
   const [activeMode, setActiveMode] = useState<LogInspectorMode>('search');
   const [networkValue, setNetworkValue] = useState(allNetworksValue);
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
@@ -89,12 +88,8 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
   const [loadingOlderSourceHistory, setLoadingOlderSourceHistory] = useState(false);
 
   useEffect(() => {
-    sourceRequestRef.current += 1;
-    sourceAbortRef.current?.abort();
-    sourceAbortRef.current = null;
-    sourceHistoryRequestRef.current += 1;
-    sourceHistoryAbortRef.current?.abort();
-    sourceHistoryAbortRef.current = null;
+    sourceRequests.cancel();
+    historyRequests.cancel();
     setActiveMode('search');
     setNetworkValue(allNetworksValue);
     setExpandedMessageId(null);
@@ -116,12 +111,8 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
       });
     }
     return () => {
-      sourceRequestRef.current += 1;
-      sourceAbortRef.current?.abort();
-      sourceAbortRef.current = null;
-      sourceHistoryRequestRef.current += 1;
-      sourceHistoryAbortRef.current?.abort();
-      sourceHistoryAbortRef.current = null;
+      sourceRequests.cancel();
+      historyRequests.cancel();
       cancelFocus?.();
     };
     // Reset everything only when the dialog opens/closes.
@@ -138,55 +129,38 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
     queryText?: string;
   } = {}) => {
     const trimmedQuery = queryText.trim();
-    const requestId = sourceRequestRef.current + 1;
-    sourceRequestRef.current = requestId;
-    sourceAbortRef.current?.abort();
-    const controller = new AbortController();
-    sourceAbortRef.current = controller;
     setSourceState({
       status: 'loading',
       query: trimmedQuery,
       sources: [],
       error: null,
     });
-    try {
-      const payload = await props.onListLogSources({
+    await sourceRequests.run({
+      load: signal => props.onListLogSources({
         kind: kindValue === allSourceKindsValue ? null : kindValue as LogSourceListFilters['kind'],
         networkId: network === allNetworksValue ? null : network,
         q: trimmedQuery || null,
-      }, { signal: controller.signal });
-      if (sourceRequestRef.current !== requestId || sourceAbortRef.current !== controller) {
-        return;
-      }
-      setSourceState({
-        status: 'loaded',
-        query: payload.q ?? trimmedQuery,
-        sources: payload.sources,
-        error: null,
-      });
-    } catch (error) {
-      if (sourceRequestRef.current !== requestId || sourceAbortRef.current !== controller) {
-        return;
-      }
-      setSourceState({
-        status: 'error',
-        query: trimmedQuery,
-        sources: [],
-        error: error instanceof Error ? error.message : 'Failed to load sources',
-      });
-    } finally {
-      if (sourceAbortRef.current === controller) {
-        sourceAbortRef.current = null;
-      }
-    }
+      }, { signal }),
+      onLoaded: payload => {
+        setSourceState({
+          status: 'loaded',
+          query: payload.q ?? trimmedQuery,
+          sources: payload.sources,
+          error: null,
+        });
+      },
+      onError: error => {
+        setSourceState({
+          status: 'error',
+          query: trimmedQuery,
+          sources: [],
+          error: error instanceof Error ? error.message : 'Failed to load sources',
+        });
+      },
+    });
   };
 
   const loadSourceHistory = async (source: LogSource, beforeMessageId?: string, aroundMessageId?: string, newer = false) => {
-    const requestId = sourceHistoryRequestRef.current + 1;
-    sourceHistoryRequestRef.current = requestId;
-    sourceHistoryAbortRef.current?.abort();
-    const controller = new AbortController();
-    sourceHistoryAbortRef.current = controller;
     if (beforeMessageId || newer) {
       setLoadingOlderSourceHistory(true);
     } else {
@@ -197,44 +171,34 @@ export function LogInspectorDialog(props: LogInspectorDialogProps) {
         error: null,
       });
     }
-    try {
-      const window = aroundMessageId ? await api.loadMessageHistoryWindow(source.buffer.id, aroundMessageId, { signal: controller.signal }) : null;
-      const payload = window ? { messages: window.messages, hasMore: window.hasOlder } : await props.onLoadHistory(source.buffer.id, beforeMessageId, { signal: controller.signal });
-      if (
-        sourceHistoryRequestRef.current !== requestId
-        || sourceHistoryAbortRef.current !== controller
-      ) {
-        return;
-      }
-      setSourceHistoryState((current) => ({
-        status: 'loaded',
-        messages: newer ? mergeOlderMessages(current.messages, payload.messages) : beforeMessageId
-          ? mergeOlderMessages(payload.messages, current.messages)
-          : payload.messages,
-        hasMore: newer ? current.hasMore : payload.hasMore,
-        hasNewer: beforeMessageId ? current.hasNewer : window?.hasNewer ?? false,
-        error: null,
-      }));
-    } catch (error) {
-      if (
-        sourceHistoryRequestRef.current !== requestId
-        || sourceHistoryAbortRef.current !== controller
-      ) {
-        return;
-      }
-      setSourceHistoryState((current) => ({
-        status: beforeMessageId || newer ? 'loaded' : 'error',
-        messages: beforeMessageId || newer ? current.messages : [],
-        hasMore: current.hasMore,
-        hasNewer: current.hasNewer,
-        error: error instanceof Error ? error.message : 'Failed to load transcript',
-      }));
-    } finally {
-      if (sourceHistoryAbortRef.current === controller) {
-        sourceHistoryAbortRef.current = null;
-      }
-      if (sourceHistoryRequestRef.current === requestId) setLoadingOlderSourceHistory(false);
-    }
+    await historyRequests.run({
+      load: async signal => {
+        const window = aroundMessageId ? await api.loadMessageHistoryWindow(source.buffer.id, aroundMessageId, { signal }) : null;
+        const payload = window ? { messages: window.messages, hasMore: window.hasOlder } : await props.onLoadHistory(source.buffer.id, beforeMessageId, { signal });
+        return { window, payload };
+      },
+      onLoaded: ({ window, payload }) => {
+        setSourceHistoryState((current) => ({
+          status: 'loaded',
+          messages: newer ? mergeOlderMessages(current.messages, payload.messages) : beforeMessageId
+            ? mergeOlderMessages(payload.messages, current.messages)
+            : payload.messages,
+          hasMore: newer ? current.hasMore : payload.hasMore,
+          hasNewer: beforeMessageId ? current.hasNewer : window?.hasNewer ?? false,
+          error: null,
+        }));
+      },
+      onError: error => {
+        setSourceHistoryState((current) => ({
+          status: beforeMessageId || newer ? 'loaded' : 'error',
+          messages: beforeMessageId || newer ? current.messages : [],
+          hasMore: current.hasMore,
+          hasNewer: current.hasNewer,
+          error: error instanceof Error ? error.message : 'Failed to load transcript',
+        }));
+      },
+      onSettled: () => setLoadingOlderSourceHistory(false),
+    });
   };
 
   const handleSourceSubmit = (event: FormEvent<HTMLFormElement>) => {

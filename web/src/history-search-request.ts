@@ -1,3 +1,4 @@
+import type { LatestRequest } from './latest-request.js';
 import type {
   BufferHistorySearchPayload,
   LogHistorySearchFilters,
@@ -13,9 +14,8 @@ export type SearchBufferHistory = (
 type RunHistorySearchRequestParams = {
   bufferId: string;
   query: string;
-  signal: AbortSignal;
+  requests: LatestRequest;
   search: SearchBufferHistory;
-  isCurrentRequest: () => boolean;
   onLoaded: (payload: BufferHistorySearchPayload) => void;
   onError: (message: string) => void;
   onSettled: () => void;
@@ -30,9 +30,8 @@ export type SearchLogs = (
 type RunLogSearchRequestParams = {
   filters: LogHistorySearchFilters;
   query: string;
-  signal: AbortSignal;
+  requests: LatestRequest;
   search: SearchLogs;
-  isCurrentRequest: () => boolean;
   onLoaded: (payload: LogHistorySearchPayload) => void;
   onError: (message: string) => void;
   onSettled: () => void;
@@ -41,19 +40,16 @@ type RunLogSearchRequestParams = {
 export async function runHistorySearchRequest({
   bufferId,
   query,
-  signal,
+  requests,
   search,
-  isCurrentRequest,
   onLoaded,
   onError,
   onSettled,
 }: RunHistorySearchRequestParams) {
-  await runSearchRequest({
-    load: () => search(bufferId, query, { signal }),
-    fallbackError: 'Failed to search history',
-    isCurrentRequest,
+  await requests.run({
+    load: (signal) => search(bufferId, query, { signal }),
     onLoaded,
-    onError,
+    onError: error => onError(error instanceof Error ? error.message : 'Failed to search history'),
     onSettled,
   });
 }
@@ -61,50 +57,16 @@ export async function runHistorySearchRequest({
 export async function runLogSearchRequest({
   filters,
   query,
-  signal,
+  requests,
   search,
-  isCurrentRequest,
   onLoaded,
   onError,
   onSettled,
 }: RunLogSearchRequestParams) {
-  await runSearchRequest({
-    load: () => search(query, filters, { signal }),
-    fallbackError: 'Failed to search logs',
-    isCurrentRequest,
+  await requests.run({
+    load: (signal) => search(query, filters, { signal }),
     onLoaded,
-    onError,
+    onError: error => onError(error instanceof Error ? error.message : 'Failed to search history'),
     onSettled,
   });
-}
-
-async function runSearchRequest<TPayload>({
-  load,
-  fallbackError,
-  isCurrentRequest,
-  onLoaded,
-  onError,
-  onSettled,
-}: {
-  load: () => Promise<TPayload>;
-  fallbackError: string;
-  isCurrentRequest: () => boolean;
-  onLoaded: (payload: TPayload) => void;
-  onError: (message: string) => void;
-  onSettled: () => void;
-}) {
-  try {
-    const payload = await load();
-    if (isCurrentRequest()) {
-      onLoaded(payload);
-    }
-  } catch (error) {
-    if (isCurrentRequest()) {
-      onError(error instanceof Error ? error.message : fallbackError);
-    }
-  } finally {
-    if (isCurrentRequest()) {
-      onSettled();
-    }
-  }
 }
