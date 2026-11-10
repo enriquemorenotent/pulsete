@@ -115,16 +115,43 @@ export const isStableNetworkUserIdentity = (
   return !!normalized && (normalized.kind === 'account' || normalized.kind === 'userhost');
 };
 
+export type IdentityEvidence = 'same' | 'conflict' | 'unknown';
+
+export const compareIdentityEvidence = (
+  left: NetworkUserIdentity | null | undefined,
+  right: NetworkUserIdentity | null | undefined,
+): IdentityEvidence => {
+  const a = normalizeNetworkUserIdentity(left);
+  const b = normalizeNetworkUserIdentity(right);
+  if (!a || !b || a.kind === 'nick' || b.kind === 'nick') return 'unknown';
+  if (a.kind !== b.kind) return 'unknown';
+  return a.value === b.value ? 'same' : 'conflict';
+};
+
+export const compareIdentitySets = (left: readonly NetworkUserIdentity[], right: readonly NetworkUserIdentity[]): IdentityEvidence => {
+  for (const kind of ['account', 'userhost'] as const) {
+    const a = left.map(normalizeNetworkUserIdentity).filter(identity => identity?.kind === kind);
+    const b = right.map(normalizeNetworkUserIdentity).filter(identity => identity?.kind === kind);
+    if (a.length && b.length) {
+      return a.every(x => b.every(y => compareIdentityEvidence(x, y) === 'same')) ? 'same' : 'conflict';
+    }
+  }
+  return 'unknown';
+};
+
 export const matchesIdentityScopedEntry = (
   entry: IdentityScopedEntry,
   target: NetworkUserIdentityTarget | null | undefined,
+  options: { allowUnknownNickFallback?: boolean } = {},
 ) => {
   if (!target || entry.networkId !== target.networkId) {
     return false;
   }
   const entryIdentity = normalizeNetworkUserIdentity(entry.identity);
   if (entryIdentity && entryIdentity.kind !== 'nick') {
-    return isSameNetworkUserIdentity(entryIdentity, target.identity);
+    const evidence = compareIdentityEvidence(entryIdentity, target.identity);
+    if (evidence !== 'unknown') return evidence === 'same';
+    return options.allowUnknownNickFallback === true && isSameIrcIdentifier(entry.nick, target.nick);
   }
   return isSameIrcIdentifier(entry.nick, target.nick);
 };

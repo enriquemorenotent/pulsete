@@ -203,6 +203,6 @@ test('runtime drops sockets whose websocket send throws without aborting the bro
   assert.doesNotThrow(() => {
     runtime.gateway.publish({ type: 'notice', networkId: null, message: 'hello' });
   });
-  assert.deepEqual(healthySocket.sent, [{ type: 'notice', networkId: null, message: 'hello' }]);
+  assert.deepEqual(healthySocket.sent, [{ type: 'notice', networkId: null, message: 'hello', sync: runtime.gateway.snapshot().sync }]);
   assert.equal(throwingSocket.closed, true);
 });

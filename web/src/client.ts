@@ -98,6 +98,11 @@ export const api = {
         body: JSON.stringify(payload),
       },
     ),
+  updateNetwork: (networkId: string, patch: Partial<Omit<NetworkProfile, 'id' | 'hasPassword'>>) =>
+    apiRequest<{ messages: ServerMessage[]; network: NetworkProfile; serverBuffer: BufferState | null }>(
+      `/api/networks/${encodeURIComponent(networkId)}`,
+      { method: 'PATCH', body: JSON.stringify(patch) },
+    ),
   deleteNetwork: (networkId: string) =>
     apiRequest<{ deletedNetworkIds: string[]; messages: ServerMessage[]; ok: boolean }>(`/api/networks/${networkId}`, {
       method: 'DELETE',

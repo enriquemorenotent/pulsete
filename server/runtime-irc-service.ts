@@ -1,3 +1,4 @@
+import { badRequest } from './app-error.js';
 import {
   normalizeChannelTarget,
   normalizeMessageBody,
@@ -13,7 +14,7 @@ import { parseRawIrcClientCommand } from '../shared/irc-client-command.js';
 type RuntimeIrcServiceOptions = {
   connectionManager: RuntimeConnectionManager;
   conversations: Pick<RuntimeConversationStore, 'getBuffer' | 'getBufferByTarget' | 'getChannelByName'>;
-  networks: Pick<RuntimeNetworkStore, 'get'>;
+  networks: Pick<RuntimeNetworkStore, 'get'> & Partial<Pick<RuntimeNetworkStore, 'getServerRules'>>;
 };
 
 
@@ -22,7 +23,7 @@ export class RuntimeIrcService {
 
   join(networkId: string, channel: string, sourceBufferId?: string) {
     requireStoredNetwork(this.options.networks, networkId);
-    const normalizedChannel = normalizeChannelTarget(channel);
+    const normalizedChannel = normalizeChannelTarget(channel, this.options.networks.getServerRules?.(networkId));
     const existingBuffer = this.options.conversations.getBufferByTarget(networkId, normalizedChannel);
     const existingChannel = this.options.conversations.getChannelByName(networkId, normalizedChannel);
     const connection = this.options.connectionManager.getConnection(networkId);
@@ -35,7 +36,7 @@ export class RuntimeIrcService {
 
   part(networkId: string, channel: string, sourceBufferId?: string) {
     requireStoredNetwork(this.options.networks, networkId);
-    const normalizedChannel = normalizeChannelTarget(channel);
+    const normalizedChannel = normalizeChannelTarget(channel, this.options.networks.getServerRules?.(networkId));
     const connection = this.options.connectionManager.getConnection(networkId);
     connection.part(
       normalizedChannel,
@@ -52,12 +53,13 @@ export class RuntimeIrcService {
     sourceBufferId?: string,
   ) {
     const network = requireStoredNetwork(this.options.networks, networkId);
-    const normalizedTarget = normalizeMessageTarget(target);
+    const normalizedTarget = normalizeMessageTarget(target, this.options.networks.getServerRules?.(networkId));
     const normalizedBody = normalizeMessageBody(body);
     assertNotSelfPrivateMessageTarget(
       normalizedTarget,
       network,
       this.options.connectionManager.getConnectionState(networkId)?.nick ?? null,
+      this.options.networks.getServerRules?.(networkId)?.caseMapping,
     );
     const connection = this.options.connectionManager.getConnection(networkId);
     const replyTarget = this.resolveReplyTarget(networkId, sourceBufferId, normalizedTarget);
@@ -93,6 +95,9 @@ export class RuntimeIrcService {
       return fallbackTarget;
     }
     const buffer = this.options.conversations.getBuffer(sourceBufferId);
+    if (buffer?.networkId === networkId && buffer.queryTargetAvailable === false) {
+      throw badRequest('This nickname now belongs to a different person. Open their current conversation to send a message.');
+    }
     return buffer?.networkId === networkId ? buffer.target : fallbackTarget;
   }
 }

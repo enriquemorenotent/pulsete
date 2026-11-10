@@ -17,6 +17,7 @@ export const resolveNextSelection = (
       buffers: domain.buffers,
       channels: domain.channels,
       pendingChannels: domain.pendingChannels,
+      networkStates: domain.networkStates,
     });
     return conversation;
   };
@@ -41,7 +42,7 @@ export const resolveNextSelection = (
         previous.transient.selection?.kind === 'pending-channel'
         && previous.transient.selection.networkId === action.buffer.networkId
         && action.buffer.kind === 'channel'
-        && isSameIrcIdentifier(previous.transient.selection.channel, action.buffer.target)
+        && isSameIrcIdentifier(previous.transient.selection.channel, action.buffer.target, domain.networkStates[action.buffer.networkId]?.serverRules?.caseMapping)
       ) {
         return selectionFor(action.buffer);
       }
@@ -50,7 +51,7 @@ export const resolveNextSelection = (
       if (
         previous.transient.selection?.kind !== 'pending-channel'
         || previous.transient.selection.networkId !== action.networkId
-        || !isSameIrcIdentifier(previous.transient.selection.channel, action.channel)
+        || !isSameIrcIdentifier(previous.transient.selection.channel, action.channel, domain.networkStates[action.networkId]?.serverRules?.caseMapping)
       ) {
         return selection;
       }

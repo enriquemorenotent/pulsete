@@ -2,12 +2,13 @@ import type { BufferState, ChatMessage, MutedNickState } from '../../../shared/p
 import { isMessageMuted } from '../muted-nick-utils.js';
 
 type BufferActivityFields = Pick<BufferState, 'unread' | 'priorityUnread'>;
-type BufferReadCursorFields = Pick<BufferState, 'unread' | 'lastReadTs' | 'lastReadMessageId'>;
+type BufferReadCursorFields = Pick<BufferState, 'unread' | 'lastReadTs' | 'lastReadMessageId' | 'firstUnreadMessageId'>;
 
 export type UnreadDividerAnchor = {
   bufferId: string;
   lastReadTs: number | null;
   lastReadMessageId: string | null;
+  firstUnreadMessageId?: string | null;
 };
 
 export const hasUnreadBufferActivity = (buffer: BufferActivityFields | null | undefined) =>
@@ -29,7 +30,7 @@ export const shouldMarkSelectedBufferRead = (input: {
   && input.windowFocused;
 
 export const captureUnreadDividerAnchor = (
-  buffer: (BufferActivityFields & Pick<BufferState, 'id' | 'lastReadTs' | 'lastReadMessageId'>) | null | undefined,
+  buffer: (BufferActivityFields & Pick<BufferState, 'id' | 'lastReadTs' | 'lastReadMessageId' | 'firstUnreadMessageId'>) | null | undefined,
   previousAnchor: UnreadDividerAnchor | null,
 ): UnreadDividerAnchor | null => {
   if (!buffer) {
@@ -43,6 +44,7 @@ export const captureUnreadDividerAnchor = (
       bufferId: buffer.id,
       lastReadTs: buffer.lastReadTs,
       lastReadMessageId: buffer.lastReadMessageId,
+      ...(buffer.firstUnreadMessageId !== undefined ? { firstUnreadMessageId: buffer.firstUnreadMessageId } : {}),
     };
   }
   if (previousAnchor?.bufferId === buffer.id) {
@@ -53,7 +55,7 @@ export const captureUnreadDividerAnchor = (
 
 export const resolveVisibleUnreadDividerIndex = (
   messages: readonly ChatMessage[],
-  buffer: (BufferActivityFields & Pick<BufferState, 'id' | 'lastReadTs' | 'lastReadMessageId'>) | null | undefined,
+  buffer: (BufferActivityFields & Pick<BufferState, 'id' | 'lastReadTs' | 'lastReadMessageId' | 'firstUnreadMessageId'>) | null | undefined,
   anchor: UnreadDividerAnchor | null,
 ) => {
   if (!buffer) {
@@ -64,6 +66,7 @@ export const resolveVisibleUnreadDividerIndex = (
       unread: 1,
       lastReadTs: anchor.lastReadTs,
       lastReadMessageId: anchor.lastReadMessageId,
+      firstUnreadMessageId: anchor.firstUnreadMessageId,
     });
   }
   if (hasUnreadBufferActivity(buffer)) {
@@ -71,6 +74,7 @@ export const resolveVisibleUnreadDividerIndex = (
       unread: buffer.unread,
       lastReadTs: buffer.lastReadTs,
       lastReadMessageId: buffer.lastReadMessageId,
+      ...(buffer.firstUnreadMessageId !== undefined ? { firstUnreadMessageId: buffer.firstUnreadMessageId } : {}),
     });
   }
   return null;
@@ -117,6 +121,10 @@ export const resolveFirstUnreadDividerIndex = (
 ) => {
   if (!buffer || buffer.unread <= 0 || messages.length === 0) {
     return null;
+  }
+  if (buffer.firstUnreadMessageId !== undefined) {
+    const index = messages.findIndex(message => message.id === buffer.firstUnreadMessageId);
+    return index >= 0 ? index : null;
   }
   if (buffer.lastReadMessageId) {
     const cursorIndex = messages.findIndex((message) => message.id === buffer.lastReadMessageId);

@@ -14,11 +14,11 @@ export const tagMutationMessages = (messages: readonly ServerMessage[]) => {
 };
 
 export const createMutationPublisher =
-  (publish: (messages: readonly ServerMessage[]) => void) =>
+  (publish: (messages: readonly ServerMessage[]) => readonly ServerMessage[] | void) =>
   <T extends MutationResult>(result: T): T => {
-    const messages = tagMutationMessages(result.messages);
+    let messages = tagMutationMessages(result.messages);
     if (messages.length > 0) {
-      publish(messages);
+      messages = publish(messages) ?? messages;
     }
     return { ...result, messages } as T;
   };

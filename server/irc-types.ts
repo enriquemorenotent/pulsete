@@ -26,6 +26,7 @@ export type RuntimeEvent =
       vpnServer?: string;
       nick: string;
       capabilities: NonNullable<NetworkRuntimeState['capabilities']>;
+      serverRules?: NetworkRuntimeState['serverRules'];
     }
   | {
       type: 'status';

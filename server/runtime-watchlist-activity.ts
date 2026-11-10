@@ -27,7 +27,7 @@ export class RuntimeWatchlistActivity {
 
   constructor(
     private readonly friends: StorageFriendsRepository,
-    private readonly networks: Pick<StorageNetworksRepository, 'list'>,
+    private readonly networks: Pick<StorageNetworksRepository, 'list'> & Partial<Pick<StorageNetworksRepository, 'getServerRules'>>,
     private readonly now = Date.now,
     startTimer = true,
   ) {
@@ -77,7 +77,7 @@ export class RuntimeWatchlistActivity {
     } else if (event.type === 'peer-quit' && !event.self) {
       this.tick();
       for (const friend of this.friends.list()) {
-        if (normalizeIrcIdentifier(friend.nick) !== normalizeIrcIdentifier(event.nick)) continue;
+        if (normalizeIrcIdentifier(friend.nick, this.networks.getServerRules?.(event.networkId)?.caseMapping) !== normalizeIrcIdentifier(event.nick, this.networks.getServerRules?.(event.networkId)?.caseMapping)) continue;
         const key = this.key(event.networkId, friend.id);
         const previous = this.active.get(key);
         // A QUIT is evidence of leaving only within an existing observation.
@@ -93,10 +93,10 @@ export class RuntimeWatchlistActivity {
       return;
     }
     const presences = new Map(Object.entries(event.presences)
-      .map(([nick, status]) => [normalizeIrcIdentifier(nick), status]));
+      .map(([nick, status]) => [normalizeIrcIdentifier(nick, this.networks.getServerRules?.(event.networkId)?.caseMapping), status]));
     for (const friend of this.friends.list()) {
       const key = this.key(event.networkId, friend.id);
-      const status = presences.get(normalizeIrcIdentifier(friend.nick));
+      const status = presences.get(normalizeIrcIdentifier(friend.nick, this.networks.getServerRules?.(event.networkId)?.caseMapping));
       if (status) this.record(key, friend.id, event.networkId, status, event.transport);
       else if (event.transport === 'ison') this.active.delete(key);
     }

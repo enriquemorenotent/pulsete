@@ -1,3 +1,4 @@
+import type { IrcServerRules } from '../../shared/irc-server-rules.js';
 import type { ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Badge, type BadgeProps } from '@/components/ui/badge.js';
@@ -58,7 +59,7 @@ export function ServerProfileSidebar(props: {
         )}
       />
       <ConnectionAccordion accordion={accordion} network={network} runtime={props.runtime} />
-      <HistoryAccordion accordion={accordion} capabilities={props.runtime?.capabilities} />
+      <HistoryAccordion accordion={accordion} capabilities={props.runtime?.capabilities} rules={props.runtime?.serverRules} />
       <ServerCapabilityInspector accordion={accordion} capabilities={props.runtime?.capabilities} />
       <NotesAccordion accordion={accordion} network={network} onSaveNotes={props.onSaveNotes} />
     </InspectorPanel>
@@ -101,10 +102,11 @@ function ConnectionAccordion(props: {
 }
 
 function HistoryAccordion(props: {
+  rules?: IrcServerRules;
   accordion: ServerSidebarAccordionController;
   capabilities?: NetworkRuntimeCapabilities | null;
 }) {
-  const summary = summarizeHistoryCapabilities(props.capabilities);
+  const summary = summarizeHistoryCapabilities(props.capabilities, props.rules);
   return (
     <ServerInspectorAccordionItem
       accordion={props.accordion}

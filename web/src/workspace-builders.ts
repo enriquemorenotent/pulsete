@@ -184,8 +184,10 @@ const buildConnectedWorkspace = (resolved: ResolvedWorkspace): WorkspaceView => 
     return createWorkspace(resolved, {
       mode: 'query-connected',
       headerTitle: resolved.activeBuffer.target,
-      headerSubtitle: resolved.connectedSubtitle,
+      headerSubtitle: resolved.activeBuffer.queryTargetAvailable === false
+        ? 'This nickname now belongs to someone else. Saved history is still available.' : resolved.connectedSubtitle,
       composerMode: 'normal',
+      composerDisabled: resolved.activeBuffer.queryTargetAvailable === false,
       composerPlaceholder: `Message ${resolved.activeBuffer.target} or /command`,
       emptyBody: 'Wait for a reply or send a message.',
     });

@@ -62,12 +62,12 @@ export const resolveReplyContext = (
     const matchesBurstReplyNick = matchesMessageReplyNick(context, nick);
     const matchesMessageTarget = !!nick
       && (
-        isSameIrcIdentifier(nick, context.target)
+        isSameIrcIdentifier(nick, context.target, context.rules?.caseMapping)
         || matchesServiceTargetNick(nick, context.target)
       );
     if (
       command === 'NOTICE'
-      && !isChannelTarget(context.target)
+      && !isChannelTarget(context.target, context.rules)
       && matchesMessageTarget
       && matchesBurstReplyNick
     ) {
@@ -76,18 +76,18 @@ export const resolveReplyContext = (
     if (
       command === 'NOTICE'
       && context.commandLike
-      && isChannelTarget(context.sourceTarget)
-      && isChannelTarget(context.target)
+      && isChannelTarget(context.sourceTarget, context.rules)
+      && isChannelTarget(context.target, context.rules)
       && matchesBurstReplyNick
     ) {
       return { matched: true, done: context.completion !== 'burst' };
     }
-    return messageErrorNumerics.has(command) && isSameIrcIdentifier(params[1] ?? '', context.target)
+    return messageErrorNumerics.has(command) && isSameIrcIdentifier(params[1] ?? '', context.target, context.rules?.caseMapping)
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
   if (context.kind === 'whois') {
-    if (!whoisReplyNumerics.has(command) || !isSameIrcIdentifier(params[1] ?? '', context.nick)) {
+    if (!whoisReplyNumerics.has(command) || !isSameIrcIdentifier(params[1] ?? '', context.nick, context.rules?.caseMapping)) {
       return { matched: false, done: false };
     }
     return { matched: true, done: command === '318' || /^[45]\d{2}$/.test(command) };
@@ -99,7 +99,7 @@ export const resolveReplyContext = (
     if (rawModeUntargetedReplyNumerics.has(command)) {
       return { matched: true, done: true };
     }
-    return isSameIrcIdentifier(params[1] ?? '', context.target)
+    return isSameIrcIdentifier(params[1] ?? '', context.target, context.rules?.caseMapping)
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
@@ -111,7 +111,7 @@ export const resolveReplyContext = (
   }
   if (context.kind === 'nick') {
     return nickReplyNumerics.has(command)
-      && !(command === '437' && isChannelTarget(params[1] ?? ''))
+      && !(command === '437' && isChannelTarget(params[1] ?? '', context.rules))
       && matchesNickReply(context, command, params)
       ? { matched: true, done: true }
       : { matched: false, done: false };
@@ -200,7 +200,7 @@ const resolveChannelReplyContext = (
   params: string[]
 ): ReplyResolution => {
   const replyChannel = command === '353' ? params[2] ?? '' : params[1] ?? '';
-  if (!replyChannel || !isSameIrcIdentifier(replyChannel, context.channel)) {
+  if (!replyChannel || !isSameIrcIdentifier(replyChannel, context.channel, context.rules?.caseMapping)) {
     return { matched: false, done: false };
   }
   if (context.operation === 'join') {
@@ -224,9 +224,9 @@ const matchesNickReply = (
   context: Extract<PendingReplyContext, { kind: 'nick' }>,
   command: string,
   params: string[]
-) => command === '431' || isSameIrcIdentifier(params[1] ?? '', context.requestedNick);
+) => command === '431' || isSameIrcIdentifier(params[1] ?? '', context.requestedNick, context.rules?.caseMapping);
 
 const matchesMessageReplyNick = (
   context: MessageReplyContext,
   nick: string | null,
-) => !context.replyNick || (!!nick && isSameIrcIdentifier(nick, context.replyNick));
+) => !context.replyNick || (!!nick && isSameIrcIdentifier(nick, context.replyNick, context.rules?.caseMapping));

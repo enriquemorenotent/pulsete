@@ -1,3 +1,4 @@
+import type { IrcCaseMapping } from '../shared/irc-server-rules.js';
 import { reportedRealName, toRegistrationIdent } from '../shared/irc-identity.js';
 export { toRegistrationIdent } from '../shared/irc-identity.js';
 import { emitStatus } from './irc-emit.js';
@@ -94,7 +95,7 @@ export const handleNickservAutoJoinMessage = (
   const pendingTarget = connection.lifecycle.pendingNickservAutoJoinTarget;
   if (
     !pendingTarget
-    || !isNickservReplyTarget(rawTarget, pendingTarget, connection.lifecycle.currentNick)
+    || !isNickservReplyTarget(rawTarget, pendingTarget, connection.lifecycle.currentNick, connection.lifecycle.serverSupport.rules.caseMapping)
     || !matchesServiceTargetNick(nick, pendingTarget)
   ) {
     return false;
@@ -126,14 +127,14 @@ const completeDeferredNickservAutoJoin = (connection: IrcDeferredAutoJoinContext
   return joinConfiguredChannels(connection);
 };
 
-const isNickservReplyTarget = (rawTarget: string, pendingTarget: string, currentNick: string) =>
+const isNickservReplyTarget = (rawTarget: string, pendingTarget: string, currentNick: string, mapping?: IrcCaseMapping) =>
   rawTarget === '*'
-  || isSameIrcIdentifier(rawTarget, currentNick)
-  || isSameIrcIdentifier(rawTarget, pendingTarget);
+  || isSameIrcIdentifier(rawTarget, currentNick, mapping)
+  || isSameIrcIdentifier(rawTarget, pendingTarget, mapping);
 
 const joinConfiguredChannels = (connection: IrcDeferredAutoJoinContext) => {
   let joinedAny = false;
-  const configuredChannels = resolveAutoJoinChannels(connection.profile, connection.listReconnectChannels());
+  const configuredChannels = resolveAutoJoinChannels(connection.profile, connection.listReconnectChannels(), connection.lifecycle.serverSupport.rules.caseMapping);
   for (const channel of configuredChannels) {
     connection.join(channel);
     joinedAny = true;
@@ -144,7 +145,8 @@ const joinConfiguredChannels = (connection: IrcDeferredAutoJoinContext) => {
 const resolveAutoJoinChannels = (
   profile: RuntimeNetworkProfile,
   reconnectChannels: readonly string[],
+  mapping?: IrcCaseMapping,
 ) =>
   [...profile.autoJoin, ...reconnectChannels].filter((channel, index, channels) =>
-    channels.findIndex((candidate) => isSameIrcIdentifier(candidate, channel)) === index
+    channels.findIndex((candidate) => isSameIrcIdentifier(candidate, channel, mapping)) === index
   );

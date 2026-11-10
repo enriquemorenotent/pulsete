@@ -69,6 +69,7 @@ export type RuntimeNickEmojiMutations = {
 
 export type RuntimeNetworkMutations = {
   saveNetwork: NetworkLifecycleService['saveNetwork'];
+  updateNetwork: NetworkLifecycleService['updateNetwork'];
   duplicateNetwork: NetworkLifecycleService['duplicateNetwork'];
   deleteNetwork: NetworkLifecycleService['deleteNetwork'];
   connectNetwork(networkId: string): { network: NetworkProfile; serverBuffer: BufferState | null; messages: readonly ServerMessage[] };
@@ -124,6 +125,7 @@ export type RuntimeHttpApi = {
     saveAccountImage: RuntimeStore['networks']['saveAccountImage'];
     list: RuntimeNetworkCatalog['list'];
     save: RuntimeNetworkMutations['saveNetwork'];
+    update: RuntimeNetworkMutations['updateNetwork'];
     duplicate: RuntimeNetworkMutations['duplicateNetwork'];
     remove: RuntimeNetworkMutations['deleteNetwork'];
     close: RuntimeNetworkMutations['closeConnection'];

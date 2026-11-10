@@ -1,3 +1,4 @@
+import { RuntimeRevisionStream } from './runtime-revision-stream.js';
 import { RuntimeWatchlistActivity } from './runtime-watchlist-activity.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
@@ -31,11 +32,13 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   let closing = false;
 
   const socketHub = new RuntimeSocketHub();
+  const revisions = new RuntimeRevisionStream();
   const publish = (message: ServerMessage | readonly ServerMessage[]) => {
-    const messages = Array.isArray(message) ? message : [message];
+    const messages = revisions.stamp(Array.isArray(message) ? message : [message]);
     for (const entry of messages) {
       socketHub.broadcast(entry);
     }
+    return messages;
   };
   const publishMutation = createMutationPublisher(publish);
   const { avatarOverrides, drafts, preferences } = createRuntimeUserStateServices(
@@ -65,6 +68,11 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     friends: store.friends,
     networks: store.networks,
     isClosing: () => closing,
+    onConnectionEvent: event => {
+      if (event.type === 'state' && event.serverRules && event.phase === 'connected') {
+        store.networks.saveServerRules(event.networkId, event.serverRules);
+      }
+    },
   });
   socketHub.setDropHandler((ws) => connectionManager.removeSocket(ws));
 
@@ -100,7 +108,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     attachSocket: (ws) => socketHub.attach(ws),
     detachSocket: (ws) => socketHub.detach(ws),
     publish,
-    snapshot: () => createRuntimeSnapshot(store.snapshotSource, connectionManager),
+    snapshot: () => ({ ...createRuntimeSnapshot(store.snapshotSource, connectionManager), sync: revisions.current() }),
     close: () => {
       closing = true;
       socketHub.closeAll();
@@ -169,6 +177,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   };
   const networks: RuntimeNetworkMutations = {
     saveNetwork: (data, networkId) => publishMutation(networkMutations.saveNetwork(data, networkId)),
+    updateNetwork: (data, networkId) => publishMutation(networkMutations.updateNetwork(data, networkId)),
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
     deleteNetwork: (networkId) => {
       const result = networkMutations.deleteNetwork(networkId);
@@ -207,6 +216,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       saveAccountImage: (id, url, type, data) => store.networks.saveAccountImage(id, url, type, data),
       list: () => store.networks.list(),
       save: networks.saveNetwork,
+      update: networks.updateNetwork,
       duplicate: networks.duplicateNetwork,
       remove: networks.deleteNetwork,
       close: networks.closeConnection,

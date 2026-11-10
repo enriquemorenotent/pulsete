@@ -26,6 +26,7 @@ const toActions = (message: ServerMessage): Action[] => {
       ...(message.vpnServer ? { vpnServer: message.vpnServer } : {}),
         nick: message.nick,
         capabilities: message.capabilities ?? emptyNetworkRuntimeCapabilities(),
+        ...(message.serverRules ? { serverRules: message.serverRules } : {}),
       }];
     case 'network.upsert':
       return [{ type: 'upsert-network', network: message.network }];

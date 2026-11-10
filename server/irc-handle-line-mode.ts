@@ -1,10 +1,8 @@
+import { modeArgument } from '../shared/irc-server-rules.js';
 import { emitChannel } from './irc-emit.js';
 import { updateChannelUserMode } from '../shared/channel-users.js';
 import type { ChannelUserPrivilegeMode } from '../shared/protocol-chat.js';
 import type { IrcConnectionState } from './irc-types.js';
-
-const channelModeArgumentTokens = new Set(['b', 'e', 'I', 'k']);
-const channelModeSetOnlyArgumentTokens = new Set(['L', 'f', 'j', 'l']);
 
 export const handleMode = (connection: IrcConnectionState, params: string[]) => {
   const channel = connection.resolveTrackedChannel(params[0] ?? '');
@@ -16,27 +14,33 @@ export const handleMode = (connection: IrcConnectionState, params: string[]) => 
   let sign: '+' | '-' = '+';
   let parameterIndex = 2;
   let changed = false;
-  for (const [index, token] of Array.from(modeSequence).entries()) {
+  for (const token of modeSequence) {
     if (token === '+' || token === '-') {
       sign = token;
       continue;
     }
-    const mode = modeFromToken(token);
+    const rules = connection.lifecycle.serverSupport.rules;
+    const consumes = modeArgument(token, sign === '+', rules);
+    if (consumes === null || (consumes && !params[parameterIndex])) {
+      // Without the mode's argument rule, later nicknames cannot be assigned safely.
+      connection.sendRaw(`NAMES ${channel}`, channel);
+      return;
+    }
+    const argument = consumes ? params[parameterIndex++] : undefined;
+    const mode = rules.prefixModes.includes(token) ? modeFromToken(token) : null;
     if (mode) {
-      const nick = params[parameterIndex++];
+      const nick = argument;
       if (!nick) {
         continue;
       }
-      const nextUsers = updateChannelUserMode(users, nick, mode, sign === '+');
+      const nextUsers = updateChannelUserMode(users, nick, mode, sign === '+', connection.lifecycle.serverSupport.rules);
       if (nextUsers.some((user, offset) => user !== users[offset]) || nextUsers.length !== users.length) {
         users = nextUsers;
         changed = true;
       }
       continue;
     }
-    if (modeTokenConsumesParameter(token, sign) || shouldConsumeUnknownModeParameter(modeSequence, index, sign, params, parameterIndex)) {
-      parameterIndex += 1;
-    }
+
   }
   if (changed) {
     connection.setTrackedChannelUsers(channel, users);
@@ -51,32 +55,3 @@ const modeFromToken = (token: string): ChannelUserPrivilegeMode | null =>
     : token === 'h' ? 'halfop'
     : token === 'v' ? 'voice'
     : null;
-
-const modeTokenConsumesParameter = (token: string, sign: '+' | '-') =>
-  ['q', 'a', 'o', 'h', 'v'].includes(token)
-  || channelModeArgumentTokens.has(token)
-  || (sign === '+' && channelModeSetOnlyArgumentTokens.has(token));
-
-const shouldConsumeUnknownModeParameter = (
-  modeSequence: string,
-  index: number,
-  sign: '+' | '-',
-  params: string[],
-  parameterIndex: number
-) => countKnownModeParameters(modeSequence, index + 1, sign) < params.length - parameterIndex;
-
-const countKnownModeParameters = (modeSequence: string, startIndex: number, initialSign: '+' | '-') => {
-  let sign = initialSign;
-  let count = 0;
-  for (let index = startIndex; index < modeSequence.length; index += 1) {
-    const token = modeSequence[index];
-    if (token === '+' || token === '-') {
-      sign = token;
-      continue;
-    }
-    if (token && modeTokenConsumesParameter(token, sign)) {
-      count += 1;
-    }
-  }
-  return count;
-};

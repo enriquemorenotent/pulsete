@@ -1,3 +1,4 @@
+import type { IrcCaseMapping } from '../../shared/irc-server-rules.js';
 import type { AppDomainState, Action } from './app-types.js';
 import type { BufferState, FriendState, MutedNickState, NickEmojiState, PendingChannelState } from '../../shared/protocol-chat.js';
 import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
@@ -44,11 +45,11 @@ export const sortPendingChannels = (pendingChannels: PendingChannelState[]) =>
 const findBufferById = (buffers: BufferState[], bufferId: string) =>
   buffers.find((buffer) => buffer.id === bufferId) ?? null;
 
-const hasChannelBuffer = (buffers: BufferState[], networkId: string, channel: string) =>
+const hasChannelBuffer = (buffers: BufferState[], networkId: string, channel: string, mapping?: IrcCaseMapping) =>
   buffers.some((buffer) =>
     buffer.networkId === networkId
     && buffer.kind === 'channel'
-    && isSameIrcIdentifier(buffer.target, channel)
+    && isSameIrcIdentifier(buffer.target, channel, mapping)
   );
 
 export const reduceConversationDomain = (
@@ -120,7 +121,7 @@ export const reduceConversationDomain = (
           ? domain.pendingChannels.filter(
               (pendingChannel) =>
                 pendingChannel.networkId !== action.buffer.networkId
-                || !isSameIrcIdentifier(pendingChannel.channel, action.buffer.target)
+                || !isSameIrcIdentifier(pendingChannel.channel, action.buffer.target, domain.networkStates[action.buffer.networkId]?.serverRules?.caseMapping)
             )
           : domain.pendingChannels;
       return {
@@ -254,13 +255,13 @@ export const reduceConversationDomain = (
         channels: domain.channels.filter((channel) => channel.id !== action.channelId),
       };
     case 'add-pending-channel': {
-      if (hasChannelBuffer(domain.buffers, action.pendingChannel.networkId, action.pendingChannel.channel)) {
+      if (hasChannelBuffer(domain.buffers, action.pendingChannel.networkId, action.pendingChannel.channel, domain.networkStates[action.pendingChannel.networkId]?.serverRules?.caseMapping)) {
         return domain;
       }
       const pendingChannels = domain.pendingChannels.filter(
         (pendingChannel) =>
           pendingChannel.networkId !== action.pendingChannel.networkId
-          || !isSameIrcIdentifier(pendingChannel.channel, action.pendingChannel.channel)
+          || !isSameIrcIdentifier(pendingChannel.channel, action.pendingChannel.channel, domain.networkStates[action.pendingChannel.networkId]?.serverRules?.caseMapping)
       );
       pendingChannels.push(action.pendingChannel);
       return {
@@ -274,14 +275,14 @@ export const reduceConversationDomain = (
         pendingChannels: domain.pendingChannels.filter(
           (pendingChannel) =>
             pendingChannel.networkId !== action.networkId
-            || !isSameIrcIdentifier(pendingChannel.channel, action.channel)
+            || !isSameIrcIdentifier(pendingChannel.channel, action.channel, domain.networkStates[action.networkId]?.serverRules?.caseMapping)
         ),
       };
     case 'update-presence':
       return {
         ...domain,
         channels: domain.channels.map((channel) =>
-          channel.networkId === action.networkId && isSameIrcIdentifier(channel.name, action.channel)
+          channel.networkId === action.networkId && isSameIrcIdentifier(channel.name, action.channel, domain.networkStates[action.networkId]?.serverRules?.caseMapping)
             ? { ...channel, users: action.users }
             : channel
         ),

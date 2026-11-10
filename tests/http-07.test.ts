@@ -134,7 +134,7 @@ test('websocket validation returns errors for invalid channel, query, and messag
   try {
     const joinErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: 'helper' }));
-    assert.equal((await joinErrorPromise).message, 'Channel name must start with #, &, +, or !');
+    assert.equal((await joinErrorPromise).message, 'Channel name must start with one of: #&');
 
     const multiJoinErrorPromise = waitForWebSocketMessageType(socket, 'error');
     socket.send(JSON.stringify({ type: 'channel.join', networkId: network.id, channel: '#help,#ops' }));

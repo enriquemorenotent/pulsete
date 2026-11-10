@@ -39,6 +39,7 @@ export function translateRuntimeEvent(
       ...(event.vpnServer ? { vpnServer: event.vpnServer } : {}),
       nick: event.nick,
       capabilities: event.capabilities,
+      ...(event.serverRules ? { serverRules: event.serverRules } : {}),
     } satisfies ServerMessage];
   }
   if (event.type === 'status') {

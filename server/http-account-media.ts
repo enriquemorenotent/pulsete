@@ -4,7 +4,7 @@ import type { RouteArgs } from './http-types.js';
 import { createAccountMediaNetwork } from './account-media-network.js';
 import { getAccountMediaRoute, type AccountMediaRoute } from './account-media-route.js';
 import { createPagePreviewResolver, type PagePreviewResolver } from './page-preview-resolver.js';
-import { isAllowedPagePreviewUrl, resolvePublicPagePreviewAddress } from './page-preview-network.js';
+import { downloadExternalResource, ResourceDownloadError } from './external-resource-download.js';
 
 const resolvers = new Map<string, { route?: AccountMediaRoute; resolver: PagePreviewResolver }>();
 
@@ -71,19 +71,18 @@ export async function handleAccountMediaRoutes({ req, res, url, pathname, contex
 async function downloadAccountMedia(input: string, network: ReturnType<typeof createAccountMediaNetwork>) {
   let target: URL;
   try { target = new URL(input); } catch { throw badRequest('Invalid media URL'); }
-  for (let redirects = 0; redirects <= 3; redirects++) {
-    if (!isAllowedPagePreviewUrl(target)) throw badRequest('Media destination is blocked');
-    const address = await resolvePublicPagePreviewAddress(target, network);
-    if (!address) throw badRequest('Media destination is blocked');
-    const response = await network.request(target, address, { maxBytes: 20 * 1024 * 1024, timeoutMs: 15000 });
-    if ([301,302,303,307,308].includes(response.status) && response.location) {
-      target = new URL(response.location, target);
-      continue;
-    }
-    const type = response.contentType.split(';')[0]!.trim();
-    // Never serve HTML, SVG, playlists, or other content that can fetch nested URLs.
-    if (response.status !== 200 || !/^(image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|ogg|quicktime))$/.test(type)) throw badRequest('Unsupported external media');
-    return { mimeType: type, body: response.body };
+  let response;
+  try {
+    ({ response } = await downloadExternalResource(target, {
+      network, maxBytes: 20 * 1024 * 1024, timeoutMs: 15000,
+      maxRedirects: 3, maxUrlLength: 2048,
+    }));
+  } catch (error) {
+    if (error instanceof ResourceDownloadError) throw badRequest(error.message);
+    throw error;
   }
-  throw badRequest('Too many media redirects');
+  const type = response.contentType.split(';')[0]!.trim();
+  // Never serve HTML, SVG, playlists, or other content that can fetch nested URLs.
+  if (response.status !== 200 || !/^(image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|ogg|quicktime))$/.test(type)) throw badRequest('Unsupported external media');
+  return { mimeType: type, body: response.body };
 }

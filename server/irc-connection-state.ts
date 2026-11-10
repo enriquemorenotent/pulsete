@@ -1,3 +1,4 @@
+import { IrcServerSupport } from '../shared/irc-server-rules.js';
 import type { ChannelUserState, PresenceStatus } from '../shared/protocol-chat.js';
 import { createIdleSaslState, resolveDeferredNickservAutoJoinTarget } from './irc-auth.js';
 import { ReplyTracker } from './irc-reply-tracker.js';
@@ -31,6 +32,7 @@ export const createIrcConnectionState = (
   options: IrcConnectionOptions = {}
 ): IrcConnectionData => {
   const lifecycle: IrcLifecycleState = {
+    serverSupport: new IrcServerSupport(),
     socket: null,
     buffer: '',
     connectDeadlineTimer: null,
@@ -84,7 +86,7 @@ export const createIrcConnectionState = (
   };
   const channelList: IrcChannelListState = {
     session: { phase: 'idle' },
-    timeoutTimer: null,
+    action: null,
     timeoutMs: options.channelListTimeoutMs ?? defaultChannelListTimeoutMs,
     drainGraceMs: options.channelListDrainGraceMs ?? defaultChannelListDrainGraceMs,
   };
@@ -97,6 +99,6 @@ export const createIrcConnectionState = (
     history,
     friendPresence,
     channelList,
-    replyTracker: new ReplyTracker(),
+    replyTracker: new ReplyTracker(() => lifecycle.serverSupport.rules),
   };
 };

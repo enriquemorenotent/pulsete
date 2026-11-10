@@ -60,6 +60,7 @@ export class IrcConnection implements IrcConnectionState {
       ...(this.lifecycle.vpnServer ? { vpnServer: this.lifecycle.vpnServer } : {}),
       nick: this.lifecycle.currentNick,
       capabilities: snapshotIrcCapabilities(this.lifecycle.capabilities),
+      ...(this.lifecycle.serverSupport.received ? { serverRules: this.lifecycle.serverSupport.rules } : {}),
     };
   }
 

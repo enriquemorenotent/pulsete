@@ -131,7 +131,7 @@ export const createNetworkActions = ({
 
   const saveFavorite = async (network: NetworkProfile, favorite: boolean) => {
     return executeMutation({
-      request: () => api.saveNetwork({ ...network, favorite }),
+      request: () => api.updateNetwork(network.id, { favorite }),
       mapResult: (result) => result.network,
       successMessage: favorite ? 'Marked as favorite' : 'Removed from favorites',
       errorMessage: 'Failed to update favorite',
@@ -141,7 +141,7 @@ export const createNetworkActions = ({
 
   const saveNetworkNotes = async (network: NetworkProfile, notes: string) => {
     return executeMutation({
-      request: () => api.saveNetwork({ ...network, notes }),
+      request: () => api.updateNetwork(network.id, { notes }),
       mapResult: (result) => result.network,
       successMessage: null,
       errorMessage: 'Failed to save notes',
@@ -168,10 +168,11 @@ export const createNetworkActions = ({
     if (!autoJoin.network || !autoJoin.channel) {
       return false;
     }
+    const networkId = autoJoin.network.id;
     const nextAutoJoin = toggleChannelAutoJoin(autoJoin.network, autoJoin.channel);
     const nextActive = nextAutoJoin.length > autoJoin.network.autoJoin.length;
     return executeMutation({
-      request: () => api.saveNetwork({ ...autoJoin.network, autoJoin: nextAutoJoin }),
+      request: () => api.updateNetwork(networkId, { autoJoin: nextAutoJoin }),
       mapResult: () => nextActive,
       successMessage: nextActive
         ? `Added ${autoJoin.channel} to autojoin`

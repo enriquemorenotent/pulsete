@@ -1,3 +1,4 @@
+import type { IrcCaseMapping } from '../shared/irc-server-rules.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { maxIrcCommandBytes, maxIsonNickBytes } from './irc-limits.js';
 import type {
@@ -29,13 +30,13 @@ export const resolveFriendPresenceTransport = (
 	return 'ison';
 };
 
-export const buildTrackableNickMap = (nicks: string[]) => {
+export const buildTrackableNickMap = (nicks: string[], mapping: IrcCaseMapping = 'rfc1459') => {
 	const trackableNicks = new Map<string, string>();
 	for (const nick of nicks) {
 		if (!isTrackablePresenceNick(nick)) {
 			continue;
 		}
-		trackableNicks.set(normalizeIrcIdentifier(nick), nick);
+		trackableNicks.set(normalizeIrcIdentifier(nick, mapping), nick);
 	}
 	return trackableNicks;
 };
@@ -78,10 +79,11 @@ export const buildCommandBatches = (
 export const isTrackedMonitorNick = (
 	presence: IrcFriendPresenceState,
 	normalizedNick: string,
+	mapping: IrcCaseMapping = 'rfc1459',
 ) =>
 	presence.registeredMonitorNicks.has(normalizedNick) ||
 	presence.nicks.some(
-		(nick) => normalizeIrcIdentifier(nick) === normalizedNick,
+		(nick) => normalizeIrcIdentifier(nick, mapping) === normalizedNick,
 	);
 
 const isTrackablePresenceNick = (nick: string) =>

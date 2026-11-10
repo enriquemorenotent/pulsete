@@ -1,7 +1,5 @@
 import net from 'node:net';
-import tls from 'node:tls';
-import http from 'node:http';
-import https from 'node:https';
+import { requestExternalResource, type ResourceLimits } from './external-resource-request.js';
 import { defaultPagePreviewNetwork, isPublicIpAddress, type PagePreviewNetwork, type PagePreviewAddress, type PagePreviewNetworkResponse } from './page-preview-network.js';
 import type { AccountMediaRoute } from './account-media-route.js';
 
@@ -33,54 +31,7 @@ export function createAccountMediaNetwork(route?: AccountMediaRoute): PagePrevie
   };
 }
 
-export async function requestAccountResource(url: URL, address: PagePreviewAddress, options: { maxBytes: number; timeoutMs: number }, route?: AccountMediaRoute, accept = '*/*'): Promise<PagePreviewNetworkResponse> {
+export async function requestAccountResource(url: URL, address: PagePreviewAddress, options: ResourceLimits, route?: AccountMediaRoute, accept = '*/*'): Promise<PagePreviewNetworkResponse> {
   if (!isPublicIpAddress(address.address)) throw new Error('Private media destinations are blocked');
-  const signal = route ? AbortSignal.any([route.signal, AbortSignal.timeout(options.timeoutMs)]) : AbortSignal.timeout(options.timeoutMs);
-  signal.throwIfAborted();
-  const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
-  const socket = route ? await route.connect(address.address, port) : net.connect({ host: address.address, port });
-  const abort = () => socket.destroy(new Error('Media connection stopped'));
-  // Install an error handler before TLS/request takes ownership of the socket.
-  socket.on('error', () => {});
-  signal.addEventListener('abort', abort, { once: true });
-  if (signal.aborted) { socket.destroy(); throw new Error('Media connection stopped'); }
-  const hostname = url.hostname.replace(/^\[|\]$/g, '');
-  const transport = url.protocol === 'https:' ? tls.connect({ socket, host: hostname, servername: net.isIP(hostname) ? undefined : hostname, rejectUnauthorized: true }) : socket;
-  const agent = url.protocol === 'https:' ? new https.Agent() : new http.Agent();
-  agent.createConnection = () => transport;
-  try {
-    return await new Promise<PagePreviewNetworkResponse>((resolve, reject) => {
-      const request = (url.protocol === 'https:' ? https.request : http.request)(url, {
-        agent, signal, method: 'GET', headers: { Accept: accept, 'User-Agent': 'Pulsete-Media/1.0', 'Accept-Encoding': 'identity' },
-      }, response => {
-        const status = response.statusCode ?? 0;
-        const contentType = String(response.headers['content-type'] ?? '').toLowerCase();
-        const location = response.headers.location ?? null;
-        if ([301,302,303,307,308].includes(status)) {
-          resolve({ body: Buffer.alloc(0), status, contentType, location });
-          response.destroy();
-          return;
-        }
-        if (Number(response.headers['content-length']) > options.maxBytes) {
-          response.destroy(new Error('External content is too large'));
-        }
-        const chunks: Buffer[] = [];
-        let length = 0;
-        response.on('data', (chunk: Buffer) => {
-          length += chunk.length;
-          if (length > options.maxBytes) response.destroy(new Error('External content is too large'));
-          else chunks.push(chunk);
-        });
-        response.on('error', reject);
-        response.on('end', () => resolve({ body: Buffer.concat(chunks), status, contentType, location }));
-      });
-      request.on('error', reject);
-      request.end();
-      transport.resume();
-    });
-  } finally {
-    signal.removeEventListener('abort', abort);
-    transport.destroy();
-    agent.destroy();
-  }
+  return requestExternalResource(url, address, { ...options, route, accept });
 }

@@ -1,3 +1,4 @@
+import type { IrcServerRules } from '../../shared/irc-server-rules.js';
 import { emptyNetworkRuntimeCapabilities, type NetworkRuntimeCapabilities } from '../../shared/protocol-chat.js';
 
 type CapabilityAvailability = 'active' | 'pending' | 'offered' | 'missing';
@@ -32,6 +33,7 @@ const capabilityAvailabilitySources: Array<{
 
 export const summarizeHistoryCapabilities = (
   capabilitiesInput?: NetworkRuntimeCapabilities | null,
+  rules?: IrcServerRules,
 ): CapabilitySummary => {
   const capabilities = capabilitiesInput ?? emptyNetworkRuntimeCapabilities();
   const backfill = resolveCapabilityAvailability(capabilities, historyBackfillCapabilityNames);
@@ -39,7 +41,7 @@ export const summarizeHistoryCapabilities = (
   const eventReplay = resolveCapabilityAvailability(capabilities, historyEventReplayCapabilityNames);
   return {
     backfill: capabilityAvailabilityLabels[backfill.availability],
-    pageSize: formatHistoryPageSize(resolveHistoryPageSizeValue(capabilities, backfill.name)),
+    pageSize: formatHistoryPageSize(rules?.historyLimit != null ? String(rules.historyLimit) : resolveHistoryPageSizeValue(capabilities, backfill.name)),
     endMarker: capabilityAvailabilityLabels[endMarker.availability],
     eventReplay: capabilityAvailabilityLabels[eventReplay.availability],
     retention: 'Not advertised',
@@ -74,5 +76,4 @@ const formatHistoryPageSize = (value: string | undefined) => {
 const resolveHistoryPageSizeValue = (
   capabilities: NetworkRuntimeCapabilities,
   backfillName: string | null,
-) => capabilities.values?.['isupport/chathistory']
-  ?? (backfillName ? capabilities.values?.[backfillName] : undefined);
+) => backfillName ? capabilities.values?.[backfillName] : undefined;

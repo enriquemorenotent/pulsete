@@ -109,7 +109,12 @@ const handleClientMessage = (
   cleanup: () => void
 ) => {
   try {
-    context.handleMessage(ws, decodeClient(raw));
+    const message = decodeClient(raw);
+    if (message.type === 'state.sync') {
+      if (!sendManagedEncoded(ws, context, encode({ type: 'state.ready', snapshot: context.snapshot() }))) cleanup();
+      return;
+    }
+    context.handleMessage(ws, message);
   } catch (error) {
     if (ws.readyState !== WebSocket.OPEN) {
       return;

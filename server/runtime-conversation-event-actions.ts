@@ -68,7 +68,7 @@ export const handleRuntimeConversationMessageEvent = (
 ) => {
   const openTargetNotice = event.message.kind === 'notice'
     && event.message.target !== 'server'
-    && !isChannelTarget(event.message.target)
+    && !isChannelTarget(event.message.target, options.conversations.getServerRules(event.message.networkId))
     && !findOpenBufferByTarget(options, event.message.networkId, event.message.target);
   const message = openTargetNotice ? { ...event.message, target: 'server' } : event.message;
   const messageMuted = isUserMuted(
@@ -81,7 +81,7 @@ export const handleRuntimeConversationMessageEvent = (
   if (event.message.self && event.message.kind === 'part' && !removedChannel) {
     return [];
   }
-  const { saved, bufferUpdate, removedBufferIds, retargetedFrom } = appendConversationMessage(options.conversations, {
+  const { saved, bufferUpdate, removedBufferIds, retargetedFrom, displacedBuffers } = appendConversationMessage(options.conversations, {
     message,
     currentNick: event.currentNick,
     altNicks: event.altNicks,
@@ -89,13 +89,21 @@ export const handleRuntimeConversationMessageEvent = (
     allowCreateBuffer: !messageMuted
       || message.self
       || message.target === 'server'
-      || isChannelTarget(message.target)
+      || isChannelTarget(message.target, options.conversations.getServerRules(message.networkId))
       || (message.kind !== 'line' && message.kind !== 'action'),
   });
+  const arrivalBuffer = !messageMuted && !message.self && !message.historical
+    && (!message.delivery || message.delivery === 'live')
+    && ['line', 'action', 'notice'].includes(message.kind)
+    ? bufferUpdate ?? options.conversations.getBuffer(saved.bufferId)
+    : null;
   const retargetNotice = appendMissedNickChangeMessage(options.conversations, saved, retargetedFrom);
   const messages: ServerMessage[] = [
     ...(retargetNotice ? [{ type: 'message.append', message: retargetNotice } satisfies ServerMessage] : []),
-    { type: 'message.append', message: saved },
+    { type: 'message.append', message: saved,
+      ...(arrivalBuffer && arrivalBuffer.kind !== 'server' ? { arrival: { buffer: arrivalBuffer } } : {}),
+    },
+    ...displacedBuffers.map(buffer => ({ type: 'buffer.upsert' as const, buffer })),
   ];
   if (bufferUpdate) {
     messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
@@ -162,6 +170,7 @@ export const handleRuntimeConversationPeerNickEvent = (
         queryTarget = renamed.buffer.target;
         messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });
         messages.push(...removedBufferMessages(event.networkId, renamed.removedBufferIds, renamed.buffer.id));
+        messages.push(...(renamed.displacedBuffers ?? []).map(buffer => ({ type: 'buffer.upsert' as const, buffer })));
       }
     }
     const newNickBuffer = findOpenBufferByTarget(options, event.networkId, event.newNick);
@@ -237,7 +246,7 @@ const resolveNickChangeChannelTargets = (
   event: Extract<RuntimeEvent, { type: 'peer-nick' }>,
 ) => options.conversations
   .listChannels(event.networkId)
-  .filter((channel) => channel.users.some((user) => isSameIrcIdentifier(user.nick, event.newNick)))
+  .filter((channel) => channel.users.some((user) => isSameIrcIdentifier(user.nick, event.newNick, options.conversations.getServerRules(event.networkId).caseMapping)))
   .map((channel) => channel.name);
 
 const resolveStatusTarget = (
@@ -251,7 +260,7 @@ const resolveStatusTarget = (
   if (boundTarget) {
     return boundTarget;
   }
-  return isChannelTarget(event.target) || event.requireBoundTarget ? 'server' : event.target;
+  return isChannelTarget(event.target, options.conversations.getServerRules(event.networkId)) || event.requireBoundTarget ? 'server' : event.target;
 };
 
 const findOpenBufferByTarget = (
@@ -260,4 +269,4 @@ const findOpenBufferByTarget = (
   target: string,
 ) => options.conversations
   .listBuffers(networkId)
-  .find((buffer) => isSameIrcIdentifier(buffer.target, target)) ?? null;
+  .find((buffer) => buffer.queryTargetAvailable !== false && isSameIrcIdentifier(buffer.target, target, options.conversations.getServerRules(networkId).caseMapping)) ?? null;

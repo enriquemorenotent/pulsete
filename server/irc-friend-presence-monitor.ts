@@ -19,8 +19,8 @@ export const handleFriendPresenceMonitorUpdate = (
 	}
 	let handled = false;
 	for (const nick of nicks) {
-		const normalizedNick = normalizeIrcIdentifier(nick);
-		if (!isTrackedMonitorNick(connection.friendPresence, normalizedNick)) {
+		const normalizedNick = normalizeIrcIdentifier(nick, connection.lifecycle.serverSupport.rules.caseMapping);
+		if (!isTrackedMonitorNick(connection.friendPresence, normalizedNick, connection.lifecycle.serverSupport.rules.caseMapping)) {
 			continue;
 		}
 		handled = true;
@@ -35,7 +35,7 @@ export const handleFriendPresenceMonitorUpdate = (
 		emitEvent(connection, {
 			type: 'friend-observation', networkId: connection.profile.id, transport: 'monitor',
 			presences: Object.fromEntries(nicks
-				.filter((nick) => isTrackedMonitorNick(connection.friendPresence, normalizeIrcIdentifier(nick)))
+				.filter((nick) => isTrackedMonitorNick(connection.friendPresence, normalizeIrcIdentifier(nick, connection.lifecycle.serverSupport.rules.caseMapping), connection.lifecycle.serverSupport.rules.caseMapping))
 				.map((nick) => [nick, presence])),
 		});
 		updateFriendPresenceStatuses(connection, connection.friendPresence.presenceByKey);
@@ -46,7 +46,7 @@ export const handleFriendPresenceMonitorUpdate = (
 export const syncMonitorSubscriptions = (
 	connection: IrcFriendPresenceContext,
 ) => {
-	const desiredMonitorNicks = buildTrackableNickMap(connection.friendPresence.nicks);
+	const desiredMonitorNicks = buildTrackableNickMap(connection.friendPresence.nicks, connection.lifecycle.serverSupport.rules.caseMapping);
 	const removedNicks = Array.from(
 		connection.friendPresence.registeredMonitorNicks.entries(),
 	)
@@ -59,7 +59,7 @@ export const syncMonitorSubscriptions = (
 	)) {
 		connection.sendRaw(`MONITOR - ${batch.join(',')}`);
 	}
-	for (const normalizedNick of removedNicks.map(normalizeIrcIdentifier)) {
+	for (const normalizedNick of removedNicks.map(value => normalizeIrcIdentifier(value, connection.lifecycle.serverSupport.rules.caseMapping))) {
 		connection.friendPresence.registeredMonitorNicks.delete(normalizedNick);
 	}
 	if (desiredMonitorNicks.size === 0) {
@@ -77,7 +77,7 @@ export const syncMonitorSubscriptions = (
 		}
 		for (const nick of batch) {
 			connection.friendPresence.registeredMonitorNicks.set(
-				normalizeIrcIdentifier(nick),
+				normalizeIrcIdentifier(nick, connection.lifecycle.serverSupport.rules.caseMapping),
 				nick,
 			);
 		}

@@ -1,19 +1,16 @@
+import type { IrcServerSupport } from '../shared/irc-server-rules.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import type { IrcCapabilityState, IrcHistoryState } from './irc-state-types.js';
 
 const defaultHistoryLimit = 50;
 const historyCapabilityNames = ['draft/chathistory', 'chathistory'];
-const historyLimitValueNames = ['isupport/chathistory', 'draft/chathistory', 'chathistory'];
+const historyLimitValueNames = ['draft/chathistory', 'chathistory'];
 
 type ChatHistoryConnection = {
   history: IrcHistoryState;
-  lifecycle: { capabilities: IrcCapabilityState };
+  lifecycle: { capabilities: IrcCapabilityState; serverSupport?: IrcServerSupport };
   resolveTrackedChannel(channel: string): string | null;
   sendRaw(raw: string, statusTarget?: string): boolean;
-};
-
-type ChatHistoryStateConnection = {
-  lifecycle: { capabilities: Pick<IrcCapabilityState, 'values'> };
 };
 
 export const hasChatHistoryCapability = (
@@ -46,7 +43,7 @@ export const recordChatHistoryBatchStart = (
   connection.history.pendingTargets.add(canonicalTarget);
 };
 
-export const recordChatHistoryBatchEnd = (connection: Pick<ChatHistoryConnection, 'history'>, batchId: string) => {
+export const recordChatHistoryBatchEnd = (connection: Pick<ChatHistoryConnection, 'history'> & Partial<Pick<ChatHistoryConnection, 'lifecycle'>>, batchId: string) => {
   const target = connection.history.batchTargetById.get(batchId) ?? null;
   connection.history.batchTargetById.delete(batchId);
   if (target && !hasActiveHistoryBatchForTarget(connection, target)) {
@@ -55,25 +52,9 @@ export const recordChatHistoryBatchEnd = (connection: Pick<ChatHistoryConnection
 };
 
 export const isChatHistoryBatchMessage = (
-  connection: Pick<ChatHistoryConnection, 'history'>,
+  connection: Pick<ChatHistoryConnection, 'history'> & Partial<Pick<ChatHistoryConnection, 'lifecycle'>>,
   batchId: string | null | undefined,
 ) => Boolean(batchId && connection.history.batchTargetById.has(batchId));
-
-export const recordChatHistoryIsupport = (connection: ChatHistoryStateConnection, params: readonly string[]) => {
-  for (const token of params.slice(1, -1)) {
-    const [name, value] = token.split('=', 2);
-    if (name?.toUpperCase() !== 'CHATHISTORY' || value === undefined) {
-      continue;
-    }
-    const previous = connection.lifecycle.capabilities.values.get('isupport/chathistory') ?? null;
-    if (previous === value) {
-      return false;
-    }
-    connection.lifecycle.capabilities.values.set('isupport/chathistory', value);
-    return true;
-  }
-  return false;
-};
 
 const canRequestLatestChatHistory = (connection: ChatHistoryConnection, channel: string) => {
   if (
@@ -85,13 +66,15 @@ const canRequestLatestChatHistory = (connection: ChatHistoryConnection, channel:
   return !hasPendingHistoryForTarget(connection, channel);
 };
 
-const hasPendingHistoryForTarget = (connection: Pick<ChatHistoryConnection, 'history'>, target: string) =>
-  Array.from(connection.history.pendingTargets).some((pendingTarget) => isSameIrcIdentifier(pendingTarget, target));
+const hasPendingHistoryForTarget = (connection: Pick<ChatHistoryConnection, 'history'> & Partial<Pick<ChatHistoryConnection, 'lifecycle'>>, target: string) =>
+  Array.from(connection.history.pendingTargets).some((pendingTarget) => isSameIrcIdentifier(pendingTarget, target, connection.lifecycle?.serverSupport?.rules.caseMapping));
 
-const hasActiveHistoryBatchForTarget = (connection: Pick<ChatHistoryConnection, 'history'>, target: string) =>
-  Array.from(connection.history.batchTargetById.values()).some((activeTarget) => isSameIrcIdentifier(activeTarget, target));
+const hasActiveHistoryBatchForTarget = (connection: Pick<ChatHistoryConnection, 'history'> & Partial<Pick<ChatHistoryConnection, 'lifecycle'>>, target: string) =>
+  Array.from(connection.history.batchTargetById.values()).some((activeTarget) => isSameIrcIdentifier(activeTarget, target, connection.lifecycle?.serverSupport?.rules.caseMapping));
 
 const resolveChatHistoryLimit = (connection: ChatHistoryConnection) => {
+  const advertised = connection.lifecycle.serverSupport?.rules.historyLimit;
+  if (advertised !== null && advertised !== undefined) return advertised === 0 ? defaultHistoryLimit : Math.min(advertised, defaultHistoryLimit);
   for (const name of historyLimitValueNames) {
     const limit = parseHistoryLimit(connection.lifecycle.capabilities.values.get(name));
     if (limit !== null) {

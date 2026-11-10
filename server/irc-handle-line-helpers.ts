@@ -5,11 +5,11 @@ import { resolveRuntimeMessageAttribution } from './message-attribution.js';
 import type { MessageInput } from './storage-types.js';
 
 type IrcNickIdentityContext = Pick<IrcConnectionData, 'lifecycle' | 'profile' | 'replyTracker'>;
-type IrcMessageContext = Pick<IrcConnectionData, 'profile'>;
+type IrcMessageContext = Pick<IrcConnectionData, 'profile' | 'lifecycle'>;
 
 export const isSelfNick = (connection: IrcNickIdentityContext, nick: string | null) =>
-  isSameIrcIdentifier(nick, connection.lifecycle.currentNick)
-  || isSameIrcIdentifier(nick, connection.replyTracker.pendingNick);
+  isSameIrcIdentifier(nick, connection.lifecycle.currentNick, connection.lifecycle.serverSupport.rules.caseMapping)
+  || isSameIrcIdentifier(nick, connection.replyTracker.pendingNick, connection.lifecycle.serverSupport.rules.caseMapping);
 
 export const createMessage = (
   connection: IrcMessageContext,
@@ -23,7 +23,7 @@ export const createMessage = (
   };
   return {
     ...message,
-    ...resolveRuntimeMessageAttribution(message),
+    ...resolveRuntimeMessageAttribution(message, connection.lifecycle.serverSupport.rules),
   };
 };
 

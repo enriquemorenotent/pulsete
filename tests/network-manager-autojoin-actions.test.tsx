@@ -160,12 +160,12 @@ test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insen
   });
   const { actions, banners } = createHarness(session);
   const originalFetch = globalThis.fetch;
-  const fetchCalls: Array<{ url: string; method: string; autoJoin: string[] }> = [];
+  const fetchCalls: Array<{ url: string; method: string; body: unknown }> = [];
   globalThis.fetch = (async (input, init) => {
     fetchCalls.push({
       url: String(input),
       method: String(init?.method ?? 'GET'),
-      autoJoin: JSON.parse(String(init?.body ?? '{}')).autoJoin,
+      body: JSON.parse(String(init?.body ?? '{}')),
     });
     return okJson({
       messages: [],
@@ -180,8 +180,8 @@ test('toggleCurrentChannelAutoJoin removes existing autojoin channels case-insen
     assert.equal(enabled, false);
     assert.deepEqual(fetchCalls, [{
       url: '/api/networks/saved-1',
-      method: 'PUT',
-      autoJoin: ['#ops'],
+      method: 'PATCH',
+      body: { autoJoin: ['#ops'] },
     }]);
     assert.deepEqual(banners, [{ kind: 'notice', message: 'Removed #help from autojoin' }]);
   } finally {

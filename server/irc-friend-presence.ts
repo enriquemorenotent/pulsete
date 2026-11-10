@@ -32,14 +32,15 @@ export const setFriendNicks = (
 	nicks: string[],
 ) => {
 	const presence = connection.friendPresence;
-	presence.nicks = dedupeFriendNicks(nicks);
+	presence.nicks = dedupeFriendNicks(nicks, 'ascii');
 	presence.resolvedNicks = retainTrackedPresenceKeys(
 		presence.nicks,
 		presence.resolvedNicks,
+		connection.lifecycle.serverSupport.rules.caseMapping,
 	);
 	updateFriendPresenceStatuses(
 		connection,
-		filterPresenceByTrackedNicks(presence.nicks, presence.presenceByKey),
+		filterPresenceByTrackedNicks(presence.nicks, presence.presenceByKey, connection.lifecycle.serverSupport.rules.caseMapping),
 	);
 	if (
 		!connection.lifecycle.connected ||

@@ -1,3 +1,7 @@
+import { getServerRules } from './storage-server-rules.js';
+import { isServerChannel, type IrcServerRules } from '../shared/irc-server-rules.js';
+import { upsertQueryPeerIdentity } from './storage-query-identities.js';
+import { recordUnreadMessage, type MessageAttention } from './storage-unread.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import {
   normalizeStoredAttribution,
@@ -20,6 +24,7 @@ export const appendMessage = (
   input: MessageInput,
   lookup: MessageLookup,
   resolvedBufferId?: string,
+  attention?: MessageAttention,
 ) => {
   const bufferId = ensureMessageBufferId(db, input, resolvedBufferId);
   if (!bufferId) {
@@ -27,7 +32,7 @@ export const appendMessage = (
   }
   const attribution = shouldRespectInputAttribution(input)
     ? normalizeStoredAttribution(input)
-    : resolveRuntimeMessageAttribution(input);
+    : resolveRuntimeMessageAttribution(input, getServerRules(db, input.networkId));
   db.prepare(`
     INSERT INTO messages
       (id, bufferId, nick, senderIdentityKind, senderIdentityValue, speakerRole, speakerNick,
@@ -50,11 +55,12 @@ export const appendMessage = (
     attribution.self ? 1 : 0,
     input.ts,
   );
+  recordUnreadMessage(db, { ...input, self: attribution.self }, bufferId, attention);
   return lookup(input.id)!;
 };
 
-export const deleteMessages = (db: SqliteDb, networkId: string, target: string) => {
-  const bufferId = getMessageBufferId(db, networkId, target);
+export const deleteMessages = (db: SqliteDb, networkId: string, target: string, resolvedBufferId?: string) => {
+  const bufferId = resolvedBufferId ?? getMessageBufferId(db, networkId, target);
   if (!bufferId) {
     return [];
   }
@@ -108,10 +114,14 @@ const ensureMessageBufferId = (db: SqliteDb, input: MessageInput, resolvedBuffer
   const routingIdentity = shouldResolveQueryByIdentity(input) ? input.senderIdentity : null;
   const existing = getMessageBufferId(db, input.networkId, input.target, routingIdentity);
   if (existing) {
+    if (routingIdentity && resolveMessageBufferKind(input.target, getServerRules(db, input.networkId)) === 'query') {
+      upsertQueryPeerIdentity(db, { bufferId: existing, networkId: input.networkId, nick: input.target,
+        identity: routingIdentity, source: 'message', seenAt: input.ts });
+    }
     return existing;
   }
 
-  const kind = resolveMessageBufferKind(input.target);
+  const kind = resolveMessageBufferKind(input.target, getServerRules(db, input.networkId));
   const buffer = kind === 'query'
     ? upsertQueryBuffer(db, {
         networkId: input.networkId,
@@ -121,6 +131,7 @@ const ensureMessageBufferId = (db: SqliteDb, input: MessageInput, resolvedBuffer
         peerIdentity: routingIdentity,
         ircCloudAvatarId: input.ircCloudAvatarId ?? undefined,
         peerIdentitySource: 'message',
+        claimTarget: !input.historical && (!input.delivery || input.delivery === 'live'),
       })
     : upsertBuffer(db, {
         networkId: input.networkId,
@@ -134,10 +145,10 @@ const ensureMessageBufferId = (db: SqliteDb, input: MessageInput, resolvedBuffer
   return buffer.id;
 };
 
-const resolveMessageBufferKind = (target: string) =>
+const resolveMessageBufferKind = (target: string, rules: IrcServerRules) =>
   target === 'server'
     ? 'server' as const
-    : /^[#&+!]/.test(target)
+    : isServerChannel(target, rules)
       ? 'channel' as const
       : 'query' as const;
 

@@ -37,10 +37,7 @@ export const findMutedNickByTarget = <T extends IdentityScopedEntry>(
   if (identityMatch || !target?.nick) {
     return identityMatch;
   }
-  return mutedNicks.find((entry) =>
-    entry.networkId === target.networkId
-    && isSameIrcIdentifier(entry.nick, target.nick)
-  ) ?? null;
+  return mutedNicks.find(entry => matchesIdentityScopedEntry(entry, target, { allowUnknownNickFallback: true })) ?? null;
 };
 
 export const isNickMuted = (

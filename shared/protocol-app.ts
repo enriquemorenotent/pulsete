@@ -1,3 +1,4 @@
+import { stateRevisionSchema } from './protocol-sync.js';
 import { z } from 'zod';
 import {
   bufferSchema,
@@ -19,6 +20,7 @@ import {
 } from './protocol-preferences.js';
 
 export const appSnapshotSchema = z.object({
+  sync: stateRevisionSchema.optional(),
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
   mutedNicks: z.array(mutedNickSchema).default([]),

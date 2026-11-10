@@ -53,7 +53,7 @@ export const handleFriendPresenceIsonReply = (
 	}
 	if (!unsupported) {
 		for (const nick of onlineNicks ?? []) {
-			const normalizedNick = normalizeIrcIdentifier(nick);
+			const normalizedNick = normalizeIrcIdentifier(nick, connection.lifecycle.serverSupport.rules.caseMapping);
 			if (!pendingSnapshot.requestedNickKeys.has(normalizedNick)) {
 				continue;
 			}
@@ -88,7 +88,7 @@ export const handleFriendPresenceIsonReply = (
 export const requestIsonSnapshot = (
 	connection: IrcFriendPresenceContext,
 ) => {
-	const trackableNickMap = buildTrackableNickMap(connection.friendPresence.nicks);
+	const trackableNickMap = buildTrackableNickMap(connection.friendPresence.nicks, connection.lifecycle.serverSupport.rules.caseMapping);
 	if (trackableNickMap.size === 0) {
 		connection.friendPresence.pendingIsonSnapshot = null;
 		return;
@@ -114,7 +114,7 @@ export const requestIsonSnapshot = (
 		connection.friendPresence.pendingIsonSnapshot.remainingReplies += 1;
 		for (const nick of batch) {
 			connection.friendPresence.pendingIsonSnapshot.requestedNickKeys.add(
-				normalizeIrcIdentifier(nick),
+				normalizeIrcIdentifier(nick, connection.lifecycle.serverSupport.rules.caseMapping),
 			);
 		}
 	}

@@ -1,5 +1,6 @@
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import {
+  compareIdentitySets,
   isStableNetworkUserIdentity,
   normalizeNetworkUserIdentity,
 } from '../shared/user-identity.js';
@@ -222,3 +223,13 @@ const uniqueIdentity = <T extends QueryPeerIdentityRow>(rows: T[]) => {
   const keys = new Set(normalized.map((identity) => `${identity.kind}:${identity.value}`));
   return keys.size === 1 ? rows[0] ?? null : null;
 };
+
+const listQueryIdentities = (db: SqliteDb, bufferId: string) => db.prepare(
+  'SELECT identityKind, identityValue FROM query_peer_identities WHERE bufferId = ?',
+).all<QueryPeerIdentityRow>(bufferId).map(row => ({kind:row.identityKind,value:row.identityValue}));
+
+export const queryIdentityConflicts = (db: SqliteDb, bufferId: string, identity: NetworkUserIdentity | null | undefined) =>
+  compareIdentitySets(listQueryIdentities(db, bufferId), identity ? [identity] : []) === 'conflict';
+
+export const queryBuffersConflict = (db: SqliteDb, leftId: string, rightId: string) =>
+  compareIdentitySets(listQueryIdentities(db, leftId), listQueryIdentities(db, rightId)) === 'conflict';

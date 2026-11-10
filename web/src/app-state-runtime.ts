@@ -123,6 +123,7 @@ export const reduceRuntimeDomain = (
       ...(action.vpnServer ? { vpnServer: action.vpnServer } : {}),
             nick: action.nick,
             capabilities: action.capabilities,
+            ...((action.serverRules ?? domain.networkStates[action.networkId]?.serverRules) ? { serverRules: action.serverRules ?? domain.networkStates[action.networkId]?.serverRules } : {}),
           },
         },
         pendingChannels:

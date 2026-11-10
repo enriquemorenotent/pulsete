@@ -31,11 +31,13 @@ const buildConversation = memoizeLast(
     buffers: State['domain']['buffers'],
     channels: State['domain']['channels'],
     pendingChannels: State['domain']['pendingChannels'],
+    networkStates: State['domain']['networkStates'],
   ) =>
     buildConversationModel({
       buffers,
       channels,
       pendingChannels,
+      networkStates,
     }),
 );
 
@@ -156,6 +158,7 @@ export const selectConversation = (state: State) =>
     state.domain.buffers,
     state.domain.channels,
     state.domain.pendingChannels,
+    state.domain.networkStates,
   );
 
 export const selectWorkspaceNetworks = (state: State) =>

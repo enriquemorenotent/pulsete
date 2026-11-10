@@ -1,10 +1,12 @@
+import { normalizeIrcIdentifier } from '../../shared/irc-identifiers.js';
 import type { BufferState, ChannelState, ChatMessage, PendingChannelState } from '../../shared/protocol-chat.js';
 import type { AppDomainState } from './app-types.js';
-import { toConversationMessageKey, type ConversationMessages } from './conversation-message-state.js';
+import { type ConversationMessages } from './conversation-message-state.js';
 import type { SelectedBuffer } from './workspace-types.js';
 
 type ConversationState = Pick<AppDomainState, 'buffers' | 'channels' | 'pendingChannels'> & {
   messages?: ConversationMessages;
+  networkStates?: AppDomainState['networkStates'];
 };
 
 export type ConversationIndex = {
@@ -29,6 +31,8 @@ export const selectConversationMessages = (
   buffer ? messages[buffer.id] ?? [] : [];
 
 export const buildConversationIndex = (state: ConversationState): ConversationIndex => {
+  const keyFor = (networkId: string, target: string) => JSON.stringify([networkId,
+    normalizeIrcIdentifier(target, state.networkStates?.[networkId]?.serverRules?.caseMapping)]);
   const buffersById = new Map<string, BufferState>();
   const buffersByNetwork = new Map<string, BufferState[]>();
   const serverBuffersByNetwork = new Map<string, BufferState>();
@@ -47,12 +51,12 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
       serverBuffersByNetwork.set(buffer.networkId, buffer);
       continue;
     }
-    const key = toConversationMessageKey(buffer.networkId, buffer.target);
+    const key = keyFor(buffer.networkId, buffer.target);
     if (buffer.kind === 'channel') {
       channelBuffersByTarget.set(key, buffer);
       continue;
     }
-    queryBuffersByTarget.set(key, buffer);
+    if (buffer.queryTargetAvailable !== false) queryBuffersByTarget.set(key, buffer);
   }
 
   for (const pendingChannel of state.pendingChannels) {
@@ -60,7 +64,7 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
     pendingChannels.push(pendingChannel);
     pendingChannelsByNetwork.set(pendingChannel.networkId, pendingChannels);
     pendingChannelsByTarget.set(
-      toConversationMessageKey(pendingChannel.networkId, pendingChannel.channel),
+      keyFor(pendingChannel.networkId, pendingChannel.channel),
       pendingChannel
     );
   }
@@ -74,7 +78,7 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
 
   const findSelectedPendingChannel = (selection: SelectedBuffer | null) =>
     selection?.kind === 'pending-channel'
-      ? pendingChannelsByTarget.get(toConversationMessageKey(selection.networkId, selection.channel)) ?? null
+      ? pendingChannelsByTarget.get(keyFor(selection.networkId, selection.channel)) ?? null
       : null;
 
   return {
@@ -85,11 +89,11 @@ export const buildConversationIndex = (state: ConversationState): ConversationIn
     findBufferById: (bufferId: string) => buffersById.get(bufferId) ?? null,
     findServerBuffer: (networkId: string) => serverBuffersByNetwork.get(networkId) ?? null,
     findChannelBuffer: (networkId: string, channel: string) =>
-      channelBuffersByTarget.get(toConversationMessageKey(networkId, channel)) ?? null,
+      channelBuffersByTarget.get(keyFor(networkId, channel)) ?? null,
     findQueryBuffer: (networkId: string, nick: string) =>
-      queryBuffersByTarget.get(toConversationMessageKey(networkId, nick)) ?? null,
+      queryBuffersByTarget.get(keyFor(networkId, nick)) ?? null,
     findPendingChannel: (networkId: string, channel: string) =>
-      pendingChannelsByTarget.get(toConversationMessageKey(networkId, channel)) ?? null,
+      pendingChannelsByTarget.get(keyFor(networkId, channel)) ?? null,
     findSelectedBuffer,
     findSelectedPendingChannel,
     findChannelByBuffer: (buffer: BufferState | null) =>

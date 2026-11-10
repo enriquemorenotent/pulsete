@@ -1,6 +1,10 @@
+import type { IrcServerRules } from '../shared/irc-server-rules.js';
+import type { OutgoingAction } from './irc-outgoing-actions.js';
 export type ChannelReplyOperation = 'join' | 'part' | 'topic-set' | 'topic-query' | 'names';
 
 type PendingReplyBase = {
+  rules?: IrcServerRules;
+  action?: OutgoingAction;
   expiresAt: number;
   label?: string;
 };
@@ -32,6 +36,8 @@ export type PendingReplyContext =
       operation: ChannelReplyOperation;
       failedJoinBufferId?: string;
       requestedTopic?: string;
+      rules?: IrcServerRules;
+  action?: OutgoingAction;
       expiresAt: number;
     }
   | (PendingReplyBase & { kind: 'nick'; sourceTarget: string; requestedNick: string })
@@ -40,3 +46,7 @@ export type PendingReplyContext =
 
 export const replyContextTtlMs = 15_000;
 export const commandReplyBurstIdleMs = 1_500;
+
+// Keep a bounded set of unknown messages until disconnect, for exact late replies.
+export const canRetainLateReply = (context: PendingReplyContext) =>
+  context.kind === 'message' && !!context.label && context.action?.state === 'unknown';

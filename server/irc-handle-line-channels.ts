@@ -30,7 +30,8 @@ export const handleJoin = (connection: IrcChannelEventContext, params: string[],
   const trackedChannel = connection.resolveTrackedChannel(name);
   if (selfJoin) {
     connection.rememberReconnectChannel(trackedChannel ?? name);
-    connection.discardPendingChannelReplyContexts(name, (context) => context.operation === 'join');
+    connection.discardPendingChannelReplyContexts(name, (context) => context.operation === 'join')
+      .forEach(context => context.action?.finish('confirmed'));
     if (!pendingSession) {
       connection.setChannelSession(name, 'joined', { sourceTarget: 'server' });
     }
@@ -73,7 +74,8 @@ export const handlePart = (connection: IrcChannelEventContext, params: string[],
     if (session?.phase !== 'joining') {
       connection.forgetReconnectChannel(channel);
     }
-    connection.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join');
+    connection.discardPendingChannelReplyContexts(channel, (context) => context.operation !== 'join')
+      .forEach(context => { if (context.operation === 'part') context.action?.finish('confirmed'); });
   }
   const users = selfPart ? [] : connection.updateChannelUsers(channel, nick, false);
   if (selfPart) {
@@ -162,7 +164,7 @@ export const handleNick = (connection: IrcChannelEventContext, params: string[],
     if (!previousNick) {
       continue;
     }
-    const nextUsers = renameChannelUser(users, previousNick, newNick);
+    const nextUsers = renameChannelUser(users, previousNick, newNick, connection.lifecycle.serverSupport.rules);
     if (nextUsers.length !== users.length || nextUsers.some((user, index) => user !== users[index])) {
       connection.setTrackedChannelUsers(channel, nextUsers);
       emitChannel(connection, channel, { users: nextUsers });
@@ -186,7 +188,7 @@ export const handleTopic = (connection: IrcChannelEventContext, params: string[]
     connection.discardPendingChannelReplyContexts(
       channel,
       (context) => context.operation === 'topic-set' && context.requestedTopic === topic
-    );
+    ).forEach(context => context.action?.finish('confirmed'));
   }
   emitChannel(connection, channel, { topic });
   emitStatus(connection, `${nick ?? 'Someone'} changed the topic for ${channel}`, 'system', channel, true);
@@ -206,9 +208,9 @@ export const handleNamesNumeric = (connection: IrcChannelEventContext, params: s
   }
   let knownUsers = connection.getTrackedChannelUsers(channel);
   for (const name of (params[3] ?? '').split(' ')) {
-    const user = parseChannelUserToken(name);
+    const user = parseChannelUserToken(name, connection.lifecycle.serverSupport.rules);
     if (user) {
-      const existing = knownUsers.find((candidate) => isSameIrcIdentifier(candidate.nick, user.nick));
+      const existing = knownUsers.find((candidate) => isSameIrcIdentifier(candidate.nick, user.nick, connection.lifecycle.serverSupport.rules.caseMapping));
       knownUsers = upsertChannelUser(knownUsers, existing ? {
         ...user,
         away: existing.away,
@@ -216,7 +218,7 @@ export const handleNamesNumeric = (connection: IrcChannelEventContext, params: s
         username: user.username ?? existing.username ?? null,
         host: user.host ?? existing.host ?? null,
         realname: user.realname ?? existing.realname ?? null,
-      } : user);
+      } : user, connection.lifecycle.serverSupport.rules);
     }
   }
   connection.setTrackedChannelUsers(channel, knownUsers);
@@ -233,12 +235,12 @@ export const handleWhoNumeric = (connection: IrcChannelEventContext, params: str
     return;
   }
   const currentUsers = connection.getTrackedChannelUsers(channel);
-  const awayUsers = updateChannelUserAway(currentUsers, nick, flags.includes('G'));
+  const awayUsers = updateChannelUserAway(currentUsers, nick, flags.includes('G'), connection.lifecycle.serverSupport.rules);
   const users = updateChannelUserDetails(awayUsers, nick, {
     username,
     host,
     realname: parseWhoRealname(params[7] ?? null),
-  });
+  }, connection.lifecycle.serverSupport.rules);
   if (users === currentUsers) {
     return;
   }

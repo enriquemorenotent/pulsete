@@ -68,6 +68,11 @@ test('channel events keep the untouched half of channel state', () => {
     unread: 2,
     users: [makeUser('alice'), makeUser('bob')],
   });
+  for (let i = 0; i < 2; i++) storage.conversations.appendMessage({
+    id: `unread-${i}`, networkId: network.id, target: '#help', nick: 'alice',
+    body: 'hello', kind: 'line', self: false, ts: i,
+  });
+
 
   handleRuntimeEvent({ store: storage, publish() {} }, {
     type: 'channel',
@@ -208,6 +213,11 @@ test('runtime join preserves existing channel metadata', () => {
     unread: 3,
     users: [makeUser('alice')],
   });
+  for (let i = 0; i < 3; i++) storage.conversations.appendMessage({
+    id: `unread-${i}`, networkId: network.id, target: '#help', nick: 'alice',
+    body: 'hello', kind: 'line', self: false, ts: i,
+  });
+
 
   runtime.irc.join(network.id, '#help');
 

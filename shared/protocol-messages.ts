@@ -1,3 +1,5 @@
+import { ircServerRulesSchema } from './irc-server-rules.js';
+import { stateRevisionSchema } from './protocol-sync.js';
 import { z } from 'zod';
 import { appSnapshotSchema } from './protocol-app.js';
 import {
@@ -28,9 +30,11 @@ const baseClientSchema = z.object({
 
 const baseServerSchema = baseClientSchema.extend({
   mutationId: z.string().optional(),
+  sync: stateRevisionSchema.optional(),
 });
 
 export const clientMessageSchema = z.discriminatedUnion('type', [
+  baseClientSchema.extend({ type: z.literal('state.sync') }),
   baseClientSchema.extend({ type: z.literal('network.connect'), networkId: z.string() }),
   baseClientSchema.extend({ type: z.literal('network.disconnect'), networkId: z.string() }),
   baseClientSchema.extend({
@@ -80,6 +84,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   vpnServer: z.string().optional(),
     nick: z.string(),
     capabilities: networkRuntimeCapabilitiesSchema.optional(),
+  serverRules: ircServerRulesSchema.optional(),
   }),
   baseServerSchema.extend({ type: z.literal('network.remove'), networkId: z.string() }),
   baseServerSchema.extend({ type: z.literal('network.upsert'), network: networkSchema }),
@@ -162,7 +167,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     requestId: z.string(),
     message: z.string(),
   }),
-  baseServerSchema.extend({ type: z.literal('message.append'), message: chatMessageSchema }),
+  baseServerSchema.extend({ type: z.literal('message.append'), message: chatMessageSchema, arrival: z.object({ buffer: bufferSchema }).optional() }),
   baseServerSchema.extend({ type: z.literal('message.upsert'), message: chatMessageSchema }),
   baseServerSchema.extend({ type: z.literal('message.pin.updated'), message: chatMessageSchema }),
   baseServerSchema.extend({
@@ -195,3 +200,9 @@ export type ServerMessage = z.infer<typeof serverMessageSchema>;
 export const encode = (message: ClientMessage | ServerMessage) => JSON.stringify(message);
 export const decodeClient = (payload: string) => clientMessageSchema.parse(JSON.parse(payload));
 export const decodeServer = (payload: string) => serverMessageSchema.parse(JSON.parse(payload));
+
+// An eligible live arrival, separate from history and unread-count changes.
+export type MessageArrival = {
+  message: z.infer<typeof chatMessageSchema>;
+  buffer: z.infer<typeof bufferSchema>;
+};

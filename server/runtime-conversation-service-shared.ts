@@ -10,4 +10,4 @@ export type RuntimeConversationServiceOptions = {
   networks: Pick<RuntimeNetworkStore, 'get'>;
 };
 
-export const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
+export { isServerChannel as isChannelTarget } from '../shared/irc-server-rules.js';

@@ -12,12 +12,12 @@ export type IrcStateContext = IrcEventContext & IrcConnectionPick<'lifecycle'>;
 export type IrcReplyStateContext = IrcConnectionPick<'channelList' | 'replyTracker', 'clearDrainingChannelList'>;
 
 export type IrcChannelListContext = IrcEventContext & IrcConnectionPick<
-  'channelList' | 'lifecycle',
+  'channelList' | 'lifecycle' | 'replyTracker',
   'prunePendingReplyContexts' | 'sendRaw'
 >;
 
 export type IrcChannelStateContext = IrcEventContext & IrcConnectionPick<
-  'channels' | 'replyTracker',
+  'channels' | 'replyTracker' | 'lifecycle',
   'prunePendingReplyContexts'
 >;
 
@@ -87,7 +87,7 @@ export type IrcConnectContext = IrcLifecycleContext & IrcConnectionPick<
 >;
 
 export type IrcRegistrationContext = IrcEventContext & IrcConnectionPick<
-  'lifecycle' | 'profile' | 'replyTracker',
+  'lifecycle' | 'profile' | 'replyTracker' | 'friendPresence',
   | 'applyNickFallback'
   | 'clearPendingNick'
   | 'consumeReplyContext'

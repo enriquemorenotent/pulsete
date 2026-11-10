@@ -119,11 +119,13 @@ test('websocket commands use the live local state and forward runtime methods', 
     assert.deepEqual(await queryOpenPromise, {
       type: 'buffer.upsert',
       buffer: query,
+      sync: { epoch: runtime.gateway.snapshot().sync!.epoch, revision: 1 },
     });
     assert.deepEqual(await channelListPromise, {
       type: 'channel.list.started',
       networkId: network.id,
       requestId: 'request-1',
+      sync: { epoch: runtime.gateway.snapshot().sync!.epoch, revision: 2 },
     });
     assert.deepEqual(calls, [
       `connect:${network.id}`,

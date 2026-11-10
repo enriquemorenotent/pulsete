@@ -95,7 +95,7 @@ test('irc connection requests latest server history after a confirmed self join'
   connection.lifecycle.connected = true;
   connection.lifecycle.capabilities.negotiated.add('batch');
   connection.lifecycle.capabilities.negotiated.add('draft/chathistory');
-  connection.lifecycle.capabilities.values.set('isupport/chathistory', '25');
+  connection.lifecycle.serverSupport.update(['tester', 'CHATHISTORY=25', 'supported']);
   attachMockSocket(connection, createMockSocket(writes));
 
   connection.join('#help');

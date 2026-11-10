@@ -51,7 +51,7 @@ export const sendClientRaw = (connection: IrcClientIoContext, raw: string, sourc
       sourceTarget
     );
   }
-  const replyContext = createReplyContextFromRaw(sourceTarget, raw);
+  const replyContext = createReplyContextFromRaw(sourceTarget, raw, connection.lifecycle.serverSupport.rules);
   if (parsed.name === 'list') {
     if (connection.isChannelListPending()) {
       emitStatus(connection, connection.getChannelListRequestFailureMessage(), 'error', sourceTarget);
@@ -108,7 +108,7 @@ export const createSelfMessage = (
   };
   return {
     ...message,
-    ...resolveRuntimeMessageAttribution(message),
+    ...resolveRuntimeMessageAttribution(message, connection.lifecycle.serverSupport.rules),
   };
 };
 
@@ -130,7 +130,7 @@ export const createSelfActionMessage = (
   };
   return {
     ...message,
-    ...resolveRuntimeMessageAttribution(message),
+    ...resolveRuntimeMessageAttribution(message, connection.lifecycle.serverSupport.rules),
   };
 };
 

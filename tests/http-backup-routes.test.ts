@@ -68,8 +68,8 @@ test('backup export and import fully replace stored app data', async () => {
     const buffer = restored.conversations.getBufferByTarget(original.networkId, '#backup');
     assert.ok(buffer);
     assert.equal(buffer.notes, 'buffer note');
-    assert.equal(buffer.unread, 2);
-    assert.equal(buffer.priorityUnread, 1);
+    assert.equal(buffer.unread, 1);
+    assert.equal(buffer.priorityUnread, 0);
     assert.equal(buffer.lastReadTs, 12);
     assert.equal(buffer.lastReadMessageId, 'message-1');
     assert.deepEqual(buffer.selfNickAliases, ['BackupSelf']);

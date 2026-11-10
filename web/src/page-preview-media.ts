@@ -1,3 +1,4 @@
+import { AsyncResultCache } from '../../shared/async-result-cache.js';
 import { useMediaAccount } from './account-media.js';
 import { useEffect, useState } from 'react';
 import type {
@@ -17,20 +18,18 @@ export type ResolvedPagePreview = {
   unavailableReason: PagePreviewUnavailableReason | null;
 };
 
-type PagePreviewCacheEntry = {
-  expiresAt: number;
-  promise: Promise<ResolvedPagePreview>;
-};
-
 type PagePreviewUnavailableState = {
   href: string;
   reason: PagePreviewUnavailableReason | null;
 };
 
-const pagePreviewCache = new Map<string, PagePreviewCacheEntry>();
 const pagePreviewCacheLimit = 256;
 const pagePreviewCacheTtlMs = 6 * 60 * 60 * 1_000;
 const pagePreviewNegativeCacheTtlMs = 15 * 60 * 1_000;
+const pagePreviewCache = new AsyncResultCache<string, ResolvedPagePreview>({
+  limit: pagePreviewCacheLimit,
+  ttlMs: result => result.media ? pagePreviewCacheTtlMs : pagePreviewNegativeCacheTtlMs,
+});
 
 export const pagePreviewToInlineMedia = (
   originalHref: string,
@@ -44,32 +43,12 @@ export const pagePreviewToInlineMedia = (
 
 export const resolvePagePreviewResult = (href: string, networkId?: string, scope = '') => {
   const cacheKey = JSON.stringify([networkId, scope, href]);
-  const cached = pagePreviewCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.promise;
-  }
-  if (cached) {
-    pagePreviewCache.delete(cacheKey);
-  }
-  const entry: PagePreviewCacheEntry = {
-    expiresAt: Number.POSITIVE_INFINITY,
-    promise: Promise.resolve(silentPagePreviewResult),
-  };
-  entry.promise = api.resolvePagePreview(href, { networkId })
+  return pagePreviewCache.get(cacheKey, () => api.resolvePagePreview(href, { networkId })
     .then(({ preview, unavailableReason }) => ({
       media: preview ? pagePreviewToInlineMedia(href, preview) : null,
       unavailableReason,
     }))
-    .catch(() => silentPagePreviewResult)
-    .then((result) => {
-      entry.expiresAt = Date.now() + (
-        result.media ? pagePreviewCacheTtlMs : pagePreviewNegativeCacheTtlMs
-      );
-      return result;
-    });
-  pagePreviewCache.set(cacheKey, entry);
-  trimPagePreviewCache();
-  return entry.promise;
+    .catch(() => silentPagePreviewResult));
 };
 
 export const resolvePagePreviewMedia = (href: string) =>
@@ -136,14 +115,4 @@ export const usePagePreviewUnavailableReason = (href: string) => {
 const silentPagePreviewResult: ResolvedPagePreview = {
   media: null,
   unavailableReason: null,
-};
-
-const trimPagePreviewCache = () => {
-  while (pagePreviewCache.size > pagePreviewCacheLimit) {
-    const oldest = pagePreviewCache.keys().next().value;
-    if (oldest === undefined) {
-      return;
-    }
-    pagePreviewCache.delete(oldest);
-  }
 };

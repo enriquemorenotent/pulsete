@@ -131,7 +131,7 @@ test('storage persists local workspace buffers and messages', () => {
     snapshot.buffers.some((buffer) => buffer.networkId === network.id && buffer.kind === 'server' && buffer.target === 'server'),
     true
   );
-  assert.equal(snapshot.buffers.some((buffer) => buffer.id === channel.id && buffer.unread === 2), true);
+  assert.equal(snapshot.buffers.some((buffer) => buffer.id === channel.id && buffer.unread === 0), true);
   assert.equal(snapshot.buffers.some((buffer) => buffer.id === query.id && buffer.kind === 'query'), true);
   assert.equal(snapshot.messages.at(-1)?.id, message.id);
 });

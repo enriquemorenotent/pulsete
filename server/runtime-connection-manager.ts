@@ -1,3 +1,4 @@
+import { ServerRulesConflictError } from './storage-server-rules.js';
 import { randomUUID } from 'node:crypto';
 import type WebSocket from 'ws';
 import type { BufferState, FriendState, NetworkProfile } from '../shared/protocol-chat.js';
@@ -17,7 +18,7 @@ type RuntimeConnectionManagerOptions = {
   onConnectionEvent?(event: RuntimeEvent): void;
   conversations: Pick<RuntimeConversationStore, 'listBuffers' | 'listQueryNickAliases'>;
   friends: Pick<RuntimeFriendStore, 'list'>;
-  networks: Pick<RuntimeNetworkStore, 'getRuntime'>;
+  networks: Pick<RuntimeNetworkStore, 'getRuntime'> & Partial<Pick<RuntimeNetworkStore, 'getServerRules'>>;
   isClosing(): boolean;
 };
 
@@ -25,7 +26,7 @@ export class RuntimeConnectionManager {
   private readonly conversations: RuntimeConnectionManagerOptions['conversations'];
   private readonly friends: Pick<RuntimeFriendStore, 'list'>;
   private readonly eventRouter: RuntimeEventRouter;
-  private readonly networks: Pick<RuntimeNetworkStore, 'getRuntime'>;
+  private readonly networks: Pick<RuntimeNetworkStore, 'getRuntime'> & Partial<Pick<RuntimeNetworkStore, 'getServerRules'>>;
   private readonly onConnectionEvent: RuntimeConnectionManagerOptions['onConnectionEvent'];
   private readonly isClosing: RuntimeConnectionManagerOptions['isClosing'];
   readonly connections = new Map<string, IrcConnection>();
@@ -52,7 +53,12 @@ export class RuntimeConnectionManager {
   }
 
   snapshot(networks: NetworkProfile[], friends: FriendState[]) {
-    return this.eventRouter.snapshot(networks, friends, Array.from(this.connections.values()));
+    const snapshot = this.eventRouter.snapshot(networks, friends, Array.from(this.connections.values()));
+    for (const network of networks) {
+      const state = snapshot.networkStates[network.id];
+      if (state && !state.serverRules && this.networks.getServerRules) state.serverRules = this.networks.getServerRules(network.id);
+    }
+    return snapshot;
   }
 
   getConnection(networkId: string) {
@@ -160,7 +166,19 @@ export class RuntimeConnectionManager {
     if (this.isClosing()) {
       return;
     }
-    this.onConnectionEvent?.(event);
+    try {
+      this.onConnectionEvent?.(event);
+    } catch (error) {
+      if (event.type !== 'state' || !(error instanceof ServerRulesConflictError)) throw error;
+      const connection = this.connections.get(event.networkId);
+      // A conflicting routing change must not reach message handling.
+      if (connection) {
+        connection.lifecycle.serverSupport.reset();
+        connection.disconnect();
+        connection.markConnectionFailure(error instanceof Error ? error.message : 'Invalid server rules');
+      }
+      return;
+    }
     const routedMessages = this.eventRouter.route(event);
     for (const networkId of collectPresenceTrackingNetworkIds(routedMessages)) {
       this.syncPresenceTracking(networkId);

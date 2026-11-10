@@ -36,6 +36,8 @@ export type BufferRow = {
   priorityUnread: number;
   lastReadTs: number | null;
   lastReadMessageId: string | null;
+  targetKey?: string | null;
+  firstUnreadMessageId?: string | null;
   ircCloudAvatarId: string | null;
   createdAt: number;
   updatedAt: number;

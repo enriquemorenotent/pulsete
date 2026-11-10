@@ -20,7 +20,7 @@ export const handleAccount = (
     handleAccountLoginState(connection, account);
   }
   updateUsersAcrossTrackedChannels(connection, (users) =>
-    updateChannelUserDetails(users, nick, { account }),
+    updateChannelUserDetails(users, nick, { account }, connection.lifecycle.serverSupport.rules),
   );
 };
 
@@ -33,7 +33,7 @@ export const handleAway = (
     return;
   }
   updateUsersAcrossTrackedChannels(connection, (users) =>
-    updateChannelUserAway(users, nick, params.length > 0),
+    updateChannelUserAway(users, nick, params.length > 0, connection.lifecycle.serverSupport.rules),
   );
 };
 
@@ -48,7 +48,7 @@ export const handleChghost = (
   const username = params[0]?.trim() || null;
   const host = params[1]?.trim() || null;
   updateUsersAcrossTrackedChannels(connection, (users) =>
-    updateChannelUserDetails(users, nick, { username, host }),
+    updateChannelUserDetails(users, nick, { username, host }, connection.lifecycle.serverSupport.rules),
   );
 };
 
@@ -62,7 +62,7 @@ export const handleSetname = (
   }
   const realname = params[0]?.trim() || null;
   updateUsersAcrossTrackedChannels(connection, (users) =>
-    updateChannelUserDetails(users, nick, { realname }),
+    updateChannelUserDetails(users, nick, { realname }, connection.lifecycle.serverSupport.rules),
   );
 };
 

@@ -56,7 +56,7 @@ export function WatchlistActivityDialog({ friend, onClose }: { friend: FriendSta
           <section className="rounded-xl border border-white/8 bg-black/10 p-5">
             <h3 className="mb-1 text-sm font-medium">Weekly pattern</h3>
             <p className="mb-5 text-xs text-muted-foreground">Share of observed time connected in each hour.</p>
-            <WatchlistActivityHeatmap cells={stats.cells} />
+            <WatchlistActivityHeatmap cells={stats.cells} timeZone={timeZone} />
           </section>
           {stats.observedDays === 0 ? <p className="text-sm text-muted-foreground">No activity history yet. Keep Pulsete connected to start learning their pattern.</p>
             : stats.observedDays < 7 ? <p className="text-sm text-amber-200/85">Early observations · {stats.observedDays} of 7 days collected. Patterns may change as more data arrives.</p> : null}

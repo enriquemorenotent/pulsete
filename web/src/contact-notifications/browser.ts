@@ -1,4 +1,3 @@
-import type { BufferState } from '../../../shared/protocol-chat.js';
 import type { ContactNotificationSound } from './settings.js';
 
 type AudioContextConstructor = typeof AudioContext;
@@ -25,9 +24,6 @@ export const shouldShowSystemNotification = () => {
   const hasFocus = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
   return !isVisible || !hasFocus;
 };
-
-export const getBufferMap = (buffers: readonly BufferState[]) =>
-  new Map(buffers.map((buffer) => [buffer.id, { unread: buffer.unread }]));
 
 const disconnectAudioNode = (node: AudioNode) => {
   try {

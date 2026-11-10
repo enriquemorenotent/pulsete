@@ -1,7 +1,8 @@
+import { unreadAnchorSql } from './storage-unread.js';
 import { randomUUID } from 'node:crypto';
 import type { SqliteDb } from './storage-sqlite.js';
 import type { BufferState, ChannelState, ChannelUserState } from '../shared/protocol-chat.js';
-import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
+import { normalizeNetworkIdentifier } from './storage-server-rules.js';
 import { normalizeIrcCloudAvatarId } from '../shared/irccloud-avatar.js';
 import { listBufferSelfNickAliases, replaceBufferSelfNickAliases } from './storage-owned-lists.js';
 import { getPrimaryQueryPeerIdentity } from './storage-query-identities.js';
@@ -23,7 +24,7 @@ const channelSelect = `
 `;
 
 const bufferColumns =
-  'id, networkId, kind, target, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, ircCloudAvatarId, createdAt, updatedAt';
+  'id, networkId, kind, target, targetKey, notes, isOpen, unread, priorityUnread, lastReadTs, lastReadMessageId, ircCloudAvatarId, createdAt, updatedAt, ' + unreadAnchorSql + ' AS firstUnreadMessageId';
 
 export const listBuffers = (db: SqliteDb, networkId?: string): BufferState[] => {
   const sql = networkId
@@ -44,7 +45,7 @@ export const getBuffer = (db: SqliteDb, bufferId: string): BufferState | null =>
 export const getStoredBufferByTarget = (db: SqliteDb, networkId: string, target: string): BufferState | null => {
   const row = db.prepare(
     `SELECT ${bufferColumns} FROM buffers WHERE networkId = ? AND targetKey = ?`
-  ).get(networkId, normalizeIrcIdentifier(target)) as BufferRow | undefined;
+  ).get(networkId, normalizeNetworkIdentifier(db, networkId, target)) as BufferRow | undefined;
   return row ? toBufferState(row, listBufferSelfNickAliases(db, row.id), getPrimaryQueryPeerIdentity(db, row.id)) : null;
 };
 
@@ -57,10 +58,11 @@ export const getBufferByTarget = (db: SqliteDb, networkId: string, target: strin
 export const getServerBuffer = (db: SqliteDb, networkId: string) =>
   getStoredBufferByTarget(db, networkId, 'server');
 
+// Unread counters belong to the message ledger; metadata edits cannot overwrite them.
 export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
   const existing =
     (input.id ? getBuffer(db, input.id) : null)
-    ?? getStoredBufferByTarget(db, input.networkId, input.target);
+    ?? (input.queryTargetAvailable === false ? null : getStoredBufferByTarget(db, input.networkId, input.target));
   const now = Date.now();
   const isOpen = input.isOpen ?? true;
   if (existing) {
@@ -72,11 +74,11 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
       input.networkId,
       input.kind,
       input.target,
-      normalizeIrcIdentifier(input.target),
+      existing.kind === 'query' && existing.queryTargetAvailable === false ? null : normalizeNetworkIdentifier(db, input.networkId, input.target),
       input.notes ?? existing.notes ?? '',
       isOpen ? 1 : 0,
-      input.unread ?? existing.unread ?? 0,
-      input.priorityUnread ?? existing.priorityUnread ?? 0,
+      existing.unread,
+      existing.priorityUnread,
       input.lastReadTs ?? existing.lastReadTs ?? null,
       input.lastReadMessageId ?? existing.lastReadMessageId ?? null,
       resolveNextIrcCloudAvatarId(input.ircCloudAvatarId, existing.ircCloudAvatarId),
@@ -97,11 +99,11 @@ export const upsertBuffer = (db: SqliteDb, input: BufferInput) => {
     input.networkId,
     input.kind,
     input.target,
-    normalizeIrcIdentifier(input.target),
+    input.kind === 'query' && input.queryTargetAvailable === false ? null : normalizeNetworkIdentifier(db, input.networkId, input.target),
     input.notes ?? '',
     isOpen ? 1 : 0,
-    input.unread ?? 0,
-    input.priorityUnread ?? 0,
+    0,
+    0,
     input.lastReadTs ?? null,
     input.lastReadMessageId ?? null,
     normalizeIrcCloudAvatarId(input.ircCloudAvatarId),
@@ -148,20 +150,10 @@ export const markBufferRead = (
   bufferId: string,
   input: { lastReadTs: number | null; lastReadMessageId: string | null },
 ) => {
+  db.prepare('DELETE FROM unread_messages WHERE bufferId = ?').run(bufferId);
   db.prepare(
     'UPDATE buffers SET unread = 0, priorityUnread = 0, lastReadTs = ?, lastReadMessageId = ?, updatedAt = ? WHERE id = ?'
   ).run(input.lastReadTs, input.lastReadMessageId, Date.now(), bufferId);
-};
-
-export const setBufferUnread = (
-  db: SqliteDb,
-  bufferId: string,
-  unread: number,
-  priorityUnread = 0,
-) => {
-  db.prepare(
-    'UPDATE buffers SET unread = ?, priorityUnread = ?, updatedAt = ? WHERE id = ?'
-  ).run(unread, priorityUnread, Date.now(), bufferId);
 };
 
 export const listChannels = (db: SqliteDb, networkId?: string): ChannelState[] => {
@@ -186,7 +178,7 @@ export const getChannelByName = (db: SqliteDb, networkId: string, name: string) 
 
 export const getStoredChannelByName = (db: SqliteDb, networkId: string, name: string) => {
   const row = db.prepare(`${channelSelect} AND buffers.networkId = ? AND buffers.targetKey = ?`)
-    .get(networkId, normalizeIrcIdentifier(name)) as (ChannelRow & { networkId: string; name: string }) | undefined;
+    .get(networkId, normalizeNetworkIdentifier(db, networkId, name)) as (ChannelRow & { networkId: string; name: string }) | undefined;
   return row ? toChannelState(row) : null;
 };
 

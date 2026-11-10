@@ -36,7 +36,7 @@ export const getExactDuplicateReplyIndexes = (
       .filter(
         (match) =>
           match.context.kind === 'nick'
-          && isSameIrcIdentifier(match.context.requestedNick, selectedContext.requestedNick)
+          && isSameIrcIdentifier(match.context.requestedNick, selectedContext.requestedNick, selectedContext.rules?.caseMapping)
       )
       .map((match) => match.index);
   }
@@ -47,7 +47,7 @@ export const getExactDuplicateReplyIndexes = (
         (match) =>
           match.context.kind === 'raw-target'
           && match.context.command === selectedContext.command
-          && isSameIrcIdentifier(match.context.target, selectedContext.target)
+          && isSameIrcIdentifier(match.context.target, selectedContext.target, selectedContext.rules?.caseMapping)
       )
       .map((match) => match.index);
   }
@@ -60,7 +60,7 @@ export const getExactDuplicateReplyIndexes = (
       (match) =>
         match.context.kind === 'channel'
         && match.context.operation === selectedContext.operation
-        && isSameIrcIdentifier(match.context.channel, selectedContext.channel)
+        && isSameIrcIdentifier(match.context.channel, selectedContext.channel, selectedContext.rules?.caseMapping)
         && (
           selectedContext.operation !== 'topic-set'
           || match.context.requestedTopic === selectedContext.requestedTopic

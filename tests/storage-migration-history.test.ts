@@ -7,7 +7,7 @@ import { currentStorageSchemaVersion } from '../server/storage-migrations.js';
 import { openSqliteDatabase } from '../server/storage-sqlite.js';
 import { Storage } from '../server/storage.js';
 
-test('legacy formatting upgrade preserves messages, unread counts, and a backup', () => {
+test('legacy formatting upgrade preserves messages and a backup and rebuilds unread from surviving messages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-storage-'));
   const file = join(dir, 'db.sqlite');
   const now = Date.now();
@@ -27,7 +27,7 @@ test('legacy formatting upgrade preserves messages, unread counts, and a backup'
   assert.equal(message?.kind, 'line');
   assert.equal(message?.self, false);
   assert.equal(message?.ts, now);
-  assert.equal(snapshot.buffers.find((buffer) => buffer.id === 'buffer-1')?.unread, 4);
+  assert.equal(snapshot.buffers.find((buffer) => buffer.id === 'buffer-1')?.unread, 1);
 
   const upgraded = openSqliteDatabase(file);
   const version = upgraded.prepare('PRAGMA user_version').get() as { user_version: number };

@@ -9,7 +9,7 @@ import { createMockSocket, makeUser, mockNetConnect } from './helpers/irc-race-t
 const projectUserModes = (users: ChannelUserState[]) =>
   users.map(({ nick, mode, away }) => ({ nick, mode, away }));
 
-test('channel mode changes keep user updates aligned after unknown arg-taking modes', () => {
+test('channel mode changes keep user updates aligned after advertised arg-taking modes', () => {
   const connection = new IrcConnection(
     {
       id: randomUUID(),
@@ -31,6 +31,7 @@ test('channel mode changes keep user updates aligned after unknown arg-taking mo
   );
 
   connection.channels.users.set('#help', [makeUser('alice')]);
+  handleIrcLine(connection, ':irc.example 005 tester CHANMODES=b,k,lL,imnpst :supported');
   handleIrcLine(connection, ':chanop!user@host MODE #help +Lo #overflow alice');
 
   assert.deepEqual(projectUserModes(connection.channels.users.get('#help') ?? []), [makeUser('alice', 'op')]);

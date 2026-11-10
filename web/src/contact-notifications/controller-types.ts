@@ -1,5 +1,5 @@
 import type { BufferState } from '../../../shared/protocol-chat.js';
-import type { ConversationMessages } from '../conversation-message-state.js';
+import type { MessageArrival } from '../../../shared/protocol-messages.js';
 import type {
   ContactNotificationChannel,
   ContactNotificationContact,
@@ -8,8 +8,7 @@ import type {
 } from './settings.js';
 
 export type ContactNotificationsInput = {
-  buffers: readonly BufferState[];
-  getMessagesByConversation?: () => ConversationMessages;
+  subscribeMessageArrivals: (listener: (arrival: MessageArrival) => void) => () => void;
   getAvatarIconUrl?: (buffer: BufferState) => string | null;
   networkNamesById: ReadonlyMap<string, string>;
   onSelectBuffer: (buffer: BufferState) => void;

@@ -1,3 +1,4 @@
+import type { ServerMessage } from '../shared/protocol-messages.js';
 import assert from 'node:assert/strict';
 import { mkdirSync,mkdtempSync,writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -61,6 +62,7 @@ test('http buffer mutation routes succeed and broadcast buffer changes', async (
       networkId: network.id,
       target: 'helper',
       messageIds: ['history-message'],
+      sync: (clearHistoryResponse.json.messages as ServerMessage[]).find(message => message.type === 'message.remove')?.sync,
     });
 
     runtime.sessions.connect(network.id);
@@ -85,6 +87,7 @@ test('http buffer mutation routes succeed and broadcast buffer changes', async (
       type: 'buffer.remove',
       networkId: network.id,
       bufferId: queryBuffer.id,
+      sync: (deleteResponse.json.messages as ServerMessage[]).find(message => message.type === 'buffer.remove')?.sync,
     });
   } finally {
     runtime.sessions.disconnect(network.id);

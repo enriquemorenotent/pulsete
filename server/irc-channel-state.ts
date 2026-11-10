@@ -27,8 +27,8 @@ export const updateChannelUsers = (
           username: details.username ?? null,
           host: details.host ?? null,
           realname: details.realname ?? null,
-        })
-      : removeChannelUser(current, nick);
+        }, connection.lifecycle.serverSupport.rules)
+      : removeChannelUser(current, nick, connection.lifecycle.serverSupport.rules);
   connection.channels.users.set(channelKey, nextUsers);
   return nextUsers;
 };
@@ -87,7 +87,7 @@ export const listReconnectChannels = (connection: IrcChannelStateContext) =>
   Array.from(connection.channels.reconnectChannels);
 
 export const rememberReconnectChannel = (connection: IrcChannelStateContext, channel: string) => {
-  const existing = findIrcCaseMatch(connection.channels.reconnectChannels, channel);
+  const existing = findIrcCaseMatch(connection.channels.reconnectChannels, channel, connection.lifecycle.serverSupport.rules.caseMapping);
   if (existing) {
     return existing;
   }
@@ -96,7 +96,7 @@ export const rememberReconnectChannel = (connection: IrcChannelStateContext, cha
 };
 
 export const forgetReconnectChannel = (connection: IrcChannelStateContext, channel: string) => {
-  const existing = findIrcCaseMatch(connection.channels.reconnectChannels, channel);
+  const existing = findIrcCaseMatch(connection.channels.reconnectChannels, channel, connection.lifecycle.serverSupport.rules.caseMapping);
   if (existing) {
     connection.channels.reconnectChannels.delete(existing);
   }
@@ -113,10 +113,10 @@ export const removeChannelSession = (connection: IrcChannelStateContext, channel
   if (!session) {
     return null;
   }
-  clearChannelJoinTimer(session);
+  finishChannelJoinAction(session, 'cancelled');
   connection.channels.sessions.delete(key);
   hidePendingChannel(connection, session);
-  return { ...session, joinTimeoutTimer: null };
+  return { ...session, joinAction: null };
 };
 
 export const handleSelfChannelDeparture = (connection: IrcChannelStateContext, channel: string) => {
@@ -143,7 +143,7 @@ export const setChannelSession = (
   const current = connection.channels.sessions.get(key) ?? null;
   const existingUsers = connection.channels.users.get(key) ?? [];
   if (current) {
-    clearChannelJoinTimer(current);
+    finishChannelJoinAction(current, phase === 'joined' ? 'confirmed' : 'cancelled');
   }
   const next: ChannelSessionState = {
     channel: current?.channel ?? channel,
@@ -151,13 +151,13 @@ export const setChannelSession = (
     sourceTarget: options.sourceTarget ?? current?.sourceTarget ?? 'server',
     visiblePending: options.visiblePending ?? current?.visiblePending ?? false,
     previouslyJoined: options.previouslyJoined ?? current?.previouslyJoined ?? false,
-    joinTimeoutTimer: null,
+    joinAction: null,
   };
   if (phase === 'joining') {
     next.previouslyJoined = options.previouslyJoined ?? (
       current?.phase === 'joined' || current?.previouslyJoined === true || existingUsers.length > 0
     );
-    next.joinTimeoutTimer = createChannelJoinTimer(connection, next.channel);
+    next.joinAction = startChannelJoinAction(connection, next.channel);
   } else {
     next.visiblePending = false;
     next.previouslyJoined = false;
@@ -174,7 +174,7 @@ export const setChannelSession = (
 
 export const clearChannelSessions = (connection: IrcChannelStateContext) => {
   for (const session of connection.channels.sessions.values()) {
-    clearChannelJoinTimer(session);
+    finishChannelJoinAction(session, 'cancelled');
     hidePendingChannel(connection, session);
   }
   connection.channels.sessions.clear();
@@ -188,8 +188,8 @@ export const discardPendingChannelReplyContexts = (
 ) => connection.replyTracker.discardPendingChannelReplyContexts(channel, predicate);
 
 const resolveTrackedChannelKey = (connection: IrcChannelStateContext, channel: string, createIfMissing = true) =>
-  findIrcCaseMatch(connection.channels.sessions.keys(), channel)
-  ?? findIrcCaseMatch(connection.channels.users.keys(), channel)
+  findIrcCaseMatch(connection.channels.sessions.keys(), channel, connection.lifecycle.serverSupport.rules.caseMapping)
+  ?? findIrcCaseMatch(connection.channels.users.keys(), channel, connection.lifecycle.serverSupport.rules.caseMapping)
   ?? (createIfMissing ? channel : null);
 
 const hidePendingChannel = (connection: IrcChannelStateContext, session: ChannelSessionState) => {
@@ -198,21 +198,19 @@ const hidePendingChannel = (connection: IrcChannelStateContext, session: Channel
   }
 };
 
-const clearChannelJoinTimer = (session: ChannelSessionState) => {
-  if (!session.joinTimeoutTimer) {
+const finishChannelJoinAction = (session: ChannelSessionState, outcome: 'confirmed' | 'cancelled') => {
+  if (!session.joinAction) {
     return;
   }
-  clearTimeout(session.joinTimeoutTimer);
-  session.joinTimeoutTimer = null;
+  session.joinAction.finish(outcome);
+  session.joinAction = null;
 };
 
-const createChannelJoinTimer = (connection: IrcChannelStateContext, channel: string) => {
-  if (connection.channels.joinTimeoutMs <= 0) {
-    return null;
-  }
-  const timer = setTimeout(() => handleChannelJoinTimeout(connection, channel), connection.channels.joinTimeoutMs);
-  timer.unref?.();
-  return timer;
+const startChannelJoinAction = (connection: IrcChannelStateContext, channel: string) => {
+  return connection.replyTracker.actions.start(
+    connection.channels.joinTimeoutMs > 0 ? Date.now() + connection.channels.joinTimeoutMs : Infinity,
+    () => handleChannelJoinTimeout(connection, channel),
+  );
 };
 
 const handleChannelJoinTimeout = (connection: IrcChannelStateContext, channel: string) => {
@@ -221,6 +219,7 @@ const handleChannelJoinTimeout = (connection: IrcChannelStateContext, channel: s
     return;
   }
   const sourceTarget = session.sourceTarget;
+  session.joinAction = null;
   if (session.previouslyJoined) {
     setChannelSession(connection, channel, 'joined', { sourceTarget });
   } else {

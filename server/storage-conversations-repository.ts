@@ -1,3 +1,6 @@
+import { getServerRules } from './storage-server-rules.js';
+import { listMessagePageByBufferId, listAllMessagesForBuffer } from './storage-message-queries.js';
+import { refreshUnreadVisibility, type MessageAttention } from './storage-unread.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import type { ChannelUserState } from '../shared/protocol-chat.js';
 import {
@@ -34,7 +37,6 @@ import {
   markBufferRead,
   removeBuffer,
   setBufferNotes,
-  setBufferUnread,
   updateChannelTopic,
   updateChannelUsers,
   upsertBuffer,
@@ -54,6 +56,8 @@ import { listPinnedMessages, setMessagePinned } from './storage-message-pins.js'
 
 export class StorageConversationsRepository {
   constructor(private readonly db: SqliteDb) {}
+
+  getServerRules(networkId: string) { return getServerRules(this.db, networkId); }
 
   listBuffers(networkId?: string) {
     return listBuffers(this.db, networkId);
@@ -96,11 +100,7 @@ export class StorageConversationsRepository {
   }
 
   markBufferRead(bufferId: string, input: { lastReadTs: number | null; lastReadMessageId: string | null }) {
-    markBufferRead(this.db, bufferId, input);
-  }
-
-  setBufferUnread(bufferId: string, unread: number, priorityUnread = 0) {
-    setBufferUnread(this.db, bufferId, unread, priorityUnread);
+    runInTransaction(this.db, () => markBufferRead(this.db, bufferId, input));
   }
 
   removeBuffer(bufferId: string) {
@@ -129,6 +129,17 @@ export class StorageConversationsRepository {
 
   listMessages(networkId: string, target: string, limit?: number) {
     return listMessages(this.db, networkId, target, limit);
+  }
+
+  listMessagePageByBufferId(bufferId: string, limit: number, beforeMessageId?: string) {
+    return listMessagePageByBufferId(this.db, bufferId, limit, beforeMessageId);
+  }
+
+  listAllMessagesForBuffer(bufferId: string) { return listAllMessagesForBuffer(this.db, bufferId); }
+
+  deleteBufferMessages(bufferId: string) {
+    const buffer = this.getBuffer(bufferId);
+    return buffer ? runInTransaction(this.db, () => deleteMessages(this.db, buffer.networkId, buffer.target, bufferId)) : [];
   }
 
   listMessagePage(networkId: string, target: string, limit: number, beforeMessageId?: string) {
@@ -250,7 +261,11 @@ export class StorageConversationsRepository {
     );
   }
 
-  appendMessage(input: MessageInput, bufferId?: string) {
-    return appendMessage(this.db, input, (messageId) => this.getMessageById(messageId), bufferId);
+  refreshUnreadVisibility(networkId: string) {
+    runInTransaction(this.db, () => refreshUnreadVisibility(this.db, networkId));
+  }
+
+  appendMessage(input: MessageInput, bufferId?: string, attention?: MessageAttention) {
+    return runInTransaction(this.db, () => appendMessage(this.db, input, (messageId) => this.getMessageById(messageId), bufferId, attention));
   }
 }

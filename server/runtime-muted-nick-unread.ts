@@ -1,54 +1,15 @@
-import type { BufferState, MutedNickState } from '../shared/protocol-chat.js';
-import { isUserMuted, resolveMutedTarget } from '../shared/muted-nicks.js';
-import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
-import type { RuntimeConversationStore, RuntimeNetworkStore } from './runtime-store.js';
-import type { MessageInput } from './storage-types.js';
+import type { BufferState } from '../shared/protocol-chat.js';
+import type { RuntimeConversationStore } from './runtime-store.js';
 
-const resolveMessageMuted = (mutedNicks: readonly MutedNickState[], message: MessageInput) =>
-  isUserMuted(mutedNicks, resolveMutedTarget(message.networkId, message.nick, message.senderIdentity));
-
-const findFirstUnreadIndex = (messages: readonly MessageInput[], buffer: BufferState) => {
-  if (buffer.lastReadMessageId) {
-    const cursorIndex = messages.findIndex((message) => message.id === buffer.lastReadMessageId);
-    if (cursorIndex >= 0) {
-      return cursorIndex + 1;
-    }
-  }
-  const lastReadTs = buffer.lastReadTs;
-  if (lastReadTs == null) {
-    return 0;
-  }
-  return messages.findIndex((message) => message.ts > lastReadTs);
-};
-
-export const recomputeMutedNickUnread = (
-  conversations: Pick<RuntimeConversationStore, 'listBuffers' | 'listAllMessages' | 'setBufferUnread'>,
-  networks: Pick<RuntimeNetworkStore, 'get'>,
-  mutedNicks: readonly MutedNickState[],
+export const collectChangedUnreadBuffers = (
+  conversations: Pick<RuntimeConversationStore, 'listBuffers'>,
+  previousBuffers: readonly BufferState[],
   networkId: string,
 ) => {
-  const network = networks.get(networkId);
-  const changedBuffers: BufferState[] = [];
-  for (const buffer of conversations.listBuffers(networkId)) {
-    const messages = conversations.listAllMessages(buffer.networkId, buffer.target);
-    const firstUnreadIndex = findFirstUnreadIndex(messages, buffer);
-    const slice = firstUnreadIndex < 0 ? [] : messages.slice(firstUnreadIndex);
-    const nextBuffer = slice.reduce(
-      (currentBuffer, message) =>
-        resolveNextBufferActivity({
-          buffer: currentBuffer,
-          message,
-          currentNick: network?.nick ?? null,
-          altNicks: network?.altNicks ?? [],
-          messageMuted: resolveMessageMuted(mutedNicks, message),
-        }),
-      { ...buffer, unread: 0, priorityUnread: 0 },
-    );
-    if (nextBuffer.unread === buffer.unread && nextBuffer.priorityUnread === buffer.priorityUnread) {
-      continue;
-    }
-    conversations.setBufferUnread(buffer.id, nextBuffer.unread, nextBuffer.priorityUnread);
-    changedBuffers.push({ ...buffer, unread: nextBuffer.unread, priorityUnread: nextBuffer.priorityUnread });
-  }
-  return changedBuffers;
+  const before = new Map(previousBuffers.map(buffer => [buffer.id, buffer]));
+  return conversations.listBuffers(networkId).filter((buffer: BufferState) => {
+    const previous = before.get(buffer.id);
+    return previous?.unread !== buffer.unread || previous?.priorityUnread !== buffer.priorityUnread
+      || previous?.firstUnreadMessageId !== buffer.firstUnreadMessageId;
+  });
 };

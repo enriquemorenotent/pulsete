@@ -34,6 +34,7 @@ export const resetRuntimeSessionState = (connection: IrcLifecycleContext) => {
   connection.history.pendingTargets.clear();
   connection.lifecycle.accountName = null;
   connection.lifecycle.pendingNickservAutoJoinTarget = null;
+  connection.replyTracker.actions.disconnect();
   clearChannelSessions(connection);
   abortActiveChannelList(connection, 'Channel list request was interrupted');
   clearDrainingChannelList(connection);
@@ -67,7 +68,7 @@ export const resolveProfileNickSyncTarget = (
     return nextProfile.nick;
   }
   const syncTarget = connection.lifecycle.profileNickSyncTarget;
-  return syncTarget && isSameIrcIdentifier(syncTarget, nextProfile.nick) ? syncTarget : null;
+  return syncTarget && isSameIrcIdentifier(syncTarget, nextProfile.nick, connection.lifecycle.serverSupport.rules.caseMapping) ? syncTarget : null;
 };
 
 export const resolveProfileUpdateStrategy = (
@@ -86,7 +87,7 @@ export const resolveProfileUpdateStrategy = (
   if (
     lifecycle.connected
     && profileNickSyncTarget
-    && !isSameIrcIdentifier(replyTracker.pendingNick ?? lifecycle.currentNick, profileNickSyncTarget)
+    && !isSameIrcIdentifier(replyTracker.pendingNick ?? lifecycle.currentNick, profileNickSyncTarget, connection.lifecycle.serverSupport.rules.caseMapping)
   ) {
     return 'update-live-nick';
   }

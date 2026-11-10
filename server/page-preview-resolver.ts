@@ -1,3 +1,5 @@
+import { AsyncResultCache } from '../shared/async-result-cache.js';
+import { downloadExternalResource, resolveResourceAddress } from './external-resource-download.js';
 import {
   pagePreviewUrlMaxLength,
   type PagePreviewResponse,
@@ -6,9 +8,7 @@ import {
 import {
   defaultPagePreviewNetwork,
   isAllowedPagePreviewUrl,
-  resolvePublicPagePreviewAddress,
   type PagePreviewNetwork,
-  type PagePreviewNetworkResponse,
 } from './page-preview-network.js';
 
 export type PagePreviewResolver = {
@@ -24,11 +24,6 @@ type PagePreviewResolverOptions = {
   network?: PagePreviewNetwork;
   timeoutMs?: number;
   ttlMs?: number;
-};
-
-type CacheEntry = {
-  expiresAt: number;
-  promise: Promise<PagePreviewResponse>;
 };
 
 type PagePreviewMetadata = {
@@ -48,8 +43,12 @@ const titleMaxLength = 200;
 export const createPagePreviewResolver = (
   options: PagePreviewResolverOptions = {},
 ): PagePreviewResolver => {
-  const cache = new Map<string, CacheEntry>();
-  const cacheLimit = options.cacheLimit ?? defaultCacheLimit;
+  const cache = new AsyncResultCache<string, PagePreviewResponse>({
+    limit: Math.max(1, options.cacheLimit ?? defaultCacheLimit),
+    ttlMs: result => result.preview
+      ? options.ttlMs ?? defaultTtlMs
+      : options.negativeTtlMs ?? defaultNegativeTtlMs,
+  });
   const network = options.network ?? defaultPagePreviewNetwork;
   const schedule = createTaskScheduler(options.concurrency ?? defaultConcurrency);
 
@@ -59,38 +58,13 @@ export const createPagePreviewResolver = (
       if (!url) {
         return unavailablePagePreview();
       }
-      const cacheKey = url.href;
-      const cached = cache.get(cacheKey);
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.promise;
-      }
-      if (cached) {
-        cache.delete(cacheKey);
-      }
-
-      const entry: CacheEntry = {
-        expiresAt: Number.POSITIVE_INFINITY,
-        promise: Promise.resolve(unavailablePagePreview()),
-      };
-      entry.promise = schedule(() =>
+      return cache.get(url.href, () => schedule(() =>
         resolvePagePreview(url, {
           maxBytes: options.maxBytes ?? defaultMaxBytes,
           maxRedirects: options.maxRedirects ?? defaultMaxRedirects,
           network,
           timeoutMs: options.timeoutMs ?? defaultTimeoutMs,
-        }))
-        .catch(() => unavailablePagePreview())
-        .then((result) => {
-          entry.expiresAt = Date.now() + (
-            result.preview
-              ? options.ttlMs ?? defaultTtlMs
-              : options.negativeTtlMs ?? defaultNegativeTtlMs
-          );
-          return result;
-        });
-      cache.set(cacheKey, entry);
-      trimCache(cache, cacheLimit);
-      return entry.promise;
+        })).catch(() => unavailablePagePreview()));
     },
   };
 };
@@ -104,72 +78,50 @@ const resolvePagePreview = async (
     timeoutMs: number;
   },
 ): Promise<PagePreviewResponse> => {
-  let pageUrl = initialUrl;
-  const visitedUrls = new Set([initialUrl.href]);
-  for (let redirectCount = 0; redirectCount <= options.maxRedirects; redirectCount += 1) {
-    const address = await resolveAddress(pageUrl, options);
-    if (!address) {
-      return unavailablePagePreview();
-    }
-    const response = await options.network.request(pageUrl, address, {
-      maxBytes: options.maxBytes,
-      timeoutMs: options.timeoutMs,
-    });
-    if (isRedirectResponse(response)) {
-      if (redirectCount === options.maxRedirects || !response.location) {
-        return unavailablePagePreview();
-      }
-      const redirectUrl = normalizePreviewUrl(response.location, pageUrl);
-      if (!redirectUrl || visitedUrls.has(redirectUrl.href)) {
-        return unavailablePagePreview();
-      }
-      visitedUrls.add(redirectUrl.href);
-      pageUrl = redirectUrl;
-      continue;
-    }
-    if (response.status === 404 || response.status === 410) {
-      return unavailablePagePreview('not-found');
-    }
-    if (response.status < 200 || response.status >= 300) {
-      return unavailablePagePreview();
-    }
-    if (response.contentType.startsWith('image/')) {
-      return {
-        preview: {
-          imageUrl: pageUrl.href,
-          pageUrl: pageUrl.href,
-          title: null,
-        },
-        unavailableReason: null,
-      };
-    }
-    if (!isHtmlContentType(response.contentType)) {
-      return unavailablePagePreview();
-    }
-
-    const metadata = extractPagePreviewMetadata(
-      response.body.toString('utf8'),
-      pageUrl,
-    );
-    const imageUrl = metadata.imageUrl
-      ? normalizePreviewUrl(metadata.imageUrl, pageUrl)
-      : null;
-    if (
-      !imageUrl
-      || !await resolveAddress(imageUrl, options)
-    ) {
-      return unavailablePagePreview();
-    }
+  const { url: pageUrl, response } = await downloadExternalResource(initialUrl, {
+    ...options, maxUrlLength: pagePreviewUrlMaxLength, headersOnlyForImages: true,
+  });
+  if (response.status === 404 || response.status === 410) {
+    return unavailablePagePreview('not-found');
+  }
+  if (response.status < 200 || response.status >= 300) {
+    return unavailablePagePreview();
+  }
+  if (response.contentType.startsWith('image/')) {
     return {
       preview: {
-        imageUrl: imageUrl.href,
+        imageUrl: pageUrl.href,
         pageUrl: pageUrl.href,
-        title: metadata.title,
+        title: null,
       },
       unavailableReason: null,
     };
   }
-  return unavailablePagePreview();
+  if (!isHtmlContentType(response.contentType)) {
+    return unavailablePagePreview();
+  }
+
+  const metadata = extractPagePreviewMetadata(
+    response.body.toString('utf8'),
+    pageUrl,
+  );
+  const imageUrl = metadata.imageUrl
+    ? normalizePreviewUrl(metadata.imageUrl, pageUrl)
+    : null;
+  if (
+    !imageUrl
+    || !await resolveResourceAddress(imageUrl, options)
+  ) {
+    return unavailablePagePreview();
+  }
+  return {
+    preview: {
+      imageUrl: imageUrl.href,
+      pageUrl: pageUrl.href,
+      title: metadata.title,
+    },
+    unavailableReason: null,
+  };
 };
 
 const unavailablePagePreview = (
@@ -178,17 +130,6 @@ const unavailablePagePreview = (
   preview: null,
   unavailableReason,
 });
-
-const resolveAddress = (
-  url: URL,
-  options: {
-    network: PagePreviewNetwork;
-    timeoutMs: number;
-  },
-) => withTimeout(
-  resolvePublicPagePreviewAddress(url, options.network),
-  options.timeoutMs,
-);
 
 export const extractPagePreviewMetadata = (
   html: string,
@@ -301,43 +242,9 @@ const normalizePreviewUrl = (value: string, base?: URL) => {
   }
 };
 
-const isRedirectResponse = (response: PagePreviewNetworkResponse) =>
-  response.status === 301
-  || response.status === 302
-  || response.status === 303
-  || response.status === 307
-  || response.status === 308;
-
 const isHtmlContentType = (value: string) =>
   value.startsWith('text/html')
   || value.startsWith('application/xhtml+xml');
-
-const trimCache = (cache: Map<string, CacheEntry>, limit: number) => {
-  while (cache.size > Math.max(1, limit)) {
-    const oldest = cache.keys().next().value;
-    if (oldest === undefined) {
-      return;
-    }
-    cache.delete(oldest);
-  }
-};
-
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number) =>
-  new Promise<T>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Page preview lookup timed out'));
-    }, timeoutMs);
-    void promise.then(
-      (value) => {
-        clearTimeout(timeout);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timeout);
-        reject(error);
-      },
-    );
-  });
 
 const createTaskScheduler = (limit: number) => {
   const queue: Array<() => void> = [];

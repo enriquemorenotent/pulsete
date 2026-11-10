@@ -12,6 +12,12 @@ export const handleNetworkRoutes = async ({ req, res, pathname, context }: Route
     return true;
   }
   const networkMatch = pathname.match(/^\/api\/networks\/([^/]+)$/);
+  if (networkMatch && req.method === 'PATCH') {
+    const networkId = decodeRouteParam(networkMatch[1]);
+    const result = context.networks.update(await readJson(req, networkJsonBodyLimitBytes), networkId);
+    writeJson(res, 200, result);
+    return true;
+  }
   if (networkMatch && req.method === 'PUT') {
     const networkId = decodeRouteParam(networkMatch[1]);
     const result = context.networks.save(await readJson(req, networkJsonBodyLimitBytes), networkId);

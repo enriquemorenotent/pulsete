@@ -1,9 +1,11 @@
+import { defaultIrcServerRules, type IrcServerRules } from '../shared/irc-server-rules.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { BufferState, FriendState, PresenceStatus } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { RuntimeEvent } from './irc-types.js';
 
 export class RuntimeFriendPresenceProjector {
+  constructor(private readonly getRules: (networkId: string) => IrcServerRules = () => defaultIrcServerRules) {}
   private readonly friendPresenceByNetwork = new Map<string, Map<string, PresenceStatus>>();
   private readonly friendPresenceCache = new Map<string, PresenceStatus>();
   private readonly queryPresenceCache = new Map<string, PresenceStatus>();
@@ -44,7 +46,7 @@ export class RuntimeFriendPresenceProjector {
       event.networkId,
       new Map(
         Object.entries(event.presences).map(([nick, presence]) => [
-          normalizeIrcIdentifier(nick),
+          normalizeIrcIdentifier(nick, this.getRules(event.networkId).caseMapping),
           presence,
         ]),
       ),
@@ -58,7 +60,7 @@ export class RuntimeFriendPresenceProjector {
     friends: FriendState[],
     buffers: BufferState[],
   ) {
-    const normalizedNick = normalizeIrcIdentifier(nick);
+    const normalizedNick = normalizeIrcIdentifier(nick, this.getRules(networkId).caseMapping);
     const networkPresence = this.friendPresenceByNetwork.get(networkId) ?? new Map<string, PresenceStatus>();
     if (networkPresence.get(normalizedNick) !== 'offline') {
       networkPresence.set(normalizedNick, 'offline');
@@ -78,7 +80,7 @@ export class RuntimeFriendPresenceProjector {
       buffers
         .filter((buffer) => buffer.kind === 'query')
         .flatMap((buffer) => {
-          const presence = this.resolveQueryPresenceOnNetwork(buffer.networkId, buffer.target);
+          const presence = buffer.queryTargetAvailable === false ? 'offline' : this.resolveQueryPresenceOnNetwork(buffer.networkId, buffer.target);
           return presence ? [[buffer.id, presence]] : [];
         })
     ) as Record<string, PresenceStatus>;
@@ -124,9 +126,9 @@ export class RuntimeFriendPresenceProjector {
   }
 
   private resolveNickPresenceAnywhere(nick: string) {
-    const normalized = normalizeIrcIdentifier(nick);
     let aggregate: PresenceStatus = 'offline';
-    for (const presenceByNick of this.friendPresenceByNetwork.values()) {
+    for (const [networkId, presenceByNick] of this.friendPresenceByNetwork) {
+      const normalized = normalizeIrcIdentifier(nick, this.getRules(networkId).caseMapping);
       const presence = presenceByNick.get(normalized) ?? 'offline';
       if (presence === 'online') {
         return 'online';
@@ -140,7 +142,7 @@ export class RuntimeFriendPresenceProjector {
 
   private resolveQueryPresenceOnNetwork(networkId: string, nick: string) {
     const networkPresence = this.friendPresenceByNetwork.get(networkId);
-    const normalizedNick = normalizeIrcIdentifier(nick);
+    const normalizedNick = normalizeIrcIdentifier(nick, this.getRules(networkId).caseMapping);
     if (networkPresence?.has(normalizedNick)) {
       return networkPresence.get(normalizedNick) ?? 'offline';
     }

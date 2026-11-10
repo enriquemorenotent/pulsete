@@ -1,3 +1,5 @@
+import { runInTransaction } from './storage-db.js';
+import { refreshUnreadVisibility } from './storage-unread.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import {
   getMutedNick,
@@ -30,10 +32,18 @@ export class StorageMutedNicksRepository {
   }
 
   upsert(input: MutedNickInput) {
-    return upsertMutedNick(this.db, input);
+    return runInTransaction(this.db, () => {
+      const mutedNick = upsertMutedNick(this.db, input);
+      refreshUnreadVisibility(this.db, input.networkId);
+      return mutedNick;
+    });
   }
 
   remove(mutedNickId: string) {
-    return removeMutedNick(this.db, mutedNickId);
+    return runInTransaction(this.db, () => {
+      const mutedNick = removeMutedNick(this.db, mutedNickId);
+      if (mutedNick) refreshUnreadVisibility(this.db, mutedNick.networkId);
+      return mutedNick;
+    });
   }
 }

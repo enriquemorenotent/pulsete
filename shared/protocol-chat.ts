@@ -1,3 +1,4 @@
+import { ircServerRulesSchema } from './irc-server-rules.js';
 import { z } from 'zod';
 import { ircCloudAvatarIdValuePattern } from './irccloud-avatar.js';
 import { networkUserIdentitySchema } from './user-identity.js';
@@ -153,6 +154,8 @@ export const bufferSchema = z.object({
   priorityUnread: z.number().int().nonnegative().default(0),
   lastReadTs: z.number().int().nonnegative().nullable().default(null),
   lastReadMessageId: z.string().nullable().default(null),
+  queryTargetAvailable: z.boolean().optional(),
+  firstUnreadMessageId: z.string().nullable().optional(),
   peerIdentity: networkUserIdentitySchema.optional(),
   ircCloudAvatarId: z.string().regex(ircCloudAvatarIdValuePattern).optional(),
   selfNickAliases: z.array(z.string()).default([]).optional(),
@@ -204,5 +207,6 @@ export const networkRuntimeStateSchema = z.object({
   vpnServer: z.string().optional(),
   nick: z.string(),
   capabilities: networkRuntimeCapabilitiesSchema.optional(),
+  serverRules: ircServerRulesSchema.optional(),
 });
 export type NetworkRuntimeState = z.infer<typeof networkRuntimeStateSchema>;

@@ -1,3 +1,5 @@
+import { getServerRules } from './storage-server-rules.js';
+import type { IrcCaseMapping } from '../shared/irc-server-rules.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 
@@ -33,12 +35,14 @@ const replaceOwnedValues = (
        (${spec.ownerColumn}, position, ${spec.valueColumn}, ${spec.keyColumn})
      VALUES (?, ?, ?, ?)`
   );
-  normalizeOwnedValues(values).forEach((value, position) => {
-    insert.run(ownerId, position, value, normalizeIrcIdentifier(value));
+  const networkId = spec.ownerColumn === 'networkId' ? ownerId : db.prepare('SELECT networkId FROM buffers WHERE id = ?').get<{networkId:string}>(ownerId)?.networkId ?? '';
+  const mapping = getServerRules(db, networkId).caseMapping;
+  normalizeOwnedValues(values, mapping).forEach((value, position) => {
+    insert.run(ownerId, position, value, normalizeIrcIdentifier(value, mapping));
   });
 };
 
-const normalizeOwnedValues = (values: readonly string[]) => {
+const normalizeOwnedValues = (values: readonly string[], mapping: IrcCaseMapping) => {
   const normalized: string[] = [];
   const seen = new Set<string>();
   for (const value of values) {
@@ -46,7 +50,7 @@ const normalizeOwnedValues = (values: readonly string[]) => {
     if (!trimmed) {
       continue;
     }
-    const key = normalizeIrcIdentifier(trimmed);
+    const key = normalizeIrcIdentifier(trimmed, mapping);
     if (seen.has(key)) {
       continue;
     }

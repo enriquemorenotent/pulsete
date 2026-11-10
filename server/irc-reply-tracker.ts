@@ -1,7 +1,9 @@
+import { defaultIrcServerRules, type IrcServerRules } from '../shared/irc-server-rules.js';
+import { canRetainLateReply } from './irc-reply-context-types.js';
+import { OutgoingActions } from './irc-outgoing-actions.js';
 import { isSameIrcIdentifier } from './irc-parser.js';
 import {
   consumeReplyContext,
-  consumeReplyTarget,
   type PendingReplyContext,
 } from './irc-reply-context.js';
 
@@ -9,6 +11,8 @@ type PendingChannelReplyContext = Extract<PendingReplyContext, { kind: 'channel'
 type PendingNickReplyContext = Extract<PendingReplyContext, { kind: 'nick' }>;
 
 export class ReplyTracker {
+  constructor(private readonly getRules: () => IrcServerRules = () => defaultIrcServerRules) {}
+  readonly actions = new OutgoingActions();
   private readonly contexts: PendingReplyContext[] = [];
   private pendingNickValue: string | null = null;
 
@@ -29,19 +33,22 @@ export class ReplyTracker {
   }
 
   reset() {
+    this.actions.disconnect();
     this.contexts.length = 0;
     this.clearPendingNick();
   }
 
   prune() {
     const now = Date.now();
+    this.actions.expire(now);
     let changed = false;
     for (let index = this.contexts.length - 1; index >= 0; index -= 1) {
       const context = this.contexts[index];
-      if (!context || context.expiresAt >= now) {
+      if (!context || context.expiresAt >= now || canRetainLateReply(context)) {
         continue;
       }
-      this.contexts.splice(index, 1);
+      context.action?.finish('unknown');
+      this.remove(context);
       changed = true;
     }
     if (changed) {
@@ -50,7 +57,17 @@ export class ReplyTracker {
   }
 
   queue(context: PendingReplyContext) {
+    context.rules = this.getRules();
     this.prune();
+    context.action = this.actions.start(context.expiresAt, () => {
+      if (context.kind === 'message' && context.label) {
+        // Only exact labels can safely resolve a late reply after a timeout.
+        const retained = this.contexts.filter(entry => entry.action?.state === 'unknown');
+        for (const entry of retained.slice(0, Math.max(0, retained.length - 256))) this.remove(entry);
+      } else {
+        this.remove(context);
+      }
+    });
     this.contexts.push(context);
     if (context.kind === 'nick') {
       this.pendingNickValue = context.requestedNick;
@@ -59,9 +76,8 @@ export class ReplyTracker {
 
   consumeReplyTarget(command: string, params: string[], nick: string | null, rawTarget?: string, label?: string | null) {
     this.prune();
-    const target = consumeReplyTarget(this.contexts, command, params, nick, rawTarget, label);
-    this.refreshPendingNick();
-    return target;
+    const context = this.consumeReplyContext(command, params, nick, rawTarget, label);
+    return context && 'sourceTarget' in context ? context.sourceTarget : null;
   }
 
   consumeReplyContext(command: string, params: string[], nick: string | null, rawTarget?: string, label?: string | null) {
@@ -80,9 +96,10 @@ export class ReplyTracker {
       const context = this.contexts[index];
       if (
         context?.kind === 'channel'
-        && isSameIrcIdentifier(context.channel, channel)
+        && isSameIrcIdentifier(context.channel, channel, this.getRules().caseMapping)
         && (!predicate || predicate(context))
       ) {
+        context.action?.finish('unknown');
         contexts.push(this.contexts.splice(index, 1)[0] as PendingChannelReplyContext);
       }
     }
@@ -93,7 +110,8 @@ export class ReplyTracker {
     const contexts: PendingNickReplyContext[] = [];
     for (let index = this.contexts.length - 1; index >= 0; index -= 1) {
       const context = this.contexts[index];
-      if (context?.kind === 'nick' && isSameIrcIdentifier(context.requestedNick, requestedNick)) {
+      if (context?.kind === 'nick' && isSameIrcIdentifier(context.requestedNick, requestedNick, this.getRules().caseMapping)) {
+        context.action?.finish('confirmed');
         contexts.push(this.contexts.splice(index, 1)[0] as PendingNickReplyContext);
       }
     }
@@ -106,11 +124,18 @@ export class ReplyTracker {
     for (let index = this.contexts.length - 1; index >= 0; index -= 1) {
       const context = this.contexts[index];
       if (context?.kind === 'nick') {
+        context.action?.finish('cancelled');
         contexts.push(this.contexts.splice(index, 1)[0] as PendingNickReplyContext);
       }
     }
     this.refreshPendingNick();
     return contexts;
+  }
+
+  private remove(context: PendingReplyContext) {
+    const index = this.contexts.indexOf(context);
+    if (index !== -1) this.contexts.splice(index, 1);
+    this.refreshPendingNick();
   }
 
   private refreshPendingNick() {

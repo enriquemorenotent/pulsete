@@ -36,8 +36,17 @@ function App() {
     }
   }, [store, updateBanner]);
   const serverMessages = useMemo(
-    () => createServerMessageBridge(store, { recoverRejectedDraft: composer.recoverRejectedDraft }),
-    [store, composer],
+    () => createServerMessageBridge(store, {
+      onMessageArrival: store.publishMessageArrival,
+      recoverRejectedDraft: composer.recoverRejectedDraft,
+      requestSnapshot: () => {
+        const socket = ui.socketRef.current;
+        if (!socket) return false;
+        try { socket.send({ type: 'state.sync' }); return true; }
+        catch { return false; }
+      },
+    }),
+    [store, composer, ui.socketRef],
   );
   const actions = useMemo(
     () =>

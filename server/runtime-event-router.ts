@@ -1,3 +1,4 @@
+import { defaultIrcServerRules } from '../shared/irc-server-rules.js';
 import type { RuntimeWatchlistActivity } from './runtime-watchlist-activity.js';
 import type { FriendState, NetworkProfile } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
@@ -15,7 +16,7 @@ import type { RuntimeConversationStore, RuntimeFriendStore } from './runtime-sto
 type RuntimeEventRouterOptions = {
   activity?: RuntimeWatchlistActivity;
   conversations: RuntimeConversationService;
-  buffers: Pick<RuntimeConversationStore, 'listBuffers' | 'listQueryNickAliases'>;
+  buffers: Pick<RuntimeConversationStore, 'listBuffers' | 'listQueryNickAliases'> & Partial<Pick<RuntimeConversationStore, 'getServerRules'>>;
   friends: Pick<RuntimeFriendStore, 'list'>;
   publish(messages: ServerMessage[]): void;
   sendSocket(ws: WebSocket, message: ServerMessage): void;
@@ -23,9 +24,10 @@ type RuntimeEventRouterOptions = {
 
 export class RuntimeEventRouter {
   private readonly channelLists: RuntimeChannelListService;
-  private readonly friendPresence = new RuntimeFriendPresenceProjector();
+  private readonly friendPresence: RuntimeFriendPresenceProjector;
 
   constructor(private readonly options: RuntimeEventRouterOptions) {
+    this.friendPresence = new RuntimeFriendPresenceProjector(networkId => options.buffers.getServerRules?.(networkId) ?? defaultIrcServerRules);
     this.channelLists = new RuntimeChannelListService((ws, message) => this.options.sendSocket(ws, message));
   }
 
@@ -155,8 +157,9 @@ export class RuntimeEventRouter {
   }
 
   private createKnownAliasNickChangeMessages(event: Extract<RuntimeEvent, { type: 'friend-presence' }>) {
+    const mapping = this.options.buffers.getServerRules?.(event.networkId)?.caseMapping;
     const presences = new Map(
-      Object.entries(event.presences).map(([nick, presence]) => [normalizeIrcIdentifier(nick), presence]),
+      Object.entries(event.presences).map(([nick, presence]) => [normalizeIrcIdentifier(nick, mapping), presence]),
     );
     const aliasesByBufferId = new Map<string, string[]>();
     for (const alias of this.options.buffers.listQueryNickAliases(event.networkId)) {
@@ -165,14 +168,14 @@ export class RuntimeEventRouter {
 
     const messages: ServerMessage[] = [];
     for (const buffer of this.options.buffers.listBuffers(event.networkId)) {
-      if (buffer.kind !== 'query' || presences.get(normalizeIrcIdentifier(buffer.target)) !== 'offline') {
+      if (buffer.kind !== 'query' || presences.get(normalizeIrcIdentifier(buffer.target, mapping)) !== 'offline') {
         continue;
       }
       const onlineAliases = (aliasesByBufferId.get(buffer.id) ?? [])
-        .filter((nick) => normalizeIrcIdentifier(nick) !== normalizeIrcIdentifier(buffer.target))
-        .filter((nick) => presences.get(normalizeIrcIdentifier(nick)) === 'online');
+        .filter((nick) => normalizeIrcIdentifier(nick, mapping) !== normalizeIrcIdentifier(buffer.target, mapping))
+        .filter((nick) => presences.get(normalizeIrcIdentifier(nick, mapping)) === 'online');
       const uniqueOnlineAliases = [...new Map(
-        onlineAliases.map((nick) => [normalizeIrcIdentifier(nick), nick] as const),
+        onlineAliases.map((nick) => [normalizeIrcIdentifier(nick, mapping), nick] as const),
       ).values()];
       if (uniqueOnlineAliases.length !== 1) {
         continue;

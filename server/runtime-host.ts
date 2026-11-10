@@ -128,6 +128,7 @@ export class RuntimeHost {
         saveAccountImage: (id, url, type, data) => this.runtime.http.networks.saveAccountImage(id, url, type, data),
         list: () => this.runtime.http.networks.list(),
         save: (data, networkId) => this.runtime.http.networks.save(data, networkId),
+        update: (data, networkId) => this.runtime.http.networks.update(data, networkId),
         duplicate: (networkId) => this.runtime.http.networks.duplicate(networkId),
         remove: (networkId) => this.runtime.http.networks.remove(networkId),
         close: (networkId) => this.runtime.http.networks.close(networkId),

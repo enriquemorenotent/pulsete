@@ -19,17 +19,20 @@ export const handleTextMessage = (
   tags: IrcMessageTags,
   replyLabel: string | null,
 ) => {
+  if (replyLabel && isSelfNick(connection, nick)) {
+    connection.consumeReplyContext(command, params, nick, params[0], replyLabel);
+  }
   if (command === 'TAGMSG') {
     return;
   }
   const rawTarget = params[0] ?? 'server';
-  const trackedChannel = isChannelTarget(rawTarget) ? connection.resolveTrackedChannel(rawTarget) : null;
-  if (isChannelTarget(rawTarget) && !trackedChannel) {
+  const trackedChannel = isChannelTarget(rawTarget, connection.lifecycle.serverSupport.rules) ? connection.resolveTrackedChannel(rawTarget) : null;
+  if (isChannelTarget(rawTarget, connection.lifecycle.serverSupport.rules) && !trackedChannel) {
     return;
   }
   const payload = params[1] ?? '';
   const ctcp = stripCtcp(payload);
-  const isDirectTarget = !isChannelTarget(rawTarget) && isSelfNick(connection, rawTarget);
+  const isDirectTarget = !isChannelTarget(rawTarget, connection.lifecycle.serverSupport.rules) && isSelfNick(connection, rawTarget);
   const isDirectCtcp = isDirectTarget && ctcp !== null && !ctcp.startsWith('ACTION ');
   const isDirectServiceMessage = isDirectTarget && !!nick && isServiceNick(nick);
   const isDirectUserNotice =

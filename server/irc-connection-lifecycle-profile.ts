@@ -35,7 +35,7 @@ export const confirmNick = (connection: IrcLifecycleContext, newNick: string) =>
   connection.lifecycle.currentNick = newNick;
   if (
     connection.lifecycle.profileNickSyncTarget
-    && isSameIrcIdentifier(connection.lifecycle.profileNickSyncTarget, newNick)
+    && isSameIrcIdentifier(connection.lifecycle.profileNickSyncTarget, newNick, connection.lifecycle.serverSupport.rules.caseMapping)
   ) {
     connection.lifecycle.profileNickSyncTarget = null;
   }
@@ -81,7 +81,7 @@ export const updateProfile = (connection: IrcConnectContext, profile: RuntimeNet
   if (
     lifecycle.profileNickSyncTarget
     && !connection.replyTracker.pendingNick
-    && isSameIrcIdentifier(lifecycle.currentNick, lifecycle.profileNickSyncTarget)
+    && isSameIrcIdentifier(lifecycle.currentNick, lifecycle.profileNickSyncTarget, connection.lifecycle.serverSupport.rules.caseMapping)
   ) {
     lifecycle.profileNickSyncTarget = null;
   }

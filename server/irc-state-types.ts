@@ -1,3 +1,5 @@
+import type { IrcServerSupport } from '../shared/irc-server-rules.js';
+import type { OutgoingAction, OutgoingActions } from './irc-outgoing-actions.js';
 import type net from 'node:net';
 import type tls from 'node:tls';
 import type { ChannelListEntry, ChannelUserState, PresenceStatus } from '../shared/protocol-chat.js';
@@ -11,7 +13,7 @@ export type ChannelSessionState = {
   sourceTarget: string;
   visiblePending: boolean;
   previouslyJoined: boolean;
-  joinTimeoutTimer: ReturnType<typeof setTimeout> | null;
+  joinAction: OutgoingAction | null;
 };
 
 export type IrcSocket = net.Socket | tls.TLSSocket;
@@ -54,6 +56,7 @@ export type IrcHeartbeatState = {
 };
 
 export type IrcLifecycleState = {
+  serverSupport: IrcServerSupport;
   stopAccountMedia?: () => void;
   stopVpnTunnel?: () => void;
   vpnServer?: string;
@@ -154,12 +157,13 @@ export type IrcChannelListDrainingState = Extract<IrcChannelListSession, { phase
 
 export type IrcChannelListState = {
   session: IrcChannelListSession;
-  timeoutTimer: ReturnType<typeof setTimeout> | null;
+  action: OutgoingAction | null;
   timeoutMs: number;
   drainGraceMs: number;
 };
 
 export type IrcReplyTracker = {
+  readonly actions: OutgoingActions;
   pendingNick: string | null;
   pendingReplyContexts: readonly PendingReplyContext[];
   setPendingNick(value: string | null): void;

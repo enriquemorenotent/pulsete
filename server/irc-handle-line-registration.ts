@@ -6,7 +6,7 @@ import {
   handlePostRegistrationAutoJoin,
   handleRegistrationAuthLine,
 } from './irc-auth.js';
-import { emitStatus } from './irc-emit.js';
+import { emitState, emitStatus } from './irc-emit.js';
 import { formatServerNumeric } from './irc-server-log.js';
 import { isChannelTarget, isSameIrcIdentifier } from './irc-parser.js';
 import type { IrcRegistrationContext } from './irc-contexts.js';
@@ -72,7 +72,7 @@ const handleNickConflict = (
   if (
     replyContext?.kind === 'nick'
     && connection.replyTracker.pendingNick
-    && !isSameIrcIdentifier(connection.replyTracker.pendingNick, attemptedNick)
+    && !isSameIrcIdentifier(connection.replyTracker.pendingNick, attemptedNick, connection.lifecycle.serverSupport.rules.caseMapping)
   ) {
     emitStatus(connection, `${attemptedNick} is already in use. Keeping ${connection.replyTracker.pendingNick} as the pending nick.`, 'notice', replyTarget, true);
     return true;
@@ -93,7 +93,7 @@ const handleNickRejected = (
   params: string[],
   nick: string | null
 ) => {
-  if (!nickRejectionCommands.has(command) || command === '433' || (command === '437' && isChannelTarget(params[1] ?? ''))) {
+  if (!nickRejectionCommands.has(command) || command === '433' || (command === '437' && isChannelTarget(params[1] ?? '', connection.lifecycle.serverSupport.rules))) {
     return false;
   }
   const replyContext = connection.consumeReplyContext(command, params, nick);
@@ -126,23 +126,18 @@ const handleServerSupportLine = (
   if (command !== '005') {
     return;
   }
-  const monitorToken = params
-    .slice(1, -1)
-    .find((token) => token === 'MONITOR' || token.startsWith('MONITOR=') || token === '-MONITOR');
-  if (!monitorToken) {
-    return;
+  const previousMapping = connection.lifecycle.serverSupport.rules.caseMapping;
+  if (connection.lifecycle.serverSupport.update(params)) {
+    const rules = connection.lifecycle.serverSupport.rules;
+    if (previousMapping !== rules.caseMapping) {
+      connection.friendPresence.presenceByKey.clear();
+      connection.friendPresence.resolvedNicks.clear();
+      connection.friendPresence.snapshotByKey.clear();
+      connection.friendPresence.pendingIsonSnapshot = null;
+      connection.friendPresence.registeredMonitorNicks.clear();
+      if (connection.friendPresence.activeTransport === 'monitor') connection.sendRaw('MONITOR C');
+    }
+    emitState(connection);
+    connection.setFriendPresenceMonitorSupport(rules.monitor !== null, rules.monitor === 0 ? null : rules.monitor);
   }
-  if (monitorToken === '-MONITOR') {
-    connection.setFriendPresenceMonitorSupport(false, null);
-    return;
-  }
-  const limit = monitorToken.startsWith('MONITOR=')
-    ? parseMonitorLimit(monitorToken.slice('MONITOR='.length))
-    : null;
-  connection.setFriendPresenceMonitorSupport(true, limit);
-};
-
-const parseMonitorLimit = (value: string) => {
-  const limit = Number.parseInt(value, 10);
-  return Number.isFinite(limit) && limit > 0 ? limit : null;
 };

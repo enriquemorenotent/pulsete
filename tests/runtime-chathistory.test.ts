@@ -26,7 +26,7 @@ test('runtime auto-loads recent server history after joining a chathistory-capab
     runtime.sessions.connect(network.id);
     await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
     await waitFor(() =>
-      runtime.gateway.snapshot().networkStates[network.id]?.capabilities?.values?.['isupport/chathistory'] === '3'
+      runtime.gateway.snapshot().networkStates[network.id]?.serverRules?.historyLimit === 3
     );
 
     runtime.irc.join(network.id, '#chat');

@@ -3,7 +3,7 @@ import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import { notFound } from './app-error.js';
 import { normalizeMutedNick } from './irc-validate.js';
-import { recomputeMutedNickUnread } from './runtime-muted-nick-unread.js';
+import { collectChangedUnreadBuffers } from './runtime-muted-nick-unread.js';
 import type {
   RuntimeConversationStore,
   RuntimeMutedNickStore,
@@ -11,7 +11,7 @@ import type {
 } from './runtime-store.js';
 
 type RuntimeMutedNickServiceOptions = {
-  conversations: Pick<RuntimeConversationStore, 'listBuffers' | 'listAllMessages' | 'setBufferUnread'>;
+  conversations: Pick<RuntimeConversationStore, 'listBuffers'>;
   mutedNicks: RuntimeMutedNickStore;
   networks: Pick<RuntimeNetworkStore, 'get'>;
 };
@@ -27,15 +27,15 @@ export class RuntimeMutedNickService {
     if (!this.options.networks.get(networkId)) {
       throw notFound('Network not found');
     }
+    const before = this.options.conversations.listBuffers(networkId);
     const mutedNick = this.options.mutedNicks.upsert({
       networkId,
       nick: normalizeMutedNick(nick),
       identity: identity ?? undefined,
     });
-    const changedBuffers = recomputeMutedNickUnread(
+    const changedBuffers = collectChangedUnreadBuffers(
       this.options.conversations,
-      this.options.networks,
-      this.options.mutedNicks.list(networkId),
+      before,
       networkId,
     );
     const messages: ServerMessage[] = [
@@ -49,14 +49,14 @@ export class RuntimeMutedNickService {
   }
 
   removeMutedNick(mutedNickId: string): { mutedNickId: string; messages: readonly ServerMessage[] } {
+    const before = this.options.conversations.listBuffers();
     const mutedNick = this.options.mutedNicks.remove(mutedNickId);
     if (!mutedNick) {
       throw notFound('Muted nick not found');
     }
-    const changedBuffers = recomputeMutedNickUnread(
+    const changedBuffers = collectChangedUnreadBuffers(
       this.options.conversations,
-      this.options.networks,
-      this.options.mutedNicks.list(mutedNick.networkId),
+      before,
       mutedNick.networkId,
     );
     const messages: ServerMessage[] = [

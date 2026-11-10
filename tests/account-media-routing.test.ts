@@ -15,6 +15,7 @@ test('media and previews use their account exit, isolate caches, and fail closed
   const website = createServer((req, res) => {
     visits.push({ source: req.socket.remoteAddress!, path: req.url!, cookie: req.headers.cookie, referer: req.headers.referer });
     if (req.url === '/redirect') { res.writeHead(302, { Location: 'http://127.0.0.1/private' }); res.end(); }
+    else if (req.url === '/loop') { res.writeHead(302, { Location: '/loop#fragment' }); res.end(); }
     else if (req.url === '/page') { res.setHeader('Content-Type', 'text/html'); res.end('<meta property="og:image" content="http://1.1.1.1/image.png">'); }
     else if (req.url === '/unsafe.svg') { res.setHeader('Content-Type', 'image/svg+xml'); res.end('<svg/>'); }
     else { res.setHeader('Content-Type', 'image/png'); res.setHeader('Set-Cookie', 'tracker=1'); res.end('image'); }
@@ -48,6 +49,9 @@ test('media and previews use their account exit, isolate caches, and fail closed
     assert.ok(visits.every(v => !v.cookie && !v.referer));
     assert.equal((await fetch(resource(accounts[0]!.id, 'http://1.1.1.1/redirect'))).status, 400);
     assert.equal((await fetch(resource(accounts[0]!.id, 'http://1.1.1.1/unsafe.svg'))).status, 400);
+    const beforeLoop = visits.length;
+    assert.equal((await fetch(resource(accounts[0]!.id, 'http://1.1.1.1/loop'))).status, 400);
+    assert.equal(visits.length, beforeLoop + 1);
     const count = visits.length;
     controllers[0]!.abort();
     assert.equal((await fetch(resource(accounts[0]!.id))).status, 400);

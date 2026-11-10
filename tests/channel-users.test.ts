@@ -1,3 +1,4 @@
+import { defaultIrcServerRules } from '../shared/irc-server-rules.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -11,7 +12,7 @@ const projectUserModes = (users: ChannelUserState[]) =>
   users.map(({ nick, mode, modes, away }) => ({ nick, mode, modes, away }));
 
 test('channel user parsing stores every stacked prefix mode', () => {
-  assert.deepEqual(parseChannelUser('~&@%+alice!ident@example.test'), {
+  assert.deepEqual(parseChannelUser('~&@%+alice!ident@example.test', { ...defaultIrcServerRules, prefixModes: 'qaohv', prefixSymbols: '~&@%+' }), {
     nick: 'alice',
     mode: 'owner',
     modes: ['owner', 'admin', 'op', 'halfop', 'voice'],

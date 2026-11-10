@@ -131,3 +131,12 @@ test('connections without a server buffer stay in transitional server mode', () 
   assert.equal(workspace.selection, null);
   assert.match(workspace.emptyBody, /server buffer/i);
 });
+
+test('a displaced nickname keeps history selected but disables sending', () => {
+  const serverBuffer = makeBuffer({ id: 'server-1' });
+  const query = { ...makeBuffer({ id: 'query-1', kind: 'query', target: 'alice' }), queryTargetAvailable: false };
+  const workspace = derive({ runtime: makeRuntime({ phase: 'connected' }), buffers: [serverBuffer, query], selection: bufferSelection(query.id) });
+  assert.equal(workspace.selectedBuffer?.id, query.id);
+  assert.equal(workspace.composerDisabled, true);
+  assert.match(workspace.headerSubtitle, /someone else/);
+});

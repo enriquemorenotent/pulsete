@@ -1,163 +1,31 @@
-import type { ServerMessage } from '../../shared/protocol-messages.js';
+import type { MessageArrival, ServerMessage } from '../../shared/protocol-messages.js';
+import type { StateRevision } from '../../shared/protocol-sync.js';
 import type { AppStoreApi } from './app-store.js';
 import type { Action } from './app-types.js';
 import { dispatchInboundServerMessage } from './server-message-actions.js';
 
-type MutationEchoEntry = {
-  count: number;
-  expiresAt: number;
+type ServerMessageBridgeOptions = {
+  onMessageArrival?: (arrival: MessageArrival) => void;
+  requestSnapshot?: () => boolean;
+  recoverRejectedDraft?: (bufferId: string, body: string) => 'restored' | 'history';
 };
+type DispatchTarget = ((action: Action) => void) | Pick<AppStoreApi, 'batch' | 'dispatch'>;
 
-type MutationEchoStore = Map<string, MutationEchoEntry>;
+// These are private replies, not changes in the shared state stream.
+const isPrivateReply = (message: ServerMessage) =>
+  message.type === 'notice' || message.type === 'error' || message.type.startsWith('channel.list.');
 
-type MutationEchoSettings = {
-  maxTrackedMutationIds: number;
-  mutationEchoTtlMs: number;
-  now: () => number;
-};
+export const createServerMessageBridge = (target: DispatchTarget, options: ServerMessageBridgeOptions = {}) => {
+  const dispatch = typeof target === 'function' ? target : target.dispatch;
+  const batch = (callback: () => void) => typeof target === 'function' ? callback() : target.batch(callback);
+  let current: StateRevision | null = null;
+  let recovering = false;
+  let snapshotRequested = false;
 
-type ServerMessageBridgeOptions = Partial<{
-  maxTrackedMutationIds: number;
-  mutationEchoTtlMs: number;
-  now: () => number;
-  recoverRejectedDraft: (bufferId: string, body: string) => 'restored' | 'history';
-}>;
-
-const defaultMutationEchoTtlMs = 30_000;
-const defaultMaxTrackedMutationIds = 500;
-
-const resolveMutationEchoSettings = (
-  options: ServerMessageBridgeOptions,
-): MutationEchoSettings => ({
-  maxTrackedMutationIds: Math.max(
-    1,
-    Math.floor(options.maxTrackedMutationIds ?? defaultMaxTrackedMutationIds),
-  ),
-  mutationEchoTtlMs: Math.max(
-    1,
-    Math.floor(options.mutationEchoTtlMs ?? defaultMutationEchoTtlMs),
-  ),
-  now: options.now ?? Date.now,
-});
-
-const pruneExpiredMutationEchoes = (
-  store: MutationEchoStore,
-  now: number,
-) => {
-  for (const [mutationId, entry] of store) {
-    if (entry.expiresAt > now) {
-      continue;
-    }
-    store.delete(mutationId);
-  }
-};
-
-const trimTrackedMutationEchoes = (
-  store: MutationEchoStore,
-  maxTrackedMutationIds: number,
-) => {
-  while (store.size > maxTrackedMutationIds) {
-    const oldestMutationId = store.keys().next().value as string | undefined;
-    if (!oldestMutationId) {
-      return;
-    }
-    store.delete(oldestMutationId);
-  }
-};
-
-const trackMutationEcho = (
-  store: MutationEchoStore,
-  mutationId: string,
-  settings: MutationEchoSettings,
-  now = settings.now(),
-) => {
-  pruneExpiredMutationEchoes(store, now);
-  const count = (store.get(mutationId)?.count ?? 0) + 1;
-  store.delete(mutationId);
-  store.set(mutationId, {
-    count,
-    expiresAt: now + settings.mutationEchoTtlMs,
-  });
-  trimTrackedMutationEchoes(store, settings.maxTrackedMutationIds);
-};
-
-const consumeMutationEcho = (
-  store: MutationEchoStore,
-  mutationId: string,
-  settings: MutationEchoSettings,
-  now = settings.now(),
-) => {
-  pruneExpiredMutationEchoes(store, now);
-  const entry = store.get(mutationId);
-  if (!entry) {
-    return false;
-  }
-  store.delete(mutationId);
-  if (entry.count > 1) {
-    store.set(mutationId, {
-      count: entry.count - 1,
-      expiresAt: now + settings.mutationEchoTtlMs,
-    });
-  }
-  return true;
-};
-
-const trackPendingMutationEchoes = (
-  pendingMutations: MutationEchoStore,
-  seenSocketMutations: MutationEchoStore,
-  settings: MutationEchoSettings,
-  messages: readonly ServerMessage[],
-) => {
-  const now = settings.now();
-  const messagesToDispatch: ServerMessage[] = [];
-  for (const message of messages) {
-    if (!message.mutationId) {
-      messagesToDispatch.push(message);
-      continue;
-    }
-    if (consumeMutationEcho(seenSocketMutations, message.mutationId, settings, now)) {
-      continue;
-    }
-    trackMutationEcho(pendingMutations, message.mutationId, settings, now);
-    messagesToDispatch.push(message);
-  }
-  return messagesToDispatch;
-};
-
-const consumePendingMutationEcho = (
-  pendingMutations: MutationEchoStore,
-  settings: MutationEchoSettings,
-  message: ServerMessage,
-) => {
-  if (!message.mutationId) {
-    return false;
-  }
-  return consumeMutationEcho(pendingMutations, message.mutationId, settings);
-};
-
-type DispatchTarget =
-  | ((action: Action) => void)
-  | Pick<AppStoreApi, 'batch' | 'dispatch'>;
-
-const runBatched = (target: DispatchTarget, callback: () => void) => {
-  if (typeof target === 'function') {
-    callback();
-    return;
-  }
-  target.batch(callback);
-};
-
-const readDispatch = (target: DispatchTarget) =>
-  typeof target === 'function' ? target : target.dispatch;
-
-export const createServerMessageBridge = (
-  target: DispatchTarget,
-  options: ServerMessageBridgeOptions = {},
-) => {
-  const settings = resolveMutationEchoSettings(options);
-  const pendingMutations: MutationEchoStore = new Map();
-  const seenSocketMutations: MutationEchoStore = new Map();
-  const dispatch = readDispatch(target);
+  const recover = () => {
+    recovering = true;
+    if (!snapshotRequested) snapshotRequested = options.requestSnapshot?.() ?? false;
+  };
   const dispatchMessage = (message: ServerMessage) => {
     if (message.type === 'error' && message.retryDraft && options.recoverRejectedDraft) {
       const result = options.recoverRejectedDraft(message.retryDraft.bufferId, message.retryDraft.body);
@@ -166,36 +34,48 @@ export const createServerMessageBridge = (
         : 'Your newer draft was kept. Press Up in the original conversation to recover the rejected message.'}` };
     }
     dispatchInboundServerMessage(message, dispatch);
+    if (message.type === 'message.append' && message.arrival) {
+      options.onMessageArrival?.({ message: message.message, buffer: message.arrival.buffer });
+    }
   };
 
-  const applyMutationMessages = (messages: readonly ServerMessage[]) => {
-    const messagesToDispatch = trackPendingMutationEchoes(
-      pendingMutations,
-      seenSocketMutations,
-      settings,
-      messages,
-    );
-    runBatched(target, () => {
-      for (const message of messagesToDispatch) {
-        dispatchMessage(message);
+  const accept = (message: ServerMessage, source: 'socket' | 'http') => {
+    if (message.type === 'state.ready') {
+      // Only the active websocket may establish a runtime epoch or replace state.
+      if (source !== 'socket') return;
+      const sync = message.snapshot.sync;
+      if (!sync) { if (!current) dispatchMessage(message); return; }
+      snapshotRequested = false;
+      if (current?.epoch === sync.epoch && sync.revision < current.revision) {
+        recover();
+        return;
       }
-    });
-  };
-
-  const applySocketMessage = (message: ServerMessage) => {
-    if (consumePendingMutationEcho(pendingMutations, settings, message)) {
+      current = sync;
+      recovering = false;
+      dispatchMessage(message);
       return;
     }
-    runBatched(target, () => {
-      dispatchMessage(message);
-    });
-    if (message.mutationId) {
-      trackMutationEcho(seenSocketMutations, message.mutationId, settings);
+    const sync = message.sync;
+    if (!sync) {
+      if (!current || (source === 'socket' && isPrivateReply(message))) dispatchMessage(message);
+      return;
     }
+    if (!current) { recover(); return; }
+    if (sync.epoch !== current.epoch) {
+      // A late HTTP response from a previous runtime must not restart recovery.
+      if (source === 'socket') recover();
+      return;
+    }
+    if (sync.revision <= current.revision) return;
+    if (recovering || sync.revision !== current.revision + 1) { recover(); return; }
+    current = sync;
+    dispatchMessage(message);
   };
 
   return {
-    applyMutationMessages,
-    applySocketMessage,
+    applyMutationMessages: (messages: readonly ServerMessage[]) => batch(() => {
+      for (const message of messages) accept(message, 'http');
+    }),
+    applySocketMessage: (message: ServerMessage) => batch(() => accept(message, 'socket')),
   };
 };

@@ -4,7 +4,7 @@ import type { SocketHandle } from './client.js';
 import type { WorkspaceView } from './workspace-types.js';
 import { parseSlashIrcClientCommand } from '../../shared/irc-client-command.js';
 
-const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
+import { defaultIrcServerRules, isServerChannel } from '../../shared/irc-server-rules.js';
 
 type ComposerParams = {
   draft: string;
@@ -67,6 +67,7 @@ async function runSlashCommand(text: string, params: ComposerParams) {
     return null;
   }
   const { name: command, args, remainder } = parsed;
+  const rules = params.workspace.selectedRuntime?.serverRules ?? defaultIrcServerRules;
 
   if (command === 'close') {
     if (remainder) {
@@ -96,8 +97,8 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         params.updateBanner('error', 'Usage: /join #channel');
         return null;
       }
-      if (!isChannelTarget(remainder)) {
-        params.updateBanner('error', 'Channel name must start with #, &, +, or !');
+      if (!isServerChannel(remainder, rules)) {
+        params.updateBanner('error', `Channel name must start with one of: ${rules.channelTypes}`);
         return null;
       }
       await params.onJoinChannel(selection.networkId, remainder, selection.id);
@@ -142,8 +143,8 @@ async function runSlashCommand(text: string, params: ComposerParams) {
         params.updateBanner('error', 'Usage: /invite nick [#channel]');
         return null;
       }
-      if (!isChannelTarget(channel)) {
-        params.updateBanner('error', 'Channel name must start with #, &, +, or !');
+      if (!isServerChannel(channel, rules)) {
+        params.updateBanner('error', `Channel name must start with one of: ${rules.channelTypes}`);
         return null;
       }
       socket.send({

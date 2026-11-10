@@ -200,6 +200,7 @@ test('query routes validate missing networks and invalid targets', async () => {
     const channelCloseMessages = channelClose.json.messages as Array<{
       bufferId: string;
       mutationId?: string;
+      sync: { epoch: string; revision: number };
       networkId: string;
       type: string;
     }>;
@@ -208,6 +209,7 @@ test('query routes validate missing networks and invalid targets', async () => {
       networkId: network.id,
       bufferId: channel.id,
       mutationId: channelCloseMessages[0]?.mutationId,
+      sync: channelCloseMessages[0]?.sync,
     }]);
 
     const invalidClose = await requestJson(port, 'DELETE', `/api/buffers/${storage.conversations.getServerBuffer(network.id)!.id}`);

@@ -60,7 +60,7 @@ test('runtime snapshots include negotiated IRC capabilities', async () => {
     runtime.sessions.connect(network.id);
     await waitFor(() => runtime.gateway.snapshot().networkStates[network.id]?.phase === 'connected');
     await waitFor(() =>
-      runtime.gateway.snapshot().networkStates[network.id]?.capabilities?.values?.['isupport/chathistory'] === '25'
+      runtime.gateway.snapshot().networkStates[network.id]?.serverRules?.historyLimit === 25
     );
 
     assert.deepEqual(runtime.gateway.snapshot().networkStates[network.id]?.capabilities, {
@@ -83,7 +83,7 @@ test('runtime snapshots include negotiated IRC capabilities', async () => {
         'userhost-in-names',
       ],
       pending: [],
-      values: { 'draft/chathistory': '50', 'isupport/chathistory': '25' },
+      values: { 'draft/chathistory': '50' },
     });
     assert.equal(received.some((line) => line.startsWith('CAP REQ :')), true);
   } finally {

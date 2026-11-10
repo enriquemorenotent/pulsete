@@ -1,3 +1,4 @@
+import { defaultIrcServerRules } from '../shared/irc-server-rules.js';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -34,6 +35,7 @@ test('runtime snapshot includes live network states after a refresh point', asyn
       serverName: 'irc.example',
       nick: 'tester',
       capabilities: { offered: [], negotiated: [], pending: [] },
+      serverRules: defaultIrcServerRules,
     });
   } finally {
     runtime.sessions.disconnect(network.id);

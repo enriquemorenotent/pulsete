@@ -29,7 +29,7 @@ export const parseJson = <T>(value: string, fallback: T): T => {
 
 const parseChannelUsers = (value: string) => {
   const parsed = parseJson<Array<string | ChannelUserState>>(value, []);
-  return sortChannelUsers(parsed.map(parseChannelUser).filter((user): user is ChannelUserState => user !== null));
+  return sortChannelUsers(parsed.map(value => parseChannelUser(value)).filter((user): user is ChannelUserState => user !== null));
 };
 
 export const toNetworkProfile = (
@@ -95,6 +95,8 @@ export const toBufferState = (
   priorityUnread: row.priorityUnread,
   lastReadTs: row.lastReadTs,
   lastReadMessageId: row.lastReadMessageId,
+  firstUnreadMessageId: row.firstUnreadMessageId ?? null,
+  ...(row.kind === 'query' && row.targetKey === null ? { queryTargetAvailable: false } : {}),
   kind: row.kind,
   target: row.target,
   notes: row.notes,

@@ -99,8 +99,6 @@ test('peer nick events merge an existing destination query buffer into the origi
   const harness = createRuntimeEventHarness();
   const originalQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'helper');
   const renamedQuery = harness.storage.conversations.upsertQuery(harness.network.id, 'guide');
-  harness.storage.conversations.setBufferUnread(originalQuery.id, 1, 1);
-  harness.storage.conversations.setBufferUnread(renamedQuery.id, 2, 0);
   harness.storage.conversations.appendMessage({
     id: 'old-query-message',
     networkId: harness.network.id,
@@ -136,8 +134,8 @@ test('peer nick events merge an existing destination query buffer into the origi
   assert.equal(queryCount, 1);
   assert.equal(harness.storage.conversations.getBufferByTarget(harness.network.id, 'guide')?.id, originalQuery.id);
   assert.equal(harness.storage.conversations.getBuffer(renamedQuery.id), null);
-  assert.equal(harness.storage.conversations.getBuffer(originalQuery.id)?.unread, 3);
-  assert.equal(harness.storage.conversations.getBuffer(originalQuery.id)?.priorityUnread, 1);
+  assert.equal(harness.storage.conversations.getBuffer(originalQuery.id)?.unread, 2);
+  assert.equal(harness.storage.conversations.getBuffer(originalQuery.id)?.priorityUnread, 2);
   assert.deepEqual(
     harness.storage.conversations.listMessages(harness.network.id, 'guide', 10).map((message) => message.body),
     ['old buffer', 'new buffer', 'helper is now known as guide'],

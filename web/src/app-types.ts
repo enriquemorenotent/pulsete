@@ -125,6 +125,7 @@ export type Action =
       vpnServer?: string;
       nick: string;
       capabilities: NonNullable<NetworkRuntimeState['capabilities']>;
+      serverRules?: NetworkRuntimeState['serverRules'];
     }
   | { type: 'set-banner'; banner: BannerInput | null }
   | { type: 'open-channel-list'; networkId: string }

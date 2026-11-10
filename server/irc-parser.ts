@@ -1,3 +1,4 @@
+import { defaultIrcServerRules, isServerChannel, type IrcServerRules } from '../shared/irc-server-rules.js';
 import { parseChannelUser } from '../shared/channel-users.js';
 import { parseIrcMessageTags, type IrcMessageTags } from './irc-message-tags.js';
 export { findIrcCaseMatch, isSameIrcIdentifier } from '../shared/irc-identifiers.js';
@@ -80,5 +81,5 @@ export const stripCtcp = (text: string) => {
   return text.slice(1, -1);
 };
 
-export const parseChannelUserToken = (value: string) => parseChannelUser(value);
-export const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
+export const parseChannelUserToken = (value: string, rules: IrcServerRules = defaultIrcServerRules) => parseChannelUser(value, rules);
+export const isChannelTarget = isServerChannel;

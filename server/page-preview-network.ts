@@ -1,29 +1,11 @@
 import { lookup as dnsLookup } from 'node:dns/promises';
-import { request as httpRequest } from 'node:http';
-import {
-  request as httpsRequest,
-  type RequestOptions,
-} from 'node:https';
 import { isIP } from 'node:net';
+import { requestExternalResource, type ResourceAddress, type ResourceResponse, type ResourceLimits } from './external-resource-request.js';
 
-export type PagePreviewAddress = {
-  address: string;
-  family: 4 | 6;
-};
-
-export type PagePreviewNetworkResponse = {
-  body: Buffer;
-  contentType: string;
-  location: string | null;
-  status: number;
-};
-
+export type PagePreviewAddress = ResourceAddress;
+export type PagePreviewNetworkResponse = ResourceResponse;
 export type PagePreviewNetwork = {
-  request(
-    url: URL,
-    address: PagePreviewAddress,
-    options: { maxBytes: number; timeoutMs: number },
-  ): Promise<PagePreviewNetworkResponse>;
+  request(url: URL, address: PagePreviewAddress, options: ResourceLimits): Promise<PagePreviewNetworkResponse>;
   resolve(hostname: string): Promise<readonly PagePreviewAddress[]>;
 };
 
@@ -84,109 +66,6 @@ export const isPublicIpAddress = (address: string) => {
   return false;
 };
 
-const requestPageResource: PagePreviewNetwork['request'] = (
-  url,
-  address,
-  options,
-) => new Promise((resolve, reject) => {
-  const originalHostname = stripIpv6Brackets(url.hostname);
-  const requestOptions: RequestOptions = {
-    agent: false,
-    headers: {
-      Accept: 'text/html,application/xhtml+xml,image/*;q=0.8',
-      'Accept-Encoding': 'identity',
-      Connection: 'close',
-      Host: url.host,
-      'User-Agent': 'Pulsete-Link-Preview/1.0',
-    },
-    hostname: address.address,
-    method: 'GET',
-    path: `${url.pathname}${url.search}`,
-    port: url.port || (url.protocol === 'https:' ? 443 : 80),
-    protocol: url.protocol,
-    servername: isIP(originalHostname) === 0 ? originalHostname : undefined,
-  };
-  const transport = url.protocol === 'https:' ? httpsRequest : httpRequest;
-  let settled = false;
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  const succeed = (value: PagePreviewNetworkResponse) => {
-    if (settled) {
-      return;
-    }
-    settled = true;
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    resolve(value);
-  };
-  const fail = (error: Error) => {
-    if (settled) {
-      return;
-    }
-    settled = true;
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    reject(error);
-  };
-
-  const request = transport(requestOptions, (response) => {
-    const status = response.statusCode ?? 0;
-    const contentType = readHeader(response.headers['content-type']).toLowerCase();
-    const location = readHeader(response.headers.location) || null;
-    if (isRedirectStatus(status) || contentType.startsWith('image/')) {
-      succeed({
-        body: Buffer.alloc(0),
-        contentType,
-        location,
-        status,
-      });
-      response.destroy();
-      return;
-    }
-
-    const declaredLength = Number(response.headers['content-length'] ?? 0);
-    if (Number.isFinite(declaredLength) && declaredLength > options.maxBytes) {
-      fail(new Error('Page preview response is too large'));
-      response.destroy();
-      return;
-    }
-
-    const chunks: Buffer[] = [];
-    let totalBytes = 0;
-    response.on('data', (chunk) => {
-      const buffer = Buffer.from(chunk);
-      totalBytes += buffer.length;
-      if (totalBytes > options.maxBytes) {
-        fail(new Error('Page preview response is too large'));
-        response.destroy();
-        return;
-      }
-      chunks.push(buffer);
-    });
-    response.on('end', () => {
-      succeed({
-        body: Buffer.concat(chunks),
-        contentType,
-        location,
-        status,
-      });
-    });
-    response.on('error', (error) => {
-      fail(error);
-    });
-  });
-
-  timeout = setTimeout(() => {
-    request.destroy(new Error('Page preview request timed out'));
-  }, options.timeoutMs);
-  timeout.unref();
-  request.on('error', (error) => {
-    fail(error);
-  });
-  request.end();
-});
-
 export const defaultPagePreviewNetwork: PagePreviewNetwork = {
   async resolve(hostname) {
     const addresses = await dnsLookup(hostname, { all: true, verbatim: true });
@@ -196,18 +75,12 @@ export const defaultPagePreviewNetwork: PagePreviewNetwork = {
         : [])
       .sort((left, right) => left.family - right.family);
   },
-  request: requestPageResource,
+  request: (url, address, options) => requestExternalResource(url, address, {
+    ...options,
+    accept: 'text/html,application/xhtml+xml,image/*;q=0.8',
+    userAgent: 'Pulsete-Link-Preview/1.0',
+  }),
 };
-
-const readHeader = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] ?? '' : value ?? '';
-
-const isRedirectStatus = (status: number) =>
-  status === 301
-  || status === 302
-  || status === 303
-  || status === 307
-  || status === 308;
 
 const stripIpv6Brackets = (hostname: string) =>
   hostname.startsWith('[') && hostname.endsWith(']')

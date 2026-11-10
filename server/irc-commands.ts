@@ -35,7 +35,7 @@ export const say = (connection: IrcConnectionState, target: string, text: string
     `PRIVMSG ${target} :${text}`,
     sourceTarget,
     createMessageReplyContext(sourceTarget, target, selfMessage?.id, 'PRIVMSG', isCommandLikeMessage(text),
-      isSameIrcIdentifier(sourceTarget, target) && !text.startsWith('/') ? text : `/msg ${target} ${text}`),
+      isSameIrcIdentifier(sourceTarget, target, connection.lifecycle.serverSupport.rules.caseMapping) && !text.startsWith('/') ? text : `/msg ${target} ${text}`),
   ) && selfMessage) {
     emitMessage(connection, selfMessage);
   }
@@ -50,7 +50,7 @@ export const action = (connection: IrcConnectionState, target: string, text: str
       `PRIVMSG ${target} :\u0001ACTION ${text}\u0001`,
       sourceTarget,
       createMessageReplyContext(sourceTarget, target, selfMessage?.id, 'PRIVMSG', false,
-        isSameIrcIdentifier(sourceTarget, target) ? `/me ${text}` : undefined),
+        isSameIrcIdentifier(sourceTarget, target, connection.lifecycle.serverSupport.rules.caseMapping) ? `/me ${text}` : undefined),
     )
     && selfMessage
   ) {

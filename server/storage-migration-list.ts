@@ -1,3 +1,6 @@
+import { serverRulesSchemaSql } from './storage-server-rules.js';
+import { migrateQueryRouting } from './storage-query-routing-migration.js';
+import { migrateUnreadMessages } from './storage-unread-migration.js';
 import { ensureNordVpnStorage } from './storage-nordvpn.js';
 import { accountImagesSchemaSql } from './storage-account-images.js';
 import { ensureWatchlistActivityStorage } from './storage-watchlist-activity.js';
@@ -206,4 +209,7 @@ export const storageMigrations: readonly StorageMigration[] = [
       ensureIdentityIndexes(db);
     },
   },
+  { version: 36, apply: migrateUnreadMessages },
+  { version: 37, apply: migrateQueryRouting },
+  { version: 38, apply: db => { db.exec(serverRulesSchemaSql); } },
 ];

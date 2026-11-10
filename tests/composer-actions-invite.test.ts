@@ -42,6 +42,6 @@ test('/invite rejects missing nicks and invalid channels', async () => {
   assert.deepEqual(invalidChannel.sent, []);
   assert.deepEqual(invalidChannel.drafts, []);
   assert.deepEqual(invalidChannel.banners, [
-    { kind: 'error', message: 'Channel name must start with #, &, +, or !' },
+    { kind: 'error', message: 'Channel name must start with one of: #&' },
   ]);
 });

@@ -1,3 +1,4 @@
+import { defaultIrcServerRules, isServerChannel, type IrcServerRules } from '../shared/irc-server-rules.js';
 import { badRequest } from './app-error.js';
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
 import { isSingleNickEmojiTag, normalizeNickEmojiTag } from '../shared/nick-emoji.js';
@@ -5,7 +6,6 @@ import { maxIsonNickBytes } from './irc-limits.js';
 
 const lineBreakPattern = /[\r\n]/;
 const whitespacePattern = /\s/;
-const channelTargetPattern = /^[#&+!]/;
 const multiTargetPattern = /,/;
 
 const requireSingleLine = (value: string, message: string) => {
@@ -26,10 +26,10 @@ export const requireIrcToken = (value: string, message: string) => {
 export const requireSingleLineValue = (value: string, message: string) =>
   requireSingleLine(value, message);
 
-export const normalizeChannelTarget = (value: string) => {
+export const normalizeChannelTarget = (value: string, rules: IrcServerRules = defaultIrcServerRules) => {
   const target = value.trim();
-  if (!target || !channelTargetPattern.test(target) || whitespacePattern.test(target)) {
-    throw badRequest('Channel name must start with #, &, +, or !');
+  if (!target || !isServerChannel(target, rules) || whitespacePattern.test(target)) {
+    throw badRequest(`Channel name must start with one of: ${rules.channelTypes || '(this server has no channels)'}`);
   }
   if (multiTargetPattern.test(target)) {
     throw badRequest('Channel name must refer to a single channel');
@@ -42,13 +42,14 @@ const normalizeSingleNickTarget = (
   messages: {
     requiredMessage: string;
     singleTargetMessage: string;
-  }
+  },
+  rules: IrcServerRules = defaultIrcServerRules
 ) => {
   const target = value.trim();
   if (
     !target
     || normalizeIrcIdentifier(target) === normalizeIrcIdentifier('server')
-    || channelTargetPattern.test(target)
+    || isServerChannel(target, rules)
     || whitespacePattern.test(target)
   ) {
     throw badRequest(messages.requiredMessage);
@@ -59,10 +60,10 @@ const normalizeSingleNickTarget = (
   return target;
 };
 
-export const normalizeQueryTarget = (value: string) => normalizeSingleNickTarget(value, {
+export const normalizeQueryTarget = (value: string, rules: IrcServerRules = defaultIrcServerRules) => normalizeSingleNickTarget(value, {
   requiredMessage: 'Private-message target is required',
   singleTargetMessage: 'Private-message target must refer to a single nick',
-});
+}, rules);
 
 export const normalizeAuthTarget = (value: string) => normalizeSingleNickTarget(value, {
   requiredMessage: 'Authentication target must be a single nick',
@@ -104,8 +105,8 @@ export const normalizeMutedNick = (value: string) => {
   return nick;
 };
 
-export const normalizeMessageTarget = (value: string) =>
-  channelTargetPattern.test(value.trim()) ? normalizeChannelTarget(value) : normalizeQueryTarget(value);
+export const normalizeMessageTarget = (value: string, rules: IrcServerRules = defaultIrcServerRules) =>
+  isServerChannel(value.trim(), rules) ? normalizeChannelTarget(value, rules) : normalizeQueryTarget(value, rules);
 
 export const normalizeMessageBody = (value: string) => {
   requireSingleLineValue(value, 'Message body cannot contain carriage returns or line feeds');

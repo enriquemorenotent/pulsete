@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { BufferState } from '../../../shared/protocol-chat.js';
 import {
   addContactNotificationChannel,
   addContactNotificationContact,
   canPlayContactNotificationCue,
-  findEligibleContactNotification,
+  isMessageArrivalNotificationAllowed,
   removeContactNotificationChannel,
   removeContactNotificationContact,
   type ContactNotificationChannel,
@@ -17,7 +16,6 @@ import type {
 } from './controller-types.js';
 import {
   getAudioContextConstructor,
-  getBufferMap,
   getNotificationPermission,
   playCue,
   shouldShowSystemNotification,
@@ -37,7 +35,6 @@ export function useContactNotifications(
   const [systemPermission, setSystemPermission] = useState<
     NotificationPermission | 'unsupported'
   >(getNotificationPermission);
-  const previousBuffersRef = useRef<ReadonlyMap<string, Pick<BufferState, 'unread'>> | null>(null);
   const lastPlayedAtRef = useRef(-Infinity);
   const audioContextRef = useRef<AudioContext | null>(null);
   const [notificationOwner] = useState(() => new NotificationOwner<string, ContactSystemNotificationHandle>({
@@ -142,27 +139,17 @@ export function useContactNotifications(
     notificationOwner.closeAll();
   }, [notificationOwner]);
 
-  useEffect(() => {
-    const nextBuffers = getBufferMap(input.buffers);
-    const previousBuffers = previousBuffersRef.current;
-    previousBuffersRef.current = nextBuffers;
-    if (!previousBuffers) {
-      return;
-    }
-    if (!settings.enabled && !settings.systemEnabled) {
-      return;
-    }
-    const eligibleNotification = findEligibleContactNotification({
-      previousBuffers,
-      nextBuffers: input.buffers,
-      messagesByConversation: input.getMessagesByConversation?.(),
-      appVisibleAndFocused: !shouldShowSystemNotification(),
+  const currentInput = useRef(input);
+  currentInput.current = input;
+  useEffect(() => input.subscribeMessageArrivals(({ buffer, message }) => {
+    const input = currentInput.current;
+    const settings = input.settings;
+    if (!isMessageArrivalNotificationAllowed({
+      arrival: { buffer, message }, settings,
       selectedBufferId: input.selectedBufferId,
-      settings,
-    });
-    if (!eligibleNotification) {
-      return;
-    }
+      appVisibleAndFocused: !shouldShowSystemNotification(),
+    })) return;
+    const eligibleNotification = { buffer, latestMessage: message };
     const shouldPlayAudio = settings.enabled;
     const shouldNotify =
       settings.systemEnabled
@@ -193,18 +180,7 @@ export function useContactNotifications(
         onSelectBuffer: input.onSelectBuffer,
       });
     }
-  }, [
-    input.buffers,
-    input.getMessagesByConversation,
-    input.getAvatarIconUrl,
-    input.networkNamesById,
-    input.onSelectBuffer,
-    input.selectedBufferId,
-    input.systemNotificationIconsEnabled,
-    notificationOwner,
-    settings,
-    ensureAudioContext,
-  ]);
+  }), [input.subscribeMessageArrivals, notificationOwner, ensureAudioContext]);
 
   return useMemo(() => ({
     settings,

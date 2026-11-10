@@ -79,9 +79,9 @@ test('runtime validation rejects missing networks and invalid targets before tou
   assert.throws(() => runtime.irc.part('missing-network', '#help'), /Network not found/);
   assert.throws(() => runtime.conversations.closeBuffer('missing-buffer'), /Buffer not found/);
   assert.throws(() => runtime.mutedNicks.upsertMutedNick('missing-network', 'alice'), /Network not found/);
-  assert.throws(() => runtime.irc.join(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
+  assert.throws(() => runtime.irc.join(network.id, 'helper'), /Channel name must start with one of: #&/);
   assert.throws(() => runtime.irc.join(network.id, '#help,#ops'), /Channel name must refer to a single channel/);
-  assert.throws(() => runtime.irc.part(network.id, 'helper'), /Channel name must start with #, &, \+, or !/);
+  assert.throws(() => runtime.irc.part(network.id, 'helper'), /Channel name must start with one of: #&/);
   assert.throws(() => runtime.conversations.openQuery(network.id, '   '), /Private-message target is required/);
   assert.throws(() => runtime.conversations.openQuery(network.id, '#help'), /Private-message target is required/);
   assert.throws(() => runtime.conversations.openQuery(network.id, 'alice,bob'), /Private-message target must refer to a single nick/);
@@ -222,7 +222,6 @@ test('muting and unmuting recomputes unread counts for existing buffers immediat
     self: false,
     ts: 1,
   });
-  storage.conversations.setBufferUnread(channel.id, 1, 1);
 
   const muted = runtime.mutedNicks.upsertMutedNick(network.id, 'alice');
 

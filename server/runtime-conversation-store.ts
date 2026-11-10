@@ -1,9 +1,9 @@
+import { isServerChannel } from '../shared/irc-server-rules.js';
 import { randomUUID } from 'node:crypto';
 import type { BufferState, ChannelState } from '../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import { badRequest } from './app-error.js';
 import type { RuntimeEvent } from './irc-types.js';
-import { resolveNextBufferActivity } from './runtime-buffer-activity.js';
 import { getRequiredBuffer } from './runtime-conversation-store-helpers.js';
 import type { RuntimeConversationStore } from './runtime-store.js';
 import type { MessageInput } from './storage-types.js';
@@ -12,6 +12,7 @@ type BufferResolution = {
   buffer: BufferState;
   removedBufferIds: string[];
   retargetedFrom?: string | null;
+  displacedBuffers?: BufferState[];
 };
 
 export const openConversationQuery = (
@@ -31,17 +32,9 @@ export const closeConversationBuffer = (store: RuntimeConversationStore, bufferI
 
 export const markConversationBufferRead = (store: RuntimeConversationStore, bufferId: string) => {
   const buffer = getRequiredBuffer(store, bufferId);
-  const latestMessage = store.listRecentMessagesForBuffer(buffer.networkId, buffer.target, 1)[0] ?? null;
+  const latestMessage = store.listRecentMessagesForBufferIds([buffer.id], 1)[0] ?? null;
   const nextLastReadTs = latestMessage?.ts ?? buffer.lastReadTs ?? null;
   const nextLastReadMessageId = latestMessage?.id ?? buffer.lastReadMessageId ?? null;
-  if (
-    buffer.unread === 0
-    && buffer.priorityUnread === 0
-    && buffer.lastReadTs === nextLastReadTs
-    && buffer.lastReadMessageId === nextLastReadMessageId
-  ) {
-    return buffer;
-  }
   store.markBufferRead(bufferId, {
     lastReadTs: nextLastReadTs,
     lastReadMessageId: nextLastReadMessageId,
@@ -54,7 +47,7 @@ export const clearConversationQueryHistory = (store: RuntimeConversationStore, b
   if (buffer.kind !== 'query') {
     throw badRequest('Only private-message history can be deleted');
   }
-  const deletedMessages = store.deleteMessages(buffer.networkId, buffer.target);
+  const deletedMessages = store.deleteBufferMessages(buffer.id);
   store.markBufferRead(buffer.id, { lastReadTs: null, lastReadMessageId: null });
   return {
     buffer: getRequiredBuffer(store, buffer.id),
@@ -81,7 +74,7 @@ export const listConversationBufferHistory = (
   beforeMessageId?: string,
 ) => {
   const buffer = getRequiredBuffer(store, bufferId);
-  return store.listMessagePage(buffer.networkId, buffer.target, limit, beforeMessageId);
+  return store.listMessagePageByBufferId(buffer.id, limit, beforeMessageId);
 };
 
 export const searchConversationBufferHistory = (
@@ -113,14 +106,20 @@ export const appendConversationMessage = (
       saved: existing,
       bufferUpdate: null,
       removedBufferIds: [],
+      displacedBuffers: [],
       retargetedFrom: null,
     };
   }
+  if (input.message.historical || (input.message.delivery && input.message.delivery !== 'live')) {
+    return { saved: store.appendMessage(input.message), bufferUpdate: null, removedBufferIds: [], displacedBuffers: [], retargetedFrom: null };
+  }
   const resolvedBuffer = resolveMessageBuffer(store, input);
+  const saved = store.appendMessage(input.message, resolvedBuffer?.buffer.id, input);
   return {
-    saved: store.appendMessage(input.message, resolvedBuffer?.buffer.id),
-    bufferUpdate: resolvedBuffer?.buffer ?? null,
+    saved,
+    bufferUpdate: resolvedBuffer ? store.getBuffer(resolvedBuffer.buffer.id) : null,
     removedBufferIds: resolvedBuffer?.removedBufferIds ?? [],
+    displacedBuffers: resolvedBuffer?.displacedBuffers ?? [],
     retargetedFrom: resolvedBuffer?.retargetedFrom ?? null,
   };
 };
@@ -156,7 +155,7 @@ const resolveMessageBuffer = (
   if (!existing && input.allowCreateBuffer === false) {
     return null;
   }
-  const created = shouldRouteQueryByIdentity(input.message)
+  const created = shouldRouteQueryByIdentity(store, input.message)
     ? store.upsertQueryWithMergeResult(input.message.networkId, input.message.target, input.message.senderIdentity)
     : existing
       ? toBufferResolution(existing)
@@ -166,21 +165,7 @@ const resolveMessageBuffer = (
     return null;
   }
 
-  const nextBuffer = resolveNextBufferActivity({
-    buffer: createdWithAvatar.buffer,
-    message: input.message,
-    currentNick: input.currentNick,
-    altNicks: input.altNicks,
-    messageMuted: input.messageMuted,
-  });
-  if (nextBuffer === createdWithAvatar.buffer) {
-    return createdWithAvatar;
-  }
-  return {
-    buffer: store.upsertBuffer(nextBuffer),
-    removedBufferIds: createdWithAvatar.removedBufferIds,
-    retargetedFrom: createdWithAvatar.retargetedFrom ?? null,
-  };
+  return createdWithAvatar;
 };
 
 const createMessageBuffer = (store: RuntimeConversationStore, message: MessageInput): BufferResolution | null => {
@@ -190,7 +175,7 @@ const createMessageBuffer = (store: RuntimeConversationStore, message: MessageIn
         ?? store.upsertBuffer({ networkId: message.networkId, kind: 'server', target: 'server' }),
     );
   }
-  if (isChannelTarget(message.target)) {
+  if (isServerChannel(message.target, store.getServerRules(message.networkId))) {
     if (message.self && message.kind === 'part') {
       return null;
     }
@@ -207,9 +192,9 @@ const createMessageBuffer = (store: RuntimeConversationStore, message: MessageIn
   return null;
 };
 
-const shouldRouteQueryByIdentity = (message: MessageInput) =>
+const shouldRouteQueryByIdentity = (store: RuntimeConversationStore, message: MessageInput) =>
   !message.self
-  && !isChannelTarget(message.target)
+  && !isServerChannel(message.target, store.getServerRules(message.networkId))
   && message.target !== 'server'
   && !!message.senderIdentity
   && (message.kind === 'line' || message.kind === 'action');
@@ -242,5 +227,3 @@ const toBufferResolution = (buffer: BufferState): BufferResolution => ({
   removedBufferIds: [],
   retargetedFrom: null,
 });
-
-const isChannelTarget = (value: string) => /^[#&+!]/.test(value);

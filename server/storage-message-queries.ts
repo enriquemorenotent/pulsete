@@ -178,3 +178,10 @@ const selectMessagePage = (
     hasMore: rows.length > limit,
   };
 };
+
+export const listMessagePageByBufferId = (db: SqliteDb, bufferId: string, limit: number, beforeMessageId?: string): MessagePage => {
+  const cursor = beforeMessageId ? getMessageCursor(db, beforeMessageId) : null;
+  return beforeMessageId && (!cursor || cursor.bufferId !== bufferId) ? emptyMessagePage
+    : selectMessagePage(db, bufferId, limit, cursor ?? null);
+};
+export const listAllMessagesForBuffer = (db: SqliteDb, bufferId: string) => selectMessages(db, bufferId);

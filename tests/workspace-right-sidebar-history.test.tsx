@@ -1,3 +1,4 @@
+import { defaultIrcServerRules } from '../shared/irc-server-rules.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -44,11 +45,12 @@ const workspace: WorkspaceView = {
     phase: 'connected',
     serverName: 'irc.example.test',
     nick: network.nick,
+    serverRules: { ...defaultIrcServerRules, historyLimit: 25 },
     capabilities: {
       offered: ['draft/chathistory', 'draft/chathistory-end'],
       negotiated: ['echo-message'],
       pending: [],
-      values: { 'draft/chathistory': '50', 'isupport/chathistory': '25' },
+      values: { 'draft/chathistory': '50' },
     },
   },
   selectedBuffer: serverBuffer,

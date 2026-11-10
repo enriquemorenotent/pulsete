@@ -1,10 +1,10 @@
+import type { MessageArrival } from '../../../shared/protocol-messages.js';
 import type { BufferState, ChatMessage } from '../../../shared/protocol-chat.js';
 import {
   addContactNotificationChannel,
   addContactNotificationContact,
   dedupeChannels,
   dedupeContacts,
-  hasNotificationTargets,
   isContactNotificationAllowedForTarget,
   isContactNotificationChannelAllowed,
   isConversationNotificationAllowed,
@@ -16,7 +16,6 @@ import {
   type ContactNotificationChannel,
   type ContactNotificationContact,
 } from './targets.js';
-import type { ConversationMessages } from '../conversation-message-state.js';
 
 export const CONTACT_NOTIFICATION_SETTINGS_STORAGE_KEY =
   'pulsete.preferences.contactNotifications.v3';
@@ -65,10 +64,6 @@ export type ContactNotificationSettings = {
   channels: ContactNotificationChannel[];
 };
 
-export type ContactNotificationCandidate = {
-  buffer: BufferState;
-  latestMessage: ChatMessage | null;
-};
 const defaultSettings: ContactNotificationSettings = {
   enabled: false,
   systemEnabled: false,
@@ -130,61 +125,20 @@ export const isContactNotificationAllowed = (
   latestMessage?: Pick<ChatMessage, 'networkId' | 'nick' | 'senderIdentity'> | null,
 ) => isConversationNotificationAllowed(settings, buffer, latestMessage);
 
-export const findEligibleContactNotificationSoundBuffer = (input: {
-  previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
-  nextBuffers: readonly BufferState[];
-  messagesByConversation?: ConversationMessages;
+export const isMessageArrivalNotificationAllowed = (input: {
+  arrival: MessageArrival;
   appVisibleAndFocused: boolean;
   selectedBufferId: string | null;
   settings: ContactNotificationSettings;
 }) => {
-  if (!input.settings.enabled) {
-    return null;
-  }
-  return findEligibleContactNotificationBuffer(input);
-};
-
-export const findEligibleContactNotificationBuffer = (input: {
-  previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
-  nextBuffers: readonly BufferState[];
-  messagesByConversation?: ConversationMessages;
-  appVisibleAndFocused: boolean;
-  selectedBufferId: string | null;
-  settings: ContactNotificationSettings;
-}) => findEligibleContactNotification(input)?.buffer ?? null;
-
-export const findEligibleContactNotification = (input: {
-  previousBuffers: ReadonlyMap<string, Pick<BufferState, 'unread'>>;
-  nextBuffers: readonly BufferState[];
-  messagesByConversation?: ConversationMessages;
-  appVisibleAndFocused: boolean;
-  selectedBufferId: string | null;
-  settings: ContactNotificationSettings;
-}): ContactNotificationCandidate | null => {
-  if (!hasNotificationTargets(input.settings)) {
-    return null;
-  }
-  for (const buffer of input.nextBuffers) {
-    if (
-      (buffer.kind !== 'query' && buffer.kind !== 'channel')
-      || (input.appVisibleAndFocused && buffer.id === input.selectedBufferId)
-    ) {
-      continue;
-    }
-    const latestMessage = getLatestBufferMessage(input.messagesByConversation, buffer);
-    if (!isContactNotificationAllowed(
-      input.settings,
-      buffer,
-      latestMessage,
-    )) {
-      continue;
-    }
-    const previousUnread = input.previousBuffers.get(buffer.id)?.unread ?? 0;
-    if (buffer.unread > previousUnread) {
-      return { buffer, latestMessage };
-    }
-  }
-  return null;
+  const { buffer, message } = input.arrival;
+  return (input.settings.enabled || input.settings.systemEnabled)
+    && (buffer.kind === 'query' || buffer.kind === 'channel')
+    && message.bufferId === buffer.id && message.networkId === buffer.networkId
+    && !message.self && (!message.delivery || message.delivery === 'live')
+    && ['line', 'action', 'notice'].includes(message.kind)
+    && !(input.appVisibleAndFocused && buffer.id === input.selectedBufferId)
+    && isContactNotificationAllowed(input.settings, buffer, message);
 };
 
 export const canPlayContactNotificationCue = (
@@ -192,9 +146,3 @@ export const canPlayContactNotificationCue = (
   lastPlayedAt: number,
   cooldownMs = CONTACT_NOTIFICATION_COOLDOWN_MS,
 ) => now - lastPlayedAt >= cooldownMs;
-
-const getLatestBufferMessage = (
-  messagesByConversation: ConversationMessages | undefined,
-  buffer: Pick<BufferState, 'id'>,
-) =>
-  messagesByConversation?.[buffer.id]?.at(-1) ?? null;

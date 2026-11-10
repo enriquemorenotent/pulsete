@@ -1,3 +1,4 @@
+import type { MessageArrival } from '../../shared/protocol-messages.js';
 import {
   createElement,
   createContext,
@@ -19,6 +20,8 @@ export type AppStoreActionEvent = {
 type ActionListener = (event: AppStoreActionEvent) => void;
 
 export type AppStoreApi = {
+  publishMessageArrival: (arrival: MessageArrival) => void;
+  subscribeMessageArrivals: (listener: (arrival: MessageArrival) => void) => () => void;
   batch: (callback: () => void) => void;
   dispatch: (action: Action) => void;
   getState: () => State;
@@ -37,6 +40,7 @@ export const createAppStore = (state: State = initialState): AppStoreApi => {
   let batchDepth = 0;
   let pendingNotification = false;
   const listeners = new Set<Listener>();
+  const arrivalListeners = new Set<(arrival: MessageArrival) => void>();
   const actionListeners = new Set<ActionListener>();
 
   const flush = () => {
@@ -56,6 +60,13 @@ export const createAppStore = (state: State = initialState): AppStoreApi => {
   };
 
   return {
+    publishMessageArrival(arrival) {
+      for (const listener of arrivalListeners) listener(arrival);
+    },
+    subscribeMessageArrivals(listener) {
+      arrivalListeners.add(listener);
+      return () => { arrivalListeners.delete(listener); };
+    },
     batch(callback) {
       batchDepth += 1;
       try {

@@ -1,3 +1,4 @@
+import { defaultIrcServerRules, type IrcServerRules } from '../shared/irc-server-rules.js';
 import { isChannelTarget } from './irc-parser.js';
 import { type ChannelReplyOperation, type PendingReplyContext, replyContextTtlMs } from './irc-reply-context-types.js';
 
@@ -93,7 +94,7 @@ export const createFriendPresenceIsonReplyContext = (
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
-export const createReplyContextFromRaw = (sourceTarget: string, raw: string): PendingReplyContext | null => {
+export const createReplyContextFromRaw = (sourceTarget: string, raw: string, rules: IrcServerRules = defaultIrcServerRules): PendingReplyContext | null => {
   const trimmed = raw.trim();
   if (!trimmed) {
     return null;
@@ -124,10 +125,10 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string): Pe
   if ((command === 'JOIN' || command === 'PART') && rest[0]) {
     return createChannelReplyContext(sourceTarget, rest[0], command.toLowerCase() as 'join' | 'part');
   }
-  if (command === 'MODE' && rest[0] && !isChannelTarget(rest[0])) {
+  if (command === 'MODE' && rest[0] && !isChannelTarget(rest[0], rules)) {
     return createRawTargetReplyContext('server', 'MODE', rest[0]);
   }
-  if (command === 'NAMES' && rest[0] && isChannelTarget(rest[0])) {
+  if (command === 'NAMES' && rest[0] && isChannelTarget(rest[0], rules)) {
     return createChannelReplyContext('server', rest[0], 'names');
   }
   if (command === 'NICK' && rest[0]) {

@@ -1,9 +1,9 @@
+import { defaultIrcServerRules, type IrcServerRules } from './irc-server-rules.js';
 import type { ChannelUserMode, ChannelUserPrivilegeMode, ChannelUserState } from './protocol-chat.js';
 import { normalizeIrcIdentifier } from './irc-identifiers.js';
 import {
   getChannelUserModeRank,
   getPrimaryChannelUserMode,
-  modeByPrefix,
   normalizeChannelUserModes,
   orderedModes,
 } from './channel-user-modes.js';
@@ -17,7 +17,7 @@ export {
 } from './channel-user-modes.js';
 
 export const parseChannelUser = (
-  value: string | ChannelUserState | null | undefined
+  value: string | ChannelUserState | null | undefined, rules: IrcServerRules = defaultIrcServerRules
 ): ChannelUserState | null => {
   if (!value) {
     return null;
@@ -27,7 +27,7 @@ export const parseChannelUser = (
     if (!trimmed) {
       return null;
     }
-    const prefixes = parseChannelUserPrefixes(trimmed);
+    const prefixes = parseChannelUserPrefixes(trimmed, rules);
     const identity = parseUserHost(prefixes.value);
     return identity.nick
       ? normalizeChannelUser({
@@ -69,29 +69,29 @@ export const compareChannelUsers = (left: ChannelUserState, right: ChannelUserSt
 export const sortChannelUsers = (users: ChannelUserState[]) =>
   [...users].sort(compareChannelUsers);
 
-export const upsertChannelUser = (users: ChannelUserState[], value: string | ChannelUserState) => {
-  const user = parseChannelUser(value);
+export const upsertChannelUser = (users: ChannelUserState[], value: string | ChannelUserState, rules: IrcServerRules = defaultIrcServerRules) => {
+  const user = parseChannelUser(value, rules);
   if (!user) {
     return sortChannelUsers(users);
   }
-  const normalizedNick = normalizeIrcIdentifier(user.nick);
-  const nextUsers = users.filter((candidate) => normalizeIrcIdentifier(candidate.nick) !== normalizedNick);
+  const normalizedNick = normalizeIrcIdentifier(user.nick, rules.caseMapping);
+  const nextUsers = users.filter((candidate) => normalizeIrcIdentifier(candidate.nick, rules.caseMapping) !== normalizedNick);
   nextUsers.push(user);
   return sortChannelUsers(nextUsers);
 };
 
-export const removeChannelUser = (users: ChannelUserState[], nick: string) => {
-  const normalizedNick = normalizeIrcIdentifier(nick);
-  return users.filter((candidate) => normalizeIrcIdentifier(candidate.nick) !== normalizedNick);
+export const removeChannelUser = (users: ChannelUserState[], nick: string, rules: IrcServerRules = defaultIrcServerRules) => {
+  const normalizedNick = normalizeIrcIdentifier(nick, rules.caseMapping);
+  return users.filter((candidate) => normalizeIrcIdentifier(candidate.nick, rules.caseMapping) !== normalizedNick);
 };
 
-export const renameChannelUser = (users: ChannelUserState[], previousNick: string, nextNick: string) => {
-  const normalizedPreviousNick = normalizeIrcIdentifier(previousNick);
-  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick) === normalizedPreviousNick);
+export const renameChannelUser = (users: ChannelUserState[], previousNick: string, nextNick: string, rules: IrcServerRules = defaultIrcServerRules) => {
+  const normalizedPreviousNick = normalizeIrcIdentifier(previousNick, rules.caseMapping);
+  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick, rules.caseMapping) === normalizedPreviousNick);
   if (!existing) {
     return users;
   }
-  return upsertChannelUser(removeChannelUser(users, previousNick), {
+  return upsertChannelUser(removeChannelUser(users, previousNick, rules), {
     nick: nextNick,
     mode: existing.mode,
     modes: getStoredChannelUserModes(existing),
@@ -100,17 +100,17 @@ export const renameChannelUser = (users: ChannelUserState[], previousNick: strin
     username: existing.username ?? null,
     host: existing.host ?? null,
     realname: existing.realname ?? null,
-  });
+  }, rules);
 };
 
 export const updateChannelUserMode = (
   users: ChannelUserState[],
   nick: string,
   mode: ChannelUserPrivilegeMode,
-  active: boolean
+  active: boolean, rules: IrcServerRules = defaultIrcServerRules
 ) => {
-  const normalizedNick = normalizeIrcIdentifier(nick);
-  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick) === normalizedNick);
+  const normalizedNick = normalizeIrcIdentifier(nick, rules.caseMapping);
+  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick, rules.caseMapping) === normalizedNick);
   if (!existing) {
     return users;
   }
@@ -130,12 +130,12 @@ export const updateChannelUserMode = (
     username: existing.username ?? null,
     host: existing.host ?? null,
     realname: existing.realname ?? null,
-  });
+  }, rules);
 };
 
-export const updateChannelUserAway = (users: ChannelUserState[], nick: string, away: boolean) => {
-  const normalizedNick = normalizeIrcIdentifier(nick);
-  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick) === normalizedNick);
+export const updateChannelUserAway = (users: ChannelUserState[], nick: string, away: boolean, rules: IrcServerRules = defaultIrcServerRules) => {
+  const normalizedNick = normalizeIrcIdentifier(nick, rules.caseMapping);
+  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick, rules.caseMapping) === normalizedNick);
   if (!existing || existing.away === away) {
     return users;
   }
@@ -148,16 +148,16 @@ export const updateChannelUserAway = (users: ChannelUserState[], nick: string, a
     username: existing.username ?? null,
     host: existing.host ?? null,
     realname: existing.realname ?? null,
-  });
+  }, rules);
 };
 
 export const updateChannelUserDetails = (
   users: ChannelUserState[],
   nick: string,
-  updates: Partial<Pick<ChannelUserState, 'account' | 'host' | 'realname' | 'username'>>
+  updates: Partial<Pick<ChannelUserState, 'account' | 'host' | 'realname' | 'username'>>, rules: IrcServerRules = defaultIrcServerRules
 ) => {
-  const normalizedNick = normalizeIrcIdentifier(nick);
-  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick) === normalizedNick);
+  const normalizedNick = normalizeIrcIdentifier(nick, rules.caseMapping);
+  const existing = users.find((candidate) => normalizeIrcIdentifier(candidate.nick, rules.caseMapping) === normalizedNick);
   if (!existing) {
     return users;
   }
@@ -170,7 +170,7 @@ export const updateChannelUserDetails = (
     username: updates.username === undefined ? existing.username ?? null : updates.username,
     host: updates.host === undefined ? existing.host ?? null : updates.host,
     realname: updates.realname === undefined ? existing.realname ?? null : updates.realname,
-  });
+  }, rules);
   if (!nextUser) {
     return users;
   }
@@ -180,7 +180,7 @@ export const updateChannelUserDetails = (
     && nextUser.host === (existing.host ?? null)
     && nextUser.realname === (existing.realname ?? null)
   );
-  return unchanged ? users : upsertChannelUser(users, nextUser);
+  return unchanged ? users : upsertChannelUser(users, nextUser, rules);
 };
 
 type NormalizableChannelUser = Omit<ChannelUserState, 'modes'> & {
@@ -211,15 +211,18 @@ const getStoredChannelUserModes = (
   user: Pick<ChannelUserState, 'mode' | 'modes'>
 ) => normalizeChannelUserModes(user.modes && user.modes.length > 0 ? user.modes : [user.mode]);
 
-const parseChannelUserPrefixes = (value: string) => {
+const parseChannelUserPrefixes = (value: string, rules: IrcServerRules) => {
   const modes: ChannelUserPrivilegeMode[] = [];
   let index = 0;
   while (index < value.length) {
-    const prefix = value[index] as keyof typeof modeByPrefix;
-    if (!Object.prototype.hasOwnProperty.call(modeByPrefix, prefix)) {
+    const prefix = value[index]!;
+    const statusIndex = rules.prefixSymbols.indexOf(prefix);
+    if (statusIndex < 0) {
       break;
     }
-    modes.push(modeByPrefix[prefix]);
+    const statusMode = rules.prefixModes[statusIndex];
+    const mode = ({q:'owner',a:'admin',o:'op',h:'halfop',v:'voice'} as const)[statusMode as 'o'];
+    if (mode) modes.push(mode);
     index += 1;
   }
   return {

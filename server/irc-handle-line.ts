@@ -19,7 +19,7 @@ import { handleMode } from './irc-handle-line-mode.js';
 import { handleTextMessage } from './irc-handle-line-messages.js';
 import { handleRegistrationLine } from './irc-handle-line-registration.js';
 import { hasNegotiatedCapability } from './irc-capabilities.js';
-import { recordChatHistoryBatchEnd, recordChatHistoryBatchStart, recordChatHistoryIsupport } from './irc-history.js';
+import { recordChatHistoryBatchEnd, recordChatHistoryBatchStart } from './irc-history.js';
 import { formatServerNumeric, getServerNumericStatusKind } from './irc-server-log.js';
 import { formatStandardReply, getStandardReplyStatusKind, isStandardReplyCommand } from './irc-standard-replies.js';
 import { nickFromPrefix, parseLine } from './irc-parser.js';
@@ -36,6 +36,10 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
     return;
   }
   if (command === 'BATCH' && handleBatchCommand(connection, params, tags.label ?? null)) {
+    return;
+  }
+  if (command === 'ACK' && replyLabel) {
+    connection.consumeReplyContext(command, params, nick, undefined, replyLabel);
     return;
   }
   if (handleRegistrationLine(connection, command, params, nick)) {
@@ -144,9 +148,6 @@ const handleNumericReply = (
   isonReplyContext: ReturnType<IrcConnectionState['consumeReplyContext']>,
   replyLabel: string | null
 ) => {
-  if (command === '005' && recordChatHistoryIsupport(connection, params)) {
-    emitState(connection);
-  }
   const replyContext = isonReplyContext && 'sourceTarget' in isonReplyContext
     ? isonReplyContext
     : connection.consumeReplyContext(command, params, nick, undefined, replyLabel);
@@ -155,6 +156,7 @@ const handleNumericReply = (
   if (joinFailureChannel) {
     const session = connection.getChannelSession(joinFailureChannel);
     if (session?.phase === 'joining') {
+      session.joinAction?.finish('failed');
       replyTarget ??= session.sourceTarget;
       connection.removeChannelSession(joinFailureChannel);
     }

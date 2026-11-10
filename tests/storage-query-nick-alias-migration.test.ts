@@ -33,7 +33,7 @@ test('query nick alias migration repairs empty duplicate buffers without rewriti
   storage.close();
 
   const legacy = openSqliteDatabase(file);
-  legacy.exec('DROP TABLE query_nick_aliases');
+  legacy.exec('DROP TRIGGER unread_move; DROP TABLE unread_messages; DROP TABLE query_nick_aliases');
   legacy.exec('PRAGMA user_version = 15');
   legacy.close();
 

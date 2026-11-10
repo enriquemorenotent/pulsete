@@ -2,7 +2,7 @@ import type { BufferState } from '../shared/protocol-chat.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { StoredNetworkProfile } from '../shared/network-model.js';
 import { createNetworkRemoveMessages, createNetworkUpsertMessages } from './network-lifecycle-messages.js';
-import { notFound } from './app-error.js';
+import { badRequest, notFound } from './app-error.js';
 import { createDuplicateNetworkName } from './network-name-utils.js';
 import { parseNetworkInput } from './network-input.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
@@ -50,6 +50,16 @@ export class NetworkLifecycleService {
     });
     const messages = [{ type: 'network.upsert', network: duplicate } satisfies ServerMessage];
     return { network: duplicate, serverBuffer: null, messages };
+  }
+
+  updateNetwork(data: unknown, networkId: string) {
+    const current = requireStoredNetwork(this.context.networks, networkId);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw badRequest('Network update must be an object');
+    }
+    // Merge against the current server profile, then use the same validation,
+    // secret handling, persistence, and broadcasts as a full save.
+    return this.saveNetwork({ ...current, ...data }, networkId);
   }
 
   saveNetwork(data: unknown, networkId?: string) {

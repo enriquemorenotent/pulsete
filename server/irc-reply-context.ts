@@ -1,3 +1,4 @@
+import { canRetainLateReply } from './irc-reply-context-types.js';
 import {
   createChannelListReplyContext,
   createChannelReplyContext,
@@ -66,7 +67,8 @@ export const consumeReplyContext = (
   const now = Date.now();
 
   for (let index = contexts.length - 1; index >= 0; index -= 1) {
-    if (contexts[index]!.expiresAt < now) {
+    const context = contexts[index]!;
+    if (context.expiresAt < now && !canRetainLateReply(context)) {
       contexts.splice(index, 1);
     }
   }
@@ -80,7 +82,7 @@ export const consumeReplyContext = (
   const matches: ReplyMatch[] = [];
   for (const index of candidateIndexes) {
     const context = contexts[index];
-    if (!context) {
+    if (!context || ((context.expiresAt < now || context.action?.state === 'unknown') && (!label || context.label !== label))) {
       continue;
     }
     if (label && context.label === label) {
@@ -109,20 +111,38 @@ export const consumeReplyContext = (
   const highestPriority = Math.max(...matches.map((match) => getReplyPriority(match.context)));
   const prioritized = matches.filter((match) => getReplyPriority(match.context) === highestPriority);
   if (isAmbiguousReplyMatch(prioritized, command) || shouldDiscardUntargetedRawModeMatches(prioritized, command)) {
+    for (const match of prioritized) match.context.action?.finish('unknown');
     discardReplyContexts(contexts, prioritized);
     return null;
   }
 
   const selected = selectReplyContext(prioritized, prefersFifoReplyOrder(command, params));
   if (selected.resolution.done) {
+    const failed = command === 'FAIL' || /^[45]\d{2}$/.test(command) || command === '263';
+    const messageConfirmation = !!label && (command === 'ACK' || (
+      ['PRIVMSG', 'NOTICE', 'TAGMSG'].includes(command)
+      && selected.context.kind === 'message'
+      && isSameIrcIdentifier(params[0] ?? '', selected.context.target, selected.context.rules?.caseMapping)
+    ));
+    const outcome = failed ? 'failed'
+      : command === 'WARN' || command === 'NOTE' || (selected.context.kind === 'message' && !messageConfirmation)
+        ? 'unknown' : 'confirmed';
+    // Informational replies do not finish a labeled send; a failure may follow.
+    if (outcome === 'unknown' && selected.context.kind === 'message' && label) {
+      retargetMessageAwayContext(selected.context, command);
+      return selected.context;
+    }
+    selected.context.action?.finish(outcome);
     const exactDuplicateIndexes = getExactDuplicateReplyIndexes(prioritized, selected);
     if (exactDuplicateIndexes.length > 0) {
+      for (const index of exactDuplicateIndexes) contexts[index]?.action?.finish(outcome);
       discardReplyIndexes(contexts, exactDuplicateIndexes);
     } else {
       contexts.splice(selected.index, 1);
     }
   } else {
     refreshReplyContextAfterMatch(selected.context, nick);
+    selected.context.action?.refresh(selected.context.expiresAt);
   }
   retargetMessageAwayContext(selected.context, command);
   return selected.context;
@@ -135,7 +155,7 @@ const resolveMessageAwayReplyContext = (
 ) => (
   context.kind === 'message'
   && command === '301'
-  && isSameIrcIdentifier(params[1] ?? '', context.target)
+  && isSameIrcIdentifier(params[1] ?? '', context.target, context.rules?.caseMapping)
     ? { matched: true, done: true }
     : { matched: false, done: false }
 );
@@ -160,8 +180,8 @@ const resolveLabeledReplyContext = (
     && context.kind === 'message'
   ) {
     const rawTarget = params[0] ?? '';
-    const matchesDirectTarget = !isChannelTarget(context.target) && isSameIrcIdentifier(rawTarget, context.target);
-    const matchesSelfEcho = isChannelTarget(context.target) && isSameIrcIdentifier(rawTarget, context.target);
+    const matchesDirectTarget = !isChannelTarget(context.target, context.rules) && isSameIrcIdentifier(rawTarget, context.target, context.rules?.caseMapping);
+    const matchesSelfEcho = isChannelTarget(context.target, context.rules) && isSameIrcIdentifier(rawTarget, context.target, context.rules?.caseMapping);
     if ((matchesDirectTarget || matchesSelfEcho) && (nick || rawTarget)) {
       return { matched: true, done: true };
     }

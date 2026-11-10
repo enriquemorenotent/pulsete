@@ -2,10 +2,8 @@ import { useCallback, useMemo } from 'react';
 import type { BufferState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import {
-  selectBuffers,
   selectFriendPresence,
   selectFriends,
-  selectMessagesByConversation,
   selectNetworkNamesById,
   selectPhase,
   selectPreferences,
@@ -40,17 +38,12 @@ type AppBodyProps = Omit<
 export function AppBody(props: AppBodyProps) {
   const store = useAppStore();
   const phase = useAppSelector(selectPhase);
-  const buffers = useAppSelector(selectBuffers);
   const friends = useAppSelector(selectFriends);
   const friendPresence = useAppSelector(selectFriendPresence);
   const networkNamesById = useAppSelector(selectNetworkNamesById);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
   const preferences = useAppSelector(selectPreferences);
   const userAvatarOverrides = useAppSelector(selectUserAvatarOverrides);
-  const getMessagesByConversation = useCallback(
-    () => selectMessagesByConversation(store.getState()),
-    [store],
-  );
   const setMediaVisibilityMode = useCallback(
     (mode: 'show-media' | 'hide-media') => {
       void props.actions.updatePreferences({ mediaVisibilityMode: mode });
@@ -82,8 +75,7 @@ export function AppBody(props: AppBodyProps) {
     [props.actions],
   );
   const contactNotifications = useContactNotifications({
-    buffers,
-    getMessagesByConversation,
+    subscribeMessageArrivals: store.subscribeMessageArrivals,
     getAvatarIconUrl: getNotificationAvatarIconUrl,
     networkNamesById,
     onSelectBuffer: props.actions.selectTabBuffer,

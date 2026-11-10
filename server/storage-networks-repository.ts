@@ -1,3 +1,5 @@
+import { getServerRules, saveServerRules } from './storage-server-rules.js';
+import type { IrcServerRules } from '../shared/irc-server-rules.js';
 import { getAccountImage, saveAccountImage } from './storage-account-images.js';
 import type { SecretBox } from './network-secret.js';
 import {
@@ -26,6 +28,10 @@ export class StorageNetworksRepository {
   saveAccountImage(networkId: string, sourceUrl: string, mimeType: string, imageData: Buffer) {
     saveAccountImage(this.db, networkId, sourceUrl, mimeType, imageData);
   }
+
+  getServerRules(networkId: string) { return getServerRules(this.db, networkId); }
+
+  saveServerRules(networkId: string, rules: IrcServerRules) { saveServerRules(this.db, networkId, rules); }
 
   list() {
     return listNetworks(this.db);

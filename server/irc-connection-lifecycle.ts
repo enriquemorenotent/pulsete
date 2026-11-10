@@ -126,4 +126,5 @@ export const dispose = (connection: IrcLifecycleContext) => {
 export const resetTransientState = (connection: IrcLifecycleContext) => {
   clearConnectDeadlineTimer(connection);
   resetRuntimeSessionState(connection);
+  connection.lifecycle.serverSupport.reset();
 };

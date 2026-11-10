@@ -46,7 +46,7 @@ export function AppEffects(props: AppEffectsProps) {
   const appStore = useAppStore();
   useEffect(() => appStore.subscribeActions(({ action, state }) => {
     if (action.type !== 'remove-messages') return;
-    const bufferId = action.bufferId ?? state.domain.buffers.find((buffer) => buffer.networkId === action.networkId && buffer.target === action.target)?.id;
+    const bufferId = action.bufferId ?? state.domain.buffers.find((buffer) => buffer.networkId === action.networkId && buffer.target === action.target && buffer.queryTargetAvailable !== false)?.id;
     if (bufferId && (state.domain.messages[bufferId]?.length ?? 0) === 0) props.assistantStore.clearThread(bufferId);
   }), [appStore, props.assistantStore]);
   const banner = useAppSelector(selectBanner);

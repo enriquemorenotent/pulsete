@@ -1,13 +1,14 @@
+import { defaultIrcServerRules, isServerChannel, type IrcServerRules } from '../shared/irc-server-rules.js';
 import { isSameIrcIdentifier } from '../shared/irc-identifiers.js';
 import type { SpeakerAttributionConfidence, SpeakerAttributionSource, SpeakerRole } from '../shared/protocol-chat.js';
 import type { MessageAttributionUpdate, MessageInput } from './storage-types.js';
 
 export type SpeakerAttribution = Omit<MessageAttributionUpdate, 'id' | 'importBatchId'>;
 
-const isChannelTarget = (value: string) => /^[#&+!]/.test(value);
 
 export const resolveRuntimeMessageAttribution = (
   message: Pick<MessageInput, 'kind' | 'nick' | 'self' | 'target'>,
+  rules: IrcServerRules = defaultIrcServerRules,
 ): SpeakerAttribution => {
   if (message.self) {
     return {
@@ -27,7 +28,7 @@ export const resolveRuntimeMessageAttribution = (
       self: false,
     };
   }
-  if (!isChannelTarget(message.target) && message.target !== 'server' && isSameIrcIdentifier(message.nick, message.target)) {
+  if (!isServerChannel(message.target, rules) && message.target !== 'server' && isSameIrcIdentifier(message.nick, message.target, rules.caseMapping)) {
     return {
       speakerRole: 'peer',
       speakerNick: message.nick,

@@ -35,6 +35,7 @@ export const normalizeHistorySelection = (
   buffers: state.domain.buffers,
   channels: state.domain.channels,
   pendingChannels: state.domain.pendingChannels,
+      networkStates: state.domain.networkStates,
 }).normalizeSelection(state.domain.networks, target.selection, target.networkId);
 
 export const sameSelection = (

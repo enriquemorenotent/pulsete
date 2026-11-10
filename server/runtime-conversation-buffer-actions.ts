@@ -35,8 +35,9 @@ export const openRuntimeConversationQuery = (
   currentNick?: string | null,
 ) => {
   const network = requireStoredNetwork(options.networks, networkId);
-  const normalizedTarget = normalizeQueryTarget(target);
-  assertNotSelfPrivateMessageTarget(normalizedTarget, network, currentNick);
+  const rules = options.conversations.getServerRules(networkId);
+  const normalizedTarget = normalizeQueryTarget(target, rules);
+  assertNotSelfPrivateMessageTarget(normalizedTarget, network, currentNick, rules.caseMapping);
   const result = openConversationQuery(
     options.conversations,
     networkId,
@@ -48,6 +49,7 @@ export const openRuntimeConversationQuery = (
     messages: [
       { type: 'buffer.upsert', buffer: result.buffer } satisfies ServerMessage,
       ...removedBufferMessages(networkId, result.removedBufferIds, result.buffer.id),
+      ...(result.displacedBuffers ?? []).map(buffer => ({ type: 'buffer.upsert' as const, buffer })),
     ],
   };
 };
@@ -204,7 +206,7 @@ export const exportRuntimeConversationBufferHistory = (
     throw badRequest('Only channels and private messages can export history');
   }
   const network = requireStoredNetwork(options.networks, buffer.networkId);
-  const messages = options.conversations.listAllMessages(buffer.networkId, buffer.target);
+  const messages = options.conversations.listAllMessagesForBuffer(buffer.id);
   return {
     buffer,
     fileName: buildHistoryDownloadName(network.name, buffer.target),
