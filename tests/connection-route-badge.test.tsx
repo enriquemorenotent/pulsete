@@ -23,10 +23,10 @@ test('direct connections have no VPN indicator', () => {
  assert.equal(renderToStaticMarkup(<ConnectionRouteBadge network={makeSidebarNetwork()} phase="connected" />), '');
 });
 
-test('VPN badge shows the selected server number and full hostname on hover', () => {
+test('VPN badge keeps the server number separate for hover reveal and labels the full hostname', () => {
  const network = { ...makeSidebarNetwork(), nordVpnLocation: 'country:Germany' };
  const markup = renderToStaticMarkup(<ConnectionRouteBadge network={network} phase="connected" vpnServer="de1566.nordvpn.com" />);
- assert.match(markup, /VPN #1566/);
+ assert.match(markup, /class="connection-route-server"><span> #1566<\/span>/);
  assert.match(markup, /title="NordVPN tunnel · Germany · de1566.nordvpn.com · Connected"/);
  const offline = renderToStaticMarkup(<ConnectionRouteBadge network={network} phase="offline" vpnServer="de1566.nordvpn.com" />);
  assert.doesNotMatch(offline, /1566/);

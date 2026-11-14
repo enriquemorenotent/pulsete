@@ -5,6 +5,33 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "tailwindcss";
 
+.connection-route-server {
+  display: inline-grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: grid-template-columns 220ms ease, opacity 180ms ease, transform 220ms ease;
+}
+
+.connection-route-server > span {
+  overflow: hidden;
+  min-width: 0;
+  white-space: pre;
+}
+
+.connection-route-badge:hover .connection-route-server,
+button:is(:hover, :focus-visible) > .connection-route-badge .connection-route-server {
+  grid-template-columns: 1fr;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-route-server {
+    transition: none;
+  }
+}
+
 .watchlist-activity-cell[aria-pressed="true"] {
   border-color: #6ee7b7;
   box-shadow: inset 0 0 0 2px #6ee7b7;
