@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { BufferState, ChannelState } from '../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../shared/user-identity.js';
 import { badRequest } from './app-error.js';
+import { normalizeStoredAttribution } from './message-attribution.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { getRequiredBuffer } from './runtime-conversation-store-helpers.js';
 import type { RuntimeConversationStore } from './runtime-store.js';
@@ -113,7 +114,10 @@ export const appendConversationMessage = (
   if (input.message.historical || (input.message.delivery && input.message.delivery !== 'live')) {
     return { saved: store.appendMessage(input.message), bufferUpdate: null, removedBufferIds: [], displacedBuffers: [], retargetedFrom: null };
   }
-  const resolvedBuffer = resolveMessageBuffer(store, input);
+  const resolvedBuffer = resolveMessageBuffer(store, {
+    ...input,
+    message: { ...input.message, self: normalizeStoredAttribution(input.message).self },
+  });
   const saved = store.appendMessage(input.message, resolvedBuffer?.buffer.id, input);
   return {
     saved,

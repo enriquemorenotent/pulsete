@@ -18,6 +18,7 @@ import {
   upsertQueryPeerIdentity,
 } from './storage-query-identities.js';
 import type { BufferInput } from './storage-types.js';
+import { mergeQueryNotes, preserveQueryDraft, queryDraftsConflict } from './storage-query-merge-state.js';
 
 export type QueryAliasSource = 'target' | 'nick-change';
 
@@ -120,7 +121,8 @@ export const resolveQueryBufferId = (
       return exact.id;
     }
     const candidates = listAliasCandidates(db, networkId, target, exact.id)
-      .filter((candidate) => candidate.messageCount > 0 && !queryIdentityConflicts(db, candidate.bufferId, peerIdentity));
+      .filter((candidate) => candidate.messageCount > 0 && !queryIdentityConflicts(db, candidate.bufferId, peerIdentity)
+        && !queryBuffersConflict(db, candidate.bufferId, exact.id));
     return candidates.length === 1 ? candidates[0]!.bufferId : exact.id;
   }
   if (exact) {
@@ -184,6 +186,8 @@ const upsertQueryBufferWithIdentity = (db: SqliteDb, input: QueryBufferInput, di
       ],
       input.networkId,
       'target',
+      target,
+      displacedBuffers,
     );
     const retargeted = retargetQueryBufferWithMetadata(db, merged.buffer, { ...input, target, peerIdentity });
     return {
@@ -196,17 +200,19 @@ const upsertQueryBufferWithIdentity = (db: SqliteDb, input: QueryBufferInput, di
   if (exact?.kind === 'query') {
     if (countBufferMessages(db, exact.id) === 0) {
       const candidates = listAliasCandidates(db, input.networkId, target, exact.id)
-        .filter((candidate) => candidate.messageCount > 0 && !queryIdentityConflicts(db, candidate.bufferId, peerIdentity));
+        .filter((candidate) => candidate.messageCount > 0 && !queryIdentityConflicts(db, candidate.bufferId, peerIdentity)
+          && !queryBuffersConflict(db, candidate.bufferId, exact!.id));
       if (candidates.length === 1) {
-        deleteBuffer(db, exact.id);
+        const merged = mergeQueryBuffers(db, getBuffer(db, candidates[0]!.bufferId)!,
+          [exact], input.networkId, 'target', target, displacedBuffers);
         const retargeted = retargetQueryBufferWithMetadata(
           db,
-          getBuffer(db, candidates[0]!.bufferId)!,
+          merged.buffer,
           { ...input, target },
         );
         return {
           buffer: retargeted.buffer,
-          removedBufferIds: [exact.id],
+          removedBufferIds: merged.removedBufferIds,
           retargetedFrom: retargeted.retargetedFrom,
         };
       }
@@ -256,7 +262,7 @@ export const recordObservedQueryNickChange = (
   }
   const mergedBuffer = destination?.kind === 'query' && destination.id !== source.id ? destination : null;
   const bufferOpen = isStoredBufferOpen(db, source.id) || (!!mergedBuffer && isStoredBufferOpen(db, mergedBuffer.id));
-  const merged = mergeQueryBuffers(db, source, [mergedBuffer], networkId, 'nick-change');
+  const merged = mergeQueryBuffers(db, source, [mergedBuffer], networkId, 'nick-change', toTarget, displacedBuffers);
 
   const updated = upsertBuffer(db, {
     ...merged.buffer,
@@ -354,6 +360,8 @@ const mergeQueryBuffers = (
   candidates: ReadonlyArray<BufferState | null>,
   networkId: string,
   aliasSource: QueryAliasSource,
+  target: string,
+  displacedBuffers: BufferState[],
 ) => {
   let buffer = source;
   const removedBufferIds: string[] = [];
@@ -361,11 +369,18 @@ const mergeQueryBuffers = (
     if (candidate?.kind !== 'query' || candidate.id === source.id || removedBufferIds.includes(candidate.id) || queryBuffersConflict(db, source.id, candidate.id)) {
       continue;
     }
+    if (queryDraftsConflict(db, source.id, candidate.id)) {
+      if (isSameQueryTarget(db, networkId, candidate.target, target) && candidate.queryTargetAvailable !== false) {
+        releaseQueryRoute(db, candidate.id, displacedBuffers);
+      }
+      continue;
+    }
     copyQueryNickAliases(db, candidate.id, source.id, networkId);
     copyQueryPeerIdentities(db, candidate.id, source.id, networkId);
     upsertQueryNickAlias(db, { bufferId: source.id, networkId, nick: candidate.target, source: aliasSource });
     db.prepare('UPDATE messages SET bufferId = ? WHERE bufferId = ?').run(source.id, candidate.id);
     db.prepare('UPDATE history_import_batches SET bufferId = ? WHERE bufferId = ?').run(source.id, candidate.id);
+    preserveQueryDraft(db, candidate.id, source.id);
     deleteBuffer(db, candidate.id);
     removedBufferIds.push(candidate.id);
     buffer = {
@@ -373,7 +388,7 @@ const mergeQueryBuffers = (
       unread: getBuffer(db, source.id)!.unread,
       priorityUnread: getBuffer(db, source.id)!.priorityUnread,
       ...pickLatestReadState(buffer, candidate),
-      notes: pickQueryNotes(buffer, candidate),
+      notes: mergeQueryNotes(buffer, candidate),
       ircCloudAvatarId: buffer.ircCloudAvatarId ?? candidate.ircCloudAvatarId,
       selfNickAliases: mergeNickAliases(buffer.selfNickAliases ?? [], candidate.selfNickAliases ?? []),
     };
@@ -437,9 +452,6 @@ const countBufferMessages = (db: SqliteDb, bufferId: string) =>
   Number((db.prepare('SELECT COUNT(*) AS count FROM messages WHERE bufferId = ?').get(bufferId) as { count?: number } | undefined)?.count ?? 0);
 
 const mergeNickAliases = (left: string[], right: string[]) => [...new Set([...left, ...right])];
-
-const pickQueryNotes = (source: BufferState, merged: BufferState | null) =>
-  source.notes && source.notes.length > 0 ? source.notes : merged?.notes ?? source.notes ?? '';
 
 const pickLatestReadState = (source: BufferState, merged: BufferState | null) => {
   if (!merged || merged.lastReadTs == null) {

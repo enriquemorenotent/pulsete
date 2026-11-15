@@ -1,11 +1,7 @@
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import type { RuntimeEvent } from './irc-types.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
-import type {
-  RuntimeConversationStore,
-  RuntimeMutedNickStore,
-  RuntimeNetworkStore,
-} from './runtime-store.js';
+import type { RuntimeConversationServiceOptions } from './runtime-conversation-service-shared.js';
 
 type RuntimeEventConversations = Pick<
   RuntimeConversationService,
@@ -16,11 +12,7 @@ type RuntimeEventConversations = Pick<
   | 'handleSendFailure'
   | 'handleStatusEvent'
 >;
-type RuntimeEventStore = {
-  conversations: RuntimeConversationStore;
-  mutedNicks: Pick<RuntimeMutedNickStore, 'list'>;
-  networks: Pick<RuntimeNetworkStore, 'get'>;
-};
+type RuntimeEventStore = RuntimeConversationServiceOptions;
 type RuntimeEventSink = {
   publish(message: ServerMessage): void;
   store: RuntimeEventStore;
@@ -77,6 +69,7 @@ export function handleRuntimeEvent(runtime: RuntimeEventSink, event: RuntimeEven
     conversations: runtime.store.conversations,
     mutedNicks: runtime.store.mutedNicks,
     networks: runtime.store.networks,
+    drafts: runtime.store.drafts,
   });
   for (const message of translateRuntimeEvent(event, conversations)) {
     runtime.publish(message);

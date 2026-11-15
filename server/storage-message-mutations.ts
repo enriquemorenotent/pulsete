@@ -26,13 +26,13 @@ export const appendMessage = (
   resolvedBufferId?: string,
   attention?: MessageAttention,
 ) => {
-  const bufferId = ensureMessageBufferId(db, input, resolvedBufferId);
-  if (!bufferId) {
-    throw new Error(`Buffer not found for message target: ${input.networkId}:${input.target}`);
-  }
   const attribution = shouldRespectInputAttribution(input)
     ? normalizeStoredAttribution(input)
     : resolveRuntimeMessageAttribution(input, getServerRules(db, input.networkId));
+  const bufferId = ensureMessageBufferId(db, { ...input, self: attribution.self }, resolvedBufferId);
+  if (!bufferId) {
+    throw new Error(`Buffer not found for message target: ${input.networkId}:${input.target}`);
+  }
   db.prepare(`
     INSERT INTO messages
       (id, bufferId, nick, senderIdentityKind, senderIdentityValue, speakerRole, speakerNick,

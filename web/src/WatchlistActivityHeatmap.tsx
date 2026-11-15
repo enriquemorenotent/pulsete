@@ -33,8 +33,6 @@ export function WatchlistActivityHeatmap({ cells, timeZone }: { cells: ActivityC
     };
   }, [timeZone]);
   const [selected, setSelected] = useState<number | null>(null);
-  const [hovered, setHovered] = useState<number | null>(null);
-  const active = hovered ?? selected;
   const descriptions = useMemo(() => cells.map((cell, index) => {
     const label = `${days[Math.floor(index / 24)]}, ${activityHour(index % 24)}–${activityHour(index % 24 + 1)}`;
     if (!cell.observedMs) return `${label}: no observations`;
@@ -43,29 +41,21 @@ export function WatchlistActivityHeatmap({ cells, timeZone }: { cells: ActivityC
   }), [cells]);
   return (
     <div>
-      <ActivityGrid cells={cells} descriptions={descriptions} selected={selected} currentSlot={currentSlot} onHover={setHovered} onSelect={setSelected} />
-      <div className="mt-4 flex items-center justify-between gap-4 text-[11px] text-muted-foreground">
-        <span className="flex items-center gap-4"><span>Striped = unknown</span><span className="flex items-center gap-2"><span className="h-3 w-4 rounded-sm border-2 border-amber-300" />Current hour</span></span>
-        <span className="flex items-center gap-2">Connected 0% <span className="h-2 w-24 rounded-full" style={{ background: 'linear-gradient(to right, #253342, #34d399)' }} /> 100%</span>
-      </div>
-      <p className="mt-4 min-h-8 text-xs leading-relaxed text-muted-foreground" aria-live="polite">
-        {active === null ? 'Select or hover over an hour to see its observations. Away counts as connected.' : descriptions[active]}
-      </p>
+      <ActivityGrid cells={cells} descriptions={descriptions} selected={selected} currentSlot={currentSlot} onSelect={setSelected} />
+
     </div>
   );
 }
 
-// Hover only changes the detail text; the 168 slots stay unchanged.
-const ActivityGrid = memo(function ActivityGrid({ cells, descriptions, selected, currentSlot, onHover, onSelect }: {
+const ActivityGrid = memo(function ActivityGrid({ cells, descriptions, selected, currentSlot, onSelect }: {
   cells: ActivityCell[];
   descriptions: string[];
   selected: number | null;
   currentSlot: number;
-  onHover(index: number | null): void;
   onSelect(index: number): void;
 }) {
   return (
-    <div className="grid gap-1.5" style={{ gridTemplateColumns: '4rem repeat(24, minmax(0, 1fr))' }}>
+    <div className="grid gap-1" style={{ gridTemplateColumns: '2.5rem repeat(24, minmax(0, 1fr))' }}>
       <span />
       {Array.from({ length: 24 }, (_, hour) => <span key={hour} className="pb-1 text-center font-mono text-[10px] text-muted-foreground">{hour % 3 === 0 ? String(hour).padStart(2, '0') : ''}</span>)}
       {days.map((day, dayIndex) => <div key={day} className="contents">
@@ -80,7 +70,6 @@ const ActivityGrid = memo(function ActivityGrid({ cells, descriptions, selected,
               : 'repeating-linear-gradient(135deg, transparent, transparent 3px, #ffffff08 3px, #ffffff08 4px)' }}
             aria-current={index === currentSlot ? 'time' : undefined}
             aria-label={`${descriptions[index]}${index === currentSlot ? ' · Current hour' : ''}`} aria-pressed={selected === index} title={`${descriptions[index]}${index === currentSlot ? ' · Current hour' : ''}`}
-            onMouseEnter={() => onHover(index)} onMouseLeave={() => onHover(null)}
             onFocus={() => onSelect(index)} onClick={() => onSelect(index)} />;
         })}
       </div>)}

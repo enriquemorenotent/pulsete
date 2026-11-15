@@ -1,5 +1,5 @@
 import { normalizeIrcIdentifier } from '../shared/irc-identifiers.js';
-import { ensureQueryNickAliasesTable } from './storage-schema-helpers.js';
+import { ensureQueryNickAliasesTable, tableExists, tableHasColumn } from './storage-schema-helpers.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import { upsertQueryNickAlias } from './storage-query-aliases.js';
 
@@ -87,6 +87,14 @@ const deleteEmptyDuplicateQueryBuffers = (db: SqliteDb) => {
     HAVING COUNT(m.id) = 0
   `).all() as EmptyQueryRow[];
   for (const row of rows) {
+    // No messages does not mean no user data. Leave these for the current,
+    // lossless merge path once all later schema migrations have completed.
+    if (tableHasColumn(db, 'buffers', 'notes') && db.prepare(
+      "SELECT id FROM buffers WHERE id = ? AND notes <> ''",
+    ).get(row.id)) continue;
+    if (tableExists(db, 'buffer_drafts') && db.prepare(
+      "SELECT bufferId FROM buffer_drafts WHERE bufferId = ? AND body <> ''",
+    ).get(row.id)) continue;
     const candidates = queryBuffersWithMessagesForAlias(db, row.networkId, row.targetKey, row.id);
     if (candidates.length === 1) {
       db.prepare('DELETE FROM buffers WHERE id = ?').run(row.id);

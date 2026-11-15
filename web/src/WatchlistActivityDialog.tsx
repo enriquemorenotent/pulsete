@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, RefreshCw, X } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import type { FriendState } from '../../shared/protocol-chat.js';
 import type { WatchlistActivity } from '../../shared/watchlist-activity.js';
 import { buildActivityStatistics } from '../../shared/watchlist-activity-statistics.js';
@@ -29,47 +29,34 @@ export function WatchlistActivityDialog({ friend, onClose }: { friend: FriendSta
   const stats = useMemo(() => data ? buildActivityStatistics(data, timeZone) : null, [data, timeZone]);
   const date = (ts: number) => new Date(ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
   return <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-    <DialogContent className="max-h-[90dvh] w-[min(960px,calc(100vw-3rem))] gap-6 overflow-y-auto p-7 xl:p-7">
+    <DialogContent className="max-h-[90dvh] w-[min(760px,calc(100vw-3rem))] gap-4 overflow-y-auto p-5 xl:p-5">
       <DialogHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-emerald-300"><Activity className="size-3.5" /> Watchlist activity</div>
-            <DialogTitle className="truncate text-2xl">{friend.nick}</DialogTitle>
+            <DialogTitle className="truncate text-xl">{friend.nick}</DialogTitle>
+            <DialogDescription className="mt-1 text-xs">Watchlist activity · Last 30 days · {timeZone}</DialogDescription>
           </div>
-          <Button variant="ghost" size="icon" aria-label="Close activity" onClick={onClose}><X className="size-4" /></Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button variant="ghost" size="icon" aria-label="Refresh activity" title="Refresh activity" disabled={loading} onClick={() => setRevision((value) => value + 1)}><RefreshCw className={`size-3.5 ${loading ? 'animate-spin motion-reduce:animate-none' : ''}`} /></Button>
+            <Button variant="ghost" size="icon" aria-label="Close activity" title="Close activity" onClick={onClose}><X className="size-4" /></Button>
+          </div>
         </div>
-        <DialogDescription>When they’re usually connected, based on what Pulsete could observe.</DialogDescription>
       </DialogHeader>
-      <div className="flex items-center justify-between gap-4 border-y border-white/8 py-3">
-        <span className="text-sm text-muted-foreground">Across all connections</span>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground"><span>Last 30 days · {timeZone}</span>
-          <Button variant="ghost" size="icon" aria-label="Refresh activity" disabled={loading} onClick={() => setRevision((value) => value + 1)}><RefreshCw className="size-3.5" /></Button>
-        </div>
-      </div>
       {loading && !data ? <p role="status" className="py-12 text-center text-muted-foreground">Loading activity…</p> : error ?
         <p role="alert" className="py-8 text-center text-red-300">{error}. Use Refresh to try again.</p> : stats && data ? <>
-          <div className="grid grid-cols-3 gap-4">
-            <Metric label="Observation time" value={`${(stats.observedMs / 3_600_000).toFixed(1)} hours`} detail={`${stats.observedDays} ${stats.observedDays === 1 ? 'day' : 'days'} with observations`} />
-            <Metric label="Typical connection time" value={stats.typical ? `${activityHour(stats.typical.hour)}–${activityHour(stats.typical.hour + 1)}` : 'Still learning'} detail={stats.typical ? `${stats.typical.count} arrivals in this hour` : 'Needs repeated arrivals across more days'} />
-            <Metric label="Last observed online" value={stats.lastOnline === null ? 'Not observed yet' : date(stats.lastOnline)} detail="Includes away status" />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-white/8 pt-3 text-xs text-muted-foreground">
+            {stats.typical ? <span>Usually connects <strong className="font-medium text-emerald-300">{activityHour(stats.typical.hour)}–{activityHour(stats.typical.hour + 1)}</strong></span> : null}
+            <span>Last observed online <strong className="font-medium text-foreground">{stats.lastOnline === null ? 'Not yet' : date(stats.lastOnline)}</strong></span>
           </div>
-          <section className="rounded-xl border border-white/8 bg-black/10 p-5">
-            <h3 className="mb-1 text-sm font-medium">Weekly pattern</h3>
-            <p className="mb-5 text-xs text-muted-foreground">Share of observed time connected in each hour.</p>
+          <section aria-label="Weekly connection pattern">
+            <h3 className="mb-3 text-sm font-medium">Weekly pattern</h3>
             <WatchlistActivityHeatmap cells={stats.cells} timeZone={timeZone} />
           </section>
-          {stats.observedDays === 0 ? <p className="text-sm text-muted-foreground">No activity history yet. Keep Pulsete connected to start learning their pattern.</p>
-            : stats.observedDays < 7 ? <p className="text-sm text-amber-200/85">Early observations · {stats.observedDays} of 7 days collected. Patterns may change as more data arrives.</p> : null}
-          <p className="text-[11px] leading-relaxed text-muted-foreground">{date(data.since)} – {date(data.until)}. Disconnected time is unknown. Polling can delay detection by about 5 minutes; very short sessions may be missed. History is kept for 30 days.</p>
+          {stats.observedDays < 7 ? <p className="border-t border-white/8 pt-3 text-xs text-muted-foreground">
+            {stats.observedDays === 0 ? 'No history yet. Keep Pulsete connected to learn their pattern.'
+              : `Learning their pattern · ${stats.observedDays} of 7 days observed`}
+          </p> : null}
         </> : null}
     </DialogContent>
   </Dialog>;
-}
-
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <div className="rounded-lg border border-white/8 bg-white/[0.025] p-4">
-    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
-    <p className="mt-2 text-base font-medium text-foreground">{value}</p>
-    <p className="mt-1 text-[11px] text-muted-foreground">{detail}</p>
-  </div>;
 }

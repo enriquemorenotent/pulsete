@@ -23,17 +23,17 @@ export function ConnectionRouteBadge({ network, phase, vpnServer, embedded = fal
   const vpn = Boolean(nordVpnCountry(network.nordVpnLocation ?? ''));
   const Icon = vpn ? (phase === 'connected' ? ShieldCheck : Shield) : Globe;
   const serverNumber = vpn && phase !== 'offline' ? /^[a-z]{2}(\d+)\.nordvpn\.com$/.exec(vpnServer ?? '')?.[1] : undefined;
-  const text = vpn ? 'VPN' : 'Proxy';
   const flag = nordVpnCountryFlag(network.nordVpnLocation ?? '');
   return <span role="img" aria-label={label} title={label} className={cn(
     'connection-route-badge inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[9px] font-medium leading-none',
-    embedded ? 'min-w-[76px] justify-start self-stretch rounded-r-lg border-l px-2' : 'rounded border px-1.5 py-0.5',
+    embedded ? 'min-w-[48px] justify-start self-stretch rounded-r-lg border-l px-2' : 'rounded border px-1.5 py-0.5',
     phase === 'connected' ? 'border-emerald-400/15 bg-emerald-400/5 text-emerald-300'
       : phase === 'connecting' ? 'border-amber-400/15 bg-amber-400/5 text-amber-300'
         : 'border-border/60 text-muted-foreground',
   )}>
     {flag ? <span aria-hidden="true" className="text-xs leading-none">{flag}</span> : null}
     <Icon aria-hidden="true" className="size-3" />
-    <span aria-hidden="true" className="inline-flex items-center">{text}{serverNumber ? <span className="connection-route-server"><span> #{serverNumber}</span></span> : null}</span>
+    {!vpn ? <span aria-hidden="true">Proxy</span> : null}
+    {serverNumber ? <span aria-hidden="true" className="connection-route-server"><span> #{serverNumber}</span></span> : null}
   </span>;
 }

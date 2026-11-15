@@ -48,7 +48,7 @@ export const openRuntimeConversationQuery = (
     buffer: result.buffer,
     messages: [
       { type: 'buffer.upsert', buffer: result.buffer } satisfies ServerMessage,
-      ...removedBufferMessages(networkId, result.removedBufferIds, result.buffer.id),
+      ...removedBufferMessages(networkId, result.removedBufferIds, result.buffer.id, options.drafts),
       ...(result.displacedBuffers ?? []).map(buffer => ({ type: 'buffer.upsert' as const, buffer })),
     ],
   };

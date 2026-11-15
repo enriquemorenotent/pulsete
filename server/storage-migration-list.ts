@@ -1,4 +1,5 @@
 import { serverRulesSchemaSql } from './storage-server-rules.js';
+import { repairSelfQueryPeerIdentities } from './storage-query-peer-repair.js';
 import { migrateQueryRouting } from './storage-query-routing-migration.js';
 import { migrateUnreadMessages } from './storage-unread-migration.js';
 import { ensureNordVpnStorage } from './storage-nordvpn.js';
@@ -212,4 +213,11 @@ export const storageMigrations: readonly StorageMigration[] = [
   { version: 36, apply: migrateUnreadMessages },
   { version: 37, apply: migrateQueryRouting },
   { version: 38, apply: db => { db.exec(serverRulesSchemaSql); } },
+  { version: 39, apply: db => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      repairSelfQueryPeerIdentities(db);
+      db.exec('COMMIT');
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
+  } },
 ];

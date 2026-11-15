@@ -49,6 +49,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     conversations: store.conversations,
     mutedNicks: store.mutedNicks,
     networks: store.networks,
+    drafts: store.drafts,
   });
   const assistantService = new RuntimeAiAssistantService({
     conversations: store.conversations,

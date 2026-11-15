@@ -107,7 +107,7 @@ export const handleRuntimeConversationMessageEvent = (
   ];
   if (bufferUpdate) {
     messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
-    messages.push(...removedBufferMessages(event.message.networkId, removedBufferIds, bufferUpdate.id));
+    messages.push(...removedBufferMessages(event.message.networkId, removedBufferIds, bufferUpdate.id, options.drafts));
   }
   const closedServiceQuery = !event.message.self
     && event.message.target === 'server'
@@ -169,7 +169,7 @@ export const handleRuntimeConversationPeerNickEvent = (
       if (renamed.bufferOpen) {
         queryTarget = renamed.buffer.target;
         messages.push({ type: 'buffer.upsert', buffer: renamed.buffer });
-        messages.push(...removedBufferMessages(event.networkId, renamed.removedBufferIds, renamed.buffer.id));
+        messages.push(...removedBufferMessages(event.networkId, renamed.removedBufferIds, renamed.buffer.id, options.drafts));
         messages.push(...(renamed.displacedBuffers ?? []).map(buffer => ({ type: 'buffer.upsert' as const, buffer })));
       }
     }
@@ -217,7 +217,7 @@ const appendRuntimeConversationMessage = (
   const messages: ServerMessage[] = [{ type: 'message.append', message: saved }];
   if (bufferUpdate) {
     messages.push({ type: 'buffer.upsert', buffer: bufferUpdate });
-    messages.push(...removedBufferMessages(message.networkId, removedBufferIds, bufferUpdate.id));
+    messages.push(...removedBufferMessages(message.networkId, removedBufferIds, bufferUpdate.id, options.drafts));
   }
   return messages;
 };

@@ -38,6 +38,7 @@ for (const [name, mutate] of Object.entries(mutations)) {
       conversations: storage.conversations,
       networks: storage.networks,
       mutedNicks: storage.mutedNicks,
+      drafts: storage.drafts,
     };
     let state = reducer(initialState, { type: 'upsert-buffer', buffer: query });
     const apply = (messages: ServerMessage[]) => {

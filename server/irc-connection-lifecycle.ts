@@ -110,7 +110,6 @@ export const disconnect = (connection: IrcLifecycleContext, raw = 'QUIT :Client 
   });
   if (wasActive) {
     emitState(connection);
-    emitStatus(connection, 'Disconnected from server');
   }
 };
 

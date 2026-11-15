@@ -4,7 +4,7 @@ import { Storage } from '../server/storage.js';
 import { makeStorageFile, openSqliteDatabase } from './helpers/storage-test-helpers.js';
 import { createNetworkInput } from './helpers/runtime-test-common.js';
 import { isUserMuted } from '../shared/muted-nicks.js';
-import { matchesIdentityScopedEntry, compareIdentityEvidence } from '../shared/user-identity.js';
+import { matchesIdentityScopedEntry, compareIdentityEvidence, compareIdentitySets } from '../shared/user-identity.js';
 import { listConversationBufferHistory, clearConversationQueryHistory } from '../server/runtime-conversation-store.js';
 import { buildConversationIndex } from '../web/src/conversation-selectors.js';
 
@@ -18,6 +18,15 @@ const setup = () => {
   });
   return {path,storage,network,add};
 };
+
+test('mixed account evidence stays conflicting even when one account or host overlaps', () => {
+  const host = { kind: 'userhost' as const, value: 'peer@example.test' };
+  assert.equal(compareIdentitySets([alice, bob], [alice]), 'conflict');
+  assert.equal(compareIdentitySets([alice], [bob, alice]), 'conflict');
+  assert.equal(compareIdentitySets([alice, host], [bob, host]), 'conflict');
+  assert.equal(compareIdentitySets([host], [host]), 'same');
+  assert.equal(compareIdentitySets([alice], [host]), 'unknown');
+});
 
 test('nickname fallback distinguishes missing identity from a conflicting identity', () => {
   const entry = {networkId:'net',nick:'same',identity:alice};
