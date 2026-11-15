@@ -103,7 +103,7 @@ test('irc connection surfaces raw TOPIC payloads for unjoined channels', () => {
     events.some(
       (event) =>
         event.type === 'status'
-        && event.target === undefined
+        && event.target === 'server'
         && event.kind === 'system'
         && event.message === '* #help alice 123'
     )

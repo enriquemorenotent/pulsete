@@ -1,3 +1,4 @@
+import { createChannelReplyContext, createWhoReplyContext } from './irc-reply-context-create.js';
 import { emitSendFailure, emitState, emitStatus } from './irc-emit.js';
 import { formatPingReply, isSelfNick } from './irc-handle-line-helpers.js';
 import {
@@ -112,7 +113,9 @@ export const handleIrcLine = (connection: IrcConnectionState, line: string) => {
   } else if (command === '366') {
     const channel = connection.resolveTrackedChannel(params[1] ?? '');
     if (channel && !hasNegotiatedCapability(connection.lifecycle.capabilities, 'away-notify')) {
-      connection.sendRaw(`WHO ${channel}`);
+      if (connection.sendRaw(`WHO ${channel}`)) {
+        connection.queueReplyContext(createWhoReplyContext('server', channel, true));
+      }
     }
   }
 };
@@ -161,10 +164,19 @@ const handleNumericReply = (
       connection.removeChannelSession(joinFailureChannel);
     }
   }
-  const allowTopicPayload = replyContext?.kind === 'channel' && replyContext.operation === 'topic-query';
-  const allowNamesPayload = replyContext?.kind === 'channel' && replyContext.operation === 'names';
+  const allowTopicPayload = !replyContext?.background && replyContext?.kind === 'channel'
+    && (replyContext.operation === 'topic-query' || replyContext.operation === 'topic-metadata');
+  if (command === '332' && replyContext?.kind === 'channel' && replyContext.operation === 'topic-query') {
+    // Some servers omit 333. Finish the topic query and track optional metadata separately.
+    connection.queueReplyContext({
+      ...createChannelReplyContext(replyContext.sourceTarget, replyContext.channel, 'topic-metadata'),
+      label: replyContext.label, background: replyContext.background,
+    });
+  }
+  const allowNamesPayload = !replyContext?.background && replyContext?.kind === 'channel' && replyContext.operation === 'names';
+  const allowWhoPayload = replyContext?.kind === 'who' && !replyContext.background;
   const isMessageSendFailure = replyContext?.kind === 'message' && getServerNumericStatusKind(command) === 'error';
-  for (const lineText of formatServerNumeric(command, params, { allowTopicPayload, allowNamesPayload })) {
+  for (const lineText of formatServerNumeric(command, params, { allowTopicPayload, allowNamesPayload, allowWhoPayload })) {
     if (isMessageSendFailure) {
       emitSendFailure(connection, {
         sourceTarget: replyContext.sourceTarget,

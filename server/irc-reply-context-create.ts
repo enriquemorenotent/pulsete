@@ -27,6 +27,10 @@ export const createMessageReplyContext = (
   };
 };
 
+export const createWhoReplyContext = (sourceTarget: string, target: string, background = false): PendingReplyContext => ({
+  kind: 'who', sourceTarget, target, background, expiresAt: Date.now() + replyContextTtlMs,
+});
+
 export const createWhoisReplyContext = (sourceTarget: string, nick: string): PendingReplyContext => ({
   kind: 'whois',
   sourceTarget,
@@ -62,7 +66,7 @@ export const createChannelReplyContext = (
   sourceTarget: string,
   channel: string,
   operation: ChannelReplyOperation,
-  options: { failedJoinBufferId?: string; requestedTopic?: string } = {}
+  options: { failedJoinBufferId?: string; requestedTopic?: string; background?: boolean } = {}
 ): PendingReplyContext => ({
   kind: 'channel',
   sourceTarget,
@@ -70,6 +74,7 @@ export const createChannelReplyContext = (
   operation,
   failedJoinBufferId: options.failedJoinBufferId,
   requestedTopic: options.requestedTopic,
+  background: options.background,
   expiresAt: Date.now() + replyContextTtlMs,
 });
 
@@ -104,6 +109,9 @@ export const createReplyContextFromRaw = (sourceTarget: string, raw: string, rul
   if ((command === 'PRIVMSG' || command === 'NOTICE') && rest[0]) {
     const messageText = rest.slice(1).join(' ').replace(/^:/, '').trim();
     return createMessageReplyContext(sourceTarget, rest[0], undefined, command, messageText.startsWith('!'));
+  }
+  if (command === 'WHO') {
+    return createWhoReplyContext('server', rest[0] ?? '0');
   }
   if (command === 'WHOIS') {
     return rest.at(-1) ? createWhoisReplyContext(sourceTarget, rest.at(-1) as string) : null;

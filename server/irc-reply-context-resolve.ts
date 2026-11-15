@@ -86,6 +86,13 @@ export const resolveReplyContext = (
       ? { matched: true, done: true }
       : { matched: false, done: false };
   }
+  if (context.kind === 'who') {
+    const matchesTarget = isSameIrcIdentifier(params[1] ?? '', context.target, context.rules?.caseMapping);
+    const matchesRow = command === '352' && (matchesTarget || !isChannelTarget(context.target, context.rules));
+    const commandError = ['421', '461', '263'].includes(command) && (params[1] ?? '').toUpperCase() === 'WHO';
+    const done = ((command === '315' || ['401', '402', '403'].includes(command)) && matchesTarget) || commandError;
+    return { matched: matchesRow || done, done };
+  }
   if (context.kind === 'whois') {
     if (!whoisReplyNumerics.has(command) || !isSameIrcIdentifier(params[1] ?? '', context.nick, context.rules?.caseMapping)) {
       return { matched: false, done: false };
@@ -141,6 +148,7 @@ export const getReplyPriority = (context: PendingReplyContext) => {
     context.kind === 'channel-list'
     || context.kind === 'raw-list'
     || context.kind === 'whois'
+    || context.kind === 'who'
     || context.kind === 'raw-target'
     || context.kind === 'nick'
   ) {
@@ -173,6 +181,7 @@ export const refreshReplyContextAfterMatch = (
 
 const fifoReplyNumerics = new Set([
   ...whoisReplyNumerics,
+  '352', '315',
   ...joinReplyNumerics,
   ...partReplyNumerics,
   ...topicSetReplyNumerics,
@@ -214,6 +223,9 @@ const resolveChannelReplyContext = (
   }
   if (context.operation === 'topic-query') {
     return topicQueryReplyNumerics.has(command) ? { matched: true, done: true } : { matched: false, done: false };
+  }
+  if (context.operation === 'topic-metadata') {
+    return { matched: command === '333', done: command === '333' };
   }
   return namesReplyNumerics.has(command)
     ? { matched: true, done: command === '366' }

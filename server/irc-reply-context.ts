@@ -10,6 +10,7 @@ import {
   createRawTargetReplyContext,
   createReplyContextFromRaw,
   createWhoisReplyContext,
+  createWhoReplyContext,
 } from './irc-reply-context-create.js';
 import {
   getReplyPriority,
@@ -39,6 +40,7 @@ export {
   createRawTargetReplyContext,
   createReplyContextFromRaw,
   createWhoisReplyContext,
+  createWhoReplyContext,
 };
 
 export const consumeReplyTarget = (

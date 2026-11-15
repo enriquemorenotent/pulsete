@@ -87,12 +87,15 @@ export const formatTlsStatusLines = (socket: tls.TLSSocket) => {
   return lines;
 };
 
-const silentNumericReplies = new Set(['332', '353']);
+// State synchronization is silent unless it answers an explicit user request.
+const topicNumericReplies = new Set(['331', '332', '333']);
+const namesNumericReplies = new Set(['353', '366']);
+const whoNumericReplies = new Set(['352', '315']);
 
 export const formatServerNumeric = (
   command: string,
   params: string[],
-  options: { allowTopicPayload?: boolean; allowNamesPayload?: boolean } = {}
+  options: { allowTopicPayload?: boolean; allowNamesPayload?: boolean; allowWhoPayload?: boolean } = {}
 ) => {
   const whoisLines = formatWhoisNumeric(command, params);
   if (whoisLines.length > 0) {
@@ -143,7 +146,9 @@ export const formatServerNumeric = (
     return body ? [`* ${body}`] : [];
   }
 
-  if (silentNumericReplies.has(command)) {
+  if ((topicNumericReplies.has(command) && !options.allowTopicPayload)
+    || (namesNumericReplies.has(command) && !options.allowNamesPayload)
+    || (whoNumericReplies.has(command) && !options.allowWhoPayload)) {
     return [];
   }
 

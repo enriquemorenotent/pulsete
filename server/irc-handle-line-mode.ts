@@ -1,3 +1,4 @@
+import { createChannelReplyContext } from './irc-reply-context-create.js';
 import { modeArgument } from '../shared/irc-server-rules.js';
 import { emitChannel } from './irc-emit.js';
 import { updateChannelUserMode } from '../shared/channel-users.js';
@@ -23,7 +24,9 @@ export const handleMode = (connection: IrcConnectionState, params: string[]) => 
     const consumes = modeArgument(token, sign === '+', rules);
     if (consumes === null || (consumes && !params[parameterIndex])) {
       // Without the mode's argument rule, later nicknames cannot be assigned safely.
-      connection.sendRaw(`NAMES ${channel}`, channel);
+      if (connection.sendRaw(`NAMES ${channel}`, channel)) {
+        connection.replyTracker.queue(createChannelReplyContext('server', channel, 'names', { background: true }));
+      }
       return;
     }
     const argument = consumes ? params[parameterIndex++] : undefined;

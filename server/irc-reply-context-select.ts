@@ -55,6 +55,8 @@ export const getExactDuplicateReplyIndexes = (
     return [];
   }
   const selectedContext = selected.context;
+  // Each NAMES/TOPIC request has its own response stream, including background refreshes.
+  if (selectedContext.operation === 'names' || selectedContext.operation === 'topic-query' || selectedContext.operation === 'topic-metadata') return [];
   return matches
     .filter(
       (match) =>

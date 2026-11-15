@@ -1,12 +1,13 @@
 import type { IrcServerRules } from '../shared/irc-server-rules.js';
 import type { OutgoingAction } from './irc-outgoing-actions.js';
-export type ChannelReplyOperation = 'join' | 'part' | 'topic-set' | 'topic-query' | 'names';
+export type ChannelReplyOperation = 'join' | 'part' | 'topic-set' | 'topic-query' | 'topic-metadata' | 'names';
 
 type PendingReplyBase = {
   rules?: IrcServerRules;
   action?: OutgoingAction;
   expiresAt: number;
   label?: string;
+  background?: boolean;
 };
 
 type MessageReplyCompletion = 'single' | 'burst';
@@ -24,22 +25,19 @@ export type PendingReplyContext =
       optimisticMessageId?: string;
       retryDraft?: string;
     })
+  | (PendingReplyBase & { kind: 'who'; sourceTarget: string; target: string })
   | (PendingReplyBase & { kind: 'whois'; sourceTarget: string; nick: string })
   | (PendingReplyBase & { kind: 'raw-target'; sourceTarget: string; command: 'MODE'; target: string })
   | (PendingReplyBase & { kind: 'raw-list'; sourceTarget: string })
   | (PendingReplyBase & { kind: 'channel-list'; requestId: string })
-  | {
-      label?: string;
+  | (PendingReplyBase & {
       kind: 'channel';
       sourceTarget: string;
       channel: string;
       operation: ChannelReplyOperation;
       failedJoinBufferId?: string;
       requestedTopic?: string;
-      rules?: IrcServerRules;
-  action?: OutgoingAction;
-      expiresAt: number;
-    }
+    })
   | (PendingReplyBase & { kind: 'nick'; sourceTarget: string; requestedNick: string })
   | (PendingReplyBase & { kind: 'ison'; sourceTarget: string })
   | (PendingReplyBase & { kind: 'friend-presence-ison'; snapshotId: number });

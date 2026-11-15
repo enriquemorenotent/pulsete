@@ -1,3 +1,4 @@
+import { createChannelReplyContext } from './irc-reply-context-create.js';
 import { emitChannel, emitMessage, emitPeerNick, emitPeerQuit, emitStatus } from './irc-emit.js';
 import {
   renameChannelUser,
@@ -58,6 +59,8 @@ export const handleJoin = (connection: IrcChannelEventContext, params: string[],
     connection.setChannelSession(channel, 'joined', { sourceTarget: pendingSession.sourceTarget });
   }
   if (selfJoin) {
+    // JOIN includes a NAMES response before later user queries.
+    connection.replyTracker.queue(createChannelReplyContext('server', channel, 'names', { background: true }));
     requestLatestChatHistory(connection, channel);
   }
 };
