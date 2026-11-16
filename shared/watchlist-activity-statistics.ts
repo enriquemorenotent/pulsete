@@ -4,6 +4,7 @@ import type { WatchlistActivity } from './watchlist-activity.js';
 export type ActivityCell = { observedMs: number; connectedMs: number; awayMs: number };
 const minuteMs = 60_000;
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+export const typicalConnectionRequirements = { observedDays: 7, arrivals: 5, repeatedDays: 3 } as const;
 
 export const buildActivityStatistics = (activity: WatchlistActivity, timeZone: string) => {
   const cells: ActivityCell[] = Array.from({ length: 168 }, () => ({ observedMs: 0, connectedMs: 0, awayMs: 0 }));
@@ -49,10 +50,13 @@ export const buildActivityStatistics = (activity: WatchlistActivity, timeZone: s
     days: new Set(arrivals.filter((arrival) => arrival.hour === hour).map((arrival) => arrival.date)).size,
   })).sort((a, b) => b.count - a.count || a.hour - b.hour);
   // Require repeated evidence on separate days before calling a time typical.
-  const typical = days.size >= 7 && arrivals.length >= 5 && arrivalHours[0]!.days >= 3
+  const repeatedDays = arrivalHours[0]!.days;
+  const typical = days.size >= typicalConnectionRequirements.observedDays
+    && arrivals.length >= typicalConnectionRequirements.arrivals
+    && repeatedDays >= typicalConnectionRequirements.repeatedDays
     ? arrivalHours[0]! : null;
   return {
-    cells, observedDays: days.size, lastOnline, typical, arrivals: arrivals.length,
+    cells, observedDays: days.size, lastOnline, typical, arrivals: arrivals.length, repeatedDays,
     observedMs: cells.reduce((total, cell) => total + cell.observedMs, 0),
     connectedMs: cells.reduce((total, cell) => total + cell.connectedMs, 0),
   };

@@ -46,7 +46,29 @@ test('typical times require repeated arrivals on separate days and at least seve
   const result = buildActivityStatistics(data(rows), 'UTC');
   assert.equal(result.typical?.hour, 20);
   assert.equal(result.typical?.count, 7);
+  assert.equal(result.repeatedDays, 7);
   assert.equal(buildActivityStatistics(data(rows.slice(0, 3)), 'UTC').typical, null);
+});
+
+test('learning progress starts empty and still reports missing arrivals after seven observed days', () => {
+  const empty = buildActivityStatistics(data([]), 'UTC');
+  assert.equal(empty.observedDays, 0);
+  assert.equal(empty.arrivals, 0);
+  assert.equal(empty.repeatedDays, 0);
+  const observed = buildActivityStatistics(data([interval(start, 7 * 24 * hour, 'offline')]), 'UTC');
+  assert.equal(observed.observedDays, 7);
+  assert.equal(observed.arrivals, 0);
+  assert.equal(observed.repeatedDays, 0);
+  assert.equal(observed.typical, null);
+});
+
+test('learning progress counts separate dates in the leading hour, not repeated connections on one date', () => {
+  const rows = Array.from({ length: 5 }, (_, index) =>
+    interval(start + 20 * hour + index * 10 * 60_000, 60_000, 'online', { arrival: true }));
+  const result = buildActivityStatistics(data(rows), 'UTC');
+  assert.equal(result.arrivals, 5);
+  assert.equal(result.repeatedDays, 1);
+  assert.equal(result.typical, null);
 });
 
 test('five accounts observing the same hour count as one hour and one arrival', () => {
