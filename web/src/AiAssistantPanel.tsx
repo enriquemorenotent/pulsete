@@ -7,6 +7,7 @@ import {
   type AiAssistantSelection,
 } from '../../shared/protocol-ai.js';
 import { normalizeAssistantTurns } from '../../shared/ai-assistant-turns.js';
+import { stripAssistantSourceLabels } from '../../shared/ai-assistant-sources.js';
 import { Button } from '@/components/ui/button.js';
 import { aiAssistantApi } from './ai-assistant-client.js';
 import {
@@ -19,7 +20,7 @@ import { useAssistantReadingMode } from './assistant-reading-mode.js';
 import { AiAssistantChatView } from './AiAssistantChatView.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 import { AiAssistantConnectionPanel } from './AiAssistantConnectionPanel.js';
-import { AiAssistantModelControls } from './AiAssistantModelControls.js';
+import { AiAssistantSettings } from './AiAssistantSettings.js';
 import { resolveAiAssistantSelection } from './ai-assistant-model-selection.js';
 import {
   InspectorPanel,
@@ -28,6 +29,8 @@ import {
 
 type AiAssistantPanelProps = {
   buffer: BufferState | null;
+  recentOnly?: boolean;
+  onRecentOnlyChange?: (recentOnly: boolean) => Promise<boolean>;
   onSelectionChange?: (selection: AiAssistantSelection) => boolean | Promise<boolean>;
   onUseSuggestion: (value: string) => void;
   onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
@@ -50,15 +53,13 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   useEffect(() => store.subscribe(() => {
     for (const [id, controller] of controllers.current) if (!store.getThread(id).pending) controller.abort();
   }), [store]);
-  const cancel = () => {
-    if (!bufferId) return;
-    controllers.current.get(bufferId)?.abort();
-    const requestId = store.getThread(bufferId).activeRequestId;
-    if (requestId !== null) store.failRequest(bufferId, requestId, 'Request cancelled');
-  };
+  const cancel = () => { if (bufferId) controllers.current.get(bufferId)?.abort(); };
   const thread = useAiAssistantThread(store, bufferId);
   const [status, setStatus] = useState<AiAssistantProviderStatus | null>(null);
   const [optimisticSelection, setOptimisticSelection] = useState<AiAssistantSelection | null>(null);
+  const [recentOnlyOverride, setRecentOnlyOverride] = useState<boolean | null>(null);
+  const [savingAccess, setSavingAccess] = useState(false);
+  const recentOnly = recentOnlyOverride ?? props.recentOnly ?? false;
   const savedSelection = optimisticSelection ?? props.selection ?? defaultSelection;
   const resolvedSelection = resolveAiAssistantSelection(status, savedSelection);
 
@@ -69,13 +70,24 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     });
   };
 
+  const changeRecentOnly = async (value: boolean) => {
+    setRecentOnlyOverride(value);
+    if (!props.onRecentOnlyChange) return;
+    setSavingAccess(true);
+    try { await props.onRecentOnlyChange(value); }
+    finally {
+      setRecentOnlyOverride(null);
+      setSavingAccess(false);
+    }
+  };
+
   const ask = async (
     mode: AiAssistantMode,
     prompt: string,
     label = prompt,
     nextPendingLabel = 'Thinking',
   ) => {
-    if (!bufferId || (mode === 'answer' && !prompt.trim())) {
+    if (!bufferId || savingAccess || (mode === 'answer' && !prompt.trim())) {
       return;
     }
     const currentThread = store.getThread(bufferId);
@@ -94,7 +106,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         assistantTurns,
         continuationToken: currentThread.continuationToken,
         mode,
-        scope: currentThread.scope,
+        scope: recentOnly ? 'recent' : 'auto',
         webLookup: mode === 'answer' && currentThread.webLookup,
         prompt,
         selection: resolvedSelection.selection,
@@ -103,7 +115,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       if (store.getThread(bufferId).activeRequestId !== currentRequestId) return;
       setStatus(response.status);
       store.resolveRequest(bufferId, currentRequestId, {
-        mode,
+        mode: response.mode,
         text: response.answer,
         context: response.context,
         continuationToken: response.continuationToken,
@@ -112,8 +124,9 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       store.failRequest(
         bufferId,
         currentRequestId,
-        controller.signal.aborted ? 'Request cancelled'
+        controller.signal.aborted ? ''
           : reason instanceof Error ? reason.message : 'Assistant request failed',
+        label === prompt ? prompt : '',
       );
     } finally {
       if (controllers.current.get(bufferId) === controller) controllers.current.delete(bufferId);
@@ -126,7 +139,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     }
     const current = store.getThread(bufferId);
     const prompt = current.input.trim();
-    if (!prompt || current.pending) {
+    if (!prompt || current.pending || savingAccess) {
       return;
     }
     store.setInput(bufferId, '');
@@ -136,75 +149,55 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const connected = status?.connected === true;
   const hasThreadContent = hasAiAssistantThreadContent(thread);
   return (
-    <InspectorPanel className="gap-3 py-3.5">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.045] pb-3">
-        <div className="flex min-w-0 items-baseline gap-2">
-          <h2 className="shrink-0 text-sm font-semibold tracking-tight text-foreground/92">
-            {props.buffer?.target ?? 'Assistant'}
-          </h2>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-        {hasThreadContent ? (
-          <Button
-            type="button"
-            size="icon"
-            aria-label="New assistant chat"
-            title="New chat"
-            variant="ghost"
-            className="shrink-0 text-foreground/72 hover:text-foreground"
-            disabled={!bufferId}
-            onClick={() => {
-              if (bufferId) {
+    <InspectorPanel className="gap-0 px-3 py-0">
+      <header className="-mx-3 flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3">
+        <h2 className="min-w-0 truncate text-[14px] font-semibold text-foreground">
+          {props.buffer?.target ?? 'Assistant'}
+        </h2>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {connected ? <AiAssistantSettings status={status} selection={savedSelection} recentOnly={recentOnly}
+            webLookup={thread.webLookup} disabled={thread.pending || savingAccess} onRecentOnlyChange={changeRecentOnly}
+            onWebLookupChange={(enabled) => { if (bufferId) store.setWebLookup(bufferId, enabled); }}
+            onSelectionChange={changeSelection} /> : null}
+          {connected || hasThreadContent ? (
+            <Button type="button" size="icon" variant="ghost" aria-label="New assistant chat" title="New chat"
+              className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+              disabled={!bufferId || !hasThreadContent}
+              onClick={() => {
+                if (!bufferId) return;
                 controllers.current.get(bufferId)?.abort();
                 const token = store.getThread(bufferId).continuationToken;
                 if (token) void aiAssistantApi.clear(bufferId, token).catch(() => undefined);
                 store.clearThread(bufferId);
-              }
-            }}
-          >
-            <MessageSquarePlus />
-          </Button>
-        ) : null}
-        {reading ? <Button type="button" size="icon" variant="ghost"
-          className="size-7 text-muted-foreground" aria-label={reading.expanded ? 'Reduce assistant width' : 'Expand assistant'}
-          title={reading.expanded ? 'Reduce width' : 'Expand for reading'}
-          onClick={() => reading.setExpanded(!reading.expanded)}>
-          {reading.expanded ? <Minimize2 /> : <Maximize2 />}
-        </Button> : null}
+              }}>
+              <MessageSquarePlus />
+            </Button>
+          ) : null}
+          {reading ? <Button type="button" size="icon" variant="ghost"
+            className="size-8 text-muted-foreground" aria-label={reading.expanded ? 'Reduce assistant width' : 'Expand assistant'}
+            title={reading.expanded ? 'Reduce width' : 'Expand for reading'}
+            onClick={() => reading.setExpanded(!reading.expanded)}>
+            {reading.expanded ? <Minimize2 /> : <Maximize2 />}
+          </Button> : null}
         </div>
       </header>
-      <InspectorSection className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <InspectorSection className="flex min-h-0 flex-1 flex-col space-y-0 overflow-hidden pt-2.5 pb-3">
         <AiAssistantConnectionPanel compact onStatusChange={setStatus} />
         {connected ? (
-          <>
-            <AiAssistantModelControls
-              disabled={thread.pending}
-              onSelectionChange={changeSelection}
-              savedSelection={savedSelection}
-              status={status}
-            />
-            <AiAssistantChatView
-              scope={thread.scope}
-              onScopeChange={(scope) => { if (bufferId) store.setScope(bufferId, scope); }}
-              webLookup={thread.webLookup}
-              onWebLookupChange={(enabled) => { if (bufferId) store.setWebLookup(bufferId, enabled); }}
-              entries={thread.entries}
-              error={thread.error}
-              input={thread.input}
-              pending={thread.pending}
-              pendingLabel={thread.pendingLabel}
-              onAsk={ask}
-              onCancel={cancel}
-              onChange={(value) => {
-                if (bufferId) {
-                  store.setInput(bufferId, value);
-                }
-              }}
-              onSubmit={submit}
-              onUseSuggestion={props.onUseSuggestion}
-              onOpenSource={props.onOpenSource}
-            />
-          </>
+          <AiAssistantChatView
+            disabled={savingAccess}
+            entries={thread.entries}
+            error={thread.error}
+            input={thread.input}
+            pending={thread.pending}
+            pendingLabel={thread.pendingLabel}
+            onAsk={ask}
+            onCancel={cancel}
+            onChange={value => { if (bufferId) store.setInput(bufferId, value); }}
+            onSubmit={submit}
+            onUseSuggestion={props.onUseSuggestion}
+            onOpenSource={props.onOpenSource}
+          />
         ) : null}
       </InspectorSection>
     </InspectorPanel>
@@ -212,7 +205,9 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
 }
 
 const buildAssistantTurns = (entries: readonly AssistantEntry[]) =>
-  normalizeAssistantTurns(entries.map((entry) => ({ role: entry.role, text: entry.text })));
+  normalizeAssistantTurns(entries.map(({ role, text, context }) => ({ role, text: role === 'assistant' && context
+    ? stripAssistantSourceLabels(text, new Set([...(context.sources ?? []), ...(context.webSources ?? [])].map(({ label }) => label)))
+    : text })));
 
 const selectionsMatch = (
   left: AiAssistantSelection | null,
@@ -220,6 +215,6 @@ const selectionsMatch = (
 ) => left?.model === right.model && left.reasoningEffort === right.reasoningEffort;
 
 const progressLabels = {
-  preparing: 'Preparing context', searching: 'Searching history', reading: 'Reading messages',
-  'searching-web': 'Looking up public information', writing: 'Writing answer', checking: 'Checking sources',
+  preparing: 'Thinking', searching: 'Looking back in the chat', reading: 'Looking back in the chat',
+  'searching-web': 'Looking up public information', writing: 'Thinking', checking: 'Thinking',
 };

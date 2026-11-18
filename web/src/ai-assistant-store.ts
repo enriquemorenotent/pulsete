@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { AiAssistantContext, AiAssistantMode, AiAssistantScope } from '../../shared/protocol-ai.js';
+import type { AiAssistantContext, AiAssistantMode } from '../../shared/protocol-ai.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 
 type Listener = () => void;
@@ -12,7 +12,6 @@ export type AiAssistantThreadState = {
   input: string;
   pending: boolean;
   pendingLabel: string;
-  scope: AiAssistantScope;
   webLookup: boolean;
 };
 
@@ -31,7 +30,7 @@ type ResolveRequestInput = {
 export type AiAssistantStoreApi = {
   updateProgress: (bufferId: string, requestId: number, label: string) => void;
   clearThread: (bufferId: string) => void;
-  failRequest: (bufferId: string, requestId: number, error: string) => void;
+  failRequest: (bufferId: string, requestId: number, error: string, restoreInput?: string) => void;
   getThread: (bufferId: string | null) => AiAssistantThreadState;
   pruneThreads: (activeBufferIds: readonly string[]) => void;
   resolveRequest: (
@@ -39,7 +38,6 @@ export type AiAssistantStoreApi = {
     requestId: number,
     result: ResolveRequestInput,
   ) => void;
-  setScope: (bufferId: string, scope: AiAssistantScope) => void;
   setWebLookup: (bufferId: string, enabled: boolean) => void;
   setInput: (bufferId: string, input: string) => void;
   startRequest: (bufferId: string, input: StartRequestInput) => number | null;
@@ -55,7 +53,6 @@ export const emptyAiAssistantThread: AiAssistantThreadState = {
   input: '',
   pending: false,
   pendingLabel: 'Thinking',
-  scope: 'recent',
   webLookup: false,
 };
 
@@ -100,9 +97,6 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
     updateProgress(bufferId, requestId, pendingLabel) {
       finishRequest(bufferId, requestId, (current) => ({ ...current, pendingLabel }));
     },
-    setScope(bufferId, scope) {
-      updateThread(bufferId, (current) => current.scope === scope ? current : { ...current, scope, continuationToken: undefined });
-    },
     setWebLookup(bufferId, webLookup) {
       updateThread(bufferId, (current) => current.webLookup === webLookup ? current : { ...current, webLookup });
     },
@@ -114,10 +108,12 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
       threads = retained;
       notify();
     },
-    failRequest(bufferId, requestId, error) {
+    failRequest(bufferId, requestId, error, restoreInput = '') {
       finishRequest(bufferId, requestId, (current) => ({
         ...current,
         activeRequestId: null,
+        entries: current.entries.slice(0, -1),
+        input: current.input || restoreInput,
         error,
         pending: false,
         pendingLabel: 'Thinking',

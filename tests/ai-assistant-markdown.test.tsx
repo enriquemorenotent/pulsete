@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AiAssistantMarkdown } from '../web/src/AiAssistantMarkdown.js';
+import { readAssistantSourceLabels, stripAssistantSourceLabels } from '../shared/ai-assistant-sources.js';
 
 test('assistant markdown renders common formatting and GFM tables', () => {
   const markup = renderToStaticMarkup(
@@ -39,12 +40,9 @@ test('assistant markdown does not render raw HTML or remote images', () => {
   assert.match(markup, /\[Image: tracking\]/);
 });
 
-test('assistant citations link only to supplied chat and web sources', () => {
-  const markup = renderToStaticMarkup(<AiAssistantMarkdown
-    sourcePrefix="assistant-source-7" sourceLabels={['S1']}
-    webSources={[{ label: 'W1', title: 'Public event details', url: 'https://example.test/event' }]}
-  >{'The meeting was agreed [S1]. The venue opens at 9 [W1]. Unknown [S2] [W2].'}</AiAssistantMarkdown>);
-  assert.match(markup, /href="#assistant-source-7-S1"/);
-  assert.match(markup, /href="https:\/\/example.test\/event"[^>]+target="_blank"[^>]*>\[W1\]/);
-  assert.doesNotMatch(markup, /href="#assistant-source-7-[SW]2"/);
+test('citation labels leave the reply text while code and ordinary links are preserved', () => {
+  const answer = 'The meeting is at 9 [S1, W1][W2]. The label is \x60[S2]\x60. [S3](https://example.test/)';
+  assert.deepEqual([...readAssistantSourceLabels(answer)], ['S1', 'W1', 'W2']);
+  assert.equal(stripAssistantSourceLabels(answer, readAssistantSourceLabels(answer)),
+    'The meeting is at 9. The label is \x60[S2]\x60. [S3](https://example.test/)');
 });

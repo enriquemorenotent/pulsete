@@ -21,9 +21,9 @@ const renderView = (entries: Parameters<typeof AiAssistantChatView>[0]['entries'
 test('assistant empty state presents compact shortcuts and one composer', () => {
   const markup = renderView();
 
-  assert.match(markup, />A little help with the conversation</);
-  assert.match(markup, /Summarize/);
-  assert.match(markup, /> Draft reply</);
+  assert.match(markup, />How can I help\?</);
+  assert.match(markup, /Catch me up/);
+  assert.match(markup, /Help me reply/);
   assert.match(markup, /aria-label="Message assistant"/);
   assert.match(markup, /aria-label="Ask assistant"/);
 });
@@ -37,14 +37,13 @@ test('assistant conversation replaces onboarding shortcuts with messages', () =>
   }]);
 
   assert.match(markup, /Here is the summary\./);
-  assert.doesNotMatch(markup, /A little help with the conversation/);
-  assert.doesNotMatch(markup, /Summarize/);
+  assert.doesNotMatch(markup, /Catch me up|Recent messages|Saved history/);
 });
 
 test('assistant exposes Stop while a request is pending', () => {
   const markup = renderToStaticMarkup(<AiAssistantChatView entries={[]} error="" input=""
     pending pendingLabel="Thinking" onAsk={() => undefined} onCancel={() => undefined}
     onChange={() => undefined} onSubmit={() => undefined} onUseSuggestion={() => undefined} />);
-  assert.match(markup, />Stop</);
+  assert.match(markup, /aria-label="Stop response"/);
   assert.match(markup, /aria-busy="true"/);
 });

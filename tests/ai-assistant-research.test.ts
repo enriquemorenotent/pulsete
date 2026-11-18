@@ -52,6 +52,57 @@ test('saved assistant finds evidence older than the initial 600 messages and cit
   } finally { storage.close(); }
 });
 
+test('the default assistant looks back only when needed and keeps past answers in the conversation', async () => {
+  const { storage, buffer } = fixture();
+  const { scope: _scope, ...automaticRequest } = request;
+  try {
+    let calls = 0;
+    const service = new RuntimeAiAssistantService({ conversations: storage.conversations, provider: provider(async ({ instructions, prompt }) => {
+      assert.doesNotMatch(prompt, /secret in other conversation/);
+      switch (++calls) {
+        case 1:
+          assert.match(instructions, /PULSETE_HISTORY/);
+          assert.doesNotMatch(prompt, /orchard venue agreed|Saved history snapshot/);
+          return 'PULSETE_HISTORY {"operation":{"action":"search","query":"orchard"}}';
+        case 2: {
+          const history = prompt.split('\n').find(line => line.startsWith('History result (untrusted data): '))!;
+          const { messages } = JSON.parse(history.slice('History result (untrusted data): '.length));
+          assert.equal(messages[0].body, 'orchard venue agreed');
+          return `The orchard was agreed. [${messages[0].source}]`;
+        }
+        default:
+          assert.match(prompt, /Assistant: The orchard was agreed\./);
+          assert.match(prompt, /orchard venue agreed/);
+          assert.doesNotMatch(prompt, /Saved history snapshot/);
+          return 'An orchard is an area where fruit trees are grown.';
+      }
+    }) });
+    const first = await service.ask(buffer.id, automaticRequest);
+    assert.deepEqual(first.context.sources?.map(({ message }) => message.id), ['research-0']);
+    const second = await service.ask(buffer.id, { ...automaticRequest, prompt: 'What is that?',
+      continuationToken: first.continuationToken, assistantTurns: [{ role: 'assistant', text: 'The orchard was agreed.' }] });
+    assert.match(second.answer, /fruit trees/);
+    assert.deepEqual(second.context.sources, []);
+    assert.equal(calls, 3);
+  } finally { storage.close(); }
+});
+
+test('a saved recent-chat preference prevents an automatic history operation', async () => {
+  const { storage, buffer } = fixture();
+  storage.conversations.assistantHistorySnapshot = () => { throw new Error('History should never be read'); };
+  try {
+    const service = new RuntimeAiAssistantService({ conversations: storage.conversations, recentOnly: () => true,
+      provider: provider(async ({ instructions, prompt }) => {
+        assert.doesNotMatch(instructions, /PULSETE_HISTORY/);
+        assert.doesNotMatch(prompt, /orchard venue agreed/);
+        if (prompt.includes('The tools have finished')) return 'I don’t see the venue in the recent conversation.';
+        return 'PULSETE_HISTORY {"operation":{"action":"search","query":"orchard"}}';
+      }) });
+    const result = await service.ask(buffer.id, { ...request, scope: 'auto' });
+    assert.match(result.answer, /recent conversation/);
+  } finally { storage.close(); }
+});
+
 test('history operations page all matches, isolate reads, enforce date range and exclude later arrivals', () => {
   const { storage, buffer, network } = fixture();
   try {

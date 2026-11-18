@@ -1,26 +1,8 @@
 import { ExternalLink } from './ExternalLink.js';
 import type { ComponentPropsWithoutRef } from 'react';
 import Markdown, { type MarkdownToJSX } from 'markdown-to-jsx/react';
-import type { AiAssistantWebSource } from '../../shared/protocol-ai.js';
-
-type AiAssistantMarkdownProps = {
-  children: string;
-  sourcePrefix?: string;
-  sourceLabels?: string[];
-  webSources?: AiAssistantWebSource[];
-  onSourceClick?: (label: string) => void;
-};
-
-export function AiAssistantMarkdown(props: AiAssistantMarkdownProps) {
-  const { onSourceClick, sourcePrefix, sourceLabels, webSources } = props;
-  const linkProps = { onSourceClick, sourcePrefix, sourceLabels, webSources };
-  return (
-    <Markdown options={{ ...markdownOptions, overrides: { ...markdownOptions.overrides, a: { component: AssistantMarkdownLink, props: linkProps } } }}>
-      {props.children.replace(/\[([SW]\d+)\]/g, (citation, label: string) =>
-        sourcePrefix && (sourceLabels?.includes(label) || webSources?.some(source => source.label === label))
-          ? `[${citation}](#${sourcePrefix}-${label})` : citation)}
-    </Markdown>
-  );
+export function AiAssistantMarkdown({ children }: { children: string }) {
+  return <Markdown options={markdownOptions}>{children}</Markdown>;
 }
 
 const markdownOptions = {
@@ -65,26 +47,17 @@ const markdownOptions = {
   },
 } satisfies MarkdownToJSX.Options;
 
-function AssistantMarkdownLink(props: ComponentPropsWithoutRef<'a'> & Omit<AiAssistantMarkdownProps, 'children'>) {
-  const webSource = props.webSources?.find(source => props.href === `#${props.sourcePrefix}-${source.label}`);
-  const href = webSource?.url ?? props.href;
+function AssistantMarkdownLink({ href, title, children }: ComponentPropsWithoutRef<'a'>) {
   const external = isExternalLink(href);
   return (
     <ExternalLink
       href={href}
-      onClick={(event) => {
-        const label = props.sourceLabels?.find(label => props.href === `#${props.sourcePrefix}-${label}`);
-        if (label && props.onSourceClick) {
-          event.preventDefault();
-          props.onSourceClick(label);
-        }
-      }}
-      title={webSource?.title ?? props.title}
+      title={title}
       target={external ? '_blank' : undefined}
       rel={external ? 'noopener noreferrer' : undefined}
       className="font-medium text-primary underline decoration-primary/45 underline-offset-2 hover:decoration-primary"
     >
-      {props.children}
+      {children}
     </ExternalLink>
   );
 }

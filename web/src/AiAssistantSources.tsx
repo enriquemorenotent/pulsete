@@ -1,51 +1,65 @@
+import { useRef, useState } from 'react';
+import { ArrowUpRight } from 'lucide-react';
 import type { AiAssistantContext } from '../../shared/protocol-ai.js';
 import { ExternalLink } from './ExternalLink.js';
 
 type AiAssistantSourcesProps = {
-  context: AiAssistantContext;
-  sourcePrefix: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  error: string;
-  onOpenSource?: (label: string) => void;
+  chatSources: NonNullable<AiAssistantContext['sources']>;
+  webSources: NonNullable<AiAssistantContext['webSources']>;
+  onOpenSource?: (messageId: string) => Promise<boolean>;
 };
 
-export function AiAssistantSources({ context, sourcePrefix, open, onOpenChange, error, onOpenSource }: AiAssistantSourcesProps) {
+export function AiAssistantSources({ chatSources, webSources, onOpenSource }: AiAssistantSourcesProps) {
+  const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
+  const requestSequence = useRef(0);
+  if (!chatSources.length && !webSources.length) return null;
   return (
-    <details open={open} onToggle={event => onOpenChange(event.currentTarget.open)} className="mt-2 border-t border-white/10 pt-2 text-[11px] text-muted-foreground">
-      <summary className="cursor-pointer">
-        Sources ({(context.sources?.length ?? 0) + (context.webSources?.length ?? 0)}){context.coverage?.truncated ? ' · Incomplete history' : ''}
-      </summary>
-      {context.webSources?.length ? <>
-        <p className="mt-2 font-medium">Web sources</p>
-        <ul className="mt-1 space-y-1">
-          {context.webSources.map(source => <li key={source.label}>
-            <ExternalLink href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-              [{source.label}] {source.title}
-            </ExternalLink>
-          </li>)}
-        </ul>
-      </> : null}
-      {context.coverage?.totalMessages !== undefined ? <p className="mt-2">
-        {context.coverage.inspectedMessages} messages used · {context.coverage.totalMessages} saved
-      </p> : null}
-      {context.coverage?.firstTs != null && context.coverage.lastTs != null ? <p>
-        Saved dates: {new Date(context.coverage.firstTs).toLocaleDateString()} – {new Date(context.coverage.lastTs).toLocaleDateString()}
-      </p> : null}
-      {context.coverage?.researchLimited ? <p>Search limit reached. Some questions may remain unresolved.</p> : null}
-      <p className="mt-2">{context.coverage?.description}</p>
-      {context.coverage?.truncated ? <p>Some messages were omitted or shortened.</p> : null}
-      <p>These conversation excerpts were sent to OpenAI for this answer.</p>
-      {error ? <p role="alert">{error}</p> : null}
-      <ol className="mt-2 space-y-2">
-        {context.sources?.map(({ label, message }) => (
-          <li key={label} id={`${sourcePrefix}-${label}`}>
-            <span className="font-medium">[{label}] {message.speakerNick ?? message.nick ?? 'unknown'} · {new Date(message.ts).toLocaleString()}</span>
-            {onOpenSource ? <button type="button" className="ml-2 text-primary underline" onClick={() => onOpenSource(label)}>Open message</button> : null}
-            <p className="whitespace-pre-wrap break-words">{message.body}</p>
-          </li>
-        ))}
-      </ol>
-    </details>
+    <div className="mt-2.5 flex flex-col items-start gap-2 text-xs">
+      {chatSources.length > 0 ? (
+        <details className="max-w-full">
+          <summary className="w-fit cursor-pointer list-none rounded-md border border-white/15 px-2 py-0.5 text-muted-foreground hover:border-white/30 hover:text-foreground focus-visible:outline focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+            {chatSources.length === 1 ? 'Source' : `${chatSources.length} chat sources`}
+          </summary>
+          <ul className="mt-2 space-y-2 border-l border-white/15 pl-2.5 text-[12px] leading-[18px]">
+            {chatSources.map(({ label, message }) => (
+              <li key={label}>
+                <p className="font-medium text-muted-foreground">
+                  {message.speakerNick ?? message.nick ?? 'Unknown'} · <time dateTime={new Date(message.ts).toISOString()}>
+                    {new Date(message.ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                  </time>
+                </p>
+                <blockquote className="whitespace-pre-wrap break-words">{message.body}</blockquote>
+                {onOpenSource ? <button type="button" className="mt-1 text-primary underline underline-offset-2"
+                  onClick={async () => {
+                    const request = ++requestSequence.current;
+                    setUnavailableMessage(null);
+                    let opened = false;
+                    try { opened = await onOpenSource(message.id); } catch { /* Keep the excerpt visible. */ }
+                    if (!opened && request === requestSequence.current) setUnavailableMessage(label);
+                  }}>Open message</button> : null}
+                {unavailableMessage === label ? <p role="status" className="text-muted-foreground">The original message is unavailable.</p> : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+      {webSources.length === 1 ? <WebSource source={webSources[0]}>Web source</WebSource> : null}
+      {webSources.length > 1 ? (
+        <details className="max-w-full">
+          <summary className="cursor-pointer text-primary">{webSources.length} web sources</summary>
+          <ul className="mt-1 space-y-1">
+            {webSources.map(source => <li key={source.label}><WebSource source={source}>{source.title}</WebSource></li>)}
+          </ul>
+        </details>
+      ) : null}
+    </div>
   );
+}
+
+function WebSource({ source, children }: { source: NonNullable<AiAssistantContext['webSources']>[number]; children: string }) {
+  return <ExternalLink href={source.url} title={source.title} target="_blank" rel="noopener noreferrer"
+    className="inline-flex items-baseline gap-1.5 text-primary underline decoration-primary/50 underline-offset-2 hover:decoration-primary">
+    <ArrowUpRight aria-hidden className="size-3 shrink-0 self-center" />
+    <span className="break-words">{children}</span>
+  </ExternalLink>;
 }

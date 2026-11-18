@@ -22,6 +22,6 @@ test('stale progress and answers cannot revive a cancelled or cleared request', 
   store.updateProgress('a', id, 'Searching history'); assert.equal(store.getThread('a').pendingLabel, 'Searching history');
   store.failRequest('a', id, 'Request cancelled');
   store.updateProgress('a', id, 'Writing'); store.resolveRequest('a', id, { mode: 'answer', text: 'Late answer' });
-  assert.equal(store.getThread('a').entries.length, 1); assert.equal(store.getThread('a').pending, false);
+  assert.equal(store.getThread('a').entries.length, 0); assert.equal(store.getThread('a').pending, false);
   store.clearThread('a'); store.updateProgress('a', id, 'Reading'); assert.equal(store.getThread('a').entries.length, 0);
 });

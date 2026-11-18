@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Bot, LoaderCircle } from 'lucide-react';
+import { lazy, Suspense, useLayoutEffect, useRef } from 'react';
+import { LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
+import { readAssistantSourceLabels, stripAssistantSourceLabels } from '../../shared/ai-assistant-sources.js';
 import { AiAssistantSources } from './AiAssistantSources.js';
-import { cn } from '@/lib/utils.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 
 const AiAssistantMarkdown = lazy(async () => {
@@ -20,116 +20,68 @@ type AiAssistantConversationProps = {
 };
 
 export function AiAssistantConversation(props: AiAssistantConversationProps) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const followLatest = useRef(true);
+  const lastEntry = props.entries.at(-1);
 
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const viewport = viewportRef.current;
-      viewport?.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [props.entries.length, props.pending]);
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (viewport && (followLatest.current || lastEntry?.role === 'user')) viewport.scrollTop = viewport.scrollHeight;
+  }, [lastEntry, props.pending]);
 
   return (
-    <ScrollArea className="min-h-0 flex-1 pr-1" viewportRef={viewportRef}>
-      <div className="flex min-h-full flex-col justify-end gap-2 py-2">
-        {props.entries.map((entry) => (
-          <AssistantBubble
-            key={entry.id}
-            entry={entry}
-            onUseSuggestion={props.onUseSuggestion} onOpenSource={props.onOpenSource}
-          />
+    <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef} onScrollCapture={event => {
+      const viewport = viewportRef.current;
+      if (viewport && event.target === viewport) {
+        followLatest.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 60;
+      }
+    }}>
+      <div role="log" aria-label="Assistant conversation" className="flex min-w-0 flex-col gap-4 px-1.5 pt-2 pb-4">
+        {props.entries.map(entry => entry.role === 'user' ? (
+          <p key={entry.id} className="max-w-[92%] self-end whitespace-pre-wrap rounded-[13px] bg-[#2b384b] px-3 py-2 text-[14px] leading-[21px] wrap-anywhere text-foreground">
+            {entry.text}
+          </p>
+        ) : (
+          <AssistantReply key={entry.id} entry={entry} onUseSuggestion={props.onUseSuggestion} onOpenSource={props.onOpenSource} />
         ))}
-        {props.pending ? <AssistantPendingBubble label={props.pendingLabel} /> : null}
+        {props.pending ? (
+          <div role="status" className="flex items-center gap-2 text-[13px] leading-6 text-muted-foreground">
+            <LoaderCircle aria-hidden className="size-3.5 motion-safe:animate-spin" />
+            {props.pendingLabel}…
+          </div>
+        ) : null}
       </div>
     </ScrollArea>
   );
 }
 
-function AssistantBubble(props: {
+function AssistantReply({ entry, onUseSuggestion, onOpenSource }: {
   entry: AssistantEntry;
   onUseSuggestion: (value: string) => void;
   onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
 }) {
-  const assistant = props.entry.role === 'assistant';
-  const [sourcesOpen, setSourcesOpen] = useState(false);
-  const [sourceError, setSourceError] = useState('');
-  const sourceRequestRef = useRef(0);
-  const openSource = async (label: string) => {
-    const request = ++sourceRequestRef.current;
-    const context = props.entry.context;
-    const source = context?.sources?.find(source => source.label === label);
-    setSourcesOpen(true);
-    setSourceError('');
-    try {
-      if (context && source && await props.onOpenSource?.(context.buffer.id, source.message.id)) return;
-    } catch {
-      // Keep the saved excerpt available when navigation fails.
-    }
-    if (request === sourceRequestRef.current) {
-      setSourceError('The original message is unavailable. The saved excerpt is shown below.');
-    }
-  };
-  return (
-    <div className={cn('flex', assistant ? 'justify-start' : 'justify-end')}>
-      <div className={cn(
-        'max-w-[92%] rounded-md border px-3 py-2 text-[13px] leading-5 shadow-sm',
-        assistant
-          ? 'border-white/[0.055] bg-black/18 text-foreground/88'
-          : 'border-primary/14 bg-primary/12 text-foreground',
-      )}>
-        {assistant ? <Bot className="mb-1 size-3.5 text-muted-foreground" /> : null}
-        <div className="min-w-0 space-y-2 break-words">
-          {assistant ? (
-            <Suspense fallback={<div className="whitespace-pre-wrap">{props.entry.text}</div>}>
-              <AiAssistantMarkdown
-                sourcePrefix={`assistant-source-${props.entry.id}`}
-                sourceLabels={props.entry.context?.sources?.map((source) => source.label)}
-                webSources={props.entry.context?.webSources}
-                onSourceClick={(label) => void openSource(label)}
-              >{props.entry.text}</AiAssistantMarkdown>
-            </Suspense>
-          ) : (
-            <div className="whitespace-pre-wrap">{props.entry.text}</div>
-          )}
-        </div>
-        {props.entry.context ? (
-          <AiAssistantSources
-            context={props.entry.context}
-            sourcePrefix={`assistant-source-${props.entry.id}`}
-            open={sourcesOpen}
-            onOpenChange={setSourcesOpen}
-            error={sourceError}
-            onOpenSource={props.onOpenSource ? (label) => void openSource(label) : undefined}
-          />
-        ) : null}
-        {props.entry.mode === 'suggest-reply' ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="mt-2 h-7 px-2"
-            onClick={() => props.onUseSuggestion(props.entry.text)}
-          >
-            Use draft
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
+  const { context } = entry;
+  const cited = readAssistantSourceLabels(entry.text);
+  const chatSources = context?.sources?.filter(({ label }) => cited.has(label)) ?? [];
+  const webSources = context?.webSources?.filter(({ label }) => cited.has(label)) ?? [];
+  const text = stripAssistantSourceLabels(entry.text, new Set([...chatSources, ...webSources].map(({ label }) => label)));
 
-function AssistantPendingBubble(props: { label: string }) {
   return (
-    <div className="flex justify-start" role="status" aria-live="polite">
-      <div className="flex max-w-[92%] items-center gap-2 rounded-md border border-white/[0.055] bg-black/20 px-3 py-2 text-[13px] text-foreground/82 shadow-sm">
-        <LoaderCircle className="size-3.5 animate-spin text-primary" />
-        <span>{props.label}</span>
-        <span className="flex items-center gap-1" aria-hidden="true">
-          <span className="size-1 rounded-full bg-primary/70 animate-pulse" />
-          <span className="size-1 rounded-full bg-primary/70 animate-pulse [animation-delay:120ms]" />
-          <span className="size-1 rounded-full bg-primary/70 animate-pulse [animation-delay:240ms]" />
-        </span>
+    <div className="min-w-0 text-[14px] leading-[21px] text-foreground/95">
+      <div className="min-w-0 space-y-2 wrap-anywhere">
+        {entry.mode === 'suggest-reply' ? <p className="whitespace-pre-wrap">{text}</p> : (
+          <Suspense fallback={<p className="whitespace-pre-wrap">{text}</p>}>
+            <AiAssistantMarkdown>{text}</AiAssistantMarkdown>
+          </Suspense>
+        )}
       </div>
+      <AiAssistantSources chatSources={chatSources} webSources={webSources}
+        onOpenSource={context && onOpenSource ? messageId => onOpenSource(context.buffer.id, messageId) : undefined} />
+      {entry.mode === 'suggest-reply' ? (
+        <Button type="button" size="sm" variant="outline" className="mt-2.5 h-7 px-2.5 text-xs" onClick={() => onUseSuggestion(text)}>
+          Use draft
+        </Button>
+      ) : null}
     </div>
   );
 }

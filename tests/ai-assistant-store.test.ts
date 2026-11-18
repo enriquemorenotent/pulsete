@@ -83,12 +83,20 @@ test('assistant threads do not carry into a new application session', () => {
   assert.equal(reloadedSession.getThread('buffer-a'), emptyAiAssistantThread);
 });
 
-test('assistant context scope stays with its conversation and survives draft updates', () => {
+test('web permission stays with the current assistant chat', () => {
   const store = createAiAssistantStore();
-  store.setScope('first', 'saved');
+  store.setWebLookup('first', true);
   store.setInput('first', 'Find the meeting time');
-  assert.equal(store.getThread('first').scope, 'saved');
-  assert.equal(store.getThread('second').scope, 'recent');
+  assert.equal(store.getThread('first').webLookup, true);
+  assert.equal(store.getThread('second').webLookup, false);
   store.clearThread('first');
-  assert.equal(store.getThread('first').scope, 'recent');
+  assert.equal(store.getThread('first').webLookup, false);
+});
+
+test('a failed assistant request can be retried without repeating it in the conversation', () => {
+  const store = createAiAssistantStore();
+  const requestId = store.startRequest('buffer', { label: 'Where are we meeting?', pendingLabel: 'Thinking' })!;
+  store.failRequest('buffer', requestId, 'Try again', 'Where are we meeting?');
+  assert.equal(store.getThread('buffer').input, 'Where are we meeting?');
+  assert.deepEqual(store.getThread('buffer').entries, []);
 });

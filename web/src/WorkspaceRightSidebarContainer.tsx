@@ -178,6 +178,8 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
       : null;
     return {
       buffer,
+      recentOnly: preferences.assistantRecentOnly,
+      onRecentOnlyChange: (assistantRecentOnly: boolean) => actions.updatePreferences({ assistantRecentOnly }),
       onSelectionChange: (selection: typeof preferences.aiAssistant) =>
         actions.updatePreferences({ aiAssistant: selection }),
       onOpenSource: async (bufferId: string, messageId: string) => {
@@ -200,6 +202,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     assistantStore,
     composer,
     preferences.aiAssistant,
+    preferences.assistantRecentOnly,
     workspace.selectedBuffer,
   ]);
   return (

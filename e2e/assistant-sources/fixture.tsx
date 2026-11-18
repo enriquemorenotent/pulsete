@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AiAssistantConversation } from '../../web/src/AiAssistantConversation.js';
-import { AiAssistantPanel } from '../../web/src/AiAssistantPanel.js';
+import { WorkspaceRightSidebar, type WorkspaceRightSidebarProps } from '../../web/src/WorkspaceRightSidebar.js';
+import { AssistantReadingModeContext } from '../../web/src/assistant-reading-mode.js';
 import type { AssistantEntry } from '../../web/src/AiAssistantChatTypes.js';
 import '../../web/src/globals.css';
 
 const entries: AssistantEntry[] = [1, 2].map(id => ({
-  id, role: 'assistant', text: `Answer ${id} cites [S1]. Unknown [S9].`,
+  id, role: 'assistant', text: `Answer ${id} cites a specific message [S1].`,
   context: {
     buffer: { id: `buffer-${id}`, networkId: 'network', kind: 'channel', target: '#test' },
     messages: [],
@@ -36,10 +37,33 @@ function Fixture() {
     </section>
   </main>;
 }
+
+function SidebarFixture() {
+  const [expanded, setExpanded] = useState(false);
+  const [recentOnly, setRecentOnly] = useState(false);
+  const [draft, setDraft] = useState('');
+  const buffer = { ...entries[0].context!.buffer, kind: 'query' as const, target: 'Reading group',
+    unread: 0, priorityUnread: 0, lastReadTs: null, lastReadMessageId: null };
+  const workspace: WorkspaceRightSidebarProps['workspace'] = {
+    mode: 'query-connected', selection: { kind: 'buffer', bufferId: buffer.id },
+    workspaceNetworks: [], selectedNetwork: null, selectedRuntime: null, selectedBuffer: buffer,
+    selectedChannel: null, selectedPendingChannel: null, headerTitle: buffer.target,
+    headerSubtitle: '', composerMode: 'normal', composerPlaceholder: '', emptyBody: '', showNicklist: false,
+  };
+  return <main className="mx-auto flex h-screen flex-col" style={{ width: expanded ? 540 : 320 }}>
+    <AssistantReadingModeContext.Provider value={{ expanded, setExpanded }}>
+      <WorkspaceRightSidebar workspace={workspace} nicklist={{
+        friends: [], nickEmojis: [], mutedNicks: [], contactNotificationSettings: { contacts: [] },
+        contactRuleHandlers: { addFriend: async () => true, mute: async () => true,
+          removeFriend: async () => true, toggleNotifications: async () => true, unmute: async () => true },
+        externalAvatarsEnabled: false,
+        onSaveNickEmoji: async () => true, onSelectNick: () => undefined,
+      }} assistant={{ buffer, recentOnly, onRecentOnlyChange: async value => { setRecentOnly(value); return true; },
+        onUseSuggestion: setDraft }} />
+    </AssistantReadingModeContext.Provider>
+    {draft ? <output aria-label="IRC draft">{draft}</output> : null}
+  </main>;
+}
+
 const lookupDemo = new URLSearchParams(window.location.search).has('lookup');
-createRoot(document.getElementById('root')!).render(lookupDemo ? (
-  <main className="mx-auto flex h-screen w-[320px] flex-col bg-[#202733]">
-    <AiAssistantPanel buffer={{ ...entries[0].context!.buffer, unread: 0, priorityUnread: 0,
-      lastReadTs: null, lastReadMessageId: null }} onUseSuggestion={() => {}} />
-  </main>
-) : <Fixture />);
+createRoot(document.getElementById('root')!).render(lookupDemo ? <SidebarFixture /> : <Fixture />);
