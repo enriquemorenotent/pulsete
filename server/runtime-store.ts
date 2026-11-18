@@ -1,3 +1,4 @@
+import type { AssistantSemanticHistory } from './ai-assistant-semantic-history.js';
 import type { StorageAvatarOverridesRepository } from './storage-avatar-overrides-repository.js';
 import type { StorageConversationsRepository } from './storage-conversations-repository.js';
 import type { StorageDraftsRepository } from './storage-drafts-repository.js';
@@ -16,6 +17,7 @@ export type RuntimeNetworkStore = StorageNetworksRepository;
 export type RuntimeNickEmojiStore = StorageNickEmojisRepository;
 
 export type RuntimeStore = {
+  semanticHistory?: AssistantSemanticHistory;
   snapshotSource: StorageSnapshotSource;
   conversations: StorageConversationsRepository;
   friends: StorageFriendsRepository;

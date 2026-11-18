@@ -1,3 +1,6 @@
+import { dirname, join } from 'node:path';
+import { AssistantSemanticHistory } from './ai-assistant-semantic-history.js';
+import { AssistantPassageStore } from './storage-assistant-passages.js';
 import { initializeStorageDefaults, openStorageResources } from './storage-bootstrap.js';
 import {
   createStorageBackup,
@@ -24,6 +27,7 @@ export class Storage {
   private readonly paths: AppPaths;
   private closed = false;
   readonly databasePath: string;
+  readonly semanticHistory: AssistantSemanticHistory;
   readonly networks: StorageNetworksRepository;
   readonly conversations: StorageConversationsRepository;
   readonly friends: StorageFriendsRepository;
@@ -43,6 +47,8 @@ export class Storage {
     initializeStorageDefaults(resources, options);
     this.networks = new StorageNetworksRepository(this.db, this.secretBox);
     this.conversations = new StorageConversationsRepository(this.db);
+    this.semanticHistory = new AssistantSemanticHistory(new AssistantPassageStore(this.db),
+      join(dirname(this.databasePath), 'assistant-models', 'multilingual-e5-small'));
     this.friends = new StorageFriendsRepository(this.db);
     this.mutedNicks = new StorageMutedNicksRepository(this.db);
     this.nickEmojis = new StorageNickEmojisRepository(this.db);
@@ -84,6 +90,7 @@ export class Storage {
     }
     this.closed = true;
     this.friends.activity.closed = true;
+    this.semanticHistory.close();
     this.db.close();
   }
 }

@@ -17,10 +17,11 @@ if (shouldBuildServer) {
   await rm('build/server', { recursive: true, force: true });
   await build({
     ...commonOptions,
-    entryPoints: ['server/index.ts'],
-    external: ['better-sqlite3'],
+    entryPoints: { index: 'server/index.ts', 'ai-assistant-embedding-worker': 'server/ai-assistant-embedding-worker.ts' },
+    external: ['better-sqlite3', 'onnxruntime-node'],
     format: 'cjs',
-    outfile: 'build/server/index.cjs',
+    outdir: 'build/server',
+    outExtension: { '.js': '.cjs' },
   });
 }
 
@@ -28,8 +29,12 @@ if (shouldBuildDesktop) {
   await rm('build/desktop', { recursive: true, force: true });
   await build({
     ...commonOptions,
-    entryPoints: ['desktop/main.ts', 'desktop/server-process-entry.ts'],
-    external: ['better-sqlite3', 'electron'],
+    entryPoints: {
+      main: 'desktop/main.ts',
+      'server-process-entry': 'desktop/server-process-entry.ts',
+      'ai-assistant-embedding-worker': 'server/ai-assistant-embedding-worker.ts',
+    },
+    external: ['better-sqlite3', 'electron', 'onnxruntime-node'],
     format: 'cjs',
     outdir: 'build/desktop',
     outExtension: { '.js': '.cjs' },

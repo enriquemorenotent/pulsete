@@ -21,6 +21,8 @@ jobs:
           cache: npm
           node-version-file: .nvmrc
       - run: npm ci
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip
       - name: Build Candidate Once
         run: npm run dist:linux
       - name: Download Currently Published Baseline

@@ -23,7 +23,8 @@ function fixture() {
 }
 function provider(run: (input: Parameters<CodexAssistantProvider['request']>[0]) => Promise<string>): CodexAssistantProvider {
   return { model: null, status: async () => status, startLogin: async () => ({ instructions: null, status }),
-    request: async (input) => ({ answer: await run(input), status }) };
+    request: async (input) => ({ answer: input.instructions.startsWith('Review a Pulsete assistant answer')
+      ? '{"verdict":"supported"}' : await run(input), status }) };
 }
 
 test('saved assistant finds evidence older than the initial 600 messages and cites it in the final answer', async () => {
@@ -138,6 +139,33 @@ test('long message chunks remain readable beyond the original body limit', () =>
     assert.equal(query(0).messages[0].nextBodyOffset, 2000);
     assert.equal(query(4000).messages[0].nextBodyOffset, null);
     assert.match(query(4000).messages[0].body, /final agreement/);
+  } finally { storage.close(); }
+});
+
+test('related history ranks alternate wording and returns nearby messages within the snapshot', () => {
+  const { storage, buffer, network } = fixture();
+  try {
+    const store = storage.conversations;
+    const append = (id: string, ts: number, body: string, target = buffer.target) => store.appendMessage({
+      id, networkId: network.id, target, nick: 'alice', kind: 'line', self: false, ts, body,
+    });
+    append('paraphrase', 702, 'Let’s use Maya’s place.');
+    append('decision', 703, 'Everyone is in. Bring food.');
+    append('other-buffer', 702, 'Maya’s place in another room', '#other');
+    const range = { start: 702, end: 704, label: 'meeting window' };
+    const snapshot = store.assistantHistorySnapshot(buffer.id, range);
+    append('late', 703, 'Maya’s place was suggested later.');
+    const literal = store.queryAssistantHistory(buffer.id, snapshot.maxRowid, range, {
+      action: 'search', query: 'orchard gathering', offset: 0,
+    });
+    assert.equal(literal.total, 0);
+    const related = store.queryAssistantHistory(buffer.id, snapshot.maxRowid, range, {
+      action: 'related', phrases: ['orchard gathering', 'Maya’s place'], offset: 0,
+    });
+    assert.equal(related.total, 1);
+    assert.deepEqual(related.messages.map(message => [message.id, 'matched' in message && message.matched]), [
+      ['paraphrase', true], ['decision', false],
+    ]);
   } finally { storage.close(); }
 });
 

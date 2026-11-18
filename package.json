@@ -1,6 +1,6 @@
 {
   "name": "pulsete",
-  "version": "0.1.33",
+  "version": "0.1.34",
   "description": "A local IRC client with durable workspace state.",
   "homepage": "https://enriquemorenotent.github.io/pulsete/",
   "private": true,
@@ -42,7 +42,9 @@
       "smart-buffer",
       "ip-address",
       "ws",
-      "zod"
+      "zod",
+      "@huggingface/tokenizers",
+      "onnxruntime-node"
     ]
   },
   "scripts": {
@@ -70,8 +72,10 @@
     "test:browser": "playwright test"
   },
   "dependencies": {
+    "@huggingface/tokenizers": "0.2.0",
     "@openai/codex-security": "^0.1.1",
     "better-sqlite3": "12.11.1",
+    "onnxruntime-node": "1.30.0",
     "socks": "2.8.10",
     "ws": "8.21.3"
   },

@@ -1,3 +1,4 @@
+import { assistantPassagesSchemaSql } from './storage-assistant-passages-schema.js';
 import { serverRulesSchemaSql } from './storage-server-rules.js';
 import { repairSelfQueryPeerIdentities } from './storage-query-peer-repair.js';
 import { migrateQueryRouting } from './storage-query-routing-migration.js';
@@ -220,4 +221,5 @@ export const storageMigrations: readonly StorageMigration[] = [
       db.exec('COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   } },
+  { version: 40, apply: db => db.exec(assistantPassagesSchemaSql) },
 ];

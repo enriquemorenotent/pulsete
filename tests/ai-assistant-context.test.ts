@@ -130,7 +130,10 @@ test('assistant requests include prior sidebar Q&A for clarification prompts', a
   let capturedPrompt = '';
   const provider = {
     model: null,
-    request: async (input: { prompt: string }) => {
+    request: async (input: { prompt: string; instructions: string }) => {
+      if (input.instructions.startsWith('Review a Pulsete assistant answer')) {
+        return { answer: '{"verdict":"supported"}', status: connectedStatus };
+      }
       capturedPrompt = input.prompt;
       return { answer: 'answer', status: connectedStatus };
     },
@@ -230,7 +233,10 @@ test('assistant service forwards the selected recent scope to retrieval', async 
   store.searchMessagesByBufferId = () => { throw new Error('Recent scope must survive request routing'); };
   const service = new RuntimeAiAssistantService({ conversations: store, provider: {
     model: null,
-    request: async () => ({ answer: 'Summary', status: connectedStatus }),
+    request: async ({ instructions }) => ({
+      answer: instructions.startsWith('Review a Pulsete assistant answer') ? '{"verdict":"supported"}' : 'Summary',
+      status: connectedStatus,
+    }),
     status: async () => connectedStatus,
     startLogin: async () => ({ instructions: null, status: connectedStatus }),
   } });

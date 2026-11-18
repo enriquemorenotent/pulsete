@@ -53,6 +53,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   });
   const assistantService = new RuntimeAiAssistantService({
     conversations: store.conversations,
+    semanticHistory: store.semanticHistory,
   });
   const activity = new RuntimeWatchlistActivity(store.friends, store.networks);
   const eventRouter = new RuntimeEventRouter({

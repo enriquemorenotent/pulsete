@@ -20,7 +20,7 @@ import {
   searchMessages,
   searchMessagesByBufferId,
 } from './storage-messages.js';
-import { assistantHistorySnapshot, queryAssistantHistory } from './storage-assistant-research.js';
+import { assistantHistorySnapshot, queryAssistantHistory, readAssistantPassageMessages } from './storage-assistant-research.js';
 import type { AssistantResearchAction } from './ai-assistant-research.js';
 import { listAssistantHistory } from './storage-assistant-history.js';
 import type { AssistantDateRange } from './ai-assistant-dates.js';
@@ -153,6 +153,10 @@ export class StorageConversationsRepository {
   queryAssistantHistory(bufferId: string, maxRowid: number, range: AssistantDateRange | null,
     action: Exclude<AssistantResearchAction, { action: 'done' }>) {
     return queryAssistantHistory(this.db, bufferId, maxRowid, range, action);
+  }
+
+  readAssistantPassageMessages(bufferId: string, maxRowid: number, range: AssistantDateRange | null, ids: readonly string[]) {
+    return readAssistantPassageMessages(this.db, bufferId, maxRowid, range, ids);
   }
 
   listAssistantHistory(bufferId: string, limit: number, range: AssistantDateRange | null = null) {

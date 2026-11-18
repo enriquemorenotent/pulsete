@@ -25,6 +25,8 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Install Dependencies
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip
         run: npm ci
 
       - name: Check File Length Limits

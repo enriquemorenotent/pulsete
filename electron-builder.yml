@@ -5,6 +5,7 @@ copyright: Copyright 2026 Enrique Moreno
 asar: true
 asarUnpack:
   - "**/*.node"
+  - "**/onnxruntime-node/bin/**/*"
 nativeRebuilder: sequential
 
 directories:

@@ -11,7 +11,9 @@ const status: AiAssistantProviderStatus = { connected: true, detail: '', model: 
 const request: AiAssistantRequest = { mode: 'answer', scope: 'recent', prompt: 'Where is the reunion on 2026-01-01?',
   assistantTurns: [], selection: { model: null, reasoningEffort: null } };
 function fixture(run: (input: Parameters<CodexAssistantProvider['request']>[0]) => Promise<string>, options = {},
-  lookupPublicFacts?: CodexAssistantProvider['lookupPublicFacts']) {
+  lookupPublicFacts?: CodexAssistantProvider['lookupPublicFacts'],
+  review: typeof run = async () => '{"verdict":"supported"}',
+) {
   const storage = new Storage(makeStorageFile());
   const network = storage.networks.upsert(createNetworkInput());
   const buffer = storage.conversations.upsertBuffer({ networkId: network.id, target: '#test', kind: 'channel' });
@@ -19,7 +21,11 @@ function fixture(run: (input: Parameters<CodexAssistantProvider['request']>[0]) 
     storage.conversations.appendMessage({ id, networkId: network.id, target: '#test', nick: 'alice', body,
       kind: 'line', self: false, ts: new Date(2026, 0, day, 12).getTime() });
   const provider: CodexAssistantProvider = { model: null, status: async () => status,
-    startLogin: async () => ({ instructions: null, status }), request: async (input) => ({ answer: await run(input), status }),
+    startLogin: async () => ({ instructions: null, status }),
+    request: async (input) => ({
+      answer: await (input.instructions.startsWith('Review a Pulsete assistant answer') ? review : run)(input),
+      status,
+    }),
     lookupPublicFacts };
   return { storage, buffer, service: new RuntimeAiAssistantService({ conversations: storage.conversations, provider, ...options }) };
 }
@@ -190,4 +196,92 @@ test('deleted evidence is not reused and clearing prevents in-flight state from 
     await ready; pending.service.clear(pending.buffer.id);
     await assert.rejects(result, /context was cleared/);
   } finally { pending.storage.close(); }
+});
+
+test('the assistant can search chat, look up a public fact, then search an older chat date using the result', async () => {
+  const stages: string[] = [];
+  const queries: string[] = [];
+  let calls = 0;
+  const f = fixture(async ({ instructions, prompt }) => {
+    assert.match(instructions, /PULSETE_HISTORY/);
+    switch (++calls) {
+      case 1:
+        assert.doesNotMatch(prompt, /old theater|1939 print/);
+        return 'PULSETE_HISTORY {"operation":{"action":"search","query":"screening"},"from":"2026-01-03"}';
+      case 2:
+        assert.match(prompt, /an anniversary screening/);
+        assert.match(instructions, /PULSETE_WEB_LOOKUP/);
+        return 'PULSETE_WEB_LOOKUP {"query":"The Wizard of Oz original release year"}';
+      case 3:
+        assert.match(prompt, /released in 1939/);
+        return 'PULSETE_HISTORY {"operation":{"action":"related","phrases":["1939 print","classic version"]},"through":"2026-01-01"}';
+      default: {
+        const observations = prompt.split('\n').filter(line => line.startsWith('History result (untrusted data): '));
+        const { messages } = JSON.parse(observations[1].split(' (untrusted data): ')[1]);
+        const confirmation = messages.find(({ id }: { id: string }) => id === 'venue');
+        assert.ok(confirmation);
+        assert.equal(confirmation.matched, false);
+        assert.equal(confirmation.body, 'Confirmed: the old theater on King Street.');
+        assert.ok(messages.every(({ ts }: { ts: number }) => ts < new Date(2026, 0, 2).getTime()));
+        return `They confirmed the old theater on King Street [${confirmation.source}]. The film came out in 1939 [W1].`;
+      }
+    }
+  }, {}, async ({ query }) => {
+    queries.push(query);
+    return [{ fact: 'The Wizard of Oz was released in 1939.', source: { title: 'Film history', url: 'https://example.test/oz' } }];
+  });
+  try {
+    const append = (id: string, day: number, hour: number, body: string) => f.storage.conversations.appendMessage({
+      id, networkId: f.buffer.networkId, target: f.buffer.target, nick: 'maya', kind: 'line', self: false,
+      ts: new Date(2026, 0, day, hour).getTime(), body,
+    });
+    append('print', 1, 13, 'We got the 1939 print.');
+    append('venue', 1, 14, 'Confirmed: the old theater on King Street.');
+    for (let index = 0; index < 120; index++) append(`chatter-${index}`, 2, 12, 'Unrelated rehearsal chatter.');
+    append('screening', 3, 15, 'The Wizard of Oz is getting an anniversary screening.');
+    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'auto',
+      prompt: 'When did the film come out and where was the screening agreed?' },
+    undefined, { onProgress: stage => stages.push(stage) });
+    assert.equal(calls, 4);
+    assert.deepEqual(queries, ['The Wizard of Oz original release year']);
+    assert.deepEqual(stages.filter(stage => stage.startsWith('searching')), ['searching', 'searching-web', 'searching']);
+    assert.deepEqual(result.context.sources?.map(({ message }) => message.id), ['venue']);
+    assert.equal(result.context.webSources?.[0].label, 'W1');
+  } finally { f.storage.close(); }
+});
+
+test('the evidence review corrects a proposal reported as an agreement and checks the revision', async () => {
+  const reviewed: string[] = [];
+  const f = fixture(async () => 'They agreed to meet Friday [S3].', {}, undefined, async ({ instructions, prompt }) => {
+    assert.match(instructions, /A proposal or one person’s assertion is not an agreement/);
+    const { evidence, proposedAnswer } = JSON.parse(prompt);
+    assert.match(evidence, /How about Friday\?/);
+    assert.match(evidence, /Saturday is confirmed/);
+    reviewed.push(proposedAnswer);
+    return reviewed.length === 1
+      ? JSON.stringify({ verdict: 'revise', answer: 'Friday was proposed [S3]. Saturday was confirmed [S4].' })
+      : '{"verdict":"supported"}';
+  });
+  try {
+    for (const [day, body] of [[4, 'How about Friday?'], [5, 'Saturday is confirmed.']] as const) {
+      f.storage.conversations.appendMessage({
+        id: `proposal-${day}`, networkId: f.buffer.networkId, target: f.buffer.target, nick: 'alice',
+        kind: 'line', self: false, ts: new Date(2026, 0, day, 12).getTime(), body,
+      });
+    }
+    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'auto', prompt: 'Which day was agreed?' });
+    assert.deepEqual(reviewed, ['They agreed to meet Friday [S3].', 'Friday was proposed [S3]. Saturday was confirmed [S4].']);
+    assert.equal(result.answer, reviewed[1]);
+    assert.deepEqual(result.context.sources?.map(({ message }) => message.id), ['proposal-4', 'proposal-5']);
+  } finally { f.storage.close(); }
+});
+
+test('an unverified revision is not returned as a factual answer', async () => {
+  const f = fixture(async () => 'Everyone agreed to Friday.', {}, undefined, async () =>
+    '{"verdict":"revise","answer":"Everyone agreed to Saturday [S999]."}');
+  try {
+    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'auto' });
+    assert.match(result.answer, /couldn’t verify/);
+    assert.deepEqual(result.context.sources, []);
+  } finally { f.storage.close(); }
 });

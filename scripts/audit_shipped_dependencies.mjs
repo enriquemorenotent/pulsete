@@ -97,6 +97,8 @@ function verifyNodeBundles(roots) {
   const classified = new Set(roots);
   const bundles = [
     ['build/server/index.cjs.map', true],
+    ['build/server/ai-assistant-embedding-worker.cjs.map', false],
+    ['build/desktop/ai-assistant-embedding-worker.cjs.map', false],
     ['build/desktop/main.cjs.map', false],
     ['build/desktop/server-process-entry.cjs.map', true],
   ];

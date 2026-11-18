@@ -10,13 +10,13 @@ const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
 const packageLock = JSON.parse(await readFile('package-lock.json', 'utf8'));
 
 await prepareStage();
-await run(resolve('node_modules/.bin/electron-builder'), ['--linux', 'deb', '--x64', '--publish', 'never'], { cwd: stageRoot });
+await run(resolve('node_modules/.bin/electron-builder'), ['--linux', 'deb', '--x64', '--publish', 'never'], { cwd: stageRoot, env: { ...process.env, ONNXRUNTIME_NODE_INSTALL: 'skip' } });
 await publishArtifacts();
 await rm(stageRoot, { recursive: true, force: true });
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: options.cwd ?? projectRoot, stdio: 'inherit' });
+    const child = spawn(command, args, { cwd: options.cwd ?? projectRoot, env: options.env ?? process.env, stdio: 'inherit' });
     child.on('error', reject);
     child.on('exit', (code, signal) => {
       if (code === 0) {
@@ -37,7 +37,7 @@ async function prepareStage() {
   await cp('build-resources', join(stageRoot, 'build-resources'), { recursive: true });
   await cp('electron-builder.yml', join(stageRoot, 'electron-builder.yml'));
   await writeFile(join(stageRoot, 'package.json'), JSON.stringify(createStagePackageJson(), null, 2));
-  await run('npm', ['install', '--omit=dev', '--package-lock=false'], { cwd: stageRoot });
+  await run('npm', ['install', '--omit=dev', '--package-lock=false'], { cwd: stageRoot, env: { ...process.env, ONNXRUNTIME_NODE_INSTALL: 'skip' } });
 }
 
 function createStagePackageJson() {
@@ -54,6 +54,7 @@ function createStagePackageJson() {
     license: packageJson.license,
     dependencies: {
       'better-sqlite3': exactPackageVersion('better-sqlite3'),
+      'onnxruntime-node': exactPackageVersion('onnxruntime-node'),
     },
     devDependencies: {
       electron: exactPackageVersion('electron'),

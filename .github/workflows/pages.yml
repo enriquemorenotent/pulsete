@@ -40,6 +40,8 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Install Dependencies
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip
         run: npm ci
 
       - name: Resolve Published Release
