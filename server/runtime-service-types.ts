@@ -119,6 +119,7 @@ export type RuntimeHttpApi = {
     clear?: RuntimeAiAssistantService['clear'];
     startLogin: RuntimeAiAssistantService['startLogin'];
     status: RuntimeAiAssistantService['status'];
+    indexProgress: RuntimeAiAssistantService['indexProgress'];
   };
   networks: {
     getAccountImage: RuntimeStore['networks']['getAccountImage'];

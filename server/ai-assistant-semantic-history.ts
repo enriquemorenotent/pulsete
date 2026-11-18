@@ -1,12 +1,15 @@
 import { setImmediate } from 'node:timers/promises';
 import { AssistantEmbeddingClient } from './ai-assistant-embedding-client.js';
+import type { ModelDownloadProgress } from './ai-assistant-embedding-model.js';
 import { assistantPassageIndexVersion, embeddingSize } from './ai-assistant-embedding-version.js';
-import type { AssistantPassageStore } from './storage-assistant-passages.js';
+import type { AssistantIndexProgress } from '../shared/protocol-ai.js';
+import type { AssistantPassageStore, Bucket } from './storage-assistant-passages.js';
 import type { AssistantDateRange } from './ai-assistant-dates.js';
 
 type Candidate = { ids: string[]; score: number; key: string };
 const candidateLimit = 128;
 const passageLimit = 30;
+type Encoder = Pick<AssistantEmbeddingClient, 'start' | 'available' | 'encode' | 'close'>;
 
 export type SemanticHistorySearch = (input: {
   bufferId: string;
@@ -22,11 +25,30 @@ export class AssistantSemanticHistory {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private running = false;
   private closed = false;
-  private initialized = false;
-  private readonly encoder: AssistantEmbeddingClient;
+  private discoveryCutoff: number | undefined;
+  private backlog: Set<string> | undefined;
+  private completed = 0;
+  private activity: AssistantIndexProgress = { stage: 'idle' };
+  private activitySince = 0;
+  private readyUntil = 0;
+  private readonly encoder: Encoder;
 
-  constructor(private readonly store: AssistantPassageStore, directory: string) {
-    this.encoder = new AssistantEmbeddingClient(directory);
+  constructor(private readonly store: AssistantPassageStore, directory: string,
+    createEncoder: (directory: string, onDownload: (value: ModelDownloadProgress | null) => void) => Encoder
+      = (path, onDownload) => new AssistantEmbeddingClient(path, onDownload)) {
+    this.encoder = createEncoder(directory, progress => {
+      if (!this.closed) this.setActivity(progress ? { stage: 'downloading', ...progress } : { stage: 'preparing' });
+    });
+  }
+
+  progress(): AssistantIndexProgress {
+    if (this.closed) return { stage: 'idle' };
+    const now = Date.now();
+    if (this.activity.stage === 'idle' || this.activity.stage === 'ready'
+      || (this.activity.stage === 'updating' && now - this.activitySince < 600)) {
+      return { stage: now < this.readyUntil ? 'ready' : 'idle' };
+    }
+    return this.activity;
   }
 
   start(bufferId?: string) {
@@ -43,7 +65,7 @@ export class AssistantSemanticHistory {
   }
 
   search: SemanticHistorySearch = async ({ bufferId, maxRowid, range, question, examples, signal }) => {
-    if (this.closed || !this.initialized || !this.encoder.available || signal.aborted || !question.trim()) return [];
+    if (this.closed || this.discoveryCutoff === undefined || !this.encoder.available || signal.aborted || !question.trim()) return [];
     try {
       const texts = [`query: ${question}`, ...examples.map(example => `passage: ${example}`)];
       const vectors = await this.encoder.encode(texts, signal);
@@ -79,16 +101,34 @@ export class AssistantSemanticHistory {
     this.running = true;
     let interval = 2_500;
     try {
+      if (!this.encoder.available) this.setActivity({ stage: 'preparing' });
       await this.encoder.start();
       if (this.closed) return;
-      if (!this.initialized) {
+      if (this.discoveryCutoff === undefined) {
         this.store.initialize(assistantPassageIndexVersion);
-        this.initialized = true;
+        this.discoveryCutoff = this.store.historyEnd();
       }
-      const seeded = this.store.seed();
+      if (!this.backlog) {
+        if (this.store.seed(this.discoveryCutoff)) {
+          this.setActivity({ stage: 'preparing' });
+          interval = 5;
+          return;
+        }
+        this.backlog = new Set(this.store.pendingSections(Date.now()).map(sectionKey));
+      }
       const job = this.store.nextBucket(this.preferredBuffer);
-      if (seeded || job) interval = 5;
-      if (!job) return;
+      if (!job) {
+        if (this.backlog.size) {
+          const pending = new Set(this.store.pendingSections().map(sectionKey));
+          for (const key of this.backlog) if (!pending.has(key)) this.backlog.delete(key);
+        }
+        if (this.backlog.size) this.showBacklogProgress();
+        else this.finishActivity();
+        return;
+      }
+      interval = 5;
+      if (this.backlog.size) this.showBacklogProgress();
+      else this.setActivity({ stage: 'updating' });
       this.store.resetStage();
       let ordinal = 0;
       for (const batch of this.store.passageBatches(job)) {
@@ -98,9 +138,15 @@ export class AssistantSemanticHistory {
         await setImmediate();
         if (this.closed) return;
       }
-      this.store.finish(job);
+      const published = this.store.finish(job);
+      if (published !== undefined && this.backlog.delete(sectionKey(job))) {
+        if (published) this.completed++;
+        if (this.backlog.size) this.showBacklogProgress();
+        else this.finishActivity();
+      }
     } catch (error) {
       if (!this.closed) {
+        this.setActivity({ stage: 'paused' });
         console.warn('Assistant history indexing paused:', error instanceof Error ? error.message : String(error));
         interval = 60_000;
       }
@@ -112,7 +158,25 @@ export class AssistantSemanticHistory {
       }
     }
   }
+  private setActivity(next: AssistantIndexProgress) {
+    if (next.stage !== this.activity.stage) this.activitySince = Date.now();
+    this.activity = next;
+  }
+
+  private showBacklogProgress() {
+    this.setActivity({ stage: 'indexing', completed: this.completed, total: this.completed + this.backlog!.size });
+  }
+
+  private finishActivity() {
+    const { stage } = this.activity;
+    if (stage === 'idle' || stage === 'ready') return;
+    const flash = stage !== 'updating' || Date.now() - this.activitySince >= 600;
+    if (flash) this.readyUntil = Date.now() + 5_000;
+    this.setActivity({ stage: flash ? 'ready' : 'idle' });
+  }
 }
+
+const sectionKey = ({ bufferId, bucket }: Pick<Bucket, 'bufferId' | 'bucket'>) => JSON.stringify([bufferId, bucket]);
 
 function insertCandidate(list: Candidate[], candidate: Candidate) {
   const position = list.findIndex(({ score }) => score < candidate.score);

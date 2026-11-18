@@ -15,16 +15,22 @@ const assets = [
   ['onnx/model_int8.onnx', '4d24e2bc01a447951524466ef533e52944bf48509e6552810bcee1a2711cb02c', 118_054_593],
 ] as const;
 
-async function ensureAsset(directory: string, [name, expectedHash, bytes]: typeof assets[number], signal: AbortSignal) {
-  const path = join(directory, name);
+async function hasAsset(path: string, expectedHash: string, signal: AbortSignal) {
   try {
-    const existingHash = createHash('sha256');
-    for await (const chunk of createReadStream(path, { signal })) existingHash.update(chunk);
-    if (existingHash.digest('hex') === expectedHash) return path;
+    const hash = createHash('sha256');
+    for await (const chunk of createReadStream(path, { signal })) hash.update(chunk);
+    return hash.digest('hex') === expectedHash;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return false;
   }
+}
 
+export type ModelDownloadProgress = { receivedBytes: number; totalBytes: number };
+
+async function downloadAsset(directory: string, [name, expectedHash, bytes]: typeof assets[number],
+  signal: AbortSignal, onBytes: (length: number) => void) {
+  const path = join(directory, name);
   const response = await fetch(`https://huggingface.co/Xenova/multilingual-e5-small/resolve/${embeddingModelRevision}/${name}?download=true`,
     { signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]) });
   if (!response.ok || !response.body) throw new Error(`Embedding asset download failed (${response.status})`);
@@ -36,7 +42,7 @@ async function ensureAsset(directory: string, [name, expectedHash, bytes]: typeo
     transform(chunk: Buffer, _encoding, callback) {
       received += chunk.length;
       if (received > bytes) callback(new Error('Embedding asset exceeded expected size'));
-      else { hash.update(chunk); callback(null, chunk); }
+      else { hash.update(chunk); onBytes(chunk.length); callback(null, chunk); }
     },
   });
   try {
@@ -49,19 +55,35 @@ async function ensureAsset(directory: string, [name, expectedHash, bytes]: typeo
   return path;
 }
 
-export async function loadAssistantEmbeddingModel(directory: string, signal: AbortSignal) {
+export async function loadAssistantEmbeddingModel(directory: string, signal: AbortSignal,
+  onDownload: (progress: ModelDownloadProgress | null) => void) {
   await mkdir(join(directory, 'onnx'), { recursive: true });
-  const download = new AbortController();
-  const downloadSignal = AbortSignal.any([signal, download.signal]);
-  const results = await Promise.allSettled(assets.map(asset => ensureAsset(directory, asset, downloadSignal).catch(error => {
-    download.abort(error);
-    throw error;
-  })));
-  downloadSignal.throwIfAborted();
-  const [tokenizerPath, configPath, modelPath] = results.map(result => {
-    if (result.status === 'rejected') throw result.reason;
-    return result.value;
-  });
+  const paths = assets.map(([name]) => join(directory, name));
+  const cached = await Promise.all(assets.map(([, hash], i) => hasAsset(paths[i], hash, signal)));
+  const missing = assets.filter((_, i) => !cached[i]);
+  if (missing.length) {
+    const download = new AbortController();
+    const downloadSignal = AbortSignal.any([signal, download.signal]);
+    const totalBytes = missing.reduce((total, [, , size]) => total + size, 0);
+    let receivedBytes = 0;
+    let lastUpdate = Date.now();
+    onDownload({ receivedBytes, totalBytes });
+    const onBytes = (length: number) => {
+      receivedBytes += length;
+      const now = Date.now();
+      if (now - lastUpdate >= 150 || receivedBytes === totalBytes) {
+        onDownload({ receivedBytes, totalBytes });
+        lastUpdate = now;
+      }
+    };
+    await Promise.allSettled(missing.map(asset => downloadAsset(directory, asset, downloadSignal, onBytes).catch(error => {
+      download.abort(error);
+      throw error;
+    })));
+    downloadSignal.throwIfAborted();
+    onDownload(null);
+  }
+  const [tokenizerPath, configPath, modelPath] = paths;
   const tokenizer = new Tokenizer(JSON.parse(await readFile(tokenizerPath, 'utf8')), JSON.parse(await readFile(configPath, 'utf8')));
   const session = await InferenceSession.create(modelPath, {
     executionProviders: ['cpu'], intraOpNumThreads: 2, interOpNumThreads: 1,

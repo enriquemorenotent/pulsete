@@ -23,6 +23,7 @@ import {
   NetworkManagerDialogContainer,
   PreferencesDialogContainer,
 } from './DesktopShellDialogContainers.js';
+import { AssistantIndexIndicator } from './AssistantIndexIndicator.js';
 import { DesktopShellLayout } from './DesktopShellLayout.js';
 import type { MediaVisibilityMode } from './media-visibility-settings.js';
 import type { AppActions } from './useAppActions.js';
@@ -133,6 +134,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   return (
     <DesktopShellLayout
       header={header}
+      indexProgress={<AssistantIndexIndicator />}
       commandPalette={commandPalette}
       onJumpChatToLatest={jumpChatToLatest}
       selectedBufferId={selectedBufferId}

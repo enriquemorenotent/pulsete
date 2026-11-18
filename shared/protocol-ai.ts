@@ -96,3 +96,8 @@ export type AiAssistantResponse = {
   mode: AiAssistantMode;
   status: AiAssistantProviderStatus;
 };
+
+export type AssistantIndexProgress =
+  | { stage: 'idle' | 'preparing' | 'updating' | 'ready' | 'paused' }
+  | { stage: 'downloading'; receivedBytes: number; totalBytes: number }
+  | { stage: 'indexing'; completed: number; total: number };

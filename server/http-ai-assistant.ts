@@ -15,6 +15,12 @@ export const handleAiAssistantRoutes = async ({
     return true;
   }
 
+  if (pathname === '/api/assistant/index-progress' && req.method === 'GET') {
+    res.setHeader('Cache-Control', 'no-store');
+    writeJson(res, 200, context.assistant.indexProgress());
+    return true;
+  }
+
   if (pathname === '/api/assistant/login' && req.method === 'POST') {
     writeJson(res, 200, await context.assistant.startLogin());
     return true;

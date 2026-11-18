@@ -32,6 +32,7 @@ export type DesktopShellLayoutProps = {
     onOpenPreferences: () => void;
     onToggleMediaVisibilityMode: () => void;
   };
+  indexProgress?: ReactNode;
   logInspectorDialog: ReactNode;
   networkEditorDialog: ReactNode;
   networkManagerDialog: ReactNode;
@@ -130,6 +131,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
           <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground sm:inline">Ctrl K</kbd>
         </Button>
         <nav aria-label="Workspace tools" className="ml-auto flex shrink-0 items-center gap-1">
+          {props.indexProgress}
           <Button variant="ghost" className="hidden h-10 sm:inline-flex" onClick={props.header.onOpenLogInspector}><FolderSearch />Chat history</Button>
           <Button variant="ghost" className="h-10" aria-label="Networks" onClick={props.header.onOpenNetworkManager}><Network /><span className="hidden md:inline">Networks</span></Button>
           <Button variant="ghost" className="h-10" aria-label="Preferences" onClick={props.header.onOpenPreferences}><Settings /><span className="hidden md:inline">Preferences</span></Button>

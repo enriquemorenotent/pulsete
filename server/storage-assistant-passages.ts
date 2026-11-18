@@ -3,7 +3,7 @@ import { assistantPassageBucketMs } from './storage-assistant-passages-schema.js
 import type { SqliteDb } from './storage-sqlite.js';
 import type { AssistantDateRange } from './ai-assistant-dates.js';
 
-type Bucket = { bufferId: string; bucket: number; revision: number };
+export type Bucket = { bufferId: string; bucket: number; revision: number };
 type MessageRow = { id: string; ts: number; rowid: number; body: string; speaker: string };
 type PassageRow = { bucket: number; ordinal: number; messageIds: string; embedding: Buffer };
 export type Passage = { text: string; rows: MessageRow[] };
@@ -12,6 +12,8 @@ const windowSize = 4;
 const stride = 2;
 const bucketMs = assistantPassageBucketMs;
 const readPageSize = 128;
+const eligibleBucket = '(bucket < ? OR changedAt <= ?)';
+const bucketEligibility = (now: number) => [Math.floor(now / bucketMs), now - 30_000];
 
 export class AssistantPassageStore {
   constructor(private readonly db: SqliteDb) {}
@@ -26,11 +28,15 @@ export class AssistantPassageStore {
     });
   }
 
-  seed() {
+  historyEnd() {
+    return this.db.prepare('SELECT coalesce(max(rowid), 0) AS last FROM messages').get<{ last: number }>()!.last;
+  }
+
+  seed(through = Number.MAX_SAFE_INTEGER) {
     const { scannedRowid } = this.db.prepare('SELECT scannedRowid FROM assistant_passage_state WHERE id = 1')
       .get<{ scannedRowid: number }>()!;
-    const { last } = this.db.prepare('SELECT max(rowid) AS last FROM (SELECT rowid FROM messages WHERE rowid > ? ORDER BY rowid LIMIT 4096)')
-      .get<{ last: number | null }>(scannedRowid)!;
+    const { last } = this.db.prepare('SELECT max(rowid) AS last FROM (SELECT rowid FROM messages WHERE rowid > ? AND rowid <= ? ORDER BY rowid LIMIT 4096)')
+      .get<{ last: number | null }>(scannedRowid, through)!;
     if (last === null) return false;
     return runInTransaction(this.db, () => {
       this.db.prepare(`INSERT OR IGNORE INTO assistant_passage_buckets (bufferId, bucket)
@@ -44,11 +50,18 @@ export class AssistantPassageStore {
   nextBucket(preferredBuffer: string | null, now = Date.now()) {
     // Let a live bucket settle so active chat does not rebuild the same windows every second.
     const query = `SELECT bufferId, bucket, revision FROM assistant_passage_buckets
-      WHERE revision != indexedRevision AND (bucket < ? OR changedAt <= ?)`;
-    const args = [Math.floor(now / bucketMs), now - 30_000];
+      WHERE revision != indexedRevision AND ${eligibleBucket}`;
+    const args = bucketEligibility(now);
     return (preferredBuffer === null ? undefined
       : this.db.prepare(query + ' AND bufferId = ? ORDER BY bucket LIMIT 1').get<Bucket>(...args, preferredBuffer))
       ?? this.db.prepare(query + ' ORDER BY bucket LIMIT 1').get<Bucket>(...args);
+  }
+
+  pendingSections(eligibleAt?: number) {
+    const eligibility = eligibleAt === undefined ? '' : ` AND ${eligibleBucket}`;
+    return this.db.prepare(`SELECT bufferId, bucket FROM assistant_passage_buckets
+      WHERE revision != indexedRevision${eligibility}`)
+      .all<Pick<Bucket, 'bufferId' | 'bucket'>>(...(eligibleAt === undefined ? [] : bucketEligibility(eligibleAt)));
   }
 
   resetStage() {
@@ -107,11 +120,11 @@ export class AssistantPassageStore {
   }
 
   finish(job: Bucket) {
-    runInTransaction(this.db, () => {
+    return runInTransaction(this.db, () => {
       const ready = this.db.prepare(`UPDATE assistant_passage_buckets SET indexedRevision = revision
         WHERE bufferId = ? AND bucket = ? AND revision = ? AND indexedRevision != revision`)
         .run(job.bufferId, job.bucket, job.revision);
-      if (!ready.changes) return;
+      if (!ready.changes) return undefined;
       this.db.prepare('DELETE FROM assistant_passages WHERE bufferId = ? AND bucket = ?').run(job.bufferId, job.bucket);
       const changed = this.db.prepare(`INSERT INTO assistant_passages
         (bufferId, bucket, ordinal, firstTs, lastTs, maxRowid, messageIds, embedding)
@@ -121,6 +134,7 @@ export class AssistantPassageStore {
         this.db.prepare('DELETE FROM assistant_passage_buckets WHERE bufferId = ? AND bucket = ?')
           .run(job.bufferId, job.bucket);
       }
+      return changed.changes > 0;
     });
   }
 

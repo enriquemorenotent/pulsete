@@ -19,6 +19,19 @@ test('assistant status route reports unavailable when Codex CLI is missing', asy
   });
 });
 
+test('index progress is a read-only route independent of assistant login', async () => {
+  const context = await createHttpRuntimeContext();
+  try {
+    context.runtime.http.assistant.status = async () => assert.fail('Reading progress must not check provider status');
+    const url = `http://127.0.0.1:${context.port}/api/assistant/index-progress`;
+    const response = await fetch(url);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await response.json(), { stage: 'idle' });
+    context.runtime.http.assistant.indexProgress = () => ({ stage: 'indexing', completed: 1, total: 4 });
+    assert.deepEqual(await (await fetch(url)).json(), { stage: 'indexing', completed: 1, total: 4 });
+  } finally { await context.close(); }
+});
+
 test('assistant ask route returns Codex provider errors without losing conversation context', async () => {
   await withMissingCodexPath(async () => {
     const context = await createHttpRuntimeContext();

@@ -212,6 +212,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       clear: (bufferId, token, sessionId) => assistantService.clear(bufferId, token, sessionId),
       startLogin: () => assistantService.startLogin(),
       status: () => assistantService.status(),
+      indexProgress: () => assistantService.indexProgress(),
     },
     networks: {
       getAccountImage: (id, url) => store.networks.getAccountImage(id, url),

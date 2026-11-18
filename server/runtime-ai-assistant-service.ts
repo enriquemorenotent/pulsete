@@ -18,6 +18,7 @@ import {
 import { createCodexAssistantProvider } from './codex-assistant-provider.js';
 import type {
   AiAssistantProgress,
+  AssistantIndexProgress,
   AiAssistantLoginResponse,
   AiAssistantProviderStatus,
   AiAssistantRequest,
@@ -30,7 +31,7 @@ import type { CodexAssistantProvider } from './codex-assistant-provider.js';
 type RuntimeAiAssistantServiceOptions = {
   conversations: RuntimeConversationStore;
   provider?: CodexAssistantProvider;
-  semanticHistory?: Pick<AssistantSemanticHistory, 'start' | 'search'>;
+  semanticHistory?: Pick<AssistantSemanticHistory, 'start' | 'search'> & Partial<Pick<AssistantSemanticHistory, 'progress'>>;
   timeoutMs?: number;
   researchMs?: number;
 };
@@ -48,6 +49,10 @@ export class RuntimeAiAssistantService {
     const status = await this.provider.status();
     if (status.connected) this.options.semanticHistory?.start();
     return status;
+  }
+
+  indexProgress(): AssistantIndexProgress {
+    return this.options.semanticHistory?.progress?.() ?? { stage: 'idle' };
   }
 
   startLogin(): Promise<AiAssistantLoginResponse> {

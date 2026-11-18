@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AssistantIndexIndicator } from '../../web/src/AssistantIndexIndicator.js';
 import { DesktopShellLayout } from '../../web/src/DesktopShellLayout.js';
 import { ChatPaneHeaderActionMenu } from '../../web/src/ChatPaneHeaderActionMenu.js';
 import { QueryAvatarOptionsMenu } from '../../web/src/QueryAvatarOptionsMenu.js';
@@ -15,6 +16,7 @@ function Fixture() {
   const [action, setAction] = useState('none');
   const actions = ['First action', 'Second action'].map(label => ({ id: label, label, onSelect: () => setAction(label) }));
   return <DesktopShellLayout {...createDesktopShellLayoutProps({
+    indexProgress: new URLSearchParams(location.search).has('index-progress') ? <AssistantIndexIndicator /> : undefined,
     onJumpChatToLatest: () => setJumps(n => n + 1),
     commandPalette: { open: false, onOpen: () => setPalette(n => n + 1) },
     chat: <div className="flex flex-col gap-6 p-8">

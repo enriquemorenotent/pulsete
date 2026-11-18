@@ -122,6 +122,7 @@ export class RuntimeHost {
         clear: (bufferId, token, sessionId) => this.runtime.http.assistant.clear?.(bufferId, token, sessionId),
         startLogin: () => this.runtime.http.assistant.startLogin(),
         status: () => this.runtime.http.assistant.status(),
+        indexProgress: () => this.runtime.http.assistant.indexProgress(),
       },
       networks: {
         getAccountImage: (id, url) => this.runtime.http.networks.getAccountImage(id, url),

@@ -1,3 +1,4 @@
+import type { ModelDownloadProgress } from './ai-assistant-embedding-model.js';
 import { addAbortListener } from 'node:events';
 import { Worker } from 'node:worker_threads';
 import { join, resolve } from 'node:path';
@@ -15,7 +16,7 @@ export class AssistantEmbeddingClient {
   private ready = false;
   private closed = false;
 
-  constructor(private readonly directory: string) {}
+  constructor(private readonly directory: string, private readonly onDownload?: (progress: ModelDownloadProgress | null) => void) {}
 
   get available() { return this.ready; }
 
@@ -43,8 +44,9 @@ export class AssistantEmbeddingClient {
         this.pending.clear();
         void worker.terminate();
       };
-      worker.on('message', (message: { id?: number; ready?: boolean; embeddings?: Float32Array[]; error?: string }) => {
+      worker.on('message', (message: { id?: number; ready?: boolean; download?: ModelDownloadProgress | null; embeddings?: Float32Array[]; error?: string }) => {
         if (this.worker !== worker) return;
+        if ('download' in message) { this.onDownload?.(message.download ?? null); return; }
         if (message.ready) { this.ready = true; worker.unref(); resolve(); return; }
         if (message.id === undefined) { fail(new Error(message.error ?? 'Embedding worker failed')); return; }
         const entry = this.pending.get(message.id);

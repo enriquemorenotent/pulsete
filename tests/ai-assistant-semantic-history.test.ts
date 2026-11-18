@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { setTimeout } from 'node:timers/promises';
+import { AssistantSemanticHistory } from '../server/ai-assistant-semantic-history.js';
 import { buildAiAssistantContext } from '../server/ai-assistant-context.js';
 import { assistantHistoryResearch } from '../server/ai-assistant-research.js';
 import { assistantPassageIndexVersion, embeddingSize } from '../server/ai-assistant-embedding-version.js';
@@ -109,4 +111,65 @@ test('hybrid research hydrates only in-scope originals and preserves literal res
     assert.deepEqual(literal.messages.map(({ id }: { id: string }) => id), ['literal']);
     assert.equal(literal.relatedPassages, undefined);
   } finally { f.close(); }
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+test('progress freezes the discovered backlog and counts a section only once it is searchable', async t => {
+  const f = fixture();
+  const prepared = deferred<void>();
+  const firstStarted = deferred<void>();
+  const finishFirst = deferred<Float32Array[]>();
+  const secondStarted = deferred<void>();
+  const finishSecond = deferred<Float32Array[]>();
+  const updateStarted = deferred<void>();
+  const finishUpdate = deferred<Float32Array[]>();
+  const calls = [
+    { started: firstStarted, done: finishFirst },
+    { started: secondStarted, done: finishSecond },
+    { started: updateStarted, done: finishUpdate },
+  ];
+  const indexer = new AssistantSemanticHistory(f.history, '', () => ({
+    get available() { return available; },
+    start: () => prepared.promise,
+    encode: () => {
+      const call = calls.shift()!;
+      call.started.resolve();
+      return call.done.promise;
+    },
+    close: () => undefined,
+  }));
+  let available = false;
+  const vectors = [new Float32Array(embeddingSize)];
+  const keepAlive = globalThis.setTimeout(() => undefined, 2_000);
+  try {
+    f.append('one', 1, 'one');
+    f.append('two', 2 * assistantPassageBucketMs, 'two');
+    assert.deepEqual(indexer.progress(), { stage: 'idle' });
+    indexer.start();
+    assert.deepEqual(indexer.progress(), { stage: 'preparing' });
+    available = true;
+    prepared.resolve();
+    await firstStarted.promise;
+    assert.deepEqual(indexer.progress(), { stage: 'indexing', completed: 0, total: 2 });
+    f.append('new', 4 * assistantPassageBucketMs, 'arrived during catch-up');
+    finishFirst.resolve(vectors);
+    await secondStarted.promise;
+    assert.deepEqual(indexer.progress(), { stage: 'indexing', completed: 1, total: 2 });
+    finishSecond.resolve(vectors);
+    await updateStarted.promise;
+    assert.deepEqual(indexer.progress(), { stage: 'ready' });
+    await setTimeout(650);
+    assert.deepEqual(indexer.progress(), { stage: 'updating' });
+    finishUpdate.resolve(vectors);
+    await setTimeout(35);
+    assert.deepEqual(indexer.progress(), { stage: 'ready' });
+    const expired = Date.now() + 5_100;
+    t.mock.method(Date, 'now', () => expired);
+    assert.deepEqual(indexer.progress(), { stage: 'idle' });
+  } finally { clearTimeout(keepAlive); indexer.close(); f.close(); }
 });

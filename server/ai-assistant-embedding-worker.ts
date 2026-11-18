@@ -3,7 +3,7 @@ import { loadAssistantEmbeddingModel } from './ai-assistant-embedding-model.js';
 
 const port = parentPort!;
 const shutdown = new AbortController();
-const model = loadAssistantEmbeddingModel(workerData.directory, shutdown.signal);
+const model = loadAssistantEmbeddingModel(workerData.directory, shutdown.signal, download => port.postMessage({ download }));
 
 port.on('message', async (message: { close: true } | { id: number; texts: string[] }) => {
   if ('close' in message) {
