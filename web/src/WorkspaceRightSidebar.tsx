@@ -27,8 +27,6 @@ export type WorkspaceRightSidebarProps = {
   onCollapse?: () => void;
   assistant?: {
     buffer: BufferState | null;
-    recentOnly?: boolean;
-    onRecentOnlyChange?: (recentOnly: boolean) => Promise<boolean>;
     onSelectionChange?: (selection: AiAssistantSelection) => boolean | Promise<boolean>;
     onUseSuggestion: (value: string) => void;
     onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
@@ -113,8 +111,6 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
             content: (
               <AiAssistantPanel
                 buffer={props.assistant?.buffer ?? buffer}
-                recentOnly={props.assistant?.recentOnly}
-                onRecentOnlyChange={props.assistant?.onRecentOnlyChange}
                 onSelectionChange={props.assistant?.onSelectionChange}
                 onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
                 onOpenSource={props.assistant?.onOpenSource}
@@ -172,8 +168,6 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
           content: (
             <AiAssistantPanel
               buffer={props.assistant?.buffer ?? props.workspace.selectedBuffer}
-              recentOnly={props.assistant?.recentOnly}
-              onRecentOnlyChange={props.assistant?.onRecentOnlyChange}
               onSelectionChange={props.assistant?.onSelectionChange}
               onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
                 onOpenSource={props.assistant?.onOpenSource}

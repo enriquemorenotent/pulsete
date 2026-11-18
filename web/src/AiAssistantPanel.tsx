@@ -20,7 +20,7 @@ import { useAssistantReadingMode } from './assistant-reading-mode.js';
 import { AiAssistantChatView } from './AiAssistantChatView.js';
 import type { AssistantEntry } from './AiAssistantChatTypes.js';
 import { AiAssistantConnectionPanel } from './AiAssistantConnectionPanel.js';
-import { AiAssistantSettings } from './AiAssistantSettings.js';
+import { AiAssistantModelControls } from './AiAssistantModelControls.js';
 import { resolveAiAssistantSelection } from './ai-assistant-model-selection.js';
 import {
   InspectorPanel,
@@ -29,8 +29,6 @@ import {
 
 type AiAssistantPanelProps = {
   buffer: BufferState | null;
-  recentOnly?: boolean;
-  onRecentOnlyChange?: (recentOnly: boolean) => Promise<boolean>;
   onSelectionChange?: (selection: AiAssistantSelection) => boolean | Promise<boolean>;
   onUseSuggestion: (value: string) => void;
   onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
@@ -57,9 +55,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const thread = useAiAssistantThread(store, bufferId);
   const [status, setStatus] = useState<AiAssistantProviderStatus | null>(null);
   const [optimisticSelection, setOptimisticSelection] = useState<AiAssistantSelection | null>(null);
-  const [recentOnlyOverride, setRecentOnlyOverride] = useState<boolean | null>(null);
-  const [savingAccess, setSavingAccess] = useState(false);
-  const recentOnly = recentOnlyOverride ?? props.recentOnly ?? false;
   const savedSelection = optimisticSelection ?? props.selection ?? defaultSelection;
   const resolvedSelection = resolveAiAssistantSelection(status, savedSelection);
 
@@ -70,24 +65,13 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     });
   };
 
-  const changeRecentOnly = async (value: boolean) => {
-    setRecentOnlyOverride(value);
-    if (!props.onRecentOnlyChange) return;
-    setSavingAccess(true);
-    try { await props.onRecentOnlyChange(value); }
-    finally {
-      setRecentOnlyOverride(null);
-      setSavingAccess(false);
-    }
-  };
-
   const ask = async (
     mode: AiAssistantMode,
     prompt: string,
     label = prompt,
     nextPendingLabel = 'Thinking',
   ) => {
-    if (!bufferId || savingAccess || (mode === 'answer' && !prompt.trim())) {
+    if (!bufferId || (mode === 'answer' && !prompt.trim())) {
       return;
     }
     const currentThread = store.getThread(bufferId);
@@ -106,8 +90,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         assistantTurns,
         continuationToken: currentThread.continuationToken,
         mode,
-        scope: recentOnly ? 'recent' : 'auto',
-        webLookup: mode === 'answer' && currentThread.webLookup,
         prompt,
         selection: resolvedSelection.selection,
       }, controller.signal, (stage) => store.updateProgress(bufferId, currentRequestId, progressLabels[stage]));
@@ -139,7 +121,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     }
     const current = store.getThread(bufferId);
     const prompt = current.input.trim();
-    if (!prompt || current.pending || savingAccess) {
+    if (!prompt || current.pending) {
       return;
     }
     store.setInput(bufferId, '');
@@ -155,10 +137,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
           {props.buffer?.target ?? 'Assistant'}
         </h2>
         <div className="flex shrink-0 items-center gap-0.5">
-          {connected ? <AiAssistantSettings status={status} selection={savedSelection} recentOnly={recentOnly}
-            webLookup={thread.webLookup} disabled={thread.pending || savingAccess} onRecentOnlyChange={changeRecentOnly}
-            onWebLookupChange={(enabled) => { if (bufferId) store.setWebLookup(bufferId, enabled); }}
-            onSelectionChange={changeSelection} /> : null}
           {connected || hasThreadContent ? (
             <Button type="button" size="icon" variant="ghost" aria-label="New assistant chat" title="New chat"
               className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
@@ -185,7 +163,10 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         <AiAssistantConnectionPanel compact onStatusChange={setStatus} />
         {connected ? (
           <AiAssistantChatView
-            disabled={savingAccess}
+            modelControl={
+              <AiAssistantModelControls disabled={thread.pending} onSelectionChange={changeSelection}
+                savedSelection={savedSelection} status={status} />
+            }
             entries={thread.entries}
             error={thread.error}
             input={thread.input}

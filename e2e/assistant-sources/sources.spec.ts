@@ -24,13 +24,16 @@ for (const outcome of ['success', 'missing', 'error'] as const) {
   });
 }
 
-test('the desktop assistant follows a conversation with optional sources and lookup settings', async ({ page }) => {
+test('the desktop assistant follows a conversation with a model picker and automatic context', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
   const status: AiAssistantProviderStatus = {
     connected: true, detail: 'Connected', provider: 'codex-openai-login', model: 'test',
-    availableModels: [{ id: 'test', label: 'Test model', defaultReasoningEffort: 'low', reasoningEfforts: ['low'] }],
+    availableModels: [
+      { id: 'test', label: 'Test model', defaultReasoningEffort: 'low', reasoningEfforts: ['low'] },
+      { id: 'other', label: 'Other model', defaultReasoningEffort: 'medium', reasoningEfforts: ['medium', 'high'] },
+    ],
     modelsError: null, reasoningEffort: 'low', selectionNotice: null,
   };
   const buffer = { id: 'buffer-1', networkId: 'network', kind: 'query', target: 'Reading group' };
@@ -51,7 +54,7 @@ test('the desktop assistant follows a conversation with optional sources and loo
       { answer: 'I’d love to hear how you first learned about her!', mode: 'suggest-reply' },
     ];
     return route.fulfill({ json: { status, ...replies[requests.length - 1],
-      context: { buffer, messages: [], sources, webSources: request.webLookup ? webSources : undefined },
+      context: { buffer, messages: [], sources, webSources: requests.length === 2 ? webSources : undefined },
     } });
   });
 
@@ -59,13 +62,13 @@ test('the desktop assistant follows a conversation with optional sources and loo
   await expect(page).toHaveTitle('Assistant sources regression fixture');
   await expect(page).toHaveURL(/\/e2e\/assistant-sources\/index\.html\?lookup$/);
   await page.getByRole('tab', { name: 'Assistant' }).click();
-  const settings = page.getByRole('button', { name: 'Assistant settings' });
-  const lookup = page.getByRole('checkbox', { name: 'Web lookup' });
-  const recentOnly = page.getByRole('checkbox', { name: 'Limit to recent chat' });
+  const picker = page.getByRole('button', { name: /^Choose assistant model/ });
+  const modelSettings = page.getByRole('dialog', { name: 'Assistant model settings' });
   const input = page.getByRole('textbox', { name: 'Message assistant' });
   await expect(input).toHaveAttribute('placeholder', 'Ask anything…');
   await expect(page.getByRole('heading', { name: 'How can I help?' })).toBeVisible();
-  await expect(lookup).toHaveCount(0);
+  await expect(picker).toHaveText('Test model · Low');
+  await expect(page.getByRole('button', { name: 'Assistant settings' })).toHaveCount(0);
   await page.locator('main').screenshot({ path: '/tmp/pulsete-assistant-empty.png' });
 
   await input.fill('Who was her role model?');
@@ -76,34 +79,39 @@ test('the desktop assistant follows a conversation with optional sources and loo
   await expect(page.getByText('An unrelated message.', { exact: true })).toHaveCount(0);
   await source.click();
 
-  await settings.click();
-  await expect(lookup).not.toBeChecked();
-  await expect(recentOnly).not.toBeChecked();
-  await lookup.click();
-  await page.getByRole('button', { name: 'Done' }).click();
-  await expect(settings).toBeFocused();
+  await picker.click();
+  await expect(modelSettings).toBeVisible();
+  await modelSettings.getByRole('combobox', { name: 'Model', exact: true }).click();
+  await page.getByRole('option', { name: 'Other model' }).click();
+  await expect(picker).toHaveText('Other model · Medium');
+  await modelSettings.getByRole('combobox', { name: 'Reasoning' }).click();
+  await page.getByRole('option', { name: 'High' }).click();
+  await expect(picker).toHaveText('Other model · High');
+  await page.locator('main').screenshot({ path: '/tmp/pulsete-assistant-model-picker.png' });
+  await page.keyboard.press('Escape');
+  await expect(modelSettings).toBeHidden();
+  await expect(picker).toBeFocused();
+
   await input.fill('What is she known for?');
   await input.press('Enter');
   await expect(page.getByRole('link', { name: 'Web source' })).toHaveAttribute('href', webSources[0].url);
   await expect(page.getByText(/\[S1\]|\[W1\]|Incomplete history/)).toHaveCount(0);
   await page.locator('main').screenshot({ path: '/tmp/pulsete-assistant-conversation.png' });
 
-  await settings.click();
-  await recentOnly.click();
-  await page.getByRole('button', { name: 'Done' }).click();
   await input.fill('Help me write a reply.');
   await input.press('Enter');
   await page.getByRole('button', { name: 'Use draft' }).click();
   await expect(page.getByRole('status', { name: 'IRC draft' })).toHaveText('I’d love to hear how you first learned about her!');
-  expect(requests.map(({ scope, webLookup }) => [scope, webLookup])).toEqual([['auto', false], ['auto', true], ['recent', true]]);
+  expect(requests[1].selection).toEqual({ model: 'other', reasoningEffort: 'high' });
+  for (const request of requests) {
+    expect(request).not.toHaveProperty('scope');
+    expect(request).not.toHaveProperty('webLookup');
+  }
   expect(requests[1].assistantTurns.map(({ text }) => text)).toEqual(['Who was her role model?', 'She said Marie Curie was her role model.']);
 
   await page.getByRole('button', { name: 'New assistant chat' }).click();
   await expect(page.getByRole('heading', { name: 'How can I help?' })).toBeVisible();
-  await settings.click();
-  await expect(lookup).not.toBeChecked();
-  await expect(recentOnly).toBeChecked();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(picker).toHaveText('Other model · High');
   await page.getByRole('button', { name: 'Expand assistant' }).click();
   await expect(page.getByRole('button', { name: 'Reduce assistant width' })).toBeVisible();
   await expect(page.locator('vite-error-overlay')).toHaveCount(0);

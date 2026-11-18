@@ -30,9 +30,6 @@ test('assistant model controls show the active model and reasoning effort', () =
     />,
   );
 
-  assert.match(markup, /aria-label="Assistant model settings"/);
-  assert.match(markup, />Model</);
-  assert.match(markup, />Reasoning</);
-  assert.match(markup, />GPT-5.6-Terra</);
-  assert.match(markup, />High</);
+  assert.match(markup, /aria-label="Choose assistant model, GPT-5.6-Terra, High reasoning"/);
+  assert.match(markup, /GPT-5.6-Terra · High/);
 });

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ArrowUp, FileText, Reply, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { AiAssistantConversation } from './AiAssistantConversation.js';
@@ -15,7 +16,7 @@ type AiAssistantChatViewProps = {
   onOpenSource?: (bufferId: string, messageId: string) => Promise<boolean>;
   pending: boolean;
   pendingLabel: string;
-  disabled?: boolean;
+  modelControl?: ReactNode;
 };
 
 export function AiAssistantChatView(props: AiAssistantChatViewProps) {
@@ -27,12 +28,11 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
           <div className="flex min-h-full flex-col justify-end px-1.5 pb-7 pt-3">
             <h3 className="mb-2.5 text-xl font-semibold tracking-tight text-foreground">How can I help?</h3>
             <Button variant="ghost" size="sm" className="h-8 justify-start gap-2.5 px-0 text-[14px] font-normal"
-              disabled={props.disabled}
               onClick={() => props.onAsk('answer', 'Catch me up on the current chat. What has been happening and what should I know?', 'Catch me up')}>
               <FileText aria-hidden className="text-muted-foreground" /> Catch me up
             </Button>
             <Button variant="ghost" size="sm" className="h-8 justify-start gap-2.5 px-0 text-[14px] font-normal"
-              disabled={props.disabled} onClick={() => props.onAsk('suggest-reply', '', 'Help me reply', 'Drafting')}>
+              onClick={() => props.onAsk('suggest-reply', '', 'Help me reply', 'Drafting')}>
               <Reply aria-hidden className="text-muted-foreground" /> Help me reply
             </Button>
           </div>
@@ -44,33 +44,36 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
       {props.error ? (
         <p role="alert" className="text-xs leading-5 text-amber-100">{props.error}</p>
       ) : null}
-      <form className="flex shrink-0 items-end gap-1.5 rounded-[11px] border border-white/10 bg-[#283444] py-1.5 pr-1.5 pl-3 focus-within:border-primary/45"
+      <form className="flex shrink-0 flex-col rounded-[11px] border border-white/10 bg-[#283444] p-1.5 focus-within:border-primary/45"
         onSubmit={event => {
           event.preventDefault();
-          if (!props.disabled && !props.pending) props.onSubmit();
+          if (!props.pending) props.onSubmit();
         }}>
         <textarea aria-label="Message assistant" rows={1} value={props.input}
           onChange={event => props.onChange(event.target.value)}
           onKeyDown={event => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
-              if (!props.disabled && !props.pending) props.onSubmit();
+              if (!props.pending) props.onSubmit();
             }
           }}
           placeholder="Ask anything…"
           aria-busy={props.pending}
-          className="max-h-32 min-h-8 min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1.5 text-[14px] leading-5 text-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground" />
-        {props.pending ? (
-          <Button type="button" size="icon" className="size-8 shrink-0 rounded-full"
-            aria-label="Stop response" title="Stop response" onClick={props.onCancel}>
-            <Square className="size-3 fill-current" />
-          </Button>
-        ) : (
-          <Button type="submit" size="icon" className="size-8 shrink-0 rounded-full"
-            aria-label="Ask assistant" title="Send message" disabled={props.disabled || !props.input.trim()}>
-            <ArrowUp className="size-[18px]" />
-          </Button>
-        )}
+          className="max-h-32 min-h-8 w-full resize-none overflow-y-auto bg-transparent px-1.5 py-1.5 text-[14px] leading-5 text-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground" />
+        <div className="flex items-center gap-1.5">
+          <div className="min-w-0 flex-1">{props.modelControl}</div>
+          {props.pending ? (
+            <Button type="button" size="icon" className="size-8 shrink-0 rounded-full"
+              aria-label="Stop response" title="Stop response" onClick={props.onCancel}>
+              <Square className="size-3 fill-current" />
+            </Button>
+          ) : (
+            <Button type="submit" size="icon" className="size-8 shrink-0 rounded-full"
+              aria-label="Ask assistant" title="Send message" disabled={!props.input.trim()}>
+              <ArrowUp className="size-[18px]" />
+            </Button>
+          )}
+        </div>
       </form>
     </div>
   );

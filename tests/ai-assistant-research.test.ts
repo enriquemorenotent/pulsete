@@ -87,19 +87,19 @@ test('the default assistant looks back only when needed and keeps past answers i
   } finally { storage.close(); }
 });
 
-test('a saved recent-chat preference prevents an automatic history operation', async () => {
+test('the default assistant answers from recent context without reading older messages when it has enough', async () => {
   const { storage, buffer } = fixture();
   storage.conversations.assistantHistorySnapshot = () => { throw new Error('History should never be read'); };
   try {
-    const service = new RuntimeAiAssistantService({ conversations: storage.conversations, recentOnly: () => true,
+    const service = new RuntimeAiAssistantService({ conversations: storage.conversations,
       provider: provider(async ({ instructions, prompt }) => {
-        assert.doesNotMatch(instructions, /PULSETE_HISTORY/);
+        assert.match(instructions, /PULSETE_HISTORY/);
+        assert.match(prompt, /ordinary conversation/);
         assert.doesNotMatch(prompt, /orchard venue agreed/);
-        if (prompt.includes('The tools have finished')) return 'I don’t see the venue in the recent conversation.';
-        return 'PULSETE_HISTORY {"operation":{"action":"search","query":"orchard"}}';
+        return 'The group is chatting.';
       }) });
-    const result = await service.ask(buffer.id, { ...request, scope: 'auto' });
-    assert.match(result.answer, /recent conversation/);
+    const result = await service.ask(buffer.id, { ...request, scope: 'auto', prompt: 'What is happening now?' });
+    assert.equal(result.answer, 'The group is chatting.');
   } finally { storage.close(); }
 });
 

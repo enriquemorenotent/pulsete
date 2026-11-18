@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { AiAssistantConversation } from '../../web/src/AiAssistantConversation.js';
 import { WorkspaceRightSidebar, type WorkspaceRightSidebarProps } from '../../web/src/WorkspaceRightSidebar.js';
 import { AssistantReadingModeContext } from '../../web/src/assistant-reading-mode.js';
+import type { AiAssistantSelection } from '../../shared/protocol-ai.js';
 import type { AssistantEntry } from '../../web/src/AiAssistantChatTypes.js';
 import '../../web/src/globals.css';
 
@@ -40,7 +41,7 @@ function Fixture() {
 
 function SidebarFixture() {
   const [expanded, setExpanded] = useState(false);
-  const [recentOnly, setRecentOnly] = useState(false);
+  const [selection, setSelection] = useState<AiAssistantSelection>({ model: null, reasoningEffort: null });
   const [draft, setDraft] = useState('');
   const buffer = { ...entries[0].context!.buffer, kind: 'query' as const, target: 'Reading group',
     unread: 0, priorityUnread: 0, lastReadTs: null, lastReadMessageId: null };
@@ -58,7 +59,7 @@ function SidebarFixture() {
           removeFriend: async () => true, toggleNotifications: async () => true, unmute: async () => true },
         externalAvatarsEnabled: false,
         onSaveNickEmoji: async () => true, onSelectNick: () => undefined,
-      }} assistant={{ buffer, recentOnly, onRecentOnlyChange: async value => { setRecentOnly(value); return true; },
+      }} assistant={{ buffer, selection, onSelectionChange: value => { setSelection(value); return true; },
         onUseSuggestion: setDraft }} />
     </AssistantReadingModeContext.Provider>
     {draft ? <output aria-label="IRC draft">{draft}</output> : null}

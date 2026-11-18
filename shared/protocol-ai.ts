@@ -30,7 +30,6 @@ export type AiAssistantScope = z.infer<typeof aiAssistantScopeSchema>;
 
 export const aiAssistantRequestSchema = z.object({
   scope: aiAssistantScopeSchema.optional(),
-  webLookup: z.boolean().optional(),
   continuationToken: z.string().uuid().optional(),
   assistantTurns: z.array(aiAssistantTurnSchema).max(aiAssistantThreadMaxTurns).default([]),
   mode: aiAssistantModeSchema.default('answer'),

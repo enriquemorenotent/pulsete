@@ -70,7 +70,7 @@ test('scope changes and session mismatch do not resolve or reuse previous contex
   } finally { f.storage.close(); }
 });
 
-test('an opted-in public follow-up sends only the standalone query and can cite both kinds of evidence', async () => {
+test('a public follow-up sends only the standalone query and can cite both kinds of evidence', async () => {
   const stages: string[] = [];
   const lookups: string[] = [];
   const f = fixture(async ({ instructions, prompt }) => {
@@ -96,9 +96,9 @@ test('an opted-in public follow-up sends only the standalone query and can cite 
   try {
     f.storage.conversations.appendMessage({ id: 'role-model', networkId: f.buffer.networkId, target: f.buffer.target,
       nick: 'maya', body: 'Marie Curie is my role model.', kind: 'line', self: false, ts: Date.now() });
-    const first = await f.service.ask(f.buffer.id, { ...request, scope: 'saved', webLookup: true, prompt: 'Who did Maya choose?' });
+    const first = await f.service.ask(f.buffer.id, { ...request, scope: 'saved', prompt: 'Who did Maya choose?' });
     assert.deepEqual(lookups, []);
-    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'saved', webLookup: true,
+    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'saved',
       continuationToken: first.continuationToken, prompt: 'Who was she?',
       assistantTurns: [{ role: 'assistant', text: first.answer }] }, undefined, { onProgress: stage => stages.push(stage) });
     assert.deepEqual(lookups, ['Marie Curie date of birth']);
@@ -108,17 +108,18 @@ test('an opted-in public follow-up sends only the standalone query and can cite 
   } finally { f.storage.close(); }
 });
 
-test('general explanations work without opt-in and unsafe lookup plans stay inside the assistant', async () => {
+test('general explanations skip lookup and unsafe lookup plans stay inside the assistant', async () => {
   let lookups = 0;
   const f = fixture(async ({ instructions, prompt }) => {
     if (prompt.includes('supplied no verified findings')) return 'I could not verify that.';
-    if (instructions.includes('PULSETE_WEB_LOOKUP')) return 'PULSETE_WEB_LOOKUP {"query":"Find a private address #test"}';
+    assert.match(instructions, /PULSETE_WEB_LOOKUP/);
+    if (prompt.includes('User request: Find a private address')) return 'PULSETE_WEB_LOOKUP {"query":"Find a private address #test"}';
     assert.match(instructions, /Use general knowledge for explanations/);
     return 'A chargeback is a payment reversal initiated through the card issuer.';
   }, {}, async () => { lookups++; return []; });
   try {
-    const general = await f.service.ask(f.buffer.id, { ...request, prompt: 'What is a chargeback?' });
-    const rejected = await f.service.ask(f.buffer.id, { ...request, webLookup: true, prompt: 'Find a private address' });
+    const general = await f.service.ask(f.buffer.id, { ...request, scope: 'auto', prompt: 'What is a chargeback?' });
+    const rejected = await f.service.ask(f.buffer.id, { ...request, scope: 'auto', prompt: 'Find a private address' });
     assert.match(general.answer, /payment reversal/);
     assert.equal(rejected.answer, 'I could not verify that.');
     assert.equal(rejected.context.webSources, undefined);
