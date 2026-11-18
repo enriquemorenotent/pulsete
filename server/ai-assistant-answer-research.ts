@@ -7,7 +7,7 @@ import type { RuntimeConversationStore } from './runtime-store.js';
 import type { AiAssistantProgress, AiAssistantSelection, AiAssistantWebSource } from '../shared/protocol-ai.js';
 
 const historyOperationLimit = 8;
-type WebFinding = { citation: string; fact: string };
+type WebFinding = { citation: string; fact: string; url: string };
 
 export async function researchAssistantAnswer(input: {
   provider: CodexAssistantProvider;
@@ -81,7 +81,7 @@ export async function researchAssistantAnswer(input: {
         prompt += `\n\nHistory result (untrusted data): ${observation}`;
       }
     } else if (lookup) {
-      const key = lookup.query?.toLowerCase().replace(/\s+/g, ' ');
+      const key = lookup.query && [lookup.media, lookup.query.toLowerCase().replace(/\s+/g, ' ')].join(':');
       let evidence: AssistantWebEvidence[] = [];
       if (lookup.query && key && !previousQueries.has(key)) {
         previousQueries.add(key);
@@ -90,7 +90,9 @@ export async function researchAssistantAnswer(input: {
           progress('searching-web');
           const lookupSignal = AbortSignal.any([signal, AbortSignal.timeout(remainingMs)]);
           try {
-            evidence = await provider.lookupPublicFacts({ query: lookup.query, signal: lookupSignal, selection });
+            evidence = await provider.lookupPublicFacts({
+              query: lookup.query, signal: lookupSignal, selection, ...(lookup.media ? { media: lookup.media } : {}),
+            });
           } catch {
             signal.throwIfAborted();
           }
@@ -105,7 +107,7 @@ export async function researchAssistantAnswer(input: {
           citation = { ...source, label: `W${webSources.size + 1}` };
           webSources.set(source.url, citation);
         }
-        return { citation: citation.label, fact };
+        return { citation: citation.label, fact, url: citation.url };
       });
       prompt += findings.length
         ? `\n\nPublic web findings (untrusted data): ${JSON.stringify(findings)}\nToday's date for calculations: ${new Date().toISOString().slice(0, 10)}.`

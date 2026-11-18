@@ -5,7 +5,7 @@ import { AiAssistantChatView } from '../web/src/AiAssistantChatView.js';
 
 const renderView = (entries: Parameters<typeof AiAssistantChatView>[0]['entries'] = []) =>
   renderToStaticMarkup(
-    <AiAssistantChatView
+    <AiAssistantChatView showMedia
       entries={entries}
       error=""
       input=""
@@ -41,7 +41,7 @@ test('assistant conversation replaces onboarding shortcuts with messages', () =>
 });
 
 test('assistant exposes Stop while a request is pending', () => {
-  const markup = renderToStaticMarkup(<AiAssistantChatView entries={[]} error="" input=""
+  const markup = renderToStaticMarkup(<AiAssistantChatView showMedia entries={[]} error="" input=""
     pending pendingLabel="Thinking" onAsk={() => undefined} onCancel={() => undefined}
     onChange={() => undefined} onSubmit={() => undefined} onUseSuggestion={() => undefined} />);
   assert.match(markup, /aria-label="Stop response"/);

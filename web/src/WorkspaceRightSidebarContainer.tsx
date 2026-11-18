@@ -205,6 +205,7 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
   return (
     <AccountMediaProvider network={workspace.selectedNetwork} runtime={workspace.selectedRuntime}><WorkspaceRightSidebar
       workspace={workspace}
+      showMedia={showMedia}
       onReconnectNetwork={reconnectSelectedNetwork}
       nicklist={nicklist}
       assistant={assistant}

@@ -5,6 +5,7 @@ import { AiAssistantConversation } from './AiAssistantConversation.js';
 import type { AssistantAskHandler, AssistantEntry } from './AiAssistantChatTypes.js';
 
 type AiAssistantChatViewProps = {
+  showMedia: boolean;
   entries: readonly AssistantEntry[];
   error: string;
   input: string;
@@ -38,7 +39,7 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
           </div>
         </div>
       ) : (
-        <AiAssistantConversation entries={props.entries} pending={props.pending}
+        <AiAssistantConversation entries={props.entries} pending={props.pending} showMedia={props.showMedia}
           pendingLabel={props.pendingLabel} onUseSuggestion={props.onUseSuggestion} onOpenSource={props.onOpenSource} />
       )}
       {props.error ? (

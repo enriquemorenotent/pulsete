@@ -285,3 +285,27 @@ test('an unverified revision is not returned as a factual answer', async () => {
     assert.deepEqual(result.context.sources, []);
   } finally { f.storage.close(); }
 });
+
+test('a public picture reply includes only media grounded in the supplied sources', async () => {
+  const portrait = 'https://example.test/portrait';
+  const media = [
+    { source: 'W1', kind: 'image', title: 'Portrait' },
+    { source: 'W1', kind: 'image', title: 'Substituted image', url: 'https://example.test/unverified.png' },
+    { source: 'S1', kind: 'image', title: 'Unrelated chat link', url: 'https://example.test/unverified.png' },
+  ];
+  const f = fixture(async ({ instructions, prompt }) => {
+    assert.match(instructions, /PULSETE_MEDIA/);
+    if (!prompt.includes('Public web findings')) return 'PULSETE_WEB_LOOKUP {"query":"Marie Curie portrait","media":"image"}';
+    assert.ok(prompt.includes(portrait));
+    return 'Here’s a portrait from the archive.\nPULSETE_MEDIA ' + JSON.stringify(media);
+  }, {}, async ({ media }) => {
+    assert.equal(media, 'image');
+    return [{ fact: 'The archive includes a portrait of Marie Curie.', source: { title: 'Archive', url: portrait } }];
+  });
+  try {
+    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'auto', prompt: 'Show me a picture of Marie Curie.' });
+    assert.equal(result.answer, 'Here’s a portrait from the archive.');
+    assert.deepEqual(result.context.attachments, [{ source: 'W1', kind: 'image', title: 'Portrait', url: portrait }]);
+    assert.equal(result.context.webSources?.[0].label, 'W1');
+  } finally { f.storage.close(); }
+});

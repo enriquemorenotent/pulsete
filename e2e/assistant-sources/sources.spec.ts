@@ -117,3 +117,70 @@ test('the desktop assistant follows a conversation with a model picker and autom
   await expect(page.locator('vite-error-overlay')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+for (const showMedia of [true, false]) {
+  test(`the desktop assistant shows grounded media cards with previews ${showMedia ? 'enabled' : 'disabled'}`, async ({ page }) => {
+    const portrait = 'https://example.test/portrait';
+    const clip = 'https://example.test/clip.mp4';
+    const article = 'https://example.test/article';
+    const status: AiAssistantProviderStatus = {
+      connected: true, detail: 'Connected', provider: 'codex-openai-login', model: 'test',
+      availableModels: [], modelsError: null, reasoningEffort: 'low', selectionNotice: null,
+    };
+    const previewRequests: string[] = [];
+    await page.route('**/api/assistant/status', route => route.fulfill({ json: status }));
+    await page.route('**/api/buffers/buffer-1/assistant', route => route.fulfill({ json: {
+      status, answer: 'Here’s the portrait and a short documentary.', mode: 'answer',
+      context: {
+        buffer: { id: 'buffer-1', kind: 'query', networkId: 'network', target: 'Reading group' },
+        messages: [],
+        attachments: [
+          { kind: 'image', title: 'Portrait from the archive', url: portrait, source: 'W1' },
+          { kind: 'video', title: 'Short documentary', url: clip, source: 'W2' },
+          { kind: 'link', title: 'Read the biography', url: article, source: 'W3' },
+        ],
+      },
+    } }));
+    await page.route('**/api/media/page-preview', route => {
+      const { url } = route.request().postDataJSON() as { url: string };
+      previewRequests.push(url);
+      return route.fulfill({ json: { preview: url === portrait
+        ? { title: 'Portrait', pageUrl: portrait, imageUrl: 'https://example.test/image.png' }
+        : null, unavailableReason: null } });
+    });
+    await page.route('**/api/media/resource?*', route => route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="320"><rect width="240" height="320" fill="#315975"/></svg>',
+    }));
+
+    await page.goto('/e2e/assistant-sources/index.html?lookup' + (showMedia ? '' : '&hide-media'));
+    await page.getByRole('tab', { name: 'Assistant' }).click();
+    const input = page.getByRole('textbox', { name: 'Message assistant' });
+    await input.fill('Show me a picture and a documentary.');
+    await input.press('Enter');
+
+    const cards = page.getByRole('list', { name: 'Reply media' });
+    await expect(cards.getByRole('link', { name: /Read the biography/ })).toHaveAttribute('href', article);
+    const picture = cards.getByRole('button', { name: 'Enlarge Portrait from the archive' });
+    const video = cards.locator('video');
+    if (showMedia) {
+      await expect.poll(() => picture.getByRole('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(240);
+      await expect(video).toHaveAttribute('controls', '');
+      await expect(video).toHaveAttribute('preload', 'none');
+      await expect(video).not.toHaveAttribute('autoplay', '');
+      await page.locator('main').screenshot({ path: '/tmp/pulsete-assistant-media.png' });
+      await picture.click();
+      const dialog = page.getByRole('dialog', { name: 'Portrait from the archive' });
+      await expect(dialog.getByRole('link', { name: 'Open original' })).toHaveAttribute('href', portrait);
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await expect(picture).toBeFocused();
+      expect(previewRequests.sort()).toEqual([article, portrait].sort());
+    } else {
+      await expect(picture).toHaveCount(0);
+      await expect(video).toHaveCount(0);
+      await expect(cards.getByRole('link', { name: /Portrait from the archive/ })).toHaveAttribute('href', portrait);
+      expect(previewRequests).toEqual([]);
+    }
+  });
+}

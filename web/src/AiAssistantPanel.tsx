@@ -28,6 +28,7 @@ import {
 } from './RightSidebarInspector.js';
 
 type AiAssistantPanelProps = {
+  showMedia?: boolean;
   buffer: BufferState | null;
   onSelectionChange?: (selection: AiAssistantSelection) => boolean | Promise<boolean>;
   onUseSuggestion: (value: string) => void;
@@ -163,6 +164,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         <AiAssistantConnectionPanel compact onStatusChange={setStatus} />
         {connected ? (
           <AiAssistantChatView
+            showMedia={props.showMedia ?? true}
             modelControl={
               <AiAssistantModelControls disabled={thread.pending} onSelectionChange={changeSelection}
                 savedSelection={savedSelection} status={status} />

@@ -19,6 +19,7 @@ const context: AiAssistantContext = {
 
 test('assistant replies show just the cited evidence without history coverage', () => {
   const markup = renderToStaticMarkup(<AiAssistantConversation
+    showMedia
     entries={[{ id: 1, role: 'assistant', text: 'Meet at the bridge. [S1]', context }]}
     pending={false} pendingLabel="" onUseSuggestion={() => undefined} />);
   assert.match(markup, />Source<\/summary>/);

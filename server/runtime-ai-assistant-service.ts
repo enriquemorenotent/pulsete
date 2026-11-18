@@ -1,3 +1,4 @@
+import { assistantMediaInstructions, readAssistantMedia } from './ai-assistant-media.js';
 import type { AssistantSemanticHistory } from './ai-assistant-semantic-history.js';
 import { z } from 'zod';
 import { AssistantContinuations } from './ai-assistant-continuations.js';
@@ -170,9 +171,11 @@ export class RuntimeAiAssistantService {
       acceptsRevision: (answer) => !readDraft(answer) && !badReferences(answer) && !unfinished(answer),
     }) : result.answer;
     signal.throwIfAborted();
-    const citedLabels = readAssistantSourceLabels(reviewed);
-    const answer = draft || request.mode === 'suggest-reply'
-      ? stripAssistantSourceLabels(draft?.[1] ?? reviewed, citedLabels) : reviewed;
+    const { text, attachments } = readAssistantMedia(reviewed, context.sources, webSources);
+    const citedLabels = readAssistantSourceLabels(text);
+    const isDraft = Boolean(draft) || request.mode === 'suggest-reply';
+    const answer = isDraft ? stripAssistantSourceLabels(readDraft(text)?.[1] ?? text, citedLabels) : text;
+    if (!isDraft) for (const attachment of attachments) citedLabels.add(attachment.source);
     if (request.continuationToken) this.continuations.clear(bufferId, request.continuationToken, sessionId);
     const sources = context.sources?.filter(({ label }) => !automatic || citedLabels.has(label));
     const continuationToken = this.continuations.put({ bufferId, sessionId, scope, question: prompt, range,
@@ -180,6 +183,7 @@ export class RuntimeAiAssistantService {
     return { answer, context: {
       ...toPublicAiAssistantContext(context),
       sources,
+      ...(!isDraft && attachments.length ? { attachments } : {}),
       ...(webSources.size ? { webSources: [...webSources.values()].filter(({ label }) => !automatic || citedLabels.has(label)) } : {}),
     }, mode: draft ? 'suggest-reply' : request.mode, status: result.status, continuationToken };
   }
@@ -201,7 +205,8 @@ const buildInstructions = (mode: AiAssistantRequest['mode']) =>
     mode === 'suggest-reply'
       ? 'Use only the provided conversation context. Write one concise message the user could send next. Do not add analysis.'
       : 'Use general knowledge for explanations and background. Cite supplied public web findings with labels such as [W1] alongside the facts they support. If a precise or current public fact needs verification and the evidence is insufficient, say so and avoid guessing. When the user asks for a ready-to-send reply to the IRC chat, start with PULSETE_DRAFT on its own line, then give only the draft text. This prepares a draft for the user to review.',
-  ].join('\n');
+    mode === 'answer' ? assistantMediaInstructions : '',
+  ].filter(Boolean).join('\n');
 
 const buildPrompt = (input: {
   assistantTurns: readonly AiAssistantTurn[];

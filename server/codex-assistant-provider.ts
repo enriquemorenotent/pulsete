@@ -2,7 +2,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { serviceUnavailable } from './app-error.js';
-import { publicSearchInstructions, readPublicSearchEvidence, type AssistantWebEvidence } from './ai-assistant-web.js';
+import { publicMediaSearchInstructions, publicSearchInstructions, readPublicSearchEvidence,
+  type AssistantPublicMedia, type AssistantWebEvidence } from './ai-assistant-web.js';
 import { readFailure, runCommand } from './codex-command-runner.js';
 import { resolveInstalledCodexCommand } from './codex-command-path.js';
 import type {
@@ -38,6 +39,7 @@ export type CodexAssistantProvider = {
   }): Promise<CodexAssistantProviderResponse>;
   lookupPublicFacts?(input: {
     query: string;
+    media?: AssistantPublicMedia;
     selection?: AiAssistantSelection;
     signal?: AbortSignal;
   }): Promise<AssistantWebEvidence[]>;
@@ -107,9 +109,9 @@ export const createCodexAssistantProvider = (
       readModelCatalog,
       input,
     ),
-    lookupPublicFacts: async ({ query, selection, signal }) => {
+    lookupPublicFacts: async ({ query, media, selection, signal }) => {
       const result = await requestCodexAnswer(command, model, readModelCatalog, {
-        instructions: publicSearchInstructions,
+        instructions: media ? publicSearchInstructions + '\n' + publicMediaSearchInstructions[media] : publicSearchInstructions,
         prompt: `Public search query: ${JSON.stringify(query)}`,
         selection,
         signal,

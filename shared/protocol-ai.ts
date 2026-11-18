@@ -69,6 +69,7 @@ export type AiAssistantContext = {
   messages: ChatMessage[];
   sources?: { label: string; message: ChatMessage }[];
   webSources?: AiAssistantWebSource[];
+  attachments?: AiAssistantAttachment[];
   coverage?: {
     description: string;
     truncated: boolean;
@@ -78,6 +79,13 @@ export type AiAssistantContext = {
     lastTs?: number | null;
     researchLimited?: boolean;
   };
+};
+
+export type AiAssistantAttachment = {
+  kind: 'image' | 'video' | 'link';
+  title: string;
+  url: string;
+  source: string;
 };
 
 export type AiAssistantWebSource = { label: string; title: string; url: string };

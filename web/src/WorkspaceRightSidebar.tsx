@@ -21,6 +21,7 @@ import type { AiAssistantStoreApi } from './ai-assistant-store.js';
 import type { ServerSidebarAccordionState } from './server-sidebar-accordion-state.js';
 
 export type WorkspaceRightSidebarProps = {
+  showMedia?: boolean;
   workspace: WorkspaceView;
   onReconnectNetwork?: () => Promise<boolean>;
   nicklist: Omit<NicklistPanelProps, 'channel' | 'network'>;
@@ -111,6 +112,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
             content: (
               <AiAssistantPanel
                 buffer={props.assistant?.buffer ?? buffer}
+                showMedia={props.showMedia}
                 onSelectionChange={props.assistant?.onSelectionChange}
                 onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
                 onOpenSource={props.assistant?.onOpenSource}
@@ -168,6 +170,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
           content: (
             <AiAssistantPanel
               buffer={props.assistant?.buffer ?? props.workspace.selectedBuffer}
+              showMedia={props.showMedia}
               onSelectionChange={props.assistant?.onSelectionChange}
               onUseSuggestion={props.assistant?.onUseSuggestion ?? (() => undefined)}
                 onOpenSource={props.assistant?.onOpenSource}

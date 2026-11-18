@@ -29,7 +29,7 @@ function Fixture() {
     </select></label>
     <output aria-label="Navigation calls">{JSON.stringify(calls)}</output>
     <section className="flex h-[650px] flex-col">
-      <AiAssistantConversation entries={entries} pending={false} pendingLabel="" onUseSuggestion={() => {}}
+      <AiAssistantConversation showMedia entries={entries} pending={false} pendingLabel="" onUseSuggestion={() => {}}
         onOpenSource={async (bufferId, messageId) => {
           setCalls(calls => [...calls, `${bufferId}/${messageId}`]);
           if (outcome === 'error') throw new Error('Unavailable');
@@ -53,7 +53,8 @@ function SidebarFixture() {
   };
   return <main className="mx-auto flex h-screen flex-col" style={{ width: expanded ? 540 : 320 }}>
     <AssistantReadingModeContext.Provider value={{ expanded, setExpanded }}>
-      <WorkspaceRightSidebar workspace={workspace} nicklist={{
+      <WorkspaceRightSidebar workspace={workspace}
+        showMedia={!new URLSearchParams(window.location.search).has('hide-media')} nicklist={{
         friends: [], nickEmojis: [], mutedNicks: [], contactNotificationSettings: { contacts: [] },
         contactRuleHandlers: { addFriend: async () => true, mute: async () => true,
           removeFriend: async () => true, toggleNotifications: async () => true, unmute: async () => true },
