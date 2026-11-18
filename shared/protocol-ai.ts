@@ -30,6 +30,7 @@ export type AiAssistantScope = z.infer<typeof aiAssistantScopeSchema>;
 
 export const aiAssistantRequestSchema = z.object({
   scope: aiAssistantScopeSchema.optional(),
+  webLookup: z.boolean().optional(),
   continuationToken: z.string().uuid().optional(),
   assistantTurns: z.array(aiAssistantTurnSchema).max(aiAssistantThreadMaxTurns).default([]),
   mode: aiAssistantModeSchema.default('answer'),
@@ -68,6 +69,7 @@ export type AiAssistantContext = {
   buffer: Pick<BufferState, 'id' | 'kind' | 'networkId' | 'target'>;
   messages: ChatMessage[];
   sources?: { label: string; message: ChatMessage }[];
+  webSources?: AiAssistantWebSource[];
   coverage?: {
     description: string;
     truncated: boolean;
@@ -79,7 +81,9 @@ export type AiAssistantContext = {
   };
 };
 
-export type AiAssistantProgress = 'preparing' | 'searching' | 'reading' | 'writing' | 'checking';
+export type AiAssistantWebSource = { label: string; title: string; url: string };
+
+export type AiAssistantProgress = 'preparing' | 'searching' | 'reading' | 'searching-web' | 'writing' | 'checking';
 
 export type AiAssistantStreamEvent =
   | { type: 'progress'; stage: AiAssistantProgress }

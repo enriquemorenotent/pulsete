@@ -13,6 +13,7 @@ export type AiAssistantThreadState = {
   pending: boolean;
   pendingLabel: string;
   scope: AiAssistantScope;
+  webLookup: boolean;
 };
 
 type StartRequestInput = {
@@ -39,6 +40,7 @@ export type AiAssistantStoreApi = {
     result: ResolveRequestInput,
   ) => void;
   setScope: (bufferId: string, scope: AiAssistantScope) => void;
+  setWebLookup: (bufferId: string, enabled: boolean) => void;
   setInput: (bufferId: string, input: string) => void;
   startRequest: (bufferId: string, input: StartRequestInput) => number | null;
   subscribe: (listener: Listener) => () => void;
@@ -54,6 +56,7 @@ export const emptyAiAssistantThread: AiAssistantThreadState = {
   pending: false,
   pendingLabel: 'Thinking',
   scope: 'recent',
+  webLookup: false,
 };
 
 export const createAiAssistantStore = (): AiAssistantStoreApi => {
@@ -99,6 +102,9 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
     },
     setScope(bufferId, scope) {
       updateThread(bufferId, (current) => current.scope === scope ? current : { ...current, scope, continuationToken: undefined });
+    },
+    setWebLookup(bufferId, webLookup) {
+      updateThread(bufferId, (current) => current.webLookup === webLookup ? current : { ...current, webLookup });
     },
     clearThread(bufferId) {
       if (!(bufferId in threads)) {

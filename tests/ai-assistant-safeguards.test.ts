@@ -10,7 +10,8 @@ const status: AiAssistantProviderStatus = { connected: true, detail: '', model: 
   modelsError: null, provider: 'codex-openai-login', reasoningEffort: null, selectionNotice: null };
 const request: AiAssistantRequest = { mode: 'answer', scope: 'recent', prompt: 'Where is the reunion on 2026-01-01?',
   assistantTurns: [], selection: { model: null, reasoningEffort: null } };
-function fixture(run: (input: Parameters<CodexAssistantProvider['request']>[0]) => Promise<string>, options = {}) {
+function fixture(run: (input: Parameters<CodexAssistantProvider['request']>[0]) => Promise<string>, options = {},
+  lookupPublicFacts?: CodexAssistantProvider['lookupPublicFacts']) {
   const storage = new Storage(makeStorageFile());
   const network = storage.networks.upsert(createNetworkInput());
   const buffer = storage.conversations.upsertBuffer({ networkId: network.id, target: '#test', kind: 'channel' });
@@ -18,7 +19,8 @@ function fixture(run: (input: Parameters<CodexAssistantProvider['request']>[0]) 
     storage.conversations.appendMessage({ id, networkId: network.id, target: '#test', nick: 'alice', body,
       kind: 'line', self: false, ts: new Date(2026, 0, day, 12).getTime() });
   const provider: CodexAssistantProvider = { model: null, status: async () => status,
-    startLogin: async () => ({ instructions: null, status }), request: async (input) => ({ answer: await run(input), status }) };
+    startLogin: async () => ({ instructions: null, status }), request: async (input) => ({ answer: await run(input), status }),
+    lookupPublicFacts };
   return { storage, buffer, service: new RuntimeAiAssistantService({ conversations: storage.conversations, provider, ...options }) };
 }
 
@@ -65,6 +67,62 @@ test('scope changes and session mismatch do not resolve or reuse previous contex
     await f.service.ask(f.buffer.id, { ...request, scope: 'saved', prompt: 'Who?', continuationToken: first.continuationToken }, undefined, { sessionId: 'a' });
     await f.service.ask(f.buffer.id, { ...request, prompt: 'Who?', continuationToken: first.continuationToken }, undefined, { sessionId: 'b' });
     assert.equal(resolutions, 0);
+  } finally { f.storage.close(); }
+});
+
+test('an opted-in public follow-up sends only the standalone query and can cite both kinds of evidence', async () => {
+  const stages: string[] = [];
+  const lookups: string[] = [];
+  const f = fixture(async ({ instructions, prompt }) => {
+    if (instructions.startsWith('You select')) return '{"action":"done"}';
+    if (instructions.startsWith('Resolve')) return '{"followUp":true,"question":"Who was Marie Curie and when was she born?"}';
+    if (prompt.includes('Public web findings')) {
+      assert.match(prompt, /"citation":"W1","fact":"She was born on November 7, 1867."/);
+      assert.doesNotMatch(instructions, /PULSETE_WEB_LOOKUP/);
+      if (!prompt.includes('previous answer cited nonexistent sources')) return 'Curie was born on November 7, 1867 [W9].';
+      return 'Maya chose Marie Curie [S3]. Curie was born on November 7, 1867 [W1].';
+    }
+    if (prompt.includes('User request: Who was she?')) {
+      assert.match(prompt, /Resolved question: Who was Marie Curie/);
+      assert.match(instructions, /PULSETE_WEB_LOOKUP/);
+      return 'PULSETE_WEB_LOOKUP {"query":"Marie Curie date of birth"}';
+    }
+    return 'Maya chose Marie Curie [S3].';
+  }, {}, async ({ query, ...options }) => {
+    lookups.push(query);
+    assert.deepEqual(Object.keys(options).sort(), ['selection', 'signal']);
+    return [{ fact: 'She was born on November 7, 1867.', source: { title: 'Biography', url: 'https://example.test/curie' } }];
+  });
+  try {
+    f.storage.conversations.appendMessage({ id: 'role-model', networkId: f.buffer.networkId, target: f.buffer.target,
+      nick: 'maya', body: 'Marie Curie is my role model.', kind: 'line', self: false, ts: Date.now() });
+    const first = await f.service.ask(f.buffer.id, { ...request, scope: 'saved', webLookup: true, prompt: 'Who did Maya choose?' });
+    assert.deepEqual(lookups, []);
+    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'saved', webLookup: true,
+      continuationToken: first.continuationToken, prompt: 'Who was she?',
+      assistantTurns: [{ role: 'assistant', text: first.answer }] }, undefined, { onProgress: stage => stages.push(stage) });
+    assert.deepEqual(lookups, ['Marie Curie date of birth']);
+    assert.match(result.answer, /\[S3\].*\[W1\]/);
+    assert.deepEqual(result.context.webSources, [{ label: 'W1', title: 'Biography', url: 'https://example.test/curie' }]);
+    assert.ok(stages.includes('searching-web'));
+  } finally { f.storage.close(); }
+});
+
+test('general explanations work without opt-in and unsafe lookup plans stay inside the assistant', async () => {
+  let lookups = 0;
+  const f = fixture(async ({ instructions, prompt }) => {
+    if (prompt.includes('supplied no verified findings')) return 'I could not verify that.';
+    if (instructions.includes('PULSETE_WEB_LOOKUP')) return 'PULSETE_WEB_LOOKUP {"query":"Find a private address #test"}';
+    assert.match(instructions, /Use general knowledge for explanations/);
+    return 'A chargeback is a payment reversal initiated through the card issuer.';
+  }, {}, async () => { lookups++; return []; });
+  try {
+    const general = await f.service.ask(f.buffer.id, { ...request, prompt: 'What is a chargeback?' });
+    const rejected = await f.service.ask(f.buffer.id, { ...request, webLookup: true, prompt: 'Find a private address' });
+    assert.match(general.answer, /payment reversal/);
+    assert.equal(rejected.answer, 'I could not verify that.');
+    assert.equal(rejected.context.webSources, undefined);
+    assert.equal(lookups, 0);
   } finally { f.storage.close(); }
 });
 

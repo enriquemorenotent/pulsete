@@ -108,6 +108,23 @@ test('Codex assistant provider safely replaces an unsupported saved effort', asy
   assert.ok(args.includes('model_reasoning_effort="medium"'));
 });
 
+test('public lookup uses an isolated web-enabled request and only accepts URLs the search returned', async () => {
+  const fake = createConnectedFakeCodexCommand();
+  const provider = createCodexAssistantProvider({ command: fake.command, env: {} });
+  const evidence = await provider.lookupPublicFacts!({ query: 'Marie Curie date of birth' });
+  const args = JSON.parse(readFileSync(fake.argsPath, 'utf8')) as string[];
+  const prompt = readFileSync(fake.promptPath, 'utf8');
+
+  assert.ok(args.includes('web_search="live"'));
+  assert.ok(args.includes('--json'));
+  assert.ok(args.includes('shell_tool'));
+  assert.ok(args.includes('unified_exec'));
+  assert.match(prompt, /Public search query: "Marie Curie date of birth"$/);
+  assert.deepEqual(evidence, [{
+    fact: 'Born November 7, 1867.', source: { title: 'Verified source', url: 'https://example.test/curie' },
+  }]);
+});
+
 const createFakeCodexCommand = () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-codex-test-'));
   const command = join(dir, 'codex-fake.js');
@@ -128,6 +145,7 @@ const createConnectedFakeCodexCommand = () => {
   const dir = mkdtempSync(join(tmpdir(), 'pulsete-codex-connected-test-'));
   const command = join(dir, 'codex-fake.js');
   const argsPath = join(dir, 'exec-args.json');
+  const promptPath = join(dir, 'exec-prompt.txt');
   const modelsJson = JSON.stringify({
     model_messages: { instructions: 'x'.repeat(700_000) },
     models: [
@@ -157,14 +175,18 @@ const createConnectedFakeCodexCommand = () => {
     `if (args.join(" ") === "debug models") { writeFileSync(1, readFileSync(${JSON.stringify(modelsPath)})); process.exit(0); }`,
     'if (args[0] === "exec") {',
     `  writeFileSync(${JSON.stringify(argsPath)}, JSON.stringify(args));`,
+    `  writeFileSync(${JSON.stringify(promptPath)}, readFileSync(0));`,
     '  const outputIndex = args.indexOf("--output-last-message");',
-    '  writeFileSync(args[outputIndex + 1], "Test answer");',
+    '  if (args.includes("--json")) {',
+    '    console.log(JSON.stringify({ type: "item.completed", item: { type: "web_search", results: [{ title: "Verified source", url: "https://example.test/curie" }] } }));',
+    '    writeFileSync(args[outputIndex + 1], JSON.stringify({ findings: [{ fact: "Born November 7, 1867.", url: "https://example.test/curie" }, { fact: "Unsupported finding.", url: "https://example.test/guessed-url" }] }));',
+    '  } else writeFileSync(args[outputIndex + 1], "Test answer");',
     '  process.exit(0);',
     '}',
     'process.exit(1);',
   ].join('\n'));
   chmodSync(command, 0o755);
-  return { argsPath, command };
+  return { argsPath, command, promptPath };
 };
 
 const createModel = (

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { FileText, LoaderCircle, PenLine, Search, Send, Sparkles } from 'lucide-react';
 import type { AiAssistantScope } from '../../shared/protocol-ai.js';
 import { Button } from '@/components/ui/button.js';
+import { Checkbox } from '@/components/ui/checkbox.js';
 import { AiAssistantConversation } from './AiAssistantConversation.js';
 import type { AssistantAskHandler, AssistantEntry } from './AiAssistantChatTypes.js';
 
@@ -19,6 +20,8 @@ type AiAssistantChatViewProps = {
   pendingLabel: string;
   scope?: AiAssistantScope;
   onScopeChange?: (scope: AiAssistantScope) => void;
+  webLookup?: boolean;
+  onWebLookupChange?: (enabled: boolean) => void;
 };
 
 export function AiAssistantChatView(props: AiAssistantChatViewProps) {
@@ -58,7 +61,7 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
       <div className="shrink-0 space-y-2 border-t border-white/[0.07] pt-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            Use
+            Chat
             <select aria-label="Assistant context scope" value={scope} disabled={props.pending}
               className="min-w-0 rounded border border-white/10 bg-[#202733] px-2 py-1 text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onChange={(event) => props.onScopeChange?.(event.target.value as AiAssistantScope)}>
@@ -78,6 +81,11 @@ export function AiAssistantChatView(props: AiAssistantChatViewProps) {
         <p className="text-[11px] leading-4 text-muted-foreground">
           {scope === 'recent' ? 'Uses up to 120 recent messages; long messages may be shortened.' : 'Can search all saved messages in this conversation and read more as needed.'}
         </p>
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Checkbox checked={props.webLookup ?? false} disabled={props.pending}
+            onCheckedChange={(checked) => props.onWebLookupChange?.(checked === true)} aria-label="Web lookup" />
+          Web lookup for public facts
+        </label>
         <div className="relative rounded-md border border-white/[0.12] bg-black/10 transition-colors focus-within:border-ring/60">
           <textarea ref={inputRef} aria-label="Message assistant" rows={3} value={props.input}
             onChange={(event) => props.onChange(event.target.value)}

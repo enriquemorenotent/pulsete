@@ -78,7 +78,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     if (!bufferId || (mode === 'answer' && !prompt.trim())) {
       return;
     }
-    const assistantTurns = buildAssistantTurns(store.getThread(bufferId).entries);
+    const currentThread = store.getThread(bufferId);
+    const assistantTurns = buildAssistantTurns(currentThread.entries);
     const currentRequestId = store.startRequest(bufferId, {
       label: label || 'Draft a reply',
       pendingLabel: nextPendingLabel,
@@ -91,9 +92,10 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     try {
       const response = await aiAssistantApi.ask(bufferId, {
         assistantTurns,
-        continuationToken: store.getThread(bufferId).continuationToken,
+        continuationToken: currentThread.continuationToken,
         mode,
-        scope: thread.scope,
+        scope: currentThread.scope,
+        webLookup: mode === 'answer' && currentThread.webLookup,
         prompt,
         selection: resolvedSelection.selection,
       }, controller.signal, (stage) => store.updateProgress(bufferId, currentRequestId, progressLabels[stage]));
@@ -184,6 +186,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             <AiAssistantChatView
               scope={thread.scope}
               onScopeChange={(scope) => { if (bufferId) store.setScope(bufferId, scope); }}
+              webLookup={thread.webLookup}
+              onWebLookupChange={(enabled) => { if (bufferId) store.setWebLookup(bufferId, enabled); }}
               entries={thread.entries}
               error={thread.error}
               input={thread.input}
@@ -215,4 +219,7 @@ const selectionsMatch = (
   right: AiAssistantSelection,
 ) => left?.model === right.model && left.reasoningEffort === right.reasoningEffort;
 
-const progressLabels = { preparing: 'Preparing context', searching: 'Searching history', reading: 'Reading messages', writing: 'Writing answer', checking: 'Checking sources' };
+const progressLabels = {
+  preparing: 'Preparing context', searching: 'Searching history', reading: 'Reading messages',
+  'searching-web': 'Looking up public information', writing: 'Writing answer', checking: 'Checking sources',
+};

@@ -39,10 +39,12 @@ test('assistant markdown does not render raw HTML or remote images', () => {
   assert.match(markup, /\[Image: tracking\]/);
 });
 
-test('assistant citations link only to supplied message sources', () => {
+test('assistant citations link only to supplied chat and web sources', () => {
   const markup = renderToStaticMarkup(<AiAssistantMarkdown
     sourcePrefix="assistant-source-7" sourceLabels={['S1']}
-  >{'The meeting was agreed [S1]. Unknown [S2].'}</AiAssistantMarkdown>);
+    webSources={[{ label: 'W1', title: 'Public event details', url: 'https://example.test/event' }]}
+  >{'The meeting was agreed [S1]. The venue opens at 9 [W1]. Unknown [S2] [W2].'}</AiAssistantMarkdown>);
   assert.match(markup, /href="#assistant-source-7-S1"/);
-  assert.doesNotMatch(markup, /href="#assistant-source-7-S2"/);
+  assert.match(markup, /href="https:\/\/example.test\/event"[^>]+target="_blank"[^>]*>\[W1\]/);
+  assert.doesNotMatch(markup, /href="#assistant-source-7-[SW]2"/);
 });

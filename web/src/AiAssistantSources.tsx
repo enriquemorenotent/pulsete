@@ -1,4 +1,5 @@
 import type { AiAssistantContext } from '../../shared/protocol-ai.js';
+import { ExternalLink } from './ExternalLink.js';
 
 type AiAssistantSourcesProps = {
   context: AiAssistantContext;
@@ -13,8 +14,18 @@ export function AiAssistantSources({ context, sourcePrefix, open, onOpenChange, 
   return (
     <details open={open} onToggle={event => onOpenChange(event.currentTarget.open)} className="mt-2 border-t border-white/10 pt-2 text-[11px] text-muted-foreground">
       <summary className="cursor-pointer">
-        Sources ({context.sources?.length ?? 0}){context.coverage?.truncated ? ' · Incomplete history' : ''}
+        Sources ({(context.sources?.length ?? 0) + (context.webSources?.length ?? 0)}){context.coverage?.truncated ? ' · Incomplete history' : ''}
       </summary>
+      {context.webSources?.length ? <>
+        <p className="mt-2 font-medium">Web sources</p>
+        <ul className="mt-1 space-y-1">
+          {context.webSources.map(source => <li key={source.label}>
+            <ExternalLink href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              [{source.label}] {source.title}
+            </ExternalLink>
+          </li>)}
+        </ul>
+      </> : null}
       {context.coverage?.totalMessages !== undefined ? <p className="mt-2">
         {context.coverage.inspectedMessages} messages used · {context.coverage.totalMessages} saved
       </p> : null}

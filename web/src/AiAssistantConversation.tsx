@@ -85,6 +85,7 @@ function AssistantBubble(props: {
               <AiAssistantMarkdown
                 sourcePrefix={`assistant-source-${props.entry.id}`}
                 sourceLabels={props.entry.context?.sources?.map((source) => source.label)}
+                webSources={props.entry.context?.webSources}
                 onSourceClick={(label) => void openSource(label)}
               >{props.entry.text}</AiAssistantMarkdown>
             </Suspense>

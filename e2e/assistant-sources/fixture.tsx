@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AiAssistantConversation } from '../../web/src/AiAssistantConversation.js';
+import { AiAssistantPanel } from '../../web/src/AiAssistantPanel.js';
 import type { AssistantEntry } from '../../web/src/AiAssistantChatTypes.js';
 import '../../web/src/globals.css';
 
@@ -35,4 +36,10 @@ function Fixture() {
     </section>
   </main>;
 }
-createRoot(document.getElementById('root')!).render(<Fixture />);
+const lookupDemo = new URLSearchParams(window.location.search).has('lookup');
+createRoot(document.getElementById('root')!).render(lookupDemo ? (
+  <main className="mx-auto flex h-screen w-[320px] flex-col bg-[#202733]">
+    <AiAssistantPanel buffer={{ ...entries[0].context!.buffer, unread: 0, priorityUnread: 0,
+      lastReadTs: null, lastReadMessageId: null }} onUseSuggestion={() => {}} />
+  </main>
+) : <Fixture />);
