@@ -120,7 +120,8 @@ test('the desktop assistant follows a conversation with a model picker and autom
 
 for (const showMedia of [true, false]) {
   test(`the desktop assistant shows grounded media cards with previews ${showMedia ? 'enabled' : 'disabled'}`, async ({ page }) => {
-    const portrait = 'https://example.test/portrait';
+    // Photo pages can have a filename in the path even when the URL serves HTML.
+    const portrait = 'https://example.test/wiki/File%3APortrait.jpg';
     const clip = 'https://example.test/clip.mp4';
     const article = 'https://example.test/article';
     const status: AiAssistantProviderStatus = {
@@ -128,6 +129,7 @@ for (const showMedia of [true, false]) {
       availableModels: [], modelsError: null, reasoningEffort: 'low', selectionNotice: null,
     };
     const previewRequests: string[] = [];
+    const mediaRequests: string[] = [];
     await page.route('**/api/assistant/status', route => route.fulfill({ json: status }));
     await page.route('**/api/buffers/buffer-1/assistant', route => route.fulfill({ json: {
       status, answer: 'Here’s the portrait and a short documentary.', mode: 'answer',
@@ -148,10 +150,16 @@ for (const showMedia of [true, false]) {
         ? { title: 'Portrait', pageUrl: portrait, imageUrl: 'https://example.test/image.png' }
         : null, unavailableReason: null } });
     });
-    await page.route('**/api/media/resource?*', route => route.fulfill({
-      contentType: 'image/svg+xml',
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="320"><rect width="240" height="320" fill="#315975"/></svg>',
-    }));
+    await page.route('**/api/media/resource?*', route => {
+      const url = new URL(route.request().url()).searchParams.get('url')!;
+      mediaRequests.push(url);
+      return url === portrait
+        ? route.fulfill({ status: 400, json: { message: 'Unsupported external media' } })
+        : route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="320"><rect width="240" height="320" fill="#315975"/></svg>',
+        });
+    });
 
     await page.goto('/e2e/assistant-sources/index.html?lookup' + (showMedia ? '' : '&hide-media'));
     await page.getByRole('tab', { name: 'Assistant' }).click();
@@ -176,11 +184,24 @@ for (const showMedia of [true, false]) {
       await expect(dialog).toHaveCount(0);
       await expect(picture).toBeFocused();
       expect(previewRequests.sort()).toEqual([article, portrait].sort());
+      expect(mediaRequests).toContain(portrait);
     } else {
       await expect(picture).toHaveCount(0);
       await expect(video).toHaveCount(0);
       await expect(cards.getByRole('link', { name: /Portrait from the archive/ })).toHaveAttribute('href', portrait);
       expect(previewRequests).toEqual([]);
+      expect(mediaRequests).toEqual([]);
+      const reveal = cards.getByRole('button', { name: 'Show image preview' });
+      await expect(reveal).toHaveAttribute('aria-pressed', 'false');
+      await reveal.click();
+      await expect(reveal).toHaveAttribute('aria-pressed', 'true');
+      await expect.poll(() => picture.getByRole('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(240);
+      await expect(video).toHaveCount(0);
+      expect(previewRequests).toEqual([portrait]);
+      await reveal.click();
+      await expect(reveal).toHaveAttribute('aria-pressed', 'false');
+      await expect(picture).toHaveCount(0);
     }
+    await expect(page.locator('vite-error-overlay')).toHaveCount(0);
   });
 }
