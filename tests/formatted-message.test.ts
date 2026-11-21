@@ -201,8 +201,7 @@ test('renders Imgur GIFV links as looping MP4 video previews', () => {
     })
   );
 
-  assertProxiedMedia(html, 'video', 'https://i.imgur.com/TEHJoGS.mp4');
-  assert.match(html, /<video[^>]*&amp;loopingPreview=1/);
+  assert.equal(assertProxiedMedia(html, 'video', 'https://i.imgur.com/TEHJoGS.mp4').searchParams.get('loopingPreview'), '1');
   assert.match(html, /<video[^>]*autoPlay=""/i);
   assert.match(html, /<video[^>]*loop=""/i);
   assert.match(html, /<video[^>]*muted=""/i);
@@ -220,8 +219,7 @@ test('renders direct MP4 links as on-demand video players', () => {
     })
   );
 
-  assertProxiedMedia(html, 'video', 'https://cdn.example.com/media/clip.MP4?token=abc#t=2');
-  assert.doesNotMatch(html, /loopingPreview=/);
+  assert.equal(assertProxiedMedia(html, 'video', 'https://cdn.example.com/media/clip.MP4?token=abc#t=2').searchParams.get('loopingPreview'), null);
   assert.match(html, /<video[^>]*controls=""/i);
   assert.match(html, /<video[^>]*muted=""/i);
   assert.match(html, /<video[^>]*playsInline=""/i);
