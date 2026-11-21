@@ -4,7 +4,12 @@ import http from 'node:http';
 import https from 'node:https';
 
 export type ResourceAddress = { address: string; family: 4 | 6 };
-export type ResourceResponse = { body: Buffer; contentType: string; location: string | null; status: number };
+export type ResourceCacheHeaders = {
+  headers: Pick<http.IncomingHttpHeaders, 'age' | 'cache-control' | 'date' | 'expires' | 'pragma' | 'vary'>;
+  requestedAt: number;
+  receivedAt: number;
+};
+export type ResourceResponse = { body: Buffer; contentType: string; location: string | null; status: number; cache?: ResourceCacheHeaders };
 export type ResourceLimits = { maxBytes: number; timeoutMs: number; headersOnlyForImages?: boolean };
 export type ResourceRoute = { signal: AbortSignal; connect(host: string, port: number): Promise<net.Socket> };
 export const isResourceRedirect = (status: number) => [301, 302, 303, 307, 308].includes(status);
@@ -43,6 +48,7 @@ export async function requestExternalResource(
     }
     return await new Promise<ResourceResponse>((resolve, reject) => {
       const send = url.protocol === 'https:' ? https.request : http.request;
+      const requestedAt = Date.now();
       request = send({
         agent: agent ?? false, signal, method: 'GET',
         protocol: url.protocol, hostname: address.address, port,
@@ -58,10 +64,16 @@ export async function requestExternalResource(
         const status = incoming.statusCode ?? 0;
         const contentType = readHeader(incoming.headers['content-type']).toLowerCase();
         const location = readHeader(incoming.headers.location) || null;
+        const { age, 'cache-control': cacheControl, date, expires, pragma, vary } = incoming.headers;
+        const cache = {
+          headers: { age, 'cache-control': cacheControl, date, expires, pragma, vary },
+          requestedAt,
+          receivedAt: Date.now(),
+        };
         incoming.on('error', reject);
         incoming.on('aborted', () => reject(new Error('External content response ended early')));
         if (isResourceRedirect(status) || (options.headersOnlyForImages && contentType.startsWith('image/'))) {
-          resolve({ body: Buffer.alloc(0), status, contentType, location });
+          resolve({ body: Buffer.alloc(0), status, contentType, location, cache });
           return;
         }
         if (Number(incoming.headers['content-length']) > options.maxBytes) {
@@ -78,7 +90,7 @@ export async function requestExternalResource(
             incoming.destroy();
           } else chunks.push(buffer);
         });
-        incoming.on('end', () => resolve({ body: Buffer.concat(chunks), status, contentType, location }));
+        incoming.on('end', () => resolve({ body: Buffer.concat(chunks), status, contentType, location, cache }));
       });
       request.on('error', reject);
       request.end();

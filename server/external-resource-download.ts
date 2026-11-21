@@ -1,4 +1,4 @@
-import { isResourceRedirect, type ResourceLimits } from './external-resource-request.js';
+import { isResourceRedirect, type ResourceLimits, type ResourceResponse } from './external-resource-request.js';
 import { isAllowedPagePreviewUrl, resolvePublicPagePreviewAddress, type PagePreviewNetwork } from './page-preview-network.js';
 
 export class ResourceDownloadError extends Error {}
@@ -11,6 +11,7 @@ export async function downloadExternalResource(initialUrl: URL, options: Resourc
 }) {
   let url = new URL(initialUrl);
   const visited = new Set<string>();
+  const redirectResponses: ResourceResponse[] = [];
   for (let redirects = 0; ; redirects++) {
     url.hash = '';
     if (url.href.length > options.maxUrlLength || !isAllowedPagePreviewUrl(url)) {
@@ -24,9 +25,10 @@ export async function downloadExternalResource(initialUrl: URL, options: Resourc
       maxBytes: options.maxBytes, timeoutMs: options.timeoutMs,
       headersOnlyForImages: options.headersOnlyForImages,
     });
-    if (!isResourceRedirect(response.status)) return { url, response };
+    if (!isResourceRedirect(response.status)) return { url, response, redirectResponses };
     if (redirects >= options.maxRedirects) throw new ResourceDownloadError('Too many external content redirects');
     if (!response.location) throw new ResourceDownloadError('External redirect has no destination');
+    redirectResponses.push(response);
     try { url = new URL(response.location, url); }
     catch { throw new ResourceDownloadError('Invalid external redirect'); }
   }

@@ -18,11 +18,14 @@ test('media and previews use their account exit, isolate caches, and fail closed
     else if (req.url === '/loop') { res.writeHead(302, { Location: '/loop#fragment' }); res.end(); }
     else if (req.url === '/page') { res.setHeader('Content-Type', 'text/html'); res.end('<meta property="og:image" content="http://1.1.1.1/image.png">'); }
     else if (req.url === '/unsafe.svg') { res.setHeader('Content-Type', 'image/svg+xml'); res.end('<svg/>'); }
+    else if (req.url === '/animation.gif') { res.setHeader('Content-Type', 'image/gif'); res.end(String(visits.length)); }
+    else if (req.url === '/video.mp4') { res.setHeader('Content-Type', 'video/mp4'); res.end(String(visits.length)); }
     else { res.setHeader('Content-Type', 'image/png'); res.setHeader('Set-Cookie', 'tracker=1'); res.end('image'); }
   });
   const port = await listen(website);
   const context = await createHttpRuntimeContext();
   const controllers = [new AbortController(), new AbortController()];
+  const reconnected = new AbortController();
   const accounts = ['Germany','Austria'].map((country, i) => {
     const account = context.storage.networks.upsert(createNetworkInput({ name: country, nordVpnUsername: 'dummy', nordVpnPassword: 'dummy', nordVpnLocation: `country:${country}` }));
     registerAccountMediaRoute(account.id, {
@@ -47,6 +50,20 @@ test('media and previews use their account exit, isolate caches, and fail closed
     }
     assert.deepEqual(visits.map(v => v.source), ['127.0.0.2','127.0.0.2','127.0.0.3','127.0.0.3']);
     assert.ok(visits.every(v => !v.cookie && !v.referer));
+    const [first, second] = accounts;
+    const gif = 'http://1.1.1.1/animation.gif';
+    const video = 'http://1.1.1.1/video.mp4';
+    const mediaBody = async (id: string, url: string) => {
+      const response = await fetch(resource(id, url));
+      assert.equal(response.status, 200);
+      return response.text();
+    };
+    assert.equal(await mediaBody(first!.id, 'http://1.1.1.1/image.png'), 'image');
+    assert.equal(visits.length, 4);
+    const firstGif = await mediaBody(first!.id, gif);
+    assert.equal(await mediaBody(first!.id, gif), firstGif);
+    assert.notEqual(await mediaBody(second!.id, gif), firstGif);
+    assert.notEqual(await mediaBody(first!.id, video), await mediaBody(first!.id, video));
     assert.equal((await fetch(resource(accounts[0]!.id, 'http://1.1.1.1/redirect'))).status, 400);
     assert.equal((await fetch(resource(accounts[0]!.id, 'http://1.1.1.1/unsafe.svg'))).status, 400);
     const beforeLoop = visits.length;
@@ -60,8 +77,77 @@ test('media and previews use their account exit, isolate caches, and fail closed
     assert.equal(cachedPreview.status, 400);
     assert.equal(visits.length, count);
     assert.equal((await fetch(resource(accounts[1]!.id))).status, 200);
+    registerAccountMediaRoute(first!.id, {
+      location: 'country:Germany', signal: reconnected.signal,
+      connect: async () => net.connect(port, '127.0.0.1'),
+    });
+    assert.notEqual(await mediaBody(first!.id, gif), firstGif);
   } finally {
     controllers.forEach(controller => controller.abort());
+    reconnected.abort();
+    await context.close();
+    website.closeAllConnections();
+    await new Promise<void>(resolve => website.close(() => resolve()));
+  }
+});
+
+test('inline image reuse follows origin freshness and redirect cache instructions', async (t) => {
+  const start = Date.UTC(2026, 0, 1);
+  t.mock.timers.enable({ apis: ['Date'], now: start });
+  const policies: Record<string, Record<string, string>> = {
+    '/no-store': { 'Cache-Control': 'max-age=60, No-Store' },
+    '/no-cache': { 'Cache-Control': 'no-cache="field, other", max-age=60' },
+    '/zero': { 'Cache-Control': 'max-age=0' },
+    '/private': { 'Cache-Control': 'private, max-age=60' },
+    '/vary-all': { Vary: '*' },
+    '/must-revalidate': { 'Cache-Control': 'must-revalidate, max-age=2' },
+    '/aged': { 'Cache-Control': 'max-age=6', Age: '4' },
+    '/expires': { Expires: new Date(start + 2000).toUTCString() },
+    '/long-lived': { 'Cache-Control': 'max-age=3600' },
+    '/redirect': { 'Cache-Control': 'no-store', Location: '/long-lived' },
+  };
+  let visits = 0;
+  const website = createServer((req, res) => {
+    const path = req.url!;
+    res.writeHead(path === '/redirect' ? 302 : 200, {
+      'Content-Type': 'image/gif', Date: new Date().toUTCString(), ...policies[path],
+    });
+    res.end(String(++visits));
+  });
+  const port = await listen(website);
+  const context = await createHttpRuntimeContext();
+  const controller = new AbortController();
+  const location = 'country:Germany';
+  const account = context.storage.networks.upsert(createNetworkInput({
+    nordVpnUsername: 'dummy', nordVpnPassword: 'dummy', nordVpnLocation: location,
+  }));
+  registerAccountMediaRoute(account.id, {
+    location, signal: controller.signal, connect: async () => net.connect(port, '127.0.0.1'),
+  });
+  const load = async (path: string) => {
+    const query = new URLSearchParams({ networkId: account.id, url: `http://1.1.1.1${path}` });
+    const response = await fetch(`http://127.0.0.1:${context.port}/api/media/resource?${query}`);
+    assert.equal(response.status, 200);
+    return response.text();
+  };
+  try {
+    for (const path of ['/no-store', '/no-cache', '/zero', '/private', '/vary-all', '/redirect']) {
+      assert.notEqual(await load(path), await load(path), path);
+    }
+    const concurrent = await Promise.all([load('/no-store'), load('/no-store')]);
+    assert.notEqual(concurrent[0], concurrent[1]);
+    const expiring = ['/must-revalidate', '/aged', '/expires'];
+    const first = await Promise.all(expiring.map(load));
+    const longLived = await load('/long-lived');
+    t.mock.timers.tick(1999);
+    assert.deepEqual(await Promise.all(expiring.map(load)), first);
+    t.mock.timers.tick(1);
+    for (const [index, path] of expiring.entries()) assert.notEqual(await load(path), first[index], path);
+    assert.equal(await load('/long-lived'), longLived);
+    t.mock.timers.tick(5 * 60 * 1000);
+    assert.notEqual(await load('/long-lived'), longLived);
+  } finally {
+    controller.abort();
     await context.close();
     website.closeAllConnections();
     await new Promise<void>(resolve => website.close(() => resolve()));

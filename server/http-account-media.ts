@@ -1,6 +1,7 @@
 import { extractIrcCloudAvatarId } from '../shared/irccloud-avatar.js';
 import { badRequest } from './app-error.js';
 import type { RouteArgs } from './http-types.js';
+import { loadAccountMedia, responseFreshUntil } from './account-media-cache.js';
 import { createAccountMediaNetwork } from './account-media-network.js';
 import { getAccountMediaRoute, type AccountMediaRoute } from './account-media-route.js';
 import { createPagePreviewResolver, type PagePreviewResolver } from './page-preview-resolver.js';
@@ -56,8 +57,9 @@ export async function handleAccountMediaRoutes({ req, res, url, pathname, contex
     return sendImage(cached.mimeType, cached.imageData);
   }
   try {
-    const { network } = accountMediaAccess(context, networkId);
-    const image = await downloadAccountMedia(input, network);
+    const { route, network } = accountMediaAccess(context, networkId);
+    const download = () => downloadAccountMedia(input, network);
+    const image = await (cacheable ? download() : loadAccountMedia(networkId, input, route, download));
     if (cacheable && image.mimeType.startsWith('image/')) {
       context.networks.saveAccountImage(account.id, input, image.mimeType, image.body);
     }
@@ -71,18 +73,20 @@ export async function handleAccountMediaRoutes({ req, res, url, pathname, contex
 async function downloadAccountMedia(input: string, network: ReturnType<typeof createAccountMediaNetwork>) {
   let target: URL;
   try { target = new URL(input); } catch { throw badRequest('Invalid media URL'); }
-  let response;
+  let resource;
   try {
-    ({ response } = await downloadExternalResource(target, {
+    resource = await downloadExternalResource(target, {
       network, maxBytes: 20 * 1024 * 1024, timeoutMs: 15000,
       maxRedirects: 3, maxUrlLength: 2048,
-    }));
+    });
   } catch (error) {
     if (error instanceof ResourceDownloadError) throw badRequest(error.message);
     throw error;
   }
+  const { response, redirectResponses } = resource;
   const type = response.contentType.split(';')[0]!.trim();
   // Never serve HTML, SVG, playlists, or other content that can fetch nested URLs.
   if (response.status !== 200 || !/^(image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|ogg|quicktime))$/.test(type)) throw badRequest('Unsupported external media');
-  return { mimeType: type, body: response.body };
+  const freshUntil = Math.min(responseFreshUntil(response), ...redirectResponses.map(responseFreshUntil));
+  return { mimeType: type, body: response.body, freshUntil };
 }
