@@ -10,6 +10,7 @@ test('NordVPN setup opens the external account page without claiming authenticat
   assert.match(markup, /target="_blank" rel="noopener noreferrer"/);
   assert.match(markup, /Connect to NordVPN/);
   assert.doesNotMatch(markup, /Credentials saved/);
+  assert.doesNotMatch(markup, /This route requires Docker/);
 });
 
 test('saved NordVPN credentials do not require repeated entry', () => {
@@ -17,12 +18,18 @@ test('saved NordVPN credentials do not require repeated entry', () => {
   assert.match(markup, /Credentials saved/);
   assert.match(markup, /Update credentials/);
   assert.doesNotMatch(markup, /type="password"/);
-  assert.match(markup, /value="amsterdam" selected/);
+  assert.match(markup, /role="combobox"/);
 });
 
 test('new proxy setup explains service credentials and flags incomplete entry', () => {
   const markup = renderToStaticMarkup(<NordVpnSettings form={{ ...emptyNetworkForm(), nordVpnLocation: 'amsterdam', nordVpnUsername: 'example' }} onChange={() => {}} />);
   assert.match(markup, /type="password"/);
   assert.match(markup, /Enter both service credentials before saving/);
-  assert.match(markup, /Each connection runs its own isolated tunnel/);
+  assert.doesNotMatch(markup, /This route requires Docker/);
+});
+
+test('a VPN country shows Docker setup guidance', () => {
+  const markup = renderToStaticMarkup(<NordVpnSettings form={{ ...emptyNetworkForm(), nordVpnLocation: 'country:Austria' }} onChange={() => {}} />);
+  assert.match(markup, /This route requires Docker\. Pulsete downloads the VPN helper/);
+  assert.match(markup, /aria-describedby="[^"]+-docker"/);
 });

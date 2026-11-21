@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select.js';
 
 const preferenceSelectTriggerClassName =
-  'w-full rounded-lg border-white/10 bg-white/[0.035] text-[13px] shadow-none hover:border-white/18';
+  'w-full rounded-lg bg-white/[0.035] text-[13px] shadow-none';
 
 type PreferencesNotificationSoundSectionProps = {
   enabled: boolean;

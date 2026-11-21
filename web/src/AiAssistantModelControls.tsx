@@ -70,7 +70,7 @@ export function AiAssistantModelControls(props: AiAssistantModelControlsProps) {
                 <SelectTrigger
                   aria-label="Model"
                   size="sm"
-                  className="w-full min-w-0 border-white/10 bg-white/[0.025] px-2.5 text-xs shadow-none *:data-[slot=select-value]:block *:data-[slot=select-value]:truncate"
+                  className="w-full min-w-0 bg-white/[0.025] px-2.5 text-xs shadow-none *:data-[slot=select-value]:block *:data-[slot=select-value]:truncate"
                 >
                   <SelectValue>{model.label}</SelectValue>
                 </SelectTrigger>
@@ -98,7 +98,7 @@ export function AiAssistantModelControls(props: AiAssistantModelControlsProps) {
                 <SelectTrigger
                   aria-label="Reasoning"
                   size="sm"
-                  className="w-full min-w-0 border-white/10 bg-white/[0.025] px-2.5 text-xs shadow-none *:data-[slot=select-value]:block *:data-[slot=select-value]:truncate"
+                  className="w-full min-w-0 bg-white/[0.025] px-2.5 text-xs shadow-none *:data-[slot=select-value]:block *:data-[slot=select-value]:truncate"
                 >
                   <SelectValue>{formatReasoningEffort(reasoningEffort)}</SelectValue>
                 </SelectTrigger>

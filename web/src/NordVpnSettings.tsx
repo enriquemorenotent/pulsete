@@ -1,5 +1,5 @@
 import { ExternalLink } from './ExternalLink.js';
-import { nordVpnCountries } from '../../shared/nordvpn-countries.js';
+import { nordVpnCountries, nordVpnCountry } from '../../shared/nordvpn-countries.js';
 import { useId, useState } from 'react';
 import { ExternalLink as ExternalLinkIcon, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
@@ -19,6 +19,7 @@ export function NordVpnSettings({ form, onChange }: {
   const id = useId();
   const [editing, setEditing] = useState(false);
   const saved = form.hasNordVpnCredentials === true;
+  const country = nordVpnCountry(form.nordVpnLocation ?? '');
   const showFields = editing || Boolean(form.nordVpnUsername || form.nordVpnPassword) || (!saved && Boolean(form.nordVpnLocation));
   const incomplete = Boolean(form.nordVpnUsername?.trim()) !== Boolean(form.nordVpnPassword);
   return (
@@ -57,7 +58,7 @@ export function NordVpnSettings({ form, onChange }: {
       <div className="flex flex-col gap-1">
         <Label htmlFor={`${id}-location`}>Location for this connection</Label>
         <Select value={form.nordVpnLocation || directConnection} onValueChange={value => onChange({ nordVpnLocation: value === directConnection ? '' : value })}>
-          <SelectTrigger id={`${id}-location`} size="sm" className="w-full max-w-72">
+          <SelectTrigger id={`${id}-location`} aria-describedby={country ? `${id}-docker` : undefined} size="sm" className="w-full max-w-72">
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper" align="start" className="max-h-[min(20rem,var(--radix-select-content-available-height))]">
@@ -74,7 +75,7 @@ export function NordVpnSettings({ form, onChange }: {
             </SelectGroup>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">Choose from {nordVpnCountries.length} VPN countries. Each connection runs its own isolated tunnel using Docker. The first connection downloads the VPN helper.</p>
+        {country ? <p id={`${id}-docker`} className="text-xs text-muted-foreground">This route requires Docker. Pulsete downloads the VPN helper the first time you connect through a VPN country.</p> : null}
       </div>
       {form.nordVpnLocation ? <p className="text-xs text-muted-foreground">Saving a new location reconnects an active connection. If the proxy fails, this connection stays offline. Enable TLS to encrypt your IRC messages.</p> : null}
     </section>
