@@ -80,3 +80,17 @@ test('interrupted fresh setup rolls back and can be retried', () => {
     db.close();
   }
 });
+
+test('version 40 repairs missing message delivery before indexing live messages', () => {
+  const db = openSqliteDatabase(':memory:');
+  try {
+    applyStorageMigrations(db, { existedBeforeOpen: false });
+    db.exec('DROP INDEX idx_messages_live_conversation_arrival; ALTER TABLE messages DROP COLUMN delivery; PRAGMA user_version = 40');
+    applyStorageMigrations(db, { existedBeforeOpen: true });
+    assert.equal(getStorageSchemaVersion(db), currentStorageSchemaVersion);
+    assert.ok(db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'idx_messages_live_conversation_arrival'").get());
+    assert.deepEqual(db.prepare("SELECT dflt_value FROM pragma_table_info('messages') WHERE name = 'delivery'").get(), { dflt_value: "'live'" });
+  } finally {
+    db.close();
+  }
+});

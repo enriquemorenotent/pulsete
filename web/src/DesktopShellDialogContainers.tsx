@@ -38,11 +38,16 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
   ui,
 }: PreferencesDialogContainerProps) {
   const developerMode = useAppSelector(selectPreferences).developerMode;
+  const aiReplySuggestionsEnabled = useAppSelector(selectPreferences).aiReplySuggestionsEnabled;
   const mutedNicks = useAppSelector(selectMutedNicks);
   const networks = useAppSelector(selectNetworks);
   const model = useMemo(() => ({
     open: ui.preferencesOpen,
     developerMode,
+    aiReplySuggestionsEnabled,
+    onSetAiReplySuggestionsEnabled: (enabled: boolean) => {
+      void actions.updatePreferences({ aiReplySuggestionsEnabled: enabled });
+    },
     onSetDeveloperMode: (enabled: boolean) => { void actions.updatePreferences({ developerMode: enabled }); },
     contactNotifications: contactNotifications.settings,
     mediaVisibilitySettings: { mode: mediaVisibilityMode },
@@ -70,6 +75,7 @@ export const PreferencesDialogContainer = memo(function PreferencesDialogContain
     onExportBackup: actions.exportBackup,
     onImportBackup: actions.importBackup,
   }), [
+    aiReplySuggestionsEnabled,
     developerMode,
     actions,
     contactNotifications,

@@ -5,6 +5,7 @@ import type { ClientMessage, ServerMessage } from '../shared/protocol-messages.j
 import type { NetworkLifecycleService } from './network-lifecycle-service.js';
 import type { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import type { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
+import type { createAiReplySuggestion } from './ai-reply-suggestion.js';
 import type { RuntimeConversationService } from './runtime-conversation-service.js';
 import type { RuntimeFriendService } from './runtime-friend-service.js';
 import type { RuntimeIrcService } from './runtime-irc-service.js';
@@ -116,6 +117,7 @@ export type RuntimeAvatarOverrideMutations = {
 export type RuntimeHttpApi = {
   assistant: {
     ask: RuntimeAiAssistantService['ask'];
+    suggestReply: ReturnType<typeof createAiReplySuggestion>;
     clear?: RuntimeAiAssistantService['clear'];
     startLogin: RuntimeAiAssistantService['startLogin'];
     status: RuntimeAiAssistantService['status'];

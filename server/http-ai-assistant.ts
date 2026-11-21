@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { toAppError, badRequest } from './app-error.js';
 import { aiAssistantRequestSchema } from '../shared/protocol-ai.js';
+import { replySuggestionRequestSchema } from '../shared/reply-suggestion.js';
 import { decodeRouteParam, readJson, writeJson } from './http-utils.js';
 import type { RouteArgs } from './http-types.js';
 
@@ -23,6 +24,27 @@ export const handleAiAssistantRoutes = async ({
 
   if (pathname === '/api/assistant/login' && req.method === 'POST') {
     writeJson(res, 200, await context.assistant.startLogin());
+    return true;
+  }
+
+  const suggestionMatch = pathname.match(/^\/api\/buffers\/([^/]+)\/reply-suggestion$/);
+  if (suggestionMatch && req.method === 'POST') {
+    const bufferId = decodeRouteParam(suggestionMatch[1]);
+    const request = replySuggestionRequestSchema.safeParse(await readJson(req, 4096));
+    if (!request.success) throw badRequest('Invalid reply suggestion payload');
+
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    res.once('close', cancel);
+    try {
+      const response = await context.assistant.suggestReply(bufferId, request.data.messageId, controller.signal);
+      if (!res.destroyed) {
+        res.setHeader('Cache-Control', 'no-store');
+        writeJson(res, 200, response);
+      }
+    } finally {
+      res.off('close', cancel);
+    }
     return true;
   }
 

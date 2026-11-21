@@ -69,6 +69,18 @@ export const listRecentMessagesForBufferIds = (
     .flatMap((bufferId) => selectMessages(db, bufferId, limit))
     .sort((left, right) => left.ts - right.ts);
 
+export const listLiveTextMessagesInArrivalOrder = (db: SqliteDb, bufferId: string, limit: number) => {
+  // Incoming server-time and locally recorded sends can use different clocks.
+  const rows = db.prepare(`
+    SELECT ${messageColumns}
+    ${messageJoin}
+    WHERE b.isOpen = 1 AND m.bufferId = ? AND m.kind IN ('line', 'action', 'notice') AND m.delivery = 'live' AND m.importBatchId IS NULL
+    ORDER BY m.rowid DESC
+    LIMIT ?
+  `).all(bufferId, limit) as MessageRow[];
+  return hydrateMessages(db, rows).reverse();
+};
+
 export const getMessageWindow = (db: SqliteDb, messageId: string, before: number, after: number) => {
   const cursor = getMessageCursor(db, messageId);
   if (!cursor) {

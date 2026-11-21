@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef } from 'react';
 import { maxDraftCharacters } from '../../shared/protocol-preferences.js';
 import { SendHorizonal, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
@@ -54,6 +54,9 @@ export const shouldFocusChatPaneComposerFromRequest = (
 
 type ChatPaneComposerProps = {
   draft: string;
+  replySuggestion?: string | null;
+  onDismissReplySuggestion?: () => void;
+  onTakeReplySuggestion?: (displayed: string) => boolean;
   mode: ComposerMode;
   disabled?: boolean;
   placeholder: string;
@@ -77,6 +80,10 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
   const previousFocusContextKeyRef = useRef<string | null>(props.focusContextKey ?? null);
   const previousFocusRequestIdRef = useRef(props.focusRequestId ?? 0);
   const prompt = resolveChatPaneComposerPrompt({ mode: props.mode });
+  const suggestionId = useId();
+  const suggestion = !props.disabled && props.mode === 'normal' && props.draft === ''
+    ? props.replySuggestion
+    : null;
 
   useEffect(() => {
     completionSessionRef.current = null;
@@ -153,61 +160,90 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
           {prompt.prefixSymbol}
         </div>
       ) : null}
-      <Input
-        ref={inputRef}
-        value={props.draft}
-        maxLength={maxDraftCharacters}
-        disabled={props.disabled}
-        className={cn(
-          'h-10 min-w-0 flex-1 border-[#2a2e34] bg-[#283140] px-3 hover:border-white/15 focus-visible:border-ring/60',
-          prompt.variant === 'commands' && 'border-amber-300/15 bg-amber-400/[0.045]'
-        )}
-        onBlur={() => {
-          completionSessionRef.current = null;
-          pendingSelectionRef.current = null;
-        }}
-        onChange={(event) => {
-          completionSessionRef.current = null;
-          pendingSelectionRef.current = null;
-          props.onDraftChange(event.target.value);
-        }}
-        onKeyDown={(event) => {
-          if (
-            props.completionEnabled
-            && event.key === 'Tab'
-            && !event.altKey
-            && !event.ctrlKey
-            && !event.metaKey
-            && !event.nativeEvent.isComposing
-          ) {
+      <div className="relative min-w-0 flex-1">
+        <Input
+          ref={inputRef}
+          value={props.draft}
+          maxLength={maxDraftCharacters}
+          disabled={props.disabled}
+          className={cn(
+            'h-10 w-full min-w-0 border-[#2a2e34] bg-[#283140] px-3 hover:border-white/15 focus-visible:border-ring/60',
+            prompt.variant === 'commands' && 'border-amber-300/15 bg-amber-400/[0.045]'
+          )}
+          onBlur={() => {
+            completionSessionRef.current = null;
+            pendingSelectionRef.current = null;
+          }}
+          onChange={(event) => {
+            completionSessionRef.current = null;
+            pendingSelectionRef.current = null;
+            props.onDismissReplySuggestion?.();
+            props.onDraftChange(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (suggestion && !event.nativeEvent.isComposing && !event.shiftKey && !event.altKey
+              && !event.ctrlKey && !event.metaKey && (event.key === 'Tab' || event.key === 'Escape')) {
+              event.preventDefault();
+              if (event.key === 'Escape') props.onDismissReplySuggestion?.();
+              else if (props.onTakeReplySuggestion?.(suggestion)) {
+                completionSessionRef.current = null;
+                pendingSelectionRef.current = { start: suggestion.length, end: suggestion.length };
+                props.onDraftChange(suggestion);
+              }
+              return;
+            }
+            if (
+              props.completionEnabled
+              && event.key === 'Tab'
+              && !event.altKey
+              && !event.ctrlKey
+              && !event.metaKey
+              && !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              handleCompletionKey(
+                event.shiftKey ? 'backward' : 'forward',
+                event.currentTarget.selectionStart,
+                event.currentTarget.selectionEnd,
+              );
+              return;
+            }
+            const action = getChatPaneComposerKeyAction(event, props.draft);
+            if (!action) {
+              return;
+            }
             event.preventDefault();
-            handleCompletionKey(
-              event.shiftKey ? 'backward' : 'forward',
-              event.currentTarget.selectionStart,
-              event.currentTarget.selectionEnd,
-            );
-            return;
-          }
-          const action = getChatPaneComposerKeyAction(event, props.draft);
-          if (!action) {
-            return;
-          }
-          event.preventDefault();
-          if (action === 'recall-older') {
-            props.onRecallOlderDraft();
-            return;
-          }
-          if (action === 'recall-newer') {
-            props.onRecallNewerDraft();
-            return;
-          }
-          if (action === 'send') {
-            void props.onSend();
-          }
-        }}
-        aria-label={prompt.variant === 'commands' ? 'Server command' : 'Message'}
-        placeholder={props.disabled ? props.disabledPlaceholder ?? 'Reconnect to send messages' : props.placeholder}
-      />
+            if (action === 'recall-older') {
+              props.onDismissReplySuggestion?.();
+              props.onRecallOlderDraft();
+              return;
+            }
+            if (action === 'recall-newer') {
+              props.onDismissReplySuggestion?.();
+              props.onRecallNewerDraft();
+              return;
+            }
+            if (action === 'send') {
+              void props.onSend();
+            }
+          }}
+          aria-label={prompt.variant === 'commands' ? 'Server command' : 'Message'}
+          aria-describedby={suggestion ? suggestionId : undefined}
+          placeholder={suggestion ? '' : props.disabled ? props.disabledPlaceholder ?? 'Reconnect to send messages' : props.placeholder}
+        />
+        {suggestion ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 flex items-center gap-2 px-3 text-sm text-muted-foreground"
+          >
+            <span className="min-w-0 flex-1 truncate">{suggestion}</span>
+            <kbd className="shrink-0 rounded border border-white/15 px-1.5 py-0.5 text-xs">Tab</kbd>
+          </div>
+        ) : null}
+        <span id={suggestionId} role="status" className="sr-only">
+          {suggestion ? `Suggested reply: ${suggestion}. Press Tab to accept or Escape to dismiss.` : ''}
+        </span>
+      </div>
       <Button
         size="sm"
         variant={prompt.variant === 'commands' ? 'secondary' : 'default'}

@@ -1,5 +1,6 @@
 import { requestJson, requestResponse, readJsonResponse } from './api-request.js';
 import { readAssistantStream } from './ai-assistant-stream.js';
+import type { ReplySuggestionResponse } from '../../shared/reply-suggestion.js';
 import type {
   AiAssistantProgress,
   AiAssistantLoginResponse,
@@ -9,6 +10,10 @@ import type {
 } from '../../shared/protocol-ai.js';
 
 export const aiAssistantApi = {
+  suggestReply: (bufferId: string, messageId: string, signal: AbortSignal) =>
+    requestJson<ReplySuggestionResponse>(`/api/buffers/${encodeURIComponent(bufferId)}/reply-suggestion`, {
+      method: 'POST', body: JSON.stringify({ messageId }), signal,
+    }),
   ask: async (bufferId: string, request: AiAssistantRequest, signal?: AbortSignal,
     onProgress?: (stage: AiAssistantProgress) => void): Promise<AiAssistantResponse> => {
     const response = await requestResponse(`/api/buffers/${encodeURIComponent(bufferId)}/assistant`, {

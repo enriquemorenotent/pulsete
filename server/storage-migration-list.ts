@@ -222,4 +222,12 @@ export const storageMigrations: readonly StorageMigration[] = [
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   } },
   { version: 40, apply: db => db.exec(assistantPassagesSchemaSql) },
+  // SQLite orders equal index keys by rowid, which is the local arrival order.
+  { version: 43, apply: db => {
+    ensureColumn(db, 'messages', 'delivery', "TEXT NOT NULL DEFAULT 'live'");
+    db.exec(`DROP INDEX IF EXISTS idx_messages_live_text_arrival;
+    DROP INDEX IF EXISTS idx_messages_live_conversation_arrival;
+    CREATE INDEX idx_messages_live_conversation_arrival
+    ON messages(bufferId) WHERE kind IN ('line', 'action', 'notice') AND delivery = 'live' AND importBatchId IS NULL`);
+  } },
 ];

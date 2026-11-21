@@ -60,6 +60,7 @@ export const workspacePreferencesSchema = z.object({
     model: null,
     reasoningEffort: null,
   }),
+  aiReplySuggestionsEnabled: z.boolean().default(false),
   contactNotifications: contactNotificationSettingsSchema.default({
     enabled: false,
     systemEnabled: false,
@@ -82,6 +83,7 @@ export const defaultWorkspacePreferences: WorkspacePreferences =
 
 export const workspacePreferencesPatchSchema = z.object({
   aiAssistant: aiAssistantSelectionSchema.optional(),
+  aiReplySuggestionsEnabled: z.boolean().optional(),
   contactNotifications: contactNotificationSettingsSchema.optional(),
   mediaVisibilityMode: mediaVisibilityModeSchema.optional(),
   developerMode: z.boolean().optional(),

@@ -16,6 +16,8 @@ import type { MediaVisibilitySettings } from './media-visibility-settings.js';
 import type { UserAvatarSettings } from './user-avatars/settings.js';
 
 export type PreferencesDialogBodyProps = {
+  aiReplySuggestionsEnabled: boolean;
+  onSetAiReplySuggestionsEnabled: (enabled: boolean) => void;
   developerMode: boolean;
   onSetDeveloperMode: (enabled: boolean) => void;
   contactNotifications: ContactNotificationSettings;
@@ -74,7 +76,12 @@ export function PreferencesDialogBody(props: PreferencesDialogBodyProps) {
       />
       </div>
       </TabsContent>
-      <TabsContent value="ai" className="m-0 min-h-0 min-w-0 flex-1 overflow-y-auto p-6"><PreferencesAiSection /></TabsContent>
+      <TabsContent value="ai" className="m-0 min-h-0 min-w-0 flex-1 overflow-y-auto p-6">
+        <PreferencesAiSection
+          replySuggestionsEnabled={props.aiReplySuggestionsEnabled}
+          onSetReplySuggestionsEnabled={props.onSetAiReplySuggestionsEnabled}
+        />
+      </TabsContent>
       <TabsContent value="notifications" className="m-0 min-h-0 min-w-0 flex-1 overflow-y-auto p-6">
       <PreferencesNotificationsPanel
         contactNotifications={props.contactNotifications}

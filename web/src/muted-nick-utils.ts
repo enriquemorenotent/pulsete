@@ -16,17 +16,7 @@ export const findMutedNick = (
   findMutedNickByTarget(mutedNicks, { networkId, nick, identity })
   ?? findMutedNickByNick(mutedNicks, networkId, nick);
 
-export const isMessageMuted = (
-  mutedNicks: readonly MutedNickState[],
-  message: Pick<ChatMessage, 'networkId' | 'nick' | 'senderIdentity' | 'speakerNick'>,
-) => isUserMuted(
-  mutedNicks,
-  resolveMutedTarget(
-    message.networkId,
-    message.nick ?? message.speakerNick ?? null,
-    message.senderIdentity,
-  ),
-);
+export { isMessageMuted } from '../../shared/muted-nicks.js';
 
 export const resolveMutedMessageNick = (
   mutedNicks: readonly MutedNickState[],

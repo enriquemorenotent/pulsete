@@ -31,6 +31,9 @@ export type ChatPaneProps = {
   selectedQueryUser?: QueryProfileAvatarUser | null;
   selectedMessages: ChatMessage[];
   draft: string;
+  replySuggestion?: string | null;
+  onDismissReplySuggestion?: () => void;
+  onTakeReplySuggestion?: (displayed: string) => boolean;
   focusContextKey?: string | null;
   completionEnabled?: boolean;
   completionContextKey?: string | null;
@@ -192,6 +195,9 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
       {props.workspace.composerMode !== 'hidden' ? (
         <ChatPaneComposer
           draft={props.draft}
+          replySuggestion={props.replySuggestion}
+          onDismissReplySuggestion={props.onDismissReplySuggestion}
+          onTakeReplySuggestion={props.onTakeReplySuggestion}
           mode={props.workspace.composerMode}
           disabled={props.workspace.composerDisabled === true}
           placeholder={props.workspace.composerPlaceholder}

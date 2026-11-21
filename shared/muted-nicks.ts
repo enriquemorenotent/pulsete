@@ -1,3 +1,4 @@
+import type { ChatMessage, MutedNickState } from './protocol-chat.js';
 import { isSameIrcIdentifier } from './irc-identifiers.js';
 import {
   type NetworkUserIdentityTarget,
@@ -66,3 +67,15 @@ const hasStrongIdentity = (entry: NickScopedEntry) => {
   const identity = normalizeNetworkUserIdentity(entry.identity);
   return !!identity && identity.kind !== 'nick';
 };
+
+export const isMessageMuted = (
+  mutedNicks: readonly MutedNickState[],
+  message: Pick<ChatMessage, 'networkId' | 'nick' | 'senderIdentity' | 'speakerNick'>,
+) => isUserMuted(
+  mutedNicks,
+  resolveMutedTarget(
+    message.networkId,
+    message.nick ?? message.speakerNick ?? null,
+    message.senderIdentity,
+  ),
+);

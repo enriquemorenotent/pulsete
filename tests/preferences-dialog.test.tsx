@@ -45,6 +45,8 @@ const mediaVisibilitySettings: MediaVisibilitySettings = {
 test('settings categories preserve notification, media and backup controls', () => {
   const settings = (
     <PreferencesDialogBody
+      aiReplySuggestionsEnabled={false}
+      onSetAiReplySuggestionsEnabled={() => {}}
       developerMode={false}
       onSetDeveloperMode={() => {}}
       contactNotifications={contactNotifications}

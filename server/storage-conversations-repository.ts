@@ -1,5 +1,5 @@
 import { getServerRules } from './storage-server-rules.js';
-import { listMessagePageByBufferId, listAllMessagesForBuffer } from './storage-message-queries.js';
+import { listMessagePageByBufferId, listAllMessagesForBuffer, listLiveTextMessagesInArrivalOrder } from './storage-message-queries.js';
 import { refreshUnreadVisibility, type MessageAttention } from './storage-unread.js';
 import type { SqliteDb } from './storage-sqlite.js';
 import type { ChannelUserState } from '../shared/protocol-chat.js';
@@ -177,6 +177,10 @@ export class StorageConversationsRepository {
 
   listRecentMessagesForBufferIds(bufferIds: readonly string[], limit: number) {
     return listRecentMessagesForBufferIds(this.db, bufferIds, limit);
+  }
+
+  listLiveTextMessagesInArrivalOrder(bufferId: string, limit: number) {
+    return listLiveTextMessagesInArrivalOrder(this.db, bufferId, limit);
   }
 
   searchMessagesByBufferId(bufferId: string, query: string, limit: number) {

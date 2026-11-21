@@ -22,7 +22,7 @@ import {
   selectSidebarConnections,
   selectWorkspace,
 } from './app-selectors.js';
-import { useAppDispatch, useAppSelector } from './app-store.js';
+import { useAppDispatch, useAppSelector, useAppStore } from './app-store.js';
 import type { ApplyServerMessages } from './app-actions-types.js';
 import type { ComposerStoreApi } from './composer-store.js';
 import type { ContactRuleHandlers } from './contact-notifications/contact-rules.js';
@@ -34,6 +34,7 @@ import { useSelectedBufferReadReceipt } from './transcript/read-receipt.js';
 import type { AppActions } from './useAppActions.js';
 import type { AppUiState } from './useAppUiState.js';
 import { useDocumentActivityState } from './useDocumentActivityState.js';
+import { selectReplySuggestionBuffer, useReplySuggestion } from './useReplySuggestion.js';
 
 type SharedProps = {
   actions: AppActions;
@@ -149,6 +150,8 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   const selectedMessages = useAppSelector(selectSelectedMessages);
   const workspace = useAppSelector(selectWorkspace);
   const dispatch = useAppDispatch();
+  const store = useAppStore();
+  const suggestionBuffer = useAppSelector(selectReplySuggestionBuffer);
   const { documentVisible, windowFocused } = useDocumentActivityState();
 
   useSelectedBufferReadReceipt({
@@ -185,7 +188,23 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
     selectedMessages,
     workspace,
   });
-  return <AccountMediaProvider network={workspace.selectedNetwork} runtime={workspace.selectedRuntime}><ChatPane {...model} jumpToLatestRequestId={jumpToLatestRequestId} /></AccountMediaProvider>;
+  const { suggestion, dismiss, take } = useReplySuggestion({
+    bufferId: suggestionBuffer,
+    canSuggest: documentVisible && windowFocused && model.draft === '',
+    composer,
+    store,
+  });
+  return (
+    <AccountMediaProvider network={workspace.selectedNetwork} runtime={workspace.selectedRuntime}>
+      <ChatPane
+        {...model}
+        replySuggestion={suggestion}
+        onDismissReplySuggestion={dismiss}
+        onTakeReplySuggestion={take}
+        jumpToLatestRequestId={jumpToLatestRequestId}
+      />
+    </AccountMediaProvider>
+  );
 });
 
 export const CommandPaletteDialogContainer = memo(function CommandPaletteDialogContainer({

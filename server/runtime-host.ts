@@ -119,6 +119,7 @@ export class RuntimeHost {
     return {
       assistant: {
         ask: (bufferId, request, signal, options) => this.runtime.http.assistant.ask(bufferId, request, signal, options),
+        suggestReply: (bufferId, messageId, signal) => this.runtime.http.assistant.suggestReply(bufferId, messageId, signal),
         clear: (bufferId, token, sessionId) => this.runtime.http.assistant.clear?.(bufferId, token, sessionId),
         startLogin: () => this.runtime.http.assistant.startLogin(),
         status: () => this.runtime.http.assistant.status(),

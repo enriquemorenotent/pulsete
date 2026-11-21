@@ -2,6 +2,8 @@ import { RuntimeRevisionStream } from './runtime-revision-stream.js';
 import { RuntimeWatchlistActivity } from './runtime-watchlist-activity.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
 import { RuntimeAiAssistantService } from './runtime-ai-assistant-service.js';
+import { createAiReplySuggestion } from './ai-reply-suggestion.js';
+import { createCodexAssistantProvider } from './codex-assistant-provider.js';
 import { NetworkLifecycleService } from './network-lifecycle-service.js';
 import { RuntimeConnectionManager } from './runtime-connection-manager.js';
 import { RuntimeConversationService } from './runtime-conversation-service.js';
@@ -51,8 +53,10 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     networks: store.networks,
     drafts: store.drafts,
   });
+  const assistantProvider = createCodexAssistantProvider();
   const assistantService = new RuntimeAiAssistantService({
     conversations: store.conversations,
+    provider: assistantProvider,
     semanticHistory: store.semanticHistory,
   });
   const activity = new RuntimeWatchlistActivity(store.friends, store.networks);
@@ -209,6 +213,12 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
   const http: RuntimeHttpApi = {
     assistant: {
       ask: (bufferId, request, signal, options) => assistantService.ask(bufferId, request, signal, options),
+      suggestReply: createAiReplySuggestion({
+        conversations: store.conversations,
+        getPreferences: () => store.preferences.get(),
+        listMutedNicks: (networkId) => store.mutedNicks.list(networkId),
+        provider: assistantProvider,
+      }),
       clear: (bufferId, token, sessionId) => assistantService.clear(bufferId, token, sessionId),
       startLogin: () => assistantService.startLogin(),
       status: () => assistantService.status(),
