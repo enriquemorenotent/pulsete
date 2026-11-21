@@ -2,15 +2,17 @@ import type { AccountMediaRoute } from './account-media-route.js';
 import type { ResourceResponse } from './external-resource-request.js';
 
 type MediaResource = { mimeType: string; body: Buffer; freshUntil: number };
-type CachedImage = { resource: MediaResource; route?: AccountMediaRoute };
+type CachedMedia = { resource: MediaResource; route?: AccountMediaRoute; expiryTimer: ReturnType<typeof setTimeout> };
+type MediaCache = { entries: Map<string, CachedMedia>; bytes: number; byteLimit: number };
 
-const byteLimit = 32 * 1024 * 1024;
+const mib = 1024 * 1024;
 const entryLimit = 256;
 const ttlMs = 5 * 60 * 1000;
-const images = new Map<string, CachedImage>();
+const images: MediaCache = { entries: new Map(), bytes: 0, byteLimit: 32 * mib };
+const loopingVideos: MediaCache = { entries: new Map(), bytes: 0, byteLimit: 16 * mib };
+const loopingVideoSizeLimit = 4 * mib;
 const routeIds = new WeakMap<AccountMediaRoute, number>();
 let nextRouteId = 0;
-let cachedBytes = 0;
 const deltaSecondsMs = (value: string) => Math.min(Number(value), 2 ** 31) * 1000;
 
 export function responseFreshUntil({ cache, status }: ResourceResponse): number {
@@ -51,9 +53,23 @@ export function responseFreshUntil({ cache, status }: ResourceResponse): number 
   return receivedAt + Math.min(ttlMs, lifetime - currentAge);
 }
 
-function removeImage(key: string, image: CachedImage) {
-  images.delete(key);
-  cachedBytes -= image.resource.body.length;
+function removeCachedMedia(cache: MediaCache, key: string, entry: CachedMedia) {
+  clearTimeout(entry.expiryTimer);
+  cache.entries.delete(key);
+  cache.bytes -= entry.resource.body.length;
+}
+
+function readCachedMedia(cache: MediaCache, key: string, now: number) {
+  for (const [entryKey, entry] of cache.entries) {
+    if (entry.resource.freshUntil <= now) removeCachedMedia(cache, entryKey, entry);
+  }
+
+  const cached = cache.entries.get(key);
+  if (cached) {
+    cache.entries.delete(key);
+    cache.entries.set(key, cached);
+  }
+  return cached?.resource;
 }
 
 function getRouteId(route: AccountMediaRoute) {
@@ -63,8 +79,10 @@ function getRouteId(route: AccountMediaRoute) {
   const id = ++nextRouteId;
   routeIds.set(route, id);
   route.signal.addEventListener('abort', () => {
-    for (const [key, image] of images) {
-      if (image.route === route) removeImage(key, image);
+    for (const cache of [images, loopingVideos]) {
+      for (const [key, entry] of cache.entries) {
+        if (entry.route === route) removeCachedMedia(cache, key, entry);
+      }
     }
   }, { once: true });
   return id;
@@ -75,37 +93,42 @@ export async function loadAccountMedia(
   href: string,
   route: AccountMediaRoute | undefined,
   download: () => Promise<MediaResource>,
+  cacheLoopingVideo = false,
 ): Promise<MediaResource> {
   route?.signal.throwIfAborted();
   const key = JSON.stringify([networkId, route && getRouteId(route), href]);
   const now = Date.now();
-  for (const [imageKey, image] of images) {
-    if (image.resource.freshUntil <= now) removeImage(imageKey, image);
-  }
-
-  const cached = images.get(key);
-  if (cached) {
-    images.delete(key);
-    images.set(key, cached);
-    return cached.resource;
-  }
+  const cached = readCachedMedia(images, key, now)
+    ?? (cacheLoopingVideo ? readCachedMedia(loopingVideos, key, now) : undefined);
+  if (cached) return cached;
 
   const resource = await download();
   route?.signal.throwIfAborted();
   const completedAt = Date.now();
-  if (!resource.mimeType.startsWith('image/') || resource.freshUntil <= completedAt
-    || resource.body.length > byteLimit) return resource;
+  if (resource.freshUntil <= completedAt) return resource;
 
-  // Another request for the same image may have finished while this one was downloading.
-  const existing = images.get(key);
+  let cache: MediaCache;
+  if (resource.mimeType.startsWith('image/') && resource.body.length <= images.byteLimit) {
+    cache = images;
+  } else if (cacheLoopingVideo && resource.mimeType.startsWith('video/') && resource.body.length <= loopingVideoSizeLimit) {
+    cache = loopingVideos;
+  } else {
+    return resource;
+  }
+
+  // Another request for the same media may have finished while this one was downloading.
+  const existing = cache.entries.get(key);
   if (existing && existing.resource.freshUntil > completedAt) return resource;
-  if (existing) removeImage(key, existing);
+  if (existing) removeCachedMedia(cache, key, existing);
 
-  images.set(key, { resource, route });
-  cachedBytes += resource.body.length;
-  for (const [oldestKey, oldest] of images) {
-    if (cachedBytes <= byteLimit && images.size <= entryLimit) break;
-    removeImage(oldestKey, oldest);
+  const expiryTimer = setTimeout(() => removeCachedMedia(cache, key, entry), resource.freshUntil - completedAt);
+  expiryTimer.unref();
+  const entry = { resource, route, expiryTimer };
+  cache.entries.set(key, entry);
+  cache.bytes += resource.body.length;
+  for (const [oldestKey, oldest] of cache.entries) {
+    if (cache.bytes <= cache.byteLimit && cache.entries.size <= entryLimit) break;
+    removeCachedMedia(cache, oldestKey, oldest);
   }
   return resource;
 }

@@ -37,7 +37,11 @@ test('media and previews use their account exit, isolate caches, and fail closed
     });
     return account;
   });
-  const resource = (id: string | undefined, url = 'http://1.1.1.1/image.png') => `http://127.0.0.1:${context.port}/api/media/resource?${new URLSearchParams({ ...(id ? { networkId: id } : {}), url })}`;
+  const resource = (id: string | undefined, url = 'http://1.1.1.1/image.png', looping = false) => {
+    const query = new URLSearchParams({ ...(id ? { networkId: id } : {}), url });
+    if (looping) query.set('loopingPreview', '1');
+    return `http://127.0.0.1:${context.port}/api/media/resource?${query}`;
+  };
   try {
     for (const account of accounts) {
       const response = await fetch(resource(account.id), { headers: { Cookie: 'local-session=secret', Referer: 'http://localhost/private' } });
@@ -53,8 +57,8 @@ test('media and previews use their account exit, isolate caches, and fail closed
     const [first, second] = accounts;
     const gif = 'http://1.1.1.1/animation.gif';
     const video = 'http://1.1.1.1/video.mp4';
-    const mediaBody = async (id: string, url: string) => {
-      const response = await fetch(resource(id, url));
+    const mediaBody = async (id: string, url: string, looping = false) => {
+      const response = await fetch(resource(id, url, looping));
       assert.equal(response.status, 200);
       return response.text();
     };
@@ -64,6 +68,10 @@ test('media and previews use their account exit, isolate caches, and fail closed
     assert.equal(await mediaBody(first!.id, gif), firstGif);
     assert.notEqual(await mediaBody(second!.id, gif), firstGif);
     assert.notEqual(await mediaBody(first!.id, video), await mediaBody(first!.id, video));
+    const firstClip = await mediaBody(first!.id, video, true);
+    assert.equal(await mediaBody(first!.id, video, true), firstClip);
+    assert.notEqual(await mediaBody(first!.id, video), firstClip);
+    assert.notEqual(await mediaBody(second!.id, video, true), firstClip);
     assert.equal((await fetch(resource(accounts[0]!.id, 'http://1.1.1.1/redirect'))).status, 400);
     assert.equal((await fetch(resource(accounts[0]!.id, 'http://1.1.1.1/unsafe.svg'))).status, 400);
     const beforeLoop = visits.length;
@@ -72,6 +80,7 @@ test('media and previews use their account exit, isolate caches, and fail closed
     const count = visits.length;
     controllers[0]!.abort();
     assert.equal((await fetch(resource(accounts[0]!.id))).status, 400);
+    assert.equal((await fetch(resource(first!.id, video, true))).status, 400);
     assert.equal((await fetch(resource(undefined))).status, 400);
     const cachedPreview = await requestJson(context.port, 'POST', '/api/media/page-preview', { networkId: accounts[0]!.id, url: 'http://1.1.1.1/page' });
     assert.equal(cachedPreview.status, 400);
@@ -82,6 +91,7 @@ test('media and previews use their account exit, isolate caches, and fail closed
       connect: async () => net.connect(port, '127.0.0.1'),
     });
     assert.notEqual(await mediaBody(first!.id, gif), firstGif);
+    assert.notEqual(await mediaBody(first!.id, video, true), firstClip);
   } finally {
     controllers.forEach(controller => controller.abort());
     reconnected.abort();
@@ -91,7 +101,7 @@ test('media and previews use their account exit, isolate caches, and fail closed
   }
 });
 
-test('inline image reuse follows origin freshness and redirect cache instructions', async (t) => {
+test('inline image and looping video reuse follows origin freshness and redirect cache instructions', async (t) => {
   const start = Date.UTC(2026, 0, 1);
   t.mock.timers.enable({ apis: ['Date'], now: start });
   const policies: Record<string, Record<string, string>> = {
@@ -105,12 +115,15 @@ test('inline image reuse follows origin freshness and redirect cache instruction
     '/expires': { Expires: new Date(start + 2000).toUTCString() },
     '/long-lived': { 'Cache-Control': 'max-age=3600' },
     '/redirect': { 'Cache-Control': 'no-store', Location: '/long-lived' },
+    '/uncacheable.mp4': { 'Cache-Control': 'no-store' },
+    '/expiring.mp4': { 'Cache-Control': 'max-age=2' },
   };
   let visits = 0;
   const website = createServer((req, res) => {
     const path = req.url!;
     res.writeHead(path === '/redirect' ? 302 : 200, {
-      'Content-Type': 'image/gif', Date: new Date().toUTCString(), ...policies[path],
+      'Content-Type': path.endsWith('.mp4') ? 'video/mp4' : 'image/gif',
+      Date: new Date().toUTCString(), ...policies[path],
     });
     res.end(String(++visits));
   });
@@ -126,17 +139,18 @@ test('inline image reuse follows origin freshness and redirect cache instruction
   });
   const load = async (path: string) => {
     const query = new URLSearchParams({ networkId: account.id, url: `http://1.1.1.1${path}` });
+    if (path.endsWith('.mp4')) query.set('loopingPreview', '1');
     const response = await fetch(`http://127.0.0.1:${context.port}/api/media/resource?${query}`);
     assert.equal(response.status, 200);
     return response.text();
   };
   try {
-    for (const path of ['/no-store', '/no-cache', '/zero', '/private', '/vary-all', '/redirect']) {
+    for (const path of ['/no-store', '/no-cache', '/zero', '/private', '/vary-all', '/redirect', '/uncacheable.mp4']) {
       assert.notEqual(await load(path), await load(path), path);
     }
     const concurrent = await Promise.all([load('/no-store'), load('/no-store')]);
     assert.notEqual(concurrent[0], concurrent[1]);
-    const expiring = ['/must-revalidate', '/aged', '/expires'];
+    const expiring = ['/must-revalidate', '/aged', '/expires', '/expiring.mp4'];
     const first = await Promise.all(expiring.map(load));
     const longLived = await load('/long-lived');
     t.mock.timers.tick(1999);

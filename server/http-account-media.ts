@@ -39,6 +39,7 @@ export async function handleAccountMediaRoutes({ req, res, url, pathname, contex
   const input = url.searchParams.get('url');
   if (!input || input.length > 2048) throw badRequest('Invalid media URL');
   const networkId = url.searchParams.get('networkId') || undefined;
+  const cacheLoopingVideo = url.searchParams.get('loopingPreview') === '1';
   const account = networkId ? context.networks.list().find(item => item.id === networkId) : undefined;
   const avatarId = extractIrcCloudAvatarId(account?.username);
   const accountImageUrl = account?.iconUrl?.trim()
@@ -59,7 +60,7 @@ export async function handleAccountMediaRoutes({ req, res, url, pathname, contex
   try {
     const { route, network } = accountMediaAccess(context, networkId);
     const download = () => downloadAccountMedia(input, network);
-    const image = await (cacheable ? download() : loadAccountMedia(networkId, input, route, download));
+    const image = await (cacheable ? download() : loadAccountMedia(networkId, input, route, download, cacheLoopingVideo));
     if (cacheable && image.mimeType.startsWith('image/')) {
       context.networks.saveAccountImage(account.id, input, image.mimeType, image.body);
     }

@@ -78,7 +78,8 @@ function InlineMediaPreviewTile(props: {
 
 function InlineMediaThumbnail(props: { media: InlineMedia }) {
   const { media } = props;
-  const source = useAccountMediaUrl(media.sourceHref);
+  const loopingAnimation = media.kind === 'video' && media.playback === 'looping-animation';
+  const source = useAccountMediaUrl(media.sourceHref, undefined, loopingAnimation);
   if (media.kind === 'image') {
     return (
       <img
@@ -91,7 +92,6 @@ function InlineMediaThumbnail(props: { media: InlineMedia }) {
       />
     );
   }
-  const loopingAnimation = media.playback === 'looping-animation';
   return (
     <video
       src={source}

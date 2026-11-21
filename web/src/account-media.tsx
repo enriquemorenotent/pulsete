@@ -16,9 +16,10 @@ export function accountMediaUrl(source: string | null | undefined, networkId?: s
   if (networkId) params.set('networkId', networkId);
   return `/api/media/resource?${params}`;
 }
-export function useAccountMediaUrl(source: string | null | undefined, networkId?: string) {
+export function useAccountMediaUrl(source: string | null | undefined, networkId?: string, cacheLoopingVideo = false) {
   const account = useMediaAccount();
   const url = accountMediaUrl(source, networkId ?? account.networkId);
   // Changing the route/session retries previously unavailable content without sharing cache keys.
-  return url?.startsWith('/api/media/resource?') ? `${url}&route=${encodeURIComponent(account.cacheKey)}` : url;
+  if (!url?.startsWith('/api/media/resource?')) return url;
+  return `${url}&route=${encodeURIComponent(account.cacheKey)}${cacheLoopingVideo ? '&loopingPreview=1' : ''}`;
 }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { makeMessage } from './chat-pane.test.fixtures.js';
 import { renderChatPane, renderQueryPane, renderServerPane } from './chat-pane.test.renderers.js';
+import { assertProxiedMedia } from './helpers/assert-proxied-media.js';
 
 test('consecutive sender messages repeat the same inline nick label in chat mode', () => {
   const markup = renderChatPane([
@@ -85,7 +86,7 @@ test('compact chat rows render Imgur GIFV links as inline videos', () => {
   ]);
 
   assert.match(markup, /Watch /);
-  assert.match(markup, /<video[^>]*src="https:\/\/i\.imgur\.com\/TEHJoGS\.mp4"/);
+  assertProxiedMedia(markup, 'video', 'https://i.imgur.com/TEHJoGS.mp4');
   assert.doesNotMatch(markup, /href="https:\/\/i\.imgur\.com\/TEHJoGS\.gifv"/);
 });
 
@@ -100,7 +101,7 @@ test('compact chat rows render direct MP4 links as on-demand video players', () 
   ]);
 
   assert.match(markup, /Watch /);
-  assert.match(markup, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mp4\?token=abc"/);
+  assertProxiedMedia(markup, 'video', 'https://cdn.example.com/media/clip.mp4?token=abc');
   assert.match(markup, /<video[^>]*controls=""/i);
   assert.doesNotMatch(markup, /<video[^>]*autoPlay=""/i);
   assert.doesNotMatch(markup, /<video[^>]*loop=""/i);
@@ -118,7 +119,7 @@ test('compact chat rows render direct MOV links as on-demand video players', () 
   ]);
 
   assert.match(markup, /Watch /);
-  assert.match(markup, /<video[^>]*src="https:\/\/cdn\.example\.com\/media\/clip\.mov\?token=abc"/);
+  assertProxiedMedia(markup, 'video', 'https://cdn.example.com/media/clip.mov?token=abc');
   assert.match(markup, /<video[^>]*controls=""/i);
   assert.doesNotMatch(markup, /<video[^>]*autoPlay=""/i);
   assert.doesNotMatch(markup, /<video[^>]*loop=""/i);
@@ -136,7 +137,7 @@ test('compact chat rows render Tumblr GIFV links as negotiated images', () => {
   ]);
 
   assert.match(markup, /Watch /);
-  assert.match(markup, /<img[^>]*src="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
+  assertProxiedMedia(markup, 'img', 'https://64.media.tumblr.com/hash/revision/s400x600/clip.gifv');
   assert.doesNotMatch(markup, /href="https:\/\/64\.media\.tumblr\.com\/hash\/revision\/s400x600\/clip\.gifv"/);
 });
 
