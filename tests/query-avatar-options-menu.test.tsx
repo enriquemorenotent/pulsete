@@ -40,7 +40,7 @@ test('avatar options show a neutral initial source cue', () => {
   assert.match(markup, /lucide-case-upper/);
 });
 
-test('avatar options show a blue IRCCloud source cue', () => {
+test('avatar options show the IRCCloud source cue', () => {
   const markup = renderOptions({ externalAvatarsEnabled: true });
 
   assert.match(markup, /data-avatar-source="irccloud"/);
@@ -57,6 +57,20 @@ test('avatar options prefer the custom source cue', () => {
   assert.match(markup, /data-avatar-source="custom"/);
   assert.match(markup, /aria-description="Avatar source: Custom"/);
   assert.match(markup, /lucide-image/);
+});
+
+test('avatar options use the same toolbar style for all sources', () => {
+  const buttonClass = /<button[^>]*class="([^"]+)"/;
+  const initialClass = renderOptions({ externalAvatarsEnabled: false }).match(buttonClass)?.[1];
+  const ircCloudClass = renderOptions({ externalAvatarsEnabled: true }).match(buttonClass)?.[1];
+  const customClass = renderOptions({
+    customAvatarUrl: 'data:image/png;base64,custom',
+    externalAvatarsEnabled: true,
+  }).match(buttonClass)?.[1];
+
+  assert.ok(initialClass);
+  assert.equal(ircCloudClass, initialClass);
+  assert.equal(customClass, initialClass);
 });
 
 test('avatar options show the initial cue when the preferred source fails', () => {

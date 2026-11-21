@@ -29,7 +29,6 @@ type QueryAvatarOptionsMenuProps = {
 type QueryAvatarSource = 'custom' | 'initial' | 'irccloud';
 
 type QueryAvatarSourcePresentation = {
-  buttonClassName: string;
   icon: LucideIcon;
   iconClassName: string;
   label: string;
@@ -103,7 +102,7 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
             type="button"
             variant="ghost"
             size="icon"
-            className={sourcePresentation.buttonClassName}
+            className={headerIconButtonClass()}
             aria-label={label}
             aria-description={`Avatar source: ${sourcePresentation.label}`}
             data-avatar-source={source}
@@ -183,22 +182,16 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
 
 const avatarSourcePresentations = {
   custom: {
-    buttonClassName: headerIconButtonClass(true),
     icon: ImageIcon,
     iconClassName: 'border-primary/25 text-primary',
     label: 'Custom',
   },
   initial: {
-    buttonClassName: headerIconButtonClass(),
     icon: CaseUpper,
     iconClassName: 'border-white/10 text-muted-foreground',
     label: 'Initial fallback',
   },
   irccloud: {
-    buttonClassName: cn(
-      headerIconButtonClass(),
-      'border-sky-300/25 bg-sky-300/10 text-sky-300 hover:border-sky-300/40 hover:bg-sky-300/15 hover:text-sky-200',
-    ),
     icon: Cloud,
     iconClassName: 'border-sky-300/25 text-sky-300',
     label: 'IRCCloud',
