@@ -18,6 +18,7 @@ export type AiAssistantThreadState = {
 };
 
 type StartRequestInput = {
+  controller?: AbortController;
   label: string;
   pendingLabel: string;
 };
@@ -32,6 +33,8 @@ type ResolveRequestInput = {
 };
 
 export type AiAssistantStoreApi = {
+  cancelRequest: (bufferId: string) => void;
+  cancelAll: () => void;
   updateProgress: (bufferId: string, requestId: number, label: string, usingChat?: boolean) => void;
   requestChatConfirmation: (bufferId: string, requestId: number, confirmation: AssistantChatConfirmation) => void;
   clearThread: (bufferId: string) => void;
@@ -62,6 +65,7 @@ export const emptyAiAssistantThread: AiAssistantThreadState = {
 
 export const createAiAssistantStore = (): AiAssistantStoreApi => {
   let threads: Record<string, AiAssistantThreadState> = {};
+  const controllers = new Map<string, AbortController>();
   let nextEntryId = 1;
   let nextRequestId = 1;
   const listeners = new Set<Listener>();
@@ -81,6 +85,7 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
     if (next === current) {
       return;
     }
+    if (current.pending && !next.pending) controllers.delete(bufferId);
     threads = { ...threads, [bufferId]: next };
     notify();
   };
@@ -98,6 +103,8 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
   };
 
   return {
+    cancelRequest(bufferId) { controllers.get(bufferId)?.abort(); },
+    cancelAll() { for (const controller of controllers.values()) controller.abort(); },
     updateProgress(bufferId, requestId, pendingLabel, usingChat = false) {
       finishRequest(bufferId, requestId, (current) => ({ ...current, pendingLabel, usingChat: current.usingChat || usingChat }));
     },
@@ -111,6 +118,8 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
       if (!(bufferId in threads)) {
         return;
       }
+      controllers.get(bufferId)?.abort();
+      controllers.delete(bufferId);
       const { [bufferId]: _removed, ...retained } = threads;
       threads = retained;
       notify();
@@ -137,6 +146,9 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
       );
       if (Object.keys(retained).length === Object.keys(threads).length) {
         return;
+      }
+      for (const [id, controller] of controllers) {
+        if (!active.has(id)) { controller.abort(); controllers.delete(id); }
       }
       threads = retained;
       notify();
@@ -178,6 +190,7 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
         return null;
       }
       const requestId = nextRequestId++;
+      if (input.controller) controllers.set(bufferId, input.controller);
       updateThread(bufferId, (thread) => ({
         ...thread,
         activeRequestId: requestId,

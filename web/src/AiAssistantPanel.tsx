@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageSquarePlus, Maximize2, Minimize2 } from 'lucide-react';
 import type { BufferState } from '../../shared/protocol-chat.js';
 import {
@@ -47,12 +47,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const [localStore] = useState(createAiAssistantStore);
   const store = props.store ?? localStore;
   const bufferId = props.buffer?.id ?? null;
-  const controllers = useRef(new Map<string, AbortController>());
-  useEffect(() => () => { for (const controller of controllers.current.values()) controller.abort(); }, []);
-  useEffect(() => store.subscribe(() => {
-    for (const [id, controller] of controllers.current) if (!store.getThread(id).pending) controller.abort();
-  }), [store]);
-  const cancel = () => { if (bufferId) controllers.current.get(bufferId)?.abort(); };
+  useEffect(() => () => localStore.cancelAll(), [localStore]);
+  const cancel = () => { if (bufferId) store.cancelRequest(bufferId); };
   const thread = useAiAssistantThread(store, bufferId);
   const [status, setStatus] = useState<AiAssistantProviderStatus | null>(null);
   const [optimisticSelection, setOptimisticSelection] = useState<AiAssistantSelection | null>(null);
@@ -78,15 +74,15 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     }
     const currentThread = store.getThread(bufferId);
     const assistantTurns = scope === 'none' ? [] : buildAssistantTurns(currentThread.entries);
+    const controller = new AbortController();
     const currentRequestId = store.startRequest(bufferId, {
+      controller,
       label: label || 'Draft a reply',
       pendingLabel: nextPendingLabel,
     });
     if (currentRequestId === null) {
       return;
     }
-    const controller = new AbortController();
-    controllers.current.set(bufferId, controller);
     try {
       const response = await aiAssistantApi.ask(bufferId, {
         assistantTurns,
@@ -121,8 +117,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
           : reason instanceof Error ? reason.message : 'Assistant request failed',
         label === prompt ? prompt : '',
       );
-    } finally {
-      if (controllers.current.get(bufferId) === controller) controllers.current.delete(bufferId);
     }
   };
 
@@ -154,7 +148,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
               disabled={!bufferId || !hasThreadContent}
               onClick={() => {
                 if (!bufferId) return;
-                controllers.current.get(bufferId)?.abort();
                 const current = store.getThread(bufferId);
                 for (const token of [current.continuationToken, current.generalContinuationToken]) {
                   if (token) void aiAssistantApi.clear(bufferId, token).catch(() => undefined);

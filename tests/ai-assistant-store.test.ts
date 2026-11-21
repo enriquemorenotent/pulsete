@@ -90,3 +90,27 @@ test('a failed assistant request can be retried without repeating it in the conv
   assert.equal(store.getThread('buffer').input, 'Where are we meeting?');
   assert.deepEqual(store.getThread('buffer').entries, []);
 });
+
+test('stopping, clearing and pruning assistant threads cancel only the affected requests', () => {
+  const store = createAiAssistantStore();
+  const start = (id: string) => {
+    const controller = new AbortController();
+    store.startRequest(id, { controller, label: id, pendingLabel: 'Thinking' });
+    return controller.signal;
+  };
+  const stopped = start('a');
+  const cleared = start('b');
+  const pruned = start('c');
+  const active = start('d');
+  store.cancelRequest('a');
+  assert.ok(stopped.aborted);
+  assert.equal(cleared.aborted, false);
+  store.clearThread('b');
+  assert.ok(cleared.aborted);
+  assert.equal(pruned.aborted, false);
+  store.pruneThreads(['a', 'd']);
+  assert.ok(pruned.aborted);
+  assert.equal(active.aborted, false);
+  store.cancelAll();
+  assert.ok(active.aborted);
+});

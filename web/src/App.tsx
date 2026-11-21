@@ -1,5 +1,5 @@
 import { createBanner, type UpdateBanner } from './banner.js';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppEffects } from './AppEffects.js';
 import { selectSelectedBufferId } from './app-selectors.js';
 import { AppStoreProvider, createAppStore } from './app-store.js';
@@ -15,6 +15,7 @@ function App() {
   const ui = useAppUiState();
   const [store] = useState(() => createAppStore(initialState));
   const [assistantStore] = useState(createAiAssistantStore);
+  useEffect(() => () => assistantStore.cancelAll(), [assistantStore]);
   const [composer] = useState(createComposerStore);
   const updateBanner = useCallback<UpdateBanner>(
     (kind, message, options) =>

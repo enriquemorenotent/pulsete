@@ -131,3 +131,38 @@ test('a public clarification can be answered with only the subject', async ({ pa
   expect(errors).toEqual([]);
   await page.locator('main').screenshot({ path: testInfo.outputPath('public-clarification.png') });
 });
+
+test('an in-flight assistant answer stays with its conversation across tab changes', async ({ page }) => {
+  let release!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  let requests = 0;
+  await page.route('**/api/assistant/status', route => route.fulfill({ json: status }));
+  await page.route('**/api/buffers/*/assistant', async route => {
+    requests++;
+    await waiting;
+    await route.fulfill({ json: { status, mode: 'answer', answer: 'Finished in the original chat.', usedChat: false,
+      context: { buffer: { id: 'buffer-1', networkId: 'network', kind: 'query', target: 'Reading group' }, messages: [] } } });
+  });
+  await page.goto('/e2e/assistant-sources/index.html?lookup&privacy');
+  const assistant = page.getByRole('tab', { name: 'Assistant' });
+  const switchChat = page.getByRole('button', { name: 'Switch conversation' });
+  const input = page.getByRole('textbox', { name: 'Message assistant' });
+  await assistant.click();
+  await input.fill('Keep working on this question');
+  await input.press('Enter');
+  await expect.poll(() => requests).toBe(1);
+  await page.getByRole('tab', { name: 'Context' }).click();
+  await assistant.click();
+  await expect(page.getByRole('button', { name: 'Stop response' })).toBeVisible();
+  await expect(input).toHaveValue('');
+  await switchChat.click();
+  await assistant.click();
+  release();
+  await expect(input).toHaveValue('');
+  await expect(page.getByText('Finished in the original chat.')).toHaveCount(0);
+  await switchChat.click();
+  await assistant.click();
+  await expect(page.getByText('Finished in the original chat.')).toBeVisible();
+  await expect(input).toHaveValue('');
+  expect(requests).toBe(1);
+});
