@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AssistantDateRange } from './ai-assistant-dates.js';
-import type { AiAssistantScope } from '../shared/protocol-ai.js';
+import type { AiAssistantScope, AiAssistantTurn } from '../shared/protocol-ai.js';
 
 export type AssistantContinuation = {
   bufferId: string;
@@ -9,6 +9,8 @@ export type AssistantContinuation = {
   question: string;
   range: AssistantDateRange | null;
   messageIds: string[];
+  generalTurns?: AiAssistantTurn[];
+  awaitingPublicSubject?: true;
 };
 
 export class AssistantContinuations {

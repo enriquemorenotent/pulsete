@@ -8,18 +8,16 @@ const publicQuerySchema = z.object({
   media: z.enum(['image', 'video']).optional(),
 }).strict();
 
-export const publicLookupInstructions = [
-  'A separate public web lookup is enabled. Request it when the user asks for public background on a specific subject, a precise or current public fact, a public source, or public media such as a picture or video. Answer chat-only questions and general explanations directly.',
-  'Decide whether the user wants public facts from the original user request. Resolve short references using the conversation evidence and previous questions. Ask who or what the user means if the public subject is ambiguous.',
-  'For lookup, return only this format: ' + lookupPrefix + ' {"query":"public name and fact as search keywords"}. Include "media":"image" or "media":"video" in that object when the user wants to see an image or video. Use a short, standalone query. Include only the public name or topic and what to find. Exclude IRC text, quotes, handles, private names, contact details, links, and other private information.',
-].join('\n');
+export const readPublicLookupPlan = (value: unknown) => {
+  const parsed = publicQuerySchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+};
 
 export function readPublicLookupRequest(answer: string): { query: string | null; media?: AssistantPublicMedia } | null {
   const text = answer.trim();
   if (!text.startsWith(lookupPrefix)) return null;
   try {
-    const parsed = publicQuerySchema.safeParse(JSON.parse(text.slice(lookupPrefix.length).trim()));
-    return parsed.success ? parsed.data : { query: null };
+    return readPublicLookupPlan(JSON.parse(text.slice(lookupPrefix.length).trim())) ?? { query: null };
   } catch {
     return { query: null };
   }

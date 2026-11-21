@@ -37,7 +37,7 @@ test('invalid citations get one repair with the same evidence', async () => {
     return calls === 1 ? 'Cedar Hall [S999]' : 'Cedar Hall [S1]';
   });
   try { const result = await f.service.ask(f.buffer.id, request, undefined, { onProgress: (stage) => stages.push(stage) });
-    assert.equal(calls, 2); assert.match(result.answer, /\[S1\]/); assert.deepEqual(stages, ['preparing', 'writing', 'checking']);
+    assert.equal(calls, 2); assert.match(result.answer, /\[S1\]/); assert.deepEqual(stages, ['preparing', 'using-chat', 'writing', 'checking']);
   } finally { f.storage.close(); }
 });
 
@@ -76,10 +76,16 @@ test('scope changes and session mismatch do not resolve or reuse previous contex
   } finally { f.storage.close(); }
 });
 
-test('a public follow-up sends only the standalone query and can cite both kinds of evidence', async () => {
+test('a public follow-up needs a named subject and can cite both kinds of evidence once it is named', async () => {
   const stages: string[] = [];
   const lookups: string[] = [];
   const f = fixture(async ({ instructions, prompt }) => {
+    if (instructions.startsWith('Route a Pulsete')) {
+      const { question } = JSON.parse(prompt);
+      if (question === 'Who was she?') return '{"intent":"ambiguous","publicSubjectNeeded":true}';
+      if (question.includes('Marie Curie')) return '{"intent":"general","publicLookup":{"subject":"Marie Curie"}}';
+      return '{"intent":"chat"}';
+    }
     if (instructions.startsWith('You select')) return '{"action":"done"}';
     if (instructions.startsWith('Resolve')) return '{"followUp":true,"question":"Who was Marie Curie and when was she born?"}';
     if (prompt.includes('Public web findings')) {
@@ -89,9 +95,8 @@ test('a public follow-up sends only the standalone query and can cite both kinds
       return 'Maya chose Marie Curie [S3]. Curie was born on November 7, 1867 [W1].';
     }
     if (prompt.includes('User request: Who was she?')) {
-      assert.match(prompt, /Resolved question: Who was Marie Curie/);
-      assert.match(instructions, /PULSETE_WEB_LOOKUP/);
-      return 'PULSETE_WEB_LOOKUP {"query":"Marie Curie date of birth"}';
+      assert.match(prompt, /Ask the user to name it/);
+      return 'Please name the person you want me to look up.';
     }
     return 'Maya chose Marie Curie [S3].';
   }, {}, async ({ query, ...options }) => {
@@ -104,10 +109,14 @@ test('a public follow-up sends only the standalone query and can cite both kinds
       nick: 'maya', body: 'Marie Curie is my role model.', kind: 'line', self: false, ts: Date.now() });
     const first = await f.service.ask(f.buffer.id, { ...request, scope: 'saved', prompt: 'Who did Maya choose?' });
     assert.deepEqual(lookups, []);
-    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'saved',
+    const unnamed = await f.service.ask(f.buffer.id, { ...request, scope: 'saved',
       continuationToken: first.continuationToken, prompt: 'Who was she?',
       assistantTurns: [{ role: 'assistant', text: first.answer }] }, undefined, { onProgress: stage => stages.push(stage) });
-    assert.deepEqual(lookups, ['Marie Curie date of birth']);
+    assert.deepEqual(lookups, []);
+    assert.match(unnamed.answer, /name the person/);
+    const result = await f.service.ask(f.buffer.id, { ...request, scope: 'saved', prompt: 'When was Marie Curie born?' },
+      undefined, { onProgress: stage => stages.push(stage) });
+    assert.deepEqual(lookups, ['Marie Curie']);
     assert.match(result.answer, /\[S3\].*\[W1\]/);
     assert.deepEqual(result.context.webSources, [{ label: 'W1', title: 'Biography', url: 'https://example.test/curie' }]);
     assert.ok(stages.includes('searching-web'));
@@ -117,9 +126,10 @@ test('a public follow-up sends only the standalone query and can cite both kinds
 test('general explanations skip lookup and unsafe lookup plans stay inside the assistant', async () => {
   let lookups = 0;
   const f = fixture(async ({ instructions, prompt }) => {
-    if (prompt.includes('supplied no verified findings')) return 'I could not verify that.';
-    assert.match(instructions, /PULSETE_WEB_LOOKUP/);
-    if (prompt.includes('User request: Find a private address')) return 'PULSETE_WEB_LOOKUP {"query":"Find a private address #test"}';
+    if (instructions.startsWith('Route a Pulsete')) return prompt.includes('Find a private address')
+      ? '{"intent":"general","publicLookup":{"subject":"Find a private address #test"}}'
+      : '{"intent":"general"}';
+    if (prompt.includes('Public lookup needs a named subject')) return 'I could not verify that.';
     assert.match(instructions, /Use general knowledge for explanations/);
     return 'A chargeback is a payment reversal initiated through the card issuer.';
   }, {}, async () => { lookups++; return []; });
@@ -198,11 +208,12 @@ test('deleted evidence is not reused and clearing prevents in-flight state from 
   } finally { pending.storage.close(); }
 });
 
-test('the assistant can search chat, look up a public fact, then search an older chat date using the result', async () => {
+test('the assistant can use a public fact from the named subject when searching an older chat date', async () => {
   const stages: string[] = [];
   const queries: string[] = [];
   let calls = 0;
   const f = fixture(async ({ instructions, prompt }) => {
+    if (instructions.startsWith('Route a Pulsete')) return '{"intent":"chat","publicLookup":{"subject":"The Wizard of Oz"}}';
     assert.match(instructions, /PULSETE_HISTORY/);
     switch (++calls) {
       case 1:
@@ -210,9 +221,6 @@ test('the assistant can search chat, look up a public fact, then search an older
         return 'PULSETE_HISTORY {"operation":{"action":"search","query":"screening"},"from":"2026-01-03"}';
       case 2:
         assert.match(prompt, /an anniversary screening/);
-        assert.match(instructions, /PULSETE_WEB_LOOKUP/);
-        return 'PULSETE_WEB_LOOKUP {"query":"The Wizard of Oz original release year"}';
-      case 3:
         assert.match(prompt, /released in 1939/);
         return 'PULSETE_HISTORY {"operation":{"action":"related","phrases":["1939 print","classic version"]},"through":"2026-01-01"}';
       default: {
@@ -240,11 +248,11 @@ test('the assistant can search chat, look up a public fact, then search an older
     for (let index = 0; index < 120; index++) append(`chatter-${index}`, 2, 12, 'Unrelated rehearsal chatter.');
     append('screening', 3, 15, 'The Wizard of Oz is getting an anniversary screening.');
     const result = await f.service.ask(f.buffer.id, { ...request, scope: 'auto',
-      prompt: 'When did the film come out and where was the screening agreed?' },
+      prompt: 'When did The Wizard of Oz come out and where was the screening agreed?' },
     undefined, { onProgress: stage => stages.push(stage) });
-    assert.equal(calls, 4);
-    assert.deepEqual(queries, ['The Wizard of Oz original release year']);
-    assert.deepEqual(stages.filter(stage => stage.startsWith('searching')), ['searching', 'searching-web', 'searching']);
+    assert.equal(calls, 3);
+    assert.deepEqual(queries, ['The Wizard of Oz']);
+    assert.deepEqual(stages.filter(stage => stage.startsWith('searching')), ['searching-web', 'searching', 'searching']);
     assert.deepEqual(result.context.sources?.map(({ message }) => message.id), ['venue']);
     assert.equal(result.context.webSources?.[0].label, 'W1');
   } finally { f.storage.close(); }
@@ -294,8 +302,9 @@ test('a public picture reply includes only media grounded in the supplied source
     { source: 'S1', kind: 'image', title: 'Unrelated chat link', url: 'https://example.test/unverified.png' },
   ];
   const f = fixture(async ({ instructions, prompt }) => {
+    if (instructions.startsWith('Route a Pulsete')) return '{"intent":"general","publicLookup":{"subject":"Marie Curie","media":"image"}}';
     assert.match(instructions, /PULSETE_MEDIA/);
-    if (!prompt.includes('Public web findings')) return 'PULSETE_WEB_LOOKUP {"query":"Marie Curie portrait","media":"image"}';
+    assert.match(prompt, /Public web findings/);
     assert.ok(prompt.includes(portrait));
     return 'Here’s a portrait from the archive.\nPULSETE_MEDIA ' + JSON.stringify(media);
   }, {}, async ({ media }) => {

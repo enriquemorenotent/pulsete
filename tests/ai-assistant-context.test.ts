@@ -146,6 +146,7 @@ test('assistant requests include prior sidebar Q&A for clarification prompts', a
   });
 
   await service.ask(channelBuffer.id, {
+    scope: 'auto',
     assistantTurns: [
       { role: 'user', text: 'How many times has TGMistress ejaculated?' },
       { role: 'assistant', text: 'In the latest scene, three times.' },

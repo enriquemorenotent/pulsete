@@ -32,6 +32,10 @@ export const buildAiAssistantContext = (
   if (buffer.kind === 'server') {
     throw badRequest('Assistant is available in channels and private messages');
   }
+  if (request.scope === 'none') {
+    const { id, kind, networkId, target } = buffer;
+    return { buffer: { id, kind, networkId, target }, messages: [], search: { messages: [], terms: [] }, fullLog: null };
+  }
   const dateRange = request.dateRange !== undefined ? request.dateRange : readAssistantDateRange(request.prompt);
   const recentMessages = conversations.listRecentMessagesForBuffer(
     buffer.networkId,

@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { readAssistantSourceLabels, stripAssistantSourceLabels } from '../../shared/ai-assistant-sources.js';
 import { AiAssistantMedia } from './AiAssistantMedia.js';
 import { AiAssistantSources } from './AiAssistantSources.js';
-import type { AssistantEntry } from './AiAssistantChatTypes.js';
+import { generalContextExpiredMessage, type AssistantEntry } from './AiAssistantChatTypes.js';
 
 const AiAssistantMarkdown = lazy(async () => {
   const module = await import('./AiAssistantMarkdown.js');
@@ -85,6 +85,7 @@ function AssistantReply({ entry, showMedia, onUseSuggestion, onOpenSource }: {
 
   return (
     <div className="min-w-0 text-[14px] leading-[21px] text-foreground/95">
+      {entry.generalContextExpired ? <p role="status" className="mb-2 text-xs text-muted-foreground">{generalContextExpiredMessage}</p> : null}
       <div className="min-w-0 space-y-2 wrap-anywhere">
         {entry.mode === 'suggest-reply' ? <p className="whitespace-pre-wrap">{text}</p> : (
           <Suspense fallback={<p className="whitespace-pre-wrap">{text}</p>}>

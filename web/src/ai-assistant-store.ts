@@ -1,17 +1,20 @@
 import { useSyncExternalStore } from 'react';
 import type { AiAssistantContext, AiAssistantMode } from '../../shared/protocol-ai.js';
-import type { AssistantEntry } from './AiAssistantChatTypes.js';
+import type { AssistantChatConfirmation, AssistantEntry } from './AiAssistantChatTypes.js';
 
 type Listener = () => void;
 
 export type AiAssistantThreadState = {
   continuationToken?: string;
+  generalContinuationToken?: string;
   activeRequestId: number | null;
   entries: readonly AssistantEntry[];
   error: string;
   input: string;
   pending: boolean;
   pendingLabel: string;
+  usingChat: boolean;
+  confirmation?: AssistantChatConfirmation;
 };
 
 type StartRequestInput = {
@@ -21,13 +24,16 @@ type StartRequestInput = {
 
 type ResolveRequestInput = {
   continuationToken?: string;
+  usedChat?: boolean;
+  generalContextExpired?: boolean;
   context?: AiAssistantContext;
   mode: AiAssistantMode;
   text: string;
 };
 
 export type AiAssistantStoreApi = {
-  updateProgress: (bufferId: string, requestId: number, label: string) => void;
+  updateProgress: (bufferId: string, requestId: number, label: string, usingChat?: boolean) => void;
+  requestChatConfirmation: (bufferId: string, requestId: number, confirmation: AssistantChatConfirmation) => void;
   clearThread: (bufferId: string) => void;
   failRequest: (bufferId: string, requestId: number, error: string, restoreInput?: string) => void;
   getThread: (bufferId: string | null) => AiAssistantThreadState;
@@ -51,6 +57,7 @@ export const emptyAiAssistantThread: AiAssistantThreadState = {
   input: '',
   pending: false,
   pendingLabel: 'Thinking',
+  usingChat: false,
 };
 
 export const createAiAssistantStore = (): AiAssistantStoreApi => {
@@ -91,8 +98,14 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
   };
 
   return {
-    updateProgress(bufferId, requestId, pendingLabel) {
-      finishRequest(bufferId, requestId, (current) => ({ ...current, pendingLabel }));
+    updateProgress(bufferId, requestId, pendingLabel, usingChat = false) {
+      finishRequest(bufferId, requestId, (current) => ({ ...current, pendingLabel, usingChat: current.usingChat || usingChat }));
+    },
+    requestChatConfirmation(bufferId, requestId, confirmation) {
+      finishRequest(bufferId, requestId, (current) => ({
+        ...current, activeRequestId: null, entries: current.entries.slice(0, -1), confirmation,
+        pending: false, pendingLabel: 'Thinking', usingChat: false,
+      }));
     },
     clearThread(bufferId) {
       if (!(bufferId in threads)) {
@@ -111,6 +124,7 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
         error,
         pending: false,
         pendingLabel: 'Thinking',
+        usingChat: false,
       }));
     },
     getThread(bufferId) {
@@ -130,7 +144,8 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
     resolveRequest(bufferId, requestId, result) {
       finishRequest(bufferId, requestId, (current) => ({
         ...current,
-        continuationToken: result.continuationToken,
+        ...(result.usedChat === false ? { generalContinuationToken: result.continuationToken }
+          : { continuationToken: result.continuationToken }),
         activeRequestId: null,
         entries: [
           ...current.entries,
@@ -138,6 +153,7 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
             id: nextEntryId++,
             mode: result.mode,
             context: result.context,
+            generalContextExpired: result.generalContextExpired,
             role: 'assistant',
             text: result.text,
           },
@@ -145,6 +161,7 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
         error: '',
         pending: false,
         pendingLabel: 'Thinking',
+        usingChat: false,
       }));
     },
     setInput(bufferId, input) {
@@ -171,6 +188,8 @@ export const createAiAssistantStore = (): AiAssistantStoreApi => {
         error: '',
         pending: true,
         pendingLabel: input.pendingLabel,
+        confirmation: undefined,
+        usingChat: false,
       }));
       return requestId;
     },
@@ -196,4 +215,5 @@ export const hasAiAssistantThreadContent = (thread: AiAssistantThreadState) =>
   thread.entries.length > 0
   || Boolean(thread.error)
   || Boolean(thread.input)
+  || Boolean(thread.confirmation)
   || thread.pending;

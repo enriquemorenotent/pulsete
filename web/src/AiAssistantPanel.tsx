@@ -71,12 +71,13 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     prompt: string,
     label = prompt,
     nextPendingLabel = 'Thinking',
+    scope?: 'auto' | 'none',
   ) => {
     if (!bufferId || (mode === 'answer' && !prompt.trim())) {
       return;
     }
     const currentThread = store.getThread(bufferId);
-    const assistantTurns = buildAssistantTurns(currentThread.entries);
+    const assistantTurns = scope === 'none' ? [] : buildAssistantTurns(currentThread.entries);
     const currentRequestId = store.startRequest(bufferId, {
       label: label || 'Draft a reply',
       pendingLabel: nextPendingLabel,
@@ -90,18 +91,27 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       const response = await aiAssistantApi.ask(bufferId, {
         assistantTurns,
         continuationToken: currentThread.continuationToken,
+        generalContinuationToken: currentThread.generalContinuationToken,
         mode,
         prompt,
         selection: resolvedSelection.selection,
-      }, controller.signal, (stage) => store.updateProgress(bufferId, currentRequestId, progressLabels[stage]));
+        scope,
+      }, controller.signal, (stage) => store.updateProgress(bufferId, currentRequestId, progressLabels[stage], stage === 'using-chat'));
       controller.signal.throwIfAborted();
       if (store.getThread(bufferId).activeRequestId !== currentRequestId) return;
       setStatus(response.status);
+      if (response.needsChatConfirmation) {
+        store.requestChatConfirmation(bufferId, currentRequestId, { prompt, message: response.answer,
+          generalContextExpired: response.generalContextExpired });
+        return;
+      }
       store.resolveRequest(bufferId, currentRequestId, {
         mode: response.mode,
         text: response.answer,
         context: response.context,
         continuationToken: response.continuationToken,
+        usedChat: response.usedChat,
+        generalContextExpired: response.generalContextExpired,
       });
     } catch (reason) {
       store.failRequest(
@@ -145,8 +155,10 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
               onClick={() => {
                 if (!bufferId) return;
                 controllers.current.get(bufferId)?.abort();
-                const token = store.getThread(bufferId).continuationToken;
-                if (token) void aiAssistantApi.clear(bufferId, token).catch(() => undefined);
+                const current = store.getThread(bufferId);
+                for (const token of [current.continuationToken, current.generalContinuationToken]) {
+                  if (token) void aiAssistantApi.clear(bufferId, token).catch(() => undefined);
+                }
                 store.clearThread(bufferId);
               }}>
               <MessageSquarePlus />
@@ -174,6 +186,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             input={thread.input}
             pending={thread.pending}
             pendingLabel={thread.pendingLabel}
+            usingChat={thread.usingChat}
+            confirmation={thread.confirmation}
             onAsk={ask}
             onCancel={cancel}
             onChange={value => { if (bufferId) store.setInput(bufferId, value); }}
@@ -198,6 +212,6 @@ const selectionsMatch = (
 ) => left?.model === right.model && left.reasoningEffort === right.reasoningEffort;
 
 const progressLabels = {
-  preparing: 'Thinking', searching: 'Looking back in the chat', reading: 'Looking back in the chat',
+  preparing: 'Thinking', 'using-chat': 'Thinking', searching: 'Looking back in the chat', reading: 'Looking back in the chat',
   'searching-web': 'Looking up public information', writing: 'Thinking', checking: 'Thinking',
 };

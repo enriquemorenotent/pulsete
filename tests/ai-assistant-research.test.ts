@@ -60,6 +60,7 @@ test('the default assistant looks back only when needed and keeps past answers i
     let calls = 0;
     const service = new RuntimeAiAssistantService({ conversations: storage.conversations, provider: provider(async ({ instructions, prompt }) => {
       assert.doesNotMatch(prompt, /secret in other conversation/);
+      if (instructions.startsWith('Route a Pulsete')) return '{"intent":"chat"}';
       switch (++calls) {
         case 1:
           assert.match(instructions, /PULSETE_HISTORY/);
@@ -78,9 +79,9 @@ test('the default assistant looks back only when needed and keeps past answers i
           return 'An orchard is an area where fruit trees are grown.';
       }
     }) });
-    const first = await service.ask(buffer.id, automaticRequest);
+    const first = await service.ask(buffer.id, { ...automaticRequest, prompt: 'Where is the reunion in this chat?' });
     assert.deepEqual(first.context.sources?.map(({ message }) => message.id), ['research-0']);
-    const second = await service.ask(buffer.id, { ...automaticRequest, prompt: 'What is that?',
+    const second = await service.ask(buffer.id, { ...automaticRequest, scope: 'auto', prompt: 'What is that?',
       continuationToken: first.continuationToken, assistantTurns: [{ role: 'assistant', text: 'The orchard was agreed.' }] });
     assert.match(second.answer, /fruit trees/);
     assert.deepEqual(second.context.sources, []);

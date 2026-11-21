@@ -25,12 +25,13 @@ export const aiAssistantTurnSchema = z.object({
 });
 export type AiAssistantTurn = z.infer<typeof aiAssistantTurnSchema>;
 
-export const aiAssistantScopeSchema = z.enum(['auto', 'recent', 'saved']);
+export const aiAssistantScopeSchema = z.enum(['none', 'auto', 'recent', 'saved']);
 export type AiAssistantScope = z.infer<typeof aiAssistantScopeSchema>;
 
 export const aiAssistantRequestSchema = z.object({
   scope: aiAssistantScopeSchema.optional(),
   continuationToken: z.string().uuid().optional(),
+  generalContinuationToken: z.string().uuid().optional(),
   assistantTurns: z.array(aiAssistantTurnSchema).max(aiAssistantThreadMaxTurns).default([]),
   mode: aiAssistantModeSchema.default('answer'),
   prompt: z.string().max(aiAssistantPromptMaxLength).default(''),
@@ -90,7 +91,7 @@ export type AiAssistantAttachment = {
 
 export type AiAssistantWebSource = { label: string; title: string; url: string };
 
-export type AiAssistantProgress = 'preparing' | 'searching' | 'reading' | 'searching-web' | 'writing' | 'checking';
+export type AiAssistantProgress = 'preparing' | 'using-chat' | 'searching' | 'reading' | 'searching-web' | 'writing' | 'checking';
 
 export type AiAssistantStreamEvent =
   | { type: 'progress'; stage: AiAssistantProgress }
@@ -98,6 +99,9 @@ export type AiAssistantStreamEvent =
   | { type: 'error'; message: string };
 
 export type AiAssistantResponse = {
+  needsChatConfirmation?: true;
+  generalContextExpired?: true;
+  usedChat?: boolean;
   continuationToken?: string;
   answer: string;
   context: AiAssistantContext;

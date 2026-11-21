@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { AiAssistantConversation } from '../../web/src/AiAssistantConversation.js';
 import { WorkspaceRightSidebar, type WorkspaceRightSidebarProps } from '../../web/src/WorkspaceRightSidebar.js';
 import { AssistantReadingModeContext } from '../../web/src/assistant-reading-mode.js';
+import { createAiAssistantStore } from '../../web/src/ai-assistant-store.js';
 import type { AiAssistantSelection } from '../../shared/protocol-ai.js';
 import type { AssistantEntry } from '../../web/src/AiAssistantChatTypes.js';
 import '../../web/src/globals.css';
@@ -43,7 +44,10 @@ function SidebarFixture() {
   const [expanded, setExpanded] = useState(false);
   const [selection, setSelection] = useState<AiAssistantSelection>({ model: null, reasoningEffort: null });
   const [draft, setDraft] = useState('');
-  const buffer = { ...entries[0].context!.buffer, kind: 'query' as const, target: 'Reading group',
+  const [bufferIndex, setBufferIndex] = useState(0);
+  const [assistantStore] = useState(createAiAssistantStore);
+  const showPrivacyControls = new URLSearchParams(window.location.search).has('privacy');
+  const buffer = { ...entries[bufferIndex]!.context!.buffer, kind: 'query' as const, target: bufferIndex === 0 ? 'Reading group' : 'Other chat',
     unread: 0, priorityUnread: 0, lastReadTs: null, lastReadMessageId: null };
   const workspace: WorkspaceRightSidebarProps['workspace'] = {
     mode: 'query-connected', selection: { kind: 'buffer', bufferId: buffer.id },
@@ -52,6 +56,7 @@ function SidebarFixture() {
     headerSubtitle: '', composerMode: 'normal', composerPlaceholder: '', emptyBody: '', showNicklist: false,
   };
   return <main className="mx-auto flex h-screen flex-col" style={{ width: expanded ? 540 : 320 }}>
+    {showPrivacyControls ? <button onClick={() => setBufferIndex(index => index === 0 ? 1 : 0)}>Switch conversation</button> : null}
     <AssistantReadingModeContext.Provider value={{ expanded, setExpanded }}>
       <WorkspaceRightSidebar workspace={workspace}
         showMedia={!new URLSearchParams(window.location.search).has('hide-media')} nicklist={{
@@ -60,7 +65,7 @@ function SidebarFixture() {
           removeFriend: async () => true, toggleNotifications: async () => true, unmute: async () => true },
         externalAvatarsEnabled: false,
         onSaveNickEmoji: async () => true, onSelectNick: () => undefined,
-      }} assistant={{ buffer, selection, onSelectionChange: value => { setSelection(value); return true; },
+      }} assistant={{ buffer, selection, store: assistantStore, onSelectionChange: value => { setSelection(value); return true; },
         onUseSuggestion: setDraft }} />
     </AssistantReadingModeContext.Provider>
     {draft ? <output aria-label="IRC draft">{draft}</output> : null}
