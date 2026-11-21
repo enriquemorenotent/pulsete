@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import { NetworkServerImageField } from './NetworkServerImageField.js';
 import type { EditorTab, NetworkForm } from './network-form.js';
@@ -214,20 +215,16 @@ function SelectField(props: {
 }) {
   const id = useId();
   return (
-    <div className="space-y-1">
+    <div className="flex flex-col gap-1">
       <Label htmlFor={id}>{props.label}</Label>
-      <select
-        id={id}
-        value={props.value}
-        onChange={(event) => props.onChange(event.target.value)}
-        className="flex h-8 w-full rounded-lg border border-white/10 bg-white/[0.035] px-3 py-1.5 text-[13px] text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/60"
-      >
-        {props.options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <Select value={props.value} onValueChange={props.onChange}>
+        <SelectTrigger id={id} size="sm" className="w-full"><SelectValue /></SelectTrigger>
+        <SelectContent position="popper" align="start">
+          <SelectGroup>
+            {props.options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

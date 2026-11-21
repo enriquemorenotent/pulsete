@@ -4,6 +4,8 @@ import type { ChatMessage, LogSource, MutedNickState, NetworkProfile, NickEmojiS
 import { Button } from '@/components/ui/button.js';
 import { DialogClose, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
 import type { HistorySearchState } from './HistorySearchDialog.js';
 import { SourceList } from './HistoryConversationList.js';
@@ -106,18 +108,30 @@ export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
       </div>
       <div id={filtersId} hidden={!showFilters}>
         <div className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-muted/20 p-3">
-          <label className="flex min-w-0 flex-1 basis-48 flex-col gap-1 text-xs text-muted-foreground">Conversation
-            <select aria-label="Search scope" value={props.scopeBufferId ? 'conversation' : 'all'} className={selectClass} onChange={(event) => props.onScopeChange(event.target.value)}>
-              <option value="all">All conversations</option>
-              <option value="conversation" disabled={!props.selectedSource && !props.scopeBufferId}>This conversation{props.scopeLabel ? ` · ${props.scopeLabel}` : ''}</option>
-            </select>
-          </label>
-          <label className="flex min-w-0 flex-1 basis-48 flex-col gap-1 text-xs text-muted-foreground">Account
-            <select aria-label="Filter logs by network" value={props.searchNetworkValue} className={selectClass} disabled={!!props.scopeBufferId} onChange={(event) => { props.onSearchNetworkChange(event.target.value); props.onNetworkChange(event.target.value); }}>
-              <option value={allNetworksValue}>All accounts</option>
-              {props.networks.map((network) => <option key={network.id} value={network.id}>{network.name}</option>)}
-            </select>
-          </label>
+          <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
+            <Label htmlFor={`${filtersId}-scope`} className="text-xs text-muted-foreground">Conversation</Label>
+            <Select value={props.scopeBufferId ? 'conversation' : 'all'} onValueChange={props.onScopeChange}>
+              <SelectTrigger id={`${filtersId}-scope`} aria-label="Search scope" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent position="popper" align="start">
+                <SelectGroup>
+                  <SelectItem value="all">All conversations</SelectItem>
+                  <SelectItem value="conversation" disabled={!props.selectedSource && !props.scopeBufferId}>This conversation{props.scopeLabel ? ` · ${props.scopeLabel}` : ''}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
+            <Label htmlFor={`${filtersId}-account`} className="text-xs text-muted-foreground">Account</Label>
+            <Select value={props.searchNetworkValue} disabled={!!props.scopeBufferId} onValueChange={(value) => { props.onSearchNetworkChange(value); props.onNetworkChange(value); }}>
+              <SelectTrigger id={`${filtersId}-account`} aria-label="Filter logs by network" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent position="popper" align="start">
+                <SelectGroup>
+                  <SelectItem value={allNetworksValue}>All accounts</SelectItem>
+                  {props.networks.map(network => <SelectItem key={network.id} value={network.id}>{network.name}</SelectItem>)}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">From<Input type="date" aria-label="From date" className="w-40" value={props.fromDate} max={props.toDate || undefined} onChange={(event) => props.onFromDateChange(event.target.value)} /></label>
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">To<Input type="date" aria-label="To date" className="w-40" value={props.toDate} min={props.fromDate || undefined} onChange={(event) => props.onToDateChange(event.target.value)} /></label>
         </div>
@@ -133,9 +147,16 @@ export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
         <TabsContent value="sources" className="m-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
           <form onSubmit={props.onSourceSubmit} className="space-y-2 border-b border-border p-3">
             <div className="flex gap-2"><Input value={props.sourceQuery} onChange={(event) => props.onSourceQueryChange(event.target.value)} placeholder="Find a conversation" aria-label="Find conversation" /><Button type="submit" variant="outline" disabled={props.sourceState.status === 'loading'}>Find</Button></div>
-            <select aria-label="Filter conversations by type" value={props.sourceKindValue} className={cn(selectClass, 'w-full')} onChange={(event) => props.onSourceKindChange(event.target.value)}>
-              <option value={allSourceKindsValue}>All types</option><option value="channel">Channels</option><option value="query">Direct messages</option>
-            </select>
+            <Select value={props.sourceKindValue} onValueChange={props.onSourceKindChange}>
+              <SelectTrigger aria-label="Filter conversations by type" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent position="popper" align="start">
+                <SelectGroup>
+                  <SelectItem value={allSourceKindsValue}>All types</SelectItem>
+                  <SelectItem value="channel">Channels</SelectItem>
+                  <SelectItem value="query">Direct messages</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </form>
           <div className="min-h-0 flex-1 overflow-y-auto"><SourceList networkNamesById={names} selectedSource={props.selectedSource} sourceState={props.sourceState} onSourceSelect={(source) => { props.onSourceSelect(source); setShowReader(true); }} /></div>
         </TabsContent>
@@ -153,5 +174,3 @@ export function LogInspectorDialogBody(props: LogInspectorDialogBodyProps) {
     </div>
   </div>;
 }
-
-const selectClass = 'h-9 min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50';

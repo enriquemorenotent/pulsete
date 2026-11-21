@@ -4,10 +4,13 @@ import { useId, useState } from 'react';
 import { ExternalLink as ExternalLinkIcon, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select.js';
 import { nordVpnLocations } from '../../shared/nordvpn.js';
 import type { NetworkForm } from './network-form.js';
 
 export const nordAccountSetupUrl = 'https://my.nordaccount.com/dashboard/nordvpn/manual-configuration/service-credentials/';
+const directConnection = 'direct';
 
 export function NordVpnSettings({ form, onChange }: {
   form: NetworkForm;
@@ -51,17 +54,26 @@ export function NordVpnSettings({ form, onChange }: {
         {incomplete ? <p role="alert" className="text-xs text-destructive">Enter both service credentials before saving.</p> : null}
         {saved ? <Button variant="ghost" size="sm" onClick={() => { onChange({ nordVpnUsername: '', nordVpnPassword: '' }); setEditing(false); }}>Keep saved credentials</Button> : null}
       </div> : null}
-      <div className="space-y-1">
-        <label htmlFor={`${id}-location`} className="text-[13px]">Location for this connection</label>
-        <select id={`${id}-location`} className="flex h-8 w-full rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[13px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/60" value={form.nordVpnLocation ?? ''} onChange={event => onChange({ nordVpnLocation: event.target.value })}>
-          <option value="">Direct connection</option>
-          <optgroup label="VPN countries · requires Docker">
-            {nordVpnCountries.map(country => <option key={country} value={`country:${country}`}>{country}</option>)}
-          </optgroup>
-          <optgroup label="SOCKS5 proxies · no Docker required">
-            {nordVpnLocations.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </optgroup>
-        </select>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={`${id}-location`}>Location for this connection</Label>
+        <Select value={form.nordVpnLocation || directConnection} onValueChange={value => onChange({ nordVpnLocation: value === directConnection ? '' : value })}>
+          <SelectTrigger id={`${id}-location`} size="sm" className="w-full max-w-72">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent position="popper" align="start" className="max-h-[min(20rem,var(--radix-select-content-available-height))]">
+            <SelectGroup>
+              <SelectItem value={directConnection}>Direct connection</SelectItem>
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel>VPN countries · requires Docker</SelectLabel>
+              {nordVpnCountries.map(country => <SelectItem key={country} value={`country:${country}`}>{country}</SelectItem>)}
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel>SOCKS5 proxies · no Docker required</SelectLabel>
+              {nordVpnLocations.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <p className="text-xs text-muted-foreground">Choose from {nordVpnCountries.length} VPN countries. Each connection runs its own isolated tunnel using Docker. The first connection downloads the VPN helper.</p>
       </div>
       {form.nordVpnLocation ? <p className="text-xs text-muted-foreground">Saving a new location reconnects an active connection. If the proxy fails, this connection stays offline. Enable TLS to encrypt your IRC messages.</p> : null}
