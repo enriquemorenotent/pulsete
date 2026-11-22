@@ -1,3 +1,4 @@
+import { QueryMediaGallery } from './QueryMediaGallery.js';
 import { useState } from 'react';
 import type { BufferState, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
@@ -160,6 +161,7 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
           contactControls={
             selectedBuffer?.kind === 'query' && selectedQueryAvatarUser ? (
               <>
+                <QueryMediaGallery key={selectedBuffer.id} buffer={selectedBuffer} />
                 {props.onSaveNickEmoji ? (
                   <NickEmojiEditorControl
                     emoji={selectedNickEmoji?.emoji ?? null}
