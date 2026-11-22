@@ -21,11 +21,12 @@ export function QueryProfileSidebar(props: {
         </summary>
         <AutosaveNotesEditor
           id="query-profile-notes"
+          markdown
           fill={false}
           variant="document"
           notes={buffer.notes ?? ''}
           onSave={(notes) => props.onSaveNotes(buffer, notes).then(Boolean)}
-          placeholder="Add details you want to remember…"
+          placeholder="Write notes in Markdown…"
           scopeKey={`buffer:${buffer.id}`}
         />
       </details>

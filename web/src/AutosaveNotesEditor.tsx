@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AiAssistantMarkdown as Markdown } from './AiAssistantMarkdown.js';
 import { Label } from '@/components/ui/label.js';
 import { cn } from '@/lib/utils.js';
 
@@ -10,6 +11,7 @@ type NotesEditorVariant = 'default' | 'compact' | 'document';
 
 type NotesEditorProps = {
   fill?: boolean;
+  markdown?: boolean;
   id: string;
   notes: string;
   onSave: (notes: string) => Promise<boolean>;
@@ -23,6 +25,8 @@ export function AutosaveNotesEditor(props: NotesEditorProps) {
 }
 
 function NotesEditor(props: NotesEditorProps) {
+  const [editing, setEditing] = useState(false);
+  const preview = props.markdown && !editing;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [recentlySaved, setRecentlySaved] = useState(false);
   const savedFeedbackRef = useRef({ scope: props.scopeKey, notes: props.notes });
@@ -88,7 +92,7 @@ function NotesEditor(props: NotesEditorProps) {
     });
     observer.observe(textarea);
     return () => observer.disconnect();
-  }, [draftNotes, variant]);
+  }, [draftNotes, variant, preview]);
 
   const statusText = getAutosaveStatusText(autosaveState, draftNotes, savedNotes);
   const showCompactStatus = !showHeader && (statusText !== 'Saved' || (variant === 'document' && recentlySaved));
@@ -123,7 +127,18 @@ function NotesEditor(props: NotesEditorProps) {
           showHeader ? fill && 'min-h-40' : 'min-h-32',
         )}
       >
-        <textarea
+        {props.markdown && (
+          <button type="button" className="rounded px-1 py-1 text-xs text-primary hover:underline"
+            onClick={() => setEditing(!editing)}>
+            {editing ? 'Done' : draftNotes ? 'Edit notes' : 'Add notes'}
+          </button>
+        )}
+        {preview ? (
+          <div id={props.id} className="space-y-2 break-words px-1 text-[13px] leading-6">
+            <Markdown>{draftNotes}</Markdown>
+          </div>
+        ) : <textarea
+          autoFocus={props.markdown}
           ref={textareaRef}
           id={props.id}
           aria-label={showHeader ? undefined : 'Notes'}
@@ -139,7 +154,7 @@ function NotesEditor(props: NotesEditorProps) {
               ? 'rounded-lg border border-white/[0.07] bg-black/15 px-3 py-2.5 text-[13px] leading-5 text-foreground/84 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-muted-foreground hover:border-white/12 hover:bg-black/20 focus-visible:border-ring/60 focus-visible:bg-black/20'
               : 'rounded-sm border border-white/[0.04] bg-black/10 py-1.5 pl-2 pr-16 text-[12px] leading-5 text-foreground/78 placeholder:text-muted-foreground/50 hover:border-white/8 hover:bg-black/15 focus-visible:border-ring/50 focus-visible:bg-black/12',
           )}
-        />
+        />}
         {showCompactStatus ? (
           <div className={variant === 'document' ? 'text-right' : 'pointer-events-none absolute right-2 top-2 rounded-sm border border-white/[0.06] bg-background/90 px-1.5 py-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.24)]'}>
             <AutosaveStatus state={autosaveState} statusText={statusText} />

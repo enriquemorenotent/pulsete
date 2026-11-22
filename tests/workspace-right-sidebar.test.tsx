@@ -41,7 +41,7 @@ const queryBuffer: BufferState = {
   networkId: network.id,
   kind: 'query',
   target: 'Sofia',
-  notes: 'Prefers encrypted routes',
+  notes: 'Prefers **encrypted routes**',
   unread: 0,
   priorityUnread: 0,
   lastReadTs: null,
@@ -208,8 +208,8 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   assert.match(markup, /aria-label="Conversation context"/);
 
   assert.match(markup, /query-profile-notes/);
-  assert.match(markup, /resize-none overflow-hidden/);
-  assert.match(markup, /Prefers encrypted routes/);
+  assert.match(markup, /Edit notes/);
+  assert.match(markup, /Prefers <strong>encrypted routes<\/strong>/);
   assert.match(markup, /Saved/);
 });
 
