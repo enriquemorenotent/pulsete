@@ -1,4 +1,4 @@
-import { memo, useCallback, useReducer } from 'react';
+import { memo, useCallback, useReducer, type ReactNode } from 'react';
 import type { BufferState, ChatMessage, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import type { ChannelListState } from './app-types.js';
@@ -32,6 +32,8 @@ export type ChatPaneProps = {
   selectedMessages: ChatMessage[];
   draft: string;
   replySuggestion?: string | null;
+  sendFile?: ReactNode;
+  fileTransferStatus?: ReactNode;
   onDismissReplySuggestion?: () => void;
   onTakeReplySuggestion?: (displayed: string) => boolean;
   focusContextKey?: string | null;
@@ -192,10 +194,12 @@ export const ChatPane = memo(function ChatPane(props: ChatPaneProps) {
         canPinMessages={props.canPinMessages}
         onSetMessagePinned={props.onSetMessagePinned}
       />
+      {props.fileTransferStatus}
       {props.workspace.composerMode !== 'hidden' ? (
         <ChatPaneComposer
           draft={props.draft}
           replySuggestion={props.replySuggestion}
+          sendFile={props.sendFile}
           onDismissReplySuggestion={props.onDismissReplySuggestion}
           onTakeReplySuggestion={props.onTakeReplySuggestion}
           mode={props.workspace.composerMode}

@@ -1,5 +1,6 @@
 import { stateRevisionSchema } from './protocol-sync.js';
 import { z } from 'zod';
+import { dccStateSchema } from './dcc.js';
 import {
   bufferSchema,
   channelSchema,
@@ -21,6 +22,7 @@ import {
 
 export const appSnapshotSchema = z.object({
   sync: stateRevisionSchema.optional(),
+  dcc: dccStateSchema.optional(),
   networks: z.array(networkSchema),
   friends: z.array(friendSchema),
   mutedNicks: z.array(mutedNickSchema).default([]),

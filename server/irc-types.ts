@@ -16,7 +16,11 @@ import type { PendingReplyContext } from './irc-reply-context-types.js';
 import type { ChannelListEntry } from '../shared/protocol-chat.js';
 import type { MessageInput, RuntimeNetworkProfile } from './storage-types.js';
 
+import type { DccOffer } from './dcc-protocol.js';
+import type { NetworkUserIdentity } from '../shared/user-identity.js';
+
 export type RuntimeEvent =
+  | { type: 'dcc-offer'; networkId: string; nick: string; identity: NetworkUserIdentity | null; offer: DccOffer }
   | { type: 'friend-observation'; networkId: string; presences: Record<string, PresenceStatus>; transport: 'monitor' | 'ison' | null }
   | {
       type: 'state';

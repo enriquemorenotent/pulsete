@@ -23,6 +23,7 @@ import {
   NetworkManagerDialogContainer,
   PreferencesDialogContainer,
 } from './DesktopShellDialogContainers.js';
+import { DccTransfersButton } from './DccTransfers.js';
 import { AssistantIndexIndicator } from './AssistantIndexIndicator.js';
 import { DesktopShellLayout } from './DesktopShellLayout.js';
 import type { MediaVisibilityMode } from './media-visibility-settings.js';
@@ -75,6 +76,8 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
   ]);
   const rightSidebarKind = useAppSelector(selectRightSidebarKind);
   const selectedBufferId = useAppSelector(selectSelectedBufferId);
+  const [fileTransfersOpen, setFileTransfersOpen] = useState(false);
+  const openFileTransfers = useCallback(() => setFileTransfersOpen(true), []);
   const historyHasNewerByBufferId = useAppSelector(selectHistoryHasNewerByBufferId);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [jumpToLatestRequestId, requestJumpToLatest] = useReducer(
@@ -135,6 +138,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
     <DesktopShellLayout
       header={header}
       indexProgress={<AssistantIndexIndicator />}
+      fileTransfers={<DccTransfersButton open={fileTransfersOpen} onOpenChange={setFileTransfersOpen} />}
       commandPalette={commandPalette}
       onJumpChatToLatest={jumpChatToLatest}
       selectedBufferId={selectedBufferId}
@@ -191,6 +195,7 @@ export const DesktopShell = memo(function DesktopShell(props: DesktopShellProps)
           externalAvatarsEnabled={props.externalAvatarsEnabled}
           showMedia={showMedia}
           jumpToLatestRequestId={jumpToLatestRequestId}
+          onOpenFileTransfers={openFileTransfers}
         />
       }
       rightSidebar={

@@ -1,3 +1,4 @@
+import type { PickDccFile } from '../shared/dcc.js';
 import { closeNordVpnTunnels } from './nordvpn-tunnel.js';
 import { createServer, type Server } from 'node:http';
 import { resolveAppPaths, type AppPathInput } from './app-paths.js';
@@ -24,10 +25,10 @@ export type PulseteServerHandle = {
   url: string;
 };
 
-export const startPulseteServer = async (options: PulseteServerOptions = {}): Promise<PulseteServerHandle> => {
+export const startPulseteServer = async (options: PulseteServerOptions = {}, pickDccFile?: PickDccFile): Promise<PulseteServerHandle> => {
   const listenHost = options.host ?? '127.0.0.1';
   const listenPort = options.port ?? Number(process.env.PORT ?? 18487);
-  const runtimeHost = new RuntimeHost(resolveAppPaths(options), { seedDefaultNetworks: true });
+  const runtimeHost = new RuntimeHost(resolveAppPaths(options), { seedDefaultNetworks: true, pickDccFile });
   const authentication = createClientAuthentication();
   const server = createServer(createHttpHandler(runtimeHost.http, {
     assetRoot: options.assetRoot,
@@ -59,6 +60,7 @@ export const startPulseteServer = async (options: PulseteServerOptions = {}): Pr
       }
       closed = true;
       runtimeHost.close();
+      await runtimeHost.http.dcc?.waitForIdle();
       await closeNordVpnTunnels();
       await closeServer(server);
     },

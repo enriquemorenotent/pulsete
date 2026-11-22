@@ -1,4 +1,5 @@
 import type WebSocket from 'ws';
+import type { PickDccFile } from '../shared/dcc.js';
 import { appSnapshotSchema } from '../shared/protocol-app.js';
 import type { ClientMessage } from '../shared/protocol-messages.js';
 import { badRequest } from './app-error.js';
@@ -15,11 +16,13 @@ import type { BackupHttpApi } from './http-types.js';
 export class RuntimeHost {
   private readonly paths: AppPaths;
   private storage: Storage;
+  private readonly pickDccFile?: PickDccFile;
   private runtime: Runtime;
   readonly http: RuntimeHttpApi & { backups: BackupHttpApi };
   readonly ws: RuntimeWebSocketApi;
 
-  constructor(paths: AppPaths | string, options: { seedDefaultNetworks?: boolean } = {}) {
+  constructor(paths: AppPaths | string, options: { seedDefaultNetworks?: boolean; pickDccFile?: PickDccFile } = {}) {
+    this.pickDccFile = options.pickDccFile;
     this.paths = typeof paths === 'string' ? resolveAppPaths({ databasePath: paths }) : paths;
     const current = this.openRuntime(this.paths, options.seedDefaultNetworks);
     this.storage = current.storage;
@@ -41,7 +44,7 @@ export class RuntimeHost {
     const storage = new Storage(paths, { seedDefaultNetworks });
     try {
       return {
-        runtime: createRuntime(storage),
+        runtime: createRuntime(storage, this.pickDccFile),
         storage,
       };
     } catch (error) {
@@ -116,7 +119,9 @@ export class RuntimeHost {
   }
 
   private createHttpApi(): RuntimeHost['http'] {
+    const host = this;
     return {
+      get dcc() { return host.runtime.http.dcc; },
       assistant: {
         ask: (bufferId, request, signal, options) => this.runtime.http.assistant.ask(bufferId, request, signal, options),
         suggestReply: (bufferId, messageId, signal) => this.runtime.http.assistant.suggestReply(bufferId, messageId, signal),

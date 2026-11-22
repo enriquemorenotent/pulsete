@@ -1,6 +1,7 @@
 import { ircServerRulesSchema } from './irc-server-rules.js';
 import { stateRevisionSchema } from './protocol-sync.js';
 import { z } from 'zod';
+import { dccStateSchema } from './dcc.js';
 import { appSnapshotSchema } from './protocol-app.js';
 import {
   bufferSchema,
@@ -76,6 +77,7 @@ export type ClientMessage = z.infer<typeof clientMessageSchema>;
 
 export const serverMessageSchema = z.discriminatedUnion('type', [
   baseServerSchema.extend({ type: z.literal('state.ready'), snapshot: appSnapshotSchema }),
+  baseServerSchema.extend({ type: z.literal('dcc.updated'), dcc: dccStateSchema }),
   baseServerSchema.extend({
     type: z.literal('network.state'),
     networkId: z.string(),

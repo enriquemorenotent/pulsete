@@ -1,3 +1,7 @@
+import type { PickDccFile } from '../shared/dcc.js';
+import { isUserMuted, resolveMutedTarget } from '../shared/muted-nicks.js';
+import { DccService } from './dcc-service.js';
+import { normalizeAddress } from './dcc-protocol.js';
 import { RuntimeRevisionStream } from './runtime-revision-stream.js';
 import { RuntimeWatchlistActivity } from './runtime-watchlist-activity.js';
 import type { ServerMessage } from '../shared/protocol-messages.js';
@@ -30,7 +34,7 @@ import { createRuntimeSnapshot } from './runtime-snapshot.js';
 import { createRuntimeWebSocketApi } from './runtime-websocket-api.js';
 import { createRuntimeUserStateServices } from './runtime-user-state-service.js';
 
-export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
+export const createRuntimeServices = (store: RuntimeStore, pickDccFile?: PickDccFile): RuntimeServices => {
   let closing = false;
 
   const socketHub = new RuntimeSocketHub();
@@ -75,9 +79,32 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     networks: store.networks,
     isClosing: () => closing,
     onConnectionEvent: event => {
+      if (event.type === 'dcc-offer' && !isUserMuted(store.mutedNicks.list(event.networkId),
+        resolveMutedTarget(event.networkId, event.nick, event.identity))) {
+        dcc.offer(event.networkId, event.nick, event.offer);
+      }
+      if (event.type === 'state' && event.phase !== 'connected') dcc.cancelNetwork(event.networkId);
       if (event.type === 'state' && event.serverRules && event.phase === 'connected') {
         store.networks.saveServerRules(event.networkId, event.serverRules);
       }
+    },
+  });
+  const dcc = new DccService({
+    pick: pickDccFile,
+    buffer: id => store.conversations.getBuffer(id),
+    publish: state => publish({ type: 'dcc.updated', dcc: state }),
+    session: networkId => {
+      const connection = connectionManager.connections.get(networkId);
+      const socket = connection?.lifecycle.socket;
+      if (!connection?.lifecycle.connected || !socket?.localAddress || socket.destroyed
+          || connection.profile.nordVpnLocation || connection.lifecycle.vpnServer) return null;
+      const profile = store.networks.getRuntime(networkId);
+      if (!profile || profile.nordVpnLocation) return null;
+      const localAddress = normalizeAddress(socket.localAddress);
+      return localAddress ? {
+        socket, localAddress, networkName: connection.profile.name,
+        sendOffer: line => connection.sendRaw(line),
+      } : null;
     },
   });
   socketHub.setDropHandler((ws) => connectionManager.removeSocket(ws));
@@ -114,9 +141,14 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     attachSocket: (ws) => socketHub.attach(ws),
     detachSocket: (ws) => socketHub.detach(ws),
     publish,
-    snapshot: () => ({ ...createRuntimeSnapshot(store.snapshotSource, connectionManager), sync: revisions.current() }),
+    snapshot: () => ({
+      ...createRuntimeSnapshot(store.snapshotSource, connectionManager),
+      ...(pickDccFile ? { dcc: dcc.snapshot() } : {}),
+      sync: revisions.current(),
+    }),
     close: () => {
       closing = true;
+      dcc.close();
       socketHub.closeAll();
       connectionManager.close();
     },
@@ -187,6 +219,7 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
     duplicateNetwork: (networkId) => publishMutation(networkMutations.duplicateNetwork(networkId)),
     deleteNetwork: (networkId) => {
       const result = networkMutations.deleteNetwork(networkId);
+      for (const removedId of result.deletedNetworkIds) dcc.cancelNetwork(removedId);
       const nextPreferences = store.preferences.get();
       return publishMutation({
         ...result,
@@ -208,9 +241,14 @@ export const createRuntimeServices = (store: RuntimeStore): RuntimeServices => {
       }
       return result;
     },
-    closeConnection: (networkId) => publishMutation(networkMutations.closeConnection(networkId)),
+    closeConnection: (networkId) => {
+      const result = networkMutations.closeConnection(networkId);
+      dcc.cancelNetwork(networkId);
+      return publishMutation(result);
+    },
   };
   const http: RuntimeHttpApi = {
+    dcc,
     assistant: {
       ask: (bufferId, request, signal, options) => assistantService.ask(bufferId, request, signal, options),
       suggestReply: createAiReplySuggestion({

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, dialog } from 'electron';
 import { join } from 'node:path';
+import { pickDesktopDccFile } from './dcc-file-dialog.js';
 import { startDesktopServer, type DesktopServer } from './server-process.js';
 import {
   handleDesktopNavigationCommand,
@@ -73,7 +74,7 @@ async function startDesktopApp() {
   }, () => {
     diagnosticLog('server-unexpected-exit');
     app.quit();
-  });
+  }, request => mainWindow && !mainWindow.isDestroyed() ? pickDesktopDccFile(mainWindow, request) : Promise.resolve(null));
 
   mainWindow = createMainWindow(serverHandle);
   await mainWindow.loadURL(serverHandle.clientUrl);

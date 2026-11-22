@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { maxDraftCharacters } from '../../shared/protocol-preferences.js';
 import { SendHorizonal, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
@@ -55,6 +55,7 @@ export const shouldFocusChatPaneComposerFromRequest = (
 type ChatPaneComposerProps = {
   draft: string;
   replySuggestion?: string | null;
+  sendFile?: ReactNode;
   onDismissReplySuggestion?: () => void;
   onTakeReplySuggestion?: (displayed: string) => boolean;
   mode: ComposerMode;
@@ -160,6 +161,7 @@ export function ChatPaneComposer(props: ChatPaneComposerProps) {
           {prompt.prefixSymbol}
         </div>
       ) : null}
+      {props.sendFile}
       <div className="relative min-w-0 flex-1">
         <Input
           ref={inputRef}

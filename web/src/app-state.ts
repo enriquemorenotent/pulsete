@@ -68,6 +68,7 @@ export const initialState: State = {
 const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
   phase: 'ready' as const,
   gatewayStatus: state.domain.gatewayStatus,
+  ...(snapshot.dcc ? { dcc: snapshot.dcc } : {}),
   networks: snapshot.networks,
   friends: sortFriends(snapshot.friends),
   mutedNicks: sortMutedNicks(snapshot.mutedNicks),
@@ -95,6 +96,7 @@ const reduceSnapshotDomain = (state: State, snapshot: AppSnapshot) => ({
 });
 
 export const reducer = (state: State, action: Action): State => {
+  if (action.type === 'dcc-updated') return { ...state, domain: { ...state.domain, dcc: action.dcc } };
   if (action.type === 'page-message-window') {
     const replacement = resolveHistoryPageAction(state, action);
     return replacement ? reducer(state, replacement) : state;

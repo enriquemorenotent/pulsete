@@ -17,6 +17,8 @@ const toActions = (message: ServerMessage): Action[] => {
         { type: 'gateway-connected' },
         { type: 'snapshot', snapshot: message.snapshot },
       ];
+    case 'dcc.updated':
+      return [{ type: 'dcc-updated', dcc: message.dcc }];
     case 'network.state':
       return [{
         type: 'network-state',

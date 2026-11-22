@@ -1,3 +1,4 @@
+import type { DccState } from '../../shared/dcc.js';
 import type { AppSnapshot } from '../../shared/protocol-app.js';
 import type { BufferState, ChannelState, ChannelListEntry, ChannelUserState, ChatMessage, FriendState, MutedNickState, NetworkProfile, NickEmojiState, PendingChannelState, PresenceStatus } from '../../shared/protocol-chat.js';
 import type { ConversationMessages } from './conversation-message-state.js';
@@ -41,6 +42,7 @@ export type NetworkManagerState = {
 export type AppDomainState = {
   phase: 'loading' | 'ready';
   gatewayStatus: GatewayStatus;
+  dcc?: DccState;
   networks: NetworkProfile[];
   friends: FriendState[];
   mutedNicks: MutedNickState[];
@@ -85,6 +87,7 @@ export type Action =
   | { type: 'snapshot'; snapshot: AppSnapshot }
   | { type: 'gateway-connecting' }
   | { type: 'gateway-connected' }
+  | { type: 'dcc-updated'; dcc: DccState }
   | { type: 'gateway-disconnected' }
   | { type: 'upsert-network'; network: NetworkProfile }
   | { type: 'upsert-friend'; friend: FriendState }

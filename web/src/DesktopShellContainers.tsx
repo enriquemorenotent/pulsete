@@ -1,6 +1,7 @@
 import { AccountMediaProvider } from './account-media.js';
 import { memo, useMemo, type ReactNode } from 'react';
 import { ConnectionSidebar } from './ConnectionSidebar.js';
+import { DccSendButton, DccSendStatus, DccUnavailableButton } from './DccTransfers.js';
 import { ChatPane } from './ChatPane.js';
 import { CommandPaletteDialog } from './CommandPaletteDialog.js';
 import {
@@ -58,6 +59,7 @@ type ChatContainerProps = Pick<SharedProps, 'actions'> & {
   externalAvatarsEnabled: boolean;
   showMedia: boolean;
   jumpToLatestRequestId: number;
+  onOpenFileTransfers: () => void;
 };
 
 type CommandPaletteContainerProps = SharedProps & {
@@ -134,6 +136,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   externalAvatarsEnabled,
   showMedia,
   jumpToLatestRequestId,
+  onOpenFileTransfers,
 }: ChatContainerProps) {
   const channels = useAppSelector(selectChannels);
   const channelList = useAppSelector(selectChannelList);
@@ -152,6 +155,12 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const suggestionBuffer = useAppSelector(selectReplySuggestionBuffer);
+  const dccEnabled = useAppSelector(state => state.domain.dcc?.enabled === true);
+  const directMessage = workspace.selectedBuffer?.kind === 'query' ? workspace.selectedBuffer : null;
+  const routedConnection = Boolean(workspace.selectedNetwork?.nordVpnLocation || workspace.selectedRuntime?.vpnServer);
+  const canSendFile = dccEnabled && gatewayStatus === 'connected'
+    && workspace.selectedRuntime?.phase === 'connected'
+    && workspace.composerMode === 'normal' && !workspace.composerDisabled;
   const { documentVisible, windowFocused } = useDocumentActivityState();
 
   useSelectedBufferReadReceipt({
@@ -199,6 +208,12 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
       <ChatPane
         {...model}
         replySuggestion={suggestion}
+        sendFile={canSendFile && directMessage && (routedConnection
+          ? <DccUnavailableButton />
+          : <DccSendButton key={directMessage.id} bufferId={directMessage.id} peer={directMessage.target} />)}
+        fileTransferStatus={dccEnabled && directMessage && (
+          <DccSendStatus bufferId={directMessage.id} onOpenTransfers={onOpenFileTransfers} />
+        )}
         onDismissReplySuggestion={dismiss}
         onTakeReplySuggestion={take}
         jumpToLatestRequestId={jumpToLatestRequestId}

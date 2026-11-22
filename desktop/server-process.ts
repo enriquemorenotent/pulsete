@@ -1,3 +1,4 @@
+import type { PickDccFile } from '../shared/dcc.js';
 import { utilityProcess } from 'electron';
 import { join } from 'node:path';
 import type { PulseteServerOptions } from '../server/server-app.js';
@@ -8,7 +9,7 @@ export type DesktopServer = {
   close: () => Promise<void>;
 };
 
-export const startDesktopServer = (options: PulseteServerOptions, onExit: () => void) =>
+export const startDesktopServer = (options: PulseteServerOptions, onExit: () => void, pickDccFile: PickDccFile) =>
   new Promise<DesktopServer>((resolve, reject) => {
     const child = utilityProcess.fork(join(__dirname, 'server-process-entry.cjs'), [], {
       serviceName: 'Pulsete local server',
@@ -24,6 +25,12 @@ export const startDesktopServer = (options: PulseteServerOptions, onExit: () => 
     }, 60_000);
     child.once('spawn', () => child.postMessage({ type: 'start', options }));
     child.on('message', (message) => {
+      if (message?.type === 'dcc-dialog' && ready && !closing) {
+        void pickDccFile(message.request).catch(() => null).then(path => {
+          if (!exited && !closing) child.postMessage({ type: 'dcc-dialog-result', id: message.id, path });
+        });
+        return;
+      }
       if (message?.type !== 'ready' || ready) return;
       ready = true;
       clearTimeout(timeout);

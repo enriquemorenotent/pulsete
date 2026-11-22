@@ -1,3 +1,4 @@
+import type { PickDccFile } from '../shared/dcc.js';
 import { createRuntimeServices } from './runtime-core.js';
 import type { RuntimeServices, RuntimeStore } from './runtime-service-types.js';
 
@@ -17,4 +18,4 @@ export type {
 
 export type Runtime = RuntimeServices;
 
-export const createRuntime = (store: RuntimeStore): Runtime => createRuntimeServices(store);
+export const createRuntime = (store: RuntimeStore, pickDccFile?: PickDccFile): Runtime => createRuntimeServices(store, pickDccFile);

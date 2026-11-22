@@ -1,4 +1,5 @@
 import { emitMessage } from './irc-emit.js';
+import { parseDccOffer } from './dcc-protocol.js';
 import { handleNickservAutoJoinMessage } from './irc-auth.js';
 import { isChatHistoryBatchMessage } from './irc-history.js';
 import { isServiceNick } from './irc-services.js';
@@ -75,6 +76,13 @@ export const handleTextMessage = (
     ? resolveIrcCloudAvatarId(prefixIdentity)
     : null;
   const historical = isChatHistoryBatchMessage(connection, tags.batch);
+  if (isDirectCtcp && /^DCC +SEND(?: |$)/i.test(ctcp)) {
+    const offer = parseDccOffer(ctcp);
+    if (offer && command === 'PRIVMSG' && !historical && sourceIsUser && nick && !isSelfNick(connection, nick)) {
+      connection.handlers.onEvent({ type: 'dcc-offer', networkId: connection.profile.id, nick, identity: senderIdentity, offer });
+    }
+    return;
+  }
   emitMessage(connection, createMessage(connection, {
     id: resolveTaggedMessageId(connection.profile.id, tags.msgid),
     target,

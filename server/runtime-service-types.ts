@@ -115,6 +115,7 @@ export type RuntimeAvatarOverrideMutations = {
 };
 
 export type RuntimeHttpApi = {
+  dcc?: import('./dcc-service.js').DccService;
   assistant: {
     ask: RuntimeAiAssistantService['ask'];
     suggestReply: ReturnType<typeof createAiReplySuggestion>;

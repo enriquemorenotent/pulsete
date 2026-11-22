@@ -10,6 +10,7 @@ import { handleMutedNickRoutes } from './http-muted-nicks.js';
 import { handleNickEmojiRoutes } from './http-nick-emojis.js';
 import { handleNetworkRoutes } from './http-networks.js';
 import { handlePreferenceRoutes } from './http-preferences.js';
+import { handleDccRoutes } from './http-dcc.js';
 import { handleDraftRoutes } from './http-drafts.js';
 import { handleAvatarOverrideRoutes } from './http-avatar-overrides.js';
 import { handlePagePreviewRoutes } from './http-page-previews.js';
@@ -56,6 +57,7 @@ export const createHttpHandler = (
       const args = { req, res, url, pathname, context };
       if (
         (hasBackupApi(context) && await handleBackupRoutes({ ...args, context }))
+        || await handleDccRoutes(args)
         || await handleAiAssistantRoutes(args)
         || await handleAccountMediaRoutes(args)
         || await handlePagePreviewRoutes(args, pagePreviewResolver)
