@@ -3,6 +3,7 @@ import type { ContactRuleHandlers, ContactRuleState } from './contact-rules.js';
 
 type ContactRuleControlsProps = {
   className?: string;
+  showLabels?: boolean;
   handlers: ContactRuleHandlers;
   state: ContactRuleState;
 };
@@ -10,9 +11,10 @@ type ContactRuleControlsProps = {
 export function ContactRuleControls(props: ContactRuleControlsProps) {
   const nick = props.state.contact.nick;
   return (
-    <div className={props.className ?? 'flex shrink-0 items-center gap-1.5'}>
+    <div className={props.className ?? (props.showLabels ? 'grid gap-1' : 'flex shrink-0 items-center gap-1.5')}>
       <ContactRuleIconButton
         kind="friend"
+        visibleLabel={props.showLabels ? 'Watchlist' : undefined}
         active={Boolean(props.state.friend)}
         label={
           props.state.friend
@@ -27,6 +29,7 @@ export function ContactRuleControls(props: ContactRuleControlsProps) {
       />
       <ContactRuleIconButton
         kind="notifications"
+        visibleLabel={props.showLabels ? 'Notifications' : undefined}
         active={props.state.notificationsEnabled}
         label={
           props.state.notificationsEnabled
@@ -39,6 +42,7 @@ export function ContactRuleControls(props: ContactRuleControlsProps) {
       />
       <ContactRuleIconButton
         kind="muted"
+        visibleLabel={props.showLabels ? 'Mute' : undefined}
         active={Boolean(props.state.mutedNick)}
         label={props.state.mutedNick ? `Unmute ${nick}` : `Mute ${nick}`}
         onClick={() => {

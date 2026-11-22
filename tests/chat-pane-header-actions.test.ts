@@ -71,7 +71,6 @@ const createContext = (overrides: Partial<Parameters<typeof resolveChatPaneHeade
   canDownloadHistory: false,
   canDeleteHistory: false,
   canSearchHistory: false,
-  onWhoisSelectedQuery: () => undefined,
   onDownloadHistory: async () => true,
   onDeleteHistory: () => undefined,
   onOpenHistorySearch: () => undefined,
@@ -104,7 +103,7 @@ test('channel header actions expose history search when the selected buffer supp
   });
 });
 
-test('query header actions expose history tools as direct header actions', () => {
+test('query header actions keep search visible and group history utilities in More', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -124,16 +123,16 @@ test('query header actions expose history tools as direct header actions', () =>
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['WHOIS', 'Search history', 'Download history', 'Delete history', 'Close'],
-    overflow: [],
+    primary: ['Search history', 'Close'],
+    overflow: ['Download history', 'Delete history'],
   });
   assert.deepEqual(
     actions.primary.map((action) => action.icon),
-    ['whois', 'search-history', 'download-history', 'delete-history', 'close'],
+    ['search-history', 'close'],
   );
 });
 
-test('query header actions keep destructive history delete direct when enabled alone', () => {
+test('query header actions put delete in More even when it is the only history action', () => {
   const queryBuffer = makeBuffer({
     kind: 'query',
     target: 'MissD',
@@ -151,10 +150,10 @@ test('query header actions keep destructive history delete direct when enabled a
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['WHOIS', 'Delete history', 'Close'],
-    overflow: [],
+    primary: ['Close'],
+    overflow: ['Delete history'],
   });
-  assert.equal(actions.primary.find((action) => action.label === 'Delete history')?.tone, 'danger');
+  assert.equal(actions.overflow.find((action) => action.label === 'Delete history')?.tone, 'danger');
 });
 
 test('query header actions are stable when notifications are enabled', () => {
@@ -174,7 +173,7 @@ test('query header actions are stable when notifications are enabled', () => {
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['WHOIS', 'Close'],
+    primary: ['Close'],
     overflow: [],
   });
 });
@@ -196,7 +195,7 @@ test('query header actions stay stable while the query is still active', () => {
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['WHOIS', 'Close'],
+    primary: ['Close'],
     overflow: [],
   });
 });
@@ -218,7 +217,7 @@ test('muted query header actions keep utilities available', () => {
   }));
 
   assert.deepEqual(resolveActionLabels(actions), {
-    primary: ['WHOIS', 'Close'],
+    primary: ['Close'],
     overflow: [],
   });
 });

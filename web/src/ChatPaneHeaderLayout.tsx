@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Download, Search, Trash2, UserSearch, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { ChatPaneHeaderActionMenu } from './ChatPaneHeaderActionMenu.js';
@@ -60,25 +60,10 @@ const headerActionIconPresentations = {
     iconClassName: 'size-3.5',
     label: (_action: ChatPaneHeaderAction, title: string) => `Close ${title}`,
   },
-  'delete-history': {
-    Icon: Trash2,
-    iconClassName: 'size-4',
-    label: (action: ChatPaneHeaderAction) => action.label,
-  },
-  'download-history': {
-    Icon: Download,
-    iconClassName: 'size-4',
-    label: (action: ChatPaneHeaderAction) => action.label,
-  },
   'search-history': {
     Icon: Search,
     iconClassName: 'size-4',
     label: (action: ChatPaneHeaderAction) => action.label,
-  },
-  whois: {
-    Icon: UserSearch,
-    iconClassName: 'size-4',
-    label: (action: ChatPaneHeaderAction, title: string) => `${action.label} ${title}`,
   },
 } satisfies Record<
   NonNullable<ChatPaneHeaderAction['icon']>,
@@ -104,11 +89,7 @@ function PaneHeaderIconAction(props: {
       type="button"
       size="icon"
       variant="ghost"
-      className={cn(
-        headerIconButtonClass(),
-        props.action.tone === 'danger'
-          && 'text-rose-300 hover:border-rose-300/25 hover:bg-rose-400/10 hover:text-rose-200',
-      )}
+      className={headerIconButtonClass()}
       aria-label={label}
       title={label}
       onClick={props.action.onSelect}

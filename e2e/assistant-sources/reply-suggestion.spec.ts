@@ -216,7 +216,8 @@ test('a live direct message can suggest an editable reply in the desktop compose
   await expect(ghost).toBeHidden();
 
   const deleteHistory = async () => {
-    await page.getByRole('button', { name: 'Delete history', exact: true }).click();
+    await page.getByRole('button', { name: 'More actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Delete history', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Delete PM history?' });
     await dialog.getByRole('button', { name: 'Delete history' }).click();
     await expect(dialog).toBeHidden();

@@ -143,40 +143,22 @@ test('server composers render command mode cues instead of a generic send box', 
   assert.doesNotMatch(markup, />Enter runs on Cuff-Link</);
 });
 
-test('query headers expose one-click contact controls', () => {
+test('query headers group contact controls under a single trigger', () => {
   const markup = renderQueryPane([]);
 
-  assert.match(markup, /aria-label="Close MissD"/);
-  assert.doesNotMatch(markup, />Close</);
-  assert.match(markup, /aria-label="Add MissD to watchlist"/);
-  assert.match(markup, /aria-label="Enable notifications for MissD"/);
-  assert.match(markup, /aria-label="Mute MissD"/);
-  assert.match(markup, /aria-label="Mute MissD"[\s\S]*aria-label="WHOIS MissD"[\s\S]*aria-label="Close MissD"/);
-  assert.match(markup, /aria-label="WHOIS MissD"/);
-  assert.doesNotMatch(markup, />WHOIS</);
-  assert.match(markup, /border-white\/10 bg-white\/\[0\.035\][^"]*" type="button" aria-label="Add MissD to watchlist"/);
-  assert.doesNotMatch(markup, /aria-label="Edit emoji tag for MissD"/);
-  assert.doesNotMatch(markup, /aria-label="Contact settings for MissD"/);
+  assert.match(markup, />Media<\/button>/);
+  assert.match(markup, /aria-label="Contact settings for MissD"[\s\S]*aria-label="Close MissD"/);
+  assert.doesNotMatch(markup, /aria-label="(?:Add MissD to watchlist|Enable notifications for MissD|Mute MissD|WHOIS MissD)"/);
   assert.doesNotMatch(markup, /aria-label="More actions"/);
 });
 
-test('query headers expose the active notification toggle state', () => {
-  const markup = renderQueryPane([], {
-    queryNotificationsEnabled: true,
-  });
-
-  assert.match(markup, /aria-label="Disable notifications for MissD"/);
-  assert.doesNotMatch(markup, /aria-label="Enable notifications for MissD"/);
-});
-
-test('muted query headers expose unmute and show the muted banner', () => {
+test('muted query headers keep contact settings available and show the muted banner', () => {
   const markup = renderQueryPane([], {
     selectedQueryMuted: true,
     mutedQueryNick: 'MissD',
   });
 
-  assert.match(markup, /aria-label="Unmute MissD"/);
-  assert.match(markup, /aria-label="Enable notifications for MissD"/);
+  assert.match(markup, /aria-label="Contact settings for MissD"/);
   assert.match(markup, />Muted</);
   assert.match(markup, /Messages from MissD are collapsed here and won’t create unread or notification activity\./);
 });

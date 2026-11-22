@@ -12,6 +12,7 @@ export const FormattedMessageInlinePreviews = memo(function FormattedMessageInli
   props: {
     media: readonly InlineMedia[];
     pageHrefs?: readonly string[];
+    layout?: 'gallery';
   },
 ) {
   const [activeHref, setActiveHref] = useState<string | null>(null);
@@ -30,7 +31,9 @@ export const FormattedMessageInlinePreviews = memo(function FormattedMessageInli
       media={activeMedia}
       description={`Expanded inline ${activeMedia?.kind ?? 'image'} preview.`}
     >
-      <span className="mt-2 flex flex-wrap gap-2">
+      <span className={props.layout === 'gallery'
+        ? 'grid grid-cols-3 gap-2 [&>*]:aspect-[4/3] [&>*]:min-w-0 [&>*>img]:size-full [&>*>video]:size-full'
+        : 'mt-2 flex flex-wrap gap-2'}>
         {media.map((entry) => (
           <InlineMediaPreviewTile
             key={entry.originalHref}

@@ -24,6 +24,7 @@ type QueryAvatarOptionsMenuProps = {
   failedAvatarUrl?: string | null;
   networkId: string;
   user: QueryProfileAvatarUser;
+  showLabel?: boolean;
 };
 
 type QueryAvatarSource = 'custom' | 'initial' | 'irccloud';
@@ -91,6 +92,7 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
           ref={inputRef}
           type="file"
           accept="image/*"
+          tabIndex={-1}
           className="sr-only"
           onChange={(event) => {
             void handleFileChange(event);
@@ -101,14 +103,15 @@ export function QueryAvatarOptionsMenu(props: QueryAvatarOptionsMenuProps) {
             ref={triggerRef}
             type="button"
             variant="ghost"
-            size="icon"
-            className={headerIconButtonClass()}
+            size={props.showLabel ? 'sm' : 'icon'}
+            className={props.showLabel ? 'justify-start' : headerIconButtonClass()}
             aria-label={label}
             aria-description={`Avatar source: ${sourcePresentation.label}`}
             data-avatar-source={source}
             title={`${label}. Avatar source: ${sourcePresentation.label}`}
           >
-            <SourceIcon className="size-4" />
+            <SourceIcon data-icon={props.showLabel ? 'inline-start' : undefined} className="size-4" />
+            {props.showLabel && 'Avatar'}
           </Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>

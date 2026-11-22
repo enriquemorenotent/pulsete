@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BufferState } from '../../shared/protocol-chat.js';
+import { Images } from 'lucide-react';
+import { Button } from '@/components/ui/button.js';
 import { api } from './client.js';
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from './components/ui/dialog.js';
 import { parseFormattedMessageContent } from './formatted-message-content.js';
@@ -12,7 +14,9 @@ export function QueryMediaGallery({ buffer }: { buffer: BufferState }) {
   const { cacheKey } = useMediaAccount();
   return (
     <Dialog>
-      <DialogTrigger asChild><button className="rounded px-2 py-1 text-sm hover:bg-accent">Media</button></DialogTrigger>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline"><Images data-icon="inline-start" />Media</Button>
+      </DialogTrigger>
       <DialogContent className="w-[48rem] max-w-[90vw]" aria-describedby={undefined}>
         <div className="flex items-center justify-between"><DialogTitle>Media shared with {buffer.target}</DialogTitle><DialogClose className="rounded px-2 py-1 text-sm hover:bg-accent">Close</DialogClose></div>
         <GalleryHistory key={JSON.stringify([buffer.id, cacheKey])} buffer={buffer} cacheKey={cacheKey} />
@@ -40,6 +44,8 @@ function PagePreviewLoader({ href, networkId, cacheKey, onResult }: {
 }
 
 function GalleryHistory({ buffer, cacheKey }: { buffer: BufferState; cacheKey: string }) {
+  const scrollRoot = useRef<HTMLDivElement>(null);
+  const loadMarker = useRef<HTMLDivElement>(null);
   const [entries, setEntries] = useState<GalleryEntry[]>([]);
   const media = entries.flatMap(entry => entry.media ?? []);
   const pending = entries.filter(entry => entry.media === undefined).slice(0, 4);
@@ -48,6 +54,7 @@ function GalleryHistory({ buffer, cacheKey }: { buffer: BufferState; cacheKey: s
   }, []);
   const [cursor, setCursor] = useState<string>();
   const [status, setStatus] = useState<'loading' | 'more' | 'done' | 'error'>('loading');
+  const canLoadOlder = status === 'more' && pending.length === 0;
 
   useEffect(() => {
     if (status !== 'loading') return;
@@ -83,16 +90,40 @@ function GalleryHistory({ buffer, cacheKey }: { buffer: BufferState; cacheKey: s
     return () => controller.abort();
   }, [buffer.id, cursor, status]);
 
+  useEffect(() => {
+    const root = scrollRoot.current;
+    const marker = loadMarker.current;
+    if (!canLoadOlder || !root || !marker) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      setStatus(current => current === 'more' ? 'loading' : current);
+    }, { root, rootMargin: '0px 0px 200px 0px' });
+    observer.observe(marker);
+    return () => {
+      observer.takeRecords();
+      observer.disconnect();
+    };
+  }, [canLoadOlder]);
+
+  const loading = status === 'loading' || pending.length > 0 || (status === 'more' && media.length === 0);
   return (
-    <div className="max-h-[70vh] overflow-y-auto">
+    <div ref={scrollRoot} role="region" aria-label="Shared media" tabIndex={0}
+      className="max-h-[70vh] overflow-y-auto rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
       {pending.map(({ href }) => <PagePreviewLoader key={href} href={href} networkId={buffer.networkId} cacheKey={cacheKey} onResult={onResult} />)}
-      <FormattedMessageInlinePreviews media={media} />
-      {status === 'done' && !pending.length && !media.length && <p>No media shared yet.</p>}
-      {(status === 'loading' || pending.length > 0) && <p role="status">Loading media…</p>}
-      {(status === 'more' || status === 'error') && (
-        <button className="rounded px-2 py-1 text-sm hover:bg-accent" onClick={() => setStatus('loading')}>
-          {status === 'error' ? 'Couldn’t load media. Retry' : 'Load older messages'}
-        </button>
+      <FormattedMessageInlinePreviews media={media} layout="gallery" />
+      {canLoadOlder && <div ref={loadMarker} className="h-px" aria-hidden="true" />}
+      {(loading || status === 'done') && (
+        <p role="status" className="py-3 text-center text-sm text-muted-foreground">
+          {loading ? 'Loading media…' : media.length ? 'No more media.' : 'No media shared yet.'}
+        </p>
+      )}
+      {status === 'error' && (
+        <div className="flex items-center justify-center gap-3 py-3">
+          <p role="alert" className="text-sm text-muted-foreground">Couldn’t load media.</p>
+          <Button type="button" variant="outline" size="sm" onClick={() => setStatus('loading')}>Retry</Button>
+        </div>
       )}
     </div>
   );

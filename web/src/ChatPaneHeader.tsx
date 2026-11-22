@@ -1,5 +1,9 @@
 import { QueryMediaGallery } from './QueryMediaGallery.js';
 import { useState } from 'react';
+import { ContactRound, UserSearch } from 'lucide-react';
+import { Popover } from 'radix-ui';
+import { Button } from '@/components/ui/button.js';
+import { containOverlayKeyDown } from '@/components/ui/overlay-keyboard.js';
 import type { BufferState, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
 import { ChannelAutoJoinButton } from './ChannelAutoJoinButton.js';
@@ -99,7 +103,6 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
     canDownloadHistory: props.canDownloadHistory,
     canDeleteHistory: props.canDeleteHistory,
     canSearchHistory: props.canSearchHistory,
-    onWhoisSelectedQuery: props.onWhoisSelectedQuery,
     onDownloadHistory: props.onDownloadHistory,
     onDeleteHistory: props.onDeleteHistory,
     onOpenHistorySearch: props.onOpenHistorySearch,
@@ -162,31 +165,60 @@ export function ChatPaneHeader(props: ChatPaneHeaderProps) {
             selectedBuffer?.kind === 'query' && selectedQueryAvatarUser ? (
               <>
                 <QueryMediaGallery key={selectedBuffer.id} buffer={selectedBuffer} />
-                {props.onSaveNickEmoji ? (
-                  <NickEmojiEditorControl
-                    emoji={selectedNickEmoji?.emoji ?? null}
-                    nick={selectedBuffer.target}
-                    onSave={(emoji) => props.onSaveNickEmoji!(
-                      selectedBuffer.networkId,
-                      selectedBuffer.target,
-                      emoji,
-                      props.selectedQueryIdentity ?? selectedBuffer.peerIdentity,
-                    )}
-                  />
-                ) : null}
-                {props.selectedQueryContactRule ? (
-                  <ContactRuleControls
-                    className="flex shrink-0 items-center gap-1 sm:gap-1.5"
-                    state={props.selectedQueryContactRule}
-                    handlers={props.contactRuleHandlers}
-                  />
-                ) : null}
-                <QueryAvatarOptionsMenu
-                  externalAvatarsEnabled={props.externalAvatarsEnabled === true}
-                  failedAvatarUrl={failedAvatarUrl}
-                  networkId={selectedBuffer.networkId}
-                  user={selectedQueryAvatarUser}
-                />
+                <Popover.Root key={`contact:${selectedBuffer.id}`}>
+                  <Popover.Trigger asChild>
+                    <Button type="button" variant="outline" aria-label={`Contact settings for ${selectedBuffer.target}`}>
+                      <ContactRound data-icon="inline-start" />
+                      Contact
+                    </Button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      align="end"
+                      sideOffset={8}
+                      collisionPadding={8}
+                      aria-label={`Contact settings for ${selectedBuffer.target}`}
+                      onKeyDown={containOverlayKeyDown}
+                      className="z-50 grid w-56 gap-1 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-lg outline-none"
+                    >
+                      {props.onSaveNickEmoji ? (
+                        <NickEmojiEditorControl
+                          showLabel
+                          emoji={selectedNickEmoji?.emoji ?? null}
+                          nick={selectedBuffer.target}
+                          onSave={(emoji) => props.onSaveNickEmoji!(
+                            selectedBuffer.networkId,
+                            selectedBuffer.target,
+                            emoji,
+                            props.selectedQueryIdentity ?? selectedBuffer.peerIdentity,
+                          )}
+                        />
+                      ) : null}
+                      {props.selectedQueryContactRule ? (
+                        <ContactRuleControls
+                          showLabels
+                          state={props.selectedQueryContactRule}
+                          handlers={props.contactRuleHandlers}
+                        />
+                      ) : null}
+                      <QueryAvatarOptionsMenu
+                        showLabel
+                        externalAvatarsEnabled={props.externalAvatarsEnabled === true}
+                        failedAvatarUrl={failedAvatarUrl}
+                        networkId={selectedBuffer.networkId}
+                        user={selectedQueryAvatarUser}
+                      />
+                      {props.onWhoisSelectedQuery ? (
+                        <Popover.Close asChild>
+                          <Button type="button" size="sm" variant="ghost" className="justify-start" onClick={props.onWhoisSelectedQuery}>
+                            <UserSearch data-icon="inline-start" />
+                            User details (WHOIS)
+                          </Button>
+                        </Popover.Close>
+                      ) : null}
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
               </>
             ) : selectedChannelName || selectedAutoJoinChannelName ? (
               <>

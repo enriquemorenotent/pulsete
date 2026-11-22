@@ -1,14 +1,27 @@
+import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AccountMediaProvider } from '../../web/src/account-media.js';
 import { ConnectionSidebarAccountMenu } from '../../web/src/ConnectionSidebarAccountMenu.js';
 import { UserAvatar } from '../../web/src/user-avatars/UserAvatar.js';
 import { QueryProfileAvatarBanner } from '../../web/src/QueryProfileAvatarBanner.js';
 import { FormattedMessageInlinePreviews } from '../../web/src/FormattedMessageInlinePreviews.js';
+import { QueryMediaGallery } from '../../web/src/QueryMediaGallery.js';
+import { bufferSchema } from '../../shared/protocol-chat.js';
 import { makeNetwork } from '../../tests/chat-pane.test.fixtures.js';
 import '../../web/src/globals.css';
 
 const href = 'https://example.test/picture.png';
 const user = { nick: 'Reader' };
+
+function PrivateMessageGallery() {
+  const [target, setTarget] = useState('Reader');
+  const buffer = bufferSchema.parse({ id: target, target, networkId: 'preview-test', kind: 'query' });
+  return <section aria-label="PM media gallery">
+    <button type="button" onClick={() => setTarget('Other')}>Switch conversation</button>
+    <QueryMediaGallery buffer={buffer} />
+  </section>;
+}
+
 createRoot(document.getElementById('root')!).render(
   <AccountMediaProvider network={makeNetwork({ id: 'preview-test' })}>
     <main className="space-y-6 p-8">
@@ -28,6 +41,7 @@ createRoot(document.getElementById('root')!).render(
       <section aria-label="Message image">
         <FormattedMessageInlinePreviews media={[{ kind: 'image', originalHref: href, sourceHref: href }]} />
       </section>
+      <PrivateMessageGallery />
     </main>
   </AccountMediaProvider>,
 );

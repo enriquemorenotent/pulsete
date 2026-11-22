@@ -14,6 +14,7 @@ const contactRuleIcons = {
 export function ContactRuleIconButton(props: {
   kind: ContactRuleKind;
   label: string;
+  visibleLabel?: string;
   active: boolean;
   onClick: () => void;
 }) {
@@ -22,15 +23,18 @@ export function ContactRuleIconButton(props: {
   return (
     <Button
       type="button"
-      size="icon"
+      size={props.visibleLabel ? 'sm' : 'icon'}
       variant="ghost"
-      className={headerIconButtonClass(props.active, props.kind === 'muted' ? 'muted' : 'primary')}
+      className={props.visibleLabel
+        ? cn('justify-start', props.active && 'bg-accent')
+        : headerIconButtonClass(props.active, props.kind === 'muted' ? 'muted' : 'primary')}
       aria-label={props.label}
       aria-pressed={props.active}
       title={props.label}
       onClick={props.onClick}
     >
-      <Icon className={cn('size-4', props.active && 'fill-current')} />
+      <Icon data-icon={props.visibleLabel ? 'inline-start' : undefined} className={cn('size-4', props.active && 'fill-current')} />
+      {props.visibleLabel}
     </Button>
   );
 }

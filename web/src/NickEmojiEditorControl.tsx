@@ -25,6 +25,7 @@ type NickEmojiEditorControlProps = {
   emoji: string | null;
   nick: string;
   onSave: (emoji: string | null) => Promise<boolean>;
+  showLabel?: boolean;
 };
 
 export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
@@ -53,9 +54,9 @@ export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
       <Popover.Trigger asChild>
         <Button
           type="button"
-          size="icon"
+          size={props.showLabel ? 'sm' : 'icon'}
           variant="ghost"
-          className={cn('shrink-0', headerIconButtonClass(Boolean(props.emoji)))}
+          className={props.showLabel ? 'justify-start' : cn('shrink-0', headerIconButtonClass(Boolean(props.emoji)))}
           aria-label={`Edit emoji tag for ${props.nick}`}
           aria-expanded={open}
           aria-haspopup="menu"
@@ -68,6 +69,7 @@ export function NickEmojiEditorControl(props: NickEmojiEditorControlProps) {
           ) : (
             <Smile className="size-4" />
           )}
+          {props.showLabel && 'Emoji tag'}
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
