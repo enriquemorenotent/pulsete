@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { AiAssistantMarkdown as Markdown } from './AiAssistantMarkdown.js';
 import { Label } from '@/components/ui/label.js';
 import { cn } from '@/lib/utils.js';
 
 import type { AutosaveState as QueueState } from './autosave-queue.js';
 import { notesAutosave } from './notes-autosave.js';
+import { MarkdownNotesEditor } from './MarkdownNotesEditor.js';
 
 type AutosaveState = 'idle' | QueueState;
 type NotesEditorVariant = 'default' | 'compact' | 'document';
@@ -25,8 +25,6 @@ export function AutosaveNotesEditor(props: NotesEditorProps) {
 }
 
 function NotesEditor(props: NotesEditorProps) {
-  const [editing, setEditing] = useState(false);
-  const preview = props.markdown && !editing;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [recentlySaved, setRecentlySaved] = useState(false);
   const savedFeedbackRef = useRef({ scope: props.scopeKey, notes: props.notes });
@@ -92,7 +90,7 @@ function NotesEditor(props: NotesEditorProps) {
     });
     observer.observe(textarea);
     return () => observer.disconnect();
-  }, [draftNotes, variant, preview]);
+  }, [draftNotes, variant]);
 
   const statusText = getAutosaveStatusText(autosaveState, draftNotes, savedNotes);
   const showCompactStatus = !showHeader && (statusText !== 'Saved' || (variant === 'document' && recentlySaved));
@@ -127,18 +125,9 @@ function NotesEditor(props: NotesEditorProps) {
           showHeader ? fill && 'min-h-40' : 'min-h-32',
         )}
       >
-        {props.markdown && (
-          <button type="button" className="rounded px-1 py-1 text-xs text-primary hover:underline"
-            onClick={() => setEditing(!editing)}>
-            {editing ? 'Done' : draftNotes ? 'Edit notes' : 'Add notes'}
-          </button>
-        )}
-        {preview ? (
-          <div id={props.id} className="space-y-2 break-words px-1 text-[13px] leading-6">
-            <Markdown>{draftNotes}</Markdown>
-          </div>
+        {props.markdown ? (
+          <MarkdownNotesEditor id={props.id} value={draftNotes} placeholder={props.placeholder} onChange={changeNotes} />
         ) : <textarea
-          autoFocus={props.markdown}
           ref={textareaRef}
           id={props.id}
           aria-label={showHeader ? undefined : 'Notes'}

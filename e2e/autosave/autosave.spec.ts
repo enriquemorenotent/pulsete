@@ -85,3 +85,35 @@ test('failed notes stay editable and a new edit saves without an automatic retry
   await page.getByRole('button', { name: 'Complete', exact: true }).click();
   await expect(page.getByText('Saved', { exact: true })).toBeVisible();
 });
+
+test('DM notes render Markdown while typing and autosave the formatted document', async ({ page }) => {
+  await page.goto('/e2e/autosave/index.html?markdown');
+  const editor = notes(page);
+  await expect(editor.getByRole('heading', { name: 'Existing' })).toBeVisible();
+  await expect(editor.getByRole('listitem')).toHaveCount(2);
+  await editor.getByRole('listitem').last().click();
+  await editor.press('End');
+  await editor.press('Enter');
+  await editor.pressSequentially('**New item**');
+  await expect(editor.getByRole('listitem').last().locator('strong')).toHaveText('New item');
+  await editor.press('Enter');
+  await editor.press('Enter');
+  await editor.pressSequentially('## New heading');
+  await expect(editor.getByRole('heading', { level: 2, name: 'New heading' })).toBeVisible();
+  await page.clock.fastForward(650);
+  await expect(requests(page)).toContainText('- **New item**');
+  await expect(requests(page)).toContainText('## New heading');
+  await page.getByRole('button', { name: 'Complete', exact: true }).click();
+  await expect(requests(page)).toHaveCount(0);
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Toggle editor' }).click();
+  await page.getByRole('button', { name: 'Toggle editor' }).click();
+  await expect(editor.getByRole('listitem').last().locator('strong')).toHaveText('New item');
+  await expect(page.getByRole('button', { name: /^(Edit notes|Done)$/ })).toHaveCount(0);
+  await page.screenshot({ path: '/tmp/pulsete-markdown-notes.png' });
+
+  await editor.press('Control+a');
+  await editor.press('Backspace');
+  await page.clock.fastForward(650);
+  await expect(requests(page)).toContainText('buffer:a: ""');
+});

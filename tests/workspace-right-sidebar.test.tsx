@@ -207,9 +207,8 @@ test('query profile sidebar renders the per-DM notes editor', () => {
   assert.doesNotMatch(markup, /avatar-redirect/);
   assert.match(markup, /aria-label="Conversation context"/);
 
-  assert.match(markup, /query-profile-notes/);
-  assert.match(markup, /Edit notes/);
-  assert.match(markup, /Prefers <strong>encrypted routes<\/strong>/);
+  assert.match(markup, /data-notes-editor="query-profile-notes"/);
+  assert.doesNotMatch(markup, /Edit notes/);
   assert.match(markup, /Saved/);
 });
 

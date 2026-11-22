@@ -1,0 +1,25 @@
+.markdown-notes {
+  @apply whitespace-pre-wrap break-words;
+
+  > * + * { @apply mt-2; }
+  h1 { @apply text-lg font-semibold; }
+  h2 { @apply text-base font-semibold; }
+  h3, h4, h5, h6 { @apply text-sm font-semibold; }
+  ul { @apply list-disc pl-5; }
+  ol { @apply list-decimal pl-5; }
+  ul[data-type="taskList"] { @apply list-none pl-0; }
+  li[data-type="taskItem"] { @apply flex items-baseline gap-2; }
+  a { @apply text-primary underline; }
+  blockquote { @apply border-l-2 border-primary/35 pl-3; }
+  code { @apply rounded bg-black/30 px-1 font-mono; }
+  pre { @apply overflow-x-auto whitespace-pre rounded bg-black/30 p-2; }
+  pre code { @apply bg-transparent p-0; }
+  hr { @apply border-white/20; }
+  table { @apply w-full table-fixed border-collapse; }
+  th, td { @apply border border-white/15 px-2 text-left align-top; }
+
+  &:has(> p:only-child > br.ProseMirror-trailingBreak:only-child)::before {
+    @apply pointer-events-none absolute text-muted-foreground;
+    content: attr(data-placeholder);
+  }
+}
