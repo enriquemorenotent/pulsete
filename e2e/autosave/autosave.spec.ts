@@ -117,3 +117,26 @@ test('DM notes render Markdown while typing and autosave the formatted document'
   await page.clock.fastForward(650);
   await expect(requests(page)).toContainText('buffer:a: ""');
 });
+
+test('short PM notes fit their content and removing the last pin collapses its panel', async ({ page }) => {
+  await page.goto('/e2e/autosave/index.html?markdown&empty');
+  const editor = notes(page);
+  await expect(editor).toBeVisible();
+  const notesSection = page.locator('details').filter({ has: editor });
+  const emptyHeight = (await notesSection.boundingBox())!.height;
+  expect(emptyHeight).toBeLessThan(72);
+  await editor.fill('A short note');
+  await page.clock.fastForward(650);
+  await page.getByRole('button', { name: 'Complete', exact: true }).click();
+  await page.clock.fastForward(2100);
+  expect((await notesSection.boundingBox())!.height).toBe(emptyHeight);
+
+  await expect(page.getByText('A saved message')).toBeVisible();
+  await page.getByRole('button', { name: 'Unpin message' }).click();
+  const summary = page.locator('summary').filter({ hasText: 'Pinned messages' });
+  await expect(summary).toContainText('0');
+  const emptyHint = page.getByText('Keep useful messages here.', { exact: false });
+  await expect(emptyHint).toBeHidden();
+  await summary.click();
+  await expect(emptyHint).toBeVisible();
+});

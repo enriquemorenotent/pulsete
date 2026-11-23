@@ -1,14 +1,21 @@
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { bufferSchema } from '../../shared/protocol-chat.js';
+import { bufferSchema, type ChatMessage } from '../../shared/protocol-chat.js';
 import { AutosaveNotesEditor } from '../../web/src/AutosaveNotesEditor.js';
 import { QueryProfileSidebar } from '../../web/src/QueryProfileSidebar.js';
 import '../../web/src/globals.css';
 
-const markdown = new URLSearchParams(window.location.search).has('markdown');
+const params = new URLSearchParams(window.location.search);
+const markdown = params.has('markdown');
+const initialNotes = params.has('empty') ? '' : '# Existing\n\n- First item\n- Second item';
 const directMessage = bufferSchema.parse({ id: 'a', networkId: 'network', target: 'contact', kind: 'query' });
 
 function Fixture() {
+  const [pins, setPins] = useState<ChatMessage[]>([{
+    id: 'pin', bufferId: directMessage.id, networkId: directMessage.networkId,
+    target: directMessage.target, nick: 'contact', body: 'A saved message',
+    kind: 'line', self: false, ts: 1,
+  }]);
   const [scope, setScope] = useState('buffer:a');
   const [visible, setVisible] = useState(true);
   const [saved, setSaved] = useState<Record<string, string>>({});
@@ -29,7 +36,14 @@ function Fixture() {
     <p data-testid="scope">{scope}</p>
     {visible && (markdown ? <div className="w-80 bg-card">
       <QueryProfileSidebar
-        buffer={{ ...directMessage, notes: saved[scope] ?? '# Existing\n\n- First item\n- Second item' }}
+        buffer={{ ...directMessage, notes: saved[scope] ?? initialNotes }}
+        pinned={{
+          messages: pins, loadState: 'loaded', onRetry: () => {}, onJump: async () => true,
+          onUnpin: async (_, id) => {
+            setPins(current => current.filter(message => message.id !== id));
+            return true;
+          },
+        }}
         onSaveNotes={async (buffer, value) => await save(value) ? { ...buffer, notes: value } : null}
       />
     </div> : <AutosaveNotesEditor id="notes" notes={saved[scope] ?? ''} onSave={save}

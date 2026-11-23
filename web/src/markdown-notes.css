@@ -1,7 +1,7 @@
 .markdown-notes {
   @apply whitespace-pre-wrap break-words;
 
-  > * + * { @apply mt-2; }
+  > * + * { @apply mt-1; }
   h1 { @apply text-lg font-semibold; }
   h2 { @apply text-base font-semibold; }
   h3, h4, h5, h6 { @apply text-sm font-semibold; }

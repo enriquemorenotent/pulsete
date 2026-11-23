@@ -44,7 +44,7 @@ export function MarkdownNotesEditor({ id, value, placeholder, onChange }: {
       editorProps: {
         attributes: {
           id,
-          class: 'markdown-notes relative min-h-24 rounded-sm border border-transparent px-1 py-2 text-[13px] leading-6 text-foreground/90 outline-none focus-visible:border-ring/50',
+          class: 'markdown-notes relative rounded-sm border border-transparent px-1 py-1 text-[13px] leading-5 text-foreground/90 outline-none focus-visible:border-ring/50',
           role: 'textbox',
           'aria-label': 'Notes',
           'aria-multiline': 'true',

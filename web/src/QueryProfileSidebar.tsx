@@ -11,10 +11,11 @@ export function QueryProfileSidebar(props: {
 }) {
   const buffer = props.buffer;
   if (!buffer) return null;
+  const pinCount = props.pinned?.messages.length ?? 0;
   return (
-    <aside aria-label="Conversation context" className="h-full overflow-y-auto overscroll-contain px-4 py-3">
-      <details open className="group/notes border-b border-white/[0.07] pb-4">
-        <summary className="flex cursor-pointer list-none items-center gap-2 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+    <aside aria-label="Conversation context" className="max-h-full overflow-y-auto overscroll-contain px-4 py-2">
+      <details open className="group/notes border-b border-white/[0.07] open:pb-1">
+        <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <NotebookPen className="size-3.5 text-muted-foreground" aria-hidden />
           Notes
           <ChevronDown className="ml-auto size-3.5 text-muted-foreground transition-transform group-not-open/notes:-rotate-90" aria-hidden />
@@ -30,11 +31,11 @@ export function QueryProfileSidebar(props: {
           scopeKey={`buffer:${buffer.id}`}
         />
       </details>
-      <details open className="group/pins pt-3">
-        <summary className="flex cursor-pointer list-none items-center gap-2 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+      <details open={pinCount > 0 || props.pinned?.loadState === 'error'} className="group/pins mt-1">
+        <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <Pin className="size-3.5 text-muted-foreground" aria-hidden />
           Pinned messages
-          <span className="text-xs tabular-nums text-muted-foreground">{props.pinned?.messages.length ?? 0}</span>
+          <span className="text-xs tabular-nums text-muted-foreground">{pinCount}</span>
           <ChevronDown className="ml-auto size-3.5 text-muted-foreground transition-transform group-not-open/pins:-rotate-90" aria-hidden />
         </summary>
         <p className="text-[11px] text-muted-foreground">Saved on this device</p>
