@@ -245,3 +245,19 @@ test('requestWhois sends a raw WHOIS command through the gateway', () => {
   ]);
   assert.deepEqual(banners, []);
 });
+
+test('channel voice changes send MODE commands for the selected channel', () => {
+  const sent: ClientMessage[] = [];
+  const { params } = createParams({
+    socket: { send: message => sent.push(message), close() {} },
+  });
+  const actions = createAppActions(params);
+  actions.setChannelVoice('Reader', true);
+  actions.setChannelVoice('Reader', false);
+  assert.deepEqual(sent, ['+v', '-v'].map(mode => ({
+    type: 'raw.send',
+    networkId: network.id,
+    sourceBufferId: selectedBuffer.id,
+    raw: `MODE #general ${mode} Reader`,
+  })));
+});

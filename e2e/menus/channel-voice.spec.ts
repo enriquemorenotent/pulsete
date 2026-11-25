@@ -1,0 +1,30 @@
+import { expect, test } from '@playwright/test';
+
+test('owner can give and remove voice from the Users list', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/e2e/menus/index.html?voice=owner');
+  await expect(page).toHaveTitle('Menu regression fixture');
+  const guest = page.getByRole('button', { name: 'Guest', exact: true });
+  const operator = page.getByRole('button', { name: 'Operator', exact: true });
+  await guest.click();
+  await expect(page.locator('output')).toContainText('select Guest');
+  await guest.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Give voice' }).click();
+  await expect(page.locator('output')).toContainText('+v Guest');
+  await operator.focus();
+  await operator.press('Shift+F10');
+  const remove = page.getByRole('menuitem', { name: 'Remove voice' });
+  await expect(remove).toBeVisible();
+  await page.screenshot({ path: '/tmp/pulsete-voice-menu.png' });
+  await page.keyboard.press('ArrowDown');
+  await expect(remove).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('output')).toContainText('-v Operator');
+  await expect(page.getByRole('button', { name: 'Owner', exact: true })).not.toHaveAttribute('aria-haspopup', 'menu');
+  await page.goto('/e2e/menus/index.html?voice=Guest');
+  await operator.click({ button: 'right' });
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

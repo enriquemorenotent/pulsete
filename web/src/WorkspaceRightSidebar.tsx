@@ -24,7 +24,7 @@ export type WorkspaceRightSidebarProps = {
   showMedia?: boolean;
   workspace: WorkspaceView;
   onReconnectNetwork?: () => Promise<boolean>;
-  nicklist: Omit<NicklistPanelProps, 'channel' | 'network'>;
+  nicklist: Omit<NicklistPanelProps, 'channel' | 'network' | 'runtime'>;
   onCollapse?: () => void;
   assistant?: {
     buffer: BufferState | null;
@@ -142,8 +142,11 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
           value: 'members',
           content: (
             props.workspace.showNicklist && props.workspace.selectedChannel ? <NicklistPanel
+              key={props.workspace.selectedBuffer?.id}
               network={props.workspace.selectedNetwork}
               channel={props.workspace.selectedChannel}
+              runtime={props.workspace.selectedRuntime}
+              onSetVoice={props.nicklist.onSetVoice}
               friends={props.nicklist.friends}
               mutedNicks={props.nicklist.mutedNicks}
               nickEmojis={props.nicklist.nickEmojis}

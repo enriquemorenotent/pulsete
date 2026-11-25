@@ -101,10 +101,12 @@ export const WorkspaceRightSidebarContainer = memo(function WorkspaceRightSideba
     mutedNicks,
     nickEmojis,
     onSaveNickEmoji: actions.saveNickEmoji,
+    onSetVoice: actions.setChannelVoice,
     onSelectNick: actions.selectPrivateBuffer,
   }), [
     actions.saveNickEmoji,
     actions.selectPrivateBuffer,
+    actions.setChannelVoice,
     contactNotifications.settings,
     contactRuleHandlers,
     externalAvatarsEnabled,

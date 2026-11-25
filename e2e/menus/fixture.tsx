@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { NicklistPanel } from '../../web/src/NicklistPanel.js';
+import { makeNetwork } from '../../tests/chat-pane.test.fixtures.js';
+import { noopContactRuleHandlers } from '../../tests/chat-pane.test.renderers.js';
 import { AssistantIndexIndicator } from '../../web/src/AssistantIndexIndicator.js';
 import { DesktopShellLayout } from '../../web/src/DesktopShellLayout.js';
 import { ChatPaneHeaderActionMenu } from '../../web/src/ChatPaneHeaderActionMenu.js';
@@ -27,6 +30,20 @@ function Fixture() {
         <QueryAvatarOptionsMenu networkId="test" user={{ nick: 'Reader' }} externalAvatarsEnabled={false} />
         <NickEmojiEditorControl nick="Reader" emoji={null} onSave={async () => true} />
       </div>
+      {new URLSearchParams(location.search).has('voice') && <NicklistPanel
+        channel={{ id: 'channel', networkId: 'net', name: '#test', topic: '', users: [
+          { nick: 'Owner', mode: 'owner', away: false },
+          { nick: 'Guest', mode: 'normal', away: false },
+          { nick: 'Operator', mode: 'op', modes: ['op', 'voice'], away: false },
+        ] }}
+        runtime={{ nick: new URLSearchParams(location.search).get('voice')!, phase: 'connected', serverName: 'test' }}
+        network={makeNetwork({ id: 'net' })}
+        friends={[]} mutedNicks={[]} nickEmojis={[]} showMedia={false} externalAvatarsEnabled={false}
+        contactNotificationSettings={{ contacts: [] }} contactRuleHandlers={noopContactRuleHandlers}
+        onSaveNickEmoji={async () => true}
+        onSelectNick={(_, nick) => setAction(`select ${nick}`)}
+        onSetVoice={(nick, enabled) => setAction(`${enabled ? '+v' : '-v'} ${nick}`)}
+      />}
       <Button>Outside button</Button>
       <Dialog>
         <DialogTrigger asChild><Button>Open test dialog</Button></DialogTrigger>

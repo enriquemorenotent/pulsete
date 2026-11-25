@@ -207,7 +207,7 @@ const normalizeChannelUser = (user: NormalizableChannelUser): ChannelUserState =
   };
 };
 
-const getStoredChannelUserModes = (
+export const getStoredChannelUserModes = (
   user: Pick<ChannelUserState, 'mode' | 'modes'>
 ) => normalizeChannelUserModes(user.modes && user.modes.length > 0 ? user.modes : [user.mode]);
 

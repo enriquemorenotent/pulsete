@@ -161,7 +161,11 @@ test('nicklist renders IRCCloud avatars only when external avatars are enabled',
   const enabledMarkup = renderNicklist(channel, { externalAvatarsEnabled: true });
 
   assert.doesNotMatch(disabledMarkup, /avatar-redirect/);
-  assert.match(enabledMarkup, /src="https:\/\/static\.irccloud-cdn\.com\/avatar-redirect\/7"/);
+  const avatarSrc = enabledMarkup.match(/<img src="([^"]+)"/)?.[1];
+  assert.ok(avatarSrc);
+  const avatarUrl = new URL(avatarSrc.replaceAll('&amp;', '&'), 'http://localhost');
+  assert.equal(avatarUrl.pathname, '/api/media/resource');
+  assert.equal(avatarUrl.searchParams.get('url'), 'https://static.irccloud-cdn.com/avatar-redirect/7');
 });
 
 test('nicklist hides user avatars when media is hidden', () => {

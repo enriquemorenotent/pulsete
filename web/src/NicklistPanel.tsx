@@ -1,7 +1,10 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Moon } from 'lucide-react';
-import type { ChannelState, FriendState, MutedNickState, NetworkProfile, NickEmojiState } from '../../shared/protocol-chat.js';
+import type { ChannelState, FriendState, MutedNickState, NetworkProfile, NetworkRuntimeState, NickEmojiState } from '../../shared/protocol-chat.js';
 import type { NetworkUserIdentity } from '../../shared/user-identity.js';
+import { isSameIrcIdentifier } from '../../shared/irc-identifiers.js';
+import { getStoredChannelUserModes } from '../../shared/channel-users.js';
+import { ChannelVoiceMenu } from './ChannelVoiceMenu.js';
 import { cn } from '@/lib/utils.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -25,6 +28,8 @@ import { UserAvatar } from './user-avatars/UserAvatar.js';
 export type NicklistPanelProps = {
   network: NetworkProfile | null;
   channel: ChannelState;
+  runtime?: NetworkRuntimeState | null;
+  onSetVoice?: (nick: string, enabled: boolean) => void;
   friends: FriendState[];
   mutedNicks: MutedNickState[];
   nickEmojis: NickEmojiState[];
@@ -52,6 +57,11 @@ export function NicklistPanel(props: NicklistPanelProps) {
     () => buildNicklistGroups(props.channel.users, props.friends, deferredQuery),
     [deferredQuery, props.channel.users, props.friends],
   );
+  const runtime = props.runtime;
+  const self = runtime?.phase === 'connected' ? props.channel.users.find(user =>
+    isSameIrcIdentifier(user.nick, runtime.nick, runtime.serverRules?.caseMapping),
+  ) : undefined;
+  const canSetVoice = self && getStoredChannelUserModes(self).includes('owner');
   const userAvatarsVisible = props.showMedia !== false;
 
   useEffect(() => {
@@ -114,31 +124,38 @@ export function NicklistPanel(props: NicklistPanelProps) {
                         const avatarTarget = props.network
                           ? resolveUserAvatarTarget(props.network.id, user)
                           : null;
+                        const nickButton = (
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-2 py-1.5 text-left text-[13px] text-foreground"
+                            onClick={() => props.network && props.onSelectNick(props.network, user.nick, user.identity)}
+                          >
+                            {userAvatarsVisible ? (
+                              <UserAvatar
+                                customAvatarTarget={avatarTarget}
+                                enabled={props.externalAvatarsEnabled}
+                                placeholder="initial"
+                                user={user}
+                              />
+                            ) : null}
+                            <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
+                            {userNickEmoji?.emoji ? (
+                              <span aria-hidden className="shrink-0 leading-none">
+                                {userNickEmoji.emoji}
+                              </span>
+                            ) : null}
+                          </button>
+                        );
                         return (
                           <div
                             key={user.nick}
                             className="group flex w-full min-w-0 items-center overflow-visible rounded-sm hover:bg-accent/60 focus-within:bg-accent/60"
                           >
-                            <button
-                              type="button"
-                              className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-2 py-1.5 text-left text-[13px] text-foreground"
-                              onClick={() => props.network && props.onSelectNick(props.network, user.nick, user.identity)}
-                            >
-                              {userAvatarsVisible ? (
-                                <UserAvatar
-                                  customAvatarTarget={avatarTarget}
-                                  enabled={props.externalAvatarsEnabled}
-                                  placeholder="initial"
-                                  user={user}
-                                />
-                              ) : null}
-                              <span className={cn('truncate', channelUserModeTone(user.mode))}>{user.nick}</span>
-                              {userNickEmoji?.emoji ? (
-                                <span aria-hidden className="shrink-0 leading-none">
-                                  {userNickEmoji.emoji}
-                                </span>
-                              ) : null}
-                            </button>
+                            {canSetVoice && user !== self && props.onSetVoice ? (
+                              <ChannelVoiceMenu user={user} onSetVoice={props.onSetVoice}>
+                                {nickButton}
+                              </ChannelVoiceMenu>
+                            ) : nickButton}
                             {user.away ? (
                               <span
                                 role="img"

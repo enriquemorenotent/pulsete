@@ -183,6 +183,16 @@ export const createChatActions = ({
     openChannelList,
     openMentionedChannel,
     requestWhois,
+    setChannelVoice: (nick: string, enabled: boolean) => {
+      const { mode, selectedBuffer } = readWorkspace(getState, getWorkspace);
+      if (mode !== 'channel-connected' || selectedBuffer?.kind !== 'channel') return false;
+      return sendGatewayMessage({
+        type: 'raw.send',
+        networkId: selectedBuffer.networkId,
+        sourceBufferId: selectedBuffer.id,
+        raw: `MODE ${selectedBuffer.target} ${enabled ? '+v' : '-v'} ${nick}`,
+      });
+    },
     searchBufferHistory,
     selectPendingTab,
     selectTabBuffer,
