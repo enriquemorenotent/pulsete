@@ -211,7 +211,7 @@ export function DesktopShellLayout(props: DesktopShellLayoutProps) {
                     ? 'hidden'
                     : readingExpanded
                     ? 'min-h-0 bg-[#202733] lg:w-[min(560px,45vw)] lg:shrink-0'
-                    : 'min-h-0 bg-[#202733] lg:w-[var(--right-sidebar-width)] lg:max-w-[320px] lg:shrink-0'}
+                    : 'min-h-0 bg-[#202733] lg:w-[var(--right-sidebar-width)] lg:shrink-0'}
                 >
                   {props.rightSidebar}
                 </div>
