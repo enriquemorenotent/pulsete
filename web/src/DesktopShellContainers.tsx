@@ -209,7 +209,7 @@ export const ChatPaneContainer = memo(function ChatPaneContainer({
         {...model}
         replySuggestion={suggestion}
         sendFile={canSendFile && directMessage && (routedConnection
-          ? <DccUnavailableButton />
+          ? <DccUnavailableButton location={workspace.selectedNetwork?.nordVpnLocation} />
           : <DccSendButton key={directMessage.id} bufferId={directMessage.id} peer={directMessage.target} />)}
         fileTransferStatus={dccEnabled && directMessage && (
           <DccSendStatus bufferId={directMessage.id} onOpenTransfers={onOpenFileTransfers} />

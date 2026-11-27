@@ -4,7 +4,7 @@ import { emptySnapshot, makeBuffer, makeNetwork } from '../../tests/helpers/app-
 
 test('desktop DMs send DCC offers and the transfers panel tracks accepted files', async ({ page }, testInfo) => {
   const direct = makeNetwork({ name: 'Direct IRC', workspaceOpen: true });
-  const routed = { ...makeNetwork({ id: 'routed', name: 'Routed IRC', workspaceOpen: true }), nordVpnLocation: 'amsterdam' };
+  const routed = { ...makeNetwork({ id: 'routed', name: 'Routed IRC', workspaceOpen: true }), nordVpnLocation: 'country:Netherlands' };
   const alice = makeBuffer({ id: 'alice', target: 'alice', networkId: direct.id, kind: 'query' });
   const bob = makeBuffer({ id: 'bob', target: 'bob', networkId: routed.id, kind: 'query' });
   const servers = [direct, routed].map(network => makeBuffer({ id: `server-${network.id}`, networkId: network.id }));
@@ -61,9 +61,19 @@ test('desktop DMs send DCC offers and the transfers panel tracks accepted files'
   await page.getByRole('button', { name: /^Open bob\b/ }).click();
   const unavailable = page.getByRole('button', { name: 'Send file', exact: true });
   await expect(unavailable).toBeDisabled();
-  await unavailable.focus();
-  await expect(unavailable).toHaveAccessibleDescription(/DCC requires a direct connection/);
+  await expect(unavailable).toHaveAccessibleDescription('File sending is unavailable on this VPN connection.');
+  await unavailable.hover();
   await expect(page.getByRole('tooltip')).toHaveCSS('opacity', '1');
+  await page.mouse.move(0, 0);
+  await unavailable.focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(unavailable).not.toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(unavailable).toBeFocused();
+  await expect(page.getByRole('tooltip')).toHaveCSS('opacity', '1');
+  await unavailable.press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath('dcc-vpn-button.png') });
   await page.getByRole('button', { name: 'Open Direct IRC', exact: true, pressed: false }).click();
   await page.getByRole('button', { name: /^Open alice\b/ }).click();
   await page.getByRole('button', { name: 'Send file', exact: true }).click();

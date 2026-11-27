@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, Paperclip, X } from 'lucide-react';
 import type { DccSendRequest, DccTransfer } from '../../shared/dcc.js';
+import { nordVpnHost } from '../../shared/nordvpn.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog.js';
@@ -54,7 +55,8 @@ export function DccSendButton({ bufferId, peer }: { bufferId: string; peer: stri
     setOpen(value);
   }}>
     <DialogTrigger asChild>
-      <Button type="button" variant="ghost" size="icon" aria-label="Send file" title="Send file"><Paperclip /></Button>
+      <Button type="button" variant="outline" size="icon" className="border-white/20 hover:border-white/30"
+        aria-label="Send file" title="Send file"><Paperclip /></Button>
     </DialogTrigger>
     <DialogContent className="max-w-md">
       <DialogHeader>
@@ -80,17 +82,18 @@ export function DccSendButton({ bufferId, peer }: { bufferId: string; peer: stri
   </Dialog>;
 }
 
-export function DccUnavailableButton() {
+export function DccUnavailableButton({ location }: { location?: string }) {
   const description = useId();
+  const route = location && nordVpnHost(location) ? 'proxy' : 'VPN';
   return <div className="group relative shrink-0">
-    <Button type="button" variant="ghost" size="icon" aria-label="Send file"
+    <Button type="button" variant="outline" size="icon" aria-label="Send file"
       aria-disabled="true" aria-describedby={description}
-      className="cursor-not-allowed text-muted-foreground hover:bg-transparent hover:text-muted-foreground">
+      className="cursor-not-allowed border-white/20 bg-transparent text-muted-foreground/65 hover:border-white/20 hover:bg-transparent hover:text-muted-foreground/65">
       <Paperclip />
     </Button>
     <span id={description} role="tooltip"
       className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-60 rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
-      DCC requires a direct connection and is unavailable on VPN or proxy accounts.
+      File sending is unavailable on this {route} connection.
     </span>
   </div>;
 }
