@@ -122,6 +122,7 @@ function NotesEditor(props: NotesEditorProps) {
         className={cn(
           'relative',
           fill ? 'flex-1' : '',
+          props.markdown && 'flex flex-col',
           showHeader && fill && 'min-h-40',
           variant === 'compact' && 'min-h-32',
         )}

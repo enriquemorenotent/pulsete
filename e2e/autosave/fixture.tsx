@@ -34,7 +34,7 @@ function Fixture() {
     <button onClick={() => setScope('network:a')}>Server</button>{' '}
     <button onClick={() => setVisible(value => !value)}>Toggle editor</button>
     <p data-testid="scope">{scope}</p>
-    {visible && (markdown ? <div className="w-80 bg-card">
+    {visible && (markdown ? <div className="h-96 w-80 bg-card">
       <QueryProfileSidebar
         buffer={{ ...directMessage, notes: saved[scope] ?? initialNotes }}
         pinned={{

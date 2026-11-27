@@ -13,8 +13,8 @@ export function QueryProfileSidebar(props: {
   if (!buffer) return null;
   const pinCount = props.pinned?.messages.length ?? 0;
   return (
-    <aside aria-label="Conversation context" className="max-h-full overflow-y-auto overscroll-contain px-4 py-2">
-      <details open className="group/notes border-b border-white/[0.07] open:pb-1">
+    <aside aria-label="Conversation context" className="conversation-context h-full overflow-y-auto overscroll-contain px-4 py-2">
+      <details open className="conversation-notes group/notes border-b border-white/[0.07] open:pb-1">
         <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <NotebookPen className="size-3.5 text-muted-foreground" aria-hidden />
           Notes
@@ -23,7 +23,6 @@ export function QueryProfileSidebar(props: {
         <AutosaveNotesEditor
           id="query-profile-notes"
           markdown
-          fill={false}
           variant="document"
           notes={buffer.notes ?? ''}
           onSave={(notes) => props.onSaveNotes(buffer, notes).then(Boolean)}
@@ -31,7 +30,7 @@ export function QueryProfileSidebar(props: {
           scopeKey={`buffer:${buffer.id}`}
         />
       </details>
-      <details open={pinCount > 0 || props.pinned?.loadState === 'error'} className="group/pins mt-1">
+      <details open={pinCount > 0 || props.pinned?.loadState === 'error'} className="conversation-pins group/pins mt-1">
         <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <Pin className="size-3.5 text-muted-foreground" aria-hidden />
           Pinned messages

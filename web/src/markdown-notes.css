@@ -1,3 +1,22 @@
+.conversation-context:has(> .conversation-notes[open]):has(> .conversation-pins:not([open])) {
+  display: flex;
+  flex-direction: column;
+
+  > .conversation-notes {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  > .conversation-notes::details-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+}
+
 .markdown-notes {
   @apply whitespace-pre-wrap break-words;
 

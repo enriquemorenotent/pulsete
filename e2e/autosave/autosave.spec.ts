@@ -118,7 +118,7 @@ test('DM notes render Markdown while typing and autosave the formatted document'
   await expect(requests(page)).toContainText('buffer:a: ""');
 });
 
-test('short PM notes fit their content and removing the last pin collapses its panel', async ({ page }) => {
+test('DM notes fill the space when pins collapse and return to their content height when pins reopen', async ({ page }) => {
   await page.goto('/e2e/autosave/index.html?markdown&empty');
   const editor = notes(page);
   await expect(editor).toBeVisible();
@@ -137,6 +137,16 @@ test('short PM notes fit their content and removing the last pin collapses its p
   await expect(summary).toContainText('0');
   const emptyHint = page.getByText('Keep useful messages here.', { exact: false });
   await expect(emptyHint).toBeHidden();
+  const sidebar = page.getByRole('complementary', { name: 'Conversation context' });
+  expect((await editor.boundingBox())!.height).toBeGreaterThan((await sidebar.boundingBox())!.height - 85);
   await summary.click();
   await expect(emptyHint).toBeVisible();
+  expect((await notesSection.boundingBox())!.height).toBe(emptyHeight);
+  await summary.click();
+  expect((await editor.boundingBox())!.height).toBeGreaterThan((await sidebar.boundingBox())!.height - 85);
+  const pinsTop = (await summary.boundingBox())!.y;
+  await editor.fill('Line of notes\n'.repeat(100));
+  await editor.press('Control+End');
+  expect((await summary.boundingBox())!.y).toBe(pinsTop);
+  await expect(summary).toBeInViewport();
 });

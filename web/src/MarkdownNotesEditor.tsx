@@ -44,7 +44,7 @@ export function MarkdownNotesEditor({ id, value, placeholder, onChange }: {
       editorProps: {
         attributes: {
           id,
-          class: 'markdown-notes relative rounded-sm border border-transparent px-1 py-1 text-[13px] leading-5 text-foreground/90 outline-none focus-visible:border-ring/50',
+          class: 'markdown-notes relative flex-1 rounded-sm border border-transparent px-1 py-1 text-[13px] leading-5 text-foreground/90 outline-none focus-visible:border-ring/50',
           role: 'textbox',
           'aria-label': 'Notes',
           'aria-multiline': 'true',
@@ -75,5 +75,5 @@ export function MarkdownNotesEditor({ id, value, placeholder, onChange }: {
       .run();
   }, [value]);
 
-  return <div ref={hostRef} data-notes-editor={id} />;
+  return <div ref={hostRef} data-notes-editor={id} className="flex flex-1 flex-col" />;
 }
