@@ -13,12 +13,15 @@ export type ContactSystemNotificationConstructor = new (
   options?: NotificationOptions,
 ) => ContactSystemNotificationHandle;
 
+type NotificationMessage = Pick<ChatMessage, 'body' | 'nick'>;
+const channelPreviewLimit = 120;
+
 type ContactSystemNotificationInput = {
   avatarIconUrl?: string | null;
   buffer: BufferState;
   focusWindow?: () => void;
   iconsEnabled?: boolean;
-  latestMessage?: Pick<ChatMessage, 'body'> | null;
+  latestMessage?: NotificationMessage | null;
   networkName: string;
   notificationConstructor?: ContactSystemNotificationConstructor;
   onRelease?: (notification: ContactSystemNotificationHandle) => void;
@@ -29,7 +32,7 @@ type ContactSystemNotificationDispatchInput = {
   avatarIconUrl?: string | null;
   buffer: BufferState;
   iconsEnabled?: boolean;
-  latestMessage?: Pick<ChatMessage, 'body'> | null;
+  latestMessage?: NotificationMessage | null;
   networkNamesById: ReadonlyMap<string, string>;
   notificationOwner: NotificationOwner<string, ContactSystemNotificationHandle>;
   notificationConstructor?: ContactSystemNotificationConstructor;
@@ -135,17 +138,29 @@ export const resolveNotificationConstructor = () => {
 const resolveContactSystemNotificationBody = (
   buffer: BufferState,
   networkName: string,
-  latestMessage?: Pick<ChatMessage, 'body'> | null,
+  latestMessage?: NotificationMessage | null,
 ) => {
+  if (buffer.kind === 'channel') {
+    const nick = latestMessage?.nick?.trim();
+    const singleLine = latestMessage
+      ? getVisibleIrcText(latestMessage.body.replace(/[\t\r\n]+/g, ' '))
+        .replace(/\s+/g, ' ')
+        .trim()
+      : '';
+    if (singleLine) {
+      const characters = Array.from(singleLine);
+      const preview = characters.length > channelPreviewLimit
+        ? `${characters.slice(0, channelPreviewLimit).join('')}…`
+        : singleLine;
+      return nick ? `${nick}: ${preview}` : preview;
+    }
+    return nick ? `New message from ${nick}` : `New message on ${networkName}`;
+  }
+
   const messageBody = buffer.kind === 'query' && latestMessage
     ? getVisibleIrcText(latestMessage.body).trim()
     : '';
-  if (messageBody) {
-    return messageBody;
-  }
-  return buffer.kind === 'channel'
-    ? `New message in ${buffer.target} on ${networkName}`
-    : `New private message on ${networkName}`;
+  return messageBody || `New private message on ${networkName}`;
 };
 
 const resolveContactSystemNotificationTag = (buffer: BufferState) =>

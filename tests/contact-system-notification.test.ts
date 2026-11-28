@@ -36,6 +36,13 @@ const buffer: BufferState = {
   lastReadMessageId: null,
 };
 
+const channelBuffer: BufferState = {
+  ...buffer,
+  id: 'channel-help',
+  kind: 'channel',
+  target: '#help',
+};
+
 test('system notification reports release when browser-owned handlers are cleared', () => {
   const released: FakeNotification[] = [];
   const notification = createContactSystemNotification({
@@ -64,7 +71,7 @@ test('system notification click focuses, selects, and clears handlers', () => {
     focusWindow: () => {
       focusCalls += 1;
     },
-    latestMessage: { body: 'Hello from Alice' },
+    latestMessage: { body: 'Hello from Alice', nick: 'Alice' },
     networkName: 'ExampleNet',
     notificationConstructor: FakeNotification,
     onSelectBuffer: (nextBuffer) => {
@@ -140,13 +147,53 @@ test('system notification omits icons when media is hidden', () => {
   });
 });
 
-test('system notification labels channel messages with a channel tag', () => {
-  const channelBuffer: BufferState = {
-    ...buffer,
-    id: 'channel-help',
-    kind: 'channel',
-    target: '#help',
-  };
+test('system notification shows the channel, sender, and a plain-text preview', (t) => {
+  const notificationOwner = new NotificationOwner<string, ContactSystemNotificationHandle>({
+    close: (notification) => notification.close(),
+  });
+  t.after(() => notificationOwner.closeAll());
+  showContactSystemNotification({
+    buffer: channelBuffer,
+    latestMessage: { body: '\x02Anyone\x02\naround?', nick: 'Alice' },
+    networkNamesById: new Map([['network-1', 'ExampleNet']]),
+    notificationConstructor: FakeNotification,
+    notificationOwner,
+    onSelectBuffer: () => undefined,
+  });
+
+  const notification = notificationOwner.get(channelBuffer.id) as FakeNotification;
+  assert.equal(notification.title, '#help');
+  assert.deepEqual(notification.options, {
+    body: 'Alice: Anyone around?',
+    tag: 'pulsete-channel:channel-help',
+  });
+});
+
+test('system notification shortens long channel previews', () => {
+  const notification = createContactSystemNotification({
+    buffer: channelBuffer,
+    latestMessage: { body: `${'a'.repeat(119)}👍more`, nick: 'Alice' },
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: () => undefined,
+  }) as FakeNotification;
+
+  assert.equal(notification.options?.body, `Alice: ${'a'.repeat(119)}👍…`);
+});
+
+test('system notification shows the sender when the channel message has no visible text', () => {
+  const notification = createContactSystemNotification({
+    buffer: channelBuffer,
+    latestMessage: { body: '\x02 ', nick: 'Alice' },
+    networkName: 'ExampleNet',
+    notificationConstructor: FakeNotification,
+    onSelectBuffer: () => undefined,
+  }) as FakeNotification;
+
+  assert.equal(notification.options?.body, 'New message from Alice');
+});
+
+test('system notification shows the network when channel message details are missing', () => {
   const notification = createContactSystemNotification({
     buffer: channelBuffer,
     networkName: 'ExampleNet',
@@ -156,7 +203,7 @@ test('system notification labels channel messages with a channel tag', () => {
 
   assert.equal(notification.title, '#help');
   assert.deepEqual(notification.options, {
-    body: 'New message in #help on ExampleNet',
+    body: 'New message on ExampleNet',
     tag: 'pulsete-channel:channel-help',
   });
 });
@@ -187,7 +234,7 @@ test('system notification dispatch tracks active notifications until release', (
 
   showContactSystemNotification({
     buffer,
-    latestMessage: { body: '\x02formatted hello\x02' },
+    latestMessage: { body: '\x02formatted hello\x02', nick: 'Alice' },
     networkNamesById: new Map([['network-1', 'ExampleNet']]),
     notificationConstructor: FakeNotification,
     notificationOwner,
